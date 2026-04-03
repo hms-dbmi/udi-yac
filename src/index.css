@@ -139,3 +139,18 @@ body {
     @apply font-sans;
   }
 }
+
+/* The <udi-vis> custom element uses shadowRoot:false, so Vue's scoped
+   component styles are not injected into the document. We must provide
+   the critical layout styles the CE internals expect. */
+udi-vis {
+  display: block;
+  width: 100%;
+}
+
+/* VegaLite.vue .vega-chart-container (scoped style not injected without shadow DOM) */
+udi-vis .vega-chart-container {
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+}
