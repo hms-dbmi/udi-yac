@@ -15,9 +15,10 @@ export function WelcomeSplash() {
   );
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+    <div className="flex items-center justify-center h-full p-6">
+      {/* Arrow pointing left toward chat */}
       <svg
-        className="w-[60%] max-w-[300px] mb-4 opacity-70"
+        className="w-[40%] max-w-[300px] min-w-[100px] opacity-70 self-start mt-4"
         viewBox="0 0 200 60"
         fill="none"
         preserveAspectRatio="xMinYMid meet"
@@ -38,9 +39,19 @@ export function WelcomeSplash() {
           fill="none"
         />
       </svg>
-      <div className="relative bg-[#e8f4fc] border border-[#57b4e9] rounded-2xl px-5 py-3 mb-2">
-        <span className="text-sm text-foreground">{message}</span>
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#57b4e9]" />
+
+      {/* Mascot + speech bubble */}
+      <div className="flex flex-col items-center gap-1 mt-12">
+        <div className="relative bg-[#e8f4fc] border-[1.5px] border-[#57b4e9] rounded-2xl px-5 py-3">
+          <span className="text-sm text-foreground">{message}</span>
+          <div className="absolute -bottom-[10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#57b4e9]" />
+          <div className="absolute -bottom-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#e8f4fc]" />
+        </div>
+        <img
+          src={`${import.meta.env.BASE_URL}images/yac-mascot.svg`}
+          alt="YAC mascot"
+          className="w-60 h-60 object-contain"
+        />
       </div>
     </div>
   );
