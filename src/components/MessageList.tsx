@@ -24,7 +24,7 @@ export function MessageList({ isLoading, showSystemPrompts, onSelectSuggestion }
   );
 
   return (
-    <ScrollArea className="flex-1 px-3">
+    <ScrollArea className="flex-1 min-h-0 px-3">
       <div className="flex flex-col gap-3 py-3">
         {displayed.map((msg) => {
           // Find the real index in messages (accounting for filtered system messages)

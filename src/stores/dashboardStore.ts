@@ -37,6 +37,16 @@ export interface DashboardState {
     sourceFields: Record<string, string[]> | null,
     title?: string,
   ) => void;
+  pinVisualizationBatch: (
+    items: Array<{
+      index: number;
+      toolCallIndex: number;
+      spec: UDIGrammar;
+      userPrompt: string;
+      sourceFields: Record<string, string[]> | null;
+      title?: string;
+    }>,
+  ) => void;
   unpinVisualization: (key: string, memoryBankStore?: StoreApi<MemoryBankState>) => void;
   restoreFromMemoryBank: (key: string, memoryBankStore: StoreApi<MemoryBankState>) => void;
   isPinned: (key: string) => boolean;
@@ -181,6 +191,20 @@ export function createDashboardStore() {
       set((state) => {
         const next = new Map(state.pinnedVisualizations);
         next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+        return { pinnedVisualizations: next };
+      });
+    },
+
+    pinVisualizationBatch: (items) => {
+      if (items.length === 0) return;
+      set((state) => {
+        const next = new Map(state.pinnedVisualizations);
+        for (const { index, toolCallIndex, spec, userPrompt, sourceFields, title } of items) {
+          const uuid = generateId();
+          const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
+          const key = `${index}-${toolCallIndex}`;
+          next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+        }
         return { pinnedVisualizations: next };
       });
     },

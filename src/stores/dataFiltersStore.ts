@@ -77,7 +77,7 @@ export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFil
     if (getToolCallName(call) !== 'FilterData') continue;
     const args = getToolCallArgs(call);
     if (!args) continue;
-    results.push({ args: args as unknown as FilterDataArgs, toolCallIndex: i });
+    results.push({ args: normalizeFilterArgs(args), toolCallIndex: i });
   }
   return results;
 }
@@ -85,6 +85,23 @@ export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFil
 export function extractFilterSpecFromMessage(message: Message): FilterDataArgs | null {
   const filters = extractAllFilterSpecsFromMessage(message);
   return filters.length > 0 ? filters[0].args : null;
+}
+
+/** Normalize legacy `{ entity, field, min, max }` format into the current
+ *  `{ entity, field, filter: { filterType, intervalRange, pointValues } }` shape. */
+function normalizeFilterArgs(args: Record<string, any>): FilterDataArgs {
+  if (args.filter?.filterType) return args as unknown as FilterDataArgs;
+  // Legacy format — min/max directly on args
+  return {
+    title: args.title ?? '',
+    entity: args.entity,
+    field: args.field,
+    filter: {
+      filterType: 'interval',
+      intervalRange: { min: args.min ?? 0, max: args.max ?? 0 },
+      pointValues: [],
+    },
+  };
 }
 
 export function generateFilterMessage(key: string, selection: DataSelection): Message | null {

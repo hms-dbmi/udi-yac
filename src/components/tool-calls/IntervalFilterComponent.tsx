@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { Slider } from '@/components/ui/slider';
 import {
   Select,
@@ -44,30 +44,48 @@ export function IntervalFilterComponent({
     return { min: (domain.domain as { min: number; max: number }).min, max: (domain.domain as { min: number; max: number }).max };
   }, [getDomainForField, entity, field]);
 
-  const currentRange = useMemo(() => {
+  const storeRange = useMemo(() => {
     const arr = dataSelection.selection?.[field] as number[] | undefined;
     if (!arr || arr.length < 2) return [rangeMinMax.min, rangeMinMax.max];
     return [arr[0], arr[1]];
   }, [dataSelection.selection, field, rangeMinMax]);
 
-  const handleRangeChange = useCallback(
-    (value: number | readonly number[]) => {
-      const arr = Array.isArray(value) ? value : [value];
-      if (arr.length < 2) return;
+  // Local state for responsive slider; committed to store on debounce
+  const [localRange, setLocalRange] = useState(storeRange);
+  const commitTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Sync local state when store range changes externally (e.g. reset, session load)
+  useEffect(() => {
+    setLocalRange(storeRange);
+  }, [storeRange]);
+
+  const commitToStore = useCallback(
+    (range: number[]) => {
       setDataSelection(filterKey, {
         ...dataSelection,
-        selection: { ...dataSelection.selection, [field]: [arr[0], arr[1]] },
+        selection: { ...dataSelection.selection, [field]: [range[0], range[1]] },
       });
     },
     [setDataSelection, filterKey, dataSelection, field],
   );
 
+  const handleRangeChange = useCallback(
+    (value: number | readonly number[]) => {
+      const arr = Array.isArray(value) ? [...value] : [value];
+      if (arr.length < 2) return;
+      setLocalRange(arr);
+      clearTimeout(commitTimer.current);
+      commitTimer.current = setTimeout(() => commitToStore(arr), 250);
+    },
+    [commitToStore],
+  );
+
   const handleReset = useCallback(() => {
-    setDataSelection(filterKey, {
-      ...dataSelection,
-      selection: { ...dataSelection.selection, [field]: [rangeMinMax.min, rangeMinMax.max] },
-    });
-  }, [setDataSelection, filterKey, dataSelection, field, rangeMinMax]);
+    const reset = [rangeMinMax.min, rangeMinMax.max];
+    setLocalRange(reset);
+    clearTimeout(commitTimer.current);
+    commitToStore(reset);
+  }, [commitToStore, rangeMinMax]);
 
   const handleEntityChange = useCallback(
     (val: string | null) => {
@@ -98,8 +116,8 @@ export function IntervalFilterComponent({
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
   const isValid = isValidIntervalFilter(entity, field).isValid === 'yes';
 
-  const minText = currentRange[0] <= rangeMinMax.min ? 'min' : formatNumber(currentRange[0]);
-  const maxText = currentRange[1] >= rangeMinMax.max ? 'max' : formatNumber(currentRange[1]);
+  const minText = localRange[0] <= rangeMinMax.min ? 'min' : formatNumber(localRange[0]);
+  const maxText = localRange[1] >= rangeMinMax.max ? 'max' : formatNumber(localRange[1]);
 
   return (
     <div className="space-y-2">
@@ -148,7 +166,7 @@ export function IntervalFilterComponent({
       </div>
       {isValid ? (
         <Slider
-          value={currentRange}
+          value={localRange}
           min={rangeMinMax.min}
           max={rangeMinMax.max}
           step={(rangeMinMax.max - rangeMinMax.min) / 100}

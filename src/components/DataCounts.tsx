@@ -23,6 +23,36 @@ interface EntityChip {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
+/** Hidden UDIVis that pushes filtered rows into the dataPackage store for download. */
+function EntityDataExporter({
+  entityName,
+  spec,
+  selections,
+  onData,
+}: {
+  entityName: string;
+  spec: object;
+  selections: object;
+  onData: (entity: string, displayRows: object[], allRows: object[]) => void;
+}) {
+  const handleDataReady = useCallback(
+    (payload: { data: object[] | null; allData: object[] | null }) => {
+      onData(
+        entityName,
+        Array.isArray(payload.data) ? payload.data : [],
+        Array.isArray(payload.allData) ? payload.allData : [],
+      );
+    },
+    [entityName, onData],
+  );
+
+  return (
+    <div style={{ display: 'none' }}>
+      <UDIVis spec={spec as any} selections={selections as any} onDataReady={handleDataReady} />
+    </div>
+  );
+}
+
 /** Hidden UDIVis that computes a filtered row count for one entity. */
 function EntityCounter({
   entityName,
@@ -154,6 +184,38 @@ export function DataCounts() {
     return specs;
   }, [chips, filterIds, dataPackage, pinnedVisualizations, dataFiltersStore, dataPackageStore]);
 
+  // Build a filtered-data spec per entity (same filters, no rollup) for download export
+  const exportSpecs = useMemo(() => {
+    if (!dataPackage) return {};
+    const specs: Record<string, object> = {};
+    for (const chip of chips) {
+      const resource = dataPackage.resources.find((r) => r.name === chip.id);
+      if (!resource) continue;
+      // Reuse the count spec's transformation but strip the rollup
+      const countSpec = countSpecs[chip.id] as any;
+      if (!countSpec) continue;
+      const transformation = (countSpec.transformation as object[]).filter(
+        (t: any) => !('rollup' in t),
+      );
+      specs[chip.id] = {
+        config: { debounce: 2000 },
+        source: countSpec.source,
+        transformation,
+      };
+    }
+    return specs;
+  }, [chips, countSpecs, dataPackage]);
+
+  const handleExportData = useCallback(
+    (entity: string, displayRows: object[], allRows: object[]) => {
+      dataPackageStore.getState().setFilteredData(entity, {
+        displayRows: displayRows as Record<string, unknown>[],
+        allRows: allRows as Record<string, unknown>[],
+      });
+    },
+    [dataPackageStore],
+  );
+
   // Merge selections for the hidden UDIVis instances
   const mergedSelections = useMemo(
     () => ({ ...dataSelections }),
@@ -203,6 +265,18 @@ export function DataCounts() {
             spec={countSpecs[chip.id]}
             selections={mergedSelections}
             onCount={handleCount}
+          />
+        ) : null,
+      )}
+      {/* Hidden UDIVis instances to export filtered rows for download */}
+      {chips.map((chip) =>
+        exportSpecs[chip.id] ? (
+          <EntityDataExporter
+            key={`export-${chip.id}`}
+            entityName={chip.id}
+            spec={exportSpecs[chip.id]}
+            selections={mergedSelections}
+            onData={handleExportData}
           />
         ) : null,
       )}

@@ -34,11 +34,7 @@ function stripExtension(filename: string) {
   return filename.replace(/\.[^/.]+$/, '');
 }
 
-interface ConversationListProps {
-  apiBaseUrl: string;
-}
-
-export function ConversationList({ apiBaseUrl }: ConversationListProps) {
+export function ConversationList() {
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
   const selectionsStore = useSelectionsStore();
@@ -56,7 +52,7 @@ export function ConversationList({ apiBaseUrl }: ConversationListProps) {
   const handleLoad = useCallback(
     async (filename: string) => {
       try {
-        const res = await fetch(`${apiBaseUrl}/sessions/${filename}`);
+        const res = await fetch(`${import.meta.env.BASE_URL}sessions/${filename}`);
         if (!res.ok) return;
         const data = await res.json();
         const messages = Array.isArray(data) ? data : data.messages;
@@ -71,7 +67,7 @@ export function ConversationList({ apiBaseUrl }: ConversationListProps) {
         /* silently fail */
       }
     },
-    [apiBaseUrl, conversationStore, dashboardStore, selectionsStore, memoryBankStore, dataFiltersStore],
+    [conversationStore, dashboardStore, selectionsStore, memoryBankStore, dataFiltersStore],
   );
 
   return (

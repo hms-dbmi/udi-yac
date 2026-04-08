@@ -39,9 +39,18 @@ function UDIChatInner({ apiBaseUrl, dataPackagePath, authToken, model, requireAp
     dataPackageStore.getState().fetchDataPackage(dataPackagePath);
   }, [dataPackageStore, dataPackagePath]);
 
-  // Auto-pin visualizations from new assistant messages
+  // Auto-pin visualizations from new assistant messages (batched to avoid O(n^2) cascade)
   useEffect(() => {
     const state = dashboardStore.getState();
+    const mbState = memoryBankStore.getState();
+    const batch: Array<{
+      index: number;
+      toolCallIndex: number;
+      spec: UDIGrammar;
+      userPrompt: string;
+      sourceFields: Record<string, string[]> | null;
+      title?: string;
+    }> = [];
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       if (message.role !== 'assistant') continue;
@@ -49,14 +58,17 @@ function UDIChatInner({ apiBaseUrl, dataPackagePath, authToken, model, requireAp
       for (const { spec, toolCallIndex, title } of specs) {
         const key = state.pinKey(i, toolCallIndex);
         if (state.pinnedVisualizations.has(key)) continue;
-        if (memoryBankStore.getState().closedVisualizations.has(key)) continue;
+        if (mbState.closedVisualizations.has(key)) continue;
         let userPromptIndex = i - 1;
         while (userPromptIndex >= 0 && messages[userPromptIndex]?.role !== 'user') {
           userPromptIndex--;
         }
         const userPrompt = userPromptIndex >= 0 ? messages[userPromptIndex].content : '';
-        state.pinVisualization(i, toolCallIndex, spec as UDIGrammar, userPrompt, sourceFields, title);
+        batch.push({ index: i, toolCallIndex, spec: spec as UDIGrammar, userPrompt, sourceFields, title });
       }
+    }
+    if (batch.length > 0) {
+      state.pinVisualizationBatch(batch);
     }
   }, [messages, dashboardStore, sourceFields, memoryBankStore]);
 
@@ -101,10 +113,10 @@ function UDIChatInner({ apiBaseUrl, dataPackagePath, authToken, model, requireAp
       {/* Sidebar drawer — debug mode only */}
       {debugMode && drawerOpen && (
         <div className="w-56 shrink-0 border-r bg-background overflow-hidden flex flex-col">
-          <ConversationList apiBaseUrl={apiBaseUrl} />
+          <ConversationList />
         </div>
       )}
-      <div className="w-[400px] min-w-[300px] shrink-0 border-r flex flex-col">
+      <div className="w-[400px] min-w-[300px] shrink-0 border-r flex flex-col overflow-hidden">
         <ChatPanel
           config={queryConfig}
           needsApiKey={needsKey}

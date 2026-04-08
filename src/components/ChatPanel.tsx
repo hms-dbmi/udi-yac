@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useGlobal, useGlobalStore, useDataPackageStore } from '@/stores/UDIChatContext';
+import { useConversation, useGlobal, useGlobalStore, useDataPackageStore } from '@/stores/UDIChatContext';
 import { ChatInput } from './ChatInput';
 import { ApiKeyInput } from './ApiKeyInput';
 import { MessageList } from './MessageList';
@@ -37,6 +37,8 @@ export function ChatPanel({ config, needsApiKey, hasApiKey, onSetApiKey, onClear
   const globalStore = useGlobalStore();
   const dataPackageStore = useDataPackageStore();
   const debugMode = useGlobal((s) => s.debugMode);
+  const messages = useConversation((s) => s.messages);
+  const hasSystemMessages = messages.some((m) => m.role === 'system');
   const [examplePrompts, setExamplePrompts] = useState<string[]>([]);
   const [showSystemPrompts, setShowSystemPrompts] = useState(false);
 
@@ -256,9 +258,10 @@ export function ChatPanel({ config, needsApiKey, hasApiKey, onSetApiKey, onClear
               id="system-prompts"
               checked={showSystemPrompts}
               onCheckedChange={(v) => setShowSystemPrompts(!!v)}
+              disabled={!hasSystemMessages}
             />
             <Label htmlFor="system-prompts" className="text-[10px] text-muted-foreground">
-              System Prompts
+              System Prompts{!hasSystemMessages && ' (none)'}
             </Label>
           </div>
         </div>
