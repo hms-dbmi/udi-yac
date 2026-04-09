@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useConversation, useGlobal, useGlobalStore, useDataPackageStore } from '@/stores/UDIChatContext';
+import { useConversation, useGlobal, useGlobalStore, useDataPackageStore, useDataPackage } from '@/stores/UDIChatContext';
 import { ChatInput } from './ChatInput';
 import { ApiKeyInput } from './ApiKeyInput';
 import { MessageList } from './MessageList';
@@ -36,6 +36,7 @@ export function ChatPanel({ config, needsApiKey, hasApiKey, onSetApiKey, onClear
   const conversationStore = useConversationStore();
   const globalStore = useGlobalStore();
   const dataPackageStore = useDataPackageStore();
+  const dataReady = useDataPackage((s) => s.loadingPhase === 'ready');
   const debugMode = useGlobal((s) => s.debugMode);
   const messages = useConversation((s) => s.messages);
   const hasSystemMessages = messages.some((m) => m.role === 'system');
@@ -302,7 +303,11 @@ export function ChatPanel({ config, needsApiKey, hasApiKey, onSetApiKey, onClear
       {needsApiKey ? (
         <ApiKeyInput onSubmit={onSetApiKey} />
       ) : (
-        <ChatInput onSend={handleSend} disabled={isLoading} />
+        <ChatInput
+          onSend={handleSend}
+          disabled={isLoading || !dataReady}
+          placeholder={!dataReady ? 'Loading data...' : undefined}
+        />
       )}
     </div>
   );

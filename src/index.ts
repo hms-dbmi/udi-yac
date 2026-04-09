@@ -10,3 +10,4 @@ export type {
   CategoricalDomain,
 } from './types/dataPackage'
 export { joinDataPath } from './utils/joinDataPath'
+export type { LoadingPhase } from './stores/dataPackageStore'

@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Users, FlaskConical, Table2 } from 'lucide-react';
+import { Users, FlaskConical, Table2, Loader2 } from 'lucide-react';
 import { UDIVis } from 'udi-toolkit/react';
 import { useDataPackage, useDashboard, useDataFilters, useDataFiltersStore, useDataPackageStore } from '@/stores/UDIChatContext';
 import { joinDataPath } from '@/utils/joinDataPath';
@@ -86,7 +86,7 @@ function EntityCounter({
 export function DataCounts() {
   const dataPackage = useDataPackage((s) => s.dataPackage);
   const entityNames = useDataPackage((s) => s.entityNames);
-  const dataLoading = useDataPackage((s) => s.loading);
+  const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const pinnedVisualizations = useDashboard((s) => s.pinnedVisualizations);
   const dataFiltersStore = useDataFiltersStore();
@@ -224,15 +224,34 @@ export function DataCounts() {
     [dataSelections],
   );
 
-  if (chips.length === 0 || dataLoading) return null;
+  // Skeleton placeholders while fetching the data package manifest
+  if (loadingPhase === 'fetching' || loadingPhase === 'idle') {
+    if (loadingPhase === 'idle') return null;
+    return (
+      <div className="flex items-center gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="inline-flex items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1.5 animate-pulse">
+            <div className="h-5 w-5 rounded bg-muted-foreground/20" />
+            <div className="flex flex-col items-center gap-1">
+              <div className="h-4 w-8 rounded bg-muted-foreground/20" />
+              <div className="h-3 w-12 rounded bg-muted-foreground/20" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (chips.length === 0) return null;
 
   const hasFilters = filterIds.length > 0;
+  const domainsReady = loadingPhase === 'ready';
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {chips.map((chip) => {
         const filtered = filteredCounts[chip.id];
-        const isFiltered = hasFilters && filtered != null && filtered !== chip.totalCount;
+        const isFiltered = domainsReady && hasFilters && filtered != null && filtered !== chip.totalCount;
         return (
           <div
             key={chip.id}
@@ -258,8 +277,14 @@ export function DataCounts() {
           </div>
         );
       })}
-      {/* Hidden UDIVis instances to compute filtered counts */}
-      {chips.map((chip) =>
+      {!domainsReady && (
+        <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Loading fields...</span>
+        </div>
+      )}
+      {/* Hidden UDIVis instances — only mount once domains are ready */}
+      {domainsReady && chips.map((chip) =>
         countSpecs[chip.id] ? (
           <EntityCounter
             key={`count-${chip.id}`}
@@ -270,8 +295,7 @@ export function DataCounts() {
           />
         ) : null,
       )}
-      {/* Hidden UDIVis instances to export filtered rows for download */}
-      {chips.map((chip) =>
+      {domainsReady && chips.map((chip) =>
         exportSpecs[chip.id] ? (
           <EntityDataExporter
             key={`export-${chip.id}`}

@@ -9,10 +9,12 @@ import type {
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/utils/joinDataPath';
 
+export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready';
+
 export interface DataPackageState {
   dataPackage: DataPackage | null;
   dataFieldDomains: DataFieldDomain[];
-  loading: boolean;
+  loadingPhase: LoadingPhase;
   error: string | null;
   // Cached derived values (updated by fetchDataPackage, not recomputed per selector call)
   sourceFields: Record<string, string[]> | null;
@@ -107,7 +109,7 @@ export function createDataPackageStore() {
   return createStore<DataPackageState>()((set, get) => ({
     dataPackage: null,
     dataFieldDomains: [],
-    loading: false,
+    loadingPhase: 'idle',
     error: null,
     sourceFields: null,
     quantitativeSourceFields: null,
@@ -177,7 +179,7 @@ export function createDataPackageStore() {
     },
 
     fetchDataPackage: async (path: string, fetchOptions?: RequestInit) => {
-      set({ loading: true, error: null });
+      set({ loadingPhase: 'fetching', error: null });
       try {
         const response = await fetch(path, fetchOptions);
         const json = await response.json();
@@ -187,11 +189,12 @@ export function createDataPackageStore() {
           );
         }
         applyDataPackage(set, json);
+        set({ loadingPhase: 'domains' });
         await loadDomainsFromCSVs(set, json, fetchOptions);
       } catch (e) {
-        set({ error: String(e), loading: false });
+        set({ error: String(e), loadingPhase: 'idle' });
       } finally {
-        set({ loading: false });
+        set({ loadingPhase: 'ready' });
       }
     },
 
@@ -200,7 +203,7 @@ export function createDataPackageStore() {
       precomputedDomains?: DataFieldDomain[],
       fetchOptions?: RequestInit,
     ) => {
-      set({ loading: true, error: null });
+      set({ loadingPhase: 'fetching', error: null });
       try {
         const filtered: DataPackage = {
           ...dp,
@@ -212,17 +215,19 @@ export function createDataPackageStore() {
 
         if (precomputedDomains) {
           set({
+            loadingPhase: 'ready',
             dataFieldDomains: precomputedDomains,
             dataDomainsString: computeDataDomainsString(precomputedDomains),
           });
           return;
         }
 
+        set({ loadingPhase: 'domains' });
         await loadDomainsFromCSVs(set, filtered, fetchOptions);
       } catch (e) {
-        set({ error: String(e), loading: false });
+        set({ error: String(e), loadingPhase: 'idle' });
       } finally {
-        set({ loading: false });
+        set({ loadingPhase: 'ready' });
       }
     },
   }));
@@ -244,33 +249,125 @@ function applyDataPackage(
   });
 }
 
-/** Load CSVs and compute field domains. `fetchOptions` is forwarded to loadCSV. */
-async function loadDomainsFromCSVs(
-  set: (
-    partial:
-      | Partial<DataPackageState>
-      | ((state: DataPackageState) => Partial<DataPackageState>),
-  ) => void,
-  dp: DataPackage,
-  fetchOptions?: RequestInit,
-) {
+type SetFn = (
+  partial:
+    | Partial<DataPackageState>
+    | ((state: DataPackageState) => Partial<DataPackageState>),
+) => void;
+
+/** Prepare the resource list that both worker and fallback paths consume. */
+function buildResourceInputs(dp: DataPackage) {
   const folderPath = dp['udi:path'];
-  if (!folderPath) {
-    console.warn('DataPackage has no udi:path — skipping CSV domain loading');
-    return;
-  }
-  for (const resource of dp.resources ?? []) {
-    const entityName = resource.name;
-    const fullPath = joinDataPath(folderPath, resource.path);
+  if (!folderPath) return null;
+  return (dp.resources ?? []).map((resource) => {
     const fieldDescriptions: Record<string, string> = {};
     for (const f of resource.schema?.fields ?? []) {
       fieldDescriptions[f.name] = f.description ?? '';
     }
+    return {
+      entityName: resource.name,
+      fullPath: joinDataPath(folderPath, resource.path),
+      fieldDescriptions,
+    };
+  });
+}
+
+/** Apply a batch of domains for one entity into the store. */
+function applyEntityDomains(
+  set: SetFn,
+  domains: DataFieldDomain[],
+) {
+  set((state) => {
+    const nextDomains = [...state.dataFieldDomains, ...domains];
+    return {
+      dataFieldDomains: nextDomains,
+      dataDomainsString: computeDataDomainsString(nextDomains),
+    };
+  });
+}
+
+/**
+ * Load CSVs and compute field domains, offloading to a Web Worker when
+ * available. Falls back to main-thread computation if the worker fails
+ * to initialize (e.g. due to CSP restrictions or missing browser support).
+ */
+async function loadDomainsFromCSVs(set: SetFn, dp: DataPackage, fetchOptions?: RequestInit) {
+  const resources = buildResourceInputs(dp);
+  if (!resources) {
+    console.warn('DataPackage has no udi:path — skipping CSV domain loading');
+    return;
+  }
+
+  try {
+    await loadDomainsViaWorker(set, resources, fetchOptions);
+  } catch {
+    // Worker failed to start — fall back to main thread
+    await loadDomainsMainThread(set, resources, fetchOptions);
+  }
+}
+
+/** Offload domain computation to a dedicated Web Worker. */
+function loadDomainsViaWorker(
+  set: SetFn,
+  resources: ReturnType<typeof buildResourceInputs> & {},
+  fetchOptions?: RequestInit,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let worker: Worker;
+    try {
+      worker = new Worker(
+        new URL('../workers/domainWorker.ts', import.meta.url),
+        { type: 'module' },
+      );
+    } catch (e) {
+      reject(e);
+      return;
+    }
+
+    // RequestInit may contain non-cloneable values (e.g. AbortSignal).
+    // Extract only the serializable subset for the worker.
+    const serializableFetchOptions = fetchOptions
+      ? { headers: fetchOptions.headers, credentials: fetchOptions.credentials, mode: fetchOptions.mode } as RequestInit
+      : undefined;
+
+    worker.onmessage = (event) => {
+      const msg = event.data;
+      if (msg.type === 'entity-domains') {
+        applyEntityDomains(set, msg.domains as DataFieldDomain[]);
+      } else if (msg.type === 'error') {
+        console.error(`Worker: failed to load data for ${msg.entityName}:`, msg.message);
+      } else if (msg.type === 'done') {
+        worker.terminate();
+        resolve();
+      }
+    };
+
+    worker.onerror = (e) => {
+      worker.terminate();
+      reject(e);
+    };
+
+    worker.postMessage({
+      type: 'compute',
+      resources,
+      fetchOptions: serializableFetchOptions,
+    });
+  });
+}
+
+/** Main-thread fallback: same logic as the original loadDomainsFromCSVs. */
+async function loadDomainsMainThread(
+  set: SetFn,
+  resources: ReturnType<typeof buildResourceInputs> & {},
+  fetchOptions?: RequestInit,
+) {
+  for (const resource of resources) {
     try {
       const { loadCSV } = await import('arquero');
-      const loadOptions: any = { ...fetchOptions };
-      if (fullPath.endsWith('.tsv')) loadOptions.delimiter = '\t';
-      const table = await loadCSV(fullPath, loadOptions);
+      const loadOptions: Record<string, unknown> = {};
+      if (resource.fullPath.endsWith('.tsv')) loadOptions.delimiter = '\t';
+      if (fetchOptions) loadOptions.fetch = fetchOptions;
+      const table = await loadCSV(resource.fullPath, loadOptions);
       const cols = table.columnNames();
       const domains: DataFieldDomain[] = [];
       for (const col of cols) {
@@ -284,31 +381,25 @@ async function loadDomainsFromCSVs(
             })
             .objects()[0] as any;
           domains.push({
-            entity: entityName,
+            entity: resource.entityName,
             field: col,
             type: 'interval',
-            fieldDescription: fieldDescriptions[col] ?? '',
+            fieldDescription: resource.fieldDescriptions[col] ?? '',
             domain: { min: stats.min, max: stats.max },
           });
         } else {
           domains.push({
-            entity: entityName,
+            entity: resource.entityName,
             field: col,
             type: 'point',
-            fieldDescription: fieldDescriptions[col] ?? '',
+            fieldDescription: resource.fieldDescriptions[col] ?? '',
             domain: { values: Array.from(new Set(series)) as string[] },
           });
         }
       }
-      set((state) => {
-        const nextDomains = [...state.dataFieldDomains, ...domains];
-        return {
-          dataFieldDomains: nextDomains,
-          dataDomainsString: computeDataDomainsString(nextDomains),
-        };
-      });
+      applyEntityDomains(set, domains);
     } catch (e) {
-      console.error(`Failed to load data for ${entityName}:`, e);
+      console.error(`Failed to load data for ${resource.entityName}:`, e);
     }
   }
 }

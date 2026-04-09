@@ -6,9 +6,10 @@ import { Send } from 'lucide-react';
 interface ChatInputProps {
   onSend: (text: string) => void;
   disabled?: boolean;
+  placeholder?: string;
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
   const [text, setText] = useState('');
 
   const handleSend = useCallback(() => {
@@ -34,7 +35,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ask a question..."
+        placeholder={placeholder ?? "Ask a question..."}
         disabled={disabled}
         className="min-h-[40px] max-h-[120px] resize-none"
         rows={1}
