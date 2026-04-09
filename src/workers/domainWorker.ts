@@ -1,17 +1,17 @@
 /**
- * Web Worker for computing data field domains from CSV/TSV files.
+ * Web Worker for computing data field domains from pre-fetched CSV/TSV text.
  *
- * Offloads the expensive CSV parsing + column-level type inference + domain
- * computation from the main thread. Receives resource metadata, loads the
- * CSVs via Arquero inside the worker, and posts back DataFieldDomain arrays.
+ * The main thread fetches the CSV text (priming the browser HTTP cache for
+ * UDIVis to reuse) and sends it here for the expensive parsing + domain
+ * computation, keeping the main thread responsive.
  *
  * Message protocol:
- *   Main → Worker:  ComputeDomainsRequest  (one message to start)
+ *   Main → Worker:  ComputeDomainsRequest  (one message with pre-fetched text)
  *   Worker → Main:  EntityDomainsResult     (one per resource, streamed)
  *   Worker → Main:  DoneResult | ErrorResult (termination)
  */
 
-import { loadCSV } from 'arquero';
+import { fromCSV } from 'arquero';
 import type {
   ResourceInput,
   WorkerMessage,
@@ -32,7 +32,7 @@ workerSelf.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 
   for (const resource of msg.resources) {
     try {
-      const domains = await computeEntityDomains(resource, msg.fetchOptions);
+      const domains = computeEntityDomains(resource);
       const response: EntityDomainsResult = {
         type: 'entity-domains',
         entityName: resource.entityName,
@@ -52,15 +52,8 @@ workerSelf.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   workerSelf.postMessage({ type: 'done' } satisfies DoneResult);
 };
 
-async function computeEntityDomains(
-  resource: ResourceInput,
-  fetchOptions?: RequestInit,
-): Promise<DataFieldDomain[]> {
-  const loadOptions: Record<string, unknown> = {};
-  if (resource.fullPath.endsWith('.tsv')) loadOptions.delimiter = '\t';
-  if (fetchOptions) loadOptions.fetch = fetchOptions;
-
-  const table = await loadCSV(resource.fullPath, loadOptions);
+function computeEntityDomains(resource: ResourceInput): DataFieldDomain[] {
+  const table = fromCSV(resource.csvText, { delimiter: resource.delimiter });
   const cols = table.columnNames();
   const domains: DataFieldDomain[] = [];
 

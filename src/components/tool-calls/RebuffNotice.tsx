@@ -20,8 +20,7 @@ export function RebuffNotice({ message, suggestions, onSelectSuggestion }: Rebuf
               <Button
                 key={i}
                 variant="outline"
-                size="sm"
-                className="text-xs"
+                className="text-xs text-wrap w-full"
                 onClick={() => onSelectSuggestion?.(sug)}
               >
                 {sug}

@@ -6,14 +6,15 @@ import type { DataFieldDomain } from './dataPackage';
 
 export interface ResourceInput {
   entityName: string;
-  fullPath: string;
+  /** Pre-fetched CSV/TSV text content. */
+  csvText: string;
+  delimiter: string;
   fieldDescriptions: Record<string, string>;
 }
 
 export interface ComputeDomainsRequest {
   type: 'compute';
   resources: ResourceInput[];
-  fetchOptions?: RequestInit;
 }
 
 export interface EntityDomainsResult {

@@ -8,6 +8,7 @@ import type {
   ExportRowSet,
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/utils/joinDataPath';
+import type { ResourceInput } from '@/types/domainWorker';
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready';
 
@@ -255,28 +256,8 @@ type SetFn = (
     | ((state: DataPackageState) => Partial<DataPackageState>),
 ) => void;
 
-/** Prepare the resource list that both worker and fallback paths consume. */
-function buildResourceInputs(dp: DataPackage) {
-  const folderPath = dp['udi:path'];
-  if (!folderPath) return null;
-  return (dp.resources ?? []).map((resource) => {
-    const fieldDescriptions: Record<string, string> = {};
-    for (const f of resource.schema?.fields ?? []) {
-      fieldDescriptions[f.name] = f.description ?? '';
-    }
-    return {
-      entityName: resource.name,
-      fullPath: joinDataPath(folderPath, resource.path),
-      fieldDescriptions,
-    };
-  });
-}
-
 /** Apply a batch of domains for one entity into the store. */
-function applyEntityDomains(
-  set: SetFn,
-  domains: DataFieldDomain[],
-) {
+function applyEntityDomains(set: SetFn, domains: DataFieldDomain[]) {
   set((state) => {
     const nextDomains = [...state.dataFieldDomains, ...domains];
     return {
@@ -287,31 +268,48 @@ function applyEntityDomains(
 }
 
 /**
- * Load CSVs and compute field domains, offloading to a Web Worker when
- * available. Falls back to main-thread computation if the worker fails
- * to initialize (e.g. due to CSP restrictions or missing browser support).
+ * Fetch CSV text for each resource on the main thread (priming the browser
+ * HTTP cache so UDIVis won't re-fetch), then offload the parsing + domain
+ * computation to a Web Worker. Falls back to main-thread parsing if the
+ * worker fails to initialize.
  */
 async function loadDomainsFromCSVs(set: SetFn, dp: DataPackage, fetchOptions?: RequestInit) {
-  const resources = buildResourceInputs(dp);
-  if (!resources) {
+  const folderPath = dp['udi:path'];
+  if (!folderPath) {
     console.warn('DataPackage has no udi:path — skipping CSV domain loading');
     return;
   }
 
+  // Fetch all CSV text on the main thread (primes browser cache for UDIVis).
+  const resources: ResourceInput[] = [];
+  for (const resource of dp.resources ?? []) {
+    const fullPath = joinDataPath(folderPath, resource.path);
+    const delimiter = fullPath.endsWith('.tsv') ? '\t' : ',';
+    const fieldDescriptions: Record<string, string> = {};
+    for (const f of resource.schema?.fields ?? []) {
+      fieldDescriptions[f.name] = f.description ?? '';
+    }
+    try {
+      const response = await fetch(fullPath, fetchOptions);
+      const csvText = await response.text();
+      resources.push({ entityName: resource.name, csvText, delimiter, fieldDescriptions });
+    } catch (e) {
+      console.error(`Failed to fetch data for ${resource.name}:`, e);
+    }
+  }
+
+  if (resources.length === 0) return;
+
   try {
-    await loadDomainsViaWorker(set, resources, fetchOptions);
+    await loadDomainsViaWorker(set, resources);
   } catch {
     // Worker failed to start — fall back to main thread
-    await loadDomainsMainThread(set, resources, fetchOptions);
+    await loadDomainsMainThread(set, resources);
   }
 }
 
 /** Offload domain computation to a dedicated Web Worker. */
-function loadDomainsViaWorker(
-  set: SetFn,
-  resources: ReturnType<typeof buildResourceInputs> & {},
-  fetchOptions?: RequestInit,
-): Promise<void> {
+function loadDomainsViaWorker(set: SetFn, resources: ResourceInput[]): Promise<void> {
   return new Promise((resolve, reject) => {
     let worker: Worker;
     try {
@@ -323,12 +321,6 @@ function loadDomainsViaWorker(
       reject(e);
       return;
     }
-
-    // RequestInit may contain non-cloneable values (e.g. AbortSignal).
-    // Extract only the serializable subset for the worker.
-    const serializableFetchOptions = fetchOptions
-      ? { headers: fetchOptions.headers, credentials: fetchOptions.credentials, mode: fetchOptions.mode } as RequestInit
-      : undefined;
 
     worker.onmessage = (event) => {
       const msg = event.data;
@@ -347,27 +339,16 @@ function loadDomainsViaWorker(
       reject(e);
     };
 
-    worker.postMessage({
-      type: 'compute',
-      resources,
-      fetchOptions: serializableFetchOptions,
-    });
+    worker.postMessage({ type: 'compute', resources });
   });
 }
 
-/** Main-thread fallback: same logic as the original loadDomainsFromCSVs. */
-async function loadDomainsMainThread(
-  set: SetFn,
-  resources: ReturnType<typeof buildResourceInputs> & {},
-  fetchOptions?: RequestInit,
-) {
+/** Main-thread fallback: parse pre-fetched CSV text with Arquero. */
+async function loadDomainsMainThread(set: SetFn, resources: ResourceInput[]) {
+  const { fromCSV } = await import('arquero');
   for (const resource of resources) {
     try {
-      const { loadCSV } = await import('arquero');
-      const loadOptions: Record<string, unknown> = {};
-      if (resource.fullPath.endsWith('.tsv')) loadOptions.delimiter = '\t';
-      if (fetchOptions) loadOptions.fetch = fetchOptions;
-      const table = await loadCSV(resource.fullPath, loadOptions);
+      const table = fromCSV(resource.csvText, { delimiter: resource.delimiter });
       const cols = table.columnNames();
       const domains: DataFieldDomain[] = [];
       for (const col of cols) {
@@ -399,7 +380,7 @@ async function loadDomainsMainThread(
       }
       applyEntityDomains(set, domains);
     } catch (e) {
-      console.error(`Failed to load data for ${resource.entityName}:`, e);
+      console.error(`Failed to parse data for ${resource.entityName}:`, e);
     }
   }
 }

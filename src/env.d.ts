@@ -45,4 +45,5 @@ declare module 'udi-toolkit' {
 
 declare module 'arquero' {
   export function loadCSV(path: string, options?: any): Promise<any>;
+  export function fromCSV(input: string, options?: any): any;
 }
