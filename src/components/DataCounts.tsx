@@ -30,7 +30,6 @@ export function DataCounts() {
   const entityNames = useDataPackage((s) => s.entityNames);
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const dataSelections = useDataFilters((s) => s.dataSelections);
-  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
   const vizSelections = useSelections((s) => s.selections);
   const pinnedVisualizations = useDashboard((s) => s.pinnedVisualizations);
   const dataFiltersStore = useDataFiltersStore();
@@ -141,10 +140,10 @@ export function DataCounts() {
     return specs;
   }, [chips, countSpecs, dataPackage]);
 
-  // Merge all selection sources: viz brush selections + LLM FilterData + internal
+  // Merge brush selections and LLM FilterData for queryData count queries
   const mergedSelections = useMemo(
-    () => ({ ...vizSelections, ...dataSelections, ...internalDataSelections }),
-    [vizSelections, dataSelections, internalDataSelections],
+    () => ({ ...vizSelections, ...dataSelections }),
+    [vizSelections, dataSelections],
   );
 
   const domainsReady = loadingPhase === 'ready';

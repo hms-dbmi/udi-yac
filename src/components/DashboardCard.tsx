@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { PinnedVisualization } from '@/stores/dashboardStore';
-import { useDashboard, useDashboardStore, useSelectionsStore, useDataFiltersStore, useMemoryBankStore } from '@/stores/UDIChatContext';
+import { useDashboard, useDashboardStore, useSelectionsStore, useMemoryBankStore } from '@/stores/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +26,6 @@ interface DashboardCardProps {
 export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const dashboardStore = useDashboardStore();
   const selectionsStore = useSelectionsStore();
-  const dataFiltersStore = useDataFiltersStore();
   const memoryBankStore = useMemoryBankStore();
   const isExpanded = useDashboard((s) => s.isExpanded(vizKey));
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
@@ -68,10 +67,14 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const handleSelectionChange = useCallback(
     (newSelections: DataSelections) => {
       const plain = JSON.parse(JSON.stringify(newSelections)) as DataSelections;
+      // Brushes propagate through selectionsStore only. We intentionally do
+      // NOT write them into dataFiltersStore.internalDataSelections anymore,
+      // so brushes don't appear as filter chips in the toolbar. Cross-chart
+      // filtering still works via the shared Pinia DataSourcesStore +
+      // named-filter entries in each viz's interactiveSpec.transformation.
       selectionsStore.getState().updateSelections(plain);
-      dataFiltersStore.getState().updateInternalDataSelections(plain);
     },
-    [selectionsStore, dataFiltersStore],
+    [selectionsStore],
   );
 
   const [showTweak, setShowTweak] = useState(false);

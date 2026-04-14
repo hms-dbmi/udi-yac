@@ -344,6 +344,15 @@ export function createDashboardStore() {
           ? (viz.interactiveSpec.source as any)[0]?.name
           : (viz.interactiveSpec.source as any)?.name;
 
+        // Include the viz's own brush UUID so the source chart also filters
+        // its own data. Previously excluded to avoid re-render side effects,
+        // but those are now handled upstream:
+        //   - deep-clone of props.spec in UDIVis.vue render() prevents spec
+        //     mutations from leaking back to React's specKey (no remount)
+        //   - save/restore of per-channel signals in VegaLite.vue
+        //     updateVegaChart preserves the brush across data updates
+        //   - re-clone of parsedSpec at the start of buildVisualization
+        //     prevents stale domain mutations from persisting across builds
         const newFilters = state.getNamedFilters(
           filterIdList,
           currentSourceName ?? 'unknown_source',

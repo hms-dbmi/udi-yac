@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { UDIChatProvider, useConversation, useDataPackageStore, useDashboardStore, useDataPackage, useDataFiltersStore, useDataFilters, useMemoryBankStore, useGlobal } from '@/stores/UDIChatContext';
+import { UDIChatProvider, useConversation, useDataPackageStore, useDashboardStore, useDashboard, useDataPackage, useDataFiltersStore, useDataFilters, useMemoryBankStore, useGlobal } from '@/stores/UDIChatContext';
 import { extractAllUdiSpecsFromMessage } from '@/stores/dashboardStore';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from './ChatPanel';
@@ -94,12 +94,15 @@ function UDIChatInner({ apiBaseUrl, dataPackagePath, dataPackage: dataPackagePro
     dataFiltersStore.getState().syncFiltersFromMessages(messages, validate);
   }, [messages, dataFiltersStore, dataPackageStore]);
 
-  // Update spec filters when data selections change
+  // Update spec filter structure when LLM FilterData selections change or when
+  // the set of pinned visualizations changes. Brush selections don't need to
+  // trigger this — each viz's own UUID is already in the filter list (from
+  // pinnedVisualizations), so the filter structure is stable once set up.
   const dataSelections = useDataFilters((s) => s.dataSelections);
-  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
+  const pinnedVisualizations = useDashboard((s) => s.pinnedVisualizations);
   useEffect(() => {
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
-  }, [dataSelections, internalDataSelections, dashboardStore, dataFiltersStore, dataPackageStore]);
+  }, [dataSelections, pinnedVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
 
   const handleSetApiKey = useCallback((key: string) => {
     setOpenAiKey(key);
