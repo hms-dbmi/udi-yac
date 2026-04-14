@@ -29,16 +29,22 @@ export function VisualizationCard({ spec, isPinned, title, messageIndex, toolCal
 
   if (isPinned) {
     return (
-      <div className="flex items-center gap-2 py-1">
-        <Badge variant="secondary" className="text-xs">
-          Pinned to dashboard
-        </Badge>
-        {title && <span className="text-xs text-muted-foreground truncate">{title}</span>}
-        <div className="w-[60px] h-[30px] overflow-hidden">
-          <div className="w-[200px] origin-top-left scale-[0.2]">
-            <UDIVis spec={displaySpec} sourceResolver={sourceResolver} />
-          </div>
+      <div className="py-1">
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">
+            Pinned to dashboard
+          </Badge>
+          {title && <span className="text-xs text-muted-foreground truncate">{title}</span>}
         </div>
+        {messageIndex != null && toolCallIndex != null && (
+          <div className="mt-1">
+            <VizTweakComponent
+              spec={currentSpec}
+              messageIndex={messageIndex}
+              toolCallIndex={toolCallIndex}
+            />
+          </div>
+        )}
       </div>
     );
   }
