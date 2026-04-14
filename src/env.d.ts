@@ -26,6 +26,8 @@ declare module 'udi-toolkit/react' {
   export interface UDIVisProps {
     spec: UDIGrammar;
     selections?: DataSelections;
+    /** Map entity names to canonical data URLs, overriding whatever the spec contains. */
+    sourceResolver?: Record<string, string>;
     onSelectionChange?: (selections: DataSelections) => void;
     onDataReady?: (payload: {
       data: object[] | null;
@@ -52,6 +54,7 @@ declare module 'udi-toolkit/react' {
   export function queryData(
     spec: QueryDataSpec,
     selections?: DataSelections,
+    sourceResolver?: Record<string, string>,
   ): Promise<QueryDataResult | null>;
 }
 

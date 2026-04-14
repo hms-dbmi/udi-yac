@@ -3,7 +3,7 @@ import { UDIVis } from 'udi-toolkit/react';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { Badge } from '@/components/ui/badge';
 import { VizTweakComponent } from '@/components/VizTweakComponent';
-import { useDashboard } from '@/stores/UDIChatContext';
+import { useDashboard, useDataPackage } from '@/stores/UDIChatContext';
 
 interface VisualizationCardProps {
   spec: UDIGrammar;
@@ -15,6 +15,7 @@ interface VisualizationCardProps {
 
 export function VisualizationCard({ spec, isPinned, title, messageIndex, toolCallIndex }: VisualizationCardProps) {
   const displaySpec = useMemo(() => spec, [spec]);
+  const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const pinnedVisualizations = useDashboard((s) => s.pinnedVisualizations);
 
   // Use the dashboard store's spec if available (it reflects VizTweak changes),
@@ -35,7 +36,7 @@ export function VisualizationCard({ spec, isPinned, title, messageIndex, toolCal
         {title && <span className="text-xs text-muted-foreground truncate">{title}</span>}
         <div className="w-[60px] h-[30px] overflow-hidden">
           <div className="w-[200px] origin-top-left scale-[0.2]">
-            <UDIVis spec={displaySpec} />
+            <UDIVis spec={displaySpec} sourceResolver={sourceResolver} />
           </div>
         </div>
       </div>
@@ -46,7 +47,7 @@ export function VisualizationCard({ spec, isPinned, title, messageIndex, toolCal
     <div className="py-1">
       {title && <p className="text-xs font-medium mb-1">{title}</p>}
       <div className="w-full max-w-[300px]">
-        <UDIVis spec={displaySpec} />
+        <UDIVis spec={displaySpec} sourceResolver={sourceResolver} />
       </div>
       {messageIndex != null && toolCallIndex != null && (
         <div className="mt-1">

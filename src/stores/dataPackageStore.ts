@@ -24,6 +24,8 @@ export interface DataPackageState {
   entityNames: string[];
   dataPackageString: string;
   dataDomainsString: string;
+  /** Maps entity names to canonical data URLs (from udi:path + resource.path). */
+  sourceResolver: Record<string, string>;
   filteredData: Map<string, ExportRowSet>;
   fetchDataPackage: (path: string, fetchOptions?: RequestInit) => Promise<void>;
   setDataPackage: (
@@ -96,6 +98,18 @@ function computeEntityNames(dp: DataPackage | null): string[] {
   return dp.resources.map((r) => r.name);
 }
 
+function computeSourceResolver(dp: DataPackage | null): Record<string, string> {
+  if (!dp?.resources) return {};
+  const basePath = dp['udi:path'] ?? '';
+  const resolver: Record<string, string> = {};
+  for (const resource of dp.resources) {
+    if (resource.name && resource.path) {
+      resolver[resource.name] = joinDataPath(basePath, resource.path);
+    }
+  }
+  return resolver;
+}
+
 function computeDataPackageString(dp: DataPackage | null): string {
   if (!dp) return '';
   return JSON.stringify(removeVestigialInfo(dp));
@@ -118,6 +132,7 @@ export function createDataPackageStore() {
     entityNames: [],
     dataPackageString: '',
     dataDomainsString: '',
+    sourceResolver: {},
     filteredData: new Map(),
 
     getDomainForField: (entity: string, field: string) => {
@@ -247,6 +262,7 @@ function applyDataPackage(
     categoricalSourceFields: computeCategoricalSourceFields(json),
     entityNames: computeEntityNames(json),
     dataPackageString: computeDataPackageString(json),
+    sourceResolver: computeSourceResolver(json),
   });
 }
 

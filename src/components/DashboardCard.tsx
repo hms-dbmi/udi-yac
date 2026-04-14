@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { PinnedVisualization } from '@/stores/dashboardStore';
-import { useDashboard, useDashboardStore, useSelectionsStore, useMemoryBankStore } from '@/stores/UDIChatContext';
+import { useDashboard, useDashboardStore, useSelectionsStore, useMemoryBankStore, useDataPackage } from '@/stores/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +27,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const dashboardStore = useDashboardStore();
   const selectionsStore = useSelectionsStore();
   const memoryBankStore = useMemoryBankStore();
+  const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const isExpanded = useDashboard((s) => s.isExpanded(vizKey));
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   const isHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
@@ -204,6 +205,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           key={isTableView ? `table-${specKey}` : specKey}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
+          sourceResolver={sourceResolver}
           onSelectionChange={handleSelectionChange}
         />
       </CardContent>
