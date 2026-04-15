@@ -41,7 +41,7 @@ function getToolCallName(toolCall: ToolCall): string {
   return toolCall.name ?? '';
 }
 
-function getToolCallArgs(toolCall: ToolCall): Record<string, any> | undefined {
+function getToolCallArgs(toolCall: ToolCall): Record<string, unknown> | undefined {
   if (toolCall.function) return toolCall.function.arguments;
   return toolCall.arguments;
 }
@@ -87,16 +87,24 @@ export function extractFilterSpecFromMessage(message: Message): FilterDataArgs |
 
 /** Normalize legacy `{ entity, field, min, max }` format into the current
  *  `{ entity, field, filter: { filterType, intervalRange, pointValues } }` shape. */
-function normalizeFilterArgs(args: Record<string, any>): FilterDataArgs {
-  if (args.filter?.filterType) return args as unknown as FilterDataArgs;
+function normalizeFilterArgs(args: Record<string, unknown>): FilterDataArgs {
+  const legacy = args as {
+    title?: string;
+    entity?: string;
+    field?: string;
+    min?: number;
+    max?: number;
+    filter?: { filterType?: string };
+  };
+  if (legacy.filter?.filterType) return args as unknown as FilterDataArgs;
   // Legacy format — min/max directly on args
   return {
-    title: args.title ?? '',
-    entity: args.entity,
-    field: args.field,
+    title: legacy.title ?? '',
+    entity: legacy.entity ?? '',
+    field: legacy.field ?? '',
     filter: {
       filterType: 'interval',
-      intervalRange: { min: args.min ?? 0, max: args.max ?? 0 },
+      intervalRange: { min: legacy.min ?? 0, max: legacy.max ?? 0 },
       pointValues: [],
     },
   };
@@ -105,7 +113,7 @@ function normalizeFilterArgs(args: Record<string, any>): FilterDataArgs {
 export function generateFilterMessage(key: string, selection: DataSelection): Message | null {
   if (!selection.selection || Object.keys(selection.selection).length === 0) return null;
   const fields = Object.keys(selection.selection);
-  const tool_calls = fields.map((field) => {
+  const tool_calls: ToolCall[] = fields.map((field) => {
     const range = selection.selection[field];
     return {
       function: {
@@ -126,7 +134,7 @@ export function generateFilterMessage(key: string, selection: DataSelection): Me
     role: 'user' as const,
     content: '',
     linkedVisFilterId: key,
-    tool_calls: tool_calls as any,
+    tool_calls,
   };
 }
 
@@ -232,12 +240,16 @@ export function createDataFiltersStore() {
           const args = getToolCallArgs(toolCall);
           if (!args || args.entity !== selection.dataSourceKey) continue;
           if (selection.type !== 'interval') continue;
+          // Narrow the unknown-valued arg bag down to the shape FilterData
+          // tool-call arguments are expected to have.
+          const filterArg = args.filter as { intervalRange?: { min: number; max: number } } | undefined;
+          if (!filterArg?.intervalRange) continue;
           for (const [selectionField, intervalSelection] of Object.entries(
             selection.selection ?? {},
           )) {
             if (args.field !== selectionField) continue;
-            args.filter.intervalRange.min = intervalSelection[0];
-            args.filter.intervalRange.max = intervalSelection[1];
+            filterArg.intervalRange.min = intervalSelection[0] as number;
+            filterArg.intervalRange.max = intervalSelection[1] as number;
           }
         }
       }

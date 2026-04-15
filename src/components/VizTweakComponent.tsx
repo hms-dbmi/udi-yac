@@ -36,7 +36,9 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   const dataPackageStore = useDataPackageStore();
 
   const sourceName = useMemo(() => {
-    const src = Array.isArray(spec.source) ? (spec.source as any)[0] : spec.source;
+    const src = Array.isArray(spec.source)
+      ? (spec.source as Array<{ name?: string }>)[0]
+      : (spec.source as { name?: string });
     return src?.name ?? null;
   }, [spec.source]);
 
@@ -48,24 +50,40 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
 
   const tweakableParams = useMemo<TweakableParam[]>(() => {
     if (!spec.representation) return [];
-    const representations = Array.isArray(spec.representation)
-      ? spec.representation
-      : [spec.representation];
+    interface LayerLike {
+      mark?: string;
+      mapping?: MappingLike | MappingLike[];
+    }
+    interface MappingLike {
+      field?: string;
+      encoding?: string;
+      type?: string;
+    }
+    const representations = (
+      Array.isArray(spec.representation) ? spec.representation : [spec.representation]
+    ) as LayerLike[];
 
-    const allMappings: any[] = [];
+    const allMappings: MappingLike[] = [];
     for (const layer of representations) {
-      if ((layer as any).mark === 'row') continue;
-      const mappings = Array.isArray((layer as any).mapping)
-        ? (layer as any).mapping
-        : [(layer as any).mapping];
+      if (layer.mark === 'row') continue;
+      const mappings: MappingLike[] = Array.isArray(layer.mapping)
+        ? layer.mapping
+        : layer.mapping
+          ? [layer.mapping]
+          : [];
       allMappings.push(...mappings);
     }
 
     const entityFields = sourceName ? (sourceFields?.[sourceName] ?? []) : [];
     const seen = new Set<string>();
 
+    const isComplete = (
+      m: MappingLike,
+    ): m is Required<Pick<MappingLike, 'field' | 'encoding' | 'type'>> =>
+      Boolean(m?.field && m?.encoding && m?.type);
+
     return allMappings
-      .filter((m) => m?.field && m?.encoding && m?.type)
+      .filter(isComplete)
       .filter((m) => entityFields.includes(m.field))
       .filter((m) => !lockedFields.has(m.field))
       .filter((m) => {

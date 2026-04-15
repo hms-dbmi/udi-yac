@@ -86,26 +86,61 @@ function structuredClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
 
+/** Pick the `name` off either a single source or the first of an array. */
+function getSpecSourceName(spec: UDIGrammar): string | undefined {
+  const src = spec.source as SpecSourceLike | SpecSourceLike[] | undefined;
+  if (!src) return undefined;
+  return Array.isArray(src) ? src[0]?.name : src.name;
+}
+
+// Minimal shapes the spec-walking code relies on. The canonical UDIGrammar
+// tree is a discriminated union of mark-specific layer types; these aliases
+// model only the fields this file reads/writes without losing type safety.
+interface SpecMappingLike {
+  field: string;
+  title?: string;
+  type?: string;
+  encoding?: string;
+}
+
+interface SpecRepresentationLike {
+  mark?: string;
+  mapping?: SpecMappingLike | SpecMappingLike[];
+  select?: unknown;
+}
+
+interface SpecSourceLike {
+  name?: string;
+}
+
 export function injectInteractivity(
   spec: UDIGrammar,
   id: string,
   sourceFields: Record<string, string[]> | null,
 ): UDIGrammar {
-  const sourceData = Array.isArray(spec.source) ? spec.source : [spec.source];
-  const sourceName = (sourceData[0] as any)?.name ?? 'unknown_source';
+  const sourceData = Array.isArray(spec.source)
+    ? (spec.source as SpecSourceLike[])
+    : [spec.source as SpecSourceLike];
+  const sourceName = sourceData[0]?.name ?? 'unknown_source';
   const interactiveSpec = structuredClone(spec);
-  let firstRepresentation = interactiveSpec.representation;
+  let firstRepresentation = interactiveSpec.representation as
+    | SpecRepresentationLike
+    | SpecRepresentationLike[]
+    | undefined;
   if (Array.isArray(firstRepresentation)) {
     firstRepresentation = firstRepresentation[0];
   }
   if (!firstRepresentation) return interactiveSpec;
-  if ((firstRepresentation as any).mark === 'row') return interactiveSpec;
+  if (firstRepresentation.mark === 'row') return interactiveSpec;
 
-  const mappingList = Array.isArray((firstRepresentation as any).mapping)
-    ? (firstRepresentation as any).mapping
-    : [(firstRepresentation as any).mapping];
+  const rawMapping = firstRepresentation.mapping;
+  const mappingList: SpecMappingLike[] = Array.isArray(rawMapping)
+    ? rawMapping
+    : rawMapping
+      ? [rawMapping]
+      : [];
 
-  const resolveField = (mapping: { field: string; title?: string }) => {
+  const resolveField = (mapping: SpecMappingLike): string | null => {
     const fields = sourceFields?.[sourceName];
     if (!fields) return mapping.field;
     if (fields.includes(mapping.field)) return mapping.field;
@@ -114,40 +149,40 @@ export function injectInteractivity(
   };
 
   const intervalDimensions = mappingList.filter(
-    (mapping: any) =>
+    (mapping) =>
       mapping.type === 'quantitative' &&
       (mapping.encoding === 'x' || mapping.encoding === 'y') &&
       resolveField(mapping) !== null,
   );
 
   const intervalSelectionOn = intervalDimensions
-    .map((m: any) => m.encoding)
+    .map((m) => m.encoding ?? '')
     .sort()
     .join('');
 
   const intervalFields = intervalDimensions
-    .sort((a: any, b: any) => a.encoding.localeCompare(b.encoding))
-    .map((m: any) => resolveField(m))
-    .filter((f: string | null): f is string => f !== null);
+    .sort((a, b) => (a.encoding ?? '').localeCompare(b.encoding ?? ''))
+    .map((m) => resolveField(m))
+    .filter((f): f is string => f !== null);
 
   if (intervalSelectionOn.length > 0) {
-    (firstRepresentation as any)['select'] = {
+    firstRepresentation.select = {
       name: id,
       source: sourceName,
       how: { type: 'interval', on: intervalSelectionOn, field: intervalFields },
     };
   } else {
     const categoricalDimensions = mappingList.filter(
-      (mapping: any) =>
+      (mapping) =>
         mapping.type !== 'quantitative' &&
         (mapping.encoding === 'x' || mapping.encoding === 'y' || mapping.encoding === 'color') &&
         resolveField(mapping) !== null,
     );
-    (firstRepresentation as any)['select'] = {
+    firstRepresentation.select = {
       name: id,
       source: sourceName,
       how: { type: 'point' },
-      fields: categoricalDimensions.map((m: any) => resolveField(m)!),
+      fields: categoricalDimensions.map((m) => resolveField(m)!),
     };
   }
 
@@ -159,14 +194,17 @@ function getRepresentedFields(spec: UDIGrammar): string[] {
   if (!spec.representation) return [];
   const fields = new Set<string>();
   const representations = Array.isArray(spec.representation)
-    ? spec.representation
-    : [spec.representation];
+    ? (spec.representation as SpecRepresentationLike[])
+    : [spec.representation as SpecRepresentationLike];
   for (const representation of representations) {
-    const mappings = Array.isArray((representation as any).mapping)
-      ? (representation as any).mapping
-      : [(representation as any).mapping];
+    const rawMapping = representation.mapping;
+    const mappings: SpecMappingLike[] = Array.isArray(rawMapping)
+      ? rawMapping
+      : rawMapping
+        ? [rawMapping]
+        : [];
     for (const mapping of mappings) {
-      if (mapping && 'field' in mapping) {
+      if (mapping && 'field' in mapping && mapping.field) {
         fields.add(mapping.field);
       }
     }
@@ -287,9 +325,7 @@ export function createDashboardStore() {
       const state = get();
       const uuidToSource = new Map<string, string>();
       for (const v of state.pinnedVisualizations.values()) {
-        const sourceName = Array.isArray(v.interactiveSpec.source)
-          ? (v.interactiveSpec.source as any)[0]?.name
-          : (v.interactiveSpec.source as any)?.name;
+        const sourceName = getSpecSourceName(v.interactiveSpec);
         if (v.uuid && sourceName) uuidToSource.set(v.uuid, sourceName);
       }
 
@@ -344,9 +380,7 @@ export function createDashboardStore() {
       const next = new Map(state.pinnedVisualizations);
 
       for (const [key, viz] of next) {
-        const currentSourceName = Array.isArray(viz.interactiveSpec.source)
-          ? (viz.interactiveSpec.source as any)[0]?.name
-          : (viz.interactiveSpec.source as any)?.name;
+        const currentSourceName = getSpecSourceName(viz.interactiveSpec);
 
         // Include the viz's own brush UUID so the source chart also filters
         // its own data. Previously excluded to avoid re-render side effects,
@@ -373,8 +407,10 @@ export function createDashboardStore() {
         if (
           JSON.stringify(viz.interactiveSpec.transformation) !== JSON.stringify(newTransformation)
         ) {
-          const updatedSpec = structuredClone(viz.interactiveSpec);
-          (updatedSpec as any).transformation = newTransformation;
+          const updatedSpec = structuredClone(viz.interactiveSpec) as UDIGrammar & {
+            transformation?: object[];
+          };
+          updatedSpec.transformation = newTransformation;
           next.set(key, { ...viz, interactiveSpec: updatedSpec });
           changed = true;
         }
@@ -410,7 +446,7 @@ export function normalizeToolCalls(message: Message) {
 
 export function parseSpecFromToolCall(toolCall: {
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }): object | null {
   const specString = toolCall.arguments?.spec;
   if (!specString) return null;

@@ -15,22 +15,27 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Module declarations for dependencies resolved via Vite aliases
+// Module declarations for dependencies resolved via Vite aliases. The actual
+// `UDIGrammar` type lives in `udi-grammar/src/components/GrammarTypes.ts` and
+// is a discriminated union of mark-specific layer types. The shim below keeps
+// this React app decoupled from those types while modelling the fields the
+// app actually reads/writes. Use `unknown` over `any` so implicit widening
+// errors surface at call sites rather than silently leaking.
 declare module 'udi-toolkit/react' {
   import type { CSSProperties } from 'react';
 
   export interface UDIGrammar {
-    source: any;
-    transformation?: any[];
-    representation?: any;
-    config?: Record<string, any>;
-    [key: string]: any;
+    source: unknown;
+    transformation?: unknown[];
+    representation?: unknown;
+    config?: Record<string, unknown>;
+    [key: string]: unknown;
   }
 
   export interface ActiveDataSelection {
     dataSourceKey: string;
     type: 'interval' | 'point';
-    selection: Record<string, any>;
+    selection: Record<string, unknown[]>;
   }
 
   export type DataSelections = Record<string, ActiveDataSelection>;
@@ -57,7 +62,7 @@ declare module 'udi-toolkit/react' {
 
   export interface QueryDataSpec {
     source: { name: string; source: string } | { name: string; source: string }[];
-    transformation?: any[];
+    transformation?: unknown[];
   }
 
   export interface QueryDataResult {
@@ -78,6 +83,17 @@ declare module 'udi-toolkit' {
 }
 
 declare module 'arquero' {
-  export function loadCSV(path: string, options?: any): Promise<any>;
-  export function fromCSV(input: string, options?: any): any;
+  // Minimal shim — only the APIs this app actually calls.
+  export interface ArqueroTable {
+    columnNames(): string[];
+    array(column: string): unknown[];
+    rollup(spec: Record<string, string>): ArqueroTable;
+    objects(): unknown[];
+  }
+  export interface LoadCSVOptions {
+    delimiter?: string;
+    [key: string]: unknown;
+  }
+  export function loadCSV(path: string, options?: LoadCSVOptions): Promise<ArqueroTable>;
+  export function fromCSV(input: string, options?: LoadCSVOptions): ArqueroTable;
 }

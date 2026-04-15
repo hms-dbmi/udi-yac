@@ -80,9 +80,8 @@ export function DataCounts() {
       getNamedFilters: (ids: string[], source: string) => {
         const uuidToSource = new Map<string, string>();
         for (const v of pinnedVisualizations.values()) {
-          const sn = Array.isArray(v.interactiveSpec.source)
-            ? (v.interactiveSpec.source as any)[0]?.name
-            : (v.interactiveSpec.source as any)?.name;
+          const src = v.interactiveSpec.source as { name?: string } | Array<{ name?: string }>;
+          const sn = Array.isArray(src) ? src[0]?.name : src?.name;
           if (v.uuid && sn) uuidToSource.set(v.uuid, sn);
         }
         const dpState = dataPackageStore.getState();
@@ -134,7 +133,7 @@ export function DataCounts() {
       const countSpec = countSpecs[chip.id];
       if (!countSpec) continue;
       const transformation = (countSpec.transformation as object[]).filter(
-        (t: any) => !('rollup' in t),
+        (t) => !('rollup' in (t as object)),
       );
       specs[chip.id] = {
         source: countSpec.source,

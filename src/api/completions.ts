@@ -56,7 +56,7 @@ function constructQueryBody(
 
 export interface ToolCallResponse {
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }
 
 export async function queryLLM(

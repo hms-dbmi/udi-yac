@@ -18,6 +18,11 @@ export interface FlatToolCall {
   meta?: Record<string, unknown>;
 }
 
-export interface Arguments {
-  [key: string]: string;
-}
+/**
+ * Tool-call arguments can contain arbitrary nested JSON values (e.g.
+ * `filter: { intervalRange: { min, max } }` on FilterData, or `spec: string`
+ * on RenderVisualization). The previous `{ [key: string]: string }` typing
+ * did not match the reality. Callers should narrow to a specific
+ * tool-call-args interface from `@/types/toolCallArgs` before use.
+ */
+export type Arguments = Record<string, unknown>;

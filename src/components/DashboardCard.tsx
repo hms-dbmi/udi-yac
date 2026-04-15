@@ -59,7 +59,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // alone despite the useLayoutEffect fix in the wrapper.
   const specKey = useMemo(() => {
     const s = viz.interactiveSpec;
-    const repr = JSON.stringify((s as any).representation);
+    const repr = JSON.stringify(s.representation);
     const src = JSON.stringify(s.source);
     return `${src}|${repr}`;
   }, [viz.interactiveSpec]);

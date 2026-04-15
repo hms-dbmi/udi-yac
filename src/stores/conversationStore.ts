@@ -1,5 +1,5 @@
 import { createStore } from 'zustand/vanilla';
-import type { Message } from '@/types/messages';
+import type { Arguments, Message } from '@/types/messages';
 
 export interface ConversationState {
   messages: Message[];
@@ -28,9 +28,12 @@ export function createConversationStore() {
         return {
           ...message,
           tool_calls: message.tool_calls.map((toolCall) => ({
+            // The LLM wire format wants `arguments` as a JSON string, not an
+            // object. We widen here through `unknown` because the Message
+            // type models the parsed shape that the rest of the app sees.
             function: {
               name: toolCall.function.name,
-              arguments: JSON.stringify(toolCall.function.arguments) as any,
+              arguments: JSON.stringify(toolCall.function.arguments) as unknown as Arguments,
             },
           })),
         };

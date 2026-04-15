@@ -40,12 +40,12 @@ export interface DataPackageState {
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
-function removeVestigialInfo(data: any): any {
+function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
   if (!data?.resources || !Array.isArray(data.resources)) return data;
   const clone = jsonClone(data);
   for (const resource of clone.resources) {
     if (resource.schema?.fields && Array.isArray(resource.schema.fields)) {
-      for (const field of resource.schema.fields) {
+      for (const field of resource.schema.fields as Array<Record<string, unknown>>) {
         delete field['udi:overlapping_fields'];
       }
     }
@@ -198,10 +198,10 @@ export function createDataPackageStore() {
       set({ loadingPhase: 'fetching', error: null });
       try {
         const response = await fetch(path, fetchOptions);
-        const json = await response.json();
+        const json = (await response.json()) as DataPackage;
         if (json.resources && Array.isArray(json.resources)) {
           json.resources = json.resources.filter(
-            (r: any) => r['udi:row_count'] && r['udi:row_count'] > 0,
+            (r) => r['udi:row_count'] && r['udi:row_count']! > 0,
           );
         }
         applyDataPackage(set, json);
@@ -362,15 +362,15 @@ async function loadDomainsMainThread(set: SetFn, resources: ResourceInput[]) {
       const cols = table.columnNames();
       const domains: DataFieldDomain[] = [];
       for (const col of cols) {
-        const series = table.array(col);
-        const isNumeric = series.every((v: any) => v == null || !isNaN(+v));
+        const series = table.array(col) as unknown[];
+        const isNumeric = series.every((v) => v == null || !isNaN(+(v as number)));
         if (isNumeric) {
           const stats = table
             .rollup({
               min: `(d) => op.min(d["${col}"])`,
               max: `(d) => op.max(d["${col}"])`,
             })
-            .objects()[0] as any;
+            .objects()[0] as { min: number; max: number };
           domains.push({
             entity: resource.entityName,
             field: col,

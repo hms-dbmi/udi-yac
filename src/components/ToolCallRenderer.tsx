@@ -42,7 +42,7 @@ export function ToolCallRenderer({
         <VisualizationCard
           spec={spec}
           isPinned={isPinned ?? false}
-          title={args.title}
+          title={typeof args.title === 'string' ? args.title : undefined}
           messageIndex={messageIndex}
           toolCallIndex={toolCallIndex}
         />
