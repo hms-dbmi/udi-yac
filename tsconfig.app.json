@@ -19,7 +19,9 @@
     /* Path aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "udi-toolkit": ["../udi-grammar/src/components/dist/index.js"],
+      "udi-toolkit/react": ["../udi-grammar/src/components/dist/react.js"]
     },
 
     /* Linting */

@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
           dts({
             insertTypesEntry: true,
             include: ['src'],
-            exclude: ['src/App.tsx', 'src/main.tsx'],
+            exclude: ['src/app/App.tsx', 'src/app/main.tsx'],
             tsconfigPath: resolve(__dirname, 'tsconfig.app.json'),
           }),
         ]

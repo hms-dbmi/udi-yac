@@ -1,7 +1,7 @@
 import './index.css';
 
-export { UDIChat } from './components/UDIChat';
-export type { UDIChatConfig } from './components/UDIChat';
+export { UDIChat } from './app/UDIChat';
+export type { UDIChatConfig } from './app/UDIChatConfig';
 export type {
   DataPackage,
   DataPackageResource,
@@ -9,5 +9,5 @@ export type {
   IntervalDomain,
   CategoricalDomain,
 } from './types/dataPackage';
-export { joinDataPath } from './utils/joinDataPath';
-export type { LoadingPhase } from './stores/dataPackageStore';
+export { joinDataPath } from './features/data-package/utils/joinDataPath';
+export type { LoadingPhase } from './features/data-package/stores/dataPackageStore';
