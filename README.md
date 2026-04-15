@@ -20,12 +20,18 @@ pnpm test:watch   # vitest in watch mode
 
 The standalone `App.tsx` reads these Vite env vars (see `.env.example`). Copy `.env.example` to `.env.local` to override locally:
 
-| Var                        | Default                                        | Purpose                                             |
-| -------------------------- | ---------------------------------------------- | --------------------------------------------------- |
-| `VITE_UDI_API_BASE_URL`    | `http://localhost:8007`                        | UDIAgent FastAPI server URL                         |
-| `VITE_UDI_DATA_PACKAGE`    | `/data/hubmap_2025-05-05/datapackage_udi.json` | Path/URL to a `datapackage_udi.json`                |
-| `VITE_UDI_REQUIRE_API_KEY` | `true`                                         | Set to `false` to skip the in-app OpenAI key prompt |
-| `VITE_UDI_MODEL`           | (unset)                                        | Optional LLM model override                         |
+| Var                        | Default                                                             | Purpose                                                                               |
+| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `VITE_UDI_API_BASE_URL`    | `http://localhost:8007`                                             | UDIAgent FastAPI server URL                                                           |
+| `VITE_UDI_DATA_PACKAGE`    | (unset → inline HuBMAP API package from `src/data/hubmapRemote.ts`) | Optional path/URL to a `datapackage_udi.json`. Overrides the inline default when set. |
+| `VITE_UDI_REQUIRE_API_KEY` | `true`                                                              | Set to `false` to skip the in-app OpenAI key prompt                                   |
+| `VITE_UDI_MODEL`           | (unset)                                                             | Optional LLM model override                                                           |
+
+By default the standalone app talks to the live HuBMAP Portal metadata API. To use the locally bundled snapshot instead, set:
+
+```
+VITE_UDI_DATA_PACKAGE=/data/hubmap_2025-05-05/datapackage_udi.json
+```
 
 > **Note on `build` vs `build:lib`**: `pnpm build` produces a deployable standalone SPA — this is the default so CI/deploy pipelines behave as expected. To build the publishable library bundle (the `UDIChat` React component), use `pnpm build:lib`, which invokes `vite build --mode lib` and emits both JS and `.d.ts` files under `dist/`.
 
@@ -174,7 +180,7 @@ const myDomains: DataFieldDomain[] = [
 />;
 ```
 
-See [`examples/hubmap-remote.tsx`](examples/hubmap-remote.tsx) for a full working example using remote HuBMAP Portal data.
+See [`src/data/hubmapRemote.ts`](src/data/hubmapRemote.ts) for the canonical inline DataPackage example targeting the live HuBMAP Portal — this is also the default the standalone `App.tsx` uses.
 
 ## Features
 
@@ -272,10 +278,11 @@ src/
   utils/
     structuredTextParser.ts   # Template function evaluation for explanations
     joinDataPath.ts           # Path joining for local + remote data URLs
+    validateConfig.ts         # Runtime validation for UDIChatConfig
+  data/
+    hubmapRemote.ts           # Inline DataPackage targeting the live HuBMAP Portal API (default for App.tsx)
   lib/
     utils.ts                  # cn() helper (clsx + tailwind-merge)
-examples/
-  hubmap-remote.tsx           # Example: inline DataPackage with remote HuBMAP URLs
 ```
 
 ## API Integration

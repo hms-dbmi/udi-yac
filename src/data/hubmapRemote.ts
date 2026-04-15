@@ -1,18 +1,16 @@
-/**
- * Example: Render UDIChat against the HuBMAP Portal's remote metadata.
- *
- * Demonstrates the inline `dataPackage` prop with a remote `udi:path`. CSVs
- * are fetched directly from portal.hubmapconsortium.org by Arquero — no local
- * fixtures required. The portal must send permissive CORS headers for browser
- * fetching to succeed.
- *
- * Drop this in place of `App.tsx` (or import from a route) to try it.
- */
-
-import { UDIChat } from '@/components/UDIChat';
 import type { DataPackage } from '@/types/dataPackage';
 
-const hubmapRemoteDataPackage: DataPackage = {
+/**
+ * Inline DataPackage describing HuBMAP donors, samples, and datasets, with
+ * `udi:path` pointed at the live HuBMAP Portal metadata API. This is the
+ * default `dataPackage` for the standalone app (src/App.tsx) and also serves
+ * as a reference for consumers who want to construct a DataPackage inline
+ * rather than fetching one as JSON.
+ *
+ * Row counts are point-in-time snapshots; the LLM uses them for context but
+ * the actual rows are fetched by Arquero at render time.
+ */
+export const hubmapRemoteDataPackage: DataPackage = {
   'udi:path': 'https://portal.hubmapconsortium.org/metadata/v0/udi/',
   resources: [
     {
@@ -209,15 +207,3 @@ const hubmapRemoteDataPackage: DataPackage = {
     },
   ],
 };
-
-export default function HubmapRemoteApp() {
-  return (
-    <div className="h-screen">
-      <UDIChat
-        apiBaseUrl={import.meta.env.VITE_UDI_API_BASE_URL ?? 'http://localhost:8007'}
-        requireApiKey
-        dataPackage={hubmapRemoteDataPackage}
-      />
-    </div>
-  );
-}

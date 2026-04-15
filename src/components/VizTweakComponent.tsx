@@ -13,6 +13,7 @@ import {
   useDataPackageStore,
 } from '@/stores/UDIChatContext';
 import type { UDIGrammar } from 'udi-toolkit/react';
+import { setMappingFieldByEncoding } from '@/utils/specMutations';
 
 interface TweakableParam {
   field: string;
@@ -80,11 +81,12 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   }, [spec, sourceName, sourceFields, quantitativeSourceFields, categoricalSourceFields]);
 
   const handleFieldChange = useCallback(
-    (oldField: string, newField: string | null) => {
-      if (!newField || newField === oldField) return;
-      const specJson = JSON.stringify(spec);
-      const updatedSpecJson = specJson.replace(new RegExp(`"${oldField}"`, 'g'), `"${newField}"`);
-      const updatedSpec = JSON.parse(updatedSpecJson) as UDIGrammar;
+    (encoding: string, newField: string | null) => {
+      if (!newField) return;
+      const updatedSpec = setMappingFieldByEncoding(spec, encoding, newField);
+      // Reference-equal when the helper detected a no-op (encoding not found
+      // or already bound to newField). Skip the store update in that case.
+      if (updatedSpec === spec) return;
 
       const pinKey = dashboardStore.getState().pinKey(messageIndex, toolCallIndex);
       dashboardStore.getState().updatePinnedVisualizationSpec(pinKey, updatedSpec, sourceFields);
@@ -110,7 +112,7 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
         <Select
           key={param.encoding}
           value={param.field}
-          onValueChange={(val) => handleFieldChange(param.field, val)}
+          onValueChange={(val) => handleFieldChange(param.encoding, val)}
         >
           <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
             <span className="text-muted-foreground mr-1">{param.encoding}:</span>
