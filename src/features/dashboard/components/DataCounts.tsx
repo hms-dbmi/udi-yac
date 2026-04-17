@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Users, FlaskConical, Table2, Loader2 } from 'lucide-react';
 import { queryData } from 'udi-toolkit/react';
 import type { QueryDataSpec } from 'udi-toolkit/react';
@@ -143,77 +143,108 @@ export function DataCounts() {
     return specs;
   }, [chips, countSpecs, dataPackage]);
 
-  // Merge brush selections and LLM FilterData for queryData count queries
-  const mergedSelections = useMemo(
-    () => ({ ...vizSelections, ...dataSelections }),
-    [vizSelections, dataSelections],
-  );
-
   const domainsReady = loadingPhase === 'ready';
 
-  // Query filtered counts via queryData (replaces hidden EntityCounter UDIVis instances)
+  // Brushes live in the shared Pinia DataSourcesStore already — UDIVis's
+  // signal listeners write them directly. Routing them back through
+  // queryData's `selections` param would call bindExternalDataSelections
+  // with a React-snapshot of vizSelections that races with ongoing brush
+  // writes (stale snapshot overwrites fresh Pinia state). So only pass
+  // LLM-originated dataSelections (which live in dataFiltersStore, not
+  // Pinia). vizSelections stays in the dep list so the effects still
+  // re-run on brush changes — they just don't re-bind the brush state.
+
+  // rAF-throttled query dispatch. Live brushing can fire vizSelections
+  // updates ~60× per second; without coalescing, every tick would kick
+  // off a round of queryData → getDataObject calls per entity, pegging
+  // the main thread and visibly flickering charts on the first drag.
+  // One query per frame is indistinguishable from "live" to the user.
+  const countsRafRef = useRef<number | null>(null);
+  const exportsRafRef = useRef<number | null>(null);
+  const countsCancelRef = useRef<{ cancelled: boolean } | null>(null);
+  const exportsCancelRef = useRef<{ cancelled: boolean } | null>(null);
+
   useEffect(() => {
     if (!domainsReady) return;
-    let cancelled = false;
 
-    async function runCountQueries() {
-      for (const [entityName, spec] of Object.entries(countSpecs)) {
-        if (cancelled) return;
-        try {
-          const result = await queryData(spec, mergedSelections);
-          if (cancelled) return;
-          const rows = result?.displayData;
-          if (
-            rows &&
-            rows.length > 0 &&
-            typeof (rows[0] as Record<string, unknown>).count === 'number'
-          ) {
-            const count = (rows[0] as Record<string, unknown>).count as number;
-            setFilteredCounts((prev) => {
-              if (prev[entityName] === count) return prev;
-              return { ...prev, [entityName]: count };
-            });
+    if (countsRafRef.current !== null) cancelAnimationFrame(countsRafRef.current);
+    if (countsCancelRef.current) countsCancelRef.current.cancelled = true;
+    const token = { cancelled: false };
+    countsCancelRef.current = token;
+
+    countsRafRef.current = requestAnimationFrame(() => {
+      countsRafRef.current = null;
+      (async () => {
+        for (const [entityName, spec] of Object.entries(countSpecs)) {
+          if (token.cancelled) return;
+          try {
+            const result = await queryData(spec, dataSelections);
+            if (token.cancelled) return;
+            const rows = result?.displayData;
+            if (
+              rows &&
+              rows.length > 0 &&
+              typeof (rows[0] as Record<string, unknown>).count === 'number'
+            ) {
+              const count = (rows[0] as Record<string, unknown>).count as number;
+              setFilteredCounts((prev) => {
+                if (prev[entityName] === count) return prev;
+                return { ...prev, [entityName]: count };
+              });
+            }
+          } catch (e) {
+            console.error(`Failed to query count for ${entityName}:`, e);
           }
-        } catch (e) {
-          console.error(`Failed to query count for ${entityName}:`, e);
         }
-      }
-    }
+      })();
+    });
 
-    runCountQueries();
     return () => {
-      cancelled = true;
+      token.cancelled = true;
+      if (countsRafRef.current !== null) {
+        cancelAnimationFrame(countsRafRef.current);
+        countsRafRef.current = null;
+      }
     };
-  }, [domainsReady, countSpecs, mergedSelections]);
+  }, [domainsReady, countSpecs, vizSelections, dataSelections]);
 
-  // Query filtered export data via queryData (replaces hidden EntityDataExporter UDIVis instances)
   useEffect(() => {
     if (!domainsReady) return;
-    let cancelled = false;
 
-    async function runExportQueries() {
-      for (const [entityName, spec] of Object.entries(exportSpecs)) {
-        if (cancelled) return;
-        try {
-          const result = await queryData(spec, mergedSelections);
-          if (cancelled) return;
-          if (result) {
-            dataPackageStore.getState().setFilteredData(entityName, {
-              displayRows: result.displayData as Record<string, unknown>[],
-              allRows: result.allData as Record<string, unknown>[],
-            });
+    if (exportsRafRef.current !== null) cancelAnimationFrame(exportsRafRef.current);
+    if (exportsCancelRef.current) exportsCancelRef.current.cancelled = true;
+    const token = { cancelled: false };
+    exportsCancelRef.current = token;
+
+    exportsRafRef.current = requestAnimationFrame(() => {
+      exportsRafRef.current = null;
+      (async () => {
+        for (const [entityName, spec] of Object.entries(exportSpecs)) {
+          if (token.cancelled) return;
+          try {
+            const result = await queryData(spec, dataSelections);
+            if (token.cancelled) return;
+            if (result) {
+              dataPackageStore.getState().setFilteredData(entityName, {
+                displayRows: result.displayData as Record<string, unknown>[],
+                allRows: result.allData as Record<string, unknown>[],
+              });
+            }
+          } catch (e) {
+            console.error(`Failed to query export data for ${entityName}:`, e);
           }
-        } catch (e) {
-          console.error(`Failed to query export data for ${entityName}:`, e);
         }
-      }
-    }
+      })();
+    });
 
-    runExportQueries();
     return () => {
-      cancelled = true;
+      token.cancelled = true;
+      if (exportsRafRef.current !== null) {
+        cancelAnimationFrame(exportsRafRef.current);
+        exportsRafRef.current = null;
+      }
     };
-  }, [domainsReady, exportSpecs, mergedSelections, dataPackageStore]);
+  }, [domainsReady, exportSpecs, vizSelections, dataSelections, dataPackageStore]);
 
   // Skeleton placeholders while fetching the data package manifest
   if (loadingPhase === 'fetching' || loadingPhase === 'idle') {
