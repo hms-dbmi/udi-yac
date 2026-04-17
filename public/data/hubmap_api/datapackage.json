@@ -14106,5 +14106,5 @@
     }
   ],
   "udi:name": "hubmap_api",
-  "udi:path": "http://localhost:5000/metadata/v0/udi/"
+  "udi:path": "https://portal.hubmapconsortium.org/metadata/v0/udi/"
 }
