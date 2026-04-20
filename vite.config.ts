@@ -4,8 +4,6 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import dts from 'vite-plugin-dts';
 
-const udiToolkitRoot = resolve(__dirname, '../udi-grammar/src/components');
-
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
@@ -24,9 +22,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      // Point to pre-built dist files (contains bundled Vue CE + React wrapper)
-      'udi-toolkit/react': resolve(udiToolkitRoot, 'dist/react.js'),
-      'udi-toolkit': resolve(udiToolkitRoot, 'dist/index.js'),
     },
   },
   build:

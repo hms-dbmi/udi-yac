@@ -1,5 +1,3 @@
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
@@ -11,15 +9,6 @@ import {
 } from 'eslint-plugin-project-structure';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
-const projectRoot = dirname(fileURLToPath(import.meta.url));
-// Resolved absolute path to udi-toolkit's dist. The plugin resolves the
-// `udi-toolkit` alias to these paths before pattern matching, so the
-// allow-list must match the post-resolution absolute path.
-const udiToolkitAbsPattern = resolve(
-  projectRoot,
-  '../udi-grammar/src/components/dist/**',
-);
-
 /**
  * Bulletproof-react-style module boundaries. Features cannot import from
  * each other's internals — only through the feature's `index.ts` barrel.
@@ -30,22 +19,13 @@ const udiToolkitAbsPattern = resolve(
  * position so a feature can reference its own tree without naming itself.
  */
 const independentModules = createIndependentModules({
-  // Explicit path aliases so the plugin can resolve the vite-aliased
-  // `udi-toolkit` package (it lives at ../udi-grammar and is not in
-  // node_modules, so the plugin's external-package check misses it).
   pathAliases: {
     baseUrl: '.',
     paths: {
       '@/*': ['./src/*'],
-      'udi-toolkit': ['../udi-grammar/src/components/dist/index.js'],
-      'udi-toolkit/react': ['../udi-grammar/src/components/dist/react.js'],
     },
   },
   reusableImportPatterns: {
-    // udi-toolkit is a vite alias to a prebuilt dist in ../udi-grammar, not
-    // a real node_modules package. Whitelist it explicitly so the plugin
-    // does not treat it as a missing external import.
-    udiToolkit: ['udi-toolkit', 'udi-toolkit/**', udiToolkitAbsPattern],
     // Shared layers any source file is allowed to reach.
     sharedLayers: [
       'src/types/**',
@@ -65,7 +45,6 @@ const independentModules = createIndependentModules({
         'src/features/*/index.ts',
         'src/utils/**',
         '{sharedLayers}',
-        '{udiToolkit}',
       ],
       allowExternalImports: true,
     },
@@ -80,7 +59,6 @@ const independentModules = createIndependentModules({
         'src/data/**',
         'src/**/*.css',
         '{sharedLayers}',
-        '{udiToolkit}',
       ],
       allowExternalImports: true,
     },
@@ -99,7 +77,6 @@ const independentModules = createIndependentModules({
         'src/utils/**',
         '{sharedLayers}',
         'src/features/*/index.ts',
-        '{udiToolkit}',
       ],
       allowExternalImports: true,
     },

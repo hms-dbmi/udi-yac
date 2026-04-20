@@ -367,9 +367,7 @@ Request body for completions:
 
 ## Relationship to udi-grammar
 
-Visualizations are rendered by the `UDIVis` Vue Custom Element from the `udi-grammar` package. The React wrapper (`udi-toolkit/react`) bridges Vue CE props and events:
+Visualizations are rendered by the `UDIVis` Vue Custom Element from the `udi-grammar` package, consumed via the published [`udi-toolkit`](https://www.npmjs.com/package/udi-toolkit) npm package. The React wrapper (`udi-toolkit/react`) bridges Vue CE props and events:
 
 - **Props** (`spec`, `selections`): set via `useLayoutEffect` on the DOM element
 - **Events** (`selection-change`, `data-ready`): listened via `addEventListener`, with Vue CE array-wrapping unwrapped
-
-The alias `udi-toolkit/react` points to `../udi-grammar/src/components/dist/react.js` (pre-built).

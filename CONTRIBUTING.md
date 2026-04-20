@@ -161,7 +161,7 @@ If the symbol isn't exported from the barrel, add it there.
 
 ### `🔥 Cannot find module. If the import includes a path alias, …`
 
-Either the import path is wrong, or you're importing something the plugin doesn't know how to resolve. The most common case is the `udi-toolkit` vite alias — see [eslint.config.js](eslint.config.js) `pathAliases` and `udiToolkit` reusable pattern. If you add a new external alias, register it there too.
+Either the import path is wrong, or you're importing something the plugin doesn't know how to resolve. If you add a new path alias, register it under `pathAliases` in [eslint.config.js](eslint.config.js) too.
 
 ### `🔥 The 'X' key does not exist in the reusableImportPatterns object`
 
@@ -171,16 +171,6 @@ You used `{ts,tsx}`-style brace expansion in a pattern. The plugin treats `{X}` 
 - 'src/features/*/index.{ts,tsx}'
 + 'src/features/*/index.ts'
 ```
-
-## udi-toolkit gotcha
-
-`udi-toolkit` and `udi-toolkit/react` are vite aliases pointing at `../udi-grammar/src/components/dist/`. They are **not real packages** in `node_modules`. Three configs reference them:
-
-- [vite.config.ts](vite.config.ts) — runtime aliases for the dev server and bundler.
-- [tsconfig.json](tsconfig.json) + [tsconfig.app.json](tsconfig.app.json) — `paths` entries so TypeScript can resolve them.
-- [eslint.config.js](eslint.config.js) — `pathAliases` for the project-structure plugin, plus a `udiToolkit` reusable pattern allowing the imports across module boundaries.
-
-If you upgrade or restructure `udi-grammar`, all three need to stay in sync. Run `pnpm typecheck` and `pnpm lint` to confirm.
 
 ## Verification before pushing
 

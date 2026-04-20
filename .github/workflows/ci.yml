@@ -27,16 +27,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # udi-toolkit is resolved via a relative alias to ../udi-grammar/src/components/dist/.
-      # Until #2 (publish udi-toolkit) is resolved, CI has no access to the sibling build
-      # artifact. We stub the alias target so lint, typecheck, and tests that don't import
-      # UDIVis runtime code still run. Tests that render UDIVis are excluded from CI for now.
-      - name: Stub udi-toolkit (temporary)
-        run: |
-          mkdir -p ../udi-grammar/src/components/dist
-          printf 'export const UDIVis = () => null;\n' > ../udi-grammar/src/components/dist/react.js
-          printf 'export {};\n' > ../udi-grammar/src/components/dist/index.js
-
       - name: Format check
         run: pnpm format:check
 
