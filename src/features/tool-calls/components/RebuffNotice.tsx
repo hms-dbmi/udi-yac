@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { MarkdownText } from '@/components/MarkdownText';
 
 interface RebuffNoticeProps {
   message: string;
@@ -9,7 +10,7 @@ interface RebuffNoticeProps {
 export function RebuffNotice({ message, suggestions, onSelectSuggestion }: RebuffNoticeProps) {
   return (
     <div className="px-2 pb-2">
-      <p className="text-sm mb-2">{message}</p>
+      <MarkdownText className="mb-2">{message}</MarkdownText>
       {suggestions.length > 0 && (
         <div>
           <p className="text-xs font-medium mb-1 text-muted-foreground">

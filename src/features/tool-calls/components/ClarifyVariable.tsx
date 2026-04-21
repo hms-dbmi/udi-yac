@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Send } from 'lucide-react';
 import type { ClarifyVariableArgs } from '../types';
+import { MarkdownText } from '@/components/MarkdownText';
 
 interface ClarifyVariableProps extends ClarifyVariableArgs {
   onSelectSuggestion?: (value: string) => void;
@@ -61,7 +62,7 @@ export function ClarifyVariable({
 
   return (
     <div className="space-y-3 p-1">
-      <p className="text-sm">{message}</p>
+      <MarkdownText>{message}</MarkdownText>
 
       {ambiguous_variables.map((variable, vIdx) => (
         <div key={vIdx} className="space-y-1.5">
