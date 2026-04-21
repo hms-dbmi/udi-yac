@@ -51,8 +51,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       udi-toolkit:
-        specifier: ^0.0.54
-        version: 0.0.54(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@5.9.3))
+        specifier: ^0.0.55
+        version: 0.0.55(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@5.9.3))
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
@@ -2570,6 +2570,9 @@ packages:
   lodash@4.17.23:
     resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
 
+  lodash@4.18.1:
+    resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
+
   log-symbols@6.0.0:
     resolution: {integrity: sha512-i24m8rpwhmPIS4zscNzK6MSEhk0DUWa/8iYQWxhffV8jkI4Phvs3F+quL5xvS0gdQR0FyTCMMH33Y78dDTzzIw==}
     engines: {node: '>=18'}
@@ -2949,6 +2952,10 @@ packages:
   postcss-selector-parser@7.1.1:
     resolution: {integrity: sha512-orRsuYpJVw8LdAwqqLykBj9ecS5/cRHlI5+nvTo8LcCKmzDmqVORXtOIYEEQuL9D4BxtA1lm5isAqzQZCoQ6Eg==}
     engines: {node: '>=4'}
+
+  postcss@8.5.10:
+    resolution: {integrity: sha512-pMMHxBOZKFU6HgAZ4eyGnwXF/EvPGGqUr0MnZ5+99485wwW41kW91A4LOGxSHhgugZmSChL5AlElNdwlNgcnLQ==}
+    engines: {node: ^10 || ^12 || >=14}
 
   postcss@8.5.8:
     resolution: {integrity: sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==}
@@ -3423,8 +3430,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  udi-toolkit@0.0.54:
-    resolution: {integrity: sha512-Bk4/GQVwqISvDhhohwg+dv2IPt7cX4XaXej4bG3SiozzHnKKk/KshOxvOTBjgiNrf4ktWEmHGNI2a84Q7RtS+g==}
+  udi-toolkit@0.0.55:
+    resolution: {integrity: sha512-+OiC1Iiw3nA7sUUyRsRKyjycDjhwubAMicRrReF3lyJlHDO8hDVlLJzi3zC5tsRnpdRyYCHjyT+JWXB72sqb3Q==}
     engines: {node: ^28 || ^26 || ^24 || ^22 || ^20, npm: '>= 6.13.4', yarn: '>= 1.21.1'}
     peerDependencies:
       ag-grid-community: 33.2.4
@@ -5027,7 +5034,7 @@ snapshots:
       '@vue/shared': 3.5.32
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.8
+      postcss: 8.5.10
       source-map-js: 1.2.1
 
   '@vue/compiler-ssr@3.5.32':
@@ -6263,6 +6270,8 @@ snapshots:
 
   lodash@4.17.23: {}
 
+  lodash@4.18.1: {}
+
   log-symbols@6.0.0:
     dependencies:
       chalk: 5.6.2
@@ -6767,6 +6776,12 @@ snapshots:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
+
+  postcss@8.5.10:
+    dependencies:
+      nanoid: 3.3.11
+      picocolors: 1.1.1
+      source-map-js: 1.2.1
 
   postcss@8.5.8:
     dependencies:
@@ -7322,7 +7337,7 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  udi-toolkit@0.0.54(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@5.9.3)):
+  udi-toolkit@0.0.55(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@5.9.3)):
     dependencies:
       '@types/d3-scale': 4.0.9
       '@types/d3-scale-chromatic': 3.1.0
@@ -7332,7 +7347,7 @@ snapshots:
       d3-scale: 4.0.2
       d3-scale-chromatic: 3.1.0
       fast-kde: 0.2.2
-      lodash: 4.17.23
+      lodash: 4.18.1
       vega: 6.2.0
       vega-embed: 7.1.0(vega-lite@6.4.2(vega@6.2.0))(vega@6.2.0)
       vega-lite: 6.4.2(vega@6.2.0)
