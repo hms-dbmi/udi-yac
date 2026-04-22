@@ -184,7 +184,7 @@ describe('dataFiltersStore', () => {
       type: 'interval',
       selection: { age: [5, 20] },
     });
-    expect(store.getState().dataSelections['message-filter-0-0'].selection.age).toEqual([5, 20]);
+    expect(store.getState().dataSelections['message-filter-0-0'].selection!.age).toEqual([5, 20]);
   });
 
   it('updateInternalDataSelections skips keys prefixed with message-filter-', () => {
@@ -214,7 +214,7 @@ describe('dataFiltersStore', () => {
     expect(store.getState().internalDataSelections).toBe(before);
   });
 
-  it('clearFilter empties the selection values but preserves the key', () => {
+  it('clearFilter nulls the selection but preserves the key', () => {
     const store = createDataFiltersStore();
     store.getState().setDataSelection('message-filter-0-0', {
       dataSourceKey: 'donors',
@@ -223,7 +223,8 @@ describe('dataFiltersStore', () => {
     });
     store.getState().clearFilter('message-filter-0-0');
     const sel = store.getState().dataSelections['message-filter-0-0'];
-    expect(sel.selection.age).toEqual([]);
+    expect(sel).toBeDefined();
+    expect(sel.selection).toBeNull();
   });
 
   describe('getValidDataSelections', () => {
@@ -304,7 +305,7 @@ describe('dataFiltersStore', () => {
       store
         .getState()
         .syncFiltersFromMessages([filterMessage('donors', 'age', 0, 100)], alwaysValid);
-      expect(store.getState().dataSelections['message-filter-0-0'].selection.age).toEqual([5, 50]);
+      expect(store.getState().dataSelections['message-filter-0-0'].selection!.age).toEqual([5, 50]);
     });
   });
 

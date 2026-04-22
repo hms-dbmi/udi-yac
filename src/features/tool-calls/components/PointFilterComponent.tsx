@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useDataPackage, useDataFilters } from '@/app/UDIChatContext';
 import type { DataSelection } from '@/features/dashboard';
+import type { PointSelection } from 'udi-toolkit/react';
 
 interface PointFilterComponentProps {
   dataSelection: DataSelection;
@@ -52,20 +53,18 @@ export function PointFilterComponent({
     (value: string, checked: boolean) => {
       if (!field) return;
       const next = checked ? [...selectedValues, value] : selectedValues.filter((v) => v !== value);
-      setDataSelection(filterKey, {
-        ...dataSelection,
-        selection: { ...dataSelection.selection, [field]: next },
-      });
+      const current = (dataSelection.selection ?? {}) as PointSelection;
+      const nextSelection: PointSelection = { ...current, [field]: next };
+      setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
     },
     [setDataSelection, filterKey, dataSelection, field, selectedValues],
   );
 
   const handleClearAll = useCallback(() => {
     if (!field) return;
-    setDataSelection(filterKey, {
-      ...dataSelection,
-      selection: { ...dataSelection.selection, [field]: [] },
-    });
+    const current = (dataSelection.selection ?? {}) as PointSelection;
+    const nextSelection: PointSelection = { ...current, [field]: [] };
+    setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
   }, [setDataSelection, filterKey, dataSelection, field]);
 
   const handleEntityChange = useCallback(

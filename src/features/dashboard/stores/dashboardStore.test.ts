@@ -33,7 +33,7 @@ describe('injectInteractivity', () => {
     const interactive = injectInteractivity(spec, 'uuid-1', {
       donors: ['age_value', 'weight_value'],
     });
-    const rep = interactive.representation as {
+    const rep = interactive.representation as unknown as {
       select: { name: string; source: string; how: { type: string; on: string; field: string[] } };
     };
     expect(rep.select.name).toBe('uuid-1');

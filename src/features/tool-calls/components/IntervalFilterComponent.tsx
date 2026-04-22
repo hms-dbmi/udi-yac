@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import { useDataPackage, useDataFilters } from '@/app/UDIChatContext';
 import type { DataSelection } from '@/features/dashboard';
+import type { RangeSelection } from 'udi-toolkit/react';
 
 interface IntervalFilterComponentProps {
   dataSelection: DataSelection;
@@ -64,10 +65,12 @@ export function IntervalFilterComponent({
 
   const commitToStore = useCallback(
     (range: number[]) => {
-      setDataSelection(filterKey, {
-        ...dataSelection,
-        selection: { ...dataSelection.selection, [field]: [range[0], range[1]] },
-      });
+      const current = (dataSelection.selection ?? {}) as RangeSelection;
+      const nextSelection: RangeSelection = {
+        ...current,
+        [field]: [range[0], range[1]],
+      };
+      setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
     },
     [setDataSelection, filterKey, dataSelection, field],
   );
