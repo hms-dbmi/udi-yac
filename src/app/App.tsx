@@ -25,7 +25,7 @@ const HUBMAP_DATAPACKAGE_URL = '/data/hubmap_api/datapackage.json';
  *   VITE_UDI_MODEL           Optional LLM model name override
  */
 function App() {
-  const apiBaseUrl = import.meta.env.VITE_UDI_API_BASE_URL ?? 'http://localhost:5001';
+  const apiBaseUrl = import.meta.env.VITE_UDI_API_BASE_URL ?? 'http://localhost:8007';
   const dataPackagePath = import.meta.env.VITE_UDI_DATA_PACKAGE ?? HUBMAP_DATAPACKAGE_URL;
   const requireApiKey = import.meta.env.VITE_UDI_REQUIRE_API_KEY !== 'false';
   const model = import.meta.env.VITE_UDI_MODEL;
