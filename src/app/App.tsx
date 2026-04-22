@@ -6,9 +6,9 @@ import { UDIChat } from '@/app/UDIChat';
  */
 
 // TODO: Swap for production endpoint when ready.
-// const HUBMAP_DATAPACKAGE_URL = '/data/hubmap_api/datapackage.json';
+const HUBMAP_DATAPACKAGE_URL = '/data/hubmap_api/datapackage.json';
 // For local development with portal UI running in parallel (requires CORS bypass in browser):
-const HUBMAP_DATAPACKAGE_URL = 'http://localhost:5001/metadata/v0/udi/datapackage.json';
+// const HUBMAP_DATAPACKAGE_URL = 'http://localhost:5001/metadata/v0/udi/datapackage.json';
 // const HUBMAP_DATAPACKAGE_URL =
 // 'https://portal.hubmapconsortium.org/metadata/v0/udi/datapackage.json';
 
