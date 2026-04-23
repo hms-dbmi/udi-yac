@@ -1,5 +1,6 @@
-import { createContext, useContext, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useMemo, type ReactNode } from 'react';
 import { useStore, type StoreApi } from 'zustand';
+import type { DownloadAction } from '@/features/dashboard';
 import {
   createConversationStore,
   type ConversationState,
@@ -114,4 +115,27 @@ export function useGlobal<T>(selector: (state: GlobalState) => T): T {
 
 export function useGlobalStore(): StoreApi<GlobalState> {
   return useStores().global;
+}
+
+// ---------------------------------------------------------------------------
+// Consumer-provided download actions
+// ---------------------------------------------------------------------------
+
+const DownloadActionsContext = createContext<readonly DownloadAction[]>([]);
+
+export function DownloadActionsProvider({
+  actions,
+  children,
+}: {
+  actions: readonly DownloadAction[] | undefined;
+  children: ReactNode;
+}) {
+  const value = useMemo(() => actions ?? [], [actions]);
+  return (
+    <DownloadActionsContext.Provider value={value}>{children}</DownloadActionsContext.Provider>
+  );
+}
+
+export function useDownloadActions(): readonly DownloadAction[] {
+  return useContext(DownloadActionsContext);
 }

@@ -1,4 +1,5 @@
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
+import type { DownloadAction } from '@/features/dashboard';
 
 /**
  * Public configuration surface for the `UDIChat` root component. Extracted
@@ -19,6 +20,15 @@ export interface UDIChatConfig {
   /** If true, prompt the user to enter an OpenAI API key before chatting. */
   requireApiKey?: boolean;
   model?: string;
+  /**
+   * Extra items to append to the Download Data dropdown. Each action's
+   * `onClick` receives a {@link DownloadActionContext} snapshot of the
+   * current filters and per-source rows, so consumers can export, route,
+   * or post-process that data in consumer-specific ways. Rendered after
+   * the built-in "Download Raw Data" and "Download Manifest" items,
+   * separated by a divider.
+   */
+  downloadActions?: readonly DownloadAction[];
   className?: string;
   style?: React.CSSProperties;
 }

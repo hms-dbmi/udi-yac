@@ -8,6 +8,8 @@ export type {
   DataFieldDomain,
   IntervalDomain,
   CategoricalDomain,
+  Row,
 } from './types/dataPackage';
+export type { DownloadAction, DownloadActionContext } from './features/dashboard';
 export { joinDataPath } from './features/data-package/utils/joinDataPath';
 export type { LoadingPhase } from './features/data-package/stores/dataPackageStore';

@@ -6,10 +6,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useDataPackage } from '@/app/UDIChatContext';
+import { useDataFilters, useDataPackage, useDownloadActions } from '@/app/UDIChatContext';
 import type { Row } from '@/types/dataPackage';
+import type { DownloadActionContext } from '../types';
 
 function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -52,6 +54,9 @@ function timestamp(): string {
 
 export function DownloadButton() {
   const filteredData = useDataPackage((s) => s.filteredData);
+  const dataPackage = useDataPackage((s) => s.dataPackage);
+  const filters = useDataFilters((s) => s.dataSelections);
+  const customActions = useDownloadActions();
 
   const rowsBySource = useMemo(() => {
     const result: { source: string; rows: Row[] }[] = [];
@@ -62,6 +67,11 @@ export function DownloadButton() {
   }, [filteredData]);
 
   const noData = rowsBySource.every((r) => r.rows.length === 0);
+
+  const actionContext = useMemo<DownloadActionContext>(
+    () => ({ rowsBySource, filters, dataPackage }),
+    [rowsBySource, filters, dataPackage],
+  );
 
   const handleDownloadCSV = useCallback(async () => {
     if (noData) return;
@@ -108,6 +118,24 @@ export function DownloadButton() {
         <DropdownMenuItem onClick={handleDownloadManifest} disabled={noData}>
           Download Manifest
         </DropdownMenuItem>
+        {customActions.length > 0 && <DropdownMenuSeparator />}
+        {customActions.map((action, i) => {
+          const isDisabled =
+            typeof action.disabled === 'function'
+              ? action.disabled(actionContext)
+              : (action.disabled ?? false);
+          return (
+            <DropdownMenuItem
+              key={`${action.label}-${i}`}
+              disabled={isDisabled}
+              onClick={() => {
+                void action.onClick(actionContext);
+              }}
+            >
+              {action.label}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

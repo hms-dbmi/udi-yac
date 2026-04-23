@@ -80,6 +80,7 @@ import 'udi-yac/style.css';
 | `authToken`        | `string?`            | JWT bearer token for API auth                                                                                   |
 | `requireApiKey`    | `boolean?`           | Show API key input before chatting                                                                              |
 | `model`            | `string?`            | LLM model name override                                                                                         |
+| `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).    |
 | `className`        | `string?`            | CSS class for the root element                                                                                  |
 | `style`            | `CSSProperties?`     | Inline styles for the root element                                                                              |
 
@@ -215,8 +216,43 @@ See [`src/data/hubmapRemote.ts`](src/data/hubmapRemote.ts) for the canonical inl
 ### Data Management
 
 - **Entity counts**: per-entity row counts with dynamic filtered counts
-- **Download**: filtered data as ZIP of CSVs, or manifest (hubmap_id extraction)
+- **Download**: filtered data as ZIP of CSVs, or manifest (hubmap_id extraction). Consumers can extend the dropdown with custom actions via the `downloadActions` prop — see [Custom download actions](#custom-download-actions).
 - Data package loading with domain computation (Arquero)
+
+### Custom download actions
+
+Pass `downloadActions` on `UDIChatConfig` to append consumer-specific entries to the Download Data dropdown. Each action's `onClick` receives a snapshot of the current filters and the per-source rows the built-in "Download Raw Data" would have used, so you can export to custom formats, post to an API, or route to another tool.
+
+```tsx
+import { UDIChat } from 'udi-yac';
+import type { DownloadAction } from 'udi-yac';
+
+const sendToWorkspaces: DownloadAction = {
+  label: 'Open in Workspaces',
+  disabled: (ctx) => ctx.rowsBySource.every((r) => r.rows.length === 0),
+  onClick: async ({ rowsBySource, filters }) => {
+    const ids = rowsBySource.flatMap(({ rows }) =>
+      rows.map((r) => String(r['hubmap_id'] ?? '')).filter(Boolean),
+    );
+    await fetch('/api/workspaces', {
+      method: 'POST',
+      body: JSON.stringify({ ids, filters }),
+    });
+  },
+};
+
+<UDIChat apiBaseUrl="http://localhost:8007" downloadActions={[sendToWorkspaces]} />;
+```
+
+The `DownloadActionContext` passed to each callback contains:
+
+| Field          | Type                                | Notes                                                              |
+| -------------- | ----------------------------------- | ------------------------------------------------------------------ |
+| `rowsBySource` | `{ source: string; rows: Row[] }[]` | Post-filter, post-brush rows — same data the built-in ZIP exports. |
+| `filters`      | `DataSelections`                    | Active filter selections keyed by filter id.                       |
+| `dataPackage`  | `DataPackage \| null`               | The loaded data package; null until first resolution completes.    |
+
+Custom actions render after the two built-in items, separated by a divider.
 
 ### Debug Mode (type `!/admin` in chat)
 
