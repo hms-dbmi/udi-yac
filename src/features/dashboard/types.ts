@@ -1,5 +1,20 @@
+import type { ComponentType } from 'react';
 import type { DataPackage, Row } from '@/types/dataPackage';
 import type { DataSelections } from './stores/dataFiltersStore';
+
+/**
+ * An icon component suitable for the entity count chips. Any component that
+ * accepts a `className` prop and renders an icon works — lucide-react icons
+ * are the typical choice.
+ */
+export type EntityIconComponent = ComponentType<{ className?: string }>;
+
+/**
+ * Consumer-provided mapping from entity name to icon. Merged on top of the
+ * built-in defaults (donors, samples, datasets, …) so consumers can supply
+ * icons for additional entities or override existing ones.
+ */
+export type EntityIconMap = Record<string, EntityIconComponent>;
 
 /**
  * Snapshot of dashboard state passed to a {@link DownloadAction}'s callbacks.

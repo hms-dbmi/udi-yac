@@ -10,6 +10,11 @@ export type {
   CategoricalDomain,
   Row,
 } from './types/dataPackage';
-export type { DownloadAction, DownloadActionContext } from './features/dashboard';
+export type {
+  DownloadAction,
+  DownloadActionContext,
+  EntityIconComponent,
+  EntityIconMap,
+} from './features/dashboard';
 export { joinDataPath } from './features/data-package/utils/joinDataPath';
 export type { LoadingPhase } from './features/data-package/stores/dataPackageStore';

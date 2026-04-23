@@ -81,6 +81,7 @@ import 'udi-yac/style.css';
 | `requireApiKey`    | `boolean?`           | Show API key input before chatting                                                                              |
 | `model`            | `string?`            | LLM model name override                                                                                         |
 | `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).    |
+| `entityIcons`      | `EntityIconMap?`     | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                         |
 | `className`        | `string?`            | CSS class for the root element                                                                                  |
 | `style`            | `CSSProperties?`     | Inline styles for the root element                                                                              |
 
@@ -253,6 +254,27 @@ The `DownloadActionContext` passed to each callback contains:
 | `dataPackage`  | `DataPackage \| null`               | The loaded data package; null until first resolution completes.    |
 
 Custom actions render after the two built-in items, separated by a divider.
+
+### Custom entity icons
+
+Pass `entityIcons` on `UDIChatConfig` to change the icon rendered on each entity count chip in the dashboard header. Keys are entity names exactly as they appear in the data package (`resources[].name`). Any component that accepts a `className` prop works — lucide-react icons are typical.
+
+```tsx
+import { UDIChat } from 'udi-yac';
+import type { EntityIconMap } from 'udi-yac';
+import { Dna, FlaskConical } from 'lucide-react';
+
+const icons: EntityIconMap = {
+  // Override the default icon for an existing entity:
+  samples: FlaskConical,
+  // Add an icon for a custom entity:
+  sequencing_runs: Dna,
+};
+
+<UDIChat apiBaseUrl="http://localhost:8007" entityIcons={icons} />;
+```
+
+Consumer entries are merged on top of the built-in icons (`donors`, `samples`, `datasets`, …) — you only need to supply the names you want to override or add. Entities with no match fall back to a generic table icon.
 
 ### Debug Mode (type `!/admin` in chat)
 

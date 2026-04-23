@@ -1,6 +1,6 @@
 import { createContext, useContext, useRef, useMemo, type ReactNode } from 'react';
 import { useStore, type StoreApi } from 'zustand';
-import type { DownloadAction } from '@/features/dashboard';
+import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 import {
   createConversationStore,
   type ConversationState,
@@ -138,4 +138,26 @@ export function DownloadActionsProvider({
 
 export function useDownloadActions(): readonly DownloadAction[] {
   return useContext(DownloadActionsContext);
+}
+
+// ---------------------------------------------------------------------------
+// Consumer-provided entity icon overrides
+// ---------------------------------------------------------------------------
+
+const EMPTY_ICON_MAP: EntityIconMap = Object.freeze({});
+const EntityIconsContext = createContext<EntityIconMap>(EMPTY_ICON_MAP);
+
+export function EntityIconsProvider({
+  icons,
+  children,
+}: {
+  icons: EntityIconMap | undefined;
+  children: ReactNode;
+}) {
+  const value = useMemo(() => icons ?? EMPTY_ICON_MAP, [icons]);
+  return <EntityIconsContext.Provider value={value}>{children}</EntityIconsContext.Provider>;
+}
+
+export function useEntityIcons(): EntityIconMap {
+  return useContext(EntityIconsContext);
 }

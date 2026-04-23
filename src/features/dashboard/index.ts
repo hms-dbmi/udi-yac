@@ -27,4 +27,9 @@ export { createSelectionsStore, type SelectionsState } from './stores/selections
 
 export { createMemoryBankStore, type MemoryBankState } from './stores/memoryBankStore';
 
-export type { DownloadAction, DownloadActionContext } from './types';
+export type {
+  DownloadAction,
+  DownloadActionContext,
+  EntityIconComponent,
+  EntityIconMap,
+} from './types';

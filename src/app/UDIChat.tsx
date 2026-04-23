@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   UDIChatProvider,
   DownloadActionsProvider,
+  EntityIconsProvider,
   useConversation,
   useDataPackageStore,
   useDashboardStore,
@@ -186,9 +187,11 @@ function UDIChatValidated(props: UDIChatConfig) {
     <TooltipProvider>
       <UDIChatProvider>
         <DownloadActionsProvider actions={props.downloadActions}>
-          <div className={cn('h-full w-full', props.className)} style={props.style}>
-            <UDIChatInner {...props} />
-          </div>
+          <EntityIconsProvider icons={props.entityIcons}>
+            <div className={cn('h-full w-full', props.className)} style={props.style}>
+              <UDIChatInner {...props} />
+            </div>
+          </EntityIconsProvider>
         </DownloadActionsProvider>
       </UDIChatProvider>
     </TooltipProvider>

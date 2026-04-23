@@ -1,5 +1,5 @@
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
-import type { DownloadAction } from '@/features/dashboard';
+import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 
 /**
  * Public configuration surface for the `UDIChat` root component. Extracted
@@ -29,6 +29,14 @@ export interface UDIChatConfig {
    * separated by a divider.
    */
   downloadActions?: readonly DownloadAction[];
+  /**
+   * Map from entity name (as it appears in the data package `resources[].name`)
+   * to an icon component. Merged on top of the built-in icons (donors,
+   * samples, datasets, …) with consumer entries winning, so you can supply
+   * icons for additional entities or override the defaults. Any component
+   * that accepts a `className` prop works — lucide-react icons are typical.
+   */
+  entityIcons?: EntityIconMap;
   className?: string;
   style?: React.CSSProperties;
 }
