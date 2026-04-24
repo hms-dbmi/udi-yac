@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 
@@ -37,6 +38,23 @@ export interface UDIChatConfig {
    * that accepts a `className` prop works — lucide-react icons are typical.
    */
   entityIcons?: EntityIconMap;
+  /**
+   * Controls the mascot rendered on the empty-dashboard splash:
+   * - `undefined` (prop omitted): the default YAC mascot image is rendered.
+   * - `null`: the mascot is hidden entirely.
+   * - any other ReactNode: the provided node is rendered in place of the mascot.
+   *
+   * The speech-bubble prompt above the mascot is not affected by this prop.
+   */
+  mascot?: ReactNode | null;
+  /**
+   * Override the randomised prompts shown in the speech bubble above the
+   * mascot on the empty-dashboard splash.
+   * - `undefined` (prop omitted): use the built-in defaults.
+   * - A non-empty array: pick one of the provided messages at random.
+   * - An empty array (`[]`): hide the speech bubble entirely.
+   */
+  splashMessages?: readonly string[];
   className?: string;
   style?: React.CSSProperties;
 }

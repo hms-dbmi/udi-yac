@@ -82,6 +82,8 @@ import 'udi-yac/style.css';
 | `model`            | `string?`            | LLM model name override                                                                                         |
 | `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).    |
 | `entityIcons`      | `EntityIconMap?`     | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                         |
+| `mascot`           | `ReactNode \| null?` | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                        |
+| `splashMessages`   | `readonly string[]?` | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages). |
 | `className`        | `string?`            | CSS class for the root element                                                                                  |
 | `style`            | `CSSProperties?`     | Inline styles for the root element                                                                              |
 
@@ -275,6 +277,54 @@ const icons: EntityIconMap = {
 ```
 
 Consumer entries are merged on top of the built-in icons (`donors`, `samples`, `datasets`, …) — you only need to supply the names you want to override or add. Entities with no match fall back to a generic table icon.
+
+### Custom mascot
+
+The empty-dashboard welcome splash renders a YAC mascot by default. Consumers can replace it or hide it via the `mascot` prop on `UDIChatConfig`:
+
+| Value              | Result                                                                 |
+| ------------------ | ---------------------------------------------------------------------- |
+| `undefined` (omit) | Renders the built-in YAC mascot image.                                 |
+| `null`             | Hides the mascot entirely. The speech-bubble prompt above still shows. |
+| Any `ReactNode`    | Renders the provided node in place of the mascot image.                |
+
+```tsx
+import { UDIChat } from 'udi-yac';
+
+// Replace with a custom image:
+<UDIChat
+  apiBaseUrl="http://localhost:8007"
+  mascot={<img src="/my-mascot.svg" alt="" className="w-60 h-60 object-contain" />}
+/>
+
+// Hide entirely:
+<UDIChat apiBaseUrl="http://localhost:8007" mascot={null} />
+```
+
+### Custom splash messages
+
+One prompt is picked at random from a built-in pool (`"Ask me for a visualization!"`, `"What data would you like to explore?"`, etc.) and shown in the speech bubble above the mascot. Override via `splashMessages` on `UDIChatConfig`:
+
+| Value              | Result                                                 |
+| ------------------ | ------------------------------------------------------ |
+| `undefined` (omit) | Random pick from the built-in defaults.                |
+| Non-empty array    | Random pick from the provided strings exclusively.     |
+| `[]`               | Hides the speech bubble entirely (mascot still shows). |
+
+```tsx
+<UDIChat
+  apiBaseUrl="http://localhost:8007"
+  splashMessages={[
+    'Ask me about donors, samples, or datasets.',
+    'Try “average age by sex”.',
+  ]}
+/>
+
+// Hide the speech bubble:
+<UDIChat apiBaseUrl="http://localhost:8007" splashMessages={[]} />
+```
+
+The selection is made once per `UDIChat` mount, so the message doesn't flicker between renders.
 
 ### Debug Mode (type `!/admin` in chat)
 
