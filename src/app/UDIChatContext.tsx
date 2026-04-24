@@ -2,6 +2,7 @@ import { createContext, useContext, useRef, useMemo, type ReactNode } from 'reac
 import { useStore, type StoreApi } from 'zustand';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 import type { TrackerFn } from '@/app/UDIChatConfig';
+import { generateEventId } from '@/lib/utils';
 import {
   createConversationStore,
   type ConversationState,
@@ -234,12 +235,22 @@ export function TrackerProvider({
   // up the latest `onEvent` prop.
   const latest = useRef<TrackerFn | undefined>(onEvent);
   latest.current = onEvent;
+  // One sessionId per `UDIChat` mount — stitches all events from a given
+  // chat instance together and distinguishes two tabs apart. Injected into
+  // every emitted event's properties bag automatically so call sites
+  // never have to thread it through.
+  const sessionIdRef = useRef<string | null>(null);
+  if (sessionIdRef.current === null) {
+    sessionIdRef.current = generateEventId();
+  }
   const tracker = useMemo<TrackerFn>(
     () => (name, properties) => {
       const fn = latest.current;
       if (!fn) return;
       try {
-        fn(name, properties);
+        // Spread the caller's props first, then sessionId last so it
+        // always wins if a call site happens to pass its own `sessionId`.
+        fn(name, { ...properties, sessionId: sessionIdRef.current });
       } catch {
         /* never propagate tracker errors */
       }
