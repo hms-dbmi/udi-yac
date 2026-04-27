@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import mascotSrc from '@/assets/yac-mascot.svg';
 
 const SPLASH_MESSAGES = [
   'Ask me for a visualization!',
@@ -47,11 +48,7 @@ export function WelcomeSplash() {
           <div className="absolute -bottom-[10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#57b4e9]" />
           <div className="absolute -bottom-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#e8f4fc]" />
         </div>
-        <img
-          src={`${import.meta.env.BASE_URL}images/yac-mascot.svg`}
-          alt="YAC mascot"
-          className="w-60 h-60 object-contain"
-        />
+        <img src={mascotSrc} alt="YAC mascot" className="w-60 h-60 object-contain" />
       </div>
     </div>
   );

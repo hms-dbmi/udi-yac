@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
 import { cva, type VariantProps } from 'class-variance-authority';
 
@@ -40,19 +41,27 @@ const buttonVariants = cva(
   },
 );
 
-function Button({
-  className,
-  variant = 'default',
-  size = 'default',
-  ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+// forwardRef is required so Base UI's render-prop composition (e.g.
+// `<DialogPrimitive.Close render={<Button ... />}>`) can attach a ref to
+// this component on React 18. Without it, React 18 logs
+// "Function components cannot be given refs" and the trigger ref never
+// reaches Floating UI, which causes dropdowns to render at (0,0) with
+// opacity 0 instead of anchored to their trigger.
+// Once HuBMAP updates to react 19, we can remove forwardRef and just export a normal function component again.
+type ButtonProps = ButtonPrimitive.Props & VariantProps<typeof buttonVariants>;
+
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant = 'default', size = 'default', ...props },
+  ref,
+) {
   return (
     <ButtonPrimitive
+      ref={ref}
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   );
-}
+});
 
 export { Button, buttonVariants };

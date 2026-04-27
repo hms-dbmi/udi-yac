@@ -70,7 +70,9 @@ jobs:
           git tag "v${new_version}"
 
       - name: Push commit and tag
-        run: git push origin HEAD --follow-tags
+        run: |
+          git push origin HEAD
+          git push --tags
 
       - name: Publish to npm
         run: pnpm publish
