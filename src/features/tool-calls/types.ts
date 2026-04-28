@@ -9,9 +9,18 @@
 // ---------------------------------------------------------------------------
 // Rebuff
 // ---------------------------------------------------------------------------
+/**
+ * Machine-readable rebuff discriminator. Emitted by the backend only for
+ * cases the frontend needs to branch on (e.g. prompt the user for their
+ * own API key when the server key is over quota). Ordinary rebuffs omit
+ * the field — callers should treat absence as "plain rebuff".
+ */
+export type RebuffReason = 'budget_exceeded';
+
 export interface RebuffArgs {
   message: string;
   suggestions: string[];
+  reason?: RebuffReason;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import {
   UDIChatProvider,
   DownloadActionsProvider,
@@ -20,6 +20,7 @@ import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { ConversationList } from '@/features/chat/components/ConversationList';
+import { useApiKey } from '@/features/chat/hooks/useApiKey';
 import { ErrorBoundary } from './ErrorBoundary';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -47,13 +48,7 @@ function UDIChatInner({
   const messages = useConversation((s) => s.messages);
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [openAiKey, setOpenAiKey] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('udi-chat-api-key');
-    } catch {
-      return null;
-    }
-  });
+  const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
 
   // Load data package on mount
   useEffect(() => {
@@ -126,32 +121,12 @@ function UDIChatInner({
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
   }, [dataSelections, pinnedVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
 
-  const handleSetApiKey = useCallback((key: string) => {
-    setOpenAiKey(key);
-    try {
-      localStorage.setItem('udi-chat-api-key', key);
-    } catch {
-      /* noop */
-    }
-  }, []);
-
-  const handleClearApiKey = useCallback(() => {
-    setOpenAiKey(null);
-    try {
-      localStorage.removeItem('udi-chat-api-key');
-    } catch {
-      /* noop */
-    }
-  }, []);
-
   const queryConfig: QueryConfig = {
     apiBaseUrl,
     authToken,
     model,
-    openAiKey: openAiKey ?? undefined,
+    openAiKey: apiKey.openAiKey ?? undefined,
   };
-
-  const needsKey = requireApiKey === true && !openAiKey;
 
   return (
     <div className="flex h-full w-full bg-background">
@@ -164,10 +139,15 @@ function UDIChatInner({
       <div className="w-[400px] min-w-[300px] shrink-0 border-r flex flex-col overflow-hidden">
         <ChatPanel
           config={queryConfig}
-          needsApiKey={needsKey}
-          hasApiKey={!!openAiKey}
-          onSetApiKey={handleSetApiKey}
-          onClearApiKey={handleClearApiKey}
+          needsApiKey={apiKey.needsApiKey}
+          hasApiKey={apiKey.hasApiKey}
+          userKeyQuotaExceeded={apiKey.userKeyQuotaExceeded}
+          pendingQuotaRetry={apiKey.pendingQuotaRetry}
+          onSetApiKey={apiKey.setApiKey}
+          onClearApiKey={apiKey.clearApiKey}
+          onQuotaRebuff={apiKey.onQuotaRebuff}
+          onNormalResponse={apiKey.onNormalResponse}
+          onConsumePendingRetry={apiKey.consumePendingRetry}
           showDrawerToggle={debugMode}
           drawerOpen={drawerOpen}
           onToggleDrawer={() => setDrawerOpen((v) => !v)}
