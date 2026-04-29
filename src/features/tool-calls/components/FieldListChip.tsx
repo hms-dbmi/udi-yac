@@ -99,8 +99,8 @@ function FieldChip({ field, meta }: FieldChipProps) {
     <Tooltip>
       <TooltipTrigger
         render={
-          <Badge variant="secondary" className="cursor-default font-mono text-[10px]">
-            <span>{field}</span>
+          <Badge variant="secondary" className="max-w-[160px] cursor-default font-mono text-[10px]">
+            <span className="min-w-0 truncate">{field}</span>
             <Info className="h-2.5 w-2.5 opacity-60" />
           </Badge>
         }
