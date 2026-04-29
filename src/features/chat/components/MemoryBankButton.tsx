@@ -67,7 +67,7 @@ export function MemoryBankButton() {
         <DialogHeader>
           <DialogTitle className="text-sm">Memory Bank</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-3 overflow-y-auto max-h-[50vh]">
+        <div className="flex flex-col gap-3 overflow-y-auto max-h-[50vh] [scrollbar-gutter:stable]">
           {entries.map(([key, viz]) => (
             <div key={key} className="flex flex-col gap-1 rounded border border-border p-2">
               <div className="flex items-center gap-2">
