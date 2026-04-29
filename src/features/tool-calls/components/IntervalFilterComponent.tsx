@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
-import { useDataPackage, useDataFilters } from '@/app/UDIChatContext';
+import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '@/features/dashboard';
 import type { RangeSelection } from 'udi-toolkit/react';
 
@@ -35,6 +35,7 @@ export function IntervalFilterComponent({
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidIntervalFilter = useDataPackage((s) => s.isValidIntervalFilter);
   const setDataSelection = useDataFilters((s) => s.setDataSelection);
+  const trackEvent = useTracker();
 
   const entity = dataSelection.dataSourceKey;
   const field = Object.keys(dataSelection.selection ?? {})[fieldIndex] ?? '';
@@ -81,9 +82,17 @@ export function IntervalFilterComponent({
       if (arr.length < 2) return;
       setLocalRange(arr);
       clearTimeout(commitTimer.current);
-      commitTimer.current = setTimeout(() => commitToStore(arr), 250);
+      commitTimer.current = setTimeout(() => {
+        commitToStore(arr);
+        trackEvent('filter_range_changed', {
+          entity,
+          field,
+          isReset: false,
+          isFullRange: arr[0] <= rangeMinMax.min && arr[1] >= rangeMinMax.max,
+        });
+      }, 250);
     },
-    [commitToStore],
+    [commitToStore, trackEvent, entity, field, rangeMinMax],
   );
 
   const handleReset = useCallback(() => {
@@ -91,7 +100,13 @@ export function IntervalFilterComponent({
     setLocalRange(reset);
     clearTimeout(commitTimer.current);
     commitToStore(reset);
-  }, [commitToStore, rangeMinMax]);
+    trackEvent('filter_range_changed', {
+      entity,
+      field,
+      isReset: true,
+      isFullRange: true,
+    });
+  }, [commitToStore, rangeMinMax, trackEvent, entity, field]);
 
   const handleEntityChange = useCallback(
     (val: string | null) => {
@@ -101,8 +116,13 @@ export function IntervalFilterComponent({
         dataSourceKey: val,
         selection: { [field]: [rangeMinMax.min, rangeMinMax.max] },
       });
+      trackEvent('filter_entity_changed', {
+        filterType: 'interval',
+        entity: val,
+        field,
+      });
     },
-    [setDataSelection, filterKey, dataSelection, field, rangeMinMax],
+    [setDataSelection, filterKey, dataSelection, field, rangeMinMax, trackEvent],
   );
 
   const handleFieldChange = useCallback(
