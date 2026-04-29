@@ -55,14 +55,24 @@ export function IntervalFilterComponent({
     return [arr[0], arr[1]];
   }, [dataSelection.selection, field, rangeMinMax]);
 
-  // Local state for responsive slider; committed to store on debounce
+  // Local state for responsive slider; committed to store once per animation
+  // frame so dependent views update live without flooding the store on every
+  // pointermove.
   const [localRange, setLocalRange] = useState(storeRange);
-  const commitTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pendingRangeRef = useRef<number[] | null>(null);
+  const commitFrameRef = useRef<number | null>(null);
 
   // Sync local state when store range changes externally (e.g. reset, session load)
   useEffect(() => {
     setLocalRange(storeRange);
   }, [storeRange]);
+
+  // Cancel any pending frame on unmount so we don't touch the store after teardown.
+  useEffect(() => {
+    return () => {
+      if (commitFrameRef.current != null) cancelAnimationFrame(commitFrameRef.current);
+    };
+  }, []);
 
   const commitToStore = useCallback(
     (range: number[]) => {
@@ -76,29 +86,55 @@ export function IntervalFilterComponent({
     [setDataSelection, filterKey, dataSelection, field],
   );
 
+  const scheduleCommit = useCallback(
+    (range: number[]) => {
+      pendingRangeRef.current = range;
+      if (commitFrameRef.current != null) return;
+      commitFrameRef.current = requestAnimationFrame(() => {
+        commitFrameRef.current = null;
+        const pending = pendingRangeRef.current;
+        pendingRangeRef.current = null;
+        if (pending) commitToStore(pending);
+      });
+    },
+    [commitToStore],
+  );
+
   const handleRangeChange = useCallback(
     (value: number | readonly number[]) => {
       const arr = Array.isArray(value) ? [...value] : [value];
       if (arr.length < 2) return;
       setLocalRange(arr);
-      clearTimeout(commitTimer.current);
-      commitTimer.current = setTimeout(() => {
-        commitToStore(arr);
-        trackEvent('filter_range_changed', {
-          entity,
-          field,
-          isReset: false,
-          isFullRange: arr[0] <= rangeMinMax.min && arr[1] >= rangeMinMax.max,
-        });
-      }, 250);
+      scheduleCommit(arr);
     },
-    [commitToStore, trackEvent, entity, field, rangeMinMax],
+    [scheduleCommit],
+  );
+
+  // Fire analytics once at drag-resolve rather than on every rAF commit, so a
+  // single drag produces one event instead of dozens. The data store is still
+  // updated continuously via scheduleCommit above for live downstream views.
+  const handleRangeCommit = useCallback(
+    (value: number | readonly number[]) => {
+      const arr = Array.isArray(value) ? [...value] : [value];
+      if (arr.length < 2) return;
+      trackEvent('filter_range_changed', {
+        entity,
+        field,
+        isReset: false,
+        isFullRange: arr[0] <= rangeMinMax.min && arr[1] >= rangeMinMax.max,
+      });
+    },
+    [trackEvent, entity, field, rangeMinMax],
   );
 
   const handleReset = useCallback(() => {
     const reset = [rangeMinMax.min, rangeMinMax.max];
     setLocalRange(reset);
-    clearTimeout(commitTimer.current);
+    if (commitFrameRef.current != null) {
+      cancelAnimationFrame(commitFrameRef.current);
+      commitFrameRef.current = null;
+    }
+    pendingRangeRef.current = null;
     commitToStore(reset);
     trackEvent('filter_range_changed', {
       entity,
@@ -206,6 +242,7 @@ export function IntervalFilterComponent({
           max={rangeMinMax.max}
           step={(rangeMinMax.max - rangeMinMax.min) / 100}
           onValueChange={handleRangeChange}
+          onValueCommitted={handleRangeCommit}
         />
       ) : (
         <span className="text-sm text-destructive">Error: Invalid filter.</span>
