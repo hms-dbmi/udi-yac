@@ -25,10 +25,7 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
   const toolCalls = message.tool_calls ?? [];
 
   return (
-    <div
-      data-message
-      className={cn('flex scroll-mt-6', isUser ? 'justify-end' : 'justify-start')}
-    >
+    <div data-message className={cn('flex scroll-mt-6', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
           'max-w-[85%] rounded-lg px-3 py-2',
