@@ -11,6 +11,7 @@ import {
   useDashboardStore,
   useDataFiltersStore,
   useDataPackageStore,
+  useTracker,
 } from '@/app/UDIChatContext';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { setMappingFieldByEncoding, collectLockedFields } from '@/utils/specMutations';
@@ -29,6 +30,7 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
   const dataPackageStore = useDataPackageStore();
+  const trackEvent = useTracker();
 
   const sourceName = useMemo(() => {
     const src = Array.isArray(spec.source)
@@ -110,6 +112,7 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       dashboardStore.getState().updatePinnedVisualizationSpec(pinKey, updatedSpec, sourceFields);
       // Reapply filter transformations to the updated spec (null filters, named filters)
       dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
+      trackEvent('visualization_tweaked', { encoding });
     },
     [
       spec,
@@ -119,6 +122,7 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       messageIndex,
       toolCallIndex,
       sourceFields,
+      trackEvent,
     ],
   );
 

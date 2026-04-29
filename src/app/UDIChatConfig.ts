@@ -3,6 +3,17 @@ import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 
 /**
+ * Signature for the optional analytics callback — deliberately untyped in
+ * the `properties` bag so consumers can forward directly to GA4, Segment,
+ * Amplitude, PostHog, or any other tool that accepts
+ * `(eventName, properties)`.
+ *
+ * Event names are stable, snake_case strings. Properties carry metadata
+ * only — never raw message content or API key material.
+ */
+export type TrackerFn = (name: string, properties?: Record<string, unknown>) => void;
+
+/**
  * Public configuration surface for the `UDIChat` root component. Extracted
  * from UDIChat.tsx so that `validateConfig` and other app-layer utilities
  * can import the type without reaching into the component module.
@@ -55,6 +66,17 @@ export interface UDIChatConfig {
    * - An empty array (`[]`): hide the speech bubble entirely.
    */
   splashMessages?: readonly string[];
+  /**
+   * Optional analytics callback. When provided, UDIChat emits events for
+   * key user actions (messages sent, responses received, rebuffs, API key
+   * changes, visualization pin/close, conversation reset, downloads).
+   *
+   * Callbacks carry metadata only — never raw message content or OpenAI
+   * key material — and thrown errors are swallowed so an analytics failure
+   * never breaks the chat. See the "Analytics events" section of the
+   * README for the full event catalog and the properties each one emits.
+   */
+  onEvent?: TrackerFn;
   className?: string;
   style?: React.CSSProperties;
 }

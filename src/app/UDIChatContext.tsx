@@ -1,6 +1,8 @@
 import { createContext, useContext, useRef, useMemo, type ReactNode } from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
+import type { TrackerFn } from '@/app/UDIChatConfig';
+import { generateEventId } from '@/lib/utils';
 import {
   createConversationStore,
   type ConversationState,
@@ -207,4 +209,57 @@ export function SplashMessagesProvider({
 
 export function useSplashMessages(): readonly string[] | undefined {
   return useContext(SplashMessagesContext);
+}
+
+// ---------------------------------------------------------------------------
+// Consumer-provided analytics tracker
+// ---------------------------------------------------------------------------
+// The context always holds a callable so that call sites can write
+// `tracker('event', {...})` unconditionally. When no `onEvent` is supplied
+// on `UDIChatConfig`, the callable is a no-op. Exceptions thrown by the
+// consumer's tracker are swallowed — an analytics failure must never
+// break the chat.
+
+const NOOP_TRACKER: TrackerFn = () => {};
+const TrackerContext = createContext<TrackerFn>(NOOP_TRACKER);
+
+export function TrackerProvider({
+  onEvent,
+  children,
+}: {
+  onEvent: TrackerFn | undefined;
+  children: ReactNode;
+}) {
+  // Ref so event call sites keep a stable tracker identity across renders
+  // (no invalidation of memoized downstream callbacks) while still picking
+  // up the latest `onEvent` prop.
+  const latest = useRef<TrackerFn | undefined>(onEvent);
+  latest.current = onEvent;
+  // One sessionId per `UDIChat` mount — stitches all events from a given
+  // chat instance together and distinguishes two tabs apart. Injected into
+  // every emitted event's properties bag automatically so call sites
+  // never have to thread it through.
+  const sessionIdRef = useRef<string | null>(null);
+  if (sessionIdRef.current === null) {
+    sessionIdRef.current = generateEventId();
+  }
+  const tracker = useMemo<TrackerFn>(
+    () => (name, properties) => {
+      const fn = latest.current;
+      if (!fn) return;
+      try {
+        // Spread the caller's props first, then sessionId last so it
+        // always wins if a call site happens to pass its own `sessionId`.
+        fn(name, { ...properties, sessionId: sessionIdRef.current });
+      } catch {
+        /* never propagate tracker errors */
+      }
+    },
+    [],
+  );
+  return <TrackerContext.Provider value={tracker}>{children}</TrackerContext.Provider>;
+}
+
+export function useTracker(): TrackerFn {
+  return useContext(TrackerContext);
 }

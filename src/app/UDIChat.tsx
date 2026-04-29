@@ -5,6 +5,7 @@ import {
   EntityIconsProvider,
   MascotProvider,
   SplashMessagesProvider,
+  TrackerProvider,
   useConversation,
   useDataPackageStore,
   useDashboardStore,
@@ -14,6 +15,7 @@ import {
   useDataFilters,
   useMemoryBankStore,
   useGlobal,
+  useTracker,
 } from '@/app/UDIChatContext';
 import { extractAllUdiSpecsFromMessage } from '@/features/dashboard/stores/dashboardStore';
 import type { UDIGrammar } from 'udi-toolkit/react';
@@ -49,6 +51,7 @@ function UDIChatInner({
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
+  const trackEvent = useTracker();
 
   // Load data package on mount
   useEffect(() => {
@@ -98,8 +101,14 @@ function UDIChatInner({
     }
     if (batch.length > 0) {
       state.pinVisualizationBatch(batch);
+      for (const item of batch) {
+        trackEvent('visualization_pinned', {
+          hasTitle: !!item.title,
+          toolCallIndex: item.toolCallIndex,
+        });
+      }
     }
-  }, [messages, dashboardStore, sourceFields, memoryBankStore]);
+  }, [messages, dashboardStore, sourceFields, memoryBankStore, trackEvent]);
 
   // Sync data filters from messages (replaces Vue's watch(messages, ...) in dataFiltersStore)
   useEffect(() => {
@@ -168,17 +177,19 @@ function UDIChatValidated(props: UDIChatConfig) {
   return (
     <TooltipProvider>
       <UDIChatProvider>
-        <DownloadActionsProvider actions={props.downloadActions}>
-          <EntityIconsProvider icons={props.entityIcons}>
-            <MascotProvider mascot={props.mascot}>
-              <SplashMessagesProvider messages={props.splashMessages}>
-                <div className={cn('h-full w-full', props.className)} style={props.style}>
-                  <UDIChatInner {...props} />
-                </div>
-              </SplashMessagesProvider>
-            </MascotProvider>
-          </EntityIconsProvider>
-        </DownloadActionsProvider>
+        <TrackerProvider onEvent={props.onEvent}>
+          <DownloadActionsProvider actions={props.downloadActions}>
+            <EntityIconsProvider icons={props.entityIcons}>
+              <MascotProvider mascot={props.mascot}>
+                <SplashMessagesProvider messages={props.splashMessages}>
+                  <div className={cn('h-full w-full', props.className)} style={props.style}>
+                    <UDIChatInner {...props} />
+                  </div>
+                </SplashMessagesProvider>
+              </MascotProvider>
+            </EntityIconsProvider>
+          </DownloadActionsProvider>
+        </TrackerProvider>
       </UDIChatProvider>
     </TooltipProvider>
   );

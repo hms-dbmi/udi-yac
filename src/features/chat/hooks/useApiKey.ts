@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTracker } from '@/app/UDIChatContext';
 
 const STORAGE_KEY = 'udi-chat-api-key';
 
@@ -33,6 +34,7 @@ function writeStoredKey(key: string | null): void {
  * `consumePendingRetry` for the hand-off.
  */
 export function useApiKey({ requireApiKey }: { requireApiKey: boolean }) {
+  const trackEvent = useTracker();
   const [openAiKey, setOpenAiKey] = useState<string | null>(readStoredKey);
   // Budget-exceeded rebuff arrived while the request had no user key —
   // unlocks `ApiKeyInput` regardless of `requireApiKey`.
@@ -57,15 +59,17 @@ export function useApiKey({ requireApiKey }: { requireApiKey: boolean }) {
       if (wasQuotaResponse) {
         setPendingQuotaRetry(true);
       }
+      trackEvent('api_key_set', { inResponseToQuota: wasQuotaResponse });
     },
-    [serverQuotaExceeded, userKeyQuotaExceeded],
+    [serverQuotaExceeded, userKeyQuotaExceeded, trackEvent],
   );
 
   const clearApiKey = useCallback(() => {
     setOpenAiKey(null);
     setUserKeyQuotaExceeded(false);
     writeStoredKey(null);
-  }, []);
+    trackEvent('api_key_cleared');
+  }, [trackEvent]);
 
   const onQuotaRebuff = useCallback((hadUserKey: boolean) => {
     if (hadUserKey) {

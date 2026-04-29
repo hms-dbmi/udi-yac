@@ -1,7 +1,7 @@
 import './index.css';
 
 export { UDIChat } from './app/UDIChat';
-export type { UDIChatConfig } from './app/UDIChatConfig';
+export type { UDIChatConfig, TrackerFn } from './app/UDIChatConfig';
 export type {
   DataPackage,
   DataPackageResource,

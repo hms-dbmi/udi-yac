@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { queryLLM, type QueryConfig, type ToolCallResponse } from '../api/completions';
-import { useConversationStore, useDataPackageStore } from '@/app/UDIChatContext';
+import { useConversationStore, useDataPackageStore, useTracker } from '@/app/UDIChatContext';
+import { generateEventId } from '@/lib/utils';
 import type { Message } from '@/types/messages';
 
 interface UseChatApiOptions {
@@ -32,11 +33,19 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
   const [error, setError] = useState<string | null>(null);
   const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
+  const trackEvent = useTracker();
+  // The most recently minted turnId — reused by `retryLastUserMessage` so
+  // a retry's `response_received` pairs back to the originating
+  // `message_sent` instead of orphaning. Generated per-send in
+  // `sendMessage`, consumed by `runCompletion` for the response/rebuff/
+  // request_failed events.
+  const turnIdRef = useRef<string | null>(null);
 
   const runCompletion = useCallback(
-    async (messages: Message[]) => {
+    async (messages: Message[], turnId: string) => {
       const dpState = dataPackageStore.getState();
       const hadUserKey = !!config.openAiKey;
+      const startedAt = performance.now();
 
       setIsLoading(true);
       setError(null);
@@ -57,26 +66,60 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           })),
         });
 
+        const durationMs = Math.round(performance.now() - startedAt);
+        const toolCallNames = toolCalls.map((tc) => tc.name);
+        const rebuff = toolCalls.find((tc) => tc.name === 'Rebuff');
+        trackEvent('response_received', {
+          turnId,
+          durationMs,
+          toolCallNames,
+          toolCallCount: toolCalls.length,
+          hadUserKey,
+          hasRebuff: !!rebuff,
+        });
+        if (rebuff) {
+          const reason = (rebuff.arguments as { reason?: unknown }).reason;
+          trackEvent('rebuff_received', {
+            turnId,
+            reason: typeof reason === 'string' ? reason : undefined,
+            hadUserKey,
+          });
+        }
+
         if (toolCalls.some(isBudgetExceededRebuff)) {
           onQuotaRebuff?.(hadUserKey);
         } else {
           onNormalResponse?.();
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        const message = e instanceof Error ? e.message : String(e);
+        setError(message);
+        trackEvent('request_failed', {
+          turnId,
+          durationMs: Math.round(performance.now() - startedAt),
+          hadUserKey,
+        });
       } finally {
         setIsLoading(false);
       }
     },
-    [config, conversationStore, dataPackageStore, onQuotaRebuff, onNormalResponse],
+    [config, conversationStore, dataPackageStore, onQuotaRebuff, onNormalResponse, trackEvent],
   );
 
   const sendMessage = useCallback(
     async (text: string) => {
+      const turnId = generateEventId();
+      turnIdRef.current = turnId;
       conversationStore.getState().addMessage({ role: 'user', content: text });
-      await runCompletion(conversationStore.getState().messages);
+      trackEvent('message_sent', {
+        turnId,
+        charCount: text.length,
+        conversationLength: conversationStore.getState().messages.length,
+        hasUserApiKey: !!config.openAiKey,
+      });
+      await runCompletion(conversationStore.getState().messages, turnId);
     },
-    [conversationStore, runCompletion],
+    [conversationStore, runCompletion, trackEvent, config.openAiKey],
   );
 
   /**
@@ -85,6 +128,11 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
    * config on the next request, but there's no new user message to trigger
    * one. We drop any trailing assistant message (the rebuff itself) so the
    * conversation doesn't end up with two stacked assistant replies.
+   *
+   * Reuses the previous `turnId` so the retry's response pairs back to
+   * the original `message_sent`. Falls back to a fresh id only in the
+   * degenerate case where no send has ever happened (shouldn't occur in
+   * practice — retry is always triggered by a prior quota rebuff).
    */
   const retryLastUserMessage = useCallback(async () => {
     const state = conversationStore.getState();
@@ -93,8 +141,10 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
       trimmed.pop();
     }
     if (trimmed.length === 0) return;
+    const turnId = turnIdRef.current ?? generateEventId();
+    turnIdRef.current = turnId;
     state.loadConversation(trimmed);
-    await runCompletion(trimmed);
+    await runCompletion(trimmed, turnId);
   }, [conversationStore, runCompletion]);
 
   return { sendMessage, retryLastUserMessage, isLoading, error };
