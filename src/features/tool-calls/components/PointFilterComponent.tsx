@@ -105,8 +105,13 @@ export function PointFilterComponent({
         ...dataSelection,
         selection: { [val]: [] },
       });
+      trackEvent('filter_field_changed', {
+        filterType: 'point',
+        entity,
+        field: val,
+      });
     },
-    [setDataSelection, filterKey, dataSelection],
+    [setDataSelection, filterKey, dataSelection, trackEvent, entity],
   );
 
   const fieldOptions = categoricalSourceFields?.[entity] ?? [];

@@ -139,8 +139,13 @@ export function IntervalFilterComponent({
         ...dataSelection,
         selection: { [val]: [min, max] },
       });
+      trackEvent('filter_field_changed', {
+        filterType: 'interval',
+        entity,
+        field: val,
+      });
     },
-    [setDataSelection, filterKey, dataSelection, getDomainForField, entity],
+    [setDataSelection, filterKey, dataSelection, getDomainForField, entity, trackEvent],
   );
 
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
