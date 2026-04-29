@@ -16,6 +16,11 @@ function makePackage(): DataPackage {
             { name: 'organ', 'udi:data_type': 'nominal', description: 'Organ' },
           ],
         },
+        encoding: '',
+        format: '',
+        mediatype: '',
+        scheme: '',
+        type: '',
       },
       {
         name: 'samples',
@@ -33,6 +38,11 @@ function makePackage(): DataPackage {
             },
           ],
         },
+        encoding: '',
+        format: '',
+        mediatype: '',
+        scheme: '',
+        type: '',
       },
     ],
   };
@@ -85,8 +95,28 @@ describe('dataPackageStore — setDataPackage with precomputedDomains', () => {
     const pkg: DataPackage = {
       'udi:path': 'data',
       resources: [
-        { name: 'a', path: 'a.csv', 'udi:row_count': 0, schema: { fields: [{ name: 'x' }] } },
-        { name: 'b', path: 'b.csv', 'udi:row_count': 5, schema: { fields: [{ name: 'y' }] } },
+        {
+          name: 'a',
+          path: 'a.csv',
+          'udi:row_count': 0,
+          schema: { fields: [{ name: 'x' }] },
+          encoding: '',
+          format: '',
+          mediatype: '',
+          scheme: '',
+          type: '',
+        },
+        {
+          name: 'b',
+          path: 'b.csv',
+          'udi:row_count': 5,
+          schema: { fields: [{ name: 'y' }] },
+          encoding: '',
+          format: '',
+          mediatype: '',
+          scheme: '',
+          type: '',
+        },
       ],
     };
     await store.getState().setDataPackage(pkg, []);
@@ -174,7 +204,9 @@ describe('dataPackageStore — setFilteredData', () => {
     const store = createDataPackageStore();
     await store.getState().setDataPackage(makePackage(), []);
     const before = store.getState().filteredData;
-    store.getState().setFilteredData('donors', { displayRows: [{ age: 10 }], allRows: [{ age: 10 }] });
+    store
+      .getState()
+      .setFilteredData('donors', { displayRows: [{ age: 10 }], allRows: [{ age: 10 }] });
     const after = store.getState().filteredData;
     expect(after).not.toBe(before);
     expect(after.get('donors')?.displayRows).toEqual([{ age: 10 }]);
@@ -196,11 +228,15 @@ describe('dataPackageStore — serialization strings', () => {
               {
                 name: 'age_value',
                 'udi:data_type': 'quantitative',
-                // @ts-expect-error — vestigial field stripped at serialization
                 'udi:overlapping_fields': ['other.age_value'],
               },
             ],
           },
+          encoding: '',
+          format: '',
+          mediatype: '',
+          scheme: '',
+          type: '',
         },
       ],
     };

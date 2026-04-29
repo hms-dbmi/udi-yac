@@ -18,9 +18,6 @@ export interface DataFieldDomain {
 export interface DataPackageResource {
   name: string;
   path: string;
-  encoding: string;
-  format: string;
-  mediatype: string;
   schema: {
     fields: Array<{
       name: string;
@@ -37,15 +34,18 @@ export interface DataPackageResource {
       'udi:cardinality'?: {
         from: 'one' | 'many';
         to: 'one' | 'many';
-      }
+      };
       reference: {
         resource: string;
         fields: string[];
       };
     }>;
   };
-  scheme: string;
-  type: string;
+  encoding?: string;
+  format?: string;
+  mediatype?: string;
+  scheme?: string;
+  type?: string;
   'udi:column_count'?: number;
   'udi:row_count'?: number;
 }

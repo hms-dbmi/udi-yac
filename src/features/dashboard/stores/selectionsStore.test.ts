@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createSelectionsStore } from './selectionsStore';
-import type { DataSelection } from 'udi-toolkit/react';
+import type { DataSelection, PointSelection, RangeSelection } from 'udi-toolkit/react';
+
+type Selection = RangeSelection | PointSelection | null;
 
 function makeSelection(
   field: string,
@@ -8,7 +10,7 @@ function makeSelection(
   type: 'interval' | 'point' = 'interval',
   dataSourceKey = 'donors',
 ): DataSelection {
-  return { dataSourceKey, type, selection: { [field]: value } };
+  return { dataSourceKey, type, selection: { [field]: value } as unknown as Selection };
 }
 
 describe('selectionsStore', () => {
@@ -45,30 +47,26 @@ describe('selectionsStore', () => {
     const store = createSelectionsStore();
     store.getState().updateSelections({ brush1: makeSelection('age', [0, 50]) });
     // Signal a cleared brush by setting selection to null.
-    store
-      .getState()
-      .updateSelections({
-        brush1: {
-          dataSourceKey: 'donors',
-          type: 'interval',
-          selection: null as unknown as Record<string, unknown[]>,
-        },
-      });
+    store.getState().updateSelections({
+      brush1: {
+        dataSourceKey: 'donors',
+        type: 'interval',
+        selection: null as unknown as Selection,
+      },
+    });
     expect(store.getState().selections).toEqual({});
   });
 
   it('updateSelections is a no-op when clearing a key that is not set', () => {
     const store = createSelectionsStore();
     const before = store.getState().selections;
-    store
-      .getState()
-      .updateSelections({
-        brush1: {
-          dataSourceKey: 'donors',
-          type: 'interval',
-          selection: null as unknown as Record<string, unknown[]>,
-        },
-      });
+    store.getState().updateSelections({
+      brush1: {
+        dataSourceKey: 'donors',
+        type: 'interval',
+        selection: null as unknown as Selection,
+      },
+    });
     expect(store.getState().selections).toBe(before);
   });
 

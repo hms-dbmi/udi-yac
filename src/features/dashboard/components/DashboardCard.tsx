@@ -30,6 +30,7 @@ import {
   useSelectionsStore,
   useMemoryBankStore,
   useDataPackage,
+  useTracker,
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const selectionsStore = useSelectionsStore();
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
+  const trackEvent = useTracker();
   const isExpanded = useDashboard((s) => s.isExpanded(vizKey));
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   const isHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
@@ -74,7 +76,8 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   const handleClose = useCallback(() => {
     dashboardStore.getState().unpinVisualization(vizKey, memoryBankStore);
-  }, [dashboardStore, vizKey, memoryBankStore]);
+    trackEvent('visualization_closed', { hasTitle: !!viz.title });
+  }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title]);
 
   const handleToggleExpand = useCallback(() => {
     dashboardStore.getState().toggleExpanded(vizKey);

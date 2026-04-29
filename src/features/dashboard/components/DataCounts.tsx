@@ -8,11 +8,13 @@ import {
   useDataFilters,
   useDataFiltersStore,
   useDataPackageStore,
+  useEntityIcons,
   useSelections,
 } from '@/app/UDIChatContext';
 import { joinDataPath } from '@/features/data-package';
+import type { EntityIconMap } from '../types';
 
-const ENTITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const DEFAULT_ENTITY_ICONS: EntityIconMap = {
   donors: Users,
   donor: Users,
   subject: Users,
@@ -45,6 +47,12 @@ export function DataCounts() {
 
   const [filteredCounts, setFilteredCounts] = useState<Record<string, number>>({});
 
+  const consumerIcons = useEntityIcons();
+  const mergedIcons = useMemo<EntityIconMap>(
+    () => ({ ...DEFAULT_ENTITY_ICONS, ...consumerIcons }),
+    [consumerIcons],
+  );
+
   const chips = useMemo<EntityChip[]>(() => {
     if (!dataPackage?.resources) return [];
     return entityNames
@@ -56,11 +64,11 @@ export function DataCounts() {
           id: name,
           label: name,
           totalCount,
-          Icon: ENTITY_ICONS[name] ?? Table2,
+          Icon: mergedIcons[name] ?? Table2,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
-  }, [dataPackage, entityNames]);
+  }, [dataPackage, entityNames, mergedIcons]);
 
   // Build filter IDs (same logic as dashboardStore.getFilterIds)
   const filterIds = useMemo(() => {

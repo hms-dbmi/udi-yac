@@ -1,10 +1,6 @@
 import { useCallback } from 'react';
 import { RotateCw } from 'lucide-react';
-import {
-  useMemoryBank,
-  useDashboardStore,
-  useMemoryBankStore,
-} from '@/app/UDIChatContext';
+import { useMemoryBank, useDashboardStore, useMemoryBankStore } from '@/app/UDIChatContext';
 
 /**
  * Renders a strip of recently-closed visualizations with per-item restore

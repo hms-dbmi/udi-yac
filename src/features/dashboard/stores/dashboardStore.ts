@@ -5,6 +5,7 @@ import type { DataFiltersState } from './dataFiltersStore';
 import type { DataPackageState } from '@/features/data-package';
 import type { MemoryBankState } from './memoryBankStore';
 import type { EntityRelationship } from '@/types/dataPackage';
+import type { DataTransformation } from 'udi-toolkit';
 
 export interface PinnedVisualization {
   index: number;
@@ -113,16 +114,22 @@ interface SpecSourceLike {
   name?: string;
 }
 
+interface InteractiveSpec extends UDIGrammar {
+  config?: {
+    hideActions?: boolean;
+  };
+}
+
 export function injectInteractivity(
   spec: UDIGrammar,
   id: string,
   sourceFields: Record<string, string[]> | null,
-): UDIGrammar {
+): InteractiveSpec {
   const sourceData = Array.isArray(spec.source)
     ? (spec.source as SpecSourceLike[])
     : [spec.source as SpecSourceLike];
   const sourceName = sourceData[0]?.name ?? 'unknown_source';
-  const interactiveSpec = structuredClone(spec);
+  const interactiveSpec: InteractiveSpec = structuredClone(spec);
   let firstRepresentation = interactiveSpec.representation as
     | SpecRepresentationLike
     | SpecRepresentationLike[]
@@ -186,6 +193,7 @@ export function injectInteractivity(
     };
   }
 
+  console.log({ interactiveSpec });
   interactiveSpec.config = { hideActions: true };
   return interactiveSpec;
 }
@@ -402,7 +410,11 @@ export function createDashboardStore() {
           ? getRepresentedFields(viz.spec).map((field) => ({ filter: `d['${field}'] != null` }))
           : [];
 
-        const newTransformation = [...newFilters, ...baseTrans, ...nullFilters];
+        const newTransformation = [
+          ...newFilters,
+          ...baseTrans,
+          ...nullFilters,
+        ] as DataTransformation[];
 
         if (
           JSON.stringify(viz.interactiveSpec.transformation) !== JSON.stringify(newTransformation)

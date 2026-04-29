@@ -30,8 +30,10 @@ function makeSpec(overrides: Partial<Record<string, unknown>> = {}): UDIGrammar 
 describe('injectInteractivity', () => {
   it('adds an interval select for quantitative x/y encodings', () => {
     const spec = makeSpec();
-    const interactive = injectInteractivity(spec, 'uuid-1', { donors: ['age_value', 'weight_value'] });
-    const rep = interactive.representation as {
+    const interactive = injectInteractivity(spec, 'uuid-1', {
+      donors: ['age_value', 'weight_value'],
+    });
+    const rep = interactive.representation as unknown as {
       select: { name: string; source: string; how: { type: string; on: string; field: string[] } };
     };
     expect(rep.select.name).toBe('uuid-1');
@@ -71,7 +73,9 @@ describe('injectInteractivity', () => {
 
   it('sets config.hideActions so Vega overlay does not appear', () => {
     const spec = makeSpec();
-    const interactive = injectInteractivity(spec, 'uuid-1', { donors: ['age_value', 'weight_value'] });
+    const interactive = injectInteractivity(spec, 'uuid-1', {
+      donors: ['age_value', 'weight_value'],
+    });
     expect(interactive.config?.hideActions).toBe(true);
   });
 
@@ -162,9 +166,9 @@ describe('parseSpecFromToolCall', () => {
 
 describe('extractAllUdiSpecsFromMessage', () => {
   it('skips user messages', () => {
-    expect(
-      extractAllUdiSpecsFromMessage({ role: 'user', content: '', tool_calls: [] }),
-    ).toEqual([]);
+    expect(extractAllUdiSpecsFromMessage({ role: 'user', content: '', tool_calls: [] })).toEqual(
+      [],
+    );
   });
 
   it('returns only RenderVisualization tool calls with parseable specs', () => {
@@ -211,7 +215,9 @@ describe('dashboardStore — pinning / unpinning', () => {
   it('pinVisualization stores the spec with a generated uuid', () => {
     const store = createDashboardStore();
     const spec = makeSpec();
-    store.getState().pinVisualization(0, 0, spec, 'show age', { donors: ['age_value', 'weight_value'] });
+    store
+      .getState()
+      .pinVisualization(0, 0, spec, 'show age', { donors: ['age_value', 'weight_value'] });
     const viz = store.getState().pinnedVisualizations.get('0-0');
     expect(viz?.uuid).toMatch(/^udi_/);
     expect(viz?.spec).toBe(spec);
@@ -307,7 +313,9 @@ describe('dashboardStore — UI toggles', () => {
 describe('dashboardStore — updatePinnedVisualizationSpec', () => {
   it('replaces the spec and recomputes the interactive spec for the same uuid', () => {
     const store = createDashboardStore();
-    store.getState().pinVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
+    store
+      .getState()
+      .pinVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
     const original = store.getState().pinnedVisualizations.get('0-0')!;
     const newSpec = makeSpec({
       representation: {
@@ -372,7 +380,9 @@ describe('dashboardStore — cross-store filter propagation', () => {
       },
     ]);
 
-    dashboard.getState().pinVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
+    dashboard
+      .getState()
+      .pinVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
     const pinned = dashboard.getState().pinnedVisualizations.get('0-0')!;
 
     dataFilters.getState().setDataSelection('message-filter-1-0', {
@@ -396,7 +406,9 @@ describe('dashboardStore — cross-store filter propagation', () => {
     const dataFilters = createDataFiltersStore();
     const dataPackage = buildDataPackageStoreWith([]);
 
-    dashboard.getState().pinVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
+    dashboard
+      .getState()
+      .pinVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 
     const viz = dashboard.getState().pinnedVisualizations.get('0-0')!;
@@ -412,7 +424,9 @@ describe('dashboardStore — cross-store filter propagation', () => {
     const dataFilters = createDataFiltersStore();
     const dataPackage = buildDataPackageStoreWith([]);
 
-    dashboard.getState().pinVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
+    dashboard
+      .getState()
+      .pinVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
     dashboard.getState().setFilterAllNullValues(false);
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 

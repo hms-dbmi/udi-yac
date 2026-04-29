@@ -9,8 +9,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { useDataPackage, useDataFilters } from '@/app/UDIChatContext';
+import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '@/features/dashboard';
+import type { PointSelection } from 'udi-toolkit/react';
 
 interface PointFilterComponentProps {
   dataSelection: DataSelection;
@@ -28,6 +29,7 @@ export function PointFilterComponent({
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidPointFilter = useDataPackage((s) => s.isValidPointFilter);
   const setDataSelection = useDataFilters((s) => s.setDataSelection);
+  const trackEvent = useTracker();
 
   const entity = dataSelection.dataSourceKey;
   const allFields = Object.keys(dataSelection.selection ?? {});
@@ -52,21 +54,32 @@ export function PointFilterComponent({
     (value: string, checked: boolean) => {
       if (!field) return;
       const next = checked ? [...selectedValues, value] : selectedValues.filter((v) => v !== value);
-      setDataSelection(filterKey, {
-        ...dataSelection,
-        selection: { ...dataSelection.selection, [field]: next },
+      const current = (dataSelection.selection ?? {}) as PointSelection;
+      const nextSelection: PointSelection = { ...current, [field]: next };
+      setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
+      trackEvent('filter_selection_changed', {
+        entity,
+        field,
+        action: 'toggle',
+        checked,
+        selectionCount: next.length,
       });
     },
-    [setDataSelection, filterKey, dataSelection, field, selectedValues],
+    [setDataSelection, filterKey, dataSelection, field, selectedValues, trackEvent, entity],
   );
 
   const handleClearAll = useCallback(() => {
     if (!field) return;
-    setDataSelection(filterKey, {
-      ...dataSelection,
-      selection: { ...dataSelection.selection, [field]: [] },
+    const current = (dataSelection.selection ?? {}) as PointSelection;
+    const nextSelection: PointSelection = { ...current, [field]: [] };
+    setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
+    trackEvent('filter_selection_changed', {
+      entity,
+      field,
+      action: 'clear_all',
+      selectionCount: 0,
     });
-  }, [setDataSelection, filterKey, dataSelection, field]);
+  }, [setDataSelection, filterKey, dataSelection, field, trackEvent, entity]);
 
   const handleEntityChange = useCallback(
     (val: string | null) => {
@@ -76,8 +89,13 @@ export function PointFilterComponent({
         dataSourceKey: val,
         selection: field ? { [field]: [] } : {},
       });
+      trackEvent('filter_entity_changed', {
+        filterType: 'point',
+        entity: val,
+        field,
+      });
     },
-    [setDataSelection, filterKey, dataSelection, field],
+    [setDataSelection, filterKey, dataSelection, field, trackEvent],
   );
 
   const handleFieldChange = useCallback(
@@ -87,8 +105,13 @@ export function PointFilterComponent({
         ...dataSelection,
         selection: { [val]: [] },
       });
+      trackEvent('filter_field_changed', {
+        filterType: 'point',
+        entity,
+        field: val,
+      });
     },
-    [setDataSelection, filterKey, dataSelection],
+    [setDataSelection, filterKey, dataSelection, trackEvent, entity],
   );
 
   const fieldOptions = categoricalSourceFields?.[entity] ?? [];

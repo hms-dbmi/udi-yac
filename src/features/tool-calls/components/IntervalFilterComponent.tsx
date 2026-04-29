@@ -9,8 +9,9 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
-import { useDataPackage, useDataFilters } from '@/app/UDIChatContext';
+import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '@/features/dashboard';
+import type { RangeSelection } from 'udi-toolkit/react';
 
 interface IntervalFilterComponentProps {
   dataSelection: DataSelection;
@@ -34,6 +35,7 @@ export function IntervalFilterComponent({
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidIntervalFilter = useDataPackage((s) => s.isValidIntervalFilter);
   const setDataSelection = useDataFilters((s) => s.setDataSelection);
+  const trackEvent = useTracker();
 
   const entity = dataSelection.dataSourceKey;
   const field = Object.keys(dataSelection.selection ?? {})[fieldIndex] ?? '';
@@ -74,10 +76,12 @@ export function IntervalFilterComponent({
 
   const commitToStore = useCallback(
     (range: number[]) => {
-      setDataSelection(filterKey, {
-        ...dataSelection,
-        selection: { ...dataSelection.selection, [field]: [range[0], range[1]] },
-      });
+      const current = (dataSelection.selection ?? {}) as RangeSelection;
+      const nextSelection: RangeSelection = {
+        ...current,
+        [field]: [range[0], range[1]],
+      };
+      setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
     },
     [setDataSelection, filterKey, dataSelection, field],
   );
@@ -106,6 +110,23 @@ export function IntervalFilterComponent({
     [scheduleCommit],
   );
 
+  // Fire analytics once at drag-resolve rather than on every rAF commit, so a
+  // single drag produces one event instead of dozens. The data store is still
+  // updated continuously via scheduleCommit above for live downstream views.
+  const handleRangeCommit = useCallback(
+    (value: number | readonly number[]) => {
+      const arr = Array.isArray(value) ? [...value] : [value];
+      if (arr.length < 2) return;
+      trackEvent('filter_range_changed', {
+        entity,
+        field,
+        isReset: false,
+        isFullRange: arr[0] <= rangeMinMax.min && arr[1] >= rangeMinMax.max,
+      });
+    },
+    [trackEvent, entity, field, rangeMinMax],
+  );
+
   const handleReset = useCallback(() => {
     const reset = [rangeMinMax.min, rangeMinMax.max];
     setLocalRange(reset);
@@ -115,7 +136,13 @@ export function IntervalFilterComponent({
     }
     pendingRangeRef.current = null;
     commitToStore(reset);
-  }, [commitToStore, rangeMinMax]);
+    trackEvent('filter_range_changed', {
+      entity,
+      field,
+      isReset: true,
+      isFullRange: true,
+    });
+  }, [commitToStore, rangeMinMax, trackEvent, entity, field]);
 
   const handleEntityChange = useCallback(
     (val: string | null) => {
@@ -125,8 +152,13 @@ export function IntervalFilterComponent({
         dataSourceKey: val,
         selection: { [field]: [rangeMinMax.min, rangeMinMax.max] },
       });
+      trackEvent('filter_entity_changed', {
+        filterType: 'interval',
+        entity: val,
+        field,
+      });
     },
-    [setDataSelection, filterKey, dataSelection, field, rangeMinMax],
+    [setDataSelection, filterKey, dataSelection, field, rangeMinMax, trackEvent],
   );
 
   const handleFieldChange = useCallback(
@@ -143,8 +175,13 @@ export function IntervalFilterComponent({
         ...dataSelection,
         selection: { [val]: [min, max] },
       });
+      trackEvent('filter_field_changed', {
+        filterType: 'interval',
+        entity,
+        field: val,
+      });
     },
-    [setDataSelection, filterKey, dataSelection, getDomainForField, entity],
+    [setDataSelection, filterKey, dataSelection, getDomainForField, entity, trackEvent],
   );
 
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
@@ -205,6 +242,7 @@ export function IntervalFilterComponent({
           max={rangeMinMax.max}
           step={(rangeMinMax.max - rangeMinMax.min) / 100}
           onValueChange={handleRangeChange}
+          onValueCommitted={handleRangeCommit}
         />
       ) : (
         <span className="text-sm text-destructive">Error: Invalid filter.</span>

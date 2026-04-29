@@ -7,9 +7,6 @@
 export { ChatPanel } from './components/ChatPanel';
 export { ConversationList } from './components/ConversationList';
 
-export {
-  createConversationStore,
-  type ConversationState,
-} from './stores/conversationStore';
+export { createConversationStore, type ConversationState } from './stores/conversationStore';
 
 export type { QueryConfig } from './api/completions';

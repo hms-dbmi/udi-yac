@@ -1,15 +1,14 @@
 import { createStore } from 'zustand/vanilla';
+import type {
+  DataSelection,
+  DataSelections,
+  RangeSelection,
+  PointSelection,
+} from 'udi-toolkit/react';
 import type { Message, ToolCall } from '@/types/messages';
 import type { FilterDataArgs } from '@/features/tool-calls';
 
-// Matches udi-toolkit's DataSelection / DataSelections shape
-export interface DataSelection {
-  dataSourceKey: string;
-  type: 'interval' | 'point';
-  selection: Record<string, unknown[]>;
-}
-
-export type DataSelections = Record<string, DataSelection>;
+export type { DataSelection, DataSelections };
 
 export interface ExtractedFilter {
   args: FilterDataArgs;
@@ -111,21 +110,32 @@ function normalizeFilterArgs(args: Record<string, unknown>): FilterDataArgs {
 }
 
 export function generateFilterMessage(key: string, selection: DataSelection): Message | null {
-  if (!selection.selection || Object.keys(selection.selection).length === 0) return null;
-  const fields = Object.keys(selection.selection);
-  const tool_calls: ToolCall[] = fields.map((field) => {
-    const range = selection.selection[field];
+  const sel = selection.selection;
+  if (sel == null || Object.keys(sel).length === 0) return null;
+  const tool_calls: ToolCall[] = Object.keys(sel).map((field) => {
+    const value = sel[field];
+    const filter =
+      selection.type === 'interval'
+        ? {
+            filterType: 'interval' as const,
+            intervalRange: {
+              min: (value as RangeSelection[string])[0],
+              max: (value as RangeSelection[string])[1],
+            },
+            pointValues: [] as string[],
+          }
+        : {
+            filterType: 'point' as const,
+            intervalRange: { min: 0, max: 0 },
+            pointValues: value as PointSelection[string],
+          };
     return {
       function: {
         name: 'FilterData',
         arguments: {
           entity: selection.dataSourceKey,
           field,
-          filter: {
-            filterType: selection.type,
-            intervalRange: { min: range[0], max: range[1] },
-            pointValues: range,
-          },
+          filter,
         },
       },
     };
@@ -242,7 +252,9 @@ export function createDataFiltersStore() {
           if (selection.type !== 'interval') continue;
           // Narrow the unknown-valued arg bag down to the shape FilterData
           // tool-call arguments are expected to have.
-          const filterArg = args.filter as { intervalRange?: { min: number; max: number } } | undefined;
+          const filterArg = args.filter as
+            | { intervalRange?: { min: number; max: number } }
+            | undefined;
           if (!filterArg?.intervalRange) continue;
           for (const [selectionField, intervalSelection] of Object.entries(
             selection.selection ?? {},
@@ -272,19 +284,10 @@ export function createDataFiltersStore() {
     clearFilter: (key: string) => {
       const { dataSelections, internalDataSelections } = get();
 
-      const clearValues = (sel: DataSelection | undefined): DataSelection | undefined => {
-        if (!sel?.selection) return sel;
-        const cleared = { ...sel, selection: { ...sel.selection } };
-        for (const field of Object.keys(cleared.selection)) {
-          cleared.selection[field] = [];
-        }
-        return cleared;
-      };
-
       const nextData = { ...dataSelections };
       const nextInternal = { ...internalDataSelections };
-      if (nextData[key]) nextData[key] = clearValues(nextData[key])!;
-      if (nextInternal[key]) nextInternal[key] = clearValues(nextInternal[key])!;
+      if (nextData[key]) nextData[key] = { ...nextData[key], selection: null };
+      if (nextInternal[key]) nextInternal[key] = { ...nextInternal[key], selection: null };
       set({ dataSelections: nextData, internalDataSelections: nextInternal });
     },
 

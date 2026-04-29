@@ -11,7 +11,4 @@ export {
 
 export { joinDataPath } from './utils/joinDataPath';
 
-export {
-  evaluateStructuredText,
-  hasStructuredReferences,
-} from './utils/structuredTextParser';
+export { evaluateStructuredText, hasStructuredReferences } from './utils/structuredTextParser';

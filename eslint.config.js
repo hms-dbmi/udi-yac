@@ -3,10 +3,7 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
-import {
-  projectStructurePlugin,
-  createIndependentModules,
-} from 'eslint-plugin-project-structure';
+import { projectStructurePlugin, createIndependentModules } from 'eslint-plugin-project-structure';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 /**
@@ -27,12 +24,7 @@ const independentModules = createIndependentModules({
   },
   reusableImportPatterns: {
     // Shared layers any source file is allowed to reach.
-    sharedLayers: [
-      'src/types/**',
-      'src/lib/**',
-      'src/stores/**',
-      'src/components/ui/**',
-    ],
+    sharedLayers: ['src/types/**', 'src/lib/**', 'src/stores/**', 'src/components/ui/**'],
   },
   modules: [
     // Feature internals: own family + cross-feature barrels + shared layers.
@@ -73,11 +65,7 @@ const independentModules = createIndependentModules({
     {
       name: 'Shared utilities',
       pattern: 'src/utils/**',
-      allowImportsFrom: [
-        'src/utils/**',
-        '{sharedLayers}',
-        'src/features/*/index.ts',
-      ],
+      allowImportsFrom: ['src/utils/**', '{sharedLayers}', 'src/features/*/index.ts'],
       allowExternalImports: true,
     },
     // Shared types — leaf layer, no feature reach.

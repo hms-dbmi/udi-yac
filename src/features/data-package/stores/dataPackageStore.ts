@@ -9,6 +9,7 @@ import type {
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
 import type { ResourceInput } from '../types';
+import DomainWorker from '../workers/domainWorker?worker&inline';
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready' | 'error';
 
@@ -325,9 +326,7 @@ function loadDomainsViaWorker(set: SetFn, resources: ResourceInput[]): Promise<v
   return new Promise((resolve, reject) => {
     let worker: Worker;
     try {
-      worker = new Worker(new URL('../workers/domainWorker.ts', import.meta.url), {
-        type: 'module',
-      });
+      worker = new DomainWorker();
     } catch (e) {
       reject(e);
       return;

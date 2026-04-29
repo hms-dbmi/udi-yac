@@ -1,6 +1,6 @@
-# udi-chat-react
+# udi-yac
 
-React implementation of the UDI Chat interface — an AI-powered system for querying and visualizing biomedical datasets via natural language. This is a React port of the original Vue 3/Quasar `udi-chat` app.
+React implementation of the UDI Chat interface — an AI-powered system for querying and visualizing biomedical datasets via natural language. This is a React port of the original Vue 3/Quasar `udi-chat` app. Published on npm as [`udi-yac`](https://www.npmjs.com/package/udi-yac); the repository directory remains `udi-chat-react`.
 
 ## Quick Start
 
@@ -56,8 +56,8 @@ The project builds as both a **library** and a **standalone app**:
 ### Library Usage
 
 ```tsx
-import { UDIChat } from 'udi-chat-react';
-import 'udi-chat-react/style.css';
+import { UDIChat } from 'udi-yac';
+import 'udi-yac/style.css';
 
 <UDIChat
   apiBaseUrl="http://localhost:8007"
@@ -80,6 +80,11 @@ import 'udi-chat-react/style.css';
 | `authToken`        | `string?`            | JWT bearer token for API auth                                                                                   |
 | `requireApiKey`    | `boolean?`           | Show API key input before chatting                                                                              |
 | `model`            | `string?`            | LLM model name override                                                                                         |
+| `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).    |
+| `entityIcons`      | `EntityIconMap?`     | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                         |
+| `mascot`           | `ReactNode \| null?` | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                        |
+| `splashMessages`   | `readonly string[]?` | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages). |
+| `onEvent`          | `TrackerFn?`         | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                      |
 | `className`        | `string?`            | CSS class for the root element                                                                                  |
 | `style`            | `CSSProperties?`     | Inline styles for the root element                                                                              |
 
@@ -122,7 +127,7 @@ If the remote server requires authentication, pass `fetchOptions` with the neces
 Pass a `DataPackage` object directly via the `dataPackage` prop. This is useful when you build the schema programmatically or receive it from an API. CSVs are still loaded from the URLs in `udi:path` + `resource.path` for domain computation, unless you also provide `dataFieldDomains` to skip that step entirely.
 
 ```tsx
-import type { DataPackage } from 'udi-chat-react';
+import type { DataPackage } from 'udi-yac';
 
 const myDataPackage: DataPackage = {
   'udi:path': 'https://portal.hubmapconsortium.org/metadata/v0/',
@@ -153,7 +158,7 @@ const myDataPackage: DataPackage = {
 To skip CSV loading entirely (e.g. when you already have domain metadata), pass pre-computed domains:
 
 ```tsx
-import type { DataFieldDomain } from 'udi-chat-react';
+import type { DataFieldDomain } from 'udi-yac';
 
 const myDomains: DataFieldDomain[] = [
   {
@@ -215,8 +220,165 @@ See [`src/data/hubmapRemote.ts`](src/data/hubmapRemote.ts) for the canonical inl
 ### Data Management
 
 - **Entity counts**: per-entity row counts with dynamic filtered counts
-- **Download**: filtered data as ZIP of CSVs, or manifest (hubmap_id extraction)
+- **Download**: filtered data as ZIP of CSVs, or manifest (hubmap_id extraction). Consumers can extend the dropdown with custom actions via the `downloadActions` prop — see [Custom download actions](#custom-download-actions).
 - Data package loading with domain computation (Arquero)
+
+### Custom download actions
+
+Pass `downloadActions` on `UDIChatConfig` to append consumer-specific entries to the Download Data dropdown. Each action's `onClick` receives a snapshot of the current filters and the per-source rows the built-in "Download Raw Data" would have used, so you can export to custom formats, post to an API, or route to another tool.
+
+```tsx
+import { UDIChat } from 'udi-yac';
+import type { DownloadAction } from 'udi-yac';
+
+const sendToWorkspaces: DownloadAction = {
+  label: 'Open in Workspaces',
+  disabled: (ctx) => ctx.rowsBySource.every((r) => r.rows.length === 0),
+  onClick: async ({ rowsBySource, filters }) => {
+    const ids = rowsBySource.flatMap(({ rows }) =>
+      rows.map((r) => String(r['hubmap_id'] ?? '')).filter(Boolean),
+    );
+    await fetch('/api/workspaces', {
+      method: 'POST',
+      body: JSON.stringify({ ids, filters }),
+    });
+  },
+};
+
+<UDIChat apiBaseUrl="http://localhost:8007" downloadActions={[sendToWorkspaces]} />;
+```
+
+The `DownloadActionContext` passed to each callback contains:
+
+| Field          | Type                                | Notes                                                              |
+| -------------- | ----------------------------------- | ------------------------------------------------------------------ |
+| `rowsBySource` | `{ source: string; rows: Row[] }[]` | Post-filter, post-brush rows — same data the built-in ZIP exports. |
+| `filters`      | `DataSelections`                    | Active filter selections keyed by filter id.                       |
+| `dataPackage`  | `DataPackage \| null`               | The loaded data package; null until first resolution completes.    |
+
+Custom actions render after the two built-in items, separated by a divider.
+
+### Custom entity icons
+
+Pass `entityIcons` on `UDIChatConfig` to change the icon rendered on each entity count chip in the dashboard header. Keys are entity names exactly as they appear in the data package (`resources[].name`). Any component that accepts a `className` prop works — lucide-react icons are typical.
+
+```tsx
+import { UDIChat } from 'udi-yac';
+import type { EntityIconMap } from 'udi-yac';
+import { Dna, FlaskConical } from 'lucide-react';
+
+const icons: EntityIconMap = {
+  // Override the default icon for an existing entity:
+  samples: FlaskConical,
+  // Add an icon for a custom entity:
+  sequencing_runs: Dna,
+};
+
+<UDIChat apiBaseUrl="http://localhost:8007" entityIcons={icons} />;
+```
+
+Consumer entries are merged on top of the built-in icons (`donors`, `samples`, `datasets`, …) — you only need to supply the names you want to override or add. Entities with no match fall back to a generic table icon.
+
+### Custom mascot
+
+The empty-dashboard welcome splash renders a YAC mascot by default. Consumers can replace it or hide it via the `mascot` prop on `UDIChatConfig`:
+
+| Value              | Result                                                                 |
+| ------------------ | ---------------------------------------------------------------------- |
+| `undefined` (omit) | Renders the built-in YAC mascot image.                                 |
+| `null`             | Hides the mascot entirely. The speech-bubble prompt above still shows. |
+| Any `ReactNode`    | Renders the provided node in place of the mascot image.                |
+
+```tsx
+import { UDIChat } from 'udi-yac';
+
+// Replace with a custom image:
+<UDIChat
+  apiBaseUrl="http://localhost:8007"
+  mascot={<img src="/my-mascot.svg" alt="" className="w-60 h-60 object-contain" />}
+/>
+
+// Hide entirely:
+<UDIChat apiBaseUrl="http://localhost:8007" mascot={null} />
+```
+
+### Custom splash messages
+
+One prompt is picked at random from a built-in pool (`"Ask me for a visualization!"`, `"What data would you like to explore?"`, etc.) and shown in the speech bubble above the mascot. Override via `splashMessages` on `UDIChatConfig`:
+
+| Value              | Result                                                 |
+| ------------------ | ------------------------------------------------------ |
+| `undefined` (omit) | Random pick from the built-in defaults.                |
+| Non-empty array    | Random pick from the provided strings exclusively.     |
+| `[]`               | Hides the speech bubble entirely (mascot still shows). |
+
+```tsx
+<UDIChat
+  apiBaseUrl="http://localhost:8007"
+  splashMessages={[
+    'Ask me about donors, samples, or datasets.',
+    'Try “average age by sex”.',
+  ]}
+/>
+
+// Hide the speech bubble:
+<UDIChat apiBaseUrl="http://localhost:8007" splashMessages={[]} />
+```
+
+The selection is made once per `UDIChat` mount, so the message doesn't flicker between renders.
+
+### Analytics events
+
+Pass an `onEvent` callback on `UDIChatConfig` to receive events for key user actions. The signature —
+
+```ts
+type TrackerFn = (name: string, properties?: Record<string, unknown>) => void;
+```
+
+— matches the call shape of every major analytics tool, so it can usually be forwarded directly:
+
+```tsx
+import { UDIChat } from 'udi-yac';
+import type { TrackerFn } from 'udi-yac';
+
+// Google Analytics 4 (via gtag):
+const track: TrackerFn = (name, props) => window.gtag?.('event', name, props);
+
+// Segment / Amplitude / PostHog:
+// const track: TrackerFn = (name, props) => window.analytics?.track(name, props);
+
+<UDIChat apiBaseUrl="http://localhost:8007" onEvent={track} />;
+```
+
+Event names are stable, snake_case strings. **Properties carry metadata only — never raw message content or OpenAI key material.** If the callback throws, the error is swallowed so an analytics failure never breaks the chat.
+
+**Correlation ids.** Every event carries a `sessionId` (minted once per `UDIChat` mount) so all events from one chat instance can be stitched together and two tabs can be told apart. A subset of events — the ones bound to a single send↔response round trip — also carries a shared `turnId`, making it trivial to match a `message_sent` to the `response_received`, `rebuff_received`, or `request_failed` it produced. A retry after entering an API key reuses the original `turnId` so the retry's response still pairs back to the originating send.
+
+| Event                      | Fired when                                                                                      | Properties                                                                                                                                                                                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `message_sent`             | User submits a message through the chat input                                                   | `turnId: string`<br>`charCount: number` — length of the text, not the text itself<br>`conversationLength: number` — messages already in the conversation when this one was added<br>`hasUserApiKey: boolean` — whether the request will carry the user's key |
+| `response_received`        | Server completes a `/v1/yac/completions` call (including rebuffs)                               | `turnId: string` — matches the originating `message_sent`<br>`durationMs: number`<br>`toolCallNames: string[]` — e.g. `["RenderVisualization", "FreeTextExplain"]`<br>`toolCallCount: number`<br>`hadUserKey: boolean`<br>`hasRebuff: boolean`               |
+| `rebuff_received`          | The response contains a `Rebuff` tool_call                                                      | `turnId: string`<br>`reason?: string` — machine-readable discriminator; `"budget_exceeded"` for quota rebuffs, absent for ordinary rebuffs<br>`hadUserKey: boolean`                                                                                          |
+| `request_failed`           | `/v1/yac/completions` throws (network error, HTTP !ok)                                          | `turnId: string`<br>`durationMs: number`<br>`hadUserKey: boolean`                                                                                                                                                                                            |
+| `api_key_set`              | User submits a key through the `ApiKeyInput`                                                    | `inResponseToQuota: boolean` — true if a budget-exceeded rebuff had triggered the prompt (distinguishes first-time entry from quota-recovery entry)                                                                                                          |
+| `api_key_cleared`          | User clears their stored key via the header icon                                                | _(none)_                                                                                                                                                                                                                                                     |
+| `conversation_reset`       | User clicks the Reset button (clears messages, pinned viz, filters, memory bank)                | `conversationLength: number` — message count at the moment of reset                                                                                                                                                                                          |
+| `visualization_pinned`     | A new visualization is auto-pinned from an assistant response                                   | `hasTitle: boolean`<br>`toolCallIndex: number` — position within the assistant message's tool_calls                                                                                                                                                          |
+| `visualization_closed`     | User clicks the × on a pinned visualization card                                                | `hasTitle: boolean`                                                                                                                                                                                                                                          |
+| `download_raw_data`        | User clicks "Download Raw Data" in the Download Data dropdown                                   | `sources: number` — count of sources contributing rows<br>`rowsTotal: number`                                                                                                                                                                                |
+| `download_manifest`        | User clicks "Download Manifest"                                                                 | `idsTotal: number` — count of `hubmap_id` values in the exported manifest                                                                                                                                                                                    |
+| `download_<slug>`          | User clicks a custom `downloadActions` entry                                                    | `label: string` — the original menu label                                                                                                                                                                                                                    |
+| `filter_range_changed`     | User commits a new range on a quantitative (interval) filter slider, including the reset button | `entity: string`<br>`field: string`<br>`isReset: boolean` — true when triggered by the reset button<br>`isFullRange: boolean` — true when the new range covers the full domain                                                                               |
+| `filter_selection_changed` | User toggles a checkbox or clicks "Clear all" on a categorical (point) filter                   | `entity: string`<br>`field: string`<br>`action: 'toggle' \| 'clear_all'`<br>`checked?: boolean` — present only when `action === 'toggle'`<br>`selectionCount: number` — count of selected values after the change (no values themselves)                     |
+| `filter_entity_changed`    | User changes the target entity on a tweakable filter card                                       | `filterType: 'interval' \| 'point'`<br>`entity: string` — the newly selected entity<br>`field: string` — the field carried over to the new entity (may be empty)                                                                                             |
+| `filter_field_changed`     | User changes the target field on a tweakable filter card                                        | `filterType: 'interval' \| 'point'`<br>`entity: string`<br>`field: string` — the newly selected field                                                                                                                                                        |
+| `visualization_tweaked`    | User swaps the field bound to an encoding via a `VizTweakComponent` dropdown                    | `encoding: string` — the encoding channel (e.g. `"x"`, `"color"`)                                                                                                                                                                                            |
+
+Every row in the table above also includes `sessionId: string`; it's omitted from the per-event cells to keep the table scannable.
+
+**Custom download slug.** The suffix is derived from the action's `label`: a leading `"Download "` is stripped, the rest is lowercased and non-alphanumeric runs are replaced with `_`. So a `{ label: "Download All TSVs" }` action emits `download_all_tsvs`; `{ label: "Open in Workspaces" }` emits `download_open_in_workspaces`. The original label is always echoed back in `properties.label` so consumers can distinguish collisions.
+
+**Properties you will _not_ see.** By design, the following never cross the tracker boundary: raw message text, tool_call `arguments`, OpenAI API keys, data rows, filter values. Only counts, booleans, tool-call names, ids, and short slug strings are emitted.
 
 ### Debug Mode (type `!/admin` in chat)
 
@@ -333,14 +495,14 @@ src/
 
 The `project-structure/independent-modules` rule enforces these import boundaries:
 
-| From                  | Can import                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------ |
-| `src/features/X/**`   | own family, **other features' `index.ts` only**, `src/{utils,types,lib,stores,components/ui}/**` |
-| `src/app/**`          | any feature internal, all shared layers                                                          |
-| `src/components/ui/`  | sibling UI, `src/lib/`                                                                           |
-| `src/utils/`          | `src/{utils,types,lib,stores}/`, feature barrels                                                 |
-| `src/{types,lib}/`    | shared layers only                                                                               |
-| `src/stores/`         | `src/{stores,types,lib}/`                                                                        |
+| From                 | Can import                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `src/features/X/**`  | own family, **other features' `index.ts` only**, `src/{utils,types,lib,stores,components/ui}/**` |
+| `src/app/**`         | any feature internal, all shared layers                                                          |
+| `src/components/ui/` | sibling UI, `src/lib/`                                                                           |
+| `src/utils/`         | `src/{utils,types,lib,stores}/`, feature barrels                                                 |
+| `src/{types,lib}/`   | shared layers only                                                                               |
+| `src/stores/`        | `src/{stores,types,lib}/`                                                                        |
 
 Cross-feature imports must go through the feature's `index.ts` barrel — direct paths like `@/features/dashboard/stores/dataFiltersStore` from another feature will fail lint.
 

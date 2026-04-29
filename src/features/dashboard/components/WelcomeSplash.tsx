@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import mascotSrc from '@/assets/yac-mascot.svg';
+import { useMascot, useSplashMessages } from '@/app/UDIChatContext';
 
-const SPLASH_MESSAGES = [
+const DEFAULT_SPLASH_MESSAGES = [
   'Ask me for a visualization!',
   'Tell me what you\u2019d like to see!',
   'What data would you like to explore?',
@@ -10,9 +12,22 @@ const SPLASH_MESSAGES = [
 ];
 
 export function WelcomeSplash() {
-  const [message] = useState(
-    () => SPLASH_MESSAGES[Math.floor(Math.random() * SPLASH_MESSAGES.length)],
+  // An explicit empty array from the consumer means "hide the bubble"; leave
+  // `null` as the sentinel so the render branch below is a simple truthy check.
+  const consumerMessages = useSplashMessages();
+  const effectiveMessages = consumerMessages ?? DEFAULT_SPLASH_MESSAGES;
+  const [message] = useState(() =>
+    effectiveMessages.length > 0
+      ? effectiveMessages[Math.floor(Math.random() * effectiveMessages.length)]
+      : null,
   );
+  const mascot = useMascot();
+  const mascotContent =
+    mascot === undefined ? (
+      <img src={mascotSrc} alt="YAC mascot" className="w-60 h-60 object-contain" />
+    ) : (
+      mascot // null \u2192 renders nothing; otherwise render the consumer's node
+    );
 
   return (
     <div className="flex items-center justify-center h-full p-6">
@@ -42,16 +57,14 @@ export function WelcomeSplash() {
 
       {/* Mascot + speech bubble */}
       <div className="flex flex-col items-center gap-1 mt-12">
-        <div className="relative bg-[#e8f4fc] border-[1.5px] border-[#57b4e9] rounded-2xl px-5 py-3">
-          <span className="text-sm text-foreground">{message}</span>
-          <div className="absolute -bottom-[10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#57b4e9]" />
-          <div className="absolute -bottom-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#e8f4fc]" />
-        </div>
-        <img
-          src={`${import.meta.env.BASE_URL}images/yac-mascot.svg`}
-          alt="YAC mascot"
-          className="w-60 h-60 object-contain"
-        />
+        {message !== null && (
+          <div className="relative bg-[#e8f4fc] border-[1.5px] border-[#57b4e9] rounded-2xl px-5 py-3">
+            <span className="text-sm text-foreground">{message}</span>
+            <div className="absolute -bottom-[10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#57b4e9]" />
+            <div className="absolute -bottom-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#e8f4fc]" />
+          </div>
+        )}
+        {mascotContent}
       </div>
     </div>
   );
