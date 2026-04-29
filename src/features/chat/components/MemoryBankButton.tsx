@@ -36,22 +36,33 @@ export function MemoryBankButton() {
     [dashboardStore, memoryBankStore],
   );
 
-  if (closedVisualizations.size === 0) return null;
-
   const entries = Array.from(closedVisualizations.entries());
+  const hasEntries = entries.length > 0;
+
+  // Force `open` back to false whenever the bank empties. Previously the
+  // component returned null on an empty bank, which unmounted the Dialog
+  // mid-transition when the user restored the last entry — and a stale
+  // `open: true` would then resurrect with the next removal. Clamp during
+  // render (React's conditional-setState-in-render pattern) instead of
+  // from an effect to keep this lint-clean.
+  if (!hasEntries && open) {
+    setOpen(false);
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <DialogTrigger render={<Button variant="ghost" size="icon" className="h-7 w-7" />}>
-              <Archive className="h-3.5 w-3.5" />
-            </DialogTrigger>
-          }
-        />
-        <TooltipContent>Memory bank</TooltipContent>
-      </Tooltip>
+    <Dialog open={open && hasEntries} onOpenChange={setOpen}>
+      {hasEntries && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <DialogTrigger render={<Button variant="ghost" size="icon" className="h-7 w-7" />}>
+                <Archive className="h-3.5 w-3.5" />
+              </DialogTrigger>
+            }
+          />
+          <TooltipContent>Memory bank</TooltipContent>
+        </Tooltip>
+      )}
       <DialogContent className="sm:max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="text-sm">Memory Bank</DialogTitle>
