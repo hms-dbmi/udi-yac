@@ -57,7 +57,7 @@ export function VisualizationCard({
       <div className="py-1">
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="text-xs">
-            Active on dashboard
+            Visualization added:
           </Badge>
           {title && <span className="text-xs text-muted-foreground truncate">{title}</span>}
         </div>
