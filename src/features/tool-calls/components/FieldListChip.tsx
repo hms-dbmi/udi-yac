@@ -126,7 +126,7 @@ function FieldChip({ field, meta, highlight }: FieldChipProps) {
         render={
           <Badge variant="secondary" className="max-w-[250px] cursor-default font-mono text-[10px]">
             <span className="min-w-0 truncate">{renderHighlighted(field, highlight)}</span>
-            <Info className="h-2.5 w-2.5 opacity-60" />
+            <Info className="shrink-0 opacity-60" />
           </Badge>
         }
       />
