@@ -105,7 +105,19 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
             </span>
           )}
           {!expanded && hasMore && (
-            <Badge variant="outline" className="text-[10px] text-muted-foreground">
+            <Badge
+              variant="outline"
+              role="button"
+              tabIndex={0}
+              onClick={() => setExpanded(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setExpanded(true);
+                }
+              }}
+              className="cursor-pointer text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
               +{hiddenCount} more
             </Badge>
           )}
