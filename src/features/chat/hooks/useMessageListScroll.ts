@@ -24,15 +24,44 @@ export interface MessageListScrollResult {
 export function useMessageListScroll(messages: Message[]): MessageListScrollResult {
   const contentRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLElement | null>(null);
-  const prevLengthRef = useRef(messages.length);
-  // Start pinned so the initial mount scrolls to the latest message.
+  const prevLengthInEffectRef = useRef(messages.length);
+  // Mirror of `pinned` for read access from event callbacks and effects,
+  // where closure-captured state could be stale.
   const pinnedRef = useRef(true);
   const justAddedMessageRef = useRef(false);
 
   const [firstUnreadIndex, setFirstUnreadIndex] = useState<number | null>(null);
+  const [trackedLength, setTrackedLength] = useState(messages.length);
+  // Render-readable mirror of pinnedRef. Kept in sync inside the scroll
+  // handler so the unread-state derivation below can branch on it.
+  const [pinned, setPinned] = useState(true);
+
+  // Derive the unread boundary during render rather than from an effect —
+  // React's "store information from previous renders" pattern. Setting state
+  // conditionally during render lets React discard the in-progress render
+  // and re-render with the new derived state, without the cascading-renders
+  // cost (and lint warning) of mutating state inside a useEffect body.
+  if (messages.length !== trackedLength) {
+    const prev = trackedLength;
+    setTrackedLength(messages.length);
+    if (messages.length > prev) {
+      const latest = messages[messages.length - 1];
+      const userSent = latest?.role === 'user';
+      if (pinned || userSent) {
+        setFirstUnreadIndex(null);
+      } else {
+        // Preserve the earliest unread boundary across successive arrivals —
+        // the divider should anchor where reading stopped, not creep forward.
+        setFirstUnreadIndex((current) => current ?? prev);
+      }
+    } else {
+      // List shrank (newConversation, loadConversation) — wipe unread state.
+      setFirstUnreadIndex(null);
+    }
+  }
 
   // Resolve the scroll viewport once the content is mounted, jump to the bottom
-  // on initial render, and keep pinnedRef in sync with user scroll position.
+  // on initial render, and keep pin state in sync with user scroll position.
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
@@ -47,6 +76,7 @@ export function useMessageListScroll(messages: Message[]): MessageListScrollResu
       const nowPinned = distance < PIN_THRESHOLD_PX;
       const wasPinned = pinnedRef.current;
       pinnedRef.current = nowPinned;
+      setPinned(nowPinned);
       // Re-entering the pinned region is one of the two "I've caught up"
       // signals that dismisses the unread divider.
       if (nowPinned && !wasPinned) {
@@ -57,29 +87,13 @@ export function useMessageListScroll(messages: Message[]): MessageListScrollResu
     return () => viewport.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // On new-message arrival: if the user is pinned, scroll the newest message
-  // to the top of the viewport; otherwise mark the first unread boundary so a
-  // divider + "new message" pill can surface the fact that content arrived
-  // out of view. Sending a user message counts as the user re-engaging with
-  // the conversation and clears the divider, even if the viewport hasn't
-  // scrolled yet.
+  // On new-message arrival while pinned, align the newest message at the top
+  // of the viewport. Pure DOM side effect — unread-state derivation lives in
+  // render above so this body stays setState-free.
   useEffect(() => {
-    const prev = prevLengthRef.current;
-    prevLengthRef.current = messages.length;
+    const prev = prevLengthInEffectRef.current;
+    prevLengthInEffectRef.current = messages.length;
     if (messages.length <= prev) return;
-
-    const latest = messages[messages.length - 1];
-    const userSent = latest?.role === 'user';
-
-    if (pinnedRef.current || userSent) {
-      setFirstUnreadIndex(null);
-    } else {
-      // Preserve the earliest unread boundary across successive arrivals —
-      // once a gap opens, the divider should anchor to where reading stopped,
-      // not creep forward with every new message.
-      setFirstUnreadIndex((current) => current ?? prev);
-    }
-
     if (!pinnedRef.current) return;
 
     justAddedMessageRef.current = true;
