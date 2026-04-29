@@ -51,10 +51,7 @@ export function MemoryBankButton() {
         </DialogHeader>
         <div className="flex flex-col gap-1 overflow-y-auto max-h-[50vh]">
           {entries.map(([key, viz]) => (
-            <div
-              key={key}
-              className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted"
-            >
+            <div key={key} className="flex items-center gap-2 rounded px-2 py-1.5">
               <span className="flex-1 truncate text-sm text-foreground" title={viz.userPrompt}>
                 {viz.title ?? viz.userPrompt}
               </span>
