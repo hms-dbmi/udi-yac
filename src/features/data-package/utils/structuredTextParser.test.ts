@@ -139,6 +139,23 @@ describe('evaluateStructuredText', () => {
     ]);
   });
 
+  it('emits a field_list segment for field_names rather than a joined string', () => {
+    const segments = evaluateStructuredText(
+      'The fields are {field_names("donors")}.',
+      makeStoreStub(),
+    );
+    expect(segments).toEqual([
+      { type: 'text', content: 'The fields are ' },
+      { type: 'field_list', entity: 'donors', fields: ['age_value', 'sex'] },
+      { type: 'text', content: '.' },
+    ]);
+  });
+
+  it('emits an empty field_list when the entity is unknown', () => {
+    const segments = evaluateStructuredText('{field_names("mystery")}', makeStoreStub());
+    expect(segments).toEqual([{ type: 'field_list', entity: 'mystery', fields: [] }]);
+  });
+
   it('tolerates single-quoted and unquoted string args', () => {
     const single = evaluateStructuredText("{field_count('donors')}", makeStoreStub());
     expect(single).toEqual([{ type: 'value', content: '2' }]);

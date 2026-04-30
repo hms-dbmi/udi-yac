@@ -34,13 +34,6 @@ const functionRegistry: Record<string, FuncHandler> = {
     return fields ? String(fields.length) : '?';
   },
 
-  field_names(store, args) {
-    const entity = args[0];
-    if (!entity || !store.sourceFields) return '?';
-    const fields = store.sourceFields[entity];
-    return fields ? fields.join(', ') : '?';
-  },
-
   field_type(store, args) {
     const [entity, field] = args;
     if (!entity || !field) return '?';
@@ -69,10 +62,10 @@ const functionRegistry: Record<string, FuncHandler> = {
   },
 };
 
-export interface StructuredTextSegment {
-  type: 'text' | 'value';
-  content: string;
-}
+export type StructuredTextSegment =
+  | { type: 'text'; content: string }
+  | { type: 'value'; content: string }
+  | { type: 'field_list'; entity: string; fields: string[] };
 
 export function evaluateStructuredText(
   text: string,
@@ -93,17 +86,31 @@ export function evaluateStructuredText(
       segments.push({ type: 'text', content: text.slice(lastIndex, matchIndex) });
     }
 
-    const handler = functionRegistry[funcName];
-    if (handler) {
+    // field_names emits a structured field_list segment so the UI can render
+    // a collapsible widget rather than a long comma-separated string. All
+    // other functions resolve to flat text values via the handler registry.
+    if (funcName === 'field_names') {
       try {
         const args = parseArgs(rawArgs);
-        const result = handler(store, args);
-        segments.push({ type: 'value', content: result });
+        const entity = args[0] ?? '';
+        const fields = (entity && store.sourceFields?.[entity]) || [];
+        segments.push({ type: 'field_list', entity, fields });
       } catch {
         segments.push({ type: 'text', content: fullMatch });
       }
     } else {
-      segments.push({ type: 'text', content: fullMatch });
+      const handler = functionRegistry[funcName];
+      if (handler) {
+        try {
+          const args = parseArgs(rawArgs);
+          const result = handler(store, args);
+          segments.push({ type: 'value', content: result });
+        } catch {
+          segments.push({ type: 'text', content: fullMatch });
+        }
+      } else {
+        segments.push({ type: 'text', content: fullMatch });
+      }
     }
 
     lastIndex = matchIndex + fullMatch.length;
