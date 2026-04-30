@@ -7,6 +7,7 @@ import { MessageList } from './MessageList';
 import { ChatHeaderBar } from './ChatHeaderBar';
 import { DebugToggleSection } from './DebugToggleSection';
 import { ClosedVisualizationsPanel } from './ClosedVisualizationsPanel';
+import { InlineExamplePrompts } from './InlineExamplePrompts';
 import { useChatApi } from '../hooks/useChatApi';
 import { useResetHandlers } from '../hooks/useResetHandlers';
 import type { QueryConfig } from '../api/completions';
@@ -95,6 +96,11 @@ export function ChatPanel({
       <DebugToggleSection
         showSystemPrompts={showSystemPrompts}
         onShowSystemPromptsChange={setShowSystemPrompts}
+      />
+      <InlineExamplePrompts
+        apiBaseUrl={config.apiBaseUrl}
+        onExampleClick={handleSend}
+        isLoading={isLoading}
       />
       <MessageList
         isLoading={isLoading}
