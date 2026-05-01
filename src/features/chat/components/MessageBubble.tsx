@@ -54,7 +54,7 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
         )}
 
         {toolCalls.length > 1 && (
-          <Accordion defaultValue={[0]} className="mt-1">
+          <Accordion defaultValue={[0]} className="mt-1 min-w-64">
             {toolCalls.map((tc, i) => (
               <AccordionItem key={i} value={i}>
                 <AccordionTrigger className="text-xs">
