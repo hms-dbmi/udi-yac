@@ -79,10 +79,10 @@ export function ClarifyVariable({
                 }
                 size="sm"
                 disabled={submitted}
-                className="h-auto py-1.5 px-2.5 text-left"
+                className="h-auto py-1.5 px-2.5 text-left whitespace-normal max-w-full"
                 onClick={() => toggleCandidate(vIdx, candidate.field_name, candidate.entity)}
               >
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="text-xs">{candidate.field_name}</span>
                     <Badge

@@ -20,6 +20,7 @@ import {
   useSelectionsStore,
   useMemoryBankStore,
   useDataPackage,
+  useGlobal,
   useTracker,
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
@@ -37,6 +38,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const trackEvent = useTracker();
+  const debugMode = useGlobal((s) => s.debugMode);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   const isHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
 
@@ -163,66 +165,68 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
             </TooltipTrigger>
             <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
           </Tooltip>
-          <Dialog>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <DialogTrigger
-                    render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
-                  >
-                    <Code2 className="h-3 w-3" />
-                  </DialogTrigger>
-                }
-              />
-              <TooltipContent>View spec</TooltipContent>
-            </Tooltip>
-            <DialogContent className="max-w-2xl max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle className="text-sm">UDI Grammar Spec</DialogTitle>
-              </DialogHeader>
-              <div className="relative">
-                <div className="flex gap-1 absolute top-1 right-1">
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={handleCopySpec}
-                        />
-                      }
+          {debugMode && (
+            <Dialog>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <DialogTrigger
+                      render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
                     >
-                      {copied ? (
-                        <Check className="h-3.5 w-3.5 text-green-600" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </TooltipTrigger>
-                    <TooltipContent>{copied ? 'Copied' : 'Copy spec'}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => window.open(specEditorUrl, '_blank')}
-                        />
-                      }
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </TooltipTrigger>
-                    <TooltipContent>Open in UDI Grammar Editor</TooltipContent>
-                  </Tooltip>
+                      <Code2 className="h-3 w-3" />
+                    </DialogTrigger>
+                  }
+                />
+                <TooltipContent>View spec</TooltipContent>
+              </Tooltip>
+              <DialogContent className="max-w-2xl max-h-[80vh]">
+                <DialogHeader>
+                  <DialogTitle className="text-sm">UDI Grammar Spec</DialogTitle>
+                </DialogHeader>
+                <div className="relative">
+                  <div className="flex gap-1 absolute top-1 right-1">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={handleCopySpec}
+                          />
+                        }
+                      >
+                        {copied ? (
+                          <Check className="h-3.5 w-3.5 text-green-600" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>{copied ? 'Copied' : 'Copy spec'}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => window.open(specEditorUrl, '_blank')}
+                          />
+                        }
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Open in UDI Grammar Editor</TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <pre className="text-xs overflow-auto max-h-[60vh] bg-muted p-3 rounded-md">
+                    {specJson}
+                  </pre>
                 </div>
-                <pre className="text-xs overflow-auto max-h-[60vh] bg-muted p-3 rounded-md">
-                  {specJson}
-                </pre>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </CardHeader>
       {showTweak && (
