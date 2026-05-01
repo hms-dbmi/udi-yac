@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { Users, FlaskConical, Table2, Loader2, AlertCircle } from 'lucide-react';
+import { Users, FlaskConical, Table2, AlertCircle } from 'lucide-react';
 import { queryData } from 'udi-toolkit/react';
 import type { QueryDataSpec } from 'udi-toolkit/react';
 import {
@@ -325,12 +325,6 @@ export function DataCounts() {
           </div>
         );
       })}
-      {!domainsReady && (
-        <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Loading fields...</span>
-        </div>
-      )}
     </div>
   );
 }

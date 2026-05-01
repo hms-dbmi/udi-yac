@@ -26,16 +26,17 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   );
 }
 
-function SelectTrigger({
-  className,
-  size = 'default',
-  children,
-  ...props
-}: SelectPrimitive.Trigger.Props & {
-  size?: 'sm' | 'default';
-}) {
+// See note in components/ui/button.tsx — forwardRef is required so Base UI's
+// render-prop composition can attach a ref to this component on React 18.
+const SelectTrigger = React.forwardRef<
+  HTMLButtonElement,
+  SelectPrimitive.Trigger.Props & {
+    size?: 'sm' | 'default';
+  }
+>(function SelectTrigger({ className, size = 'default', children, ...props }, ref) {
   return (
     <SelectPrimitive.Trigger
+      ref={ref}
       data-slot="select-trigger"
       data-size={size}
       className={cn(
@@ -50,7 +51,7 @@ function SelectTrigger({
       />
     </SelectPrimitive.Trigger>
   );
-}
+});
 
 function SelectContent({
   className,

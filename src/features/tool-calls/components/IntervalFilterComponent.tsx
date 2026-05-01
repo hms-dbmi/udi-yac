@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { RotateCcw } from 'lucide-react';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '@/features/dashboard';
@@ -231,9 +232,16 @@ export function IntervalFilterComponent({
         <span className="font-semibold">{minText}</span>
         <span className="text-muted-foreground">to</span>
         <span className="font-semibold">{maxText}</span>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleReset}>
-          <RotateCcw className="h-3 w-3" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleReset} />
+            }
+          >
+            <RotateCcw className="h-3 w-3" />
+          </TooltipTrigger>
+          <TooltipContent>Reset range</TooltipContent>
+        </Tooltip>
       </div>
       {isValid ? (
         <Slider

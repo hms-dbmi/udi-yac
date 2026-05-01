@@ -270,28 +270,17 @@ describe('dashboardStore — activating / closing', () => {
     expect(memoryBank.getState().closedVisualizations.has('0-0')).toBe(false);
   });
 
-  it('clearAllVisualizations empties active, expanded, and table-view state', () => {
+  it('clearAllVisualizations empties active and table-view state', () => {
     const store = createDashboardStore();
     store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
-    store.getState().toggleExpanded('0-0');
     store.getState().toggleTableView('0-0');
     store.getState().clearAllVisualizations();
     expect(store.getState().activeVisualizations.size).toBe(0);
-    expect(store.getState().expandedVisualizations.size).toBe(0);
     expect(store.getState().tableViewKeys.size).toBe(0);
   });
 });
 
 describe('dashboardStore — UI toggles', () => {
-  it('toggleExpanded flips state and isExpanded matches', () => {
-    const store = createDashboardStore();
-    expect(store.getState().isExpanded('0-0')).toBe(false);
-    store.getState().toggleExpanded('0-0');
-    expect(store.getState().isExpanded('0-0')).toBe(true);
-    store.getState().toggleExpanded('0-0');
-    expect(store.getState().isExpanded('0-0')).toBe(false);
-  });
-
   it('toggleTableView flips state and isTableView matches', () => {
     const store = createDashboardStore();
     store.getState().toggleTableView('0-0');

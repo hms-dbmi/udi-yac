@@ -11,9 +11,14 @@ function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
-function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
-}
+// See note in components/ui/button.tsx — forwardRef is required so Base UI's
+// render-prop composition (e.g. `<DialogTrigger render={<Button ... />}>`)
+// can attach a ref to this component on React 18.
+const DialogTrigger = React.forwardRef<HTMLButtonElement, DialogPrimitive.Trigger.Props>(
+  function DialogTrigger(props, ref) {
+    return <DialogPrimitive.Trigger ref={ref} data-slot="dialog-trigger" {...props} />;
+  },
+);
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;

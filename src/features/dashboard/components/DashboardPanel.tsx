@@ -4,6 +4,7 @@ import {
   useSelections,
   useDashboardStore,
   useDataFilters,
+  useGlobal,
 } from '@/app/UDIChatContext';
 import { DashboardCard } from './DashboardCard';
 import { WelcomeSplash } from './WelcomeSplash';
@@ -29,6 +30,7 @@ export function DashboardPanel() {
   const vizSelections = useSelections((s) => s.selections);
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const filterAllNullValues = useDashboard((s) => s.filterAllNullValues);
+  const debugMode = useGlobal((s) => s.debugMode);
   const dashboardStore = useDashboardStore();
 
   // Merge viz brush selections with FilterData selections so UDIVis can
@@ -69,18 +71,20 @@ export function DashboardPanel() {
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Filters
             </h3>
-            <div className="flex items-center gap-1.5">
-              <Label htmlFor="null-filter" className="text-[10px] text-muted-foreground">
-                Filter Nulls
-              </Label>
-              <Switch
-                id="null-filter"
-                checked={filterAllNullValues}
-                onCheckedChange={(checked) =>
-                  dashboardStore.getState().setFilterAllNullValues(!!checked)
-                }
-              />
-            </div>
+            {debugMode && (
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="null-filter" className="text-[10px] text-muted-foreground">
+                  Filter Nulls
+                </Label>
+                <Switch
+                  id="null-filter"
+                  checked={filterAllNullValues}
+                  onCheckedChange={(checked) =>
+                    dashboardStore.getState().setFilterAllNullValues(!!checked)
+                  }
+                />
+              </div>
+            )}
           </div>
           <FilterToolbar />
         </div>

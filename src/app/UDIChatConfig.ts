@@ -42,6 +42,12 @@ export interface UDIChatConfig {
    */
   downloadActions?: readonly DownloadAction[];
   /**
+   * Override the visible label on the Download dropdown trigger. Defaults
+   * to "Download Data". Useful when consumers want product-specific
+   * wording (e.g. "Export", "Download Cohort").
+   */
+  downloadButtonLabel?: string;
+  /**
    * Map from entity name (as it appears in the data package `resources[].name`)
    * to an icon component. Merged on top of the built-in icons (donors,
    * samples, datasets, …) with consumer entries winning, so you can supply

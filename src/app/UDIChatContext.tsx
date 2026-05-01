@@ -143,6 +143,32 @@ export function useDownloadActions(): readonly DownloadAction[] {
 }
 
 // ---------------------------------------------------------------------------
+// Consumer-provided Download button label
+// ---------------------------------------------------------------------------
+
+const DEFAULT_DOWNLOAD_BUTTON_LABEL = 'Download Data';
+const DownloadButtonLabelContext = createContext<string>(DEFAULT_DOWNLOAD_BUTTON_LABEL);
+
+export function DownloadButtonLabelProvider({
+  label,
+  children,
+}: {
+  label: string | undefined;
+  children: ReactNode;
+}) {
+  const value = label && label.length > 0 ? label : DEFAULT_DOWNLOAD_BUTTON_LABEL;
+  return (
+    <DownloadButtonLabelContext.Provider value={value}>
+      {children}
+    </DownloadButtonLabelContext.Provider>
+  );
+}
+
+export function useDownloadButtonLabel(): string {
+  return useContext(DownloadButtonLabelContext);
+}
+
+// ---------------------------------------------------------------------------
 // Consumer-provided entity icon overrides
 // ---------------------------------------------------------------------------
 

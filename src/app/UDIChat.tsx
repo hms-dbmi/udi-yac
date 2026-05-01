@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   UDIChatProvider,
   DownloadActionsProvider,
+  DownloadButtonLabelProvider,
   EntityIconsProvider,
   MascotProvider,
   SplashMessagesProvider,
@@ -164,7 +165,7 @@ function UDIChatInner({
           onToggleDrawer={() => setDrawerOpen((v) => !v)}
         />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <DashboardPanel />
       </div>
     </div>
@@ -181,15 +182,17 @@ function UDIChatValidated(props: UDIChatConfig) {
       <UDIChatProvider>
         <TrackerProvider onEvent={props.onEvent}>
           <DownloadActionsProvider actions={props.downloadActions}>
-            <EntityIconsProvider icons={props.entityIcons}>
-              <MascotProvider mascot={props.mascot}>
-                <SplashMessagesProvider messages={props.splashMessages}>
-                  <div className={cn('h-full w-full', props.className)} style={props.style}>
-                    <UDIChatInner {...props} />
-                  </div>
-                </SplashMessagesProvider>
-              </MascotProvider>
-            </EntityIconsProvider>
+            <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
+              <EntityIconsProvider icons={props.entityIcons}>
+                <MascotProvider mascot={props.mascot}>
+                  <SplashMessagesProvider messages={props.splashMessages}>
+                    <div className={cn('h-full w-full', props.className)} style={props.style}>
+                      <UDIChatInner {...props} />
+                    </div>
+                  </SplashMessagesProvider>
+                </MascotProvider>
+              </EntityIconsProvider>
+            </DownloadButtonLabelProvider>
           </DownloadActionsProvider>
         </TrackerProvider>
       </UDIChatProvider>

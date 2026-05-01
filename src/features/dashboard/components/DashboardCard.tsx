@@ -3,18 +3,7 @@ import { UDIVis } from 'udi-toolkit/react';
 import type { DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  X,
-  Settings2,
-  Maximize2,
-  Minimize2,
-  Code2,
-  Copy,
-  Check,
-  Table2,
-  BarChart3,
-  ExternalLink,
-} from 'lucide-react';
+import { X, Settings2, Code2, Copy, Check, Table2, BarChart3, ExternalLink } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
   Dialog,
@@ -23,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import {
   useDashboard,
@@ -30,6 +20,7 @@ import {
   useSelectionsStore,
   useMemoryBankStore,
   useDataPackage,
+  useGlobal,
   useTracker,
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
@@ -47,7 +38,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const trackEvent = useTracker();
-  const isExpanded = useDashboard((s) => s.isExpanded(vizKey));
+  const debugMode = useGlobal((s) => s.debugMode);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   const isHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
 
@@ -78,12 +69,6 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     dashboardStore.getState().closeVisualization(vizKey, memoryBankStore);
     trackEvent('visualization_closed', { hasTitle: !!viz.title });
   }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title]);
-
-  const handleToggleExpand = useCallback(() => {
-    dashboardStore.getState().toggleExpanded(vizKey);
-    // Fire resize so Vega recalculates width
-    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
-  }, [dashboardStore, vizKey]);
 
   const handleSelectionChange = useCallback(
     (newSelections: DataSelections) => {
@@ -124,88 +109,124 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   return (
     <Card
-      className={cn(
-        'relative transition-shadow',
-        isExpanded && 'col-span-full',
-        isHovered && 'ring-2 ring-primary/40',
-      )}
+      className={cn('relative transition-shadow', isHovered && 'ring-2 ring-primary/40')}
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
     >
-      <CardHeader className="p-2 pb-0 flex-row items-center justify-between">
-        <span className="text-xs font-medium truncate pr-2">{viz.title ?? viz.userPrompt}</span>
-        <div className="flex items-center gap-0.5 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setShowTweak((v) => !v)}
-            title="Tweak fields"
-          >
-            <Settings2 className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
-            title={isTableView ? 'Show chart' : 'Show table'}
-          >
-            {isTableView ? <BarChart3 className="h-3 w-3" /> : <Table2 className="h-3 w-3" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleToggleExpand}
-            title={isExpanded ? 'Collapse' : 'Expand'}
-          >
-            {isExpanded ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
-          </Button>
-          <Dialog>
-            <DialogTrigger
-              render={<Button variant="ghost" size="icon" className="h-6 w-6" title="View spec" />}
+      <CardHeader className="p-2 pb-0 flex flex-col gap-1">
+        <div className="flex items-center w-full">
+          <span className="text-xs inline-block font-medium truncate flex-1">
+            {viz.title ?? viz.userPrompt}
+          </span>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 ml-auto"
+                  onClick={handleClose}
+                />
+              }
             >
-              <Code2 className="h-3 w-3" />
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle className="text-sm">UDI Grammar Spec</DialogTitle>
-              </DialogHeader>
-              <div className="relative">
-                <div className="flex gap-1 absolute top-1 right-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={handleCopySpec}
-                    title="Copy spec"
-                  >
-                    {copied ? (
-                      <Check className="h-3.5 w-3.5 text-green-600" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => window.open(specEditorUrl, '_blank')}
-                    title="Open in UDI Grammar Editor"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
+              <X className="h-3 w-3" />
+            </TooltipTrigger>
+            <TooltipContent>Close</TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setShowTweak((v) => !v)}
+                />
+              }
+            >
+              <Settings2 className="h-3 w-3" />
+            </TooltipTrigger>
+            <TooltipContent>Tweak fields</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
+                />
+              }
+            >
+              {isTableView ? <BarChart3 className="h-3 w-3" /> : <Table2 className="h-3 w-3" />}
+            </TooltipTrigger>
+            <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
+          </Tooltip>
+          {debugMode && (
+            <Dialog>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <DialogTrigger
+                      render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
+                    >
+                      <Code2 className="h-3 w-3" />
+                    </DialogTrigger>
+                  }
+                />
+                <TooltipContent>View spec</TooltipContent>
+              </Tooltip>
+              <DialogContent className="max-w-2xl max-h-[80vh]">
+                <DialogHeader>
+                  <DialogTitle className="text-sm">UDI Grammar Spec</DialogTitle>
+                </DialogHeader>
+                <div className="relative">
+                  <div className="flex gap-1 absolute top-1 right-1">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={handleCopySpec}
+                          />
+                        }
+                      >
+                        {copied ? (
+                          <Check className="h-3.5 w-3.5 text-green-600" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>{copied ? 'Copied' : 'Copy spec'}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => window.open(specEditorUrl, '_blank')}
+                          />
+                        }
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Open in UDI Grammar Editor</TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <pre className="text-xs overflow-auto max-h-[60vh] bg-muted p-3 rounded-md">
+                    {specJson}
+                  </pre>
                 </div>
-                <pre className="text-xs overflow-auto max-h-[60vh] bg-muted p-3 rounded-md">
-                  {specJson}
-                </pre>
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClose}>
-            <X className="h-3 w-3" />
-          </Button>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </CardHeader>
       {showTweak && (
@@ -219,6 +240,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       )}
       <CardContent className="p-2">
         <UDIVis
+          className="block w-full"
           key={isTableView ? `table-${specKey}` : specKey}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}

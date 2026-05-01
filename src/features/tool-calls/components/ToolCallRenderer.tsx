@@ -54,7 +54,7 @@ export function ToolCallRenderer({
     }
     case 'Rebuff': {
       const rebuffArgs = args as unknown as RebuffArgs;
-      return <RebuffNotice {...rebuffArgs} onSelectSuggestion={onSelectSuggestion} />;
+      return <RebuffNotice message={rebuffArgs.message} />;
     }
     case 'FilterData': {
       if (message && messageIndex != null) {

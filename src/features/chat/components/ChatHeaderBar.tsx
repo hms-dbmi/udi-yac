@@ -73,15 +73,16 @@ export function ChatHeaderBar({
     <div className="flex items-center justify-between px-3 py-2">
       <div className="flex items-center gap-1">
         {showDrawerToggle && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={onToggleDrawer}
-            title="Toggle conversations"
-          >
-            <Menu className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleDrawer} />
+              }
+            >
+              <Menu className="h-3.5 w-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>Toggle conversations</TooltipContent>
+          </Tooltip>
         )}
         <h2 className="text-sm font-semibold">Chat</h2>
       </div>
@@ -196,9 +197,14 @@ export function ChatHeaderBar({
             </Tooltip>
           </>
         )}
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onReset}>
-          <RotateCcw className="h-3.5 w-3.5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={<Button variant="ghost" size="icon" className="h-7 w-7" onClick={onReset} />}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </TooltipTrigger>
+          <TooltipContent>Reset conversation</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

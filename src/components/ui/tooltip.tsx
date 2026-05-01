@@ -1,5 +1,6 @@
 'use client';
 
+import { forwardRef } from 'react';
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 
 import { cn } from '@/lib/utils';
@@ -12,9 +13,14 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
-function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
-}
+// See note in components/ui/button.tsx — forwardRef is required so Base UI's
+// render-prop composition (e.g. `<TooltipTrigger render={<Button ... />}>`)
+// can attach a ref to this component on React 18.
+const TooltipTrigger = forwardRef<HTMLButtonElement, TooltipPrimitive.Trigger.Props>(
+  function TooltipTrigger(props, ref) {
+    return <TooltipPrimitive.Trigger ref={ref} data-slot="tooltip-trigger" {...props} />;
+  },
+);
 
 function TooltipContent({
   className,

@@ -12,9 +12,14 @@ function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
   return <MenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />;
 }
 
-function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-  return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
-}
+// See note in components/ui/button.tsx — forwardRef is required so Base UI's
+// render-prop composition (e.g. `<DropdownMenuTrigger render={<Button ... />}>`)
+// can attach a ref to this component on React 18.
+const DropdownMenuTrigger = React.forwardRef<HTMLButtonElement, MenuPrimitive.Trigger.Props>(
+  function DropdownMenuTrigger(props, ref) {
+    return <MenuPrimitive.Trigger ref={ref} data-slot="dropdown-menu-trigger" {...props} />;
+  },
+);
 
 function DropdownMenuContent({
   align = 'start',
@@ -98,16 +103,17 @@ function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {
   return <MenuPrimitive.SubmenuRoot data-slot="dropdown-menu-sub" {...props} />;
 }
 
-function DropdownMenuSubTrigger({
-  className,
-  inset,
-  children,
-  ...props
-}: MenuPrimitive.SubmenuTrigger.Props & {
-  inset?: boolean;
-}) {
+// See note in components/ui/button.tsx — forwardRef is required so Base UI's
+// render-prop composition can attach a ref to this component on React 18.
+const DropdownMenuSubTrigger = React.forwardRef<
+  HTMLButtonElement,
+  MenuPrimitive.SubmenuTrigger.Props & {
+    inset?: boolean;
+  }
+>(function DropdownMenuSubTrigger({ className, inset, children, ...props }, ref) {
   return (
     <MenuPrimitive.SubmenuTrigger
+      ref={ref}
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
@@ -120,7 +126,7 @@ function DropdownMenuSubTrigger({
       <ChevronRightIcon className="ml-auto" />
     </MenuPrimitive.SubmenuTrigger>
   );
-}
+});
 
 function DropdownMenuSubContent({
   align = 'start',

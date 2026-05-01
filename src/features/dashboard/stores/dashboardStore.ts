@@ -26,7 +26,6 @@ export interface ExtractedSpec {
 export interface DashboardState {
   activeVisualizations: Map<string, ActiveVisualization>;
   filterAllNullValues: boolean;
-  expandedVisualizations: Set<string>;
   tableViewKeys: Set<string>;
   hoveredVisualizationIndex: string | null;
   vizKey: (messageIndex: number, toolCallIndex: number) => string;
@@ -53,8 +52,6 @@ export interface DashboardState {
   isActive: (key: string) => boolean;
   clearAllVisualizations: () => void;
   setFilterAllNullValues: (value: boolean) => void;
-  toggleExpanded: (key: string) => void;
-  isExpanded: (key: string) => boolean;
   toggleTableView: (key: string) => void;
   isTableView: (key: string) => boolean;
   setHoveredVisualizationIndex: (key: string | null) => void;
@@ -224,7 +221,6 @@ export function createDashboardStore() {
   return createStore<DashboardState>()((set, get) => ({
     activeVisualizations: new Map(),
     filterAllNullValues: true,
-    expandedVisualizations: new Set(),
     tableViewKeys: new Set(),
     hoveredVisualizationIndex: null,
 
@@ -263,9 +259,7 @@ export function createDashboardStore() {
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.delete(key);
-        const nextExpanded = new Set(state.expandedVisualizations);
-        nextExpanded.delete(key);
-        return { activeVisualizations: next, expandedVisualizations: nextExpanded };
+        return { activeVisualizations: next };
       });
     },
 
@@ -285,22 +279,10 @@ export function createDashboardStore() {
     clearAllVisualizations: () =>
       set({
         activeVisualizations: new Map(),
-        expandedVisualizations: new Set(),
         tableViewKeys: new Set(),
       }),
 
     setFilterAllNullValues: (value) => set({ filterAllNullValues: value }),
-
-    toggleExpanded: (key) => {
-      set((state) => {
-        const next = new Set(state.expandedVisualizations);
-        if (next.has(key)) next.delete(key);
-        else next.add(key);
-        return { expandedVisualizations: next };
-      });
-    },
-
-    isExpanded: (key) => get().expandedVisualizations.has(key),
 
     toggleTableView: (key) => {
       set((state) => {

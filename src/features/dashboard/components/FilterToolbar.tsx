@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDataFilters, useDataPackageStore } from '@/app/UDIChatContext';
 import type { DataSelection } from '@/features/dashboard';
 
@@ -101,14 +102,21 @@ export function FilterToolbar() {
     <div className="flex items-center gap-1.5 flex-wrap">
       {chips.map((chip) => (
         <div key={`${chip.id}-${chip.label}`} className="group relative inline-block">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute -top-1.5 -right-1.5 z-10 h-4 w-4 rounded-full border bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => clearFilter(chip.id)}
-          >
-            <X className="h-2.5 w-2.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute -top-1.5 -right-1.5 z-10 h-4 w-4 rounded-full border bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => clearFilter(chip.id)}
+                />
+              }
+            >
+              <X className="h-2.5 w-2.5" />
+            </TooltipTrigger>
+            <TooltipContent>Clear filter</TooltipContent>
+          </Tooltip>
           <Badge
             variant="outline"
             className="rounded-sm text-xs font-normal gap-1.5 cursor-default"

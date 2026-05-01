@@ -13,6 +13,7 @@ import {
   useDataFilters,
   useDataPackage,
   useDownloadActions,
+  useDownloadButtonLabel,
   useTracker,
 } from '@/app/UDIChatContext';
 import type { Row } from '@/types/dataPackage';
@@ -76,6 +77,7 @@ export function DownloadButton() {
   const dataPackage = useDataPackage((s) => s.dataPackage);
   const filters = useDataFilters((s) => s.dataSelections);
   const customActions = useDownloadActions();
+  const buttonLabel = useDownloadButtonLabel();
   const trackEvent = useTracker();
 
   const rowsBySource = useMemo(() => {
@@ -136,7 +138,7 @@ export function DownloadButton() {
         render={<Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" />}
       >
         <Download className="h-3.5 w-3.5" />
-        Download Data
+        {buttonLabel}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={handleDownloadCSV} disabled={noData}>

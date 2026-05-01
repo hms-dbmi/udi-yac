@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useDataPackage, useGlobalStore } from '@/app/UDIChatContext';
 import { ChatInput } from './ChatInput';
@@ -110,6 +111,12 @@ export function ChatPanel({
       {error && (
         <div className="px-3 py-1">
           <p className="text-xs text-destructive">{error}</p>
+        </div>
+      )}
+      {!dataReady && (
+        <div className="px-3 py-1 flex items-center gap-1.5">
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">Loading fields...</p>
         </div>
       )}
       {userKeyQuotaExceeded && (
