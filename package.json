@@ -1,6 +1,6 @@
 {
   "name": "udi-yac",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "React implementation of the Universal Discovery Interface (UDI) chat — natural-language querying and visualization of biomedical datasets. Publishable as a library (`UDIChat` component) or as a standalone SPA.",
   "keywords": [
     "udi",
