@@ -14,9 +14,6 @@ importers:
       '@fontsource-variable/geist':
         specifier: ^5.2.8
         version: 5.2.8
-      arquero:
-        specifier: ^8.0.3
-        version: 8.0.3
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
