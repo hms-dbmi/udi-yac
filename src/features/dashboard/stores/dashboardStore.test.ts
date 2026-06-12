@@ -427,3 +427,201 @@ describe('dashboardStore — cross-store filter propagation', () => {
     expect(stringFilters).toHaveLength(0);
   });
 });
+
+describe('dashboardStore — batched insertion distributes across columns', () => {
+  it('distributes 4 viz across 3 columns as 2/1/1 in tool-call order', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store.getState().addActiveVisualizationBatch([
+      { index: 0, toolCallIndex: 0, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      { index: 0, toolCallIndex: 1, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      { index: 0, toolCallIndex: 2, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      { index: 0, toolCallIndex: 3, spec: makeSpec(), userPrompt: '', sourceFields: null },
+    ]);
+    const items = store.getState().layout.items;
+    expect(items).toHaveLength(4);
+
+    // Row-major reading order should match tool-call order: 0-0, 0-1, 0-2, 0-3
+    const sorted = [...items].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+    expect(sorted.map((it) => it.i)).toEqual(['0-0', '0-1', '0-2', '0-3']);
+
+    // Column distribution: col 0 has 2, cols 1 and 2 each have 1
+    const byCol = new Map<number, string[]>();
+    for (const it of items) {
+      const col = byCol.get(it.x) ?? [];
+      col.push(it.i);
+      byCol.set(it.x, col);
+    }
+    expect(byCol.get(0)?.length).toBe(2);
+    expect(byCol.get(1)?.length).toBe(1);
+    expect(byCol.get(2)?.length).toBe(1);
+  });
+
+  it('places a batch ahead of existing items (existing get pushed to later positions)', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    // Seed two existing viz, one at a time (the single-add path)
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
+    store.getState().addActiveVisualization(0, 1, makeSpec(), '', null);
+    // Then a batch of two new viz arrives
+    store.getState().addActiveVisualizationBatch([
+      { index: 1, toolCallIndex: 0, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      { index: 1, toolCallIndex: 1, spec: makeSpec(), userPrompt: '', sourceFields: null },
+    ]);
+    const items = store.getState().layout.items;
+    expect(items).toHaveLength(4);
+    const sorted = [...items].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+    // Batch (1-0, 1-1) occupies the first two row-major slots; existing
+    // (in their prior row-major order, which is "newest single-add first")
+    // come after.
+    expect(sorted.slice(0, 2).map((it) => it.i)).toEqual(['1-0', '1-1']);
+  });
+
+  it('packs a single batched viz at (0,0) when the dashboard is empty', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store
+      .getState()
+      .addActiveVisualizationBatch([
+        { index: 0, toolCallIndex: 0, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      ]);
+    const items = store.getState().layout.items;
+    expect(items).toHaveLength(1);
+    expect(items[0]).toEqual(expect.objectContaining({ i: '0-0', x: 0, y: 0 }));
+  });
+});
+
+describe('dashboardStore — setGridCols reflows items on cols change', () => {
+  it('collapses a wider layout to a single column when cols shrinks to 1', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store.getState().addActiveVisualizationBatch([
+      { index: 0, toolCallIndex: 0, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      { index: 0, toolCallIndex: 1, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      { index: 0, toolCallIndex: 2, spec: makeSpec(), userPrompt: '', sourceFields: null },
+    ]);
+    // 3 items at cols=3 → all on row 0
+    expect(store.getState().layout.items.every((it) => it.y === 0)).toBe(true);
+
+    store.getState().setGridCols(1);
+
+    // Shrunk to 1 col → everyone should be in column 0, stacked
+    const after = store.getState().layout.items;
+    for (const it of after) {
+      expect(it.x).toBe(0);
+    }
+    // Three distinct y values (rows) — reading order preserved
+    const ys = after.map((it) => it.y).sort((a, b) => a - b);
+    expect(new Set(ys).size).toBe(3);
+  });
+
+  it('expands a single-column layout to multiple columns when cols grows', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(1);
+    store.getState().addActiveVisualizationBatch([
+      { index: 0, toolCallIndex: 0, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      { index: 0, toolCallIndex: 1, spec: makeSpec(), userPrompt: '', sourceFields: null },
+      { index: 0, toolCallIndex: 2, spec: makeSpec(), userPrompt: '', sourceFields: null },
+    ]);
+    // All stacked at cols=1
+    expect(store.getState().layout.items.every((it) => it.x === 0)).toBe(true);
+
+    store.getState().setGridCols(3);
+
+    // At cols=3 they should fit on a single row 0
+    const after = store.getState().layout.items;
+    expect(after.every((it) => it.y === 0)).toBe(true);
+    const xs = after.map((it) => it.x).sort((a, b) => a - b);
+    expect(xs).toEqual([0, 1, 2]);
+  });
+
+  it('does nothing when cols is unchanged', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
+    const before = store.getState().layout.items;
+    store.getState().setGridCols(3);
+    expect(store.getState().layout.items).toBe(before);
+  });
+
+  it('keeps the same layout reference when the repack produces identical positions', () => {
+    const store = createDashboardStore();
+    // Single column to start
+    store.getState().setGridCols(1);
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
+    const layoutBefore = store.getState().layout.items;
+    // Shrink to a smaller cols — the single-column layout is unchanged
+    // by re-packing. Layout reference must stay equal so RGL doesn't
+    // see a "new" prop and trigger another compactor pass.
+    store.getState().setGridCols(1);
+    expect(store.getState().layout.items).toBe(layoutBefore);
+  });
+});
+
+describe('dashboardStore — setLayoutItems is a no-op for content-equal layouts', () => {
+  it('does not update layout when the items are byte-equal to the current state', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
+    const before = store.getState().layout.items;
+    // Feed back a new-array-reference but content-equal layout (what RGL's
+    // compactor would do on a no-op pass).
+    const echoed = before.map((it) => ({ ...it }));
+    store.getState().setLayoutItems(echoed);
+    expect(store.getState().layout.items).toBe(before);
+  });
+
+  it('does update when any item position or size differs', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
+    const before = store.getState().layout.items;
+    const moved = before.map((it) => ({ ...it, h: it.h + 1 }));
+    store.getState().setLayoutItems(moved);
+    expect(store.getState().layout.items).not.toBe(before);
+    expect(store.getState().layout.items[0].h).toBe(before[0].h + 1);
+  });
+});
+
+describe('dashboardStore — setGridRowHeight', () => {
+  it('updates the rowHeight without touching layout.items', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
+    const layoutBefore = store.getState().layout.items;
+    const heightBefore = store.getState().gridRowHeight;
+
+    store.getState().setGridRowHeight(heightBefore + 20);
+
+    // Items reference must stay identical — rowHeight is presentation-only.
+    expect(store.getState().layout.items).toBe(layoutBefore);
+    expect(store.getState().gridRowHeight).toBe(heightBefore + 20);
+  });
+
+  it('is a no-op when value is unchanged', () => {
+    const store = createDashboardStore();
+    const before = store.getState().gridRowHeight;
+    store.getState().setGridRowHeight(before);
+    // No mutation observed — would be an exact-same reference even if zustand
+    // didn't dedupe (we early-return).
+    expect(store.getState().gridRowHeight).toBe(before);
+  });
+
+  it('clamps out-of-range values to MIN/MAX_GRID_ROW_HEIGHT_PX', () => {
+    const store = createDashboardStore();
+    store.getState().setGridRowHeight(1); // below min
+    expect(store.getState().gridRowHeight).toBeGreaterThanOrEqual(30);
+    store.getState().setGridRowHeight(10000); // above max
+    expect(store.getState().gridRowHeight).toBeLessThanOrEqual(120);
+  });
+});
+
+describe('dashboardStore — setGridCols clamping', () => {
+  it('clamps out-of-range cols to MIN/MAX_GRID_COLS', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(0); // below min
+    expect(store.getState().gridCols).toBeGreaterThanOrEqual(1);
+    store.getState().setGridCols(99); // above max
+    expect(store.getState().gridCols).toBeLessThanOrEqual(8);
+  });
+});

@@ -2,6 +2,8 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -153,4 +155,67 @@ udi-vis .vega-chart-container {
   width: 100%;
   height: 100%;
   overflow-x: auto;
+}
+
+/* RGL placeholder — the ghost rectangle shown at the drop / resize target.
+   Override the library's red default with the project's primary color. */
+.react-grid-item.react-grid-placeholder {
+  background: var(--color-primary, var(--primary));
+  opacity: 0.15;
+  border-radius: var(--radius-md);
+  outline: 2px solid var(--color-primary, var(--primary));
+  outline-offset: -2px;
+}
+
+/* react-resizable's default handles are tiny rotated SVGs that vanish on
+   white cards. Replace them with larger, theme-colored hit areas. */
+.react-resizable-handle {
+  background-image: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.react-grid-item:hover .react-resizable-handle,
+.react-grid-item.resizing .react-resizable-handle {
+  opacity: 1;
+}
+.react-resizable-handle-s {
+  bottom: -2px;
+  left: 12px;
+  right: 12px;
+  width: auto;
+  height: 8px;
+  margin-left: 0;
+  transform: none;
+  cursor: ns-resize;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--primary) 35%, transparent);
+}
+.react-resizable-handle-e {
+  right: -2px;
+  top: 12px;
+  bottom: 12px;
+  width: 8px;
+  height: auto;
+  margin-top: 0;
+  transform: none;
+  cursor: ew-resize;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--primary) 35%, transparent);
+}
+.react-resizable-handle-se {
+  right: -2px;
+  bottom: -2px;
+  width: 16px;
+  height: 16px;
+  border-bottom: 2px solid color-mix(in oklab, var(--primary) 70%, transparent);
+  border-right: 2px solid color-mix(in oklab, var(--primary) 70%, transparent);
+  border-bottom-right-radius: 6px;
+  cursor: se-resize;
+}
+.react-resizable-handle:hover {
+  background: color-mix(in oklab, var(--primary) 60%, transparent);
+}
+.react-resizable-handle-se:hover {
+  border-bottom-color: var(--primary);
+  border-right-color: var(--primary);
 }

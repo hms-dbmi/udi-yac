@@ -24,6 +24,7 @@ import {
   type MemoryBankState,
 } from '@/features/dashboard/stores/memoryBankStore';
 import { createGlobalStore, type GlobalState } from '@/stores/globalStore';
+import { registerSnapshotSource } from './snapshotRegistry';
 
 interface UDIChatStores {
   conversation: StoreApi<ConversationState>;
@@ -47,6 +48,13 @@ export function UDIChatProvider({ children }: { children: ReactNode }) {
       memoryBank: createMemoryBankStore(),
       global: createGlobalStore(),
     };
+    // Register synchronously so the (outer) ErrorBoundary can capture the
+    // current session even if the very first child render throws — a
+    // useEffect would run too late in that case.
+    registerSnapshotSource({
+      conversation: storesRef.current.conversation,
+      dashboard: storesRef.current.dashboard,
+    });
   }
   return <UDIChatContext.Provider value={storesRef.current}>{children}</UDIChatContext.Provider>;
 }

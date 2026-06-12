@@ -19,6 +19,7 @@ import {
   useTracker,
 } from '@/app/UDIChatContext';
 import { extractAllUdiSpecsFromMessage } from '@/features/dashboard/stores/dashboardStore';
+import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
@@ -53,6 +54,7 @@ function UDIChatInner({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
   const trackEvent = useTracker();
+  useLayoutPersistence();
 
   // Load data package on mount
   useEffect(() => {

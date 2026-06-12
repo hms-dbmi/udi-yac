@@ -1,11 +1,23 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { UDIGrammar } from 'udi-toolkit/react';
+import type { Layout, LayoutItem } from 'react-grid-layout';
 import type { Message } from '@/types/messages';
 import type { DataFiltersState } from './dataFiltersStore';
 import type { DataPackageState } from '@/features/data-package';
 import type { MemoryBankState } from './memoryBankStore';
 import type { EntityRelationship } from '@/types/dataPackage';
 import type { DataTransformation } from 'udi-toolkit';
+import {
+  DEFAULT_CARD_H,
+  DEFAULT_CARD_W,
+  DEFAULT_GRID_COLS,
+  DEFAULT_GRID_ROW_HEIGHT_PX,
+  MIN_CARD_H,
+  MIN_CARD_W,
+  clampGridCols,
+  clampGridRowHeight,
+} from '../utils/gridDefaults';
+import { layoutItemsEqual, packAllRowMajor, repackRowMajor } from '../utils/gridPacking';
 
 export interface ActiveVisualization {
   index: number;
@@ -23,8 +35,39 @@ export interface ExtractedSpec {
   title?: string;
 }
 
+export interface DashboardLayout {
+  items: Layout;
+}
+
+/**
+ * v1 layout shape — kept exported as a type so the serialization parser can
+ * validate legacy session-export files and migrate them via `repackRowMajor`.
+ */
+export interface DashboardLayoutV1 {
+  columns: Array<{ id: string; cardKeys: string[]; cardSizes: Record<string, number> }>;
+  columnSizes: Record<string, number>;
+}
+
+export interface DashboardExportVisualization {
+  key: string;
+  uuid: string;
+  index: number;
+  toolCallIndex: number;
+  userPrompt: string;
+  title?: string;
+  spec: UDIGrammar;
+}
+
+export interface DashboardExport {
+  visualizations: DashboardExportVisualization[];
+  layout: DashboardLayout;
+}
+
 export interface DashboardState {
   activeVisualizations: Map<string, ActiveVisualization>;
+  layout: DashboardLayout;
+  gridCols: number;
+  gridRowHeight: number;
   filterAllNullValues: boolean;
   tableViewKeys: Set<string>;
   hoveredVisualizationIndex: string | null;
@@ -72,6 +115,15 @@ export interface DashboardState {
     newSpec: UDIGrammar,
     sourceFields: Record<string, string[]> | null,
   ) => void;
+  setLayoutItems: (items: Layout) => void;
+  setGridCols: (cols: number) => void;
+  setGridRowHeight: (px: number) => void;
+  repackLayout: () => void;
+  exportDashboard: () => DashboardExport;
+  importDashboard: (
+    payload: DashboardExport,
+    sourceFields: Record<string, string[]> | null,
+  ) => void;
 }
 
 let counter = 0;
@@ -82,6 +134,44 @@ function generateId(): string {
 
 function structuredClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
+}
+
+function emptyLayout(): DashboardLayout {
+  return { items: [] };
+}
+
+function newDefaultItem(key: string): LayoutItem {
+  return {
+    i: key,
+    x: 0,
+    y: 0,
+    w: DEFAULT_CARD_W,
+    h: DEFAULT_CARD_H,
+    minW: MIN_CARD_W,
+    minH: MIN_CARD_H,
+  };
+}
+
+function pruneItems(items: Layout, knownKeys: Set<string>): Layout {
+  const seen = new Set<string>();
+  const out: LayoutItem[] = [];
+  for (const it of items) {
+    if (!knownKeys.has(it.i) || seen.has(it.i)) continue;
+    seen.add(it.i);
+    out.push(it);
+  }
+  return out;
+}
+
+function removeItemFromLayout(layout: DashboardLayout, key: string): DashboardLayout {
+  const next = layout.items.filter((it) => it.i !== key);
+  return next.length === layout.items.length ? layout : { items: next };
+}
+
+function insertItemRowMajor(layout: DashboardLayout, key: string, cols: number): DashboardLayout {
+  if (layout.items.some((it) => it.i === key)) return layout;
+  const items = repackRowMajor(layout.items, newDefaultItem(key), cols);
+  return { items };
 }
 
 /** Pick the `name` off either a single source or the first of an array. */
@@ -220,6 +310,9 @@ function getRepresentedFields(spec: UDIGrammar): string[] {
 export function createDashboardStore() {
   return createStore<DashboardState>()((set, get) => ({
     activeVisualizations: new Map(),
+    layout: emptyLayout(),
+    gridCols: DEFAULT_GRID_COLS,
+    gridRowHeight: DEFAULT_GRID_ROW_HEIGHT_PX,
     filterAllNullValues: true,
     tableViewKeys: new Set(),
     hoveredVisualizationIndex: null,
@@ -233,7 +326,10 @@ export function createDashboardStore() {
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
-        return { activeVisualizations: next };
+        return {
+          activeVisualizations: next,
+          layout: insertItemRowMajor(state.layout, key, state.gridCols),
+        };
       });
     },
 
@@ -241,13 +337,29 @@ export function createDashboardStore() {
       if (items.length === 0) return;
       set((state) => {
         const next = new Map(state.activeVisualizations);
+        const newItems: LayoutItem[] = [];
         for (const { index, toolCallIndex, spec, userPrompt, sourceFields, title } of items) {
           const uuid = generateId();
           const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
           const key = `${index}-${toolCallIndex}`;
+          if (state.activeVisualizations.has(key)) continue;
           next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+          newItems.push(newDefaultItem(key));
         }
-        return { activeVisualizations: next };
+        if (newItems.length === 0) return { activeVisualizations: next };
+        // Single repack: prepend the whole batch (in arrival order) ahead of
+        // existing items sorted row-major. This distributes the batch across
+        // the available columns left-to-right, then wraps — e.g. with 3 cols
+        // and 4 new items, col0 gets 2 (item0 + item3 wrap), cols 1+2 get 1.
+        const newKeys = new Set(newItems.map((it) => it.i));
+        const existingOrdered = [...state.layout.items]
+          .filter((it) => !newKeys.has(it.i))
+          .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+        const combined = [...newItems, ...existingOrdered];
+        return {
+          activeVisualizations: next,
+          layout: { items: packAllRowMajor(combined, state.gridCols) },
+        };
       });
     },
 
@@ -259,7 +371,10 @@ export function createDashboardStore() {
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.delete(key);
-        return { activeVisualizations: next };
+        return {
+          activeVisualizations: next,
+          layout: removeItemFromLayout(state.layout, key),
+        };
       });
     },
 
@@ -269,7 +384,10 @@ export function createDashboardStore() {
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.set(key, viz);
-        return { activeVisualizations: next };
+        return {
+          activeVisualizations: next,
+          layout: insertItemRowMajor(state.layout, key, state.gridCols),
+        };
       });
       memoryBankStore.getState().removeFromMemoryBank(key);
     },
@@ -280,6 +398,7 @@ export function createDashboardStore() {
       set({
         activeVisualizations: new Map(),
         tableViewKeys: new Set(),
+        layout: emptyLayout(),
       }),
 
     setFilterAllNullValues: (value) => set({ filterAllNullValues: value }),
@@ -421,6 +540,117 @@ export function createDashboardStore() {
         const next = new Map(state.activeVisualizations);
         next.set(key, { ...viz, spec: newSpec, interactiveSpec });
         return { activeVisualizations: next };
+      });
+    },
+
+    setLayoutItems: (items) => {
+      const state = get();
+      const knownKeys = new Set(state.activeVisualizations.keys());
+      const pruned = pruneItems(items, knownKeys);
+      // Skip the update if (i, x, y, w, h) for every item matches what's
+      // already in the store. Without this guard, RGL's compactor produces
+      // a new array reference on every render — and our `set()` would feed
+      // a new layout prop back into RGL, which then runs compactor again,
+      // fires onLayoutChange again, looping until React aborts with
+      // "Maximum update depth exceeded" on viewport resize.
+      if (layoutItemsEqual(state.layout.items, pruned)) return;
+      set({ layout: { items: pruned } });
+    },
+
+    setGridCols: (cols) => {
+      const safe = clampGridCols(cols);
+      const current = get();
+      if (current.gridCols === safe) return;
+      // Re-pack items into the new column count in row-major reading order
+      // so existing cards with x+w > newCols don't overflow the grid.
+      const sorted = [...current.layout.items].sort((a, b) =>
+        a.y === b.y ? a.x - b.x : a.y - b.y,
+      );
+      const repacked = packAllRowMajor(sorted, safe);
+      if (layoutItemsEqual(current.layout.items, repacked)) {
+        set({ gridCols: safe });
+        return;
+      }
+      set({ gridCols: safe, layout: { items: repacked } });
+    },
+
+    setGridRowHeight: (px) => {
+      const safe = clampGridRowHeight(px);
+      if (get().gridRowHeight === safe) return;
+      set({ gridRowHeight: safe });
+    },
+
+    repackLayout: () => {
+      set((state) => {
+        if (state.layout.items.length === 0) return state;
+        const cols = state.gridCols;
+        const ordered = state.layout.items.map((it) => ({
+          ...it,
+          w: DEFAULT_CARD_W,
+          h: DEFAULT_CARD_H,
+          minW: MIN_CARD_W,
+          minH: MIN_CARD_H,
+        }));
+        return { layout: { items: packAllRowMajor(ordered, cols) } };
+      });
+    },
+
+    exportDashboard: () => {
+      const state = get();
+      const visualizations: DashboardExportVisualization[] = [];
+      for (const [key, viz] of state.activeVisualizations) {
+        visualizations.push({
+          key,
+          uuid: viz.uuid,
+          index: viz.index,
+          toolCallIndex: viz.toolCallIndex,
+          userPrompt: viz.userPrompt,
+          title: viz.title,
+          spec: structuredClone(viz.spec),
+        });
+      }
+      return {
+        visualizations,
+        layout: { items: state.layout.items.map((it) => ({ ...it })) },
+      };
+    },
+
+    importDashboard: (payload, sourceFields) => {
+      const next = new Map<string, ActiveVisualization>();
+      for (const v of payload.visualizations) {
+        const uuid = v.uuid || generateId();
+        const interactiveSpec = injectInteractivity(v.spec, uuid, sourceFields);
+        next.set(v.key, {
+          index: v.index,
+          toolCallIndex: v.toolCallIndex,
+          spec: v.spec,
+          interactiveSpec,
+          userPrompt: v.userPrompt,
+          title: v.title,
+          uuid,
+        });
+      }
+      const knownKeys = new Set(next.keys());
+      const cols = get().gridCols;
+
+      const provided = pruneItems(payload.layout.items, knownKeys);
+      const placedKeys = new Set(provided.map((it) => it.i));
+      const orphanItems: LayoutItem[] = [];
+      for (const k of knownKeys) {
+        if (!placedKeys.has(k)) orphanItems.push(newDefaultItem(k));
+      }
+      // A v1 import (or any single-column export) lands as items all at x=0
+      // with w=1 — re-pack against the current viewport so cards spread out
+      // horizontally instead of sitting in one tall stack. A user-customized
+      // v2 export with intentional positions is preserved verbatim.
+      const looksStacked = provided.length > 1 && provided.every((it) => it.x === 0 && it.w <= 1);
+      const shouldRepack = orphanItems.length > 0 || looksStacked;
+      const combined = [...provided, ...orphanItems];
+      const items = shouldRepack ? packAllRowMajor(combined, cols) : combined;
+      set({
+        activeVisualizations: next,
+        tableViewKeys: new Set(),
+        layout: { items },
       });
     },
   }));

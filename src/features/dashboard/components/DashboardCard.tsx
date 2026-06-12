@@ -3,7 +3,17 @@ import { UDIVis } from 'udi-toolkit/react';
 import type { DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { X, Settings2, Code2, Copy, Check, Table2, BarChart3, ExternalLink } from 'lucide-react';
+import {
+  X,
+  Settings2,
+  Code2,
+  Copy,
+  Check,
+  Table2,
+  BarChart3,
+  ExternalLink,
+  GripVertical,
+} from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
   Dialog,
@@ -24,6 +34,7 @@ import {
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
 import { cn } from '@/lib/utils';
+import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
 
 interface DashboardCardProps {
   vizKey: string;
@@ -98,12 +109,33 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   return (
     <Card
-      className={cn('relative transition-shadow', isHovered && 'ring-2 ring-primary/40')}
+      className={cn(
+        'relative transition-shadow h-full flex flex-col min-h-0',
+        isHovered && 'ring-2 ring-primary/40',
+      )}
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
     >
-      <CardHeader className="p-2 pb-0 flex flex-col gap-1">
-        <div className="flex items-center w-full">
+      <CardHeader className="p-2 pb-0 flex flex-col gap-1 shrink-0">
+        <div className="flex items-center w-full gap-1">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'h-6 w-6 cursor-grab active:cursor-grabbing touch-none',
+                    DRAG_HANDLE_CLASS,
+                  )}
+                  aria-label="Drag card"
+                />
+              }
+            >
+              <GripVertical className="h-3 w-3 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>Drag to reorder card</TooltipContent>
+          </Tooltip>
           <span className="text-xs inline-block font-medium truncate flex-1">
             {viz.title ?? viz.userPrompt}
           </span>
@@ -227,13 +259,14 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           />
         </div>
       )}
-      <CardContent className="p-2">
+      <CardContent className="p-2 flex-1 min-h-0 overflow-hidden">
         <UDIVis
-          className="block w-full"
+          className="block h-full w-full"
           key={isTableView ? `table-${specKey}` : specKey}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
           sourceResolver={sourceResolver}
+          fillContainer
         />
       </CardContent>
     </Card>

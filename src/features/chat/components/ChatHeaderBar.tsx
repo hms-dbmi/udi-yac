@@ -12,7 +12,10 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -60,6 +63,12 @@ export function ChatHeaderBar({
     handleDownloadDataSchema,
   } = useDebugExports(config);
   const [examplesOpen, setExamplesOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+
+  const handleConfirmReset = useCallback(() => {
+    setResetConfirmOpen(false);
+    onReset();
+  }, [onReset]);
 
   const handleExampleClick = useCallback(
     (prompt: string) => {
@@ -197,14 +206,33 @@ export function ChatHeaderBar({
             </Tooltip>
           </>
         )}
-        <Tooltip>
-          <TooltipTrigger
-            render={<Button variant="ghost" size="icon" className="h-7 w-7" onClick={onReset} />}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </TooltipTrigger>
-          <TooltipContent>Reset conversation</TooltipContent>
-        </Tooltip>
+        <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <DialogTrigger render={<Button variant="ghost" size="icon" className="h-7 w-7" />}>
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </DialogTrigger>
+              }
+            />
+            <TooltipContent>Reset conversation</TooltipContent>
+          </Tooltip>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-sm">Reset conversation?</DialogTitle>
+              <DialogDescription>
+                This clears the current chat, all open visualizations, brush selections, the
+                closed-viz memory bank, and any active cross-chart filters. This cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" size="sm" />}>Cancel</DialogClose>
+              <Button variant="destructive" size="sm" onClick={handleConfirmReset}>
+                Reset
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

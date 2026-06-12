@@ -1,9 +1,11 @@
 import { useDashboard, useDashboardStore, useDataFilters, useGlobal } from '@/app/UDIChatContext';
-import { DashboardCard } from './DashboardCard';
+import { DashboardGrid } from './DashboardGrid';
+import { GridSettingsButton } from './GridSettingsButton';
 import { WelcomeSplash } from './WelcomeSplash';
 import { FilterToolbar } from './FilterToolbar';
 import { DataCounts } from './DataCounts';
 import { DownloadButton } from './DownloadButton';
+import { SessionImportExportButton } from './SessionImportExportButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -13,7 +15,11 @@ function DashboardHeader() {
   return (
     <div className="flex items-center justify-between gap-2 shrink-0">
       <DataCounts />
-      <DownloadButton />
+      <div className="flex items-center gap-1.5">
+        <GridSettingsButton />
+        <SessionImportExportButton />
+        <DownloadButton />
+      </div>
     </div>
   );
 }
@@ -30,9 +36,7 @@ export function DashboardPanel() {
   // via the `selections` prop; UDIVis merges with Pinia state internally.
   const mergedSelections = dataSelections;
 
-  const entries = Array.from(activeVisualizations.entries()).reverse();
-
-  const hasEntries = entries.length > 0;
+  const hasEntries = activeVisualizations.size > 0;
 
   // No entries → skip the ScrollArea. A consumer-provided tall mascot (or
   // long custom splash messages) would otherwise make the inner content
@@ -53,36 +57,36 @@ export function DashboardPanel() {
   }
 
   return (
-    <ScrollArea className="h-full p-3">
-      <div className="flex flex-col gap-3">
-        <DashboardHeader />
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Filters
-            </h3>
-            {debugMode && (
-              <div className="flex items-center gap-1.5">
-                <Label htmlFor="null-filter" className="text-[10px] text-muted-foreground">
-                  Filter Nulls
-                </Label>
-                <Switch
-                  id="null-filter"
-                  checked={filterAllNullValues}
-                  onCheckedChange={(checked) =>
-                    dashboardStore.getState().setFilterAllNullValues(!!checked)
-                  }
-                />
-              </div>
-            )}
+    <div className="h-full">
+      <ScrollArea className="h-full p-3">
+        <div className="flex flex-col gap-3">
+          <DashboardHeader />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Filters
+              </h3>
+              {debugMode && (
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="null-filter" className="text-[10px] text-muted-foreground">
+                    Filter Nulls
+                  </Label>
+                  <Switch
+                    id="null-filter"
+                    checked={filterAllNullValues}
+                    onCheckedChange={(checked) =>
+                      dashboardStore.getState().setFilterAllNullValues(!!checked)
+                    }
+                  />
+                </div>
+              )}
+            </div>
+            <FilterToolbar />
           </div>
-          <FilterToolbar />
+          <Separator />
+          <DashboardGrid selections={mergedSelections} />
         </div>
-        <Separator />
-        {entries.map(([key, viz]) => (
-          <DashboardCard key={key} vizKey={key} viz={viz} selections={mergedSelections} />
-        ))}
-      </div>
-    </ScrollArea>
+      </ScrollArea>
+    </div>
   );
 }
