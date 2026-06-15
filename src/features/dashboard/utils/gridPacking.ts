@@ -92,8 +92,11 @@ export function rectsOverlap(
  * - exactly one occupant overlapped the target — multi-card overlaps
  *   (e.g. dragging a wide card across two narrow neighbours) skip the
  *   swap and fall through to RGL's natural handling
- * - same w × h — different sizes would make the swap geometrically
- *   invalid (the occupant might not fit in the dragger's old footprint).
+ * - same w — the occupant gets placed at the dragger's old x; if its
+ *   width differs it could overflow the column count, and we don't have
+ *   `cols` here to clamp. Equal heights are NOT required: the
+ *   row-aligned compactor reflows the rest of the column when the
+ *   swapped pair changes the row extents.
  */
 export function computeSwap(
   preDragLayout: Layout,
@@ -113,7 +116,7 @@ export function computeSwap(
   if (preOccupants.length !== 1) return null;
 
   const occupant = preOccupants[0];
-  if (oldItem.w !== occupant.w || oldItem.h !== occupant.h) return null;
+  if (oldItem.w !== occupant.w) return null;
 
   return postDragLayout.map((it) =>
     it.i === occupant.i ? { ...it, x: oldItem.x, y: oldItem.y } : it,

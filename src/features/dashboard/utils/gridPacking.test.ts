@@ -241,7 +241,7 @@ describe('computeSwap', () => {
     expect(result).toBeNull();
   });
 
-  it('returns null when the dragger and occupant have different sizes', () => {
+  it('returns null when the dragger and occupant have different widths', () => {
     const preDrag: LayoutItem[] = [
       { i: 'A', x: 0, y: 0, w: 2, h: 1 }, // wide
       { i: 'B', x: 2, y: 0, w: 1, h: 1 }, // narrow
@@ -252,6 +252,52 @@ describe('computeSwap', () => {
     ];
     const result = computeSwap(preDrag, postDrag, preDrag[0], { i: 'A', x: 2, y: 0, w: 2, h: 1 });
     expect(result).toBeNull();
+  });
+
+  it('swaps when widths match but heights differ — short dragger onto tall occupant', () => {
+    // The user-reported bug: dragging a short card onto a taller one
+    // didn't fire a swap (the old guard rejected unequal h), leaving
+    // RGL's natural push + row-aligned compactor to "snap" the dragger
+    // back to its starting position.
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 2, h: 2 }, // short
+      { i: 'B', x: 0, y: 2, w: 2, h: 4 }, // tall
+    ];
+    const postDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 2, w: 2, h: 2 },
+      { i: 'B', x: 0, y: 4, w: 2, h: 4 }, // RGL pushed B
+    ];
+    const oldItem: LayoutItem = { i: 'A', x: 0, y: 0, w: 2, h: 2 };
+    const newItem: LayoutItem = { i: 'A', x: 0, y: 2, w: 2, h: 2 };
+    const swapped = computeSwap(preDrag, postDrag, oldItem, newItem);
+    expect(swapped).not.toBeNull();
+    const byId = Object.fromEntries(swapped!.map((it) => [it.i, it]));
+    // Dragger stays at its dropped position.
+    expect(byId.A).toEqual(expect.objectContaining({ x: 0, y: 2 }));
+    // Occupant takes the dragger's old x/y; the row-aligned compactor
+    // downstream will reflow the actual rendered y so they don't overlap.
+    expect(byId.B).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    // h values preserved on both.
+    expect(byId.A.h).toBe(2);
+    expect(byId.B.h).toBe(4);
+  });
+
+  it('swaps when widths match but heights differ — tall dragger onto short occupant', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 2, h: 2 }, // short
+      { i: 'B', x: 0, y: 2, w: 2, h: 4 }, // tall
+    ];
+    const postDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 4, w: 2, h: 2 }, // RGL pushed A
+      { i: 'B', x: 0, y: 0, w: 2, h: 4 },
+    ];
+    const oldItem: LayoutItem = { i: 'B', x: 0, y: 2, w: 2, h: 4 };
+    const newItem: LayoutItem = { i: 'B', x: 0, y: 0, w: 2, h: 4 };
+    const swapped = computeSwap(preDrag, postDrag, oldItem, newItem);
+    expect(swapped).not.toBeNull();
+    const byId = Object.fromEntries(swapped!.map((it) => [it.i, it]));
+    expect(byId.B).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(byId.A).toEqual(expect.objectContaining({ x: 0, y: 2 }));
   });
 
   it("preserves the dragger's post-drag position", () => {

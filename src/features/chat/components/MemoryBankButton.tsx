@@ -84,7 +84,14 @@ export function MemoryBankButton() {
                   Restore to dashboard
                 </Button>
               </div>
-              <UDIVis spec={viz.interactiveSpec} sourceResolver={sourceResolver} />
+              <div className="h-48 w-full overflow-hidden">
+                <UDIVis
+                  className="block h-full w-full"
+                  spec={viz.interactiveSpec}
+                  sourceResolver={sourceResolver}
+                  fillContainer
+                />
+              </div>
             </div>
           ))}
         </div>
