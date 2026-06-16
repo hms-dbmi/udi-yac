@@ -1,8 +1,8 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { GridLayout, useContainerWidth, type EventCallback, type Layout } from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
-import { DRAG_HANDLE_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
+import { DRAG_HANDLE_CLASS, GRID_INTERACTING_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
 import { computeSwap, rowAlignedCompactor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
 
@@ -35,10 +35,12 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
 
   const handleDragStart: EventCallback = useCallback((layout) => {
     preDragLayoutRef.current = layout.map((it) => ({ ...it }));
+    document.body.classList.add(GRID_INTERACTING_CLASS);
   }, []);
 
   const handleDragStop: EventCallback = useCallback(
     (newLayout, oldItem, newItem) => {
+      document.body.classList.remove(GRID_INTERACTING_CLASS);
       const preDrag = preDragLayoutRef.current;
       preDragLayoutRef.current = null;
       if (!preDrag || !oldItem || !newItem) return;
@@ -49,6 +51,26 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
     },
     [dashboardStore],
   );
+
+  // Suppress text selection across the whole page while a card is being
+  // dragged or resized. RGL's underlying react-resizable / react-draggable
+  // preventDefault the initial mousedown, but selection can still extend
+  // once the cursor crosses into other elements — easy to reproduce by
+  // resizing past an adjacent card or chat message. A body-level class
+  // turning off user-select keeps the interaction clean and gets cleared
+  // unconditionally on stop.
+  const handleResizeStart: EventCallback = useCallback(() => {
+    document.body.classList.add(GRID_INTERACTING_CLASS);
+  }, []);
+  const handleResizeStop: EventCallback = useCallback(() => {
+    document.body.classList.remove(GRID_INTERACTING_CLASS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      document.body.classList.remove(GRID_INTERACTING_CLASS);
+    };
+  }, []);
 
   return (
     <div ref={containerRef} className="w-full min-h-0">
@@ -73,12 +95,18 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
           }}
           resizeConfig={{
             enabled: true,
-            handles: ['se', 'e', 's'],
+            // North handles (n / nw / ne) are intentionally omitted — they
+            // require RGL to change both `y` AND `h` mid-resize, which the
+            // row-aligned compactor immediately snaps back, so the gesture
+            // visually does nothing.
+            handles: ['sw', 'se', 'e', 's', 'w'],
           }}
           compactor={rowAlignedCompactor}
           onLayoutChange={handleLayoutChange}
           onDragStart={handleDragStart}
           onDragStop={handleDragStop}
+          onResizeStart={handleResizeStart}
+          onResizeStop={handleResizeStop}
           autoSize
         >
           {/*

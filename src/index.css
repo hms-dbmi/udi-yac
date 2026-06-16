@@ -174,6 +174,29 @@ udi-vis .vega-chart-container {
   opacity: 0;
   transition: opacity 120ms ease;
 }
+/* RGL ships a `::after` pseudo on each handle that draws a small black
+   chevron pointing toward the bottom-right of the handle box. That looks
+   correct on the SE corner but rotates wrong everywhere else (e.g. the
+   SW corner ends up with a glyph pointing up-and-into the card). We draw
+   our own L-shaped corner indicators with the handle's own border so
+   that pseudo is just visual noise — hide it across the board. */
+.react-grid-item > .react-resizable-handle::after {
+  content: none;
+}
+/* RGL applies a per-direction `transform: rotate(...)` to each handle to
+   align its default SVG arrow with the resize axis. We don't use that
+   SVG (we draw our own borders), so the rotation only mis-orients them
+   — most visibly on the SW corner, where the L ends up rotated 90°.
+   These selectors match RGL's own specificity (0,3,0) so the reset
+   actually wins; a plain `.react-resizable-handle-sw` rule loses to
+   RGL's `.react-grid-item > .react-resizable-handle.react-resizable-handle-sw`. */
+.react-grid-item > .react-resizable-handle.react-resizable-handle-sw,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-se,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-w,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s {
+  transform: none;
+}
 .react-grid-item:hover .react-resizable-handle,
 .react-grid-item.resizing .react-resizable-handle {
   opacity: 1;
@@ -185,37 +208,69 @@ udi-vis .vega-chart-container {
   width: auto;
   height: 8px;
   margin-left: 0;
-  transform: none;
   cursor: ns-resize;
   border-radius: 4px;
   background: color-mix(in oklab, var(--primary) 35%, transparent);
 }
-.react-resizable-handle-e {
-  right: -2px;
+.react-resizable-handle-e,
+.react-resizable-handle-w {
   top: 12px;
   bottom: 12px;
   width: 8px;
   height: auto;
   margin-top: 0;
-  transform: none;
   cursor: ew-resize;
   border-radius: 4px;
   background: color-mix(in oklab, var(--primary) 35%, transparent);
 }
+.react-resizable-handle-e {
+  right: -2px;
+}
+.react-resizable-handle-w {
+  left: -2px;
+}
+.react-resizable-handle-se,
+.react-resizable-handle-sw {
+  width: 16px;
+  height: 16px;
+  /* Both bottom corners draw an L-shape with the handle box's own
+     border. Rotation reset for SW lives in the higher-specificity rule
+     above — RGL's default `rotate(90deg)` on `-sw` otherwise spins our
+     L 90° clockwise. */
+  border-color: color-mix(in oklab, var(--primary) 70%, transparent);
+  background: transparent;
+}
 .react-resizable-handle-se {
   right: -2px;
   bottom: -2px;
-  width: 16px;
-  height: 16px;
-  border-bottom: 2px solid color-mix(in oklab, var(--primary) 70%, transparent);
-  border-right: 2px solid color-mix(in oklab, var(--primary) 70%, transparent);
+  border-bottom: 2px solid;
+  border-right: 2px solid;
   border-bottom-right-radius: 6px;
   cursor: se-resize;
+}
+.react-resizable-handle-sw {
+  left: -2px;
+  bottom: -2px;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+  border-bottom-left-radius: 6px;
+  cursor: sw-resize;
 }
 .react-resizable-handle:hover {
   background: color-mix(in oklab, var(--primary) 60%, transparent);
 }
-.react-resizable-handle-se:hover {
-  border-bottom-color: var(--primary);
-  border-right-color: var(--primary);
+.react-resizable-handle-se:hover,
+.react-resizable-handle-sw:hover {
+  background: transparent;
+  border-color: var(--primary);
+}
+
+/* While the user is dragging or resizing a card, suppress text selection
+   across the page. Without this, sliding the cursor past adjacent cards
+   or chat messages mid-drag selects their text — visually noisy and
+   triggers an unintended copy on mouseup. Toggled by DashboardGrid via
+   GRID_INTERACTING_CLASS on the body. */
+body.udi-grid-interacting,
+body.udi-grid-interacting * {
+  user-select: none;
 }

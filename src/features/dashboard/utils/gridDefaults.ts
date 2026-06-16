@@ -20,6 +20,11 @@ export const GRID_MARGIN: readonly [number, number] = [8, 8];
 
 export const DRAG_HANDLE_CLASS = 'dashboard-card-drag';
 
+// Toggled on document.body while a card is being dragged or resized.
+// Paired with a CSS rule that disables text selection across the page —
+// see `body.${GRID_INTERACTING_CLASS}` in src/index.css.
+export const GRID_INTERACTING_CLASS = 'udi-grid-interacting';
+
 export function clampGridCols(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_GRID_COLS;
   return Math.max(MIN_GRID_COLS, Math.min(MAX_GRID_COLS, Math.floor(n)));
