@@ -28,7 +28,17 @@ function PopoverContent({
 }) {
   return (
     <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Positioner align={align} sideOffset={sideOffset}>
+      <PopoverPrimitive.Positioner
+        // Positioner needs its own high z-index (matching dropdown-menu)
+        // because the inner Popup's `z-1500` only orders things WITHIN the
+        // Positioner's stacking context — without z on the Positioner the
+        // whole popover renders at z-auto and ends up behind anything
+        // positioned higher in its containing stack (e.g. the dashboard's
+        // `z-10` sticky header).
+        className="isolate z-1500 outline-none"
+        align={align}
+        sideOffset={sideOffset}
+      >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
