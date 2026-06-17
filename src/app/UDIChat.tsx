@@ -4,6 +4,7 @@ import {
   DownloadActionsProvider,
   DownloadButtonLabelProvider,
   EntityIconsProvider,
+  PaletteProvider,
   MascotProvider,
   SplashMessagesProvider,
   TrackerProvider,
@@ -186,13 +187,15 @@ function UDIChatValidated(props: UDIChatConfig) {
           <DownloadActionsProvider actions={props.downloadActions}>
             <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
               <EntityIconsProvider icons={props.entityIcons}>
-                <MascotProvider mascot={props.mascot}>
-                  <SplashMessagesProvider messages={props.splashMessages}>
-                    <div className={cn('h-full w-full', props.className)} style={props.style}>
-                      <UDIChatInner {...props} />
-                    </div>
-                  </SplashMessagesProvider>
-                </MascotProvider>
+                <PaletteProvider palette={props.palette}>
+                  <MascotProvider mascot={props.mascot}>
+                    <SplashMessagesProvider messages={props.splashMessages}>
+                      <div className={cn('h-full w-full', props.className)} style={props.style}>
+                        <UDIChatInner {...props} />
+                      </div>
+                    </SplashMessagesProvider>
+                  </MascotProvider>
+                </PaletteProvider>
               </EntityIconsProvider>
             </DownloadButtonLabelProvider>
           </DownloadActionsProvider>

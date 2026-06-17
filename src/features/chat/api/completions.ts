@@ -64,6 +64,7 @@ export async function queryLLM(
   messages: Message[],
   dataSchema: string,
   dataDomains: string,
+  conversationId?: string,
 ): Promise<ToolCallResponse[]> {
   const model = config.model ?? 'agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B';
   const body = constructQueryBody(messages, model, dataSchema, dataDomains);
@@ -74,6 +75,10 @@ export async function queryLLM(
   headers['Authorization'] = `Bearer ${config.authToken ?? 'dev'}`;
   if (config.openAiKey) {
     headers['X-OpenAI-Key'] = config.openAiKey;
+  }
+  // Per-conversation ID for server-side tracing (Langfuse session grouping).
+  if (conversationId) {
+    headers['X-Conversation-Id'] = conversationId;
   }
 
   const response = await fetch(`${config.apiBaseUrl}/v1/yac/completions`, {

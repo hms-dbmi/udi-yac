@@ -85,6 +85,7 @@ import 'udi-yac/style.css';
 | `mascot`           | `ReactNode \| null?` | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                        |
 | `splashMessages`   | `readonly string[]?` | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages). |
 | `onEvent`          | `TrackerFn?`         | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                      |
+| `palette`          | `UDIPalette?`        | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).             |
 | `className`        | `string?`            | CSS class for the root element                                                                                  |
 | `style`            | `CSSProperties?`     | Inline styles for the root element                                                                              |
 
@@ -278,6 +279,30 @@ const icons: EntityIconMap = {
 ```
 
 Consumer entries are merged on top of the built-in icons (`donors`, `samples`, `datasets`, …) — you only need to supply the names you want to override or add. Entities with no match fall back to a generic table icon.
+
+### Custom color palette
+
+Pass `palette` on `UDIChatConfig` to set the default colors used by every chart and table (dashboard cards, chat-message previews, and the memory bank). A spec-level per-encoding `range` still overrides the palette.
+
+```tsx
+import { UDIChat } from 'udi-yac';
+import type { UDIPalette } from 'udi-toolkit/react';
+import { interpolateViridis } from 'd3-scale-chromatic';
+
+const palette: UDIPalette = {
+  // Single default mark color.
+  mark: '#0673b0',
+  // Categorical colors (nominal scales). An array, or a named Vega scheme string.
+  category: ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e'],
+  // Continuous color for numeric scales — a scheme name, a color array, or a
+  // function `(t: number) => string` (t in [0, 1]).
+  ramp: (t) => interpolateViridis(t),
+};
+
+<UDIChat apiBaseUrl="http://localhost:8007" palette={palette} />;
+```
+
+The `category`/`ordinal` fields accept a color array or a Vega scheme name. The `ramp` accepts a scheme name, a color array, or an interpolator function. Note: in the **table** renderer, function and array ramps are honored, while a bare scheme-name ramp falls back to the default (scheme names apply fully to Vega charts).
 
 ### Custom mascot
 

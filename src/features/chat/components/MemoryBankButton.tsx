@@ -16,6 +16,7 @@ import {
   useMemoryBankStore,
   useDataPackage,
   useDataPackageStore,
+  usePalette,
 } from '@/app/UDIChatContext';
 
 /**
@@ -26,6 +27,7 @@ import {
 export function MemoryBankButton() {
   const closedVisualizations = useMemoryBank((s) => s.closedVisualizations);
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
+  const palette = usePalette();
   const dashboardStore = useDashboardStore();
   const memoryBankStore = useMemoryBankStore();
   const dataPackageStore = useDataPackageStore();
@@ -91,6 +93,7 @@ export function MemoryBankButton() {
                   className="block h-full w-full"
                   spec={viz.interactiveSpec}
                   sourceResolver={sourceResolver}
+                  palette={palette}
                   fillContainer
                 />
               </div>

@@ -56,6 +56,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           messages,
           dpState.dataPackageString,
           dpState.dataDomainsString,
+          conversationStore.getState().conversationId,
         );
 
         conversationStore.getState().addMessage({
@@ -143,7 +144,9 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
     if (trimmed.length === 0) return;
     const turnId = turnIdRef.current ?? generateEventId();
     turnIdRef.current = turnId;
-    state.loadConversation(trimmed);
+    // Same conversation continuing — keep the id so the retry's trace stays
+    // grouped with the original turn rather than starting a new session.
+    state.loadConversation(trimmed, { keepId: true });
     await runCompletion(trimmed, turnId);
   }, [conversationStore, runCompletion]);
 

@@ -30,6 +30,7 @@ import {
   useMemoryBankStore,
   useDataPackage,
   useGlobal,
+  usePalette,
   useTracker,
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
@@ -48,6 +49,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const palette = usePalette();
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
@@ -280,6 +282,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
           sourceResolver={sourceResolver}
+          palette={palette}
           fillContainer
         />
       </CardContent>

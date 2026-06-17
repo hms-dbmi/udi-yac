@@ -1,5 +1,6 @@
 import { createContext, useContext, useRef, useMemo, type ReactNode } from 'react';
 import { useStore, type StoreApi } from 'zustand';
+import type { UDIPalette } from 'udi-toolkit/react';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 import type { TrackerFn } from '@/app/UDIChatConfig';
 import { generateEventId } from '@/lib/utils';
@@ -182,6 +183,28 @@ export function EntityIconsProvider({
 
 export function useEntityIcons(): EntityIconMap {
   return useContext(EntityIconsContext);
+}
+
+// ---------------------------------------------------------------------------
+// Consumer-provided color palette
+// ---------------------------------------------------------------------------
+// Forwarded to every <UDIVis> so charts and tables share the consumer's
+// colors. `undefined` (the default) lets the toolkit use its built-in palette.
+
+const PaletteContext = createContext<UDIPalette | undefined>(undefined);
+
+export function PaletteProvider({
+  palette,
+  children,
+}: {
+  palette: UDIPalette | undefined;
+  children: ReactNode;
+}) {
+  return <PaletteContext.Provider value={palette}>{children}</PaletteContext.Provider>;
+}
+
+export function usePalette(): UDIPalette | undefined {
+  return useContext(PaletteContext);
 }
 
 // ---------------------------------------------------------------------------
