@@ -103,7 +103,7 @@ function UDIChatInner({
       }
     }
     if (batch.length > 0) {
-      state.addActiveVisualizationBatch(batch);
+      state.addActiveVisualizationBatch(batch, dataPackageStore);
       for (const item of batch) {
         // Event name kept as `visualization_pinned` for analytics continuity
         // even though the in-code concept renamed pinning → active.
@@ -113,7 +113,7 @@ function UDIChatInner({
         });
       }
     }
-  }, [messages, dashboardStore, sourceFields, memoryBankStore, trackEvent]);
+  }, [messages, dashboardStore, sourceFields, memoryBankStore, dataPackageStore, trackEvent]);
 
   // Sync data filters from messages (replaces Vue's watch(messages, ...) in dataFiltersStore)
   useEffect(() => {

@@ -15,6 +15,7 @@ import {
   useDashboardStore,
   useMemoryBankStore,
   useDataPackage,
+  useDataPackageStore,
 } from '@/app/UDIChatContext';
 
 /**
@@ -27,13 +28,14 @@ export function MemoryBankButton() {
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const dashboardStore = useDashboardStore();
   const memoryBankStore = useMemoryBankStore();
+  const dataPackageStore = useDataPackageStore();
   const [open, setOpen] = useState(false);
 
   const handleRestore = useCallback(
     (key: string) => {
-      dashboardStore.getState().restoreFromMemoryBank(key, memoryBankStore);
+      dashboardStore.getState().restoreFromMemoryBank(key, memoryBankStore, dataPackageStore);
     },
-    [dashboardStore, memoryBankStore],
+    [dashboardStore, memoryBankStore, dataPackageStore],
   );
 
   const entries = Array.from(closedVisualizations.entries());

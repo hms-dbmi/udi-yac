@@ -18,6 +18,7 @@ import {
   clampGridRowHeight,
 } from '../utils/gridDefaults';
 import { layoutItemsEqual, packAllRowMajor, repackRowMajor } from '../utils/gridPacking';
+import { computeInitialCardHeight } from '../utils/initialCardSize';
 
 export interface ActiveVisualization {
   index: number;
@@ -89,9 +90,14 @@ export interface DashboardState {
       sourceFields: Record<string, string[]> | null;
       title?: string;
     }>,
+    dataPackageStore?: StoreApi<DataPackageState>,
   ) => void;
   closeVisualization: (key: string, memoryBankStore?: StoreApi<MemoryBankState>) => void;
-  restoreFromMemoryBank: (key: string, memoryBankStore: StoreApi<MemoryBankState>) => void;
+  restoreFromMemoryBank: (
+    key: string,
+    memoryBankStore: StoreApi<MemoryBankState>,
+    dataPackageStore?: StoreApi<DataPackageState>,
+  ) => void;
   isActive: (key: string) => boolean;
   clearAllVisualizations: () => void;
   setFilterAllNullValues: (value: boolean) => void;
@@ -168,9 +174,13 @@ function removeItemFromLayout(layout: DashboardLayout, key: string): DashboardLa
   return next.length === layout.items.length ? layout : { items: next };
 }
 
-function insertItemRowMajor(layout: DashboardLayout, key: string, cols: number): DashboardLayout {
-  if (layout.items.some((it) => it.i === key)) return layout;
-  const items = repackRowMajor(layout.items, newDefaultItem(key), cols);
+function insertItemRowMajor(
+  layout: DashboardLayout,
+  item: LayoutItem,
+  cols: number,
+): DashboardLayout {
+  if (layout.items.some((it) => it.i === item.i)) return layout;
+  const items = repackRowMajor(layout.items, item, cols);
   return { items };
 }
 
@@ -328,23 +338,33 @@ export function createDashboardStore() {
         next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
         return {
           activeVisualizations: next,
-          layout: insertItemRowMajor(state.layout, key, state.gridCols),
+          layout: insertItemRowMajor(state.layout, newDefaultItem(key), state.gridCols),
         };
       });
     },
 
-    addActiveVisualizationBatch: (items) => {
+    addActiveVisualizationBatch: (items, dataPackageStore) => {
       if (items.length === 0) return;
       set((state) => {
         const next = new Map(state.activeVisualizations);
         const newItems: LayoutItem[] = [];
+        // Domain lookup is only available when the caller passes the
+        // dataPackageStore (UDIChat does; tests typically don't). Without
+        // it we just keep DEFAULT_CARD_H. With it, computeInitialCardHeight
+        // returns a row count sized to fit categorical Y mappings, so a
+        // "donors by race" chart lands tall enough to show every category
+        // instead of cramped at the default height.
+        const getDomainForField = dataPackageStore?.getState().getDomainForField;
         for (const { index, toolCallIndex, spec, userPrompt, sourceFields, title } of items) {
           const uuid = generateId();
           const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
           const key = `${index}-${toolCallIndex}`;
           if (state.activeVisualizations.has(key)) continue;
           next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
-          newItems.push(newDefaultItem(key));
+          const h = getDomainForField
+            ? computeInitialCardHeight(spec, getDomainForField, state.gridRowHeight)
+            : DEFAULT_CARD_H;
+          newItems.push({ ...newDefaultItem(key), h });
         }
         if (newItems.length === 0) return { activeVisualizations: next };
         // Single repack: prepend the whole batch (in arrival order) ahead of
@@ -378,15 +398,25 @@ export function createDashboardStore() {
       });
     },
 
-    restoreFromMemoryBank: (key, memoryBankStore) => {
+    restoreFromMemoryBank: (key, memoryBankStore, dataPackageStore) => {
       const viz = memoryBankStore.getState().closedVisualizations.get(key);
       if (!viz) return;
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.set(key, viz);
+        // Recompute height when restoring — closing a card discards its
+        // last resized height, so we'd otherwise drop back to
+        // DEFAULT_CARD_H on restore. Re-running the category-aware
+        // estimator means a "donor by organ" chart comes back tall
+        // enough for all 15 organs just like its initial add did.
+        const getDomainForField = dataPackageStore?.getState().getDomainForField;
+        const h = getDomainForField
+          ? computeInitialCardHeight(viz.spec, getDomainForField, state.gridRowHeight)
+          : DEFAULT_CARD_H;
+        const item = { ...newDefaultItem(key), h };
         return {
           activeVisualizations: next,
-          layout: insertItemRowMajor(state.layout, key, state.gridCols),
+          layout: insertItemRowMajor(state.layout, item, state.gridCols),
         };
       });
       memoryBankStore.getState().removeFromMemoryBank(key);
@@ -546,15 +576,44 @@ export function createDashboardStore() {
     setLayoutItems: (items) => {
       const state = get();
       const knownKeys = new Set(state.activeVisualizations.keys());
-      const pruned = pruneItems(items, knownKeys);
+
+      // RGL emits `onLayoutChange` during drag/resize ticks with its own
+      // internal snapshot of the layout. If a new visualization is added
+      // mid-interaction (e.g. AI returns a new chart while the user is
+      // dragging), RGL's snapshot may not include it — the incoming layout
+      // would then be missing that item, and a plain `pruneItems + set`
+      // would silently drop it from `layout.items` even though it lives
+      // in `activeVisualizations`.
+      //
+      // Merge instead of replace: walk the existing layout in order,
+      // adopting the incoming position for items present in the payload,
+      // keeping the prior position for items that are still active but
+      // absent. Anything in the incoming layout that isn't in the prior
+      // layout (rare — addActiveVisualization* already seeds a position)
+      // gets appended.
+      const incomingByKey = new Map<string, LayoutItem>();
+      for (const it of items) {
+        if (knownKeys.has(it.i)) incomingByKey.set(it.i, it);
+      }
+      const merged: LayoutItem[] = [];
+      const handled = new Set<string>();
+      for (const stateItem of state.layout.items) {
+        if (!knownKeys.has(stateItem.i)) continue;
+        merged.push(incomingByKey.get(stateItem.i) ?? stateItem);
+        handled.add(stateItem.i);
+      }
+      for (const it of items) {
+        if (knownKeys.has(it.i) && !handled.has(it.i)) merged.push(it);
+      }
+
       // Skip the update if (i, x, y, w, h) for every item matches what's
       // already in the store. Without this guard, RGL's compactor produces
       // a new array reference on every render — and our `set()` would feed
       // a new layout prop back into RGL, which then runs compactor again,
       // fires onLayoutChange again, looping until React aborts with
       // "Maximum update depth exceeded" on viewport resize.
-      if (layoutItemsEqual(state.layout.items, pruned)) return;
-      set({ layout: { items: pruned } });
+      if (layoutItemsEqual(state.layout.items, merged)) return;
+      set({ layout: { items: merged } });
     },
 
     setGridCols: (cols) => {

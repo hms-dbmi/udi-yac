@@ -35,6 +35,7 @@ import {
 import { VizTweakComponent } from './VizTweakComponent';
 import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
+import { hasTweakableFields } from '../utils/tweakability';
 
 interface DashboardCardProps {
   vizKey: string;
@@ -46,10 +47,21 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const dashboardStore = useDashboardStore();
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
+  const sourceFields = useDataPackage((s) => s.sourceFields);
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   const isHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
+
+  // Whether the gear button can do anything for this spec. Charts whose
+  // mappings only reference computed / locked fields (count of groupby,
+  // binby outputs, kde outputs) have nothing tweakable — toggling the
+  // panel would just render `null`. Disable the button + swap the
+  // tooltip in that case so the affordance matches reality.
+  const tweakable = useMemo(
+    () => hasTweakableFields(viz.spec, sourceFields),
+    [viz.spec, sourceFields],
+  );
 
   const plainSpec = useMemo(
     () => JSON.parse(JSON.stringify(viz.interactiveSpec)),
@@ -111,7 +123,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     <Card
       className={cn(
         'relative transition-shadow h-full flex flex-col min-h-0',
-        isHovered && 'ring-2 ring-primary/40',
+        isHovered && 'ring-3 ring-primary/40',
       )}
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
@@ -156,21 +168,23 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           </Tooltip>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setShowTweak((v) => !v)}
-                />
-              }
-            >
-              <Settings2 className="h-3 w-3" />
-            </TooltipTrigger>
-            <TooltipContent>Tweak fields</TooltipContent>
-          </Tooltip>
+          {tweakable && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setShowTweak((v) => !v)}
+                  />
+                }
+              >
+                <Settings2 className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>Tweak fields</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger
               render={

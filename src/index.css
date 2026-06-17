@@ -201,38 +201,102 @@ udi-vis .vega-chart-container {
 .react-grid-item.resizing .react-resizable-handle {
   opacity: 1;
 }
+/* Each grid slot has 8 px of internal padding; the DashboardCard fills
+   the inner content box, and the resize handles below sit in the 8 px
+   ring (handles are absolutely-positioned so they anchor to the slot's
+   outer edge, not the padded content box). This gives:
+     - drag handles never overlap the visualization
+     - the card's border has room between itself and the dashboard's edge
+   See DashboardGrid for the matching className on the slot wrapper. */
+.dashboard-grid-slot {
+  padding: 8px;
+}
 .react-resizable-handle-s {
-  bottom: -2px;
-  left: 12px;
-  right: 12px;
+  bottom: 0;
+  /* Leave the 12 × 12 SE / SW corners untouched at the bottom edges. */
+  left: 16px;
+  right: 16px;
   width: auto;
   height: 8px;
   margin-left: 0;
   cursor: ns-resize;
-  border-radius: 4px;
-  background: color-mix(in oklab, var(--primary) 35%, transparent);
+  /* The clickable handle is transparent — the visible affordance is the
+     single bar drawn via ::before below, sitting in the slot's padding
+     ring with 3 px clearance from the card edge. */
+  background: transparent;
+  border-radius: 0;
 }
 .react-resizable-handle-e,
 .react-resizable-handle-w {
-  top: 12px;
-  bottom: 12px;
+  top: 8px;
+  /* Leave the SE / SW corners (12 px tall) untouched at the bottom. */
+  bottom: 16px;
   width: 8px;
   height: auto;
   margin-top: 0;
   cursor: ew-resize;
-  border-radius: 4px;
-  background: color-mix(in oklab, var(--primary) 35%, transparent);
+  /* The clickable handle is transparent — the visible affordance is the
+     two-bar grip icon drawn via ::before / ::after below. Both bars sit
+     in the slot's 8 px padding ring, so the icon is entirely outside
+     the card. */
+  background: transparent;
+  border-radius: 0;
 }
 .react-resizable-handle-e {
-  right: -2px;
+  right: 0;
 }
 .react-resizable-handle-w {
-  left: -2px;
+  left: 0;
+}
+/* Single-bar indicator for each edge handle, drawn via ::before. The
+   bar lives in the outer half of the slot's 8 px padding ring so it
+   stays clearly outside the card border. Specificity needs to match
+   RGL's `.react-grid-item > .react-resizable-handle::after { content: none }`
+   suppression — a plain `.react-resizable-handle-s::before` selector
+   would lose to RGL's reset and never render. (We use ::before here
+   rather than ::after specifically to dodge the corner-handle ::after
+   suppression we still rely on for SE / SW.) Bar colour matches the
+   2 px corner border (var(--primary) at 70%) so all five edge / corner
+   affordances feel like one icon family. */
+.react-grid-item > .react-resizable-handle-s::before,
+.react-grid-item > .react-resizable-handle-e::before,
+.react-grid-item > .react-resizable-handle-w::before {
+  content: '';
+  position: absolute;
+  background: color-mix(in oklab, var(--primary) 70%, transparent);
+  border-radius: 1px;
+}
+/* Vertical bars on E / W: 2 px wide, full handle height, 3 px in from
+   the slot's outer edge (3 px gap to the card on the other side). */
+.react-grid-item > .react-resizable-handle-e::before,
+.react-grid-item > .react-resizable-handle-w::before {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+}
+.react-grid-item > .react-resizable-handle-e::before {
+  right: 3px;
+}
+.react-grid-item > .react-resizable-handle-w::before {
+  left: 3px;
+}
+/* Horizontal bar on S: 2 px tall, full handle width, 3 px in from the
+   slot's outer (bottom) edge. */
+.react-grid-item > .react-resizable-handle-s::before {
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  height: 2px;
+}
+.react-grid-item > .react-resizable-handle-s:hover::before,
+.react-grid-item > .react-resizable-handle-e:hover::before,
+.react-grid-item > .react-resizable-handle-w:hover::before {
+  background: var(--primary);
 }
 .react-resizable-handle-se,
 .react-resizable-handle-sw {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   /* Both bottom corners draw an L-shape with the handle box's own
      border. Rotation reset for SW lives in the higher-specificity rule
      above — RGL's default `rotate(90deg)` on `-sw` otherwise spins our
@@ -241,16 +305,16 @@ udi-vis .vega-chart-container {
   background: transparent;
 }
 .react-resizable-handle-se {
-  right: -2px;
-  bottom: -2px;
+  right: 0;
+  bottom: 0;
   border-bottom: 2px solid;
   border-right: 2px solid;
   border-bottom-right-radius: 6px;
   cursor: se-resize;
 }
 .react-resizable-handle-sw {
-  left: -2px;
-  bottom: -2px;
+  left: 0;
+  bottom: 0;
   border-bottom: 2px solid;
   border-left: 2px solid;
   border-bottom-left-radius: 6px;
@@ -258,6 +322,15 @@ udi-vis .vega-chart-container {
 }
 .react-resizable-handle:hover {
   background: color-mix(in oklab, var(--primary) 60%, transparent);
+}
+/* S / E / W handles are transparent — their visible affordance lives in
+   the single-bar ::before pseudo, which has its own hover state. The
+   generic `:hover` rule above would otherwise re-fill the click area
+   with a solid gray strip on hover. */
+.react-resizable-handle-s:hover,
+.react-resizable-handle-e:hover,
+.react-resizable-handle-w:hover {
+  background: transparent;
 }
 .react-resizable-handle-se:hover,
 .react-resizable-handle-sw:hover {
@@ -273,4 +346,41 @@ udi-vis .vega-chart-container {
 body.udi-grid-interacting,
 body.udi-grid-interacting * {
   user-select: none;
+}
+
+/* Swim lanes: faint grid lines drawn on the dashboard wrapper so the
+   column / row structure of the layout is visible to the user.
+   - Vertical (column) lines tile at a fixed `--swim-col-step` set by
+     DashboardGrid from the measured container width.
+   - Horizontal (row) dividers can't tile — each row's extent depends on
+     `max(h)` of its items per the row-aligned compactor — so they're
+     rendered as absolutely-positioned `<div>`s (see
+     `.dashboard-grid-row-divider` below) and not part of this rule.
+   When the user is mid-drag/resize, the body gets `udi-grid-interacting`
+   and we bump the colour to make the destination cell easier to read at
+   a glance. */
+.dashboard-grid-lanes {
+  /* Light-gray dashboard background so the white cards stand out and
+     the grid area is visually distinct from the surrounding panel. */
+  background-color: var(--color-udi-gray-100);
+  /* Swim lanes are hidden until the user starts a drag or resize. The
+     `udi-grid-interacting` rule below switches `--swim-color` to a
+     visible primary tint — both the vertical column gradient and the
+     row-divider `<div>`s pick it up via this same variable. */
+  --swim-color: transparent;
+  background-image: linear-gradient(to right, var(--swim-color) 1px, transparent 1px);
+  background-size: var(--swim-col-step, 0) 100%;
+  background-position: 0 0;
+  background-repeat: repeat;
+}
+.dashboard-grid-row-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--swim-color);
+  pointer-events: none;
+}
+body.udi-grid-interacting .dashboard-grid-lanes {
+  --swim-color: color-mix(in oklab, var(--primary) 40%, transparent);
 }

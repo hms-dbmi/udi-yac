@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useDashboard, useDashboardStore, useDataFilters, useGlobal } from '@/app/UDIChatContext';
 import { DashboardGrid } from './DashboardGrid';
 import { GridSettingsButton } from './GridSettingsButton';
@@ -10,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 function DashboardHeader() {
   return (
@@ -30,6 +32,29 @@ export function DashboardPanel() {
   const filterAllNullValues = useDashboard((s) => s.filterAllNullValues);
   const debugMode = useGlobal((s) => s.debugMode);
   const dashboardStore = useDashboardStore();
+
+  // Sticky-on-scroll: the header + filter row + separator stay pinned to
+  // the top of the scroll viewport while the grid scrolls underneath. An
+  // IntersectionObserver watches a zero-height sentinel placed just
+  // above the sticky band; once the sentinel scrolls out of the
+  // viewport, the band is "stuck" and we drop a subtle shadow beneath
+  // it. Root is the ScrollArea viewport (Base UI's primitive emits
+  // `data-slot="scroll-area-viewport"`) so the observer measures
+  // against the right scroller, not the window. Declared up here ahead
+  // of the empty-state early-return so the hook order stays stable.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [isStuck, setIsStuck] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const root = el.closest('[data-slot="scroll-area-viewport"]');
+    const observer = new IntersectionObserver(([entry]) => setIsStuck(!entry.isIntersecting), {
+      root,
+      threshold: 0,
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Brush selections live in the shared Pinia DataSourcesStore — UDIVis's
   // signal handlers write them there directly. We only pass LLM-set filters
@@ -59,31 +84,39 @@ export function DashboardPanel() {
   return (
     <div className="h-full">
       <ScrollArea className="h-full p-3">
-        <div className="flex flex-col gap-3">
-          <DashboardHeader />
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Filters
-              </h3>
-              {debugMode && (
-                <div className="flex items-center gap-1.5">
-                  <Label htmlFor="null-filter" className="text-[10px] text-muted-foreground">
-                    Filter Nulls
-                  </Label>
-                  <Switch
-                    id="null-filter"
-                    checked={filterAllNullValues}
-                    onCheckedChange={(checked) =>
-                      dashboardStore.getState().setFilterAllNullValues(!!checked)
-                    }
-                  />
-                </div>
-              )}
+        <div className="flex flex-col">
+          <div ref={sentinelRef} aria-hidden />
+          <div
+            className={cn(
+              'sticky top-0 z-10 flex flex-col gap-3 bg-background pb-3 transition-shadow',
+              isStuck && 'shadow-md',
+            )}
+          >
+            <DashboardHeader />
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Filters
+                </h3>
+                {debugMode && (
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="null-filter" className="text-[10px] text-muted-foreground">
+                      Filter Nulls
+                    </Label>
+                    <Switch
+                      id="null-filter"
+                      checked={filterAllNullValues}
+                      onCheckedChange={(checked) =>
+                        dashboardStore.getState().setFilterAllNullValues(!!checked)
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+              <FilterToolbar />
             </div>
-            <FilterToolbar />
+            <Separator />
           </div>
-          <Separator />
           <DashboardGrid selections={mergedSelections} />
         </div>
       </ScrollArea>

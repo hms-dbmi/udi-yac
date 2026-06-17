@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { GridLayout, useContainerWidth, type EventCallback, type Layout } from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
@@ -72,8 +72,64 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
     };
   }, []);
 
+  // Swim-lane backdrop: paint faint grid lines on the wrapper so the
+  // column / row structure is visible even before the user starts a drag.
+  //
+  // Columns are uniform width, so vertical lines tile at a fixed step:
+  // colStep = colWidth + marginX = (width + marginX) / cols. They live on
+  // the wrapper's CSS background (see .dashboard-grid-lanes in index.css).
+  //
+  // Rows are NOT uniform — the row-aligned compactor sets each row's
+  // extent to `max(h of items in that row)`, so the divider positions
+  // depend on the current layout. We read every unique `y` from the
+  // layout (each one is a row top), tack on the layout's bottom-most
+  // edge, convert from grid units to pixels with RGL's positioning math,
+  // and render one absolutely-positioned divider per boundary.
+  const colStep = useMemo(() => {
+    if (!width || gridCols < 1) return 0;
+    return (width + GRID_MARGIN[0]) / gridCols;
+  }, [width, gridCols]);
+
+  const rowDividerTopsPx = useMemo<number[]>(() => {
+    if (items.length === 0) return [];
+    const extentByTop = new Map<number, number>();
+    for (const it of items) {
+      const prev = extentByTop.get(it.y) ?? 0;
+      if (it.h > prev) extentByTop.set(it.y, it.h);
+    }
+    const tops = Array.from(extentByTop.keys()).sort((a, b) => a - b);
+    const lastTop = tops[tops.length - 1];
+    const layoutBottom = lastTop + (extentByTop.get(lastTop) ?? 0);
+    const boundariesInGridUnits = [...tops, layoutBottom];
+    // RGL: pixel_top = grid_y * (rowHeight + marginY) + containerPadding[1].
+    // Our containerPadding[1] is 8 (see gridConfig below).
+    const step = gridRowHeight + GRID_MARGIN[1];
+    return boundariesInGridUnits.map((gy) => gy * step + 8);
+  }, [items, gridRowHeight]);
+
+  const laneStyle = useMemo<CSSProperties>(
+    () =>
+      ({
+        '--swim-col-step': `${colStep}px`,
+      }) as CSSProperties,
+    [colStep],
+  );
+
   return (
-    <div ref={containerRef} className="w-full min-h-0">
+    <div
+      ref={containerRef}
+      className="relative w-full min-h-0 dashboard-grid-lanes"
+      style={laneStyle}
+    >
+      {mounted &&
+        rowDividerTopsPx.map((topPx, i) => (
+          <div
+            key={`${i}-${topPx}`}
+            className="dashboard-grid-row-divider"
+            style={{ top: `${topPx}px` }}
+            aria-hidden
+          />
+        ))}
       {mounted && items.length > 0 ? (
         <GridLayout
           width={width}
@@ -129,7 +185,7 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
               const viz = activeVisualizations.get(it.i);
               if (!viz) return null;
               return (
-                <div key={it.i}>
+                <div key={it.i} className="dashboard-grid-slot">
                   <DashboardCard vizKey={it.i} viz={viz} selections={selections} />
                 </div>
               );
