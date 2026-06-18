@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { clearAllSelections } from 'udi-toolkit/react';
+import { useClearAllSelections } from 'udi-toolkit/react';
 import {
   useConversationStore,
   useDashboardStore,
@@ -19,6 +19,10 @@ export function useResetHandlers(): { handleReset: () => void } {
   const memoryBankStore = useMemoryBankStore();
   const dataFiltersStore = useDataFiltersStore();
   const trackEvent = useTracker();
+  // Stable hook-wrapped callback for clearing the shared Pinia selections.
+  // Identity-stable across renders, so it composes cleanly into the
+  // handleReset useCallback's deps.
+  const clearAllSelections = useClearAllSelections();
 
   const handleReset = useCallback(() => {
     const conversationLength = conversationStore.getState().messages.length;
@@ -31,7 +35,14 @@ export function useResetHandlers(): { handleReset: () => void } {
     memoryBankStore.getState().clearMemoryBank();
     dataFiltersStore.getState().resetFilters();
     trackEvent('conversation_reset', { conversationLength });
-  }, [conversationStore, dashboardStore, memoryBankStore, dataFiltersStore, trackEvent]);
+  }, [
+    conversationStore,
+    dashboardStore,
+    memoryBankStore,
+    dataFiltersStore,
+    trackEvent,
+    clearAllSelections,
+  ]);
 
   return { handleReset };
 }

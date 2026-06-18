@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Users, FlaskConical, Table2, AlertCircle } from 'lucide-react';
-import type { QueryDataSpec } from 'udi-toolkit/react';
+import { useQueryData, type QueryDataSpec } from 'udi-toolkit/react';
 import type { DataTransformation } from 'udi-toolkit';
 import {
   useDataPackage,
@@ -11,7 +11,6 @@ import {
   useEntityIcons,
 } from '@/app/UDIChatContext';
 import { joinDataPath } from '@/features/data-package';
-import { useEntityQueryPump } from '../hooks/useEntityQueryPump';
 import type { EntityIconMap } from '../types';
 
 const DEFAULT_ENTITY_ICONS: EntityIconMap = {
@@ -156,10 +155,11 @@ export function DataCounts() {
   // Brushes live in the shared Pinia DataSourcesStore already — UDIVis's
   // signal listeners write them directly. We only forward LLM-originated
   // dataSelections through queryData; brush state is read from Pinia.
-  // useEntityQueryPump owns the self-rescheduling pump, the
-  // subscribeToSelections wiring, and the latest-value refs.
-  useEntityQueryPump({
-    specs: countSpecs,
+  // useQueryData (multi-spec + onResult mode) owns the self-rescheduling
+  // pump, the subscribeToSelections wiring, and sequential queueing
+  // across the spec map. Supplying `onResult` routes per-entity results
+  // straight into the dashboard's stores without re-rendering DataCounts.
+  useQueryData(countSpecs, {
     selections: dataSelections,
     enabled: domainsReady,
     // displayDataOnly auto-defaults to true (count specs end with rollup).
@@ -179,13 +179,12 @@ export function DataCounts() {
     },
   });
 
-  useEntityQueryPump({
-    specs: exportSpecs,
+  useQueryData(exportSpecs, {
     selections: dataSelections,
     enabled: domainsReady,
     // Export specs have no rollup, so opt in explicitly — we only read
     // displayData; the unfiltered allData pass would be wasted work.
-    options: { displayDataOnly: true },
+    displayDataOnly: true,
     onResult: (entityName, result) => {
       if (result) {
         dataPackageStore.getState().setFilteredData(entityName, {

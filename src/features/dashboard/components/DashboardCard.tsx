@@ -24,13 +24,13 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ActiveVisualization } from '../stores/dashboardStore';
+import { usePalette } from 'udi-toolkit/react';
 import {
   useDashboard,
   useDashboardStore,
   useMemoryBankStore,
   useDataPackage,
   useGlobal,
-  usePalette,
   useTracker,
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';

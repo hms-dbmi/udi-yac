@@ -16,8 +16,8 @@ import {
   useMemoryBankStore,
   useDataPackage,
   useDataPackageStore,
-  usePalette,
 } from '@/app/UDIChatContext';
+import { usePalette } from 'udi-toolkit/react';
 
 /**
  * Opens a modal listing every visualization in the memory bank with a per-item

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
+import { UDIToolkitProvider } from 'udi-toolkit/react';
 import {
   UDIChatProvider,
   DownloadActionsProvider,
   DownloadButtonLabelProvider,
   EntityIconsProvider,
-  PaletteProvider,
   MascotProvider,
   SplashMessagesProvider,
   TrackerProvider,
@@ -187,7 +187,16 @@ function UDIChatValidated(props: UDIChatConfig) {
           <DownloadActionsProvider actions={props.downloadActions}>
             <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
               <EntityIconsProvider icons={props.entityIcons}>
-                <PaletteProvider palette={props.palette}>
+                {/*
+                 * UDIToolkitProvider supersedes the previous local PaletteProvider:
+                 * it ships in udi-toolkit/react, sets palette on the React
+                 * Context that <UDIVis> already reads, and (optionally) auto-
+                 * loads a data package. We only use the palette half here —
+                 * the data package is still owned by dataPackageStore so the
+                 * existing rich state (loadingPhase, sourceFields, etc.) keeps
+                 * working unchanged.
+                 */}
+                <UDIToolkitProvider palette={props.palette}>
                   <MascotProvider mascot={props.mascot}>
                     <SplashMessagesProvider messages={props.splashMessages}>
                       <div className={cn('h-full w-full', props.className)} style={props.style}>
@@ -195,7 +204,7 @@ function UDIChatValidated(props: UDIChatConfig) {
                       </div>
                     </SplashMessagesProvider>
                   </MascotProvider>
-                </PaletteProvider>
+                </UDIToolkitProvider>
               </EntityIconsProvider>
             </DownloadButtonLabelProvider>
           </DownloadActionsProvider>

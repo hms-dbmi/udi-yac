@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { UDIVis } from 'udi-toolkit/react';
+import { UDIVis, usePalette } from 'udi-toolkit/react';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { Badge } from '@/components/ui/badge';
 import { VizTweakComponent } from '@/features/dashboard';
-import { useDashboard, useDataPackage, useMemoryBank, usePalette } from '@/app/UDIChatContext';
+import { useDashboard, useDataPackage, useMemoryBank } from '@/app/UDIChatContext';
 
 interface VisualizationCardProps {
   spec: UDIGrammar;
