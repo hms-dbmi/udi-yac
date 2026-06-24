@@ -124,7 +124,7 @@ export interface DashboardState {
   setLayoutItems: (items: Layout) => void;
   setGridCols: (cols: number) => void;
   setGridRowHeight: (px: number) => void;
-  repackLayout: () => void;
+  repackLayout: (dataPackageStore?: StoreApi<DataPackageState>) => void;
   exportDashboard: () => DashboardExport;
   importDashboard: (
     payload: DashboardExport,
@@ -639,17 +639,25 @@ export function createDashboardStore() {
       set({ gridRowHeight: safe });
     },
 
-    repackLayout: () => {
+    repackLayout: (dataPackageStore) => {
       set((state) => {
         if (state.layout.items.length === 0) return state;
         const cols = state.gridCols;
-        const ordered = state.layout.items.map((it) => ({
-          ...it,
-          w: DEFAULT_CARD_W,
-          h: DEFAULT_CARD_H,
-          minW: MIN_CARD_W,
-          minH: MIN_CARD_H,
-        }));
+        const getDomainForField = dataPackageStore?.getState().getDomainForField;
+        const ordered = state.layout.items.map((it) => {
+          const viz = state.activeVisualizations.get(it.i);
+          const h =
+            viz && getDomainForField
+              ? computeInitialCardHeight(viz.spec, getDomainForField, state.gridRowHeight)
+              : DEFAULT_CARD_H;
+          return {
+            ...it,
+            w: DEFAULT_CARD_W,
+            h,
+            minW: MIN_CARD_W,
+            minH: MIN_CARD_H,
+          };
+        });
         return { layout: { items: packAllRowMajor(ordered, cols) } };
       });
     },

@@ -19,6 +19,7 @@ import {
   useConversationStore,
   useDashboardStore,
   useDataPackage,
+  useDataPackageStore,
   useTracker,
 } from '@/app/UDIChatContext';
 import {
@@ -48,6 +49,7 @@ function timestamp(): string {
 export function SessionImportExportButton() {
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
+  const dataPackageStore = useDataPackageStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const trackEvent = useTracker();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -116,9 +118,9 @@ export function SessionImportExportButton() {
 
   const handleResetLayout = useCallback(() => {
     const state = dashboardStore.getState();
-    state.repackLayout();
+    state.repackLayout(dataPackageStore);
     trackEvent('layout_reset', { vizCount: state.activeVisualizations.size });
-  }, [dashboardStore, trackEvent]);
+  }, [dashboardStore, dataPackageStore, trackEvent]);
 
   return (
     <>

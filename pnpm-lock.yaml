@@ -54,8 +54,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       udi-toolkit:
-        specifier: file:/home/nikolay/projects/udi/udi-grammar/src/components/udi-toolkit-0.0.65.tgz
-        version: file:../udi-grammar/src/components/udi-toolkit-0.0.65.tgz(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@6.0.3))
+        specifier: file:/home/nikolay/projects/udi/udi-grammar/src/components/udi-toolkit-0.0.67.tgz
+        version: file:../udi-grammar/src/components/udi-toolkit-0.0.67.tgz(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@6.0.3))
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
@@ -3553,9 +3553,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  udi-toolkit@file:../udi-grammar/src/components/udi-toolkit-0.0.65.tgz:
-    resolution: {integrity: sha512-PHItgw8R3uH0pOZtCPXcZG2vdq/HVYZofCsat8jQmweSF2XmGqBkPEJdOH2W2jgPG4EP/yEjYl1uq0aw/Us9Tg==, tarball: file:../udi-grammar/src/components/udi-toolkit-0.0.65.tgz}
-    version: 0.0.65
+  udi-toolkit@file:../udi-grammar/src/components/udi-toolkit-0.0.67.tgz:
+    resolution: {integrity: sha512-vP70neX2rF3qhD2A4gZluytyTcIlVlD7bc2l0eBz5i3eiVnkVMFC6Z1Atgb24E80NhkCqeLnLSI35ZJm1Pm7VA==, tarball: file:../udi-grammar/src/components/udi-toolkit-0.0.67.tgz}
+    version: 0.0.67
     engines: {node: ^28 || ^26 || ^24 || ^22 || ^20, npm: '>= 6.13.4', yarn: '>= 1.21.1'}
     peerDependencies:
       ag-grid-community: 33.2.4
@@ -7582,7 +7582,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  udi-toolkit@file:../udi-grammar/src/components/udi-toolkit-0.0.65.tgz(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@6.0.3)):
+  udi-toolkit@file:../udi-grammar/src/components/udi-toolkit-0.0.67.tgz(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@6.0.3)):
     dependencies:
       '@types/d3-scale': 4.0.9
       '@types/d3-scale-chromatic': 3.1.0
