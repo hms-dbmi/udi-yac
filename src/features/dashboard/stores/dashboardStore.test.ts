@@ -616,6 +616,69 @@ describe('dashboardStore — setGridRowHeight', () => {
   });
 });
 
+describe('dashboardStore — repackLayout restores per-viz initial heights', () => {
+  function buildDataPackageStoreWith(domains: DataFieldDomain[]) {
+    const dp = createDataPackageStore();
+    const dataPackage: DataPackage = {
+      'udi:path': 'data',
+      resources: [
+        {
+          name: 'donors',
+          path: 'donors.csv',
+          'udi:row_count': 10,
+          schema: {
+            fields: [
+              { name: 'race', 'udi:data_type': 'nominal' },
+              { name: 'age_value', 'udi:data_type': 'quantitative' },
+            ],
+          },
+        },
+      ],
+    };
+    dp.setState({ dataPackage, dataFieldDomains: domains, loadingPhase: 'ready' });
+    return dp;
+  }
+
+  it('uses computeInitialCardHeight per viz, not a flat default', () => {
+    const store = createDashboardStore();
+    const dp = buildDataPackageStoreWith([
+      {
+        entity: 'donors',
+        field: 'race',
+        type: 'point',
+        fieldDescription: '',
+        domain: { values: Array.from({ length: 12 }, (_, i) => `r${i}`) },
+      },
+    ]);
+    const catSpec = makeSpec({
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'y', field: 'race', type: 'nominal' },
+          { encoding: 'x', field: 'age_value', type: 'quantitative' },
+        ],
+      },
+    });
+    store
+      .getState()
+      .addActiveVisualizationBatch(
+        [{ index: 0, toolCallIndex: 0, spec: catSpec, userPrompt: '', sourceFields: null }],
+        dp,
+      );
+    const addedH = store.getState().layout.items[0].h;
+    // 12 categories at rowHeight=60: ceil((80 + 12*25) / 60) = ceil(380/60) = 7, max with default 4 = 7.
+    expect(addedH).toBeGreaterThan(4);
+
+    // Shrink the card to simulate a user resize.
+    store.getState().setLayoutItems([{ ...store.getState().layout.items[0], h: 4 }]);
+    expect(store.getState().layout.items[0].h).toBe(4);
+
+    // Reset — should put h back to the category-aware initial.
+    store.getState().repackLayout(dp);
+    expect(store.getState().layout.items[0].h).toBe(addedH);
+  });
+});
+
 describe('dashboardStore — setGridCols clamping', () => {
   it('clamps out-of-range cols to MIN/MAX_GRID_COLS', () => {
     const store = createDashboardStore();

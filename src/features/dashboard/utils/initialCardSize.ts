@@ -54,6 +54,7 @@ export function computeInitialCardHeight(
       ? [spec.representation as SpecLayerRef]
       : [];
 
+  let pxNeeded = 0;
   for (const layer of layers) {
     if (layer.mark === 'row') continue;
     const mappings: SpecMappingRef[] = Array.isArray(layer.mapping)
@@ -62,7 +63,7 @@ export function computeInitialCardHeight(
         ? [layer.mapping]
         : [];
     for (const m of mappings) {
-      if (m?.encoding !== 'y') continue;
+      if (m?.encoding !== 'y' && m?.encoding !== 'x') continue;
       if (!m.field) continue;
       if (m.type !== 'nominal' && m.type !== 'ordinal') continue;
       const domain = getDomainForField(entity, m.field);
@@ -70,10 +71,14 @@ export function computeInitialCardHeight(
       const values = (domain.domain as CategoricalDomain).values;
       const n = values?.length ?? 0;
       if (n === 0) continue;
-      const pxNeeded = 80 + n * 25;
-      const h = Math.ceil(pxNeeded / Math.max(1, rowHeight));
-      return Math.max(DEFAULT_CARD_H, h);
+      // Y categorical: bar per row, height grows with cardinality.
+      // X categorical: vertical bars; height is mostly chart body + space for
+      //   rotated/wrapped category labels along the bottom. Doesn't need to
+      //   scale per-category, just needs a sane fixed baseline.
+      const need = m.encoding === 'y' ? 80 + n * 25 : 340;
+      if (need > pxNeeded) pxNeeded = need;
     }
   }
-  return DEFAULT_CARD_H;
+  if (pxNeeded === 0) return DEFAULT_CARD_H;
+  return Math.max(DEFAULT_CARD_H, Math.ceil(pxNeeded / Math.max(1, rowHeight)));
 }
