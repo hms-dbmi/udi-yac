@@ -43,31 +43,47 @@ export function ChatPanel({
   showDrawerToggle,
   onToggleDrawer,
 }: ChatPanelProps) {
-  const { sendMessage, retryLastUserMessage, isLoading, error } = useChatApi(config, {
+  const {
+    sendMessage,
+    retryLastUserMessage,
+    flushQueuedMessage,
+    cancelQueuedMessage,
+    isLoading,
+    error,
+  } = useChatApi(config, {
     onQuotaRebuff,
     onNormalResponse,
   });
   const globalStore = useGlobalStore();
-  const dataReady = useDataPackage((s) => s.loadingPhase === 'ready');
+  const loadingPhase = useDataPackage((s) => s.loadingPhase);
+  const dataReady = loadingPhase === 'ready';
   const { handleReset } = useResetHandlers();
   const [showSystemPrompts, setShowSystemPrompts] = useState(false);
 
-  // Single guarded entry point for every send path (ChatInput, example
-  // prompts in ChatHeaderBar, suggested follow-ups in MessageList). Until
-  // the data package is fully loaded, the LLM can't inspect data domains
-  // or dispatch visualization tool calls, so we block the send entirely
-  // instead of letting a half-initialized request go through.
+  // Single entry point for every send path (ChatInput, example prompts in
+  // ChatHeaderBar, suggested follow-ups in MessageList). If the data package
+  // isn't loaded yet the LLM can't inspect data domains, so `sendMessage`
+  // queues the request (showing the message + spinner) and the effect below
+  // fires it once domains are ready.
   const handleSend = useCallback(
     (text: string) => {
       if (text.trim() === '!/admin') {
         globalStore.getState().toggleDebugMode();
         return;
       }
-      if (!dataReady) return;
       sendMessage(text);
     },
-    [sendMessage, globalStore, dataReady],
+    [sendMessage, globalStore],
   );
+
+  // Flush a message queued during data load once domains are ready, or cancel
+  // it if loading failed (so it can't spin forever). Both calls no-op when
+  // nothing is queued.
+  useEffect(() => {
+    if (loadingPhase === 'ready') flushQueuedMessage();
+    else if (loadingPhase === 'error')
+      cancelQueuedMessage('Data failed to load — please try again.');
+  }, [loadingPhase, flushQueuedMessage, cancelQueuedMessage]);
 
   // Auto-retry the last user turn after the user enters a key in response
   // to a quota rebuff. The parent sets `pendingQuotaRetry` alongside the
@@ -138,11 +154,7 @@ export function ChatPanel({
       {needsApiKey ? (
         <ApiKeyInput onSubmit={onSetApiKey} />
       ) : (
-        <ChatInput
-          onSend={handleSend}
-          disabled={isLoading || !dataReady}
-          placeholder={!dataReady ? 'Loading data...' : undefined}
-        />
+        <ChatInput onSend={handleSend} disabled={isLoading} />
       )}
     </div>
   );
