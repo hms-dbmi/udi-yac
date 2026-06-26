@@ -83,17 +83,29 @@ export function DashboardPanel() {
 
   return (
     <div className="h-full">
-      <ScrollArea className="h-full p-3">
+      {/* Gray panel background lives on the ScrollArea so it paints behind the
+          transparent viewport and fills the bottom gutter (pb-3). The right
+          gutter is applied to the grid alone (below), not the ScrollArea, so the
+          white header band spans the full panel width instead of being cut short
+          by a right inset. No left inset → background, Separator, and grid sit
+          flush against the chat panel's right border; header + filters use px-3
+          to keep their text off the divider and the right edge. Top spacing
+          lives on the sticky band (pt-3) so no gray strip lands above it. */}
+      <ScrollArea className="h-full bg-udi-gray-100 pb-3">
         <div className="flex flex-col">
           <div ref={sentinelRef} aria-hidden />
+          {/* No pb here: the Separator is the band's bottom edge so the stuck
+              shadow casts straight onto the gray grid instead of a white chin. */}
           <div
             className={cn(
-              'sticky top-0 z-10 flex flex-col gap-3 bg-background pb-3 transition-shadow',
+              'sticky top-0 z-10 flex flex-col gap-3 bg-background pt-3 transition-shadow',
               isStuck && 'shadow-md',
             )}
           >
-            <DashboardHeader />
-            <div>
+            <div className="px-3">
+              <DashboardHeader />
+            </div>
+            <div className="px-3">
               <div className="flex items-center justify-between mb-1.5">
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Filters
@@ -117,7 +129,12 @@ export function DashboardPanel() {
             </div>
             <Separator />
           </div>
-          <DashboardGrid selections={mergedSelections} />
+          {/* Right gutter on the grid alone so the header band above stays
+              full-width; grid width is unchanged (the inset just moved here
+              from the ScrollArea). */}
+          <div className="pr-3">
+            <DashboardGrid selections={mergedSelections} />
+          </div>
         </div>
       </ScrollArea>
     </div>
