@@ -1,11 +1,13 @@
 import { UDIChat } from '@/app/UDIChat';
 
-// For local development with production snapshot data (served by Vite from public/data/):
-// const HUBMAP_DATAPACKAGE_URL = '/data/hubmap_snapshot/datapackage.json';
-// For local development with production API (requires CORS bypass in browser):
-// const HUBMAP_DATAPACKAGE_URL = '/data/hubmap_api/datapackage.json';
-// For local development with portal UI running in parallel (requires CORS bypass in browser):
+/**
+ * Default DataPackage URL — the live HuBMAP Portal endpoint that dynamically
+ * builds a DataPackage from Elasticsearch + UBKG metadata.
+ */
+
 const HUBMAP_DATAPACKAGE_URL = '/data/hubmap_api/datapackage.json';
+// For local development with portal UI running locally in parallel (requires CORS bypass in browser):
+// const HUBMAP_DATAPACKAGE_URL = 'http://localhost:5001/metadata/v0/udi/datapackage.json';
 // For direct access to the live portal endpoint (requires CORS bypass in browser):
 // const HUBMAP_DATAPACKAGE_URL = 'https://portal.hubmapconsortium.org/metadata/v0/udi/datapackage.json';
 
