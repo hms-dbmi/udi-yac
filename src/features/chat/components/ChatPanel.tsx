@@ -102,6 +102,7 @@ export function ChatPanel({
       <ChatHeaderBar
         config={config}
         hasApiKey={hasApiKey}
+        onSetApiKey={onSetApiKey}
         onClearApiKey={onClearApiKey}
         showDrawerToggle={showDrawerToggle}
         onToggleDrawer={onToggleDrawer}

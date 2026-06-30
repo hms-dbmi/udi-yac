@@ -56,7 +56,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
       setError(null);
 
       try {
-        const toolCalls = await queryLLM(
+        const { toolCalls, usage } = await queryLLM(
           config,
           messages,
           dpState.dataPackageString,
@@ -64,6 +64,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           conversationStore.getState().conversationId,
         );
 
+        conversationStore.getState().addUsage(usage);
         conversationStore.getState().addMessage({
           role: 'assistant',
           content: '',

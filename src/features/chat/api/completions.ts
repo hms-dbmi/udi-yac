@@ -59,13 +59,42 @@ export interface ToolCallResponse {
   arguments: Record<string, unknown>;
 }
 
+/** Per-request token usage, parsed from the server's `X-Usage-*` headers. */
+export interface Usage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  /** Cached share of `promptTokens` (0 when the provider doesn't report it). */
+  cachedPromptTokens: number;
+  /** Reasoning share of `completionTokens` (0 when not reported). */
+  reasoningTokens: number;
+  model?: string;
+}
+
+export interface QueryResult {
+  toolCalls: ToolCallResponse[];
+  usage: Usage;
+}
+
+function parseUsage(headers: Headers): Usage {
+  const num = (name: string) => Number(headers.get(name)) || 0;
+  return {
+    promptTokens: num('X-Usage-Prompt-Tokens'),
+    completionTokens: num('X-Usage-Completion-Tokens'),
+    totalTokens: num('X-Usage-Total-Tokens'),
+    cachedPromptTokens: num('X-Usage-Cached-Prompt-Tokens'),
+    reasoningTokens: num('X-Usage-Reasoning-Tokens'),
+    model: headers.get('X-Usage-Model') ?? undefined,
+  };
+}
+
 export async function queryLLM(
   config: QueryConfig,
   messages: Message[],
   dataSchema: string,
   dataDomains: string,
   conversationId?: string,
-): Promise<ToolCallResponse[]> {
+): Promise<QueryResult> {
   const model = config.model ?? 'agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B';
   const body = constructQueryBody(messages, model, dataSchema, dataDomains);
 
@@ -93,5 +122,5 @@ export async function queryLLM(
   }
 
   const data = await response.json();
-  return data as ToolCallResponse[];
+  return { toolCalls: data as ToolCallResponse[], usage: parseUsage(response.headers) };
 }

@@ -1,14 +1,5 @@
 import { useCallback, useState } from 'react';
-import {
-  RotateCcw,
-  KeyRound,
-  Save,
-  Lightbulb,
-  FileDown,
-  FlaskConical,
-  Database,
-  Menu,
-} from 'lucide-react';
+import { RotateCcw, Save, Lightbulb, FileDown, FlaskConical, Database, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,11 +16,13 @@ import { useGlobal } from '@/app/UDIChatContext';
 import { useExamplePrompts } from '../hooks/useExamplePrompts';
 import { useDebugExports } from '../hooks/useDebugExports';
 import { MemoryBankButton } from './MemoryBankButton';
+import { SessionStatusDialog } from './SessionStatusDialog';
 import type { QueryConfig } from '../api/completions';
 
 interface ChatHeaderBarProps {
   config: QueryConfig;
   hasApiKey: boolean;
+  onSetApiKey: (key: string) => void;
   onClearApiKey: () => void;
   showDrawerToggle?: boolean;
   onToggleDrawer?: () => void;
@@ -47,6 +40,7 @@ interface ChatHeaderBarProps {
 export function ChatHeaderBar({
   config,
   hasApiKey,
+  onSetApiKey,
   onClearApiKey,
   showDrawerToggle,
   onToggleDrawer,
@@ -130,18 +124,11 @@ export function ChatHeaderBar({
           </Dialog>
         )}
         <MemoryBankButton />
-        {hasApiKey && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClearApiKey} />
-              }
-            >
-              <KeyRound className="h-3.5 w-3.5 text-green-600" />
-            </TooltipTrigger>
-            <TooltipContent>API key set — click to clear</TooltipContent>
-          </Tooltip>
-        )}
+        <SessionStatusDialog
+          hasApiKey={hasApiKey}
+          onSetApiKey={onSetApiKey}
+          onClearApiKey={onClearApiKey}
+        />
         {debugMode && (
           <>
             <Tooltip>

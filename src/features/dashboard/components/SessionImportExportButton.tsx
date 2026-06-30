@@ -57,12 +57,14 @@ export function SessionImportExportButton() {
 
   const handleExport = useCallback(() => {
     const state = dashboardStore.getState();
-    const messages = conversationStore.getState().messages;
+    const conversation = conversationStore.getState();
+    const messages = conversation.messages;
     const dashboard = state.exportDashboard();
     const payload: SessionExport = buildSessionExport({
       messages,
       dashboard,
       grid: { cols: state.gridCols, rowHeight: state.gridRowHeight },
+      sessionUsage: conversation.sessionUsage,
     });
     saveBlob(JSON.stringify(payload, null, 2), `udi-session_${timestamp()}.json`);
     trackEvent('session_exported', {
@@ -89,6 +91,9 @@ export function SessionImportExportButton() {
           return;
         }
         conversationStore.getState().loadConversation(parsed.value.conversation.messages);
+        if (parsed.value.conversation.sessionUsage) {
+          conversationStore.getState().setSessionUsage(parsed.value.conversation.sessionUsage);
+        }
         const dashboard = dashboardStore.getState();
         // Apply grid config FIRST so the import's repack/pack runs against
         // the right cols. Falls back to current defaults if the export

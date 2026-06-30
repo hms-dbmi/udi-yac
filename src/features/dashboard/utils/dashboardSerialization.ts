@@ -1,5 +1,6 @@
 import type { Layout, LayoutItem } from 'react-grid-layout';
 import type { Message } from '@/types/messages';
+import { EMPTY_USAGE, type SessionUsage } from '@/types/usage';
 import type {
   DashboardExport,
   DashboardExportVisualization,
@@ -15,6 +16,8 @@ export interface SessionExport {
   exportedAt: string;
   conversation: {
     messages: Message[];
+    /** Accumulated token total. Omitted by exports predating the counter. */
+    sessionUsage?: SessionUsage;
   };
   visualizations: DashboardExportVisualization[];
   layout: DashboardLayout;
@@ -150,6 +153,22 @@ function parseMessages(raw: unknown): ParseResult<Message[]> {
   return { ok: true, value: raw as Message[] };
 }
 
+/** Lenient parse: missing/invalid usage degrades to zeros rather than failing
+ *  the whole import. Old exports (no counter) land on `EMPTY_USAGE`. */
+function parseSessionUsage(raw: unknown): SessionUsage {
+  if (!isObject(raw)) return EMPTY_USAGE;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  return {
+    promptTokens: n(raw.promptTokens),
+    completionTokens: n(raw.completionTokens),
+    totalTokens: n(raw.totalTokens),
+    cachedPromptTokens: n(raw.cachedPromptTokens),
+    reasoningTokens: n(raw.reasoningTokens),
+    requests: n(raw.requests),
+    lastModel: typeof raw.lastModel === 'string' ? raw.lastModel : undefined,
+  };
+}
+
 export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
   if (!isObject(raw)) return { ok: false, error: 'Expected a JSON object at the top level' };
   if (raw.version !== SESSION_EXPORT_VERSION)
@@ -186,7 +205,10 @@ export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
     value: {
       version: SESSION_EXPORT_VERSION,
       exportedAt,
-      conversation: { messages: messagesResult.value },
+      conversation: {
+        messages: messagesResult.value,
+        sessionUsage: parseSessionUsage(raw.conversation.sessionUsage),
+      },
       visualizations,
       layout: layoutResult.value,
       ...(grid ? { grid } : {}),
@@ -198,11 +220,15 @@ export function buildSessionExport(args: {
   messages: Message[];
   dashboard: DashboardExport;
   grid?: { cols: number; rowHeight: number };
+  sessionUsage?: SessionUsage;
 }): SessionExport {
   return {
     version: SESSION_EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
-    conversation: { messages: args.messages },
+    conversation: {
+      messages: args.messages,
+      sessionUsage: args.sessionUsage ?? EMPTY_USAGE,
+    },
     visualizations: args.dashboard.visualizations,
     layout: args.dashboard.layout,
     ...(args.grid ? { grid: args.grid } : {}),
