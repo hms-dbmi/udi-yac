@@ -54,8 +54,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       udi-toolkit:
-        specifier: ^0.0.55
-        version: 0.0.55(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@6.0.3))
+        specifier: 0.0.68
+        version: 0.0.68(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@6.0.3))
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
@@ -3553,8 +3553,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  udi-toolkit@0.0.55:
-    resolution: {integrity: sha512-+OiC1Iiw3nA7sUUyRsRKyjycDjhwubAMicRrReF3lyJlHDO8hDVlLJzi3zC5tsRnpdRyYCHjyT+JWXB72sqb3Q==}
+  udi-toolkit@0.0.68:
+    resolution: {integrity: sha512-j3f5UPLbtQ6usF3Bt6zMu3pbLPIOOX7QURKnshOdUtwdburjPypMtmKJw9Jedm2Lm2ujOMSVUCUYViA2zt7Egw==}
     engines: {node: ^28 || ^26 || ^24 || ^22 || ^20, npm: '>= 6.13.4', yarn: '>= 1.21.1'}
     peerDependencies:
       ag-grid-community: 33.2.4
@@ -7581,7 +7581,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  udi-toolkit@0.0.55(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@6.0.3)):
+  udi-toolkit@0.0.68(ag-grid-community@33.2.4)(react@19.2.4)(vue@3.5.32(typescript@6.0.3)):
     dependencies:
       '@types/d3-scale': 4.0.9
       '@types/d3-scale-chromatic': 3.1.0
