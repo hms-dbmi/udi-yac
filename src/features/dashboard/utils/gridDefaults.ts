@@ -10,9 +10,9 @@ export const MAX_GRID_ROW_HEIGHT_PX = 120;
 
 // Per-card defaults / floors. With rowHeight=60 px:
 //   minH=3 → 180 px (Vega-Lite legibility floor)
-//   default=4 → 240 px
+//   default=4 → 420 px
 export const DEFAULT_CARD_W = 1;
-export const DEFAULT_CARD_H = 4;
+export const DEFAULT_CARD_H = 7;
 export const MIN_CARD_H = 3;
 export const MIN_CARD_W = 1;
 
