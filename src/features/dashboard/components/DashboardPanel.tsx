@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDashboard, useDashboardStore, useDataFilters, useGlobal } from '@/app/UDIChatContext';
 import { DashboardGrid } from './DashboardGrid';
+import { ScrollAffordances } from './ScrollAffordances';
 import { GridSettingsButton } from './GridSettingsButton';
 import { WelcomeSplash } from './WelcomeSplash';
 import { FilterToolbar } from './FilterToolbar';
@@ -43,6 +44,7 @@ export function DashboardPanel() {
   // against the right scroller, not the window. Declared up here ahead
   // of the empty-state early-return so the hook order stays stable.
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollWrapperRef = useRef<HTMLDivElement>(null);
   const [isStuck, setIsStuck] = useState(false);
   useEffect(() => {
     const el = sentinelRef.current;
@@ -82,7 +84,7 @@ export function DashboardPanel() {
   }
 
   return (
-    <div className="h-full">
+    <div ref={scrollWrapperRef} className="relative h-full">
       {/* Gray panel background lives on the ScrollArea so it paints behind the
           transparent viewport and fills the bottom gutter (pb-3). The right
           gutter is applied to the grid alone (below), not the ScrollArea, so the
@@ -137,6 +139,7 @@ export function DashboardPanel() {
           </div>
         </div>
       </ScrollArea>
+      <ScrollAffordances containerRef={scrollWrapperRef} />
     </div>
   );
 }
