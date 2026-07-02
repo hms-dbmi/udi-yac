@@ -3,11 +3,23 @@ import { GridLayout, useContainerWidth, type EventCallback, type Layout } from '
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
 import { DRAG_HANDLE_CLASS, GRID_INTERACTING_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
-import { computeSwap, rowAlignedCompactor } from '../utils/gridPacking';
+import { compactRowAligned, computeReorder, rowAlignedCompactor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
 
 interface DashboardGridProps {
   selections: DataSelections;
+}
+
+/** Order-independent position compare (RGL may echo items in a different array
+ * order than we stored them). Only (i, x, y, w, h) matter. */
+function layoutsMatchByItem(a: Layout, b: Layout): boolean {
+  if (a.length !== b.length) return false;
+  const byId = new Map(a.map((it) => [it.i, it]));
+  for (const it of b) {
+    const o = byId.get(it.i);
+    if (!o || o.x !== it.x || o.y !== it.y || o.w !== it.w || o.h !== it.h) return false;
+  }
+  return true;
 }
 
 export function DashboardGrid({ selections }: DashboardGridProps) {
@@ -18,38 +30,56 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   const dashboardStore = useDashboardStore();
   const { width, containerRef, mounted } = useContainerWidth();
 
+  // After a drag we replace RGL's layout with computeReorder's push-back-in-row
+  // result. But RGL vertical-compacts the drop (shoving the displaced card down
+  // a row) and echoes THAT layout back through onLayoutChange right after
+  // onDragStop — more than once. Those echoes would clobber our result. So when
+  // we apply a reorder we stash the exact layout RGL will settle to here, and
+  // handleLayoutChange ignores RGL's transient echoes until it re-syncs to it.
+  const authoritativeLayoutRef = useRef<Layout | null>(null);
+
   const handleLayoutChange = useCallback(
     (next: Layout) => {
+      const authoritative = authoritativeLayoutRef.current;
+      if (authoritative) {
+        if (layoutsMatchByItem(next, authoritative)) authoritativeLayoutRef.current = null;
+        return; // ignore RGL's post-drop push-down echoes until it catches up
+      }
       dashboardStore.getState().setLayoutItems(next);
     },
     [dashboardStore],
   );
 
-  // Drag-to-swap: when a card is dropped onto another card RGL's default
-  // behavior is to PUSH the occupant out of the way (per the compactor's
-  // type='vertical'). The occupant lands wherever RGL's chain of pushes
-  // ends up — usually NOT at the dragger's old position. The UX users
-  // expect for "drop card A onto card B" is a swap: A takes B's slot, B
-  // takes A's slot. We implement that here.
+  // Drag-to-reorder: when a card is dropped onto a row, RGL's default is to
+  // PUSH the occupant out of the way and let the compactor bump it to a new
+  // row. Users instead expect the dropped card to slot in and shove the row's
+  // other cards sideways, only spilling to a new row when the row is too full.
+  // computeReorder builds that layout from the pre-drag snapshot; the drop x
+  // decides the insertion point.
   const preDragLayoutRef = useRef<Layout | null>(null);
 
   const handleDragStart: EventCallback = useCallback((layout) => {
+    authoritativeLayoutRef.current = null;
     preDragLayoutRef.current = layout.map((it) => ({ ...it }));
     document.body.classList.add(GRID_INTERACTING_CLASS);
   }, []);
 
   const handleDragStop: EventCallback = useCallback(
-    (newLayout, oldItem, newItem) => {
+    (_newLayout, oldItem, newItem) => {
       document.body.classList.remove(GRID_INTERACTING_CLASS);
       const preDrag = preDragLayoutRef.current;
       preDragLayoutRef.current = null;
       if (!preDrag || !oldItem || !newItem) return;
-      const swapped = computeSwap(preDrag, newLayout, oldItem, newItem);
-      if (swapped) {
-        dashboardStore.getState().setLayoutItems(swapped);
+      const reordered = computeReorder(preDrag, oldItem, newItem, gridCols);
+      if (reordered) {
+        // Pre-apply the compactor so we hold exactly what RGL settles to, then
+        // guard against its push-down echoes overwriting it (see the ref above).
+        const settled = compactRowAligned(reordered);
+        authoritativeLayoutRef.current = settled;
+        dashboardStore.getState().setLayoutItems(settled);
       }
     },
-    [dashboardStore],
+    [dashboardStore, gridCols],
   );
 
   // Suppress text selection across the whole page while a card is being
@@ -60,6 +90,7 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   // turning off user-select keeps the interaction clean and gets cleared
   // unconditionally on stop.
   const handleResizeStart: EventCallback = useCallback(() => {
+    authoritativeLayoutRef.current = null;
     document.body.classList.add(GRID_INTERACTING_CLASS);
   }, []);
   const handleResizeStop: EventCallback = useCallback(() => {

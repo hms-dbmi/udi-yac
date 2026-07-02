@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { LayoutItem } from 'react-grid-layout';
 import {
   compactRowAligned,
-  computeSwap,
+  computeReorder,
   layoutItemsEqual,
   packAllRowMajor,
   rectsOverlap,
@@ -164,158 +164,207 @@ describe('rectsOverlap', () => {
   });
 });
 
-describe('computeSwap', () => {
-  it("swaps when RGL didn't push the occupant (overlap in post layout)", () => {
-    // The bug we're fixing: user drops A onto B, RGL leaves both at the
-    // same cell. The occupant is identified by who was at the target
-    // PRE-drag, so this works even when RGL's push pipeline didn't fire.
-    const preDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
-      { i: 'B', x: 1, y: 0, w: 1, h: 1 },
-    ];
-    const postDrag: LayoutItem[] = [
-      { i: 'A', x: 1, y: 0, w: 1, h: 1 },
-      { i: 'B', x: 1, y: 0, w: 1, h: 1 }, // overlapping — RGL did not push
-    ];
-    const oldItem: LayoutItem = { i: 'A', x: 0, y: 0, w: 1, h: 1 };
-    const newItem: LayoutItem = { i: 'A', x: 1, y: 0, w: 1, h: 1 };
-    const swapped = computeSwap(preDrag, postDrag, oldItem, newItem);
-    expect(swapped).not.toBeNull();
-    const byId = Object.fromEntries(swapped!.map((it) => [it.i, it]));
-    expect(byId.A).toEqual(expect.objectContaining({ x: 1, y: 0 }));
-    expect(byId.B).toEqual(expect.objectContaining({ x: 0, y: 0 }));
-  });
-
-  it('swaps when RGL did push the occupant (occupant moved away from target)', () => {
-    // Same scenario, but RGL pushed B down to (1, 1). The swap still
-    // forces B back to A's original slot rather than wherever RGL put it.
-    const preDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
-      { i: 'B', x: 1, y: 0, w: 1, h: 1 },
-    ];
-    const postDrag: LayoutItem[] = [
-      { i: 'A', x: 1, y: 0, w: 1, h: 1 },
-      { i: 'B', x: 1, y: 1, w: 1, h: 1 }, // pushed by RGL
-    ];
-    const oldItem: LayoutItem = { i: 'A', x: 0, y: 0, w: 1, h: 1 };
-    const newItem: LayoutItem = { i: 'A', x: 1, y: 0, w: 1, h: 1 };
-    const swapped = computeSwap(preDrag, postDrag, oldItem, newItem);
-    expect(swapped).not.toBeNull();
-    const byId = Object.fromEntries(swapped!.map((it) => [it.i, it]));
-    expect(byId.B).toEqual(expect.objectContaining({ x: 0, y: 0 }));
-  });
+describe('computeReorder', () => {
+  const byId = (layout: readonly LayoutItem[]) =>
+    Object.fromEntries(layout.map((it) => [it.i, it]));
 
   it('returns null when the dragger did not actually move', () => {
     const preDrag: LayoutItem[] = [{ i: 'A', x: 0, y: 0, w: 1, h: 1 }];
     const item: LayoutItem = { i: 'A', x: 0, y: 0, w: 1, h: 1 };
-    expect(computeSwap(preDrag, preDrag, item, item)).toBeNull();
+    expect(computeReorder(preDrag, item, item, 3)).toBeNull();
   });
 
-  it('returns null when the target cell was empty', () => {
+  it('returns null when dropped below every row', () => {
     const preDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
-      { i: 'B', x: 2, y: 0, w: 1, h: 1 },
-    ];
-    const postDrag: LayoutItem[] = [
-      { i: 'A', x: 1, y: 0, w: 1, h: 1 },
-      { i: 'B', x: 2, y: 0, w: 1, h: 1 },
-    ];
-    const result = computeSwap(preDrag, postDrag, preDrag[0], { i: 'A', x: 1, y: 0, w: 1, h: 1 });
-    expect(result).toBeNull();
-  });
-
-  it('returns null when the target cell had more than one occupant', () => {
-    // Wide dragger lands across two narrow neighbours — not a clean 1:1
-    // swap. Skip and let RGL's natural handling take over.
-    const preDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 0, w: 2, h: 1 },
-      { i: 'B', x: 2, y: 0, w: 1, h: 1 },
-      { i: 'C', x: 3, y: 0, w: 1, h: 1 },
-    ];
-    const postDrag: LayoutItem[] = [
-      { i: 'A', x: 2, y: 0, w: 2, h: 1 }, // spans cols 2-3, overlaps both B and C
-      { i: 'B', x: 2, y: 0, w: 1, h: 1 },
-      { i: 'C', x: 3, y: 0, w: 1, h: 1 },
-    ];
-    const result = computeSwap(preDrag, postDrag, preDrag[0], { i: 'A', x: 2, y: 0, w: 2, h: 1 });
-    expect(result).toBeNull();
-  });
-
-  it('returns null when the dragger and occupant have different widths', () => {
-    const preDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 0, w: 2, h: 1 }, // wide
-      { i: 'B', x: 2, y: 0, w: 1, h: 1 }, // narrow
-    ];
-    const postDrag: LayoutItem[] = [
-      { i: 'A', x: 2, y: 0, w: 2, h: 1 },
-      { i: 'B', x: 2, y: 0, w: 1, h: 1 },
-    ];
-    const result = computeSwap(preDrag, postDrag, preDrag[0], { i: 'A', x: 2, y: 0, w: 2, h: 1 });
-    expect(result).toBeNull();
-  });
-
-  it('swaps when widths match but heights differ — short dragger onto tall occupant', () => {
-    // The user-reported bug: dragging a short card onto a taller one
-    // didn't fire a swap (the old guard rejected unequal h), leaving
-    // RGL's natural push + row-aligned compactor to "snap" the dragger
-    // back to its starting position.
-    const preDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 0, w: 2, h: 2 }, // short
-      { i: 'B', x: 0, y: 2, w: 2, h: 4 }, // tall
-    ];
-    const postDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 2, w: 2, h: 2 },
-      { i: 'B', x: 0, y: 4, w: 2, h: 4 }, // RGL pushed B
-    ];
-    const oldItem: LayoutItem = { i: 'A', x: 0, y: 0, w: 2, h: 2 };
-    const newItem: LayoutItem = { i: 'A', x: 0, y: 2, w: 2, h: 2 };
-    const swapped = computeSwap(preDrag, postDrag, oldItem, newItem);
-    expect(swapped).not.toBeNull();
-    const byId = Object.fromEntries(swapped!.map((it) => [it.i, it]));
-    // Dragger stays at its dropped position.
-    expect(byId.A).toEqual(expect.objectContaining({ x: 0, y: 2 }));
-    // Occupant takes the dragger's old x/y; the row-aligned compactor
-    // downstream will reflow the actual rendered y so they don't overlap.
-    expect(byId.B).toEqual(expect.objectContaining({ x: 0, y: 0 }));
-    // h values preserved on both.
-    expect(byId.A.h).toBe(2);
-    expect(byId.B.h).toBe(4);
-  });
-
-  it('swaps when widths match but heights differ — tall dragger onto short occupant', () => {
-    const preDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 0, w: 2, h: 2 }, // short
-      { i: 'B', x: 0, y: 2, w: 2, h: 4 }, // tall
-    ];
-    const postDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 4, w: 2, h: 2 }, // RGL pushed A
-      { i: 'B', x: 0, y: 0, w: 2, h: 4 },
-    ];
-    const oldItem: LayoutItem = { i: 'B', x: 0, y: 2, w: 2, h: 4 };
-    const newItem: LayoutItem = { i: 'B', x: 0, y: 0, w: 2, h: 4 };
-    const swapped = computeSwap(preDrag, postDrag, oldItem, newItem);
-    expect(swapped).not.toBeNull();
-    const byId = Object.fromEntries(swapped!.map((it) => [it.i, it]));
-    expect(byId.B).toEqual(expect.objectContaining({ x: 0, y: 0 }));
-    expect(byId.A).toEqual(expect.objectContaining({ x: 0, y: 2 }));
-  });
-
-  it("preserves the dragger's post-drag position", () => {
-    const preDrag: LayoutItem[] = [
-      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
-      { i: 'B', x: 1, y: 0, w: 1, h: 1 },
-    ];
-    const postDrag: LayoutItem[] = [
-      { i: 'A', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'A', x: 0, y: 0, w: 1, h: 1 }, // dragger
       { i: 'B', x: 1, y: 0, w: 1, h: 1 },
     ];
     const oldItem: LayoutItem = { i: 'A', x: 0, y: 0, w: 1, h: 1 };
-    const newItem: LayoutItem = { i: 'A', x: 1, y: 0, w: 1, h: 1 };
-    const swapped = computeSwap(preDrag, postDrag, oldItem, newItem);
-    expect(swapped).not.toBeNull();
-    const a = swapped!.find((it) => it.i === 'A')!;
-    expect(a.x).toBe(newItem.x);
-    expect(a.y).toBe(newItem.y);
+    const newItem: LayoutItem = { i: 'A', x: 0, y: 5, w: 1, h: 1 }; // well below the only row
+    expect(computeReorder(preDrag, oldItem, newItem, 4)).toBeNull();
+  });
+
+  it('picks the target row by which band contains the drop y, not by card overlap', () => {
+    // Tall cards: row 0 spans y [0,4), row 1 spans [4,8). The dragger's drop
+    // rect (top y=2, h=4 → 2..6) dips into row 1's band, but its TOP is inside
+    // row 0, so it must join row 0 — never fall through to a push-down.
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 4 },
+      { i: 'B', x: 1, y: 4, w: 1, h: 4 },
+      { i: 'C', x: 0, y: 8, w: 1, h: 4 }, // dragger, in its own row below
+    ];
+    const oldItem: LayoutItem = { i: 'C', x: 0, y: 8, w: 1, h: 4 };
+    const newItem: LayoutItem = { i: 'C', x: 1, y: 2, w: 1, h: 4 }; // top in row 0's band
+    const m = byId(computeReorder(preDrag, oldItem, newItem, 4)!);
+    expect(m.C).toEqual(expect.objectContaining({ x: 1, y: 0 })); // joined row 0
+    expect(m.A).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(m.B).toEqual(expect.objectContaining({ x: 1, y: 4 })); // untouched
+  });
+
+  it('fits: inserts mid-row, pushes neighbours right, closes the source gap', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'C', x: 2, y: 0, w: 1, h: 1 },
+      { i: 'D', x: 0, y: 1, w: 1, h: 1 }, // dragger
+      { i: 'E', x: 1, y: 1, w: 1, h: 1 },
+    ];
+    const oldItem: LayoutItem = { i: 'D', x: 0, y: 1, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'D', x: 1, y: 0, w: 1, h: 1 }; // onto B
+    const out = computeReorder(preDrag, oldItem, newItem, 4)!;
+    expect(out).not.toBeNull();
+    const m = byId(out);
+    // target row shifted: A D B C
+    expect(m.A).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(m.D).toEqual(expect.objectContaining({ x: 1, y: 0 }));
+    expect(m.B).toEqual(expect.objectContaining({ x: 2, y: 0 }));
+    expect(m.C).toEqual(expect.objectContaining({ x: 3, y: 0 }));
+    // source row closed: E slides from x=1 to x=0, stays on its row
+    expect(m.E).toEqual(expect.objectContaining({ x: 0, y: 1 }));
+  });
+
+  it('fits: prepend when dropped at the row start', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'C', x: 0, y: 1, w: 1, h: 1 }, // dragger
+    ];
+    const oldItem: LayoutItem = { i: 'C', x: 0, y: 1, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'C', x: 0, y: 0, w: 1, h: 1 }; // onto A
+    const m = byId(computeReorder(preDrag, oldItem, newItem, 4)!);
+    expect(m.C).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(m.A).toEqual(expect.objectContaining({ x: 1, y: 0 }));
+    expect(m.B).toEqual(expect.objectContaining({ x: 2, y: 0 }));
+  });
+
+  it('fits: mixed widths — x follows cumulative width, not index', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 2, h: 1 }, // wide
+      { i: 'B', x: 2, y: 0, w: 1, h: 1 },
+      { i: 'C', x: 0, y: 1, w: 1, h: 1 }, // dragger
+    ];
+    const oldItem: LayoutItem = { i: 'C', x: 0, y: 1, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'C', x: 2, y: 0, w: 1, h: 1 }; // onto B
+    const m = byId(computeReorder(preDrag, oldItem, newItem, 4)!);
+    expect(m.A).toEqual(expect.objectContaining({ x: 0, y: 0, w: 2 }));
+    // C lands at x=2 (after the w=2 A), not x=1 (index 1) — B pushed to x=3.
+    expect(m.C).toEqual(expect.objectContaining({ x: 2, y: 0 }));
+    expect(m.B).toEqual(expect.objectContaining({ x: 3, y: 0 }));
+  });
+
+  it('fits: source row ABOVE the target stays put except for its closed gap', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 1 }, // dragger
+      { i: 'B', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'C', x: 0, y: 1, w: 1, h: 1 },
+      { i: 'D', x: 1, y: 1, w: 1, h: 1 },
+      { i: 'E', x: 0, y: 2, w: 1, h: 1 }, // untouched lower row
+    ];
+    const oldItem: LayoutItem = { i: 'A', x: 0, y: 0, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'A', x: 1, y: 1, w: 1, h: 1 }; // down onto D
+    const m = byId(computeReorder(preDrag, oldItem, newItem, 4)!);
+    // source row: B slides 1 -> 0, still row 0
+    expect(m.B).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    // target row 1: C A D
+    expect(m.C).toEqual(expect.objectContaining({ x: 0, y: 1 }));
+    expect(m.A).toEqual(expect.objectContaining({ x: 1, y: 1 }));
+    expect(m.D).toEqual(expect.objectContaining({ x: 2, y: 1 }));
+    // row 2 untouched
+    expect(m.E).toEqual(expect.objectContaining({ x: 0, y: 2 }));
+  });
+
+  it('fits: source row BELOW the target closes its gap', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'C', x: 0, y: 1, w: 1, h: 1 }, // dragger
+      { i: 'D', x: 1, y: 1, w: 1, h: 1 },
+    ];
+    const oldItem: LayoutItem = { i: 'C', x: 0, y: 1, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'C', x: 1, y: 0, w: 1, h: 1 }; // up onto B
+    const m = byId(computeReorder(preDrag, oldItem, newItem, 4)!);
+    expect(m.A).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(m.C).toEqual(expect.objectContaining({ x: 1, y: 0 }));
+    expect(m.B).toEqual(expect.objectContaining({ x: 2, y: 0 }));
+    expect(m.D).toEqual(expect.objectContaining({ x: 0, y: 1 })); // slid 1 -> 0
+  });
+
+  it('fits: pure in-row reorder (source == target), dragging rightward', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 1 }, // dragger
+      { i: 'C', x: 2, y: 0, w: 1, h: 1 },
+      { i: 'D', x: 3, y: 0, w: 1, h: 1 },
+    ];
+    const oldItem: LayoutItem = { i: 'B', x: 1, y: 0, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'B', x: 2, y: 0, w: 1, h: 1 }; // onto C
+    const m = byId(computeReorder(preDrag, oldItem, newItem, 4)!);
+    // B moves to C's slot; C slides left into B's old gap. Result: A C B D
+    expect(m.A).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(m.C).toEqual(expect.objectContaining({ x: 1, y: 0 }));
+    expect(m.B).toEqual(expect.objectContaining({ x: 2, y: 0 }));
+    expect(m.D).toEqual(expect.objectContaining({ x: 3, y: 0 }));
+  });
+
+  it('too full: overflow wraps to a new row; rows above stay put', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'X', x: 0, y: 0, w: 1, h: 1 }, // untouched top row
+      { i: 'Y', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'A', x: 0, y: 1, w: 1, h: 1 }, // full target row (cols=2)
+      { i: 'B', x: 1, y: 1, w: 1, h: 1 },
+      { i: 'C', x: 0, y: 2, w: 1, h: 1 }, // dragger
+    ];
+    const oldItem: LayoutItem = { i: 'C', x: 0, y: 2, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'C', x: 0, y: 1, w: 1, h: 1 }; // onto A
+    const m = byId(computeReorder(preDrag, oldItem, newItem, 2)!);
+    // top row untouched
+    expect(m.X).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    expect(m.Y).toEqual(expect.objectContaining({ x: 1, y: 0 }));
+    // target row too full (C + A + B = 3 > 2): C A on the row, B spills below
+    expect(m.C).toEqual(expect.objectContaining({ x: 0, y: 1 }));
+    expect(m.A).toEqual(expect.objectContaining({ x: 1, y: 1 }));
+    expect(m.B).toEqual(expect.objectContaining({ x: 0, y: 2 }));
+  });
+
+  it('too full: source row above is gap-closed and kept while target overflows', () => {
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 1 }, // dragger
+      { i: 'Z', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'B', x: 0, y: 1, w: 1, h: 1 }, // full target row (cols=2)
+      { i: 'C', x: 1, y: 1, w: 1, h: 1 },
+    ];
+    const oldItem: LayoutItem = { i: 'A', x: 0, y: 0, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'A', x: 0, y: 1, w: 1, h: 1 }; // down onto B
+    const m = byId(computeReorder(preDrag, oldItem, newItem, 2)!);
+    // source row above: Z slides 1 -> 0, stays on row 0
+    expect(m.Z).toEqual(expect.objectContaining({ x: 0, y: 0 }));
+    // target overflows: A B on the row, C spills below
+    expect(m.A).toEqual(expect.objectContaining({ x: 0, y: 1 }));
+    expect(m.B).toEqual(expect.objectContaining({ x: 1, y: 1 }));
+    expect(m.C).toEqual(expect.objectContaining({ x: 0, y: 2 }));
+  });
+
+  it('emits rows that survive compactRowAligned unchanged (no x-conflict bump)', () => {
+    // The invariant the whole feature depends on: a "fits" result must be
+    // gapless and non-overlapping in x, so the downstream compactor leaves
+    // each row's membership intact rather than bumping a card to a new row.
+    const preDrag: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'C', x: 2, y: 0, w: 1, h: 1 },
+      { i: 'D', x: 0, y: 1, w: 1, h: 1 }, // dragger
+      { i: 'E', x: 1, y: 1, w: 1, h: 1 },
+    ];
+    const oldItem: LayoutItem = { i: 'D', x: 0, y: 1, w: 1, h: 1 };
+    const newItem: LayoutItem = { i: 'D', x: 1, y: 0, w: 1, h: 1 };
+    const reordered = computeReorder(preDrag, oldItem, newItem, 4)!;
+    const compacted = byId(compactRowAligned(reordered));
+    // Target row {A,D,B,C} all still share one row after compaction.
+    expect(compacted.A.y).toBe(compacted.D.y);
+    expect(compacted.D.y).toBe(compacted.B.y);
+    expect(compacted.B.y).toBe(compacted.C.y);
+    // E is on a different (lower) row, not bumped up into the target row.
+    expect(compacted.E.y).toBeGreaterThan(compacted.A.y);
   });
 });
 
