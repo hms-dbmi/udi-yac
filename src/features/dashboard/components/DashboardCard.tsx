@@ -124,13 +124,15 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   return (
     <Card
       className={cn(
-        'relative transition-shadow h-full flex flex-col min-h-0',
+        // py-2/gap-2 override the shared Card defaults (py-4/gap-4) to give the
+        // visualization more room — the dominant vertical chrome inside a card.
+        'relative transition-shadow h-full flex flex-col min-h-0 py-2 gap-2',
         isHovered && 'ring-3 ring-primary/40',
       )}
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
     >
-      <CardHeader className="p-2 pb-0 flex flex-col gap-1 shrink-0">
+      <CardHeader className="p-1 pb-0 flex flex-col gap-1 shrink-0">
         <div className="flex items-center w-full gap-1">
           <Tooltip>
             <TooltipTrigger
@@ -275,7 +277,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           />
         </div>
       )}
-      <CardContent className="p-2 flex-1 min-h-0 overflow-hidden">
+      <CardContent className="p-1 flex-1 min-h-0 overflow-hidden">
         <UDIVis
           className="block h-full w-full"
           key={isTableView ? `table-${specKey}` : specKey}

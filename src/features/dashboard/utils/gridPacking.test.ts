@@ -25,20 +25,21 @@ describe('repackRowMajor', () => {
     ]);
   });
 
-  it('preserves each item w/h after repacking', () => {
+  it('preserves each item width and extra props; normalizes height per row', () => {
     const existing: LayoutItem[] = [
       { i: 'A', x: 0, y: 0, w: 2, h: 4, minH: 3 },
       { i: 'B', x: 0, y: 4, w: 1, h: 2 },
     ];
+    // Prepends C → row 0 = C(w1,h5) + A(w2,h4), row max 5; B alone on row 1.
     const out = repackRowMajor(existing, { i: 'C', x: 0, y: 0, w: 1, h: 5 }, 3);
     const byId = Object.fromEntries(out.map((it) => [it.i, it]));
-    expect(byId.A.w).toBe(2);
-    expect(byId.A.h).toBe(4);
-    expect(byId.A.minH).toBe(3);
-    expect(byId.B.w).toBe(1);
-    expect(byId.B.h).toBe(2);
     expect(byId.C.w).toBe(1);
+    expect(byId.A.w).toBe(2);
+    expect(byId.A.minH).toBe(3); // extra props survive the repack
     expect(byId.C.h).toBe(5);
+    expect(byId.A.h).toBe(5); // normalized up from 4 to the row max
+    expect(byId.B.w).toBe(1);
+    expect(byId.B.h).toBe(2); // alone on its row → keeps its own height
   });
 
   it('clamps an oversized item width to the column count', () => {
@@ -87,11 +88,10 @@ describe('packAllRowMajor', () => {
     ]);
   });
 
-  it('row-aligns: next row starts after the tallest item in the current row', () => {
-    // cols=3, item heights [1, 2, 1, 1]. The fourth item should land at
-    // (0, 2) — start of a new row BELOW the h=2 second item — rather than
-    // (0, 1) where a Masonry packer would slip it into row 0's gap below
-    // the h=1 first item.
+  it('normalizes every card in a row to the row max; next row starts below it', () => {
+    // cols=3, item heights [1, 2, 1, 1]. A, B, C share row 0, whose height is
+    // the max (2) — so A and C are normalized up from 1 to 2 (uniform row).
+    // D wraps to row 1 at y=2 (below the shared row-0 height) at its own h=1.
     const ordered: LayoutItem[] = [
       { i: 'A', x: 0, y: 0, w: 1, h: 1 },
       { i: 'B', x: 0, y: 0, w: 1, h: 2 },
@@ -100,9 +100,9 @@ describe('packAllRowMajor', () => {
     ];
     const out = packAllRowMajor(ordered, 3);
     const byId = Object.fromEntries(out.map((it) => [it.i, it]));
-    expect(byId.A).toEqual(expect.objectContaining({ x: 0, y: 0, h: 1 }));
+    expect(byId.A).toEqual(expect.objectContaining({ x: 0, y: 0, h: 2 }));
     expect(byId.B).toEqual(expect.objectContaining({ x: 1, y: 0, h: 2 }));
-    expect(byId.C).toEqual(expect.objectContaining({ x: 2, y: 0, h: 1 }));
+    expect(byId.C).toEqual(expect.objectContaining({ x: 2, y: 0, h: 2 }));
     expect(byId.D).toEqual(expect.objectContaining({ x: 0, y: 2, h: 1 }));
   });
 
@@ -116,11 +116,15 @@ describe('packRowMajor', () => {
     const packed: LayoutItem[] = [
       { i: 'A', x: 0, y: 0, w: 1, h: 2 },
       { i: 'B', x: 1, y: 0, w: 2, h: 1 }, // row 0 full (1 + 2 = cols)
-      { i: 'C', x: 0, y: 2, w: 1, h: 1 }, // row 1 (below A's h=2)
+      { i: 'C', x: 0, y: 2, w: 1, h: 1 }, // row 1 (below the row-0 height 2)
     ];
     const once = packRowMajor(packed, 3);
-    // Positions unchanged (input was already packed); `moved` is reset to false.
-    expect(once.map((it) => ({ i: it.i, x: it.x, y: it.y, w: it.w, h: it.h }))).toEqual(packed);
+    // Row 0 (A + B) normalizes to its max height 2 — B grows 1→2; positions hold.
+    expect(once.map((it) => ({ i: it.i, x: it.x, y: it.y, w: it.w, h: it.h }))).toEqual([
+      { i: 'A', x: 0, y: 0, w: 1, h: 2 },
+      { i: 'B', x: 1, y: 0, w: 2, h: 2 },
+      { i: 'C', x: 0, y: 2, w: 1, h: 1 },
+    ]);
     // Packing again produces an identical array.
     expect(packRowMajor(once, 3)).toEqual(once);
   });
@@ -157,6 +161,56 @@ describe('packRowMajor', () => {
       { i: 'B', x: 1, y: 0 },
       { i: 'C', x: 2, y: 0 },
     ]);
+  });
+});
+
+describe('row height (uniform + override)', () => {
+  it('auto-grows a row when a taller card joins it', () => {
+    const existing: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 3 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 3 },
+    ];
+    // Prepend a tall card; cols=3 → all three share row 0, which grows to 8.
+    const out = repackRowMajor(existing, { i: 'C', x: 0, y: 0, w: 1, h: 8 }, 3);
+    const byId = Object.fromEntries(out.map((it) => [it.i, it]));
+    expect(byId.A.h).toBe(8);
+    expect(byId.B.h).toBe(8);
+    expect(byId.C.h).toBe(8);
+  });
+
+  it('override grows the whole row (all cards, any width) and leaves other rows alone', () => {
+    const ordered: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 2 },
+      { i: 'B', x: 0, y: 0, w: 2, h: 2 }, // row 0 (1 + 2 = cols)
+      { i: 'C', x: 0, y: 0, w: 1, h: 2 }, // row 1
+    ];
+    const out = packAllRowMajor(ordered, 3, { id: 'A', h: 6 });
+    const byId = Object.fromEntries(out.map((it) => [it.i, it]));
+    expect(byId.A.h).toBe(6);
+    expect(byId.B.h).toBe(6); // whole row 0 grows, incl. the wide card
+    expect(byId.C).toEqual(expect.objectContaining({ y: 6, h: 2 })); // row 1 below, unaffected
+  });
+
+  it('override shrinks a row below its other cards (override beats max)', () => {
+    const ordered: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 10 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 5 },
+    ];
+    // Override the row (targeting B) to 3, below A's natural 10.
+    const out = packAllRowMajor(ordered, 3, { id: 'B', h: 3 });
+    const byId = Object.fromEntries(out.map((it) => [it.i, it]));
+    expect(byId.A.h).toBe(3);
+    expect(byId.B.h).toBe(3);
+  });
+
+  it('is stable after an override commit: re-packing with no override is a no-op', () => {
+    const ordered: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 10 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 5 },
+    ];
+    const committed = packAllRowMajor(ordered, 3, { id: 'B', h: 3 }); // both → 3
+    const repacked = packRowMajor(committed, 3); // no override → max = 3 (all equal)
+    expect(repacked).toEqual(committed);
   });
 });
 

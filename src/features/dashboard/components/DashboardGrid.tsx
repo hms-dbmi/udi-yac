@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useMemo, type CSSProperties } from 'react';
-import { GridLayout, useContainerWidth, type EventCallback, type Layout } from 'react-grid-layout';
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import {
+  GridLayout,
+  useContainerWidth,
+  type Compactor,
+  type EventCallback,
+  type Layout,
+} from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
 import { DRAG_HANDLE_CLASS, GRID_INTERACTING_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
-import { listPackCompactor } from '../utils/gridPacking';
+import { packRowMajor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
 
 interface DashboardGridProps {
@@ -25,18 +31,47 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
     [dashboardStore],
   );
 
-  // Drag and resize go entirely through RGL + listPackCompactor, which re-packs
-  // the ordered list on every change — so the drop matches the live preview and
-  // the store never holds a gapped layout. These handlers only toggle a
-  // body-level class that suppresses page-wide text selection during the
-  // interaction: RGL's react-draggable / react-resizable preventDefault the
+  // Height is a ROW property: the compactor gives every card in a row the row's
+  // max height. To resize a row we let RGL's per-card `s` handle drive it, but
+  // feed the dragged card's intended height back into the compactor as an
+  // override so the WHOLE row previews at that height live — grow and shrink
+  // (shrinking below other cards, which `max` alone can't). RGL calls `onResize`
+  // (with the intended h) before it runs the compactor, so the ref is set in
+  // time; on stop it compacts once more (ref still set) then we clear it, and
+  // the committed row is uniform so `max`-normalization reproduces it.
+  const resizeOverrideRef = useRef<{ id: string; h: number } | null>(null);
+  const compactor = useMemo<Compactor>(
+    () => ({
+      type: 'horizontal',
+      allowOverlap: false,
+      compact: (layout, cols) => packRowMajor(layout, cols, resizeOverrideRef.current ?? undefined),
+    }),
+    [],
+  );
+
+  // Drag and resize go entirely through RGL + the compactor above, which
+  // re-packs the ordered list on every change — so the drop matches the live
+  // preview and the store never holds a gapped layout. The start/stop handlers
+  // toggle a body-level class that suppresses page-wide text selection during
+  // the interaction: RGL's react-draggable / react-resizable preventDefault the
   // initial mousedown, but selection can still extend once the cursor crosses
   // into other elements (e.g. resizing past an adjacent card or chat message).
-  // The class turns off user-select and is cleared unconditionally on stop.
   const handleInteractStart: EventCallback = useCallback(() => {
     document.body.classList.add(GRID_INTERACTING_CLASS);
   }, []);
   const handleInteractStop: EventCallback = useCallback(() => {
+    document.body.classList.remove(GRID_INTERACTING_CLASS);
+  }, []);
+
+  const handleResizeStart: EventCallback = useCallback(() => {
+    resizeOverrideRef.current = null;
+    document.body.classList.add(GRID_INTERACTING_CLASS);
+  }, []);
+  const handleResize: EventCallback = useCallback((_layout, _oldItem, newItem) => {
+    if (newItem) resizeOverrideRef.current = { id: newItem.i, h: newItem.h };
+  }, []);
+  const handleResizeStop: EventCallback = useCallback(() => {
+    resizeOverrideRef.current = null;
     document.body.classList.remove(GRID_INTERACTING_CLASS);
   }, []);
 
@@ -125,21 +160,20 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
           }}
           resizeConfig={{
             enabled: true,
-            // Right / bottom / bottom-right only. The layout is an ordered list
-            // packed into columns, so a card's top-left origin is fixed by its
-            // list position — only its width/height are free. West/north/corner
-            // handles (`w`, `sw`, `n`, `nw`, `ne`) move that origin and make RGL
-            // call `moveElement`, which fights the pure-list packing; growing
-            // from the right/bottom instead just widens/heightens the card and
-            // pushes the following items into the next column/row.
-            handles: ['e', 's', 'se'],
+            // `e` = width (per-card: the card spans more columns, pushing/
+            // wrapping neighbours). `s` = height, but height is a ROW property,
+            // so dragging it resizes the whole row (see the compactor override
+            // above). West/north/corner handles move the top-left origin, which
+            // the pure-list packing doesn't allow, so they're omitted.
+            handles: ['e', 's'],
           }}
-          compactor={listPackCompactor}
+          compactor={compactor}
           onLayoutChange={handleLayoutChange}
           onDragStart={handleInteractStart}
           onDragStop={handleInteractStop}
-          onResizeStart={handleInteractStart}
-          onResizeStop={handleInteractStop}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeStop={handleResizeStop}
           autoSize
         >
           {/*

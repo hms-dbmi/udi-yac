@@ -1,4 +1,15 @@
-import type { Compactor, Layout, LayoutItem } from 'react-grid-layout';
+import type { Layout, LayoutItem } from 'react-grid-layout';
+
+/**
+ * During a live resize, forces one row to a specific height instead of the
+ * row's natural `max(h)`. `id` is any card in the target row; `h` is the height
+ * to apply to every card in that row. Lets a resize preview grow AND shrink the
+ * whole row (shrinking below other cards' heights, which `max` alone can't do).
+ */
+export interface RowHeightOverride {
+  id: string;
+  h: number;
+}
 
 function sortRowMajor(items: readonly LayoutItem[]): LayoutItem[] {
   return [...items].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
@@ -26,42 +37,61 @@ export function layoutItemsEqual(a: Layout, b: Layout): boolean {
 
 /**
  * Pack an ordered list of items into a row-aligned grid: items flow
- * left-to-right; when the next item won't fit in the current row's
- * remaining horizontal space, the cursor wraps to a new row whose `y`
- * starts at the previous row's `max(h)`. Items keep their individual
- * `h` — short cards leave empty space below themselves, but the next
- * row always begins below the tallest card.
+ * left-to-right; when the next item won't fit in the current row's remaining
+ * horizontal space, the cursor wraps to a new row.
  *
- * This deliberately differs from a Masonry / cell-occupancy packing
- * (where a short card lets later cards slip into the gap below it).
+ * Height is a ROW property: every card in a row is given the SAME height — the
+ * row's `max(h)` — so a short card stretches to the row instead of leaving
+ * whitespace below itself, and the next row starts below that shared height.
+ * Width stays per-card (clamped to the column count). Pass an `override` to
+ * force one row (the row containing `override.id`) to a specific height instead
+ * of its `max` — used for live row resizing (grow and shrink).
  *
  * Example with cols=3 and item heights [1, 2, 1, 1]:
- *   A@(0,0,1,1), B@(1,0,1,2), C@(2,0,1,1), D@(0,2,1,1)
- * The fourth item lands at y=2 (below B's bottom), not y=1.
+ *   A@(0,0,1,2), B@(1,0,1,2), C@(2,0,1,2), D@(0,2,1,1)
+ * A/B/C share row 0 and all take its max height 2; D starts row 1 at y=2.
  */
-export function packAllRowMajor(ordered: readonly LayoutItem[], cols: number): Layout {
+export function packAllRowMajor(
+  ordered: readonly LayoutItem[],
+  cols: number,
+  override?: RowHeightOverride,
+): Layout {
   const safeCols = Math.max(1, Math.floor(cols));
-  let cursorX = 0;
-  let rowY = 0;
-  let rowMaxH = 0;
   const out: LayoutItem[] = [];
+  let rowStart = 0; // index in `out` where the current row begins
+  let rowY = 0;
+  let cursorX = 0;
+  let rowMaxH = 0;
+  let rowOverrideH: number | undefined;
+
+  // Assign every card buffered in the current row its shared height (override
+  // if this row was flagged, else the row's max), then advance to the next row.
+  const flushRow = () => {
+    const rowH = rowOverrideH ?? rowMaxH;
+    for (let k = rowStart; k < out.length; k++) out[k].h = rowH;
+    rowY += rowH;
+    rowStart = out.length;
+    cursorX = 0;
+    rowMaxH = 0;
+    rowOverrideH = undefined;
+  };
+
   for (const item of ordered) {
     const w = Math.max(1, Math.min(item.w, safeCols));
     const h = Math.max(1, item.h);
-    if (cursorX + w > safeCols) {
-      rowY += rowMaxH;
-      rowMaxH = 0;
-      cursorX = 0;
-    }
+    if (cursorX + w > safeCols) flushRow();
     // Reset `moved` — it's a transient per-drag flag RGL sets in moveElement.
     // RGL's own compactors clear it; if we let it persist (via `...item`), it
     // accumulates across drag ticks and moveElement's `if (collision.moved)
     // continue` then refuses to push that card out of the dragged item's way,
-    // leaving them overlapping (so the drag appears to do nothing).
+    // leaving them overlapping (so the drag appears to do nothing). `h` here is
+    // provisional — flushRow rewrites it to the row's shared height.
     out.push({ ...item, x: cursorX, y: rowY, w, h, moved: false });
     cursorX += w;
     rowMaxH = Math.max(rowMaxH, h);
+    if (override && item.i === override.id) rowOverrideH = Math.max(1, override.h);
   }
+  flushRow(); // final row (no-op on empty input)
   return out;
 }
 
@@ -72,10 +102,15 @@ export function packAllRowMajor(ordered: readonly LayoutItem[], cols: number): L
  * unique key, so `sortRowMajor` is order-independent). This is the single
  * source of truth for the grid's shape: dragging just changes an item's
  * transient position (which changes its sort order), resizing changes its
- * width; re-packing turns either back into a gapless ordered list.
+ * width (or, via `override`, its row's height); re-packing turns either back
+ * into a gapless ordered list with uniform row heights.
  */
-export function packRowMajor(layout: readonly LayoutItem[], cols: number): Layout {
-  return packAllRowMajor(sortRowMajor(layout), cols);
+export function packRowMajor(
+  layout: readonly LayoutItem[],
+  cols: number,
+  override?: RowHeightOverride,
+): Layout {
+  return packAllRowMajor(sortRowMajor(layout), cols, override);
 }
 
 /**
@@ -94,22 +129,3 @@ export function repackRowMajor(
   const sorted = sortRowMajor(existing).filter((it) => it.i !== newItem.i);
   return packAllRowMajor([newItem, ...sorted], cols);
 }
-
-/**
- * RGL compactor that keeps the grid as a gapless, ordered list packed into the
- * current column count. RGL runs `compact(layout, cols)` after every drag,
- * resize, and prop sync, so the layout is always the normal form — no gaps, no
- * free-form holes. Because RGL computes the live drag preview and the drop with
- * this same function, the preview matches the drop by construction.
- *
- * `type: 'horizontal'` only affects how RGL's `moveElement` displaces the
- * hovered neighbours during a drag (it cascades them right, which — after we
- * re-sort by (y, x) and pack — reads as "insert at the hovered slot, shift the
- * rest right, wrap when the row is full"). It never changes the final geometry,
- * since we fully override `compact`.
- */
-export const listPackCompactor: Compactor = {
-  type: 'horizontal',
-  allowOverlap: false,
-  compact: (layout, cols) => packRowMajor(layout, cols),
-};
