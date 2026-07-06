@@ -1,40 +1,14 @@
 import { useCallback, useEffect, useMemo, type CSSProperties } from 'react';
-import {
-  GridLayout,
-  useContainerWidth,
-  type Compactor,
-  type EventCallback,
-  type Layout,
-} from 'react-grid-layout';
+import { GridLayout, useContainerWidth, type EventCallback, type Layout } from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
 import { DRAG_HANDLE_CLASS, GRID_INTERACTING_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
-import { packRowMajor } from '../utils/gridPacking';
+import { listPackCompactor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
 
 interface DashboardGridProps {
   selections: DataSelections;
 }
-
-// TEMP debug: log what RGL's moveElement feeds the compactor and what we pack
-// it to, but only during an active drag/resize. Remove once the mixed-width
-// drag is fixed.
-const dbgLayout = (l: Layout): string =>
-  l.map((it) => `${it.i}(${it.x},${it.y} ${it.w}x${it.h}${it.moved ? ' M' : ''})`).join('  ');
-const debugCompactor: Compactor = {
-  type: 'horizontal',
-  allowOverlap: false,
-  compact: (layout, cols) => {
-    const out = packRowMajor(layout, cols);
-    if (
-      typeof document !== 'undefined' &&
-      document.body.classList.contains(GRID_INTERACTING_CLASS)
-    ) {
-      console.log('[DND] in :', dbgLayout(layout), '\n[DND] out:', dbgLayout(out));
-    }
-    return out;
-  },
-};
 
 export function DashboardGrid({ selections }: DashboardGridProps) {
   const items = useDashboard((s) => s.layout.items);
@@ -46,7 +20,6 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
 
   const handleLayoutChange = useCallback(
     (next: Layout) => {
-      console.log('[DND] onLayoutChange:', dbgLayout(next));
       dashboardStore.getState().setLayoutItems(next);
     },
     [dashboardStore],
@@ -161,7 +134,7 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
             // pushes the following items into the next column/row.
             handles: ['e', 's', 'se'],
           }}
-          compactor={debugCompactor}
+          compactor={listPackCompactor}
           onLayoutChange={handleLayoutChange}
           onDragStart={handleInteractStart}
           onDragStop={handleInteractStop}
