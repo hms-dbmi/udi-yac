@@ -358,6 +358,15 @@ body.udi-grid-interacting * {
   user-select: none;
 }
 
+/* Suppress tooltips while dragging or resizing. Mid-interaction the pointer
+   sweeps across card drag handles and controls, flickering their Base UI
+   tooltips open and closed. The tooltip popup is portaled to <body> with
+   data-slot="tooltip-content", so hiding it while GRID_INTERACTING_CLASS is on
+   the body kills the flicker for every tooltip at once. */
+body.udi-grid-interacting [data-slot='tooltip-content'] {
+  display: none !important;
+}
+
 /* Swim lanes: faint grid lines drawn on the dashboard wrapper so the
    column / row structure of the layout is visible to the user.
    - Vertical (column) lines tile at a fixed `--swim-col-step` set by
