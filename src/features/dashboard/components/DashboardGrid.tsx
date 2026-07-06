@@ -1,26 +1,40 @@
-import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
-import { GridLayout, useContainerWidth, type EventCallback, type Layout } from 'react-grid-layout';
+import { useCallback, useEffect, useMemo, type CSSProperties } from 'react';
+import {
+  GridLayout,
+  useContainerWidth,
+  type Compactor,
+  type EventCallback,
+  type Layout,
+} from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
 import { DRAG_HANDLE_CLASS, GRID_INTERACTING_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
-import { compactRowAligned, computeReorder, rowAlignedCompactor } from '../utils/gridPacking';
+import { packRowMajor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
 
 interface DashboardGridProps {
   selections: DataSelections;
 }
 
-/** Order-independent position compare (RGL may echo items in a different array
- * order than we stored them). Only (i, x, y, w, h) matter. */
-function layoutsMatchByItem(a: Layout, b: Layout): boolean {
-  if (a.length !== b.length) return false;
-  const byId = new Map(a.map((it) => [it.i, it]));
-  for (const it of b) {
-    const o = byId.get(it.i);
-    if (!o || o.x !== it.x || o.y !== it.y || o.w !== it.w || o.h !== it.h) return false;
-  }
-  return true;
-}
+// TEMP debug: log what RGL's moveElement feeds the compactor and what we pack
+// it to, but only during an active drag/resize. Remove once the mixed-width
+// drag is fixed.
+const dbgLayout = (l: Layout): string =>
+  l.map((it) => `${it.i}(${it.x},${it.y} ${it.w}x${it.h}${it.moved ? ' M' : ''})`).join('  ');
+const debugCompactor: Compactor = {
+  type: 'horizontal',
+  allowOverlap: false,
+  compact: (layout, cols) => {
+    const out = packRowMajor(layout, cols);
+    if (
+      typeof document !== 'undefined' &&
+      document.body.classList.contains(GRID_INTERACTING_CLASS)
+    ) {
+      console.log('[DND] in :', dbgLayout(layout), '\n[DND] out:', dbgLayout(out));
+    }
+    return out;
+  },
+};
 
 export function DashboardGrid({ selections }: DashboardGridProps) {
   const items = useDashboard((s) => s.layout.items);
@@ -30,70 +44,26 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   const dashboardStore = useDashboardStore();
   const { width, containerRef, mounted } = useContainerWidth();
 
-  // After a drag we replace RGL's layout with computeReorder's push-back-in-row
-  // result. But RGL vertical-compacts the drop (shoving the displaced card down
-  // a row) and echoes THAT layout back through onLayoutChange right after
-  // onDragStop — more than once. Those echoes would clobber our result. So when
-  // we apply a reorder we stash the exact layout RGL will settle to here, and
-  // handleLayoutChange ignores RGL's transient echoes until it re-syncs to it.
-  const authoritativeLayoutRef = useRef<Layout | null>(null);
-
   const handleLayoutChange = useCallback(
     (next: Layout) => {
-      const authoritative = authoritativeLayoutRef.current;
-      if (authoritative) {
-        if (layoutsMatchByItem(next, authoritative)) authoritativeLayoutRef.current = null;
-        return; // ignore RGL's post-drop push-down echoes until it catches up
-      }
+      console.log('[DND] onLayoutChange:', dbgLayout(next));
       dashboardStore.getState().setLayoutItems(next);
     },
     [dashboardStore],
   );
 
-  // Drag-to-reorder: when a card is dropped onto a row, RGL's default is to
-  // PUSH the occupant out of the way and let the compactor bump it to a new
-  // row. Users instead expect the dropped card to slot in and shove the row's
-  // other cards sideways, only spilling to a new row when the row is too full.
-  // computeReorder builds that layout from the pre-drag snapshot; the drop x
-  // decides the insertion point.
-  const preDragLayoutRef = useRef<Layout | null>(null);
-
-  const handleDragStart: EventCallback = useCallback((layout) => {
-    authoritativeLayoutRef.current = null;
-    preDragLayoutRef.current = layout.map((it) => ({ ...it }));
+  // Drag and resize go entirely through RGL + listPackCompactor, which re-packs
+  // the ordered list on every change — so the drop matches the live preview and
+  // the store never holds a gapped layout. These handlers only toggle a
+  // body-level class that suppresses page-wide text selection during the
+  // interaction: RGL's react-draggable / react-resizable preventDefault the
+  // initial mousedown, but selection can still extend once the cursor crosses
+  // into other elements (e.g. resizing past an adjacent card or chat message).
+  // The class turns off user-select and is cleared unconditionally on stop.
+  const handleInteractStart: EventCallback = useCallback(() => {
     document.body.classList.add(GRID_INTERACTING_CLASS);
   }, []);
-
-  const handleDragStop: EventCallback = useCallback(
-    (_newLayout, oldItem, newItem) => {
-      document.body.classList.remove(GRID_INTERACTING_CLASS);
-      const preDrag = preDragLayoutRef.current;
-      preDragLayoutRef.current = null;
-      if (!preDrag || !oldItem || !newItem) return;
-      const reordered = computeReorder(preDrag, oldItem, newItem, gridCols);
-      if (reordered) {
-        // Pre-apply the compactor so we hold exactly what RGL settles to, then
-        // guard against its push-down echoes overwriting it (see the ref above).
-        const settled = compactRowAligned(reordered);
-        authoritativeLayoutRef.current = settled;
-        dashboardStore.getState().setLayoutItems(settled);
-      }
-    },
-    [dashboardStore, gridCols],
-  );
-
-  // Suppress text selection across the whole page while a card is being
-  // dragged or resized. RGL's underlying react-resizable / react-draggable
-  // preventDefault the initial mousedown, but selection can still extend
-  // once the cursor crosses into other elements — easy to reproduce by
-  // resizing past an adjacent card or chat message. A body-level class
-  // turning off user-select keeps the interaction clean and gets cleared
-  // unconditionally on stop.
-  const handleResizeStart: EventCallback = useCallback(() => {
-    authoritativeLayoutRef.current = null;
-    document.body.classList.add(GRID_INTERACTING_CLASS);
-  }, []);
-  const handleResizeStop: EventCallback = useCallback(() => {
+  const handleInteractStop: EventCallback = useCallback(() => {
     document.body.classList.remove(GRID_INTERACTING_CLASS);
   }, []);
 
@@ -110,8 +80,8 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   // colStep = colWidth + marginX = (width + marginX) / cols. They live on
   // the wrapper's CSS background (see .dashboard-grid-lanes in index.css).
   //
-  // Rows are NOT uniform — the row-aligned compactor sets each row's
-  // extent to `max(h of items in that row)`, so the divider positions
+  // Rows are NOT uniform — packing sets each row's extent to
+  // `max(h of items in that row)`, so the divider positions
   // depend on the current layout. We read every unique `y` from the
   // layout (each one is a row top), tack on the layout's bottom-most
   // edge, convert from grid units to pixels with RGL's positioning math,
@@ -182,18 +152,21 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
           }}
           resizeConfig={{
             enabled: true,
-            // North handles (n / nw / ne) are intentionally omitted — they
-            // require RGL to change both `y` AND `h` mid-resize, which the
-            // row-aligned compactor immediately snaps back, so the gesture
-            // visually does nothing.
-            handles: ['sw', 'se', 'e', 's', 'w'],
+            // Right / bottom / bottom-right only. The layout is an ordered list
+            // packed into columns, so a card's top-left origin is fixed by its
+            // list position — only its width/height are free. West/north/corner
+            // handles (`w`, `sw`, `n`, `nw`, `ne`) move that origin and make RGL
+            // call `moveElement`, which fights the pure-list packing; growing
+            // from the right/bottom instead just widens/heightens the card and
+            // pushes the following items into the next column/row.
+            handles: ['e', 's', 'se'],
           }}
-          compactor={rowAlignedCompactor}
+          compactor={debugCompactor}
           onLayoutChange={handleLayoutChange}
-          onDragStart={handleDragStart}
-          onDragStop={handleDragStop}
-          onResizeStart={handleResizeStart}
-          onResizeStop={handleResizeStop}
+          onDragStart={handleInteractStart}
+          onDragStop={handleInteractStop}
+          onResizeStart={handleInteractStart}
+          onResizeStop={handleInteractStop}
           autoSize
         >
           {/*

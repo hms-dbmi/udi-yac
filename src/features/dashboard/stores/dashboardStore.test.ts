@@ -260,6 +260,24 @@ describe('dashboardStore — activating / closing', () => {
     expect(memoryBank.getState().closedVisualizations.has('0-0')).toBe(true);
   });
 
+  it('closeVisualization re-packs so no gap is left behind', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
+    store.getState().addActiveVisualization(0, 1, makeSpec(), '', null);
+    store.getState().addActiveVisualization(0, 2, makeSpec(), '', null);
+    expect(store.getState().layout.items).toHaveLength(3); // fill row 0 at cols=3
+
+    // Remove the middle-column card; the others must pull in to close the gap.
+    const middle = store.getState().layout.items.find((it) => it.x === 1)!;
+    store.getState().closeVisualization(middle.i);
+
+    const after = store.getState().layout.items;
+    expect(after).toHaveLength(2);
+    expect(after.map((it) => it.x).sort((a, b) => a - b)).toEqual([0, 1]);
+    expect(after.every((it) => it.y === 0)).toBe(true);
+  });
+
   it('restoreFromMemoryBank re-activates and removes from the bank', () => {
     const dashboard = createDashboardStore();
     const memoryBank = createMemoryBankStore();

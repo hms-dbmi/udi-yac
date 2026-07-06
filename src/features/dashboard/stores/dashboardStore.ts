@@ -17,7 +17,12 @@ import {
   clampGridCols,
   clampGridRowHeight,
 } from '../utils/gridDefaults';
-import { layoutItemsEqual, packAllRowMajor, repackRowMajor } from '../utils/gridPacking';
+import {
+  layoutItemsEqual,
+  packAllRowMajor,
+  packRowMajor,
+  repackRowMajor,
+} from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
 
 export interface ActiveVisualization {
@@ -167,11 +172,6 @@ function pruneItems(items: Layout, knownKeys: Set<string>): Layout {
     out.push(it);
   }
   return out;
-}
-
-function removeItemFromLayout(layout: DashboardLayout, key: string): DashboardLayout {
-  const next = layout.items.filter((it) => it.i !== key);
-  return next.length === layout.items.length ? layout : { items: next };
 }
 
 function insertItemRowMajor(
@@ -391,9 +391,12 @@ export function createDashboardStore() {
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.delete(key);
+        // Re-pack so the removed card leaves no gap: later cards pull up/left to
+        // fill it, keeping the grid a contiguous ordered list.
+        const remaining = state.layout.items.filter((it) => it.i !== key);
         return {
           activeVisualizations: next,
-          layout: removeItemFromLayout(state.layout, key),
+          layout: { items: packRowMajor(remaining, state.gridCols) },
         };
       });
     },
