@@ -158,8 +158,18 @@ udi-vis .vega-chart-container {
 }
 
 /* RGL placeholder — the ghost rectangle shown at the drop / resize target.
-   Override the library's red default with the project's primary color. */
+   Override the library's red default with the project's primary color. The
+   ghost is drawn on an ::after inset by 8px on every side so it matches the
+   DashboardCard's footprint (cards are inset the same 8px via
+   `.dashboard-grid-slot` padding). Filling the raw slot box instead would make
+   the ghost sit flush to the slot's top-left and overhang the card. */
 .react-grid-item.react-grid-placeholder {
+  background: transparent;
+}
+.react-grid-item.react-grid-placeholder::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
   background: var(--color-primary, var(--primary));
   opacity: 0.15;
   border-radius: var(--radius-md);
