@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { Message } from '@/types/messages';
 import { ToolCallRenderer } from '@/features/tool-calls';
 import {
@@ -27,15 +28,37 @@ const TOOL_CALL_LABELS: Record<string, string> = {
 export function MessageBubble({ message, messageIndex, onSelectSuggestion }: MessageBubbleProps) {
   const vizKey = useDashboard((s) => s.vizKey);
   const isActive = useDashboard((s) => s.isActive);
+  // Highlight this bubble while a dashboard card it produced is hovered. The
+  // hovered value is a vizKey `${messageIndex}-${toolCallIndex}`, and one
+  // message can own several cards (one per RenderVisualization tool call), so
+  // match on the message-index prefix. The `-` delimiter keeps e.g. message 1
+  // from matching message 12's cards.
+  const hoveredViz = useDashboard((s) => s.hoveredVisualizationIndex);
+  const isVizHovered = hoveredViz != null && hoveredViz.startsWith(`${messageIndex}-`);
   const isUser = message.role === 'user';
   const toolCalls = message.tool_calls ?? [];
 
+  // Scroll this message into view when a card it produced is hovered.
+  // `block: 'nearest'` is a no-op when it's already visible, so it only nudges
+  // the chat when the message is off-screen; `scroll-mt-6` keeps it off the top.
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isVizHovered) bubbleRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [isVizHovered]);
+
   return (
-    <div data-message className={cn('flex scroll-mt-6', isUser ? 'justify-end' : 'justify-start')}>
+    <div
+      ref={bubbleRef}
+      data-message
+      className={cn('flex scroll-mt-6', isUser ? 'justify-end' : 'justify-start')}
+    >
       <div
         className={cn(
-          'max-w-[85%] min-w-0 rounded-lg px-3 py-2 wrap-break-word',
+          'max-w-[85%] min-w-0 rounded-lg px-3 py-2 wrap-break-word transition-shadow',
           isUser ? 'bg-primary text-primary-foreground' : 'bg-muted',
+          // ring-inset so the outline isn't clipped by the scroll viewport's
+          // overflow-x-hidden on left-aligned (assistant) bubbles.
+          isVizHovered && 'ring-2 ring-inset ring-primary/50',
         )}
       >
         {/* Message text */}
