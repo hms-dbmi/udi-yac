@@ -132,8 +132,8 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
     >
-      <CardHeader className="p-1 pb-0 flex flex-col gap-1 shrink-0">
-        <div className="flex items-center w-full gap-1">
+      <CardHeader className="p-1 pb-0 shrink-0">
+        <div className="flex items-center w-full gap-0.5">
           <Tooltip>
             <TooltipTrigger
               render={
@@ -155,23 +155,6 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           <span className="text-xs inline-block font-medium truncate flex-1">
             {viz.title ?? viz.userPrompt}
           </span>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 ml-auto"
-                  onClick={handleClose}
-                />
-              }
-            >
-              <X className="h-3 w-3" />
-            </TooltipTrigger>
-            <TooltipContent>Close</TooltipContent>
-          </Tooltip>
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0">
           {tweakable && (
             <Tooltip>
               <TooltipTrigger
@@ -266,6 +249,16 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
               </DialogContent>
             </Dialog>
           )}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClose} />
+              }
+            >
+              <X className="h-3 w-3" />
+            </TooltipTrigger>
+            <TooltipContent>Close</TooltipContent>
+          </Tooltip>
         </div>
       </CardHeader>
       {showTweak && (
