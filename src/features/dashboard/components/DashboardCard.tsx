@@ -145,7 +145,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
     >
       <CardHeader className="p-1 pb-0 shrink-0">
-        <div className="flex items-center w-full gap-0.5">
+        <div className="flex items-center w-full min-w-0 gap-0.5">
           <Tooltip>
             <TooltipTrigger
               render={
@@ -164,7 +164,10 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
             </TooltipTrigger>
             <TooltipContent>Drag to reorder card</TooltipContent>
           </Tooltip>
-          <span className="text-xs inline-block font-medium truncate flex-1">
+          <span
+            className="text-xs font-medium truncate flex-1 min-w-0"
+            title={viz.title ?? viz.userPrompt}
+          >
             {viz.title ?? viz.userPrompt}
           </span>
           {tweakable && (
