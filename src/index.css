@@ -285,7 +285,7 @@ udi-vis .vega-chart-container {
   width: 2px;
 }
 .react-grid-item > .react-resizable-handle-e::before {
-  right: 3px;
+  right: 0px;
 }
 .react-grid-item > .react-resizable-handle-w::before {
   left: 3px;
@@ -295,7 +295,7 @@ udi-vis .vega-chart-container {
 .react-grid-item > .react-resizable-handle-s::before {
   left: 0;
   right: 0;
-  bottom: 3px;
+  bottom: 1px;
   height: 2px;
 }
 .react-grid-item > .react-resizable-handle-s:hover::before,
