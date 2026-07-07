@@ -261,6 +261,12 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
               </DialogContent>
             </Dialog>
           )}
+          <span
+            aria-hidden
+            className="mx-0.5 select-none text-sm leading-none text-muted-foreground/40"
+          >
+            |
+          </span>
           <Tooltip>
             <TooltipTrigger
               render={
