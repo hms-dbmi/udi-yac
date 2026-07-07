@@ -75,7 +75,8 @@ export function computeInitialCardHeight(
       // X categorical: vertical bars; height is mostly chart body + space for
       //   rotated/wrapped category labels along the bottom. Doesn't need to
       //   scale per-category, just needs a sane fixed baseline.
-      const need = m.encoding === 'y' ? 80 + n * 25 : 340;
+      const minRowHeight = 12;
+      const need = m.encoding === 'y' ? 80 + n * minRowHeight : 340;
       if (need > pxNeeded) pxNeeded = need;
     }
   }
