@@ -271,7 +271,7 @@ udi-vis .vega-chart-container {
 .react-grid-item > .react-resizable-handle-w::before {
   content: '';
   position: absolute;
-  background: color-mix(in oklab, var(--primary) 70%, transparent);
+  background: color-mix(in oklab, var(--primary) 30%, transparent);
   /* Fully rounded ends — a long thin bar with radius ≥ half its thickness
      reads as a stadium/pill. */
   border-radius: 999px;
