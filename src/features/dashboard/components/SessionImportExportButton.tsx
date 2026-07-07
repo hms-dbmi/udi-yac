@@ -1,11 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
-import { Save, Upload, Download, RotateCcw } from 'lucide-react';
+import { Save, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -19,7 +18,6 @@ import {
   useConversationStore,
   useDashboardStore,
   useDataPackage,
-  useDataPackageStore,
   useTracker,
 } from '@/app/UDIChatContext';
 import {
@@ -49,7 +47,6 @@ function timestamp(): string {
 export function SessionImportExportButton() {
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
-  const dataPackageStore = useDataPackageStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const trackEvent = useTracker();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,12 +118,6 @@ export function SessionImportExportButton() {
     [conversationStore, dashboardStore, sourceFields, trackEvent],
   );
 
-  const handleResetLayout = useCallback(() => {
-    const state = dashboardStore.getState();
-    state.repackLayout(dataPackageStore);
-    trackEvent('layout_reset', { vizCount: state.activeVisualizations.size });
-  }, [dashboardStore, dataPackageStore, trackEvent]);
-
   return (
     <>
       <input
@@ -151,11 +142,6 @@ export function SessionImportExportButton() {
           <DropdownMenuItem onClick={handlePickFile}>
             <Upload className="h-3.5 w-3.5 mr-2" />
             Import session
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleResetLayout}>
-            <RotateCcw className="h-3.5 w-3.5 mr-2" />
-            Reset layout
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

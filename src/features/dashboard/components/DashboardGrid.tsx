@@ -9,10 +9,10 @@ import {
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
 import {
-  COLUMN_BREAKPOINT_PX,
   DRAG_HANDLE_CLASS,
   GRID_INTERACTING_CLASS,
   GRID_MARGIN,
+  gridColsForWidth,
 } from '../utils/gridDefaults';
 import { packRowMajor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
@@ -29,16 +29,24 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   const dashboardStore = useDashboardStore();
   const { width, containerRef, mounted } = useContainerWidth();
 
-  // On initial load, size the column count to the container: one column per
-  // ~COLUMN_BREAKPOINT_PX of width (ceil), clamped by setGridCols. Runs once on
-  // mount; resizing afterward is intentionally left alone. We read offsetWidth
-  // directly since `width` starts at a placeholder before the first measure.
+  // On initial load, size the column count to the container via the shared
+  // width → cols rule (gridColsForWidth). Runs once on mount; resizing
+  // afterward is intentionally left alone. We read offsetWidth directly since
+  // `width` starts at a placeholder before the first measure.
   useEffect(() => {
     const w = containerRef.current?.offsetWidth ?? 0;
     if (w > 0) {
-      dashboardStore.getState().setGridCols(Math.ceil(w / COLUMN_BREAKPOINT_PX));
+      dashboardStore.getState().setGridCols(gridColsForWidth(w));
     }
   }, [containerRef, dashboardStore]);
+
+  // Keep the measured width in the store so the "Reset layout" action (in the
+  // gear popover, which can't measure the grid itself) can re-derive the column
+  // count for the current width. This does not change the column count on
+  // resize — only the on-mount effect above does that.
+  useEffect(() => {
+    if (width > 0) dashboardStore.getState().setContainerWidth(width);
+  }, [width, dashboardStore]);
 
   const handleLayoutChange = useCallback(
     (next: Layout) => {

@@ -1,11 +1,17 @@
 import { useCallback } from 'react';
-import { Settings } from 'lucide-react';
+import { RotateCcw, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
+import {
+  useDashboard,
+  useDashboardStore,
+  useDataPackageStore,
+  useTracker,
+} from '@/app/UDIChatContext';
 import {
   MAX_GRID_COLS,
   MAX_GRID_ROW_HEIGHT_PX,
@@ -17,6 +23,8 @@ export function GridSettingsButton() {
   const gridCols = useDashboard((s) => s.gridCols);
   const gridRowHeight = useDashboard((s) => s.gridRowHeight);
   const store = useDashboardStore();
+  const dataPackageStore = useDataPackageStore();
+  const trackEvent = useTracker();
 
   const handleColsChange = useCallback(
     (next: number | readonly number[]) => {
@@ -33,6 +41,12 @@ export function GridSettingsButton() {
     },
     [store],
   );
+
+  const handleResetLayout = useCallback(() => {
+    const state = store.getState();
+    state.resetLayout(dataPackageStore);
+    trackEvent('layout_reset', { vizCount: state.activeVisualizations.size });
+  }, [store, dataPackageStore, trackEvent]);
 
   return (
     <Popover>
@@ -89,6 +103,16 @@ export function GridSettingsButton() {
               onValueChange={handleRowHeightChange}
             />
           </div>
+          <Separator />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-mx-1 h-8 justify-start px-2 text-xs"
+            onClick={handleResetLayout}
+          >
+            <RotateCcw className="mr-2 h-3.5 w-3.5" />
+            Reset layout
+          </Button>
         </div>
       </PopoverContent>
     </Popover>

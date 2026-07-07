@@ -16,6 +16,7 @@ import {
   MIN_CARD_W,
   clampGridCols,
   clampGridRowHeight,
+  gridColsForWidth,
 } from '../utils/gridDefaults';
 import {
   layoutItemsEqual,
@@ -74,6 +75,7 @@ export interface DashboardState {
   layout: DashboardLayout;
   gridCols: number;
   gridRowHeight: number;
+  containerWidth: number;
   filterAllNullValues: boolean;
   tableViewKeys: Set<string>;
   // Linked-hover state, one field per direction so each stays unambiguous:
@@ -137,7 +139,9 @@ export interface DashboardState {
   setLayoutItems: (items: Layout) => void;
   setGridCols: (cols: number) => void;
   setGridRowHeight: (px: number) => void;
+  setContainerWidth: (px: number) => void;
   repackLayout: (dataPackageStore?: StoreApi<DataPackageState>) => void;
+  resetLayout: (dataPackageStore?: StoreApi<DataPackageState>) => void;
   exportDashboard: () => DashboardExport;
   importDashboard: (
     payload: DashboardExport,
@@ -331,6 +335,7 @@ export function createDashboardStore() {
     layout: emptyLayout(),
     gridCols: DEFAULT_GRID_COLS,
     gridRowHeight: DEFAULT_GRID_ROW_HEIGHT_PX,
+    containerWidth: 0,
     filterAllNullValues: true,
     tableViewKeys: new Set(),
     hoveredVisualizationIndex: null,
@@ -653,6 +658,11 @@ export function createDashboardStore() {
       set({ gridRowHeight: safe });
     },
 
+    setContainerWidth: (px) => {
+      if (get().containerWidth === px) return;
+      set({ containerWidth: px });
+    },
+
     repackLayout: (dataPackageStore) => {
       set((state) => {
         if (state.layout.items.length === 0) return state;
@@ -674,6 +684,17 @@ export function createDashboardStore() {
         });
         return { layout: { items: packAllRowMajor(ordered, cols) } };
       });
+    },
+
+    resetLayout: (dataPackageStore) => {
+      // Reset the grid controls to their defaults: column count re-derived from
+      // the current view width (same rule the responsive effect uses) and row
+      // height back to the default. Then repack the cards against the reset grid.
+      set((state) => ({
+        gridCols: gridColsForWidth(state.containerWidth),
+        gridRowHeight: DEFAULT_GRID_ROW_HEIGHT_PX,
+      }));
+      get().repackLayout(dataPackageStore);
     },
 
     exportDashboard: () => {

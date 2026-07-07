@@ -39,3 +39,12 @@ export function clampGridRowHeight(px: number): number {
   if (!Number.isFinite(px)) return DEFAULT_GRID_ROW_HEIGHT_PX;
   return Math.max(MIN_GRID_ROW_HEIGHT_PX, Math.min(MAX_GRID_ROW_HEIGHT_PX, Math.round(px)));
 }
+
+// The width → column-count rule: ceil(containerWidth / COLUMN_BREAKPOINT_PX),
+// clamped to [MIN, MAX]. Falls back to the default when the width is unknown.
+// Shared by the initial-load sizing in DashboardGrid and the "Reset layout"
+// action so both derive the same count.
+export function gridColsForWidth(containerWidthPx: number): number {
+  if (!Number.isFinite(containerWidthPx) || containerWidthPx <= 0) return DEFAULT_GRID_COLS;
+  return clampGridCols(Math.ceil(containerWidthPx / COLUMN_BREAKPOINT_PX));
+}

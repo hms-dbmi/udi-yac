@@ -67,7 +67,7 @@ export function ChatPanel({
   // fires it once domains are ready.
   const handleSend = useCallback(
     (text: string) => {
-      if (text.trim() === '!/admin') {
+      if (text.trim() === '//admin') {
         globalStore.getState().toggleDebugMode();
         return;
       }
