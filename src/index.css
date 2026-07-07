@@ -211,56 +211,54 @@ udi-vis .vega-chart-container {
 .react-grid-item.resizing .react-resizable-handle {
   opacity: 1;
 }
-/* Each grid slot has 8 px of internal padding; the DashboardCard fills
-   the inner content box, and the resize handles below sit in the 8 px
-   ring (handles are absolutely-positioned so they anchor to the slot's
-   outer edge, not the padded content box). This gives:
-     - drag handles never overlap the visualization
-     - the card's border has room between itself and the dashboard's edge
+/* Only the E (right) and S (bottom) resize handles are enabled
+   (DashboardGrid resizeConfig handles: ['e','s']), so the slot only needs
+   an internal padding ring on those two sides. The ring is 12 px on the
+   right and bottom (where the pill affordances live) and 0 on the top and
+   left, which keeps neighbouring visualizations closer together. Handles
+   are absolutely-positioned and anchor to the slot's outer edge, so the
+   12 px ring keeps the pills off the card and off the visualization.
    See DashboardGrid for the matching className on the slot wrapper. */
 .dashboard-grid-slot {
-  padding: 8px;
+  padding: 0 12px 12px 0;
 }
-.react-resizable-handle-s {
-  bottom: 0;
-  /* Leave the 12 × 12 SE / SW corners untouched at the bottom edges. */
-  left: 16px;
-  right: 16px;
-  width: auto;
-  height: 8px;
-  margin-left: 0;
-  cursor: ns-resize;
-  /* The clickable handle is transparent — the visible affordance is the
-     single bar drawn via ::before below, sitting in the slot's padding
-     ring with 3 px clearance from the card edge. */
-  background: transparent;
-  border-radius: 0;
-}
-.react-resizable-handle-e,
-.react-resizable-handle-w {
-  top: 8px;
-  /* Leave the SE / SW corners (12 px tall) untouched at the bottom. */
-  bottom: 16px;
-  width: 8px;
+/* RGL sizes and positions each handle at high specificity: a 20 × 20 box
+   centered on its edge (`.react-grid-item > .react-resizable-handle` sets
+   width/height 20px at 0,3,0; `…-handle-e` sets top:50%/margin-top:-10px at
+   0,4,0). A plain `.react-resizable-handle-e` rule (0,1,0) can neither
+   stretch nor reposition that box — which is why the pills looked stuck at
+   ~20 px. Our geometry overrides must therefore match RGL's specificity to
+   win. RGL keeps right:0 (-e) / left:0 (-w) / bottom:0 (-s), so we only
+   override the stretch axis, size and margins. Only E and S are enabled
+   (handles: ['e','s']); the W selector rides along for symmetry but never
+   renders. The hit area is 16 px (reaching ~4 px past the 12 px ring into
+   the card for an easier grab); it stops 12 px short of the bottom-right so
+   the E and S pills don't collide there. */
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-w {
+  top: 0;
+  bottom: 12px;
+  width: 16px;
   height: auto;
   margin-top: 0;
   cursor: ew-resize;
-  /* The clickable handle is transparent — the visible affordance is the
-     two-bar grip icon drawn via ::before / ::after below. Both bars sit
-     in the slot's 8 px padding ring, so the icon is entirely outside
-     the card. */
   background: transparent;
   border-radius: 0;
 }
-.react-resizable-handle-e {
-  right: 0;
-}
-.react-resizable-handle-w {
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s {
   left: 0;
+  right: 12px;
+  bottom: 0;
+  width: auto;
+  height: 16px;
+  margin-left: 0;
+  cursor: ns-resize;
+  background: transparent;
+  border-radius: 0;
 }
-/* Single-bar indicator for each edge handle, drawn via ::before. The
-   bar lives in the outer half of the slot's 8 px padding ring so it
-   stays clearly outside the card border. Specificity needs to match
+/* Single-pill indicator for each edge handle, drawn via ::before. The
+   pill is centered in the slot's 12 px padding ring so it stays clearly
+   outside the card border with a gap on both sides. Specificity needs to match
    RGL's `.react-grid-item > .react-resizable-handle::after { content: none }`
    suppression — a plain `.react-resizable-handle-s::before` selector
    would lose to RGL's reset and never render. (We use ::before here
@@ -274,29 +272,36 @@ udi-vis .vega-chart-container {
   content: '';
   position: absolute;
   background: color-mix(in oklab, var(--primary) 70%, transparent);
-  border-radius: 1px;
+  /* Fully rounded ends — a long thin bar with radius ≥ half its thickness
+     reads as a stadium/pill. */
+  border-radius: 999px;
 }
-/* Vertical bars on E / W: 2 px wide, full handle height, 3 px in from
-   the slot's outer edge (3 px gap to the card on the other side). */
+/* Vertical pills on E / W: 6 px wide, a fixed 30 px tall, centered on the
+   handle (centered grip, not an edge-to-edge line), sitting 3 px in from
+   the slot's outer edge so both are centered in the 12 px ring. The hit
+   area stays full-length; only the visible pill is a fixed size. */
 .react-grid-item > .react-resizable-handle-e::before,
 .react-grid-item > .react-resizable-handle-w::before {
-  top: 0;
-  bottom: 0;
-  width: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 60px;
+  width: 5px;
 }
 .react-grid-item > .react-resizable-handle-e::before {
-  right: 0px;
+  right: 2px;
 }
 .react-grid-item > .react-resizable-handle-w::before {
   left: 3px;
 }
-/* Horizontal bar on S: 2 px tall, full handle width, 3 px in from the
-   slot's outer (bottom) edge. */
+/* Horizontal pill on S: 6 px tall, a fixed 30 px wide, centered on the
+   handle (centered grip), 3 px in from the slot's outer (bottom) edge. The
+   hit area stays full-length; only the visible pill is a fixed size. */
 .react-grid-item > .react-resizable-handle-s::before {
-  left: 0;
-  right: 0;
-  bottom: 1px;
-  height: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  bottom: 2px;
+  height: 5px;
 }
 .react-grid-item > .react-resizable-handle-s:hover::before,
 .react-grid-item > .react-resizable-handle-e:hover::before,

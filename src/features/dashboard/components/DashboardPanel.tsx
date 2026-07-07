@@ -86,13 +86,13 @@ export function DashboardPanel() {
   return (
     <div ref={scrollWrapperRef} className="relative h-full">
       {/* Gray panel background lives on the ScrollArea so it paints behind the
-          transparent viewport and fills the bottom gutter (pb-3). The right
-          gutter is applied to the grid alone (below), not the ScrollArea, so the
-          white header band spans the full panel width instead of being cut short
-          by a right inset. No left inset → background, Separator, and grid sit
-          flush against the chat panel's right border; header + filters use px-3
-          to keep their text off the divider and the right edge. Top spacing
-          lives on the sticky band (pt-3) so no gray strip lands above it. */}
+          transparent viewport and fills the bottom gutter (pb-3). The left +
+          right gutters are applied to the grid alone (below), not the
+          ScrollArea, so the white header band and Separator span the full panel
+          width instead of being cut short by the insets, while the gray
+          background still shows through the grid's side gutters. Header +
+          filters use px-3 to match the grid's inset. Top spacing lives on the
+          sticky band (pt-3) so no gray strip lands above it. */}
       <ScrollArea className="h-full bg-udi-gray-100 pb-3">
         <div className="flex flex-col">
           <div ref={sentinelRef} aria-hidden />
@@ -131,10 +131,11 @@ export function DashboardPanel() {
             </div>
             <Separator />
           </div>
-          {/* Right gutter on the grid alone so the header band above stays
-              full-width; grid width is unchanged (the inset just moved here
-              from the ScrollArea). */}
-          <div className="pr-3">
+          {/* Left + right gutter on the grid alone so the header band above
+              stays full-width. The gray ScrollArea background paints behind
+              these gutters, so the grid insets from both panel edges while the
+              dashboard background still spans the full width. */}
+          <div className="px-3">
             <DashboardGrid selections={mergedSelections} />
           </div>
         </div>
