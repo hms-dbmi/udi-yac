@@ -8,7 +8,12 @@ import {
 } from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
-import { DRAG_HANDLE_CLASS, GRID_INTERACTING_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
+import {
+  COLUMN_BREAKPOINT_PX,
+  DRAG_HANDLE_CLASS,
+  GRID_INTERACTING_CLASS,
+  GRID_MARGIN,
+} from '../utils/gridDefaults';
 import { packRowMajor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
 
@@ -23,6 +28,17 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   const gridRowHeight = useDashboard((s) => s.gridRowHeight);
   const dashboardStore = useDashboardStore();
   const { width, containerRef, mounted } = useContainerWidth();
+
+  // On initial load, size the column count to the container: one column per
+  // ~COLUMN_BREAKPOINT_PX of width (ceil), clamped by setGridCols. Runs once on
+  // mount; resizing afterward is intentionally left alone. We read offsetWidth
+  // directly since `width` starts at a placeholder before the first measure.
+  useEffect(() => {
+    const w = containerRef.current?.offsetWidth ?? 0;
+    if (w > 0) {
+      dashboardStore.getState().setGridCols(Math.ceil(w / COLUMN_BREAKPOINT_PX));
+    }
+  }, [containerRef, dashboardStore]);
 
   const handleLayoutChange = useCallback(
     (next: Layout) => {

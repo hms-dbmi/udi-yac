@@ -4,6 +4,11 @@ export const DEFAULT_GRID_COLS = 3;
 export const MIN_GRID_COLS = 1;
 export const MAX_GRID_COLS = 8;
 
+// On initial load the column count is derived from the container width:
+// ceil(containerWidth / COLUMN_BREAKPOINT_PX), then clamped to [MIN, MAX].
+// so value of 700 → 0-700: 1 column, 701-1400: 2 columns, 1401-2100: 3 columns, etc. (up to MAX_GRID_COLS)
+export const COLUMN_BREAKPOINT_PX = 700;
+
 export const DEFAULT_GRID_ROW_HEIGHT_PX = 60;
 export const MIN_GRID_ROW_HEIGHT_PX = 30;
 export const MAX_GRID_ROW_HEIGHT_PX = 120;

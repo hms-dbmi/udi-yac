@@ -57,9 +57,10 @@ export function useLayoutPersistence(): void {
       if (allMatch) {
         state.setLayoutItems(snapshot.value.layout.items);
       }
-      // Grid config (cols + rowHeight) is a per-app preference — restore it
-      // regardless of whether the viz keys still match.
-      state.setGridCols(snapshot.value.gridCols);
+      // Row height is a per-app preference — restore it regardless of whether
+      // the viz keys still match. The column count is intentionally NOT
+      // restored: it's derived from the container width on load (see
+      // DashboardGrid), so it always reflects the current screen size.
       state.setGridRowHeight(snapshot.value.gridRowHeight);
     }
 
