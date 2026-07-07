@@ -76,7 +76,14 @@ export interface DashboardState {
   gridRowHeight: number;
   filterAllNullValues: boolean;
   tableViewKeys: Set<string>;
+  // Linked-hover state, one field per direction so each stays unambiguous:
+  // `hoveredVisualizationIndex` = the hovered card's vizKey (drives the chat
+  // message + matching accordion-item highlight/scroll); `hoveredMessageVizKey`
+  // = the vizKey the chat is pointing at — a single-viz message's card, or a
+  // specific accordion item in a multi-viz message — drives that card's
+  // highlight/scroll.
   hoveredVisualizationIndex: string | null;
+  hoveredMessageVizKey: string | null;
   vizKey: (messageIndex: number, toolCallIndex: number) => string;
   addActiveVisualization: (
     index: number,
@@ -110,6 +117,7 @@ export interface DashboardState {
   isTableView: (key: string) => boolean;
   setHoveredVisualizationIndex: (key: string | null) => void;
   isHovered: (key: string) => boolean;
+  setHoveredMessageVizKey: (key: string | null) => void;
   updateSpecFilters: (
     dataFiltersStore: StoreApi<DataFiltersState>,
     dataPackageStore: StoreApi<DataPackageState>,
@@ -326,6 +334,7 @@ export function createDashboardStore() {
     filterAllNullValues: true,
     tableViewKeys: new Set(),
     hoveredVisualizationIndex: null,
+    hoveredMessageVizKey: null,
 
     vizKey: (messageIndex, toolCallIndex) => `${messageIndex}-${toolCallIndex}`,
 
@@ -450,6 +459,8 @@ export function createDashboardStore() {
     setHoveredVisualizationIndex: (key) => set({ hoveredVisualizationIndex: key }),
 
     isHovered: (key) => get().hoveredVisualizationIndex === key,
+
+    setHoveredMessageVizKey: (key) => set({ hoveredMessageVizKey: key }),
 
     getFilterIds: (dataFiltersStore) => {
       const vizFilterIDs = Array.from(get().activeVisualizations.values()).map((v) => v.uuid);

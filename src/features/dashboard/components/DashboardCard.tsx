@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UDIVis } from 'udi-toolkit/react';
 import type { DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,18 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
-  const isHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
+  // Highlight when this card is hovered directly, or when the chat is pointing
+  // at it (its single-viz message, or its accordion item in a multi-viz
+  // message). Scroll only reacts to the chat-hover direction so a card's own
+  // hover never scrolls the dashboard.
+  const isSelfHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
+  const isMessageHovered = useDashboard((s) => s.hoveredMessageVizKey === vizKey);
+  const isHovered = isSelfHovered || isMessageHovered;
+
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isMessageHovered) cardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [isMessageHovered]);
 
   // Whether the gear button can do anything for this spec. Charts whose
   // mappings only reference computed / locked fields (count of groupby,
@@ -123,6 +134,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   return (
     <Card
+      ref={cardRef}
       className={cn(
         // py-2/gap-2 override the shared Card defaults (py-4/gap-4) to give the
         // visualization more room — the dominant vertical chrome inside a card.

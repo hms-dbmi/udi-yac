@@ -315,6 +315,15 @@ describe('dashboardStore — UI toggles', () => {
     store.getState().setHoveredVisualizationIndex(null);
     expect(store.getState().isHovered('0-0')).toBe(false);
   });
+
+  it('setHoveredMessageVizKey tracks the chat-pointed vizKey (reverse-direction link)', () => {
+    const store = createDashboardStore();
+    expect(store.getState().hoveredMessageVizKey).toBeNull();
+    store.getState().setHoveredMessageVizKey('2-1');
+    expect(store.getState().hoveredMessageVizKey).toBe('2-1');
+    store.getState().setHoveredMessageVizKey(null);
+    expect(store.getState().hoveredMessageVizKey).toBeNull();
+  });
 });
 
 describe('dashboardStore — updateActiveVisualizationSpec', () => {

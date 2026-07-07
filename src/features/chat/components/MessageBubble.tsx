@@ -7,7 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { useDashboard } from '@/app/UDIChatContext';
+import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
 import { MarkdownText } from '@/components/MarkdownText';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +28,7 @@ const TOOL_CALL_LABELS: Record<string, string> = {
 export function MessageBubble({ message, messageIndex, onSelectSuggestion }: MessageBubbleProps) {
   const vizKey = useDashboard((s) => s.vizKey);
   const isActive = useDashboard((s) => s.isActive);
+  const dashboardStore = useDashboardStore();
   // Highlight this bubble while a dashboard card it produced is hovered. The
   // hovered value is a vizKey `${messageIndex}-${toolCallIndex}`, and one
   // message can own several cards (one per RenderVisualization tool call), so
@@ -37,6 +38,14 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
   const isVizHovered = hoveredViz != null && hoveredViz.startsWith(`${messageIndex}-`);
   const isUser = message.role === 'user';
   const toolCalls = message.tool_calls ?? [];
+
+  // The chat→card hover is per-visualization: a single-tool-call message links
+  // its whole bubble to its one card; a multi-tool-call message links each
+  // accordion item to its own card (below), so hovering an item scrolls to
+  // exactly that visualization.
+  const singleVizKey = toolCalls.length === 1 ? vizKey(messageIndex, 0) : null;
+  const setChatHover = (key: string | null) =>
+    dashboardStore.getState().setHoveredMessageVizKey(key);
 
   // Scroll this message into view when a card it produced is hovered.
   // `block: 'nearest'` is a no-op when it's already visible, so it only nudges
@@ -51,6 +60,11 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
       ref={bubbleRef}
       data-message
       className={cn('flex scroll-mt-6', isUser ? 'justify-end' : 'justify-start')}
+      // Single-viz messages link the whole bubble to their one card. Multi-viz
+      // messages link per accordion item instead (see below), so no bubble-level
+      // handler here.
+      onMouseEnter={singleVizKey ? () => setChatHover(singleVizKey) : undefined}
+      onMouseLeave={singleVizKey ? () => setChatHover(null) : undefined}
     >
       <div
         className={cn(
@@ -78,23 +92,34 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
 
         {toolCalls.length > 1 && (
           <Accordion defaultValue={[0]} className="mt-1 min-w-64">
-            {toolCalls.map((tc, i) => (
-              <AccordionItem key={i} value={i}>
-                <AccordionTrigger className="text-xs">
-                  {TOOL_CALL_LABELS[tc.function.name] ?? tc.function.name}
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ToolCallRenderer
-                    toolCall={tc.function}
-                    isActive={isActive(vizKey(messageIndex, i))}
-                    onSelectSuggestion={onSelectSuggestion}
-                    message={message}
-                    messageIndex={messageIndex}
-                    toolCallIndex={i}
-                  />
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+            {toolCalls.map((tc, i) => {
+              const itemKey = vizKey(messageIndex, i);
+              return (
+                <AccordionItem
+                  key={i}
+                  value={i}
+                  // Hovering an item scrolls to its card; the item tints when
+                  // that card is hovered (hoveredViz is set by the card).
+                  onMouseEnter={() => setChatHover(itemKey)}
+                  onMouseLeave={() => setChatHover(null)}
+                  className={cn('transition-colors', hoveredViz === itemKey && 'bg-primary/10')}
+                >
+                  <AccordionTrigger className="text-xs">
+                    {TOOL_CALL_LABELS[tc.function.name] ?? tc.function.name}
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ToolCallRenderer
+                      toolCall={tc.function}
+                      isActive={isActive(itemKey)}
+                      onSelectSuggestion={onSelectSuggestion}
+                      message={message}
+                      messageIndex={messageIndex}
+                      toolCallIndex={i}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         )}
       </div>
