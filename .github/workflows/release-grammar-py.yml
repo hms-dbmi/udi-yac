@@ -22,7 +22,8 @@ jobs:
           enable-cache: true
 
       - name: Build distribution
-        run: uv build
+        # --out-dir: in a uv workspace, plain `uv build` writes to the workspace root dist/
+        run: uv build --out-dir dist
         working-directory: packages/grammar-py
 
       - name: Publish to PyPI

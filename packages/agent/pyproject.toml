@@ -43,3 +43,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/udiagent"]
+
+[tool.uv.sources]
+udi-grammar-py = { workspace = true }

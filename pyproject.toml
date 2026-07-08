@@ -1,0 +1,6 @@
+# Virtual uv workspace: shared lockfile for the Python packages.
+# udiagent[codegen] resolves udi-grammar-py from the workspace (see
+# packages/agent/pyproject.toml [tool.uv.sources]); published metadata
+# still points at PyPI.
+[tool.uv.workspace]
+members = ["packages/agent", "packages/grammar-py"]

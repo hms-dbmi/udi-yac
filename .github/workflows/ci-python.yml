@@ -4,19 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/agent/**'
-      - 'packages/grammar-py/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/ci-python.yml'
+      - "packages/agent/**"
+      - "packages/grammar-py/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci-python.yml"
   pull_request:
     branches: [main]
     paths:
-      - 'packages/agent/**'
-      - 'packages/grammar-py/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/ci-python.yml'
+      - "packages/agent/**"
+      - "packages/grammar-py/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci-python.yml"
 
 jobs:
   test:
@@ -27,7 +27,7 @@ jobs:
           - package: agent
             sync-args: --extra server --extra langfuse --extra test
           - package: grammar-py
-            sync-args: ''
+            sync-args: ""
     defaults:
       run:
         working-directory: packages/${{ matrix.package }}
@@ -50,4 +50,4 @@ jobs:
         run: uv run pytest tests/ -v
 
       - name: Verify package build
-        run: uv build
+        run: uv build --out-dir dist
