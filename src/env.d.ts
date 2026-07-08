@@ -14,19 +14,3 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
-
-declare module 'arquero' {
-  // Minimal shim — only the APIs this app actually calls.
-  export interface ArqueroTable {
-    columnNames(): string[];
-    array(column: string): unknown[];
-    rollup(spec: Record<string, string>): ArqueroTable;
-    objects(): unknown[];
-  }
-  export interface LoadCSVOptions {
-    delimiter?: string;
-    [key: string]: unknown;
-  }
-  export function loadCSV(path: string, options?: LoadCSVOptions): Promise<ArqueroTable>;
-  export function fromCSV(input: string, options?: LoadCSVOptions): ArqueroTable;
-}

@@ -1,7 +1,7 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { Users, FlaskConical, Table2, AlertCircle } from 'lucide-react';
-import { queryData } from 'udi-toolkit/react';
-import type { QueryDataSpec } from 'udi-toolkit/react';
+import { useQueryData, type QueryDataSpec } from 'udi-toolkit/react';
+import type { DataTransformation } from 'udi-toolkit';
 import {
   useDataPackage,
   useDashboard,
@@ -9,7 +9,6 @@ import {
   useDataFiltersStore,
   useDataPackageStore,
   useEntityIcons,
-  useSelections,
 } from '@/app/UDIChatContext';
 import { joinDataPath } from '@/features/data-package';
 import type { EntityIconMap } from '../types';
@@ -40,7 +39,6 @@ export function DataCounts() {
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const loadError = useDataPackage((s) => s.error);
   const dataSelections = useDataFilters((s) => s.dataSelections);
-  const vizSelections = useSelections((s) => s.selections);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataFiltersStore = useDataFiltersStore();
   const dataPackageStore = useDataPackageStore();
@@ -102,7 +100,7 @@ export function DataCounts() {
         const getSource = (id: string) => uuidToSource.get(id) ?? valid[id]?.dataSourceKey ?? null;
 
         return ids
-          .map((id): object | null => {
+          .map((id): DataTransformation | null => {
             const origin = getSource(id);
             if (!origin) return null;
             if (origin !== source) {
@@ -110,9 +108,9 @@ export function DataCounts() {
               if (!er) return null;
               return { filter: { name: id, source: origin, entityRelationship: er } };
             }
-            return { filter: { name: id } };
+            return { filter: { name: id, source } };
           })
-          .filter((f): f is object => f !== null);
+          .filter((f): f is DataTransformation => f !== null);
       },
     };
 
@@ -141,8 +139,8 @@ export function DataCounts() {
       if (!resource) continue;
       const countSpec = countSpecs[chip.id];
       if (!countSpec) continue;
-      const transformation = (countSpec.transformation as object[]).filter(
-        (t) => !('rollup' in (t as object)),
+      const transformation = ((countSpec.transformation ?? []) as DataTransformation[]).filter(
+        (t) => !('rollup' in t),
       );
       specs[chip.id] = {
         source: countSpec.source,
@@ -155,105 +153,46 @@ export function DataCounts() {
   const domainsReady = loadingPhase === 'ready';
 
   // Brushes live in the shared Pinia DataSourcesStore already — UDIVis's
-  // signal listeners write them directly. Routing them back through
-  // queryData's `selections` param would call bindExternalDataSelections
-  // with a React-snapshot of vizSelections that races with ongoing brush
-  // writes (stale snapshot overwrites fresh Pinia state). So only pass
-  // LLM-originated dataSelections (which live in dataFiltersStore, not
-  // Pinia). vizSelections stays in the dep list so the effects still
-  // re-run on brush changes — they just don't re-bind the brush state.
-
-  // rAF-throttled query dispatch. Live brushing can fire vizSelections
-  // updates ~60× per second; without coalescing, every tick would kick
-  // off a round of queryData → getDataObject calls per entity, pegging
-  // the main thread and visibly flickering charts on the first drag.
-  // One query per frame is indistinguishable from "live" to the user.
-  const countsRafRef = useRef<number | null>(null);
-  const exportsRafRef = useRef<number | null>(null);
-  const countsCancelRef = useRef<{ cancelled: boolean } | null>(null);
-  const exportsCancelRef = useRef<{ cancelled: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!domainsReady) return;
-
-    if (countsRafRef.current !== null) cancelAnimationFrame(countsRafRef.current);
-    if (countsCancelRef.current) countsCancelRef.current.cancelled = true;
-    const token = { cancelled: false };
-    countsCancelRef.current = token;
-
-    countsRafRef.current = requestAnimationFrame(() => {
-      countsRafRef.current = null;
-      (async () => {
-        for (const [entityName, spec] of Object.entries(countSpecs)) {
-          if (token.cancelled) return;
-          try {
-            const result = await queryData(spec, dataSelections);
-            if (token.cancelled) return;
-            const rows = result?.displayData;
-            if (
-              rows &&
-              rows.length > 0 &&
-              typeof (rows[0] as Record<string, unknown>).count === 'number'
-            ) {
-              const count = (rows[0] as Record<string, unknown>).count as number;
-              setFilteredCounts((prev) => {
-                if (prev[entityName] === count) return prev;
-                return { ...prev, [entityName]: count };
-              });
-            }
-          } catch (e) {
-            console.error(`Failed to query count for ${entityName}:`, e);
-          }
-        }
-      })();
-    });
-
-    return () => {
-      token.cancelled = true;
-      if (countsRafRef.current !== null) {
-        cancelAnimationFrame(countsRafRef.current);
-        countsRafRef.current = null;
+  // signal listeners write them directly. We only forward LLM-originated
+  // dataSelections through queryData; brush state is read from Pinia.
+  // useQueryData (multi-spec + onResult mode) owns the self-rescheduling
+  // pump, the subscribeToSelections wiring, and sequential queueing
+  // across the spec map. Supplying `onResult` routes per-entity results
+  // straight into the dashboard's stores without re-rendering DataCounts.
+  useQueryData(countSpecs, {
+    selections: dataSelections,
+    enabled: domainsReady,
+    // displayDataOnly auto-defaults to true (count specs end with rollup).
+    onResult: (entityName, result) => {
+      const rows = result?.displayData;
+      if (
+        rows &&
+        rows.length > 0 &&
+        typeof (rows[0] as Record<string, unknown>).count === 'number'
+      ) {
+        const count = (rows[0] as Record<string, unknown>).count as number;
+        setFilteredCounts((prev) => {
+          if (prev[entityName] === count) return prev;
+          return { ...prev, [entityName]: count };
+        });
       }
-    };
-  }, [domainsReady, countSpecs, vizSelections, dataSelections]);
+    },
+  });
 
-  useEffect(() => {
-    if (!domainsReady) return;
-
-    if (exportsRafRef.current !== null) cancelAnimationFrame(exportsRafRef.current);
-    if (exportsCancelRef.current) exportsCancelRef.current.cancelled = true;
-    const token = { cancelled: false };
-    exportsCancelRef.current = token;
-
-    exportsRafRef.current = requestAnimationFrame(() => {
-      exportsRafRef.current = null;
-      (async () => {
-        for (const [entityName, spec] of Object.entries(exportSpecs)) {
-          if (token.cancelled) return;
-          try {
-            const result = await queryData(spec, dataSelections);
-            if (token.cancelled) return;
-            if (result) {
-              dataPackageStore.getState().setFilteredData(entityName, {
-                displayRows: result.displayData as Record<string, unknown>[],
-                allRows: result.allData as Record<string, unknown>[],
-              });
-            }
-          } catch (e) {
-            console.error(`Failed to query export data for ${entityName}:`, e);
-          }
-        }
-      })();
-    });
-
-    return () => {
-      token.cancelled = true;
-      if (exportsRafRef.current !== null) {
-        cancelAnimationFrame(exportsRafRef.current);
-        exportsRafRef.current = null;
+  useQueryData(exportSpecs, {
+    selections: dataSelections,
+    enabled: domainsReady,
+    // Export specs have no rollup, so opt in explicitly — we only read
+    // displayData; the unfiltered allData pass would be wasted work.
+    displayDataOnly: true,
+    onResult: (entityName, result) => {
+      if (result) {
+        dataPackageStore.getState().setFilteredData(entityName, {
+          displayRows: result.displayData as Record<string, unknown>[],
+        });
       }
-    };
-  }, [domainsReady, exportSpecs, vizSelections, dataSelections, dataPackageStore]);
+    },
+  });
 
   // Surface DataPackage load failures instead of silently rendering nothing.
   if (loadingPhase === 'error') {

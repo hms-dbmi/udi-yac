@@ -1,19 +1,4 @@
-export interface IntervalDomain {
-  min: number;
-  max: number;
-}
-
-export interface CategoricalDomain {
-  values: string[];
-}
-
-export interface DataFieldDomain {
-  entity: string;
-  field: string;
-  type: 'interval' | 'point';
-  domain: IntervalDomain | CategoricalDomain;
-  fieldDescription: string;
-}
+export type { IntervalDomain, CategoricalDomain, DataFieldDomain } from 'udi-toolkit/react';
 
 export interface DataPackageResource {
   name: string;
@@ -59,7 +44,6 @@ export type Row = Record<string, unknown>;
 
 export type ExportRowSet = {
   displayRows: Row[];
-  allRows: Row[];
 };
 
 export interface ValidStatus {

@@ -8,8 +8,7 @@ import type {
   ExportRowSet,
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
-import type { ResourceInput } from '../types';
-import DomainWorker from '../workers/domainWorker?worker&inline';
+import { loadDataPackage, type SourceSpec } from 'udi-toolkit/react';
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready' | 'error';
 
@@ -281,10 +280,10 @@ function applyEntityDomains(set: SetFn, domains: DataFieldDomain[]) {
 }
 
 /**
- * Fetch CSV text for each resource on the main thread (priming the browser
- * HTTP cache so UDIVis won't re-fetch), then offload the parsing + domain
- * computation to a Web Worker. Falls back to main-thread parsing if the
- * worker fails to initialize.
+ * Delegate CSV fetching and domain computation to udi-toolkit's
+ * loadDataPackage. udi-toolkit owns the parsed-table cache (so UDIVis
+ * reuses the data instead of re-fetching) and runs the per-column domain
+ * passes off the main thread in a Web Worker.
  */
 async function loadDomainsFromCSVs(set: SetFn, dp: DataPackage, fetchOptions?: RequestInit) {
   const folderPath = dp['udi:path'];
@@ -293,106 +292,27 @@ async function loadDomainsFromCSVs(set: SetFn, dp: DataPackage, fetchOptions?: R
     return;
   }
 
-  // Fetch all CSV text on the main thread (primes browser cache for UDIVis).
-  const resources: ResourceInput[] = [];
-  for (const resource of dp.resources ?? []) {
-    const fullPath = joinDataPath(folderPath, resource.path);
-    const delimiter = fullPath.endsWith('.tsv') ? '\t' : ',';
+  const sources: SourceSpec[] = (dp.resources ?? []).map((resource) => {
     const fieldDescriptions: Record<string, string> = {};
     for (const f of resource.schema?.fields ?? []) {
       fieldDescriptions[f.name] = f.description ?? '';
     }
-    try {
-      const response = await fetch(fullPath, fetchOptions);
-      const csvText = await response.text();
-      resources.push({ entityName: resource.name, csvText, delimiter, fieldDescriptions });
-    } catch (e) {
-      console.error(`Failed to fetch data for ${resource.name}:`, e);
-    }
-  }
-
-  if (resources.length === 0) return;
-
-  try {
-    await loadDomainsViaWorker(set, resources);
-  } catch {
-    // Worker failed to start — fall back to main thread
-    await loadDomainsMainThread(set, resources);
-  }
-}
-
-/** Offload domain computation to a dedicated Web Worker. */
-function loadDomainsViaWorker(set: SetFn, resources: ResourceInput[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let worker: Worker;
-    try {
-      worker = new DomainWorker();
-    } catch (e) {
-      reject(e);
-      return;
-    }
-
-    worker.onmessage = (event) => {
-      const msg = event.data;
-      if (msg.type === 'entity-domains') {
-        applyEntityDomains(set, msg.domains as DataFieldDomain[]);
-      } else if (msg.type === 'error') {
-        console.error(`Worker: failed to load data for ${msg.entityName}:`, msg.message);
-      } else if (msg.type === 'done') {
-        worker.terminate();
-        resolve();
-      }
+    return {
+      name: resource.name,
+      url: joinDataPath(folderPath, resource.path),
+      fieldDescriptions,
     };
-
-    worker.onerror = (e) => {
-      worker.terminate();
-      reject(e);
-    };
-
-    worker.postMessage({ type: 'compute', resources });
   });
-}
 
-/** Main-thread fallback: parse pre-fetched CSV text with Arquero. */
-async function loadDomainsMainThread(set: SetFn, resources: ResourceInput[]) {
-  const { fromCSV } = await import('arquero');
-  for (const resource of resources) {
-    try {
-      const table = fromCSV(resource.csvText, { delimiter: resource.delimiter });
-      const cols = table.columnNames();
-      const domains: DataFieldDomain[] = [];
-      for (const col of cols) {
-        const series = table.array(col) as unknown[];
-        const isNumeric = series.every((v) => v == null || !isNaN(+(v as number)));
-        if (isNumeric) {
-          const stats = table
-            .rollup({
-              min: `(d) => op.min(d["${col}"])`,
-              max: `(d) => op.max(d["${col}"])`,
-            })
-            .objects()[0] as { min: number; max: number };
-          domains.push({
-            entity: resource.entityName,
-            field: col,
-            type: 'interval',
-            fieldDescription: resource.fieldDescriptions[col] ?? '',
-            domain: { min: stats.min, max: stats.max },
-          });
-        } else {
-          domains.push({
-            entity: resource.entityName,
-            field: col,
-            type: 'point',
-            fieldDescription: resource.fieldDescriptions[col] ?? '',
-            domain: { values: Array.from(new Set(series)) as string[] },
-          });
-        }
-      }
-      applyEntityDomains(set, domains);
-    } catch (e) {
-      console.error(`Failed to parse data for ${resource.entityName}:`, e);
-    }
-  }
+  if (sources.length === 0) return;
+
+  await loadDataPackage(sources, {
+    fetchOptions,
+    onEntityDomains: (_entityName, domains) => applyEntityDomains(set, domains),
+    onError: (entityName, message) => {
+      console.error(`Failed to load data for ${entityName}:`, message);
+    },
+  });
 }
 
 function jsonClone<T>(obj: T): T {

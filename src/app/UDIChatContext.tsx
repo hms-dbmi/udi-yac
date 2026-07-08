@@ -16,10 +16,6 @@ import {
   type DataPackageState,
 } from '@/features/data-package/stores/dataPackageStore';
 import {
-  createSelectionsStore,
-  type SelectionsState,
-} from '@/features/dashboard/stores/selectionsStore';
-import {
   createDataFiltersStore,
   type DataFiltersState,
 } from '@/features/dashboard/stores/dataFiltersStore';
@@ -28,12 +24,12 @@ import {
   type MemoryBankState,
 } from '@/features/dashboard/stores/memoryBankStore';
 import { createGlobalStore, type GlobalState } from '@/stores/globalStore';
+import { registerSnapshotSource } from './snapshotRegistry';
 
 interface UDIChatStores {
   conversation: StoreApi<ConversationState>;
   dashboard: StoreApi<DashboardState>;
   dataPackage: StoreApi<DataPackageState>;
-  selections: StoreApi<SelectionsState>;
   dataFilters: StoreApi<DataFiltersState>;
   memoryBank: StoreApi<MemoryBankState>;
   global: StoreApi<GlobalState>;
@@ -48,11 +44,17 @@ export function UDIChatProvider({ children }: { children: ReactNode }) {
       conversation: createConversationStore(),
       dashboard: createDashboardStore(),
       dataPackage: createDataPackageStore(),
-      selections: createSelectionsStore(),
       dataFilters: createDataFiltersStore(),
       memoryBank: createMemoryBankStore(),
       global: createGlobalStore(),
     };
+    // Register synchronously so the (outer) ErrorBoundary can capture the
+    // current session even if the very first child render throws — a
+    // useEffect would run too late in that case.
+    registerSnapshotSource({
+      conversation: storesRef.current.conversation,
+      dashboard: storesRef.current.dashboard,
+    });
   }
   return <UDIChatContext.Provider value={storesRef.current}>{children}</UDIChatContext.Provider>;
 }
@@ -85,14 +87,6 @@ export function useDataPackage<T>(selector: (state: DataPackageState) => T): T {
 
 export function useDataPackageStore(): StoreApi<DataPackageState> {
   return useStores().dataPackage;
-}
-
-export function useSelections<T>(selector: (state: SelectionsState) => T): T {
-  return useStore(useStores().selections, selector);
-}
-
-export function useSelectionsStore(): StoreApi<SelectionsState> {
-  return useStores().selections;
 }
 
 export function useDataFilters<T>(selector: (state: DataFiltersState) => T): T {
@@ -190,6 +184,8 @@ export function useEntityIcons(): EntityIconMap {
   return useContext(EntityIconsContext);
 }
 
+// ---------------------------------------------------------------------------
+// Consumer-provided color palette
 // ---------------------------------------------------------------------------
 // Consumer-provided mascot override
 // ---------------------------------------------------------------------------

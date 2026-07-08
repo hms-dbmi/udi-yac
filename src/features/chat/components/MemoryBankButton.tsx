@@ -15,7 +15,9 @@ import {
   useDashboardStore,
   useMemoryBankStore,
   useDataPackage,
+  useDataPackageStore,
 } from '@/app/UDIChatContext';
+import { usePalette } from 'udi-toolkit/react';
 
 /**
  * Opens a modal listing every visualization in the memory bank with a per-item
@@ -25,15 +27,17 @@ import {
 export function MemoryBankButton() {
   const closedVisualizations = useMemoryBank((s) => s.closedVisualizations);
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
+  const palette = usePalette();
   const dashboardStore = useDashboardStore();
   const memoryBankStore = useMemoryBankStore();
+  const dataPackageStore = useDataPackageStore();
   const [open, setOpen] = useState(false);
 
   const handleRestore = useCallback(
     (key: string) => {
-      dashboardStore.getState().restoreFromMemoryBank(key, memoryBankStore);
+      dashboardStore.getState().restoreFromMemoryBank(key, memoryBankStore, dataPackageStore);
     },
-    [dashboardStore, memoryBankStore],
+    [dashboardStore, memoryBankStore, dataPackageStore],
   );
 
   const entries = Array.from(closedVisualizations.entries());
@@ -84,7 +88,15 @@ export function MemoryBankButton() {
                   Restore to dashboard
                 </Button>
               </div>
-              <UDIVis spec={viz.interactiveSpec} sourceResolver={sourceResolver} />
+              <div className="h-48 w-full overflow-hidden">
+                <UDIVis
+                  className="block h-full w-full"
+                  spec={viz.interactiveSpec}
+                  sourceResolver={sourceResolver}
+                  palette={palette}
+                  fillContainer
+                />
+              </div>
             </div>
           ))}
         </div>

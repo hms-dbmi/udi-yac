@@ -204,9 +204,7 @@ describe('dataPackageStore — setFilteredData', () => {
     const store = createDataPackageStore();
     await store.getState().setDataPackage(makePackage(), []);
     const before = store.getState().filteredData;
-    store
-      .getState()
-      .setFilteredData('donors', { displayRows: [{ age: 10 }], allRows: [{ age: 10 }] });
+    store.getState().setFilteredData('donors', { displayRows: [{ age: 10 }] });
     const after = store.getState().filteredData;
     expect(after).not.toBe(before);
     expect(after.get('donors')?.displayRows).toEqual([{ age: 10 }]);

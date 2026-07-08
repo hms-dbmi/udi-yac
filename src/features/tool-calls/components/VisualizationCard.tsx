@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { UDIVis } from 'udi-toolkit/react';
+import { UDIVis, usePalette } from 'udi-toolkit/react';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { Badge } from '@/components/ui/badge';
 import { VizTweakComponent } from '@/features/dashboard';
@@ -22,6 +22,7 @@ export function VisualizationCard({
 }: VisualizationCardProps) {
   const displaySpec = useMemo(() => spec, [spec]);
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
+  const palette = usePalette();
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const closedVisualizations = useMemoryBank((s) => s.closedVisualizations);
 
@@ -78,7 +79,7 @@ export function VisualizationCard({
     <div className="py-1">
       {title && <p className="text-xs font-medium mb-1">{title}</p>}
       <div className="w-full max-w-[300px]">
-        <UDIVis spec={displaySpec} sourceResolver={sourceResolver} />
+        <UDIVis spec={displaySpec} sourceResolver={sourceResolver} palette={palette} />
       </div>
       {messageIndex != null && toolCallIndex != null && (
         <div className="mt-1">

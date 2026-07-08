@@ -1,9 +1,19 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UDIVis } from 'udi-toolkit/react';
 import type { DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { X, Settings2, Code2, Copy, Check, Table2, BarChart3, ExternalLink } from 'lucide-react';
+import {
+  X,
+  Settings2,
+  Code2,
+  Copy,
+  Check,
+  Table2,
+  BarChart3,
+  ExternalLink,
+  GripVertical,
+} from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
   Dialog,
@@ -14,10 +24,10 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ActiveVisualization } from '../stores/dashboardStore';
+import { usePalette } from 'udi-toolkit/react';
 import {
   useDashboard,
   useDashboardStore,
-  useSelectionsStore,
   useMemoryBankStore,
   useDataPackage,
   useGlobal,
@@ -25,6 +35,8 @@ import {
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
 import { cn } from '@/lib/utils';
+import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
+import { hasTweakableFields } from '../utils/tweakability';
 
 interface DashboardCardProps {
   vizKey: string;
@@ -34,13 +46,35 @@ interface DashboardCardProps {
 
 export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const dashboardStore = useDashboardStore();
-  const selectionsStore = useSelectionsStore();
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
+  const sourceFields = useDataPackage((s) => s.sourceFields);
+  const palette = usePalette();
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
-  const isHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
+  // Highlight when this card is hovered directly, or when the chat is pointing
+  // at it (its single-viz message, or its accordion item in a multi-viz
+  // message). Scroll only reacts to the chat-hover direction so a card's own
+  // hover never scrolls the dashboard.
+  const isSelfHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
+  const isMessageHovered = useDashboard((s) => s.hoveredMessageVizKey === vizKey);
+  const isHovered = isSelfHovered || isMessageHovered;
+
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isMessageHovered) cardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [isMessageHovered]);
+
+  // Whether the gear button can do anything for this spec. Charts whose
+  // mappings only reference computed / locked fields (count of groupby,
+  // binby outputs, kde outputs) have nothing tweakable — toggling the
+  // panel would just render `null`. Disable the button + swap the
+  // tooltip in that case so the affordance matches reality.
+  const tweakable = useMemo(
+    () => hasTweakableFields(viz.spec, sourceFields),
+    [viz.spec, sourceFields],
+  );
 
   const plainSpec = useMemo(
     () => JSON.parse(JSON.stringify(viz.interactiveSpec)),
@@ -70,18 +104,9 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     trackEvent('visualization_closed', { hasTitle: !!viz.title });
   }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title]);
 
-  const handleSelectionChange = useCallback(
-    (newSelections: DataSelections) => {
-      const plain = JSON.parse(JSON.stringify(newSelections)) as DataSelections;
-      // Brushes propagate through selectionsStore only. We intentionally do
-      // NOT write them into dataFiltersStore.internalDataSelections anymore,
-      // so brushes don't appear as filter chips in the toolbar. Cross-chart
-      // filtering still works via the shared Pinia DataSourcesStore +
-      // named-filter entries in each viz's interactiveSpec.transformation.
-      selectionsStore.getState().updateSelections(plain);
-    },
-    [selectionsStore],
-  );
+  // Brushes flow directly into the shared Pinia DataSourcesStore via
+  // UDIVis's Vega signal handlers, so we no longer mirror them to a
+  // React store — no `onSelectionChange` handler needed here.
 
   const [showTweak, setShowTweak] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -109,47 +134,59 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   return (
     <Card
-      className={cn('relative transition-shadow', isHovered && 'ring-2 ring-primary/40')}
+      ref={cardRef}
+      className={cn(
+        // py-2/gap-2 override the shared Card defaults (py-4/gap-4) to give the
+        // visualization more room — the dominant vertical chrome inside a card.
+        'relative transition-shadow h-full flex flex-col min-h-0 py-2 gap-2',
+        isHovered && 'ring-3 ring-primary/40',
+      )}
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
     >
-      <CardHeader className="p-2 pb-0 flex flex-col gap-1">
-        <div className="flex items-center w-full">
-          <span className="text-xs inline-block font-medium truncate flex-1">
+      <CardHeader className="p-1 pb-0 shrink-0">
+        <div className="flex items-center w-full min-w-0 gap-0.5">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'h-6 w-6 cursor-grab active:cursor-grabbing touch-none',
+                    DRAG_HANDLE_CLASS,
+                  )}
+                  aria-label="Drag card"
+                />
+              }
+            >
+              <GripVertical className="h-3 w-3 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>Drag to reorder card</TooltipContent>
+          </Tooltip>
+          <span
+            className="text-xs font-medium truncate flex-1 min-w-0"
+            title={viz.title ?? viz.userPrompt}
+          >
             {viz.title ?? viz.userPrompt}
           </span>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 ml-auto"
-                  onClick={handleClose}
-                />
-              }
-            >
-              <X className="h-3 w-3" />
-            </TooltipTrigger>
-            <TooltipContent>Close</TooltipContent>
-          </Tooltip>
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setShowTweak((v) => !v)}
-                />
-              }
-            >
-              <Settings2 className="h-3 w-3" />
-            </TooltipTrigger>
-            <TooltipContent>Tweak fields</TooltipContent>
-          </Tooltip>
+          {tweakable && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setShowTweak((v) => !v)}
+                  />
+                }
+              >
+                <Settings2 className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>Tweak fields</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger
               render={
@@ -227,6 +264,22 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
               </DialogContent>
             </Dialog>
           )}
+          <span
+            aria-hidden
+            className="mx-0.5 select-none text-sm leading-none text-muted-foreground/40"
+          >
+            |
+          </span>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClose} />
+              }
+            >
+              <X className="h-3 w-3" />
+            </TooltipTrigger>
+            <TooltipContent>Close</TooltipContent>
+          </Tooltip>
         </div>
       </CardHeader>
       {showTweak && (
@@ -238,14 +291,15 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           />
         </div>
       )}
-      <CardContent className="p-2">
+      <CardContent className="p-1 flex-1 min-h-0 overflow-hidden">
         <UDIVis
-          className="block w-full"
+          className="block h-full w-full"
           key={isTableView ? `table-${specKey}` : specKey}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
           sourceResolver={sourceResolver}
-          onSelectionChange={handleSelectionChange}
+          palette={palette}
+          fillContainer
         />
       </CardContent>
     </Card>

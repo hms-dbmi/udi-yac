@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    // `baseUrl` was deprecated in TS 6 — `paths` resolves relative to the
+    // tsconfig file's directory on its own now.
     "paths": {
       "@/*": ["./src/*"]
     }

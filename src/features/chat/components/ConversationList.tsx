@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
+import { clearAllSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Plus } from 'lucide-react';
 import {
   useConversationStore,
   useDashboardStore,
-  useSelectionsStore,
   useMemoryBankStore,
   useDataFiltersStore,
 } from '@/app/UDIChatContext';
@@ -43,17 +43,16 @@ function stripExtension(filename: string) {
 export function ConversationList() {
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
-  const selectionsStore = useSelectionsStore();
   const memoryBankStore = useMemoryBankStore();
   const dataFiltersStore = useDataFiltersStore();
 
   const handleNew = useCallback(() => {
     conversationStore.getState().newConversation();
     dashboardStore.getState().clearAllVisualizations();
-    selectionsStore.getState().clearSelections();
+    void clearAllSelections();
     memoryBankStore.getState().clearMemoryBank();
     dataFiltersStore.getState().resetFilters();
-  }, [conversationStore, dashboardStore, selectionsStore, memoryBankStore, dataFiltersStore]);
+  }, [conversationStore, dashboardStore, memoryBankStore, dataFiltersStore]);
 
   const handleLoad = useCallback(
     async (filename: string) => {
@@ -65,7 +64,7 @@ export function ConversationList() {
         if (!Array.isArray(messages)) return;
         // Reset state before loading
         dashboardStore.getState().clearAllVisualizations();
-        selectionsStore.getState().clearSelections();
+        void clearAllSelections();
         memoryBankStore.getState().clearMemoryBank();
         dataFiltersStore.getState().resetFilters();
         conversationStore.getState().loadConversation(messages);
@@ -73,7 +72,7 @@ export function ConversationList() {
         /* silently fail */
       }
     },
-    [conversationStore, dashboardStore, selectionsStore, memoryBankStore, dataFiltersStore],
+    [conversationStore, dashboardStore, memoryBankStore, dataFiltersStore],
   );
 
   return (

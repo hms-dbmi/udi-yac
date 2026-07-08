@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { UDIToolkitProvider } from 'udi-toolkit/react';
 import {
   UDIChatProvider,
   DownloadActionsProvider,
@@ -19,6 +20,7 @@ import {
   useTracker,
 } from '@/app/UDIChatContext';
 import { extractAllUdiSpecsFromMessage } from '@/features/dashboard/stores/dashboardStore';
+import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
@@ -53,6 +55,7 @@ function UDIChatInner({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
   const trackEvent = useTracker();
+  useLayoutPersistence();
 
   // Load data package on mount
   useEffect(() => {
@@ -101,7 +104,7 @@ function UDIChatInner({
       }
     }
     if (batch.length > 0) {
-      state.addActiveVisualizationBatch(batch);
+      state.addActiveVisualizationBatch(batch, dataPackageStore);
       for (const item of batch) {
         // Event name kept as `visualization_pinned` for analytics continuity
         // even though the in-code concept renamed pinning → active.
@@ -111,7 +114,7 @@ function UDIChatInner({
         });
       }
     }
-  }, [messages, dashboardStore, sourceFields, memoryBankStore, trackEvent]);
+  }, [messages, dashboardStore, sourceFields, memoryBankStore, dataPackageStore, trackEvent]);
 
   // Sync data filters from messages (replaces Vue's watch(messages, ...) in dataFiltersStore)
   useEffect(() => {
@@ -184,13 +187,24 @@ function UDIChatValidated(props: UDIChatConfig) {
           <DownloadActionsProvider actions={props.downloadActions}>
             <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
               <EntityIconsProvider icons={props.entityIcons}>
-                <MascotProvider mascot={props.mascot}>
-                  <SplashMessagesProvider messages={props.splashMessages}>
-                    <div className={cn('h-full w-full', props.className)} style={props.style}>
-                      <UDIChatInner {...props} />
-                    </div>
-                  </SplashMessagesProvider>
-                </MascotProvider>
+                {/*
+                 * UDIToolkitProvider supersedes the previous local PaletteProvider:
+                 * it ships in udi-toolkit/react, sets palette on the React
+                 * Context that <UDIVis> already reads, and (optionally) auto-
+                 * loads a data package. We only use the palette half here —
+                 * the data package is still owned by dataPackageStore so the
+                 * existing rich state (loadingPhase, sourceFields, etc.) keeps
+                 * working unchanged.
+                 */}
+                <UDIToolkitProvider palette={props.palette}>
+                  <MascotProvider mascot={props.mascot}>
+                    <SplashMessagesProvider messages={props.splashMessages}>
+                      <div className={cn('h-full w-full', props.className)} style={props.style}>
+                        <UDIChatInner {...props} />
+                      </div>
+                    </SplashMessagesProvider>
+                  </MascotProvider>
+                </UDIToolkitProvider>
               </EntityIconsProvider>
             </DownloadButtonLabelProvider>
           </DownloadActionsProvider>

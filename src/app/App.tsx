@@ -5,12 +5,11 @@ import { UDIChat } from '@/app/UDIChat';
  * builds a DataPackage from Elasticsearch + UBKG metadata.
  */
 
-// TODO: Swap for production endpoint when ready.
 const HUBMAP_DATAPACKAGE_URL = '/data/hubmap_api/datapackage.json';
-// For local development with portal UI running in parallel (requires CORS bypass in browser):
+// For local development with portal UI running locally in parallel (requires CORS bypass in browser):
 // const HUBMAP_DATAPACKAGE_URL = 'http://localhost:5001/metadata/v0/udi/datapackage.json';
-// const HUBMAP_DATAPACKAGE_URL =
-// 'https://portal.hubmapconsortium.org/metadata/v0/udi/datapackage.json';
+// For direct access to the live portal endpoint (requires CORS bypass in browser):
+// const HUBMAP_DATAPACKAGE_URL = 'https://portal.hubmapconsortium.org/metadata/v0/udi/datapackage.json';
 
 /**
  * Standalone dev/demo entry. Configuration is driven by Vite env vars so the

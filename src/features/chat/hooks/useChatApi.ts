@@ -40,6 +40,11 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
   // `sendMessage`, consumed by `runCompletion` for the response/rebuff/
   // request_failed events.
   const turnIdRef = useRef<string | null>(null);
+  // Holds the turnId of a message the user submitted while the data package
+  // was still loading. The user message + spinner show immediately; the
+  // backend request is deferred until domains are ready (flushQueuedMessage,
+  // driven by ChatPanel once loadingPhase flips to 'ready').
+  const queuedTurnIdRef = useRef<string | null>(null);
 
   const runCompletion = useCallback(
     async (messages: Message[], turnId: string) => {
@@ -51,13 +56,15 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
       setError(null);
 
       try {
-        const toolCalls = await queryLLM(
+        const { toolCalls, usage } = await queryLLM(
           config,
           messages,
           dpState.dataPackageString,
           dpState.dataDomainsString,
+          conversationStore.getState().conversationId,
         );
 
+        conversationStore.getState().addUsage(usage);
         conversationStore.getState().addMessage({
           role: 'assistant',
           content: '',
@@ -117,10 +124,49 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
         conversationLength: conversationStore.getState().messages.length,
         hasUserApiKey: !!config.openAiKey,
       });
+      // The LLM needs loaded data domains to answer. If they aren't ready yet,
+      // queue the request: show the spinner now, fire the backend call once
+      // ChatPanel flushes the queue on loadingPhase === 'ready'.
+      if (dataPackageStore.getState().loadingPhase !== 'ready') {
+        queuedTurnIdRef.current = turnId;
+        setIsLoading(true);
+        return;
+      }
       await runCompletion(conversationStore.getState().messages, turnId);
     },
-    [conversationStore, runCompletion, trackEvent, config.openAiKey],
+    [conversationStore, dataPackageStore, runCompletion, trackEvent, config.openAiKey],
   );
+
+  /**
+   * Fire a request that was queued while the data package was loading. Called
+   * by ChatPanel once domains are ready. No-ops if nothing is queued. Guards
+   * like `retryLastUserMessage`: if the trailing user turn is gone (e.g. the
+   * conversation was reset while queued), just clear the spinner. Reuses the
+   * queued turnId so `response_received` pairs back to the original
+   * `message_sent`.
+   */
+  const flushQueuedMessage = useCallback(async () => {
+    const turnId = queuedTurnIdRef.current;
+    if (!turnId) return;
+    queuedTurnIdRef.current = null;
+    const messages = conversationStore.getState().messages;
+    if (messages.length === 0 || messages[messages.length - 1].role !== 'user') {
+      setIsLoading(false);
+      return;
+    }
+    await runCompletion(messages, turnId);
+  }, [conversationStore, runCompletion]);
+
+  /**
+   * Drop a queued request and surface an error — used when the data package
+   * fails to load, so the queued message doesn't spin forever.
+   */
+  const cancelQueuedMessage = useCallback((message: string) => {
+    if (!queuedTurnIdRef.current) return;
+    queuedTurnIdRef.current = null;
+    setIsLoading(false);
+    setError(message);
+  }, []);
 
   /**
    * Re-run the last user turn. Used after the user enters their own API
@@ -143,9 +189,18 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
     if (trimmed.length === 0) return;
     const turnId = turnIdRef.current ?? generateEventId();
     turnIdRef.current = turnId;
-    state.loadConversation(trimmed);
+    // Same conversation continuing — keep the id so the retry's trace stays
+    // grouped with the original turn rather than starting a new session.
+    state.loadConversation(trimmed, { keepId: true });
     await runCompletion(trimmed, turnId);
   }, [conversationStore, runCompletion]);
 
-  return { sendMessage, retryLastUserMessage, isLoading, error };
+  return {
+    sendMessage,
+    retryLastUserMessage,
+    flushQueuedMessage,
+    cancelQueuedMessage,
+    isLoading,
+    error,
+  };
 }

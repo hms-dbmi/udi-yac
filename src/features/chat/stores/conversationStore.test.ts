@@ -34,6 +34,32 @@ describe('conversationStore', () => {
     expect(store.getState().messages).toEqual(loaded);
   });
 
+  it('starts with a non-empty conversationId', () => {
+    const store = createConversationStore();
+    expect(store.getState().conversationId).toBeTruthy();
+  });
+
+  it('newConversation mints a fresh conversationId', () => {
+    const store = createConversationStore();
+    const before = store.getState().conversationId;
+    store.getState().newConversation();
+    expect(store.getState().conversationId).not.toBe(before);
+  });
+
+  it('loadConversation mints a fresh conversationId by default', () => {
+    const store = createConversationStore();
+    const before = store.getState().conversationId;
+    store.getState().loadConversation([msg({ content: 'a' })]);
+    expect(store.getState().conversationId).not.toBe(before);
+  });
+
+  it('loadConversation keeps the conversationId when keepId is set', () => {
+    const store = createConversationStore();
+    const before = store.getState().conversationId;
+    store.getState().loadConversation([msg({ content: 'a' })], { keepId: true });
+    expect(store.getState().conversationId).toBe(before);
+  });
+
   it('exportConversation round-trips through JSON', () => {
     const store = createConversationStore();
     const m = msg({ content: 'hi' });

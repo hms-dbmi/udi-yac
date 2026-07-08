@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { UDIPalette } from 'udi-toolkit/react';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 
@@ -83,6 +84,14 @@ export interface UDIChatConfig {
    * README for the full event catalog and the properties each one emits.
    */
   onEvent?: TrackerFn;
+  /**
+   * Default color palette applied to every chart and table. Sets the
+   * categorical colors, ordinal colors, single mark color, and the continuous
+   * (numeric) color ramp. The `ramp` may be a Vega scheme name, an array of
+   * colors, or an interpolator function `(t: number) => string` for numeric
+   * scales. A spec-level per-encoding `range` still overrides it.
+   */
+  palette?: UDIPalette;
   className?: string;
   style?: React.CSSProperties;
 }

@@ -1,18 +1,12 @@
 import { useCallback, useState } from 'react';
-import {
-  RotateCcw,
-  KeyRound,
-  Save,
-  Lightbulb,
-  FileDown,
-  FlaskConical,
-  Database,
-  Menu,
-} from 'lucide-react';
+import { RotateCcw, Save, Lightbulb, FileDown, FlaskConical, Database, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -22,11 +16,13 @@ import { useGlobal } from '@/app/UDIChatContext';
 import { useExamplePrompts } from '../hooks/useExamplePrompts';
 import { useDebugExports } from '../hooks/useDebugExports';
 import { MemoryBankButton } from './MemoryBankButton';
+import { SessionStatusDialog } from './SessionStatusDialog';
 import type { QueryConfig } from '../api/completions';
 
 interface ChatHeaderBarProps {
   config: QueryConfig;
   hasApiKey: boolean;
+  onSetApiKey: (key: string) => void;
   onClearApiKey: () => void;
   showDrawerToggle?: boolean;
   onToggleDrawer?: () => void;
@@ -44,6 +40,7 @@ interface ChatHeaderBarProps {
 export function ChatHeaderBar({
   config,
   hasApiKey,
+  onSetApiKey,
   onClearApiKey,
   showDrawerToggle,
   onToggleDrawer,
@@ -60,6 +57,12 @@ export function ChatHeaderBar({
     handleDownloadDataSchema,
   } = useDebugExports(config);
   const [examplesOpen, setExamplesOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+
+  const handleConfirmReset = useCallback(() => {
+    setResetConfirmOpen(false);
+    onReset();
+  }, [onReset]);
 
   const handleExampleClick = useCallback(
     (prompt: string) => {
@@ -121,18 +124,11 @@ export function ChatHeaderBar({
           </Dialog>
         )}
         <MemoryBankButton />
-        {hasApiKey && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClearApiKey} />
-              }
-            >
-              <KeyRound className="h-3.5 w-3.5 text-green-600" />
-            </TooltipTrigger>
-            <TooltipContent>API key set — click to clear</TooltipContent>
-          </Tooltip>
-        )}
+        <SessionStatusDialog
+          hasApiKey={hasApiKey}
+          onSetApiKey={onSetApiKey}
+          onClearApiKey={onClearApiKey}
+        />
         {debugMode && (
           <>
             <Tooltip>
@@ -197,14 +193,33 @@ export function ChatHeaderBar({
             </Tooltip>
           </>
         )}
-        <Tooltip>
-          <TooltipTrigger
-            render={<Button variant="ghost" size="icon" className="h-7 w-7" onClick={onReset} />}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </TooltipTrigger>
-          <TooltipContent>Reset conversation</TooltipContent>
-        </Tooltip>
+        <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <DialogTrigger render={<Button variant="ghost" size="icon" className="h-7 w-7" />}>
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </DialogTrigger>
+              }
+            />
+            <TooltipContent>Reset conversation</TooltipContent>
+          </Tooltip>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-sm">Reset conversation?</DialogTitle>
+              <DialogDescription>
+                This clears the current chat, all open visualizations, brush selections, the
+                closed-viz memory bank, and any active cross-chart filters. This cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" size="sm" />}>Cancel</DialogClose>
+              <Button variant="destructive" size="sm" onClick={handleConfirmReset}>
+                Reset
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
