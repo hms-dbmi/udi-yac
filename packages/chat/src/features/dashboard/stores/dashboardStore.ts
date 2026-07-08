@@ -240,9 +240,7 @@ export function injectInteractivity(
   const sourceName = sourceData[0]?.name ?? 'unknown_source';
   const interactiveSpec: InteractiveSpec = structuredClone(spec);
   let firstRepresentation = interactiveSpec.representation as
-    | SpecRepresentationLike
-    | SpecRepresentationLike[]
-    | undefined;
+    SpecRepresentationLike | SpecRepresentationLike[] | undefined;
   if (Array.isArray(firstRepresentation)) {
     firstRepresentation = firstRepresentation[0];
   }

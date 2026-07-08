@@ -253,8 +253,7 @@ export function createDataFiltersStore() {
           // Narrow the unknown-valued arg bag down to the shape FilterData
           // tool-call arguments are expected to have.
           const filterArg = args.filter as
-            | { intervalRange?: { min: number; max: number } }
-            | undefined;
+            { intervalRange?: { min: number; max: number } } | undefined;
           if (!filterArg?.intervalRange) continue;
           for (const [selectionField, intervalSelection] of Object.entries(
             selection.selection ?? {},

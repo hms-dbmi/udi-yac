@@ -63,10 +63,14 @@ export function IntervalFilterComponent({
   const pendingRangeRef = useRef<number[] | null>(null);
   const commitFrameRef = useRef<number | null>(null);
 
-  // Sync local state when store range changes externally (e.g. reset, session load)
-  useEffect(() => {
+  // Sync local state when store range changes externally (e.g. reset, session load).
+  // Render-time adjustment instead of an effect — see react.dev "You Might Not
+  // Need an Effect": storing information from previous renders.
+  const [prevStoreRange, setPrevStoreRange] = useState(storeRange);
+  if (prevStoreRange !== storeRange) {
+    setPrevStoreRange(storeRange);
     setLocalRange(storeRange);
-  }, [storeRange]);
+  }
 
   // Cancel any pending frame on unmount so we don't touch the store after teardown.
   useEffect(() => {
