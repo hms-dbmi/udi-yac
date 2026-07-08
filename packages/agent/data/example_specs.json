@@ -1,0 +1,377 @@
+[
+  {
+    "id": "ex_001",
+    "tags": {
+      "mark_types": ["bar"],
+      "data_tasks": ["comparison"],
+      "field_types": ["nominal_x_quantitative_y"],
+      "complexity": "simple"
+    },
+    "metadata": {
+      "question": "What is the numerical count of samples categorized based on preparation condition?",
+      "description": "A vertical bar chart showing the count of samples grouped by preparation condition."
+    },
+    "spec": {
+      "source": {
+        "name": "samples",
+        "source": "./data/hubmap_2025-05-05/samples.csv"
+      },
+      "transformation": [
+        { "groupby": "preparation_condition" },
+        { "rollup": { "samples count": { "op": "count" } } }
+      ],
+      "representation": {
+        "mark": "bar",
+        "mapping": [
+          { "encoding": "x", "field": "preparation_condition", "type": "nominal" },
+          { "encoding": "y", "field": "samples count", "type": "quantitative" }
+        ]
+      }
+    }
+  },
+  {
+    "id": "ex_002",
+    "tags": {
+      "mark_types": ["bar"],
+      "data_tasks": ["comparison", "distribution"],
+      "field_types": ["quantitative_x_nominal_y_color"],
+      "complexity": "complex"
+    },
+    "metadata": {
+      "question": "Would you be able to determine the count of datasets categorized by pixel height unit and background social history?",
+      "description": "A horizontal stacked/grouped bar chart showing dataset counts across social history categories, colored by pixel height unit, requiring a cross-table join."
+    },
+    "spec": {
+      "source": [
+        { "name": "datasets", "source": "./data/hubmap_2025-05-05/datasets.csv" },
+        { "name": "donors", "source": "./data/hubmap_2025-05-05/donors.csv" }
+      ],
+      "transformation": [
+        {
+          "join": { "on": ["donor.hubmap_id", "hubmap_id"] },
+          "in": ["datasets", "donors"],
+          "out": "datasets__donors"
+        },
+        { "groupby": ["social_history", "resolution_y_unit"] },
+        { "rollup": { "count datasets": { "op": "count" } } }
+      ],
+      "representation": {
+        "mark": "bar",
+        "mapping": [
+          { "encoding": "x", "field": "count datasets", "type": "quantitative" },
+          { "encoding": "color", "field": "resolution_y_unit", "type": "nominal" },
+          { "encoding": "y", "field": "social_history", "type": "nominal" }
+        ]
+      }
+    }
+  },
+  {
+    "id": "ex_003",
+    "tags": {
+      "mark_types": ["point"],
+      "data_tasks": ["correlation"],
+      "field_types": ["quantitative_x_quantitative_y_nominal_color"],
+      "complexity": "simple"
+    },
+    "metadata": {
+      "question": "Do UMI read classes manifest clusters within RNA input and fragment size data?",
+      "description": "A scatter plot of library average fragment size vs. RNA-seq assay input, colored by UMI read class to reveal clustering patterns."
+    },
+    "spec": {
+      "source": {
+        "name": "datasets",
+        "source": "./data/hubmap_2025-05-05/datasets.csv"
+      },
+      "representation": {
+        "mark": "point",
+        "mapping": [
+          { "encoding": "x", "field": "library_average_fragment_size", "type": "quantitative" },
+          { "encoding": "y", "field": "rnaseq_assay_input", "type": "quantitative" },
+          { "encoding": "color", "field": "umi_read", "type": "nominal" }
+        ]
+      }
+    }
+  },
+  {
+    "id": "ex_004",
+    "tags": {
+      "mark_types": ["line"],
+      "data_tasks": ["trend", "distribution"],
+      "field_types": ["quantitative_x_quantitative_y_nominal_color"],
+      "complexity": "complex"
+    },
+    "metadata": {
+      "question": "Could you whip up a graph that represents the distribution percentage of high-quality sequencing reads, using lines for each type of library build?",
+      "description": "A CDF-style line chart showing the cumulative percentile of sequencing read percent Q30 values, grouped by library layout."
+    },
+    "spec": {
+      "source": {
+        "name": "datasets",
+        "source": "./data/hubmap_2025-05-05/datasets.csv"
+      },
+      "transformation": [
+        { "filter": "d['sequencing_read_percent_q30'] != null" },
+        { "orderby": { "field": "sequencing_read_percent_q30", "order": "asc" } },
+        { "groupby": "library_layout" },
+        { "derive": { "total": "count()" } },
+        { "derive": { "percentile": { "rolling": { "expression": "count() / d.total" } } } }
+      ],
+      "representation": {
+        "mark": "line",
+        "mapping": [
+          { "encoding": "x", "field": "sequencing_read_percent_q30", "type": "quantitative" },
+          { "encoding": "y", "field": "percentile", "type": "quantitative" },
+          { "encoding": "color", "field": "library_layout", "type": "nominal" }
+        ]
+      }
+    }
+  },
+  {
+    "id": "ex_005",
+    "tags": {
+      "mark_types": ["arc"],
+      "data_tasks": ["proportion"],
+      "field_types": ["quantitative_theta_nominal_color"],
+      "complexity": "moderate"
+    },
+    "metadata": {
+      "question": "We should implement a pie chart to illustrate the transposition reagent kit numbers.",
+      "description": "A donut/pie chart showing the frequency proportion of each transposition reagent kit type."
+    },
+    "spec": {
+      "source": {
+        "name": "datasets",
+        "source": "./data/hubmap_2025-05-05/datasets.csv"
+      },
+      "transformation": [
+        { "groupby": "transposition_reagent_kit" },
+        { "rollup": { "frequency": { "op": "frequency" } } }
+      ],
+      "representation": {
+        "mark": "arc",
+        "mapping": [
+          { "encoding": "theta", "field": "frequency", "type": "quantitative" },
+          { "encoding": "color", "field": "transposition_reagent_kit", "type": "nominal" },
+          { "encoding": "radius", "value": 60 },
+          { "encoding": "radius2", "value": 80 }
+        ]
+      }
+    }
+  },
+  {
+    "id": "ex_006",
+    "tags": {
+      "mark_types": ["area"],
+      "data_tasks": ["distribution"],
+      "field_types": ["quantitative_x_quantitative_y"],
+      "complexity": "moderate"
+    },
+    "metadata": {
+      "question": "Kindly describe the extent of variation in RNA samples.",
+      "description": "A kernel density estimation (KDE) area chart showing the distribution of RNA-seq assay input values."
+    },
+    "spec": {
+      "source": {
+        "name": "datasets",
+        "source": "./data/hubmap_2025-05-05/datasets.csv"
+      },
+      "transformation": [
+        { "filter": "d['rnaseq_assay_input'] != null" },
+        {
+          "kde": {
+            "field": "rnaseq_assay_input",
+            "output": { "sample": "rnaseq_assay_input", "density": "density" }
+          }
+        }
+      ],
+      "representation": {
+        "mark": "area",
+        "mapping": [
+          { "encoding": "x", "field": "rnaseq_assay_input", "type": "quantitative" },
+          { "encoding": "y", "field": "density", "type": "quantitative" }
+        ]
+      }
+    }
+  },
+  {
+    "id": "ex_007",
+    "tags": {
+      "mark_types": ["rect"],
+      "data_tasks": ["distribution"],
+      "field_types": ["quantitative_x_quantitative_x2_quantitative_y"],
+      "complexity": "moderate"
+    },
+    "metadata": {
+      "question": "Please create a straightforward graph illustrating the elapsed time since the acquisition instrument's last calibration.",
+      "description": "A histogram using rect marks with binned calibration time values on the x-axis and count on the y-axis."
+    },
+    "spec": {
+      "source": {
+        "name": "datasets",
+        "source": "./data/hubmap_2025-05-05/datasets.csv"
+      },
+      "transformation": [
+        { "filter": "d['time_since_acquisition_instrument_calibration_value'] != null" },
+        {
+          "binby": {
+            "field": "time_since_acquisition_instrument_calibration_value",
+            "output": { "bin_start": "start", "bin_end": "end" }
+          }
+        },
+        { "rollup": { "count": { "op": "count" } } }
+      ],
+      "representation": {
+        "mark": "rect",
+        "mapping": [
+          { "encoding": "x", "field": "start", "type": "quantitative" },
+          { "encoding": "x2", "field": "end", "type": "quantitative" },
+          { "encoding": "y", "field": "count", "type": "quantitative" }
+        ]
+      }
+    }
+  },
+  {
+    "id": "ex_008",
+    "tags": {
+      "mark_types": ["rect", "text"],
+      "data_tasks": ["correlation", "comparison"],
+      "field_types": ["nominal_x_nominal_y_quantitative_color"],
+      "complexity": "complex"
+    },
+    "metadata": {
+      "question": "Are there any clusters apparent regarding dataset counts related to acquisition instrument manufacturers and protocol DOIs?",
+      "description": "A heatmap with rect marks colored by dataset count and text labels overlaid, showing the cross-tabulation of acquisition instrument vendor and protocol DOI."
+    },
+    "spec": {
+      "source": {
+        "name": "datasets",
+        "source": "./data/hubmap_2025-05-05/datasets.csv"
+      },
+      "transformation": [
+        { "groupby": ["overall_protocols_io_doi", "acquisition_instrument_vendor"] },
+        { "rollup": { "count datasets": { "op": "count" } } },
+        { "derive": { "udi_internal_percentile": "d['count datasets'] / max(d['count datasets'])" } },
+        { "derive": { "udi_internal_text_color_threshold": "d.udi_internal_percentile > .5 ? 'large' : 'small'" } }
+      ],
+      "representation": [
+        {
+          "mark": "rect",
+          "mapping": [
+            { "encoding": "color", "field": "count datasets", "type": "quantitative" },
+            { "encoding": "y", "field": "acquisition_instrument_vendor", "type": "nominal" },
+            { "encoding": "x", "field": "overall_protocols_io_doi", "type": "nominal" }
+          ]
+        },
+        {
+          "mark": "text",
+          "mapping": [
+            { "encoding": "text", "field": "count datasets", "type": "quantitative" },
+            { "encoding": "y", "field": "acquisition_instrument_vendor", "type": "nominal" },
+            { "encoding": "x", "field": "overall_protocols_io_doi", "type": "nominal" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "ex_009",
+    "tags": {
+      "mark_types": ["area", "line"],
+      "data_tasks": ["distribution", "comparison"],
+      "field_types": ["quantitative_x_quantitative_y_nominal_color"],
+      "complexity": "complex"
+    },
+    "metadata": {
+      "question": "Does it seem like each consortium has similar body mass averages?",
+      "description": "A layered area-and-line chart showing KDE density curves of body mass index grouped by consortium, with semi-transparent area fills and solid line outlines."
+    },
+    "spec": {
+      "source": {
+        "name": "donors",
+        "source": "./data/hubmap_2025-05-05/donors.csv"
+      },
+      "transformation": [
+        { "filter": "d['body_mass_index_value'] != null" },
+        { "groupby": "mapped_consortium" },
+        {
+          "kde": {
+            "field": "body_mass_index_value",
+            "output": { "sample": "body_mass_index_value", "density": "density" }
+          }
+        }
+      ],
+      "representation": [
+        {
+          "mark": "area",
+          "mapping": [
+            { "encoding": "x", "field": "body_mass_index_value", "type": "quantitative" },
+            { "encoding": "color", "field": "mapped_consortium", "type": "nominal" },
+            { "encoding": "y", "field": "density", "type": "quantitative" },
+            { "encoding": "opacity", "value": 0.25 }
+          ]
+        },
+        {
+          "mark": "line",
+          "mapping": [
+            { "encoding": "x", "field": "body_mass_index_value", "type": "quantitative" },
+            { "encoding": "color", "field": "mapped_consortium", "type": "nominal" },
+            { "encoding": "y", "field": "density", "type": "quantitative" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "ex_010",
+    "tags": {
+      "mark_types": ["row"],
+      "data_tasks": ["summary"],
+      "field_types": ["text_and_bar_composite"],
+      "complexity": "moderate"
+    },
+    "metadata": {
+      "question": "Could you inform me how many records include barcode probe specifics?",
+      "description": "A composite row mark showing the count and percentage of dataset records that have valid barcode probe data, combining text values with a proportion bar."
+    },
+    "spec": {
+      "source": {
+        "name": "datasets",
+        "source": "./data/hubmap_2025-05-05/datasets.csv"
+      },
+      "transformation": [
+        { "derive": { "datasets Count": "count()" } },
+        { "filter": "d['number_of_barcode_probes'] != null" },
+        {
+          "rollup": {
+            "Valid number_of_barcode_probes Count": { "op": "count" },
+            "datasets Count": { "op": "median", "field": "datasets Count" }
+          }
+        },
+        {
+          "derive": {
+            "Valid number_of_barcode_probes %": "d['Valid number_of_barcode_probes Count'] / d['datasets Count']"
+          }
+        }
+      ],
+      "representation": {
+        "mark": "row",
+        "mapping": [
+          { "encoding": "text", "field": "Valid number_of_barcode_probes Count", "mark": "text", "type": "nominal" },
+          { "encoding": "text", "field": "datasets Count", "mark": "text", "type": "nominal" },
+          {
+            "encoding": "x",
+            "field": "Valid number_of_barcode_probes %",
+            "mark": "bar",
+            "type": "quantitative"
+          },
+          {
+            "encoding": "y",
+            "field": "Valid number_of_barcode_probes %",
+            "mark": "line",
+            "type": "quantitative"
+          }
+        ]
+      }
+    }
+  }
+]

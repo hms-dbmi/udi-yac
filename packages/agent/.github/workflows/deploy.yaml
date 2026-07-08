@@ -1,0 +1,27 @@
+name: Deploy to EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build Docker image
+        run: docker build -t udi-agent .
+
+      - name: Restart container
+        run: |
+          docker stop udi-agent || true
+          docker rm udi-agent || true
+          docker run -d \
+            --name udi-agent \
+            --restart unless-stopped \
+            -p 80:80 \
+            --env-file /home/ec2-user/.env \
+            udi-agent
+
+      - name: Cleanup old images
+        run: docker image prune -f

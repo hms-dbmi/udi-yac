@@ -1,0 +1,75 @@
+version: 0.0.1
+
+tool:
+  name: UDI Agent
+  repo_url: https://github.com/hms-dbmi/UDIAgent
+  tool_homepage: https://hidivelab.org/research/projects/universal-discovery-interface/
+  documentation_url: https://github.com/hms-dbmi/UDIAgent/blob/main/README.md
+  tool_type: WebAPI
+
+llm:
+  usesLlm: true
+  bringOwnKey: true
+
+input:
+  - name: Omics/molecular
+    dataCategory: omics-molecular
+    dataClass: tabular
+    dataType: metadata
+    format:
+      - csv
+    dataStandard:
+      - none
+    proprietary: false
+    source: https://huggingface.co/datasets/HIDIVE/DQVis
+
+output:
+  - name: Visualization Specifications to be rendered in a front end environment by UDI Grammar visualiztion toolkit.
+    dataCategory: interactive-visualization
+    dataClass: data-viz
+    dataType: interactive-visualization
+    format:
+      - none
+    dataStandard:
+      - None
+    proprietary: false
+    source:
+
+license:
+  license_type: MIT
+  link: https://github.com/hms-dbmi/UDIAgent/blob/main/LICENSE
+
+funding:
+  source: ARPA-H
+  agreement: Not specified
+  link: ""
+
+domains:
+  - Biomedical Data Portals
+
+credit:
+  - name: UDI Harvard
+    role: Developer
+    org: Harvard University
+    url: https://hidivelab.org/
+
+target_users:
+  primary_user:
+    user_type: researcher
+    technical_literacy_level:
+      - intermediate
+    biomedical_literacy_level:
+      - expert
+
+maturity:
+  beginning_maturity: 1
+  current_maturity: 5
+
+media:
+  [
+    {
+      "link": "https://hidivelab.org/research/projects/universal-discovery-interface/",
+    },
+  ]
+
+collaborations: []

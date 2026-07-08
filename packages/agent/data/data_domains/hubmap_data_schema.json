@@ -1,0 +1,2983 @@
+{
+  "name": "hubmap_metadata",
+  "resources": [
+    {
+      "name": "donors",
+      "type": "table",
+      "path": "donors.tsv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "uuid",
+            "type": "string",
+            "description": "#",
+            "udi:cardinality": 432,
+            "udi:unique": true,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "hubmap_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 432,
+            "udi:unique": true,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "abo_blood_group_system",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "age_unit",
+            "type": "string",
+            "description": "Unit for age measurement.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "age_value",
+            "type": "number",
+            "description": "The time elapsed since birth.",
+            "udi:cardinality": 137,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "apolipoprotein_e_phenotype",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "body_mass_index_unit",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "body_mass_index_value",
+            "type": "number",
+            "description": "An individual's weight in kilograms divided by the square of the height in meters.",
+            "udi:cardinality": 176,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "cause_of_death",
+            "type": "string",
+            "description": "The circumstance or condition that caused death.",
+            "udi:cardinality": 8,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "created_by_user_displayname",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 25,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "created_by_user_email",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 26,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "created_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 432,
+            "udi:unique": true,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "death_event",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "egfr_ckd_epi_2021__unit",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "egfr_ckd_epi_2021__value",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "ethnicity",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "gestational_age_unit",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "gestational_age_value",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 7,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "group_name",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 18,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "height_unit",
+            "type": "string",
+            "description": "Unit for height measurement.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "height_value",
+            "type": "number",
+            "description": "The vertical measurement or distance from the base to the top of a subject or participant.",
+            "udi:cardinality": 66,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "kidney_donor_profile_index_unit",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "kidney_donor_profile_index_value",
+            "type": "number",
+            "description": "The Kidney Donor Profle Index (KDPI) is a numerical measure that combines ten donor factors, including clinical parameters and demographics, to summarize into a single number the quality of deceased donor kidneys relative to other recovered kidneys. The KDPI is derived by frst calculating the Kidney Donor Risk Index (KDRI) for a deceased donor. Kidneys from a donor with a KDPI of 90%, for example, have a KDRI (which indicates relative risk of graft failure) greater than 90% of recovered kidneys. The KDPI is simply a mapping of the KDRI from a relative risk scale to a cumulative percentage scale. The reference population used for this mapping is all deceased donors in the United States with a kidney recovered for the purpose of transplantation in the prior calendar year. Lower KDPI values are associated with increased donor quality and expected longevity. https://optn.transplant.hrsa.gov/media/1512/guide_to_calculating_interpreting_kdpi.pdf ",
+            "udi:cardinality": 25,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "last_modified_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 432,
+            "udi:unique": true,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "mapped_consortium",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "mapped_statusdata_access_level",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "mechanism_of_injury",
+            "type": "string",
+            "description": "Mechanism of injury may be, for example: fall, impact (eg: auto accident), weapon (eg: firearm), etc.",
+            "udi:cardinality": 12,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "medical_history",
+            "type": "string",
+            "description": "A record of a patient's background regarding health and the occurrence of disease events of the individual.",
+            "udi:cardinality": 85,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "other_anatomic_concept",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "pathology_note",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "published_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "race",
+            "type": "string",
+            "description": "A grouping of humans based on shared physical characteristics or social/ethnic identity generally viewed as distinct.",
+            "udi:cardinality": 7,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "rh_blood_group",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "serum_creatinine_unit",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "serum_creatinine_value",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "Biological sex at birth: male or female or other.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "social_history",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 24,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "status",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "weight_unit",
+            "type": "string",
+            "description": "Weight unit",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "weight_value",
+            "type": "number",
+            "description": "Weight of the participant",
+            "udi:cardinality": 173,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "fitzpatrick_classification_scale",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 4
+          }
+        ],
+        "primaryKey": [
+          "hubmap_id"
+        ],
+        "foreignKeys": []
+      },
+      "udi:row_count": 432,
+      "udi:column_count": 40
+    },
+    {
+      "name": "samples",
+      "type": "table",
+      "path": "samples.tsv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "uuid",
+            "type": "string",
+            "description": "#",
+            "udi:cardinality": 4489,
+            "udi:unique": true,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "hubmap_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 4489,
+            "udi:unique": true,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "PPID",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "Preservation_condition",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "Preservation_media",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "area_unit",
+            "type": "string",
+            "description": "The area unit of measurement",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "area_value",
+            "type": "number",
+            "description": "The area of the sample section.",
+            "udi:cardinality": 80,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "cold_ischemia_time_unit",
+            "type": "string",
+            "description": "Time unit",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "cold_ischemia_time_value",
+            "type": "number",
+            "description": "Time interval on ice to the start of preservation protocol.",
+            "udi:cardinality": 79,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "created_by_user_displayname",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 37,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "created_by_user_email",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 40,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "created_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 3922,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "donor.hubmap_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 432,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "entity_type",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "group_name",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 19,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "health_status",
+            "type": "string",
+            "description": "Patient's baseline physical condition prior to immediate event leading to organ/tissue acquisition. For example, if a relatively healthy patient suffers trauma, and as a result of reparative surgery, a tissue sample is collected, the subject will be deemed \u201crelatively healthy\u201d.   Likewise, a relatively healthy subject may have experienced trauma leading to brain death.  As a result of organ donation, a sample is collected.  In this scenario, the subject is deemed \u201crelatively healthy.\u201d",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "is_suspension_enriched",
+            "type": "string",
+            "description": "Was the cell/nuclei population enriched?",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "last_modified_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 3980,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "mapped_consortium",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "mapped_statusdata_access_level",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "metadata_schema_id",
+            "type": "string",
+            "description": "The string that serves as the definitive identifier for the metadata schema version and is readily interpretable by computers for data validation and processing. Example: 22bc762a-5020-419d-b170-24253ed9e8d9",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "description": "Miscellaneous details about the sample, not captured in the existing metadata fields.",
+            "udi:cardinality": 84,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "organ_condition",
+            "type": "string",
+            "description": "Health status of the organ at the time of sample recovery.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "origin_samples_unique_mapped_organs",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 29,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "pathologist_report",
+            "type": "string",
+            "description": "Further details on organ level QC checks.",
+            "udi:cardinality": 14,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "perfusion_solution",
+            "type": "string",
+            "description": "Type of solution that was used to perfuse the organ.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_condition",
+            "type": "string",
+            "description": "The condition by which the preparation occurred, such as was the sample placed in dry ice during the preparation.",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_medium",
+            "type": "string",
+            "description": "The medium used during the sample preparation",
+            "udi:cardinality": 7,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_protocol_doi",
+            "type": "string",
+            "description": "DOI for the protocols.io page that describes the assay or sample procurment and preparation. For example for an imaging assay, the protocol might include staining of a section through the creation of an OME-TIFF file. In this case the protocol would include any image processing steps required to create the OME-TIFF file. Example: https://dx.doi.org/10.17504/protocols.io.eq2lyno9qvx9/v1",
+            "udi:cardinality": 23,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "procedure_date",
+            "type": "string",
+            "description": "Date of procedure to procure organ.",
+            "udi:cardinality": 67,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "processing_time_unit",
+            "type": "string",
+            "description": "The time unit of measurement",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "processing_time_value",
+            "type": "number",
+            "description": "How long the tissue was being handled before the initial preservation.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "published_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "quality_criteria",
+            "type": "string",
+            "description": "For example, RIN: 8.7. For suspensions, measured by visual inspection prior to cell lysis or defined by known parameters such as wells with several cells or no cells. This can be captured at a high level. \"OK\" or \"not OK\", or with more specificity such as \"debris\", \"clump\", \"low clump\".",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sample_category",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sample_id",
+            "type": "string",
+            "description": "Unique HuBMAP or SenNet identifier for the sample assigned by the ingest portal. Example: HBM743.CKJW.876 or SNT923.UYTE.122",
+            "udi:cardinality": 1144,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "section_index_number",
+            "type": "number",
+            "description": "The index number for the section if the sample is a single section.",
+            "udi:cardinality": 67,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "source_id",
+            "type": "string",
+            "description": "Unique HuBMAP or SenNet identifier for the source (parent) from which the sample was taken. Example: HBM122.EFGH.789 or SNT234.RTYU.119",
+            "udi:cardinality": 420,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "source_storage_duration_unit",
+            "type": "string",
+            "description": "The time duration unit of measurement",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "source_storage_duration_value",
+            "type": "number",
+            "description": "How long was the source material (parent) stored, prior to this sample being processed.",
+            "udi:cardinality": 226,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "specimen_preservation_temperature",
+            "type": "string",
+            "description": "The temperature of the medium during the preservation process.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "specimen_quality_criteria",
+            "type": "string",
+            "description": "For example, RIN: 8.7.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "specimen_tumor_distance_unit",
+            "type": "string",
+            "description": "Distance unit",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "specimen_tumor_distance_value",
+            "type": "number",
+            "description": "If surgical sample, how far from the tumor was the sample obtained from. Typically a number of centimeters. Leave blank if not applicable or unknown.",
+            "udi:cardinality": 11,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "status",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "storage_medium",
+            "type": "string",
+            "description": "What was the sample preserved in.",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "storage_method",
+            "type": "string",
+            "description": "The method by which the sample was stored, after preparation and before the assay was performed.",
+            "udi:cardinality": 7,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "suspension_entity_count",
+            "type": "number",
+            "description": "Total number of cell/nuclei yielded post dissociation and enrichment.",
+            "udi:cardinality": 83,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "suspension_entity_type",
+            "type": "string",
+            "description": "The type of single cell entity derived from isolation protocol.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "thickness_unit",
+            "type": "string",
+            "description": "The thickness unit of measuement",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "thickness_value",
+            "type": "number",
+            "description": "Thickness of the sample section.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "tissue_weight_unit",
+            "type": "string",
+            "description": "The tissue weight unit of measurement",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "tissue_weight_value",
+            "type": "number",
+            "description": "The weight of a tissue block or the piece of tissue used in a suspension. Knowing the weight of the parent block and tissue used in a suspension, allows us to compute what percentage of the block was used for the suspension.",
+            "udi:cardinality": 95,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "vital_state",
+            "type": "string",
+            "description": "Identify the vital state of the donor.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "warm_ischemia_time_unit",
+            "type": "string",
+            "description": "Time unit",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "warm_ischemia_time_value",
+            "type": "string",
+            "description": "Time interval between cessation of blood flow and cooling to 4C.",
+            "udi:cardinality": 11,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "histological_report",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 21
+          },
+          {
+            "name": "is_rehydrated",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "suspension_enriched_target",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          }
+        ],
+        "primaryKey": [
+          "hubmap_id"
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "donor.hubmap_id"
+            ],
+            "reference": {
+              "resource": "donors",
+              "fields": [
+                "hubmap_id"
+              ]
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "one"
+            }
+          }
+        ]
+      },
+      "udi:row_count": 4489,
+      "udi:column_count": 56
+    },
+    {
+      "name": "datasets",
+      "type": "table",
+      "path": "datasets.tsv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "uuid",
+            "type": "string",
+            "description": "#",
+            "udi:cardinality": 6323,
+            "udi:unique": true,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "hubmap_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 6323,
+            "udi:unique": true,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "ablation_distance_between_shots_x_units",
+            "type": "string",
+            "description": "Units of x resolution distance between laser ablation shots.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "ablation_distance_between_shots_x_value",
+            "type": "number",
+            "description": "x resolution. Distance between laser ablation shots in the X-dimension.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "ablation_distance_between_shots_y_units",
+            "type": "string",
+            "description": "Units of y resolution distance between laser ablation shots.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "ablation_distance_between_shots_y_value",
+            "type": "number",
+            "description": "y resolution. Distance between laser ablation shots in the Y-dimension.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "ablation_frequency_unit",
+            "type": "string",
+            "description": "Frequency unit of laser ablation",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "ablation_frequency_value",
+            "type": "number",
+            "description": "Frequency value of laser ablation",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "acquisition_id",
+            "type": "string",
+            "description": "The acquisition_id refers to the directory containing the ROI images for a slide. Together, the \"Acquisition ID\" and the \"ROI ID\" indicate the slide-ROI represented in the image.",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "acquisition_instrument_model",
+            "type": "string",
+            "description": "Manufacturers of an acquisition instrument may offer various versions (models) of that instrument with different features or sensitivities. Differences in features or sensitivities may be relevant to processing or interpretation of the data.",
+            "udi:cardinality": 73,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "acquisition_instrument_vendor",
+            "type": "string",
+            "description": "An acquisition instrument is the device that contains the signal detection hardware and signal processing software. Assays generate signals such as light of various intensities or color or signals representing the molecular mass.",
+            "udi:cardinality": 29,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "amount_of_input_analyte_unit",
+            "type": "string",
+            "description": "Units of amount of entity input to assay value",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "amount_of_input_analyte_value",
+            "type": "number",
+            "description": "The amount of RNA or DNA input to the assay, typically measured by a Qubit, BioAnalyzer, or TapeStation. In most single cell/nuclei assays, this value isn't available.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "analyte_class",
+            "type": "string",
+            "description": "Analytes are the target molecules being measured with the assay.",
+            "udi:cardinality": 12,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "area_normalized_ion_dose_unit",
+            "type": "string",
+            "description": "Area normalized ion dose unit.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "area_normalized_ion_dose_value",
+            "type": "number",
+            "description": "Number of primary ions delivered to the sample per unit area.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "assay_category",
+            "type": "string",
+            "description": "Each assay is placed into one of the following 4 general categories: generation of images of microscopic entities, identification & quantitation of molecules by mass spectrometry, imaging mass spectrometry, and determination of nucleotide sequence.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "assay_input_entity",
+            "type": "string",
+            "description": "This is the entity from which the analyte is being captured. For example, for bulk sequencing this would be \"tissue\", while it would be \"single cell\" for single cell sequencing. This field is used to determine which analysis pipeline to run.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "assay_type",
+            "type": "string",
+            "description": "The specific type of assay being executed.",
+            "udi:cardinality": 37,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "barcode_offset",
+            "type": "string",
+            "description": "Positions in the read at which the cell or capture spot barcodes start. Cell and capture spot barcodes are, for example, 3 x 8 bp sequences that are spaced by constant sequences (the offsets). First barcode at position 0, then 38, then 76. This should be included when constructing sequencing libraries with a non-commercial kit.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "barcode_read",
+            "type": "string",
+            "description": "Which read file contains the cell or capture spot barcode. This should be included when constructing sequencing libraries with a non-commercial kit. This field is required if the source material is barcoded. This field is used to determine which analysis pipeline to run.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "barcode_size",
+            "type": "string",
+            "description": "Length of the cell or capture spot barcode in base pairs. Cell and capture spot barcodes are, for example, 3 x 8 bp sequences that are spaced by constant sequences, the offsets. This should be included when constructing sequencing libraries with a non-commercial kit. This field is required if the source material is barcoded.  This field is used to determine which analysis pipeline to run.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "bead_barcode_offset",
+            "type": "string",
+            "description": "Position(s) in the read at which the bead barcode starts",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "bead_barcode_read",
+            "type": "string",
+            "description": "Which read file contains the bead barcode",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "bead_barcode_size",
+            "type": "string",
+            "description": "Length of the bead barcode in base pairs",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "bulk_atac_cell_isolation_protocols_io_doi",
+            "type": "string",
+            "description": "Link to a protocols document answering the question: How was tissue stored and processed for cell/nuclei isolation",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "bulk_rna_isolation_protocols_io_doi",
+            "type": "string",
+            "description": "Link to a protocols document answering the question: How was tissue stored and processed for RNA isolation RNA_isolation_protocols_io_doi",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "bulk_rna_isolation_quality_metric_value",
+            "type": "number",
+            "description": "RIN value",
+            "udi:cardinality": 32,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "bulk_rna_yield_units_per_tissue_unit",
+            "type": "string",
+            "description": "RNA amount per Tissue input amount. Valid values should be weight/weight (ng/mg).",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "bulk_rna_yield_value",
+            "type": "number",
+            "description": "RNA (ng) per Weight of Tissue (mg). Answer the question: How much RNA in ng was isolated? How much tissue in mg was initially used for isolating RNA? Calculate the yield by dividing total RNA isolated by amount of tissue used to isolate RNA from (ng/mg).",
+            "udi:cardinality": 75,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "bulk_transposition_input_number_nuclei",
+            "type": "number",
+            "description": "A number (no comma separators)",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "capture_area_id",
+            "type": "string",
+            "description": "Which capture area on the slide was used. For Visium this would be [A1, B1, C1, D1]. For HiFi this would be the lane on the flowcell.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "capture_batch_id",
+            "type": "string",
+            "description": "A lab-generated ID to identify which cells were captured at the same time. This would, for example, be an ID to denote which datasets were derived from a single 10X Genomics Chromium Controller run. In the case of the 10X Controller this could be the chip ID and would allow users the ability to determine which samples were processed together in a Chromium controller. It is recommended that data providers prefix the ID with the center name, to prevent values overlapping across centers.",
+            "udi:cardinality": 57,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "cell_barcode_offset",
+            "type": "string",
+            "description": "Position(s) in the read at which the cell barcode starts.",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "cell_barcode_read",
+            "type": "string",
+            "description": "Which read file contains the cell barcode",
+            "udi:cardinality": 18,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "cell_barcode_size",
+            "type": "string",
+            "description": "Length of the cell barcode in base pairs",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "cell_boundary_marker_or_stain",
+            "type": "string",
+            "description": "If a marker or stain was used to identify all cell boundaries in the tissue, then the name of the marker or stain should be included here. The name of the antibody-targeted molecule marker or non-antibody targeted molecule stain included here must be identical to what is found in the imaging data. For example, with the PhenoCycler, this name must match the value found in the XPD output file. If multiple marker or stains are used to identify all cell boundaries, then a comma separated list should be used here.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "created_by_user_displayname",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 22,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "created_by_user_email",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 24,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "created_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 6322,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "data_collection_mode",
+            "type": "string",
+            "description": "Mode of data collection in tandem MS assays. Either DDA (Data-dependent acquisition), DIA (Data-independent acquisition), SRM (multiple reaction monitoring), or PRM (parallel reaction monitoring).",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "data_precision_bytes",
+            "type": "number",
+            "description": "Numerical data precision in bytes.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "dataset_type",
+            "type": "string",
+            "description": "The specific type of dataset being produced.",
+            "udi:cardinality": 15,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "description": "Free-text description of this assay.",
+            "udi:cardinality": 255,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "desi_solvent",
+            "type": "string",
+            "description": "Solvent composition for conducting nanospray desorption electrospray ionization (nanoDESI) or desorption electrospray ionization (DESI).",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "desi_solvent_flow_rate",
+            "type": "number",
+            "description": "The rate of flow of the solvent into a spray.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "desi_solvent_flow_rate_unit",
+            "type": "string",
+            "description": "Units of the rate of solvent flow.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "dms",
+            "type": "string",
+            "description": "Was differential mobility spectrometry used in this assay?",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "dna_assay_input_unit",
+            "type": "string",
+            "description": "Units of DNA input into library preparation",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "dna_assay_input_value",
+            "type": "number",
+            "description": "Amount of DNA input into library preparation",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "donor.hubmap_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 432,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "dual_count_start",
+            "type": "number",
+            "description": "Threshold for dual counting.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "end_datetime",
+            "type": "string",
+            "description": "Time stamp indicating end of ablation for ROI",
+            "udi:cardinality": 14,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "execution_datetime",
+            "type": "string",
+            "description": "Start date and time of assay, typically a date-time stamped folder generated by the acquisition instrument. YYYY-MM-DD hh:mm, where YYYY is the year, MM is the month with leading 0s, and DD is the day with leading 0s, hh is the hour with leading zeros, mm are the minutes with leading zeros.",
+            "udi:cardinality": 528,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "expected_cell_count",
+            "type": "number",
+            "description": "How many cells are expected? This may be used in downstream pipelines to guide selection of cell barcodes or segmentation parameters.",
+            "udi:cardinality": 24,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "expected_entity_capture_count",
+            "type": "number",
+            "description": "Number of cells, nuclei or capture spots expected to be captured by the assay. For Visium this is the total number of spots covered by tissue, within the capture area.",
+            "udi:cardinality": 95,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "gdna_fragmentation_quality_assurance",
+            "type": "string",
+            "description": "Is the gDNA integrity good enough for WGS? This is usually checked through running a gel.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "group_name",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 22,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "increment_z_unit",
+            "type": "string",
+            "description": "The units of increment z value.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "increment_z_value",
+            "type": "number",
+            "description": "The distance between sequential optical sections.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "intended_tile_overlap_percentage",
+            "type": "number",
+            "description": "The amount of overlap between tiled images. This is the set point, where as during image acquisition there will be slight variations due to stage registration.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "ion_mobility",
+            "type": "string",
+            "description": "Specifies which technology was used for ion mobility spectrometry. Technologies for measuring ion mobility: Traveling Wave Ion Mobility Spectrometry (TWIMS), Trapped Ion Mobility Spectrometry (TIMS), High Field Asymmetric waveform ion Mobility Spectrometry (FAIMS), Drift Tube Ion Mobility Spectrometry (DTIMS), Structures for Lossless Ion Manipulations (SLIM), and cyclic Ion Mobility Spectrometry (cIMS).",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "is_batch_staining_done",
+            "type": "string",
+            "description": "Are the slides stained using a linear batch method or individually?",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "is_image_preprocessing_required",
+            "type": "string",
+            "description": "Depending on if the acquisition instrument was a microscope, slide scanner, etc. will indicate whether or not any level of preprocessing was required to assemble the image (e.g., fusing image tiles) .",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "is_staining_automated",
+            "type": "string",
+            "description": "Is the slide staining automated with an instrument?",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "is_targeted",
+            "type": "string",
+            "description": "Specifies whether or not a specific molecule(s) is/are targeted for detection/measurement by the assay (\"Yes\" or \"No\"). The CODEX analyte is protein.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "is_technical_replicate",
+            "type": "string",
+            "description": "Is the sequencing reaction run in replicate, \"Yes\" or \"No\". If \"Yes\", FASTQ files in dataset need to be merged.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "label_name",
+            "type": "number",
+            "description": "If the samples were labeled (e.g. TMT), provide the name/ID of the label on this sample. Leave blank if not applicable.",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "labeling",
+            "type": "string",
+            "description": "Indicates whether samples were labeled prior to MS analysis (e.g., TMT)",
+            "udi:cardinality": 7,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "last_modified_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 6323,
+            "udi:unique": true,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "lc_column_model",
+            "type": "string",
+            "description": "The model number/name of the liquid chromatography column. If it is a custom self-packed, pulled tip capillary is used enter \u201cPulled tip capilary\u201d.",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_column_vendor",
+            "type": "string",
+            "description": "The manufacturer of the liquid chromatography column unless self-packed, pulled tip capillary is used.",
+            "udi:cardinality": 8,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_flow_rate_unit",
+            "type": "string",
+            "description": "Units of flow rate.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_flow_rate_value",
+            "type": "number",
+            "description": "Value of flow rate.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "lc_gradient",
+            "type": "string",
+            "description": "LC gradient",
+            "udi:cardinality": 8,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_id_unit",
+            "type": "string",
+            "description": "units of LC column inner diameter (typically microns)",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_id_value",
+            "type": "number",
+            "description": "LC column inner diameter (microns)",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "lc_instrument_model",
+            "type": "string",
+            "description": "The model number/name of the instrument used for liquid chromatography.",
+            "udi:cardinality": 11,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_instrument_vendor",
+            "type": "string",
+            "description": "The manufacturer of the instrument used for liquid chromatography.",
+            "udi:cardinality": 9,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_length_unit",
+            "type": "string",
+            "description": "units for LC column length (typically cm)",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_length_value",
+            "type": "number",
+            "description": "LC column length",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "lc_mobile_phase_a",
+            "type": "string",
+            "description": "Composition of mobile phase A.",
+            "udi:cardinality": 9,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_mobile_phase_b",
+            "type": "string",
+            "description": "Composition of mobile phase B",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_resin",
+            "type": "string",
+            "description": "Details of the resin used for liquid chromatography, including vendor, particle size, pore size.",
+            "udi:cardinality": 9,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_temp_unit",
+            "type": "string",
+            "description": "units for LC temperature",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "lc_temp_value",
+            "type": "number",
+            "description": "LC temperature",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_adapter_sequence",
+            "type": "string",
+            "description": "5\u2019 and/or 3\u2019 read adapter sequences used as part of the library preparation protocol to render the library compatible with the sequencing protocol and instrumentation. This should be provided as comma-separated list of key:value pairs (adapter name:sequence).",
+            "udi:cardinality": 45,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_average_fragment_size",
+            "type": "number",
+            "description": "Average size of sequencing library fragments estimated via gel electrophoresis or bioanalyzer/tapestation. Numeric value in base pairs (bp).",
+            "udi:cardinality": 301,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_concentration_unit",
+            "type": "string",
+            "description": "Unit of library concentration value.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_concentration_value",
+            "type": "number",
+            "description": "The concentration value of the pooled library samples submitted for sequencing.",
+            "udi:cardinality": 476,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_construction_method",
+            "type": "string",
+            "description": "Describes DNA library preparation kit. Modality of isolating gDNA, Fragmentation and generating sequencing libraries.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_construction_protocols_io_doi",
+            "type": "string",
+            "description": "A link to the protocol document containing the library construction method (including version) that was used.",
+            "udi:cardinality": 21,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_creation_date",
+            "type": "string",
+            "description": "date and time of library creation. YYYY-MM-DD, where YYYY is the year, MM is the month with leading 0s, and DD is the day with leading 0s.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_final_yield",
+            "type": "number",
+            "description": "Total ng of library after final pcr amplification step.",
+            "udi:cardinality": 63,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_final_yield_unit",
+            "type": "string",
+            "description": "Units of final library yield",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_final_yield_value",
+            "type": "number",
+            "description": "Total number of ng of library after final pcr amplification step. This is the concentration (ng/ul) * volume (ul)",
+            "udi:cardinality": 373,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_id",
+            "type": "string",
+            "description": "An id for the library. The id may be text and/or numbers",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_input_amount_unit",
+            "type": "string",
+            "description": "unit of library input amount value",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_input_amount_value",
+            "type": "number",
+            "description": "The amount of cDNA, after amplification, that was used for library construction.",
+            "udi:cardinality": 281,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_layout",
+            "type": "string",
+            "description": "Whether the library was generated for single-end or paired end sequencing",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_output_amount_unit",
+            "type": "string",
+            "description": "Units of library final yield.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "library_output_amount_value",
+            "type": "number",
+            "description": "Total amount (eg. nanograms) of library after the clean-up step of final pcr amplification step. Answer the question: What is the Qubit measured concentration (ng/ul) times the elution volume (ul) after the final clean-up step?",
+            "udi:cardinality": 441,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_pcr_cycles",
+            "type": "number",
+            "description": "Number of PCR cycles to amplify cDNA",
+            "udi:cardinality": 14,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_pcr_cycles_for_sample_index",
+            "type": "number",
+            "description": "Number of PCR cycles performed for library indexing",
+            "udi:cardinality": 11,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "library_preparation_kit",
+            "type": "string",
+            "description": "Reagent kit used for library preparation",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "mapped_area_unit",
+            "type": "string",
+            "description": "The unit of measurement for the mapping area. For Visium and GeoMx this is typically um^2.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "mapped_area_value",
+            "type": "number",
+            "description": "For Visium, this is the area of spots that was covered by tissue within the captured area, not the total possible captured area which is fixed. For GeoMx this would be the area of the AOI being captured. For HiFi this is the summed area of the ROIs in a single flowcell lane. For CosMx, Xenium and Resolve, this is the area of the FOV (aka ROI) region being captured.",
+            "udi:cardinality": 12,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "mapped_consortium",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "mapped_statusdata_access_level",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "mass_resolving_power",
+            "type": "number",
+            "description": "The mass resolving power m/\u2206m, where \u2206m is defined as the full width at half-maximum (FWHM) for a given peak with a specified mass-to-charge (m/z). (unitless)",
+            "udi:cardinality": 30,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "max_x_width_unit",
+            "type": "string",
+            "description": "Units of image width of the ROI acquisition",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "max_x_width_value",
+            "type": "number",
+            "description": "Image width value of the ROI acquisition",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "max_y_height_unit",
+            "type": "string",
+            "description": "Units of image height of the ROI acquisition",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "max_y_height_value",
+            "type": "number",
+            "description": "Image height value of the ROI acquisition",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "metadata_schema_id",
+            "type": "string",
+            "description": "The string that serves as the definitive identifier for the metadata schema version and is readily interpretable by computers for data validation and processing. Example: 22bc762a-5020-419d-b170-24253ed9e8d9",
+            "udi:cardinality": 16,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "ms_scan_mode",
+            "type": "string",
+            "description": "MS (mass spectrometry) scan mode refers to the number of steps in the separation of fragments.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "ms_source",
+            "type": "string",
+            "description": "The ion source type used for surface sampling.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "mz_range_high_value",
+            "type": "number",
+            "description": "The high value of the scanned mass range for MS1. (unitless)",
+            "udi:cardinality": 8,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "mz_range_low_value",
+            "type": "number",
+            "description": "The low value of the scanned mass range for MS1. (unitless)",
+            "udi:cardinality": 11,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "mz_resolving_power",
+            "type": "number",
+            "description": "The peak (m/z) used to calculate the resolving power.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "non_global_files",
+            "type": "number",
+            "description": "A semicolon separated list of non-shared files to be included in the dataset. The path assumes the files are located in the \"TOP/non-global/\" directory. For example, for the file is TOP/non-global/lab_processed/images/1-tissue-boundary.geojson the value of this field would be \"./lab_processed/images/1-tissue-boundary.geojson\". After ingest, these files will be copied to the appropriate locations within the respective dataset directory tree. This field is used for internal HuBMAP processing. Examples for GeoMx and PhenoCycler are provided in the File Locations documentation: https://docs.google.com/document/d/1n2McSs9geA9Eli4QWQaB3c9R3wo5d5U1Xd57DWQfN5Q/edit#heading=h.1u82i4axggee",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "nuclear_marker_or_stain",
+            "type": "string",
+            "description": "For markers, an antibody-targetted molecule present in or around the cell nucleus, the protein or gene symbol that identifies the antibody target that is used as the nuclear marker. This symbol must match the antibody target that is either generated from the panel used or entered with custom panels. Preferably, if using a custom antibody marker, this symbol should be the HGNC symbol (https://www.genenames.org/).   For non-protein targets this is the stain name (e.g., DAPI) and, when appropriate, associated staining kit and vendor. For the PhenoCycler, this symbol must match the value found in the XPD output file.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "number_of_antibodies",
+            "type": "number",
+            "description": "Number of antibodies",
+            "udi:cardinality": 17,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_barcode_probes",
+            "type": "number",
+            "description": "Number of barcode probes targeting mRNAs (eg. 24,000 barcode probes = 24,000 mRNAs - 1 per mRNA of interest)",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_barcode_regions_per_barcode_probe",
+            "type": "number",
+            "description": "Number of barcode regions on each mRNA barcode probe (the paper describes mRNA probes with 4 barcoded regions)",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_biomarker_imaging_rounds",
+            "type": "number",
+            "description": "Number of imaging rounds to capture the tagged biomarkers. For CODEX a biomarker imaging round consists of 1. oligo application, 2. fluor application, 3. washes. For Cell DIVE a biomarker imaging round consists of 1. staining of a biomarker via secondary detection or direct conjugate and 2. dye inactivation.",
+            "udi:cardinality": 9,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_channels",
+            "type": "number",
+            "description": "Number of fluorescent channels imaged during each cycle.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_cycles",
+            "type": "number",
+            "description": "Number of cycles of 1. oligo application, 2. fluor application, 3. washes",
+            "udi:cardinality": 11,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_imaging_rounds",
+            "type": "number",
+            "description": "the total number of acquisitions performed on microscope to collect autofluorescence/background or stained signal.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_input_cells_or_nuclei",
+            "type": "number",
+            "description": "How many cells or nuclei were input to the assay? This is typically not available for preparations working with bulk tissue.",
+            "udi:cardinality": 107,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_iterations_of_cdna_amplification",
+            "type": "number",
+            "description": "This is the amplification of the cDNA prior to library construction. This is typically a PCR amplification, while for linear amplification methods like aRNA this would be the number of rounds of aRNA.",
+            "udi:cardinality": 11,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_pcr_cycles_for_indexing",
+            "type": "number",
+            "description": "Number of PCR cycles performed in order to add adapters and amplify the library. This does not include the cDNA amplification which is captured in the \"number of iterations of cDNA amplification\" field.",
+            "udi:cardinality": 14,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_pre_amplification_pcr_cycles",
+            "type": "number",
+            "description": "The number of PCR cycles run after the Chromium Controller step and prior to separating the suspension and initiating library construction",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_pseudocolors_per_channel",
+            "type": "number",
+            "description": "Number of pseudocolors that can be assigned to each fluorescent channel (the paper describes 20 pseudocolors per channel (x 3 channels -> total = 60)",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_readout_probes_per_channel",
+            "type": "number",
+            "description": "Number of readout probes that can be interrogated per channel per cycle (the paper describes 20 readout probes per channel (x 3 channels -> total = 60))",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_sections",
+            "type": "number",
+            "description": "Number of sections",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_spots",
+            "type": "number",
+            "description": "Number of capture spots within the mapped area. For Visium this would be the number of spots covered by tissue, while it's the number of spots within ROIs for HiFi.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "number_of_total_imaging_rounds",
+            "type": "number",
+            "description": "The total number of acquisitions performed on microscope to collect autofluorescence/background or stained signal (e.g., histology).",
+            "udi:cardinality": 9,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "operator",
+            "type": "string",
+            "description": "Name of the person responsible for executing the assay.",
+            "udi:cardinality": 48,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "operator_email",
+            "type": "string",
+            "description": "Email address for the operator.",
+            "udi:cardinality": 46,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "origin_samples_unique_mapped_organs",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 30,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "overall_protocols_io_doi",
+            "type": "string",
+            "description": "DOI for protocols.io for the overall process.",
+            "udi:cardinality": 16,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "parent_sample_id",
+            "type": "string",
+            "description": "Unique HuBMAP or SenNet identifier of the sample (i.e., block, section or suspension) used to perform this assay. For example, for a RNAseq assay, the parent would be the suspension, whereas, for one of the imaging assays, the parent would be the tissue section. If an assay comes from multiple parent samples then this should be a comma separated list. Example: HBM386.ZGKG.235, HBM672.MKPK.442 or SNT232.UBHJ.322, SNT329.ALSK.102",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "permeabilization_time_unit",
+            "type": "string",
+            "description": "The unit for the permeabilization time.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "permeabilization_time_value",
+            "type": "number",
+            "description": "Permeabilization time used for this tissue section.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "pi",
+            "type": "string",
+            "description": "Name of the principal investigator responsible for the data.",
+            "udi:cardinality": 25,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "pi_email",
+            "type": "string",
+            "description": "Email address for the principal investigator.",
+            "udi:cardinality": 22,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "pixel_dwell_time_unit",
+            "type": "string",
+            "description": "Pixel dwell time unit.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "pixel_dwell_time_value",
+            "type": "number",
+            "description": "Resident time of primary ion beam on each pixel to ionize it.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "pixel_size_x_unit",
+            "type": "string",
+            "description": "Width unit of the pixel or voxel measurement.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "pixel_size_x_value",
+            "type": "number",
+            "description": "Width value of the pixel or voxel measurement (distinct from the image resolution_x_value).",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "pixel_size_y_unit",
+            "type": "string",
+            "description": "Length unit of the pixel or voxel measurement.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "pixel_size_y_value",
+            "type": "number",
+            "description": "Length value of the pixel or voxel measurement (distinct from the image resolution_y_value).",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "polarity",
+            "type": "string",
+            "description": "The polarity of the mass analysis (positive or negative ion modes)",
+            "udi:cardinality": 8,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_instrument_kit",
+            "type": "string",
+            "description": "The reagent kit used with the preparation instrument.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_instrument_model",
+            "type": "string",
+            "description": "Manufacturers of a staining system instrument may offer various versions (models) of that instrument with different features. Differences in features or sensitivities may be relevant to processing or interpretation of the data.",
+            "udi:cardinality": 14,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_instrument_vendor",
+            "type": "string",
+            "description": "The manufacturer of the instrument used to prepare (staining/processing) the sample for the assay. If an automatic slide staining method was indicated this field should list the manufacturer of the instrument.",
+            "udi:cardinality": 11,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_maldi_matrix",
+            "type": "string",
+            "description": "The matrix is a compound of crystallized molecules that acts like a buffer between the sample and the laser. It also helps ionize the sample, carrying it along the flight tube so it can be detected.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_protocol_doi",
+            "type": "string",
+            "description": "DOI for the protocols.io page that describes the assay or sample procurment and preparation. For example for an imaging assay, the protocol might include staining of a section through the creation of an OME-TIFF file. In this case the protocol would include any image processing steps required to create the OME-TIFF file. Example: https://dx.doi.org/10.17504/protocols.io.eq2lyno9qvx9/v1",
+            "udi:cardinality": 55,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "preparation_type",
+            "type": "string",
+            "description": "Common methods of depositing matrix for MALDI imaging include robotic spotting, electrospray deposition, and spray-coating with an airbrush.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "primary_ion",
+            "type": "string",
+            "description": "Primary ion.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "primary_ion_current_unit",
+            "type": "string",
+            "description": "Primary ion current unit, typically nA or pA",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "primary_ion_current_value",
+            "type": "number",
+            "description": "Primary ion current value.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "processing_protocols_io_doi",
+            "type": "string",
+            "description": "DOI for analysis protocols.io for this assay.",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "processing_search",
+            "type": "string",
+            "description": "Software for analyzing and searching LC-MS/MS omics data",
+            "udi:cardinality": 8,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "protocols_io_doi",
+            "type": "string",
+            "description": "DOI for protocols.io referring to the protocol for this assay.",
+            "udi:cardinality": 50,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "published_timestamp",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 6304,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "puck_id",
+            "type": "string",
+            "description": "Slide-seq captures RNA sequence data on spatially barcoded arrays of beads. Beads are fixed to a slide in a region shaped like a round puck. Each puck has a unique puck_id.",
+            "udi:cardinality": 42,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "range_z_unit",
+            "type": "string",
+            "description": "The unit of range_z_value.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "range_z_value",
+            "type": "number",
+            "description": "The total range of the z axis.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "reagent_prep_protocols_io_doi",
+            "type": "string",
+            "description": "DOI for protocols.io referring to the protocol for preparing reagents for the assay.",
+            "udi:cardinality": 7,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "resolution_x_unit",
+            "type": "string",
+            "description": "The unit of measurement of the width of a pixel.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "resolution_x_value",
+            "type": "number",
+            "description": "The width of a pixel.",
+            "udi:cardinality": 21,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "resolution_y_unit",
+            "type": "string",
+            "description": "The unit of measurement of the height of a pixel.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "resolution_y_value",
+            "type": "number",
+            "description": "The height of a pixel",
+            "udi:cardinality": 21,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "resolution_z_unit",
+            "type": "string",
+            "description": "The unit of incremental distance between image slices.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "resolution_z_value",
+            "type": "number",
+            "description": "The distance at which two objects along the detection z-axis can be distinguished (resolved as 2 objects).",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "rnaseq_assay_input",
+            "type": "number",
+            "description": "Number of cell/nuclei input to the assay",
+            "udi:cardinality": 130,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "rnaseq_assay_input_unit",
+            "type": "string",
+            "description": "Units of RNA input amount to the assay",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "rnaseq_assay_input_value",
+            "type": "number",
+            "description": "RNA input amount value to the assay",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "rnaseq_assay_method",
+            "type": "string",
+            "description": "The kit used for the RNA sequencing assay",
+            "udi:cardinality": 24,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "roi_description",
+            "type": "string",
+            "description": "A description of the anatomical structure being captured in the region of interest (ROI).",
+            "udi:cardinality": 17,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "roi_id",
+            "type": "number",
+            "description": "Multiple images are acquired from regions of interest (ROI1, ROI2, ROI3, etc) on a slide. The ROI ID is a number from 1 to N representing the ROI captured on a slide.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "sample_indexing_kit",
+            "type": "string",
+            "description": "Indexes are needed for multiplexing sequencing libraries for simultaneous sequencing (pooling) and proper attachment to the Illumina flowcell. Each indexing kit would have a number of compatible sequences (\"sample indexing sets\") that are used to label some number of samples (the number of sets depend on the kit).",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sample_indexing_set",
+            "type": "string",
+            "description": "The specific sequencing barcode index set used, selected from the sample indexing kit. Example: For 10X this might be \"SI-GA-A1\", for Nextera \"N505 - CTCCTTAC\"",
+            "udi:cardinality": 232,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sample_quality_metric",
+            "type": "string",
+            "description": "This is a quality metric by visual inspection. This should answer the question: Are the nuclei intact and are the nuclei free of significant amounts of debris? This can be captured at a high level, \u201cOK\u201d or \u201cnot OK\u201d.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sc_isolation_cell_number",
+            "type": "number",
+            "description": "Total number of cell/nuclei yielded post dissociation and enrichment",
+            "udi:cardinality": 249,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "sc_isolation_enrichment",
+            "type": "string",
+            "description": "The method by which specific cell populations are sorted or enriched.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sc_isolation_entity",
+            "type": "string",
+            "description": "The type of single cell entity derived from isolation protocol",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sc_isolation_protocols_io_doi",
+            "type": "string",
+            "description": "Link to a protocols document answering the question: How were single cells separated into a single-cell suspension?",
+            "udi:cardinality": 19,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sc_isolation_quality_metric",
+            "type": "string",
+            "description": "A quality metric by visual inspection prior to cell lysis or defined by known parameters such as wells with several cells or no cells. This can be captured at a high level.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sc_isolation_tissue_dissociation",
+            "type": "string",
+            "description": "The method by which tissues are dissociated into single cells in suspension.",
+            "udi:cardinality": 9,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "scan_direction",
+            "type": "string",
+            "description": "This is the direction of imaging, which is required for stitching.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "section_prep_protocols_io_doi",
+            "type": "string",
+            "description": "DOI for protocols.io referring to the protocol for preparing tissue sections for the assay.",
+            "udi:cardinality": 22,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "segment_data_format",
+            "type": "string",
+            "description": "This refers to the data type, which is a \"float\" for the IMC counts.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sequencing_batch_id",
+            "type": "string",
+            "description": "The ID for the sequencing run. This could, for example, be the chip ID and should allow users the ability to determine which samples were processed together in a sequencing run. It is recommended that data providers prefix the ID with the center name, to prevent values overlapping across centers.",
+            "udi:cardinality": 39,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sequencing_phix_percent",
+            "type": "number",
+            "description": "Percent PhiX loaded to the run",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "sequencing_read_format",
+            "type": "string",
+            "description": "Number of sequencing cycles in each round of sequencing (i.e., Read1, i7 index, i5 index, and Read2). This is reported as a comma-delimited list. Example: For 10X snATAC-seq (R1,Index,R2,R3) this might be: 50,8,16,50. For SNARE-seq2 this might be: 75,94,8,75",
+            "udi:cardinality": 33,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sequencing_read_percent_q30",
+            "type": "number",
+            "description": "Q30 is the weighted average of all the reads (e.g. # bases UMI * q30 UMI + # bases R2 * q30 R2 + ...)",
+            "udi:cardinality": 461,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "sequencing_reagent_kit",
+            "type": "string",
+            "description": "Reagent kit used for sequencing",
+            "udi:cardinality": 28,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "signal_type",
+            "type": "string",
+            "description": "Type of signal measured per channel (usually dual counts)",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "slide_id",
+            "type": "string",
+            "description": "A unique ID denoting the slide used. This allows users the ability to determine which tissue sections were processed together on the same slide. It is recommended that data providers prefix the ID with the center name, to prevent values overlapping across centers.",
+            "udi:cardinality": 0,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "source_project",
+            "type": "string",
+            "description": "External source (outside of HuBMAP) of the project, eg. HCA (The Human Cell Atlas Consortium).",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "source_storage_duration_unit",
+            "type": "string",
+            "description": "The time duration unit of measurement",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "source_storage_duration_value",
+            "type": "number",
+            "description": "How long was the source material (parent) stored, prior to this sample being processed.",
+            "udi:cardinality": 281,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "spatial_sampling_type",
+            "type": "string",
+            "description": "Specifies whether or not the analysis was performed in a spatially targeted manner. Spatial profiling experiments target specific tissue foci but do not necessarily generate images. Spatial imaging expriments collect data from a regular array (pixels) that can be visualized as heat maps of ion intensity at each location (molecular images). Leave blank if data are derived from bulk analysis.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "spatial_target",
+            "type": "string",
+            "description": "Specifies the cell-type or functional tissue unit (FTU) that is targeted in the spatial profiling experiment. Leave blank if data are generated in imaging mode without a specific target structure.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "spatial_type",
+            "type": "string",
+            "description": "Specifies whether or not the analysis was performed in a spatialy targeted manner and the technique used for spatial sampling. For example, Laser-capture microdissection (LCM), Liquid Extraction Surface Analysis (LESA), Nanodroplet Processing in One pot for Trace Samples (nanoPOTS).",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "spot_size_unit",
+            "type": "string",
+            "description": "The unit for spot size value.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "spot_size_value",
+            "type": "number",
+            "description": "For assays where spots are used to define discrete capture areas, this is the area of a spot.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "spot_spacing_unit",
+            "type": "string",
+            "description": "Units corresponding to inter-spot distance",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "spot_spacing_value",
+            "type": "number",
+            "description": "Approximate center-to-center distance between capture spots.  Synonyms: Inter-Spot distance, Spot resolution, Pit size",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "stain",
+            "type": "string",
+            "description": "Chemical stains (dyes) applied to histology samples to highlight important features of the tissue as well as to enhance the tissue contrast.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "stain_name",
+            "type": "string",
+            "description": "The name of the chemical stains (dyes) applied to histology samples to highlight important features of the tissue as well as to enhance the tissue contrast.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "stain_technique",
+            "type": "string",
+            "description": "There are typically three types of stains: progressive, modified progressive, and regressive. Progressive staining occurs when the hematoxylin is added to the tissue without being followed by a differentiator to remove excess dye. With regressive and modified progressive staining, a differentiator is used.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "start_datetime",
+            "type": "string",
+            "description": "Time stamp indicating start of ablation for ROI",
+            "udi:cardinality": 14,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "step_z_value",
+            "type": "number",
+            "description": "The number of optical sections in z axis range.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "tile_configuration",
+            "type": "string",
+            "description": "This is how the tiles are configured for stitching.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "tiled_image_columns",
+            "type": "number",
+            "description": "This is how many columns used in stitching. This is sometimes referred to as the grid size x.",
+            "udi:cardinality": 7,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "tiled_image_count",
+            "type": "number",
+            "description": "This is the total number of raw (tiled) images captured, that are to be stitched together.",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "time_since_acquisition_instrument_calibration_unit",
+            "type": "string",
+            "description": "The time unit of measurement",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "time_since_acquisition_instrument_calibration_value",
+            "type": "number",
+            "description": "The amount of time since the acqusition instrument was last serviced by the vendor. This provides a metric for assessing drift in data capture.",
+            "udi:cardinality": 20,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "total_run_time_unit",
+            "type": "string",
+            "description": "The units for the total run time unit field.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "total_run_time_value",
+            "type": "number",
+            "description": "How long the tissue was on the acquisition instrument.",
+            "udi:cardinality": 29,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "transposition_input",
+            "type": "number",
+            "description": "Number of cell/nuclei input to the assay.",
+            "udi:cardinality": 67,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "transposition_kit_number",
+            "type": "string",
+            "description": "If Tn5 came from a kit, provide the catalog number.",
+            "udi:cardinality": 7,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "transposition_method",
+            "type": "string",
+            "description": "Modality of capturing accessible chromatin molecules. For example, this would be the type of kit that was used.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "transposition_reagent_kit",
+            "type": "string",
+            "description": "If Tn5 came from a kit, provide the kit details. This should be set to \"Not applicable\" if a custom or in-house kit was used.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "transposition_transposase_source",
+            "type": "string",
+            "description": "The source of the Tn5 transposase and transposon used for capturing accessible chromatin.",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "umi_offset",
+            "type": "string",
+            "description": "Position in the read at which the UMI barcode starts. This should be included when constructing sequencing libraries with a non-commercial kit.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "umi_read",
+            "type": "string",
+            "description": "Which read file contains the UMI barcode. This should be included when constructing sequencing libraries with a non-commercial kit.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "umi_size",
+            "type": "string",
+            "description": "Length of the umi barcode in base pairs. This should be included when constructing sequencing libraries with a non-commercial kit. This field is required if UMI are present. This field is used to determine which analysis pipeline to run.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "activation_stimulus",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          },
+          {
+            "name": "analysis_protocol_doi",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 17
+          },
+          {
+            "name": "anatomical_structure_id",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "anatomical_structure_label",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "antibody_reagent_kit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "calibration_kit_lot_number",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          },
+          {
+            "name": "instrument_calibration_bead_kit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "is_cell_activation_performed",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "is_custom_probes_used",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "is_erythrocyte_lysis_performed",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "is_fcr_blocking_applied",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "is_heparin_used",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "lc_column_length_unit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "lc_column_length_value",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "lc_gradient_unit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          },
+          {
+            "name": "lc_gradient_value",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          },
+          {
+            "name": "lc_inner_diameter_unit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "lc_inner_diameter_value",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "lc_temperature_unit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "lc_temperature_value",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "loaded_cell_concentration_unit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          },
+          {
+            "name": "loaded_cell_concentration_value",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          },
+          {
+            "name": "mass_analysis_polarity",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 2
+          },
+          {
+            "name": "mass_to_charge_range_high_value",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 2
+          },
+          {
+            "name": "mass_to_charge_range_low_value",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 4
+          },
+          {
+            "name": "mass_to_charge_resolving_power",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 3
+          },
+          {
+            "name": "matrix_deposition_method",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "ms_ionization_technique",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 3
+          },
+          {
+            "name": "number_of_mass_channels",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "number_of_panel_targets",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "oligo_probe_panel",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "preparation_matrix",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 2
+          },
+          {
+            "name": "probe_hybridization_time_unit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "probe_hybridization_time_value",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "proteinasek_concentration",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "proteinasek_incubation_time_unit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "proteinasek_incubation_time_value",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "roi_label",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 12
+          },
+          {
+            "name": "spatial_sampling_target",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          },
+          {
+            "name": "spatial_sampling_technique",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 0
+          },
+          {
+            "name": "target_retrieval_incubation_temperature",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "target_retrieval_incubation_time_unit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "target_retrieval_incubation_time_value",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 1
+          },
+          {
+            "name": "viability_reagent_kit",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 1
+          }
+        ],
+        "primaryKey": [
+          "hubmap_id"
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "donor.hubmap_id"
+            ],
+            "reference": {
+              "resource": "donors",
+              "fields": [
+                "hubmap_id"
+              ]
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "one"
+            }
+          },
+          {
+            "fields": [
+              "donor.hubmap_id"
+            ],
+            "reference": {
+              "resource": "samples",
+              "fields": [
+                "donor.hubmap_id"
+              ]
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "many"
+            }
+          }
+        ]
+      },
+      "udi:row_count": 6323,
+      "udi:column_count": 233
+    }
+  ],
+  "udi:name": "hubmap_2025-05-05",
+  "udi:path": "https://portal.hubmapconsortium.org/metadata/v0/udi/"
+}

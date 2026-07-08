@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RenderVisualizationWrapper",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "const": "RenderVisualization"
+    },
+    "arguments": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "spec"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "name",
+    "arguments"
+  ],
+  "additionalProperties": false
+}

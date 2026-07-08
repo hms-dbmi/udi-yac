@@ -1,0 +1,32 @@
+[
+  {
+    "name": "DirectResponse",
+    "description": "Directly answer the user's question if it is not related to biomedical topics. Do not use this tool for biomedical questions. If the question pertains to general information about you (e.g., 'What can you do?'), remember that you are TxAgent, an AI agent that utilizes multi-step reasoning and real-time biomedical knowledge retrieval across a toolbox to solve biomedical problems.",
+    "parameter": {
+      "type": "object",
+      "properties": 
+      {
+        "respose": {
+          "type": "string",
+          "description": "The response to the user's non-biomedical question.",
+          "required": true
+        }
+      }
+    }
+  },
+  {
+    "name": "RequireClarification",
+    "description": "Requests human clarification when the user's question is unclear, ambiguous, or lacks enough detail to provide an accurate response.",
+    "parameter": {
+      "type": "object",
+      "properties": 
+      {
+        "unclear_question": {
+          "type": "string",
+          "description": "The user's question that is difficult to understand or lacks sufficient detail. Do not include your response—only pass the unclear question.",
+          "required": true
+        }
+      }
+    }
+  }
+]

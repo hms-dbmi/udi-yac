@@ -1,0 +1,45 @@
+[project]
+name = "udiagent"
+version = "0.2.7"
+description = "UDI Agent: LLM-powered data visualization orchestration library"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+dependencies = [
+    "openai>=2.15.0",
+    "jsonschema>=4.26.0",
+    "requests>=2.32.5",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+langfuse = [
+    "langfuse>=4",
+]
+server = [
+    "fastapi[standard]>=0.128.0",
+    "python-jose>=3.5.0",
+    "python-dotenv>=1.0.0",
+]
+benchmark = [
+    "datasets>=4.5.0",
+    "huggingface-hub>=0.36.0",
+    "ijson>=3.4.0.post0",
+]
+codegen = [
+    "pandas>=2.0.0",
+    "udi-grammar-py",
+]
+test = [
+    "pytest>=8.0.0",
+]
+all = [
+    "udiagent[langfuse,server,benchmark,codegen]",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/udiagent"]

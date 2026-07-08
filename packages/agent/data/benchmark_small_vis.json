@@ -1,0 +1,26 @@
+[
+  {
+    "input": {
+      "model": "agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B",
+      "messages": [
+        {
+          "content": "scatterplot of bill depth and length",
+          "role": "user"
+        }
+      ],
+      "dataSchema": "{\"name\":\"penguins\",\"resources\":[{\"name\":\"penguins\",\"type\":\"table\",\"path\":\"penguins.csv\",\"scheme\":\"file\",\"format\":\"csv\",\"mediatype\":\"text/csv\",\"encoding\":\"utf-8\",\"schema\":{\"fields\":[{\"name\":\"rowid\",\"type\":\"string\",\"description\":\"row id\",\"udi:cardinality\":281,\"udi:unique\":true,\"udi:data_type\":\"nominal\"},{\"name\":\"species\",\"type\":\"string\",\"description\":\"species name of the penguin\",\"udi:cardinality\":4,\"udi:unique\":false,\"udi:data_type\":\"nominal\"},{\"name\":\"island\",\"type\":\"string\",\"description\":\"island penguin lives on\",\"udi:cardinality\":4,\"udi:unique\":false,\"udi:data_type\":\"nominal\"},{\"name\":\"sex\",\"type\":\"string\",\"description\":\"sex  of the penguin\",\"udi:cardinality\":2,\"udi:unique\":false,\"udi:data_type\":\"nominal\"},{\"name\":\"bill_length_mm\",\"type\":\"number\",\"description\":\"bill length of the penguin in millimeters\",\"udi:cardinality\":330,\"udi:unique\":false,\"udi:data_type\":\"quantitative\"},{\"name\":\"bill_depth_mm\",\"type\":\"number\",\"description\":\"bill depth of the penguin in millimeters\",\"udi:cardinality\":330,\"udi:unique\":false,\"udi:data_type\":\"quantitative\"},{\"name\":\"flipper_length_mm\",\"type\":\"number\",\"description\":\"flipper length of the penguin in millimeters\",\"udi:cardinality\":330,\"udi:unique\":false,\"udi:data_type\":\"quantitative\"},{\"name\":\"body_mass_g\",\"type\":\"number\",\"description\":\"body mass of the penguin in grams\",\"udi:cardinality\":330,\"udi:unique\":false,\"udi:data_type\":\"quantitative\"},{\"name\":\"year\",\"type\":\"number\",\"description\":\"the year the penguin was recorded\",\"udi:cardinality\":330,\"udi:unique\":false,\"udi:data_type\":\"quantitative\"}],\"primaryKey\":[\"rowid\"],\"foreignKeys\":[]},\"udi:row_count\":344,\"udi:column_count\":9}],\"udi:name\":\"penguins\",\"udi:path\":\"./data/penguins/\"}",
+      "dataDomains": "[{\"entity\":\"penguins\",\"field\":\"rowid\",\"type\":\"interval\",\"fieldDescription\":\"row id\",\"domain\":{\"min\":1,\"max\":344}},{\"entity\":\"penguins\",\"field\":\"species\",\"type\":\"point\",\"fieldDescription\":\"species name of the penguin\",\"domain\":{\"values\":[\"Adelie\",\"Gentoo\",\"Chinstrap\"]}},{\"entity\":\"penguins\",\"field\":\"island\",\"type\":\"point\",\"fieldDescription\":\"island penguin lives on\",\"domain\":{\"values\":[\"Torgersen\",\"Biscoe\",\"Dream\"]}},{\"entity\":\"penguins\",\"field\":\"bill_length_mm\",\"type\":\"interval\",\"fieldDescription\":\"bill length of the penguin in millimeters\",\"domain\":{\"min\":32.1,\"max\":59.6}},{\"entity\":\"penguins\",\"field\":\"bill_depth_mm\",\"type\":\"interval\",\"fieldDescription\":\"bill depth of the penguin in millimeters\",\"domain\":{\"min\":13.1,\"max\":21.5}},{\"entity\":\"penguins\",\"field\":\"flipper_length_mm\",\"type\":\"interval\",\"fieldDescription\":\"flipper length of the penguin in millimeters\",\"domain\":{\"min\":172,\"max\":231}},{\"entity\":\"penguins\",\"field\":\"body_mass_g\",\"type\":\"interval\",\"fieldDescription\":\"body mass of the penguin in grams\",\"domain\":{\"min\":2700,\"max\":6300}},{\"entity\":\"penguins\",\"field\":\"sex\",\"type\":\"point\",\"fieldDescription\":\"sex  of the penguin\",\"domain\":{\"values\":[\"male\",\"female\",null]}},{\"entity\":\"penguins\",\"field\":\"year\",\"type\":\"interval\",\"fieldDescription\":\"the year the penguin was recorded\",\"domain\":{\"min\":2007,\"max\":2009}}]"
+    },
+    "expected": {
+      "tool_calls": [
+        {
+          "name": "RenderVisualization",
+          "arguments": {
+            "spec": "{\"source\": {\"name\": \"penguins\", \"source\": \"./data/penguins/penguins.csv\"}, \"representation\": {\"mark\": \"point\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"bill_depth_mm\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"bill_length_mm\", \"type\": \"quantitative\"}]}}"
+          }
+        }
+      ],
+      "orchestrator_choice": "render-visualization"
+    }
+  }
+]
