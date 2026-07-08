@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-ssr/
+.quasar/
+*.log
+logs/
+.env
+.env.local
+.env.local.*
+*.local
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
+.idea/
+*storybook.log

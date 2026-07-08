@@ -1,0 +1,25 @@
+{
+  "name": "udi-yac-monorepo",
+  "private": true,
+  "packageManager": "pnpm@11.5.1",
+  "scripts": {
+    "build:toolkit": "pnpm --filter udi-toolkit build:all",
+    "build:chat": "pnpm run build:toolkit && pnpm --filter udi-yac build",
+    "build:chat:lib": "pnpm run build:toolkit && pnpm --filter udi-yac build:lib",
+    "build:grammar": "pnpm --filter udi-grammar-app build",
+    "build:storybook": "pnpm --filter udi-grammar-app build-storybook",
+    "build": "pnpm run build:toolkit && pnpm --filter udi-yac build:lib && pnpm run build:grammar",
+    "lint": "pnpm -r lint",
+    "test": "pnpm run build:toolkit && pnpm -r test",
+    "format": "pnpm -r format",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx,vue,json,css,md,yaml,yml}": "prettier --write"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.4.2"
+  }
+}
