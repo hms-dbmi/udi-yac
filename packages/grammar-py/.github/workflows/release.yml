@@ -1,0 +1,36 @@
+name: Release
+
+# This is a manual workflow for releasing new version of the package.
+#
+# It will:
+#   - Build the distribution
+#   - Publish it to PyPI
+#   - Create a new release on GitHub
+#
+# The version (and tag) of the release is determined by the version in the
+# `pyproject.toml` file.
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # Required for making the Release
+      id-token: write # Required for PyPI Trusted Publishing
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+
+      - name: Build distribution
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          verbose: true

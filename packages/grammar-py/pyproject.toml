@@ -1,0 +1,32 @@
+[project]
+name = "udi-grammar-py"
+version = "0.2.8"
+description = "A python library for creating udi-grammar specifications"
+readme = "README.md"
+authors = [
+    { name = "Devin Lange", email = "devinscottlange@gmail.com" }
+]
+requires-python = ">=3.13"
+license = { text = "MIT" }
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
+
+
+[project.urls]
+Homepage = "https://github.com/hms-dbmi/udi-grammar-py"
