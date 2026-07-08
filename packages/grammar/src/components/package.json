@@ -6,7 +6,7 @@
   "type": "module",
   "private": false,
   "main": "dist/index.cjs",
-  "homepage": "https://hms-dbmi.github.io/udi-grammar",
+  "homepage": "https://hms-dbmi.github.io/udi-yac/grammar/",
   "module": "dist/index.js",
   "umd": "dist/index.umd.cjs",
   "types": "dist/index.d.ts",
@@ -110,7 +110,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hms-dbmi/udi-grammar"
+    "url": "https://github.com/hms-dbmi/udi-yac",
+    "directory": "packages/grammar/src/components"
   },
   "license": "MIT",
   "publishConfig": {
@@ -118,23 +119,7 @@
   },
   "engines": {
     "node": "^28 || ^26 || ^24 || ^22 || ^20",
-    "npm": ">= 6.13.4",
-    "yarn": ">= 1.21.1"
-  },
-  "resolutions": {
-    "flatted": "3.4.2",
-    "node-forge": "1.4.0",
-    "express": "4.21.2",
-    "js-yaml": "4.1.1",
-    "cross-spawn": "7.0.6",
-    "glob": "10.5.0",
-    "**/anymatch/picomatch": "2.3.2",
-    "**/readdirp/picomatch": "2.3.2",
-    "**/micromatch/picomatch": "2.3.2",
-    "**/@rollup/pluginutils/picomatch": "4.0.4",
-    "**/rollup-plugin-visualizer/picomatch": "4.0.4",
-    "**/tinyglobby/picomatch": "4.0.4",
-    "postcss": "8.5.15"
+    "npm": ">= 6.13.4"
   },
   "eslintConfig": {
     "extends": []

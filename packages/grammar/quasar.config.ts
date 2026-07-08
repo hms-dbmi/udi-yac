@@ -37,7 +37,7 @@ export default defineConfig((/* ctx */) => {
         node: 'node20',
       },
 
-      publicPath: '/udi-grammar/',
+      publicPath: process.env.QUASAR_PUBLIC_PATH ?? '/udi-yac/grammar/',
 
       typescript: {
         strict: true,

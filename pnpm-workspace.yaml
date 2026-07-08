@@ -6,8 +6,10 @@ packages:
 
 # merged from packages/chat/pnpm-workspace.yaml
 allowBuilds:
+  "@parcel/watcher": true
   esbuild: true
   msw: true
+  vue-demi: true
 minimumReleaseAgeExclude:
   - udi-toolkit
 
@@ -20,10 +22,13 @@ overrides:
   cross-spawn: 7.0.6
   glob: 10.5.0
   postcss: 8.5.15
-  vite: 8.1.0
-  'anymatch>picomatch': 2.3.2
-  'readdirp>picomatch': 2.3.2
-  'micromatch>picomatch': 2.3.2
-  '@rollup/pluginutils>picomatch': 4.0.4
-  'rollup-plugin-visualizer>picomatch': 4.0.4
-  'tinyglobby>picomatch': 4.0.4
+  # scoped, not global: a global vite pin would also rewrite the vite 5 that
+  # chat's vitest 2 bundles internally, breaking its test transform
+  "udi-toolkit>vite": 8.1.0
+  "@quasar/app-vite>vite": 8.1.0
+  "anymatch>picomatch": 2.3.2
+  "readdirp>picomatch": 2.3.2
+  "micromatch>picomatch": 2.3.2
+  "@rollup/pluginutils>picomatch": 4.0.4
+  "rollup-plugin-visualizer>picomatch": 4.0.4
+  "tinyglobby>picomatch": 4.0.4

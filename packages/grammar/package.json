@@ -1,5 +1,5 @@
 {
-  "name": "quasar-project",
+  "name": "udi-grammar-app",
   "version": "0.0.1",
   "description": "Universal Discovery Interface Grammar",
   "productName": "Universal Discovery Interface Grammar",
@@ -68,23 +68,7 @@
   },
   "engines": {
     "node": "^28 || ^26 || ^24 || ^22 || ^20 || ^18",
-    "npm": ">= 6.13.4",
-    "yarn": ">= 1.21.1"
-  },
-  "resolutions": {
-    "flatted": "3.4.2",
-    "node-forge": "1.4.0",
-    "**/anymatch/picomatch": "2.3.2",
-    "**/readdirp/picomatch": "2.3.2",
-    "**/micromatch/picomatch": "2.3.2",
-    "**/rollup-plugin-visualizer/picomatch": "4.0.4",
-    "**/tinyglobby/picomatch": "4.0.4",
-    "express": "4.21.2",
-    "js-yaml": "4.1.1",
-    "cross-spawn": "7.0.6",
-    "glob": "10.5.0",
-    "vite": "8.1.0",
-    "postcss": "8.5.15"
+    "npm": ">= 6.13.4"
   },
   "eslintConfig": {
     "extends": [
