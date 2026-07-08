@@ -2,7 +2,11 @@
 
 Monorepo for the **Universal Discovery Interface (UDI)** — an AI-powered system for querying and visualizing biomedical datasets via natural language.
 
-Formerly four separate repositories, merged with full commit history preserved via `git subtree` (note: `git log --follow` across the subtree boundary is best-effort; `git log -- packages/<name>` always shows the full imported history).
+Formerly four separate repositories, merged with full commit history preserved via `git subtree`. Plain `git log -- packages/<name>` stops at the import boundary (files lived at different paths before); to browse a package's pre-merge history, follow the second parent of its import commit:
+
+```bash
+git log "$(git log --merges --grep="Add 'packages/chat/'" -n1 --format=%H)^2"
+```
 
 ## Packages
 
