@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "target": "es2022",
+    // `baseUrl` removed — deprecated in TS 6, and we only had the no-op
+    // default here. `paths` would still work tsconfig-relative if added.
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true
+  },
+  "include": ["react-wrapper/**/*"],
+  "exclude": []
+}

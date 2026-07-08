@@ -1,0 +1,885 @@
+import { ref } from 'vue';
+import { density1d, nrd } from 'fast-kde';
+import { cloneDeep, isEqual } from 'lodash';
+import type {
+  AggregateFunction,
+  DataSource,
+  DataTransformation,
+  DirectionalOrder,
+  FilterEntityRelationship,
+  FilterMatch,
+} from './GrammarTypes';
+// import { DuckDB, init } from './dataWrappers/DuckDB.js';
+import {
+  loadCSV,
+  agg,
+  op,
+  from,
+  rolling,
+  escape,
+  desc,
+  type ColumnTable,
+} from 'arquero';
+import type {
+  ColumnGetter,
+  ExprObject,
+  OrderKey,
+  TableExpr,
+} from 'arquero/dist/types/table/types';
+import { defineStore } from 'pinia';
+
+interface DataInterface {
+  source: DataSource;
+  dest: ColumnTable; // TODO: make more generic
+}
+
+export interface DataSourcesState {
+  [key: string]: DataInterface;
+}
+
+export interface ActiveDataSelection {
+  dataSourceKey: string;
+  selection: null | RangeSelection | PointSelection;
+  type: 'interval' | 'point';
+}
+
+export interface DataSelections {
+  [key: string]: ActiveDataSelection;
+}
+
+export interface RangeSelection {
+  [field: string]: [min: number, max: number];
+}
+
+export interface PointSelection {
+  // the field is the name of thing selected, e.g. "species"
+  // and the values are the selected values, e.g. ["setosa", "versicolor"]
+  [field: string]: string[];
+}
+
+export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
+  const dataSources = ref<DataSourcesState>({});
+  const dataSelections = ref<DataSelections>({});
+
+  function bindExternalDataSelections(
+    externalSelections: DataSelections,
+  ): void {
+    let changed = false;
+    for (const [selectionName, selection] of Object.entries(
+      externalSelections,
+    )) {
+      if (
+        selectionName in dataSelections.value &&
+        isEqual(dataSelections.value[selectionName], selection)
+      ) {
+        continue; // identical — skip to avoid reactive churn
+      }
+      dataSelections.value[selectionName] = selection;
+      changed = true;
+    }
+    if (changed) {
+      // Serialize only the selection payloads (not the full ActiveDataSelection
+      // objects which may reference reactive proxies) to avoid cyclic-object
+      // errors and to keep the hash lightweight.
+      const hashObj: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(dataSelections.value)) {
+        hashObj[k] = v?.selection ?? null;
+      }
+      selectionHash.value = JSON.stringify(hashObj);
+    }
+  }
+
+  function watchDataSelection(
+    dataSourceKey: string,
+    selectionName: string,
+    type: 'point' | 'interval',
+  ): { alreadyExists: boolean } {
+    if (selectionName in dataSelections.value) {
+      return { alreadyExists: true };
+    }
+    dataSelections.value[selectionName] = {
+      dataSourceKey,
+      selection: null,
+      type,
+    };
+    return { alreadyExists: false };
+  }
+
+  function updateDataSelection(
+    selectionName: string,
+    selection: RangeSelection | PointSelection | null,
+  ) {
+    if (!(selectionName in dataSelections.value)) {
+      throw new Error(`Selection name ${selectionName} not found`);
+    }
+    // Vega emits degenerate ranges like [Infinity, -Infinity] at the start of
+    // a brush interaction before the user has dragged.  Treat these as "no
+    // selection" so they don't propagate as filters that wipe all data.
+    if (selection != null && dataSelections.value[selectionName]!.type === 'interval') {
+      for (const range of Object.values(selection)) {
+        if (
+          Array.isArray(range) &&
+          range.some((v) => typeof v === 'number' && !isFinite(v))
+        ) {
+          selection = null;
+          break;
+        }
+      }
+    }
+    const current = dataSelections.value[selectionName]!.selection;
+    if (isEqual(current, selection)) return; // no change — skip reactive churn
+    dataSelections.value[selectionName]!.selection = selection;
+    const hashObj: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(dataSelections.value)) {
+      hashObj[k] = v?.selection ?? null;
+    }
+    selectionHash.value = JSON.stringify(hashObj);
+  }
+
+  function clearDataSelection(selectionName: string): void {
+    updateDataSelection(selectionName, null);
+  }
+
+  /**
+   * Wipe every active selection. Used by consumers' "reset session"
+   * flows so stale entries from closed visualizations don't accumulate
+   * across resets. Bumps selectionHash exactly once so downstream
+   * watchers fire a single change notification.
+   */
+  function clearAllSelections(): void {
+    if (Object.keys(dataSelections.value).length === 0) return;
+    dataSelections.value = {};
+    selectionHash.value = '{}';
+  }
+
+  function getDataSelection(
+    selectionName: string,
+  ): RangeSelection | PointSelection | null {
+    if (!(selectionName in dataSelections.value)) {
+      throw new Error(`Selection name ${selectionName} not found`);
+    }
+    return dataSelections.value[selectionName]!.selection;
+  }
+
+  function RangeSelectionToArqueroFilter(
+    selection: RangeSelection | null,
+  ): string | null {
+    if (selection === null) return null;
+    const filters: string[] = [];
+    for (const [field, range] of Object.entries(selection)) {
+      // console.log('range:', range);
+      const [min, max] = range;
+      if (min != null && max != null) {
+        filters.push(`d['${field}'] >= ${min} && d['${field}'] <= ${max}`);
+      } else if (min != null) {
+        filters.push(`d['${field}'] >= ${min}`);
+      } else if (max != null) {
+        filters.push(`d['${field}'] <= ${max}`);
+      }
+    }
+    return filters.join(' && ');
+  }
+
+  function PointSelectionToArqueroFilter(
+    selection: PointSelection | null,
+  ): string | null {
+    if (selection === null) return null;
+    const filters: string[] = [];
+    for (const [field, values] of Object.entries(selection)) {
+      if (values.length === 0) continue; // skip empty selections
+      const innerFilters: string[] = [];
+      for (const value of values) {
+        innerFilters.push(`d['${field}'] === ${JSON.stringify(value)}`);
+      }
+      filters.push(`(${innerFilters.join(' || ')})`);
+    }
+    return filters.join(' && ');
+  }
+
+  function selectionToArqueroFilter(dataSelection: ActiveDataSelection) {
+    const { type, selection } = dataSelection;
+
+    if (type === 'point') {
+      return PointSelectionToArqueroFilter(selection as PointSelection);
+    }
+
+    return RangeSelectionToArqueroFilter(selection as RangeSelection);
+  }
+
+  function GetMappedArqueroFilter({
+    key,
+    inTable,
+    selectionName,
+    selectionMatching = 'any',
+    selectionEntityRelationship,
+    selectionSourceKey,
+  }: {
+    key: string;
+    inTable: ColumnTable;
+    selectionName: string;
+    selectionMatching?: FilterMatch | undefined;
+    selectionEntityRelationship?: FilterEntityRelationship | null;
+    selectionSourceKey?: string;
+  }): string | null {
+    // Check that the filter is being applied
+    const dataSelection = dataSelections.value[selectionName];
+    if (!dataSelection || !dataSelection.selection) return null;
+
+    // Pull matching values from source selection
+    const { originKey, targetKey } = selectionEntityRelationship || {
+      originKey: null,
+      targetKey: null,
+    };
+
+    const relevantFilter = selectionToArqueroFilter(dataSelection);
+
+    // assume same-entity filtering if these are not provided
+    if (!originKey || !targetKey || !selectionSourceKey) {
+      // Skip filter when the selection references columns that don't exist in
+      // the target table (e.g. a brush on one dataset applied to another).
+      if (relevantFilter) {
+        const cols = new Set(inTable.columnNames());
+        // The `if (!dataSelection || !dataSelection.selection)` guard
+        // earlier in the function already narrowed `.selection` to non-
+        // null here — no `!` assertion needed.
+        const selectionFields = Object.keys(dataSelection.selection);
+        if (selectionFields.some((f) => !cols.has(f))) {
+          return null;
+        }
+      }
+      return relevantFilter;
+    }
+
+    // Otherwise, we are doing cross-entity filtering
+
+    // Get the relevant source table
+    const relevantTable = dataSources.value[selectionSourceKey];
+
+    if (!relevantTable || !relevantFilter) {
+      console.warn(
+        `No relevant table or filter for mapping: ${selectionSourceKey}`,
+      );
+      return null;
+    }
+
+    // Check that the targetKey is present in the in table
+    if (!inTable.columnNames().includes(targetKey)) {
+      throw new Error(
+        `Identifying key [${targetKey}] not found in table [${key}]. Ensure any filters relying on the [${targetKey}] column are applied before other transformations that may remove it.`,
+      );
+    }
+
+    const totalTable = relevantTable.dest.reify();
+    const filteredTable = relevantTable.dest.filter(relevantFilter).reify();
+
+    // If the matching is 'any' or not specified, we just return the filter expression
+    if (selectionMatching != 'all') {
+      const originIds = filteredTable.array(originKey) as string[];
+
+      if (originIds.length === 0) return 'false';
+
+      return originIds
+        .map((id) => `d['${targetKey}'] === '${id}'`)
+        .join(' || ');
+    }
+
+    // Otherwise, the matching is 'all', meaning we need to find entities that satisfy the filter completely
+
+    // Count helper
+    const toCounts = (ids: string[]) => {
+      const m = new Map<string, number>();
+      for (const id of ids) m.set(id, (m.get(id) ?? 0) + 1);
+      return m;
+    };
+
+    // Per-entity counts
+    const totalCounts = toCounts(totalTable.array(originKey) as string[]);
+    const filteredCounts = toCounts(filteredTable.array(originKey) as string[]);
+
+    // Entities whose entire set matches the filter
+    const exclusiveOriginIds: string[] = [];
+    for (const [id, f] of filteredCounts.entries()) {
+      const t = totalCounts.get(id) ?? 0;
+      if (f > 0 && f === t) exclusiveOriginIds.push(id);
+    }
+
+    // Return a list of OR-ed ids as a filter string for the target table
+    const orExpression =
+      exclusiveOriginIds.length > 0
+        ? exclusiveOriginIds
+            .map((id) => `d['${targetKey}'] === '${id}'`)
+            .join(' || ')
+        : 'false'; // nothing qualifies
+
+    return orExpression;
+  }
+
+  const loading = ref<boolean>(true);
+  const selectionHash = ref<string>('');
+  /** Bumped whenever a source's parsed table is replaced. Reactive (Vue
+   *  ref) so consumers can watch it for "a new source is now available"
+   *  events — `loading` alone misses the second-of-two concurrent fetches
+   *  (a synchronous `loading.value = false` from a cached-source instance
+   *  can overwrite an in-flight `loading.value = true`, killing the
+   *  transition signal). The cache-key path also reads it. */
+  const tablesVersion = ref(0);
+
+  async function initDataSources(
+    sources: DataSource[],
+    sourceResolver?: Record<string, string>,
+  ): Promise<void> {
+    // Apply sourceResolver: override spec URLs with consumer-provided URLs.
+    const resolved = sourceResolver
+      ? sources.map((ds) => {
+          const url = sourceResolver[ds.name];
+          return url ? { ...ds, source: url } : ds;
+        })
+      : sources;
+
+    // Only set loading if at least one source actually needs to be fetched.
+    // This avoids a "Loading..." flash when only transformations/filters changed.
+    const needsLoading = resolved.some((ds) => {
+      const cached = dataSources.value[ds.name];
+      return !cached || !isEqual(cached.source, ds);
+    });
+    if (needsLoading) loading.value = true;
+    const promises = resolved.map((dataSource) =>
+      initDataSource(dataSource),
+    );
+    await Promise.all(promises);
+    loading.value = false;
+  }
+
+  // Deduplication map: prevents concurrent initDataSource calls for the same
+  // source from firing multiple network requests.
+  const pendingLoads = new Map<string, Promise<void>>();
+
+  async function initDataSource(dataSource: DataSource): Promise<void> {
+    // Check directly against the store rather than getDataSource (which
+    // returns null while loading is true, defeating the cache check).
+    const currentSource = dataSources.value[dataSource.name];
+    if (currentSource && isEqual(currentSource.source, dataSource)) return;
+
+    // If another caller is already loading this exact source, share its promise
+    const key = dataSource.name + '\0' + dataSource.source;
+    const pending = pendingLoads.get(key);
+    if (pending) return pending;
+
+    const promise = (async () => {
+      let delimiter = ',';
+      if (dataSource.source.endsWith('.tsv')) {
+        delimiter = '\t';
+      }
+      const dest: ColumnTable = await loadCSV(dataSource.source, { delimiter });
+      dataSources.value[dataSource.name] = { source: dataSource, dest };
+      tablesVersion.value++;
+    })();
+
+    pendingLoads.set(key, promise);
+    try {
+      await promise;
+    } finally {
+      pendingLoads.delete(key);
+    }
+  }
+
+  /**
+   * Install a pre-parsed table into the cache so later initDataSource()
+   * calls for the same (name, url) become no-ops. Used by loadDataPackage
+   * to avoid double-fetching CSVs that the caller already has in hand.
+   */
+  function seedDataSource(
+    name: string,
+    url: string,
+    table: ColumnTable,
+  ): void {
+    const source: DataSource = { name, source: url };
+    dataSources.value[name] = { source, dest: table };
+    tablesVersion.value++;
+  }
+
+  function getDataSource(key: string): DataInterface | null {
+    // Previously bailed on `loading.value` to surface a "still loading"
+    // signal — but the global flag flips false the instant ANY concurrent
+    // initDataSources call finishes (even one for unrelated sources), so
+    // it was both noisy and unreliable. A source's parsed table is
+    // installed atomically in dataSources.value once its fetch resolves,
+    // so the presence check below is the authoritative readiness signal.
+    if (!(key in dataSources.value)) return null;
+    return dataSources.value[key] ?? null;
+  }
+
+  // Memoizes getDataObject results across repeat queries with the same
+  // (sources, transformations, selections, table version) tuple. Live
+  // filter brushing fires the same query shape many times per second
+  // with only the selection payload changing; selectionHash is part of
+  // the key, so brand-new selections still recompute. The cap is small
+  // because the dominant access pattern is "user toggles between a
+  // handful of filter combinations," not "user explores 100s of unique
+  // filter states per second."
+  const MAX_CACHE_ENTRIES = 64;
+  type GetDataObjectResult = {
+    displayData: object[];
+    allData: object[];
+    isDisplayDataSubset: boolean;
+  };
+  const getDataObjectCache = new Map<string, GetDataObjectResult>();
+
+  function getDataObject(
+    keys: string[],
+    dataTransformations?: DataTransformation[],
+    options?: { displayDataOnly?: boolean },
+  ): {
+    displayData: object[]; // only the data that should be displayed
+    allData: object[]; // all data (needed for full domains)
+    isDisplayDataSubset: boolean; // true if the returned data is a subset of the full data
+  } | null {
+    // No global `loading` gate here — see getDataSource for the rationale.
+    // A request can succeed as soon as its OWN keys are in dataSources,
+    // regardless of unrelated concurrent fetches. The `namedTables.size`
+    // check below catches the "this request's keys aren't ready yet" case.
+
+    // Auto-default displayDataOnly=true when the transformation ends with
+    // a rollup. The second pipeline pass (skipNamedFilters: true) on a
+    // rollup spec produces a 1-row aggregate that callers rarely consume
+    // — the unfiltered total is usually available via cheaper channels
+    // (e.g. data package metadata). Explicit `displayDataOnly: false`
+    // still opts back in for callers that want the unfiltered rollup.
+    const transformations = dataTransformations ?? [];
+    const endsWithRollup =
+      transformations.length > 0 &&
+      'rollup' in (transformations[transformations.length - 1] as object);
+    const displayDataOnly = options?.displayDataOnly ?? endsWithRollup;
+    const cacheKey = `${tablesVersion.value}|${selectionHash.value}|${displayDataOnly ? 'd' : 'a'}|${[...keys].sort().join('\0')}|${JSON.stringify(dataTransformations ?? null)}`;
+    const cached = getDataObjectCache.get(cacheKey);
+    if (cached) {
+      // LRU-ish touch: re-insert to mark as most-recently-used.
+      getDataObjectCache.delete(cacheKey);
+      getDataObjectCache.set(cacheKey, cached);
+      return cached;
+    }
+
+    // make copy of tables from data sources
+    const getNamedTables = () => {
+      const namedTables = new Map<string, ColumnTable>();
+      for (const key of keys) {
+        const dataInterface = getDataSource(key);
+        if (!dataInterface) {
+          console.warn(`Skipping missing data source for key: ${key}`);
+          continue;
+        }
+        namedTables.set(key, from(dataInterface.dest.reify()));
+      }
+      return namedTables;
+    };
+
+    const namedTables = getNamedTables();
+    // Return null if ANY requested source isn't loaded yet — the caller
+    // (UDIVis) will retry when tablesVersion bumps. Previously this only
+    // checked size === 0, which let partial-data transformations run when
+    // some-but-not-all sources had arrived.
+    if (namedTables.size !== keys.length) return null;
+
+    const { data: dataTable, containsNamedFilter } = PerformDataTransformations(
+      namedTables,
+      dataTransformations ?? [],
+      { skipNamedFilters: false },
+    );
+
+    // materialize arrays of objects
+    const displayData = dataTable.objects();
+
+    let allData = displayData;
+    if (containsNamedFilter && !displayDataOnly) {
+      const { data: fullData } = PerformDataTransformations(
+        getNamedTables(),
+        dataTransformations ?? [],
+        { skipNamedFilters: true },
+      );
+      allData = fullData.objects();
+    }
+
+    const result: GetDataObjectResult = {
+      displayData,
+      allData,
+      isDisplayDataSubset: containsNamedFilter,
+    };
+    getDataObjectCache.set(cacheKey, result);
+    if (getDataObjectCache.size > MAX_CACHE_ENTRIES) {
+      // Map iteration order is insertion order — drop the oldest.
+      const oldest = getDataObjectCache.keys().next().value;
+      if (oldest !== undefined) getDataObjectCache.delete(oldest);
+    }
+    return result;
+  }
+
+  function PerformDataTransformations(
+    namedTables: Map<string, ColumnTable>,
+    dataTransformations: DataTransformation[],
+    config?: {
+      skipNamedFilters?: boolean; // if true, skip named filters in transformations
+    },
+  ): {
+    data: ColumnTable;
+    containsNamedFilter: boolean;
+  } {
+    // Snapshot the source tables so a binby transform can re-run prior
+    // transforms with named filters skipped and compute stable bin extents
+    // from the unfiltered data at that pipeline stage.
+    const originalNamedTables = new Map(namedTables);
+    let containsNamedFilter = false;
+    const key = namedTables.keys().next().value ?? '';
+    const table = namedTables.get(key);
+    if (!table) {
+      throw new Error(`Table not found for key: ${key}`);
+    }
+    const currentTable: {
+      key: string;
+      table: ColumnTable;
+    } = { key, table };
+
+    const getInTable = (key?: string): ColumnTable => {
+      const columnTable = key ? namedTables.get(key) : currentTable.table;
+      if (!columnTable) {
+        throw new Error('in table not found');
+      }
+      return columnTable;
+    };
+
+    const setOutTable = (transform: DataTransformation) => {
+      if (transform.out) {
+        currentTable.key = transform.out;
+      } else if (transform.in && !Array.isArray(transform.in)) {
+        currentTable.key = transform.in;
+      }
+      namedTables.set(currentTable.key, currentTable.table);
+    };
+
+    // console.log('we doing it');
+    for (const [transformIndex, transform] of dataTransformations.entries()) {
+      if ('filter' in transform) {
+        const { filter, in: tableName } = transform;
+        const inTable = getInTable(tableName);
+
+        // Just apply the filter if it's a string
+        if (typeof filter === 'string') {
+          currentTable.table = inTable.filter(filter).reify();
+        } else {
+          // Otherwise, we assume it's a named filter
+          containsNamedFilter = true;
+          if (config?.skipNamedFilters) {
+            continue;
+          }
+
+          // Weird spread syntax to handle optional properties
+          const mappedFilter = GetMappedArqueroFilter({
+            key,
+            inTable,
+            selectionName: filter.name,
+            selectionSourceKey: filter.source,
+            ...(filter.match !== undefined
+              ? { selectionMatching: filter.match }
+              : {}),
+            ...(filter.entityRelationship !== undefined
+              ? { selectionEntityRelationship: filter.entityRelationship }
+              : {}),
+          });
+
+          if (mappedFilter) {
+            currentTable.table = inTable.filter(mappedFilter).reify();
+          }
+        }
+      } else if ('groupby' in transform) {
+        const inTable = getInTable(transform.in);
+        if (Array.isArray(transform.groupby)) {
+          currentTable.table = inTable.groupby(...transform.groupby);
+        } else {
+          currentTable.table = inTable.groupby(transform.groupby);
+        }
+      } else if ('binby' in transform) {
+        const inTable = getInTable(transform.in);
+        const { field, bins = 10, nice = true } = transform.binby;
+        const { bin_start = 'start', bin_end = 'end' } = transform.binby
+          .output ?? {
+          bin_start: 'start',
+          bin_end: 'end',
+        };
+
+        // Compute bin extent from the *unfiltered* pipeline state at this
+        // point, so interactive (named) filters downstream of the brush
+        // don't shift bin edges. If we're already in a skipNamedFilters
+        // pass the current inTable is unfiltered; otherwise re-run the
+        // prior transforms with named filters skipped against a fresh
+        // copy of the original source tables.
+        let extentTable = inTable;
+        if (!config?.skipNamedFilters) {
+          const { data: unfilteredInTable } = PerformDataTransformations(
+            new Map(originalNamedTables),
+            dataTransformations.slice(0, transformIndex),
+            { skipNamedFilters: true },
+          );
+          extentTable = unfilteredInTable;
+        }
+        const [binMin, binMax, binStep] = agg(
+          extentTable,
+          op.bins(field, bins, nice),
+        ) as [number, number, number];
+
+        const fieldKey = JSON.stringify(field);
+        const groupbyObject: { [key: string]: string } = {
+          [bin_start]: `d => op.bin(d[${fieldKey}], ${binMin}, ${binMax}, ${binStep}, 0)`,
+          [bin_end]: `d => op.bin(d[${fieldKey}], ${binMin}, ${binMax}, ${binStep}, 1)`,
+        };
+
+        currentTable.table = inTable.groupby(groupbyObject);
+      } else if ('rollup' in transform) {
+        const inTable = getInTable(transform.in);
+        const aggregateFunctions: { [key: string]: TableExpr } = {};
+        const frequencyKeys: string[] = [];
+        for (const [as, aggFunction] of Object.entries(transform.rollup)) {
+          aggregateFunctions[as] = getArqueroAggregateFunction(aggFunction);
+          if (aggFunction.op === 'frequency') {
+            frequencyKeys.push(as);
+          }
+        }
+        currentTable.table = inTable.rollup(aggregateFunctions);
+        for (const freqKey of frequencyKeys) {
+          const deriveExpression: ExprObject = {};
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          deriveExpression[freqKey] = (d: any, $: any) =>
+            d[$.freqKey] / op.sum(d[$.freqKey]);
+
+          currentTable.table = currentTable.table
+            .params({ freqKey: freqKey })
+            .derive(deriveExpression);
+        }
+      } else if ('orderby' in transform) {
+        const inTable = getInTable(transform.in);
+        let orderbyList: (string | DirectionalOrder)[];
+        if (!Array.isArray(transform.orderby)) {
+          orderbyList = [transform.orderby];
+        } else {
+          orderbyList = transform.orderby;
+        }
+        const orderKeys: OrderKey[] = orderbyList.map((orderby) => {
+          let orderKey: OrderKey;
+          if (typeof orderby !== 'string') {
+            const dir = orderby.order;
+            orderKey = orderby.field;
+            if (dir === 'desc') {
+              orderKey = desc(orderKey);
+            }
+          } else {
+            orderKey = orderby;
+          }
+          return orderKey;
+        });
+        currentTable.table = inTable.orderby(orderKeys);
+      } else if ('derive' in transform) {
+        const inTable = getInTable(transform.in);
+        const derive = cloneDeep(transform.derive);
+        for (const [as, expr] of Object.entries(derive)) {
+          if (typeof expr !== 'string') {
+            derive[as] = rolling(expr.rolling.expression, expr.rolling.window);
+          }
+        }
+        currentTable.table = inTable.derive(derive);
+      } else if ('join' in transform) {
+        const [leftKey, rightKey] = transform.in;
+        const leftTable = namedTables.get(leftKey);
+        const rightTable = namedTables.get(rightKey);
+        if (!leftTable || !rightTable) {
+          throw new Error('join table not found');
+        }
+        if (
+          typeof transform.join.on === 'string' ||
+          transform.join.on.every((x) => typeof x === 'string')
+        ) {
+          currentTable.table = leftTable.join(rightTable, transform.join.on);
+        } else {
+          const [leftMultiKeys, rightMultiKeys] = transform.join.on;
+          if (leftMultiKeys.length !== rightMultiKeys.length) {
+            throw new Error(
+              'left and right multi keys must be the same length',
+            );
+          }
+          // multi key join. I first tried passing an anonymous function to arquero's
+          // join method, but the limitations wrt closure made it difficult/impossible
+          // to implement. So I am using a derived column to create a unique key for each
+          // row in each table, and then joining on that.
+          currentTable.table = leftTable
+            .params({
+              leftMultiKeys: transform.join.on[0],
+            })
+            .derive({
+              udi_internal_multi_key_join: escape(
+                (d: { [x: string]: unknown }, $: { leftMultiKeys: string[] }) =>
+                  $.leftMultiKeys.map((k) => d[k]).join('¶'),
+              ),
+            })
+            .join(
+              rightTable
+                .params({
+                  rightMultiKeys: transform.join.on[1],
+                })
+                .derive({
+                  udi_internal_multi_key_join: escape(
+                    (
+                      d: { [x: string]: unknown },
+                      $: { rightMultiKeys: string[] },
+                    ) => $.rightMultiKeys.map((k) => d[k]).join('¶'),
+                  ),
+                }),
+              'udi_internal_multi_key_join',
+            );
+        }
+      } else if ('kde' in transform) {
+        const inTable = getInTable(transform.in);
+        const { field, samples } = transform.kde;
+        let { bandwidth } = transform.kde;
+        const { sample = 'sample', density = 'density' } = transform.kde
+          .output ?? { sample: 'sample', density: 'density' };
+
+        // Build an empty table matching the shape of normal KDE output:
+        // sample + density columns, plus any group columns from the input.
+        const emptyKdeColumns: Record<string, never[]> = {
+          [sample]: [],
+          [density]: [],
+        };
+        if (inTable.isGrouped()) {
+          for (const name of inTable.groups().names) {
+            if (name != null) emptyKdeColumns[name] = [];
+          }
+        }
+
+        // Guard: if the table has fewer than 2 rows, KDE cannot be computed.
+        // Return an empty table with the expected output columns.
+        if (inTable.numRows() < 2) {
+          currentTable.table = from(emptyKdeColumns);
+          setOutTable(transform);
+          continue;
+        }
+
+        if (bandwidth == null) {
+          bandwidth = nrd(inTable.array(field), (x: number) => x);
+        }
+        // nrd can return NaN or 0 for degenerate data; fall back to 1
+        if (bandwidth == null || !Number.isFinite(bandwidth) || bandwidth <= 0) {
+          bandwidth = 1;
+        }
+        let kdeTable;
+
+        const minVal = agg(inTable, op.min(field));
+        const maxVal = agg(inTable, op.max(field));
+
+        // Guard: if min/max are not finite or equal (density1d divides by
+        // zero in bin1d when extent has zero width, producing NaN/Infinity)
+        if (!Number.isFinite(minVal) || !Number.isFinite(maxVal) || minVal === maxVal) {
+          currentTable.table = from(emptyKdeColumns);
+          setOutTable(transform);
+          continue;
+        }
+
+        const partitions = inTable.partitions();
+        for (let i = 0; i < partitions.length; i++) {
+          const partition = partitions[i];
+          // partition is a list of indices that define a group
+          // if no grouping is present, partition is an array of all indices
+          if (!partition || partition.length < 2) {
+            continue; // skip empty or single-element partitions
+          }
+          const values = partition.map((i) => inTable.get(field, i));
+          const densityEstimates = density1d(values, {
+            bandwidth,
+            bins: samples,
+            extent: [minVal, maxVal],
+          }).points();
+          let groupTable = from(densityEstimates);
+          groupTable = groupTable.rename({ x: sample, y: density });
+          if (inTable.isGrouped()) {
+            const groups = inTable.groups();
+            for (let j = 0; j < groups.names.length; j++) {
+              const name = groups.names[j];
+              if (name == null) {
+                throw new Error('name is undefined');
+              }
+              const getGroupValue = groups.get[j] as ColumnGetter;
+              const rowIndex = groups.rows[i];
+              if (rowIndex == null) {
+                throw new Error('rowIndex is undefined');
+              }
+              const value = getGroupValue(rowIndex);
+              groupTable = groupTable.derive({ [name]: escape(value) });
+            }
+          }
+          if (!kdeTable) {
+            kdeTable = groupTable;
+          } else {
+            kdeTable = kdeTable.concat(groupTable);
+          }
+        }
+        // If all partitions were skipped, return an empty table
+        if (!kdeTable) {
+          kdeTable = from(emptyKdeColumns);
+        }
+        currentTable.table = kdeTable;
+      }
+      setOutTable(transform);
+    }
+    return { data: currentTable.table, containsNamedFilter };
+  }
+
+  function getArqueroAggregateFunction(aggFunc: AggregateFunction): TableExpr {
+    switch (aggFunc.op) {
+      case 'count':
+        return op.count();
+      case 'sum':
+        if (!aggFunc.field) {
+          throw new Error('Field is required for sum operation');
+        }
+        return op.sum(aggFunc.field);
+      case 'min':
+        if (!aggFunc.field) {
+          throw new Error('Field is required for min operation');
+        }
+        return op.min(aggFunc.field);
+      case 'median':
+        if (!aggFunc.field) {
+          throw new Error('Field is required for median operation');
+        }
+        return op.median(aggFunc.field);
+      case 'max':
+        if (!aggFunc.field) {
+          throw new Error('Field is required for max operation');
+        }
+        return op.max(aggFunc.field);
+      case 'mean':
+        return op.mean(aggFunc.field);
+      case 'frequency':
+        // frequency is a two step process, step one is getting the counts.
+        // normalizing the counts happens outside this function.
+        return op.count();
+      default:
+        throw new Error(
+          'unsupported Aggregate Function' + JSON.stringify(aggFunc),
+        );
+    }
+  }
+
+  return {
+    dataSources,
+    loading,
+    tablesVersion,
+    selectionHash,
+    initDataSources,
+    seedDataSource,
+    getDataObject,
+    watchDataSelection,
+    getDataSelection,
+    updateDataSelection,
+    clearDataSelection,
+    clearAllSelections,
+    dataSelections,
+    bindExternalDataSelections,
+  };
+});
