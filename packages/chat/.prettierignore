@@ -1,0 +1,7 @@
+dist
+node_modules
+pnpm-lock.yaml
+
+# Bundled fixture data — leave as-is so diffs remain reviewable
+public/data
+public/images
