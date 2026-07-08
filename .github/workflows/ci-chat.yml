@@ -1,0 +1,59 @@
+name: CI (chat)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/chat/**'
+      - 'packages/grammar/src/components/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/ci-chat.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/chat/**'
+      - 'packages/grammar/src/components/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/ci-chat.yml'
+
+jobs:
+  ci:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build udi-toolkit (workspace dependency)
+        run: pnpm run build:toolkit
+
+      - name: Format check
+        run: pnpm --filter udi-yac format:check
+
+      - name: Lint
+        run: pnpm --filter udi-yac lint
+
+      - name: Typecheck
+        run: pnpm --filter udi-yac typecheck
+
+      - name: Test
+        run: pnpm --filter udi-yac test
+
+      - name: Build (standalone)
+        run: pnpm --filter udi-yac build
+
+      - name: Build (library)
+        run: pnpm --filter udi-yac build:lib

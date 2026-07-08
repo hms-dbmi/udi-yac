@@ -1,8 +1,17 @@
-name: Deploy SPA to GitHub Pages
+name: Deploy to GitHub Pages
+
+# Combined Pages site:
+#   /            ← chat SPA (packages/chat)
+#   /grammar/    ← quasar demo app (packages/grammar)
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'packages/chat/**'
+      - 'packages/grammar/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -32,19 +41,32 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Build udi-toolkit
+        run: pnpm run build:toolkit
+
+      - name: Build chat SPA
+        run: pnpm --filter udi-yac build
         env:
-          VITE_BASE: ${{ vars.VITE_BASE || '/udi-chat-react/' }}
+          VITE_BASE: ${{ vars.VITE_BASE || '/udi-yac/' }}
           VITE_UDI_API_BASE_URL: ${{ vars.VITE_UDI_API_BASE_URL }}
           VITE_UDI_DATA_PACKAGE: ${{ vars.VITE_UDI_DATA_PACKAGE }}
           VITE_UDI_MODEL: ${{ vars.VITE_UDI_MODEL }}
           VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
 
+      - name: Build grammar demo app
+        run: pnpm run build:grammar
+
+      - name: Assemble site
+        run: |
+          mkdir site
+          cp -r packages/chat/dist/* site/
+          mkdir site/grammar
+          cp -r packages/grammar/dist/spa/* site/grammar/
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ./dist
+          path: ./site
 
   deploy:
     needs: build

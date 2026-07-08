@@ -1,15 +1,19 @@
-name: Test Builds
+name: CI (udi-toolkit)
 
 on:
   push:
     branches: [main]
     paths:
-      - 'src/components/**'
-      - '.github/workflows/test-builds.yaml'
+      - 'packages/grammar/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/ci-toolkit.yml'
   pull_request:
     paths:
-      - 'src/components/**'
-      - '.github/workflows/test-builds.yaml'
+      - 'packages/grammar/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/ci-toolkit.yml'
 
 jobs:
   build-and-test:
@@ -20,41 +24,39 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Setup Node ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+          cache: pnpm
 
-      - name: Install root dependencies
-        run: yarn install --frozen-lockfile
-        working-directory: .
-
-      - name: Install toolkit dependencies
-        run: yarn install --frozen-lockfile
-        working-directory: src/components
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build all targets (Vue, CE, React)
-        run: yarn build:all
-        working-directory: src/components
+        run: pnpm run build:toolkit
 
       - name: Smoke test — Vue build
         run: node test/smoke-vue.mjs
-        working-directory: src/components
+        working-directory: packages/grammar/src/components
 
       - name: Smoke test — Custom Element build
         run: node test/smoke-ce.mjs
-        working-directory: src/components
+        working-directory: packages/grammar/src/components
 
       - name: Smoke test — React wrapper build
         run: node test/smoke-react.mjs
-        working-directory: src/components
+        working-directory: packages/grammar/src/components
 
       - name: Smoke test — package exports map
         run: node test/smoke-exports.mjs
-        working-directory: src/components
+        working-directory: packages/grammar/src/components
 
       - name: Verify dist file sizes
-        working-directory: src/components
+        working-directory: packages/grammar/src/components
         run: |
           echo "=== Build output ==="
           ls -lh dist/index.js dist/ce.js dist/react.js

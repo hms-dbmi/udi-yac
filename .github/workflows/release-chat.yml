@@ -1,4 +1,4 @@
-name: Release
+name: Release udi-yac (chat)
 
 on:
   workflow_dispatch:
@@ -44,30 +44,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build udi-toolkit (workspace dependency)
+        run: pnpm run build:toolkit
+
       - name: Format check
-        run: pnpm format:check
+        run: pnpm --filter udi-yac format:check
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm --filter udi-yac lint
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm --filter udi-yac typecheck
 
       - name: Test
-        run: pnpm test
+        run: pnpm --filter udi-yac test
 
       - name: Build library
-        run: pnpm build:lib
+        run: pnpm --filter udi-yac build:lib
 
       - name: Bump version
         id: bump
+        working-directory: packages/chat
         run: |
           pnpm version ${{ inputs.bump }} --no-git-tag-version
           new_version=$(node -p "require('./package.json').version")
           echo "version=$new_version" >> "$GITHUB_OUTPUT"
           git add package.json
-          git commit -m "chore(release): v${new_version}"
-          git tag "v${new_version}"
+          git commit -m "chore(release): udi-yac-v${new_version}"
+          git tag "udi-yac-v${new_version}"
 
       - name: Push commit and tag
         run: |
@@ -75,9 +79,9 @@ jobs:
           git push --tags
 
       - name: Publish to npm
-        run: pnpm publish
+        run: pnpm --filter udi-yac publish
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "v${{ steps.bump.outputs.version }}" --generate-notes
+        run: gh release create "udi-yac-v${{ steps.bump.outputs.version }}" --generate-notes

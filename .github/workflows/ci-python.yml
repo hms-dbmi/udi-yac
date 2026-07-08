@@ -1,0 +1,53 @@
+name: CI (python)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/agent/**'
+      - 'packages/grammar-py/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/ci-python.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/agent/**'
+      - 'packages/grammar-py/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/ci-python.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - package: agent
+            sync-args: --extra server --extra langfuse --extra test
+          - package: grammar-py
+            sync-args: ''
+    defaults:
+      run:
+        working-directory: packages/${{ matrix.package }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync ${{ matrix.sync-args }}
+
+      - name: Run tests
+        run: uv run pytest tests/ -v
+
+      - name: Verify package build
+        run: uv build

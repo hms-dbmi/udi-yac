@@ -1,0 +1,40 @@
+name: Release udi-grammar-py
+
+# Manual release: builds packages/grammar-py and publishes to PyPI.
+# The published version is whatever pyproject.toml says.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # Required for making the Release
+      id-token: write # Required for PyPI Trusted Publishing
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Build distribution
+        run: uv build
+        working-directory: packages/grammar-py
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/grammar-py/dist
+          skip-existing: true
+          verbose: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(uv run --no-project python -c "import tomllib; print(tomllib.load(open('packages/grammar-py/pyproject.toml','rb'))['project']['version'])")
+          gh release create "udi-grammar-py-v${version}" --generate-notes

@@ -1,4 +1,7 @@
-name: Publish to PyPI
+name: Publish udiagent to PyPI
+
+# Fires only for releases tagged udiagent-vX.Y.Z — other packages' releases
+# in this monorepo must not republish udiagent.
 
 on:
   release:
@@ -6,9 +9,10 @@ on:
 
 jobs:
   publish:
+    if: startsWith(github.event.release.tag_name, 'udiagent-v')
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # trusted publishing via OIDC
+      id-token: write # trusted publishing via OIDC
 
     steps:
       - uses: actions/checkout@v6
@@ -23,6 +27,9 @@ jobs:
 
       - name: Build package
         run: uv build
+        working-directory: packages/agent
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/agent/dist

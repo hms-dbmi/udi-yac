@@ -1,0 +1,46 @@
+name: Validate bdf.yaml
+
+# The upstream reusable workflow (ARPA-H-BDF/bdfkb-schema ci-validate.yaml)
+# only scans the repo root for bdf.yaml, but this monorepo has one per package
+# (packages/agent, packages/grammar). This replicates its steps with a matrix
+# and a working-directory instead.
+
+on:
+  workflow_dispatch:
+    inputs:
+      python-version:
+        description: 'Python version as a string, e.g. "3.11"'
+        required: true
+        default: '3.11'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [agent, grammar]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout source repository (where validate.py lives)
+        uses: actions/checkout@v6
+        with:
+          repository: ARPA-H-BDF/bdfkb-schema
+          path: validation-source
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ github.event.inputs.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install linkml
+
+      - name: Validate yaml
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          python "$GITHUB_WORKSPACE/validation-source/src/validation/validate.py" \
+            'https://raw.githubusercontent.com/ARPA-H-BDF/bdfkb-schema/refs/heads/main/src/bdfkb_schema/schema/bdfkb_schema.yaml'
