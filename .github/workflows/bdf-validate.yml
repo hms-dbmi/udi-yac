@@ -11,7 +11,7 @@ on:
       python-version:
         description: 'Python version as a string, e.g. "3.11"'
         required: true
-        default: '3.11'
+        default: "3.12"
 
 jobs:
   validate:
