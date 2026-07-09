@@ -39,7 +39,7 @@ export default defineBoot(({ app }) => {
     enableSchemaRequest: true,
     schemas: [
       {
-        uri: 'https://raw.githubusercontent.com/hms-dbmi/udi-grammar/refs/heads/main/UDIGrammarSchema.json',
+        uri: 'https://raw.githubusercontent.com/hms-dbmi/udi-yac/refs/heads/main/packages/grammar/UDIGrammarSchema.json',
         fileMatch: ['*'],
       },
     ],

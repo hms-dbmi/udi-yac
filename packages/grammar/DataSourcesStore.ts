@@ -115,7 +115,10 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     // Vega emits degenerate ranges like [Infinity, -Infinity] at the start of
     // a brush interaction before the user has dragged.  Treat these as "no
     // selection" so they don't propagate as filters that wipe all data.
-    if (selection != null && dataSelections.value[selectionName]!.type === 'interval') {
+    if (
+      selection != null &&
+      dataSelections.value[selectionName].type === 'interval'
+    ) {
       for (const range of Object.values(selection)) {
         if (
           Array.isArray(range) &&
@@ -126,9 +129,9 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         }
       }
     }
-    const current = dataSelections.value[selectionName]!.selection;
+    const current = dataSelections.value[selectionName].selection;
     if (isEqual(current, selection)) return; // no change — skip reactive churn
-    dataSelections.value[selectionName]!.selection = selection;
+    dataSelections.value[selectionName].selection = selection;
     const hashObj: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(dataSelections.value)) {
       hashObj[k] = v?.selection ?? null;
@@ -158,7 +161,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     if (!(selectionName in dataSelections.value)) {
       throw new Error(`Selection name ${selectionName} not found`);
     }
-    return dataSelections.value[selectionName]!.selection;
+    return dataSelections.value[selectionName].selection;
   }
 
   function RangeSelectionToArqueroFilter(
@@ -343,9 +346,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       return !cached || !isEqual(cached.source, ds);
     });
     if (needsLoading) loading.value = true;
-    const promises = resolved.map((dataSource) =>
-      initDataSource(dataSource),
-    );
+    const promises = resolved.map((dataSource) => initDataSource(dataSource));
     await Promise.all(promises);
     loading.value = false;
   }
@@ -388,11 +389,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
    * calls for the same (name, url) become no-ops. Used by loadDataPackage
    * to avoid double-fetching CSVs that the caller already has in hand.
    */
-  function seedDataSource(
-    name: string,
-    url: string,
-    table: ColumnTable,
-  ): void {
+  function seedDataSource(name: string, url: string, table: ColumnTable): void {
     const source: DataSource = { name, source: url };
     dataSources.value[name] = { source, dest: table };
     tablesVersion.value++;
@@ -764,7 +761,11 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           bandwidth = nrd(inTable.array(field), (x: number) => x);
         }
         // nrd can return NaN or 0 for degenerate data; fall back to 1
-        if (bandwidth == null || !Number.isFinite(bandwidth) || bandwidth <= 0) {
+        if (
+          bandwidth == null ||
+          !Number.isFinite(bandwidth) ||
+          bandwidth <= 0
+        ) {
           bandwidth = 1;
         }
         let kdeTable;
@@ -774,7 +775,11 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
 
         // Guard: if min/max are not finite or equal (density1d divides by
         // zero in bin1d when extent has zero width, producing NaN/Infinity)
-        if (!Number.isFinite(minVal) || !Number.isFinite(maxVal) || minVal === maxVal) {
+        if (
+          !Number.isFinite(minVal) ||
+          !Number.isFinite(maxVal) ||
+          minVal === maxVal
+        ) {
           currentTable.table = from(emptyKdeColumns);
           setOutTable(transform);
           continue;

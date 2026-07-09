@@ -1,4 +1,4 @@
-import type { UDIGrammar } from "src/components/GrammarTypes";
+import type { UDIGrammar } from 'udi-toolkit';
 
 export interface Example {
   name: string;

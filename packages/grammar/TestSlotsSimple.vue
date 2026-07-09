@@ -3,7 +3,7 @@
 // implementation. Dropping it silences the @typescript-eslint/no-unused-vars
 // warning.
 import { type ParsedUDIGrammar } from './Parser';
-import UDIVis from 'src/components/UDIVis.vue';
+import UDIVis from './UDIVis.vue';
 
 interface TestSlotsSimpleProps {
   defaultSpec: ParsedUDIGrammar;

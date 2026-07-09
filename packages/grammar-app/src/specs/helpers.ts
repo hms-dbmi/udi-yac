@@ -1,4 +1,4 @@
-import type { RowMapping } from "src/components/GrammarTypes";
+import type { RowMapping } from 'udi-toolkit';
 
 export function getTextMapping(field: string): RowMapping[] {
   return [
@@ -46,7 +46,7 @@ export function getColorBarMapping(field: string): RowMapping[] {
       field,
       encoding: 'color',
       mark: 'bar',
-      type: 'quantitative', 
+      type: 'quantitative',
     },
   ];
 }

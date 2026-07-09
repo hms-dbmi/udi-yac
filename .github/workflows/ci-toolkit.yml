@@ -4,16 +4,16 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/grammar/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/ci-toolkit.yml'
+      - "packages/grammar/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/ci-toolkit.yml"
   pull_request:
     paths:
-      - 'packages/grammar/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/ci-toolkit.yml'
+      - "packages/grammar/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/ci-toolkit.yml"
 
 jobs:
   build-and-test:
@@ -41,22 +41,22 @@ jobs:
 
       - name: Smoke test — Vue build
         run: node test/smoke-vue.mjs
-        working-directory: packages/grammar/src/components
+        working-directory: packages/grammar
 
       - name: Smoke test — Custom Element build
         run: node test/smoke-ce.mjs
-        working-directory: packages/grammar/src/components
+        working-directory: packages/grammar
 
       - name: Smoke test — React wrapper build
         run: node test/smoke-react.mjs
-        working-directory: packages/grammar/src/components
+        working-directory: packages/grammar
 
       - name: Smoke test — package exports map
         run: node test/smoke-exports.mjs
-        working-directory: packages/grammar/src/components
+        working-directory: packages/grammar
 
       - name: Verify dist file sizes
-        working-directory: packages/grammar/src/components
+        working-directory: packages/grammar
         run: |
           echo "=== Build output ==="
           ls -lh dist/index.js dist/ce.js dist/react.js

@@ -6,35 +6,6 @@ import vueTsEslintConfig from '@vue/eslint-config-typescript';
 import prettierSkipFormatting from '@vue/eslint-config-prettier/skip-formatting';
 
 export default [
-  {
-    /**
-     * Ignore the following files.
-     * Please note that pluginQuasar.configs.recommended() already ignores
-     * the "node_modules" folder for you (and all other Quasar project
-     * relevant folders and files).
-     *
-     * ESLint requires "ignores" key to be the only one in this object
-     */
-    ignores: [
-      'src/components/index.ts',
-      'src/components/dist',
-      // Hand-written declaration file whose types import from the gitignored
-      // ./dist build output. On a fresh clone (no toolkit build yet) those
-      // imports resolve to "any" error types, tripping no-redundant-type-
-      // constituents. Nothing to lint here — it's published build surface.
-      'src/components/ce.d.ts',
-      'src/components/node_modules',
-      // The React-wrapper subpath has its own tsconfig (tsconfig.react.json)
-      // that the Quasar root tsconfig doesn't reference. The
-      // typescript-eslint project service therefore can't discover these
-      // files in any registered project, surfacing them as
-      // "Parsing error: file was not found by the project service".
-      // They're already type-checked via the `build:react` flow, so
-      // skipping them here is the right separation of concerns.
-      'src/components/react-wrapper',
-    ],
-  },
-
   ...pluginQuasar.configs.recommended(),
   js.configs.recommended,
 
@@ -76,7 +47,6 @@ export default [
       // are also extendable here. But we don't recommend using them directly.
     ],
   }),
-
 
   {
     languageOptions: {

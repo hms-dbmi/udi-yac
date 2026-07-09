@@ -10,12 +10,13 @@ git log "$(git log --merges --grep="Add 'packages/chat/'" -n1 --format=%H)^2"
 
 ## Packages
 
-| Directory | Published as | Stack | Role |
-|---|---|---|---|
-| [`packages/grammar`](packages/grammar) | [`udi-toolkit`](https://www.npmjs.com/package/udi-toolkit) (npm, from `src/components`) | Vue 3, Quasar, Vite | Grammar types, UDIVis component, Storybook |
-| [`packages/chat`](packages/chat) | [`udi-yac`](https://www.npmjs.com/package/udi-yac) (npm) | React 19, Tailwind, Vite | Chat UI — library + standalone SPA |
-| [`packages/agent`](packages/agent) | [`udiagent`](https://pypi.org/project/udiagent/) (PyPI) | Python, OpenAI, FastAPI | LLM orchestrator + reference server |
-| [`packages/grammar-py`](packages/grammar-py) | [`udi-grammar-py`](https://pypi.org/project/udi-grammar-py/) (PyPI) | Python, hatchling | Python builder for UDI grammar specs |
+| Directory                                      | Published as                                                        | Stack                    | Role                                       |
+| ---------------------------------------------- | ------------------------------------------------------------------- | ------------------------ | ------------------------------------------ |
+| [`packages/grammar`](packages/grammar)         | [`udi-toolkit`](https://www.npmjs.com/package/udi-toolkit) (npm)    | Vue 3, Vite              | Grammar types, UDIVis component, Storybook |
+| [`packages/grammar-app`](packages/grammar-app) | — (private)                                                         | Vue 3, Quasar, Vite      | Demo app for the grammar/toolkit           |
+| [`packages/chat`](packages/chat)               | [`udi-yac`](https://www.npmjs.com/package/udi-yac) (npm)            | React 19, Tailwind, Vite | Chat UI — library + standalone SPA         |
+| [`packages/agent`](packages/agent)             | [`udiagent`](https://pypi.org/project/udiagent/) (PyPI)             | Python, OpenAI, FastAPI  | LLM orchestrator + reference server        |
+| [`packages/grammar-py`](packages/grammar-py)   | [`udi-grammar-py`](https://pypi.org/project/udi-grammar-py/) (PyPI) | Python, hatchling        | Python builder for UDI grammar specs       |
 
 Former homes: [udi-grammar](https://github.com/hms-dbmi/udi-grammar), [udi-chat-react](https://github.com/NickAkhmetov/udi-chat-react), [UDIAgent](https://github.com/hms-dbmi/UDIAgent), [udi-grammar-py](https://github.com/hms-dbmi/udi-grammar-py).
 
@@ -25,7 +26,7 @@ JavaScript/TypeScript (pnpm workspace — `udi-toolkit` is consumed via `workspa
 
 ```bash
 pnpm install
-pnpm build:toolkit     # udi-toolkit → packages/grammar/src/components/dist
+pnpm build:toolkit     # udi-toolkit → packages/grammar/dist
 pnpm build:chat        # standalone chat SPA
 pnpm build:chat:lib    # udi-yac library build
 pnpm build:grammar     # quasar demo app

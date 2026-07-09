@@ -1,8 +1,7 @@
 packages:
   - packages/chat
   - packages/grammar
-  # udi-toolkit is a nested package inside the grammar app; packages/* would not match it
-  - packages/grammar/src/components
+  - packages/grammar-app
 
 # merged from packages/chat/pnpm-workspace.yaml
 allowBuilds:

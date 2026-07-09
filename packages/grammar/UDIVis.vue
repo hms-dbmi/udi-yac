@@ -79,7 +79,9 @@ const props = defineProps<ParserProps>();
 // internally). The injected value is a Ref so prop swaps at the provider
 // propagate without a manual re-render here.
 const injectedPalette = inject(UDI_PALETTE_KEY, null);
-const effectivePalette = computed(() => props.palette ?? injectedPalette?.value);
+const effectivePalette = computed(
+  () => props.palette ?? injectedPalette?.value,
+);
 
 const parsedSpec = ref<ParsedUDIGrammar | null>(null);
 // Per-instance flag: true once this instance's own data sources have been
@@ -432,13 +434,13 @@ function alignAxisToBinBoundaries(
   // tick at every multiple-of-step inside the full range.
   let step = Infinity;
   for (let i = 1; i < observed.length; i++) {
-    const diff = observed[i]! - observed[i - 1]!;
+    const diff = observed[i] - observed[i - 1];
     if (diff > 0 && diff < step) step = diff;
   }
   let values = observed;
   if (Number.isFinite(step) && step > 0 && observed.length >= 2) {
-    const first = observed[0]!;
-    const last = observed[observed.length - 1]!;
+    const first = observed[0];
+    const last = observed[observed.length - 1];
     const filled: number[] = [];
     // Accumulate by step count to avoid float drift from repeated +step.
     const n = Math.round((last - first) / step);

@@ -5,8 +5,8 @@ import { type Preview, setup } from '@storybook/vue3';
 import { type App } from 'vue';
 
 import { createPinia } from 'pinia';
-import UDIVis from '../src/components/UDIVis.vue';
-import TableComponent from '../src/components/TableComponent.vue';
+import UDIVis from '../UDIVis.vue';
+import TableComponent from '../TableComponent.vue';
 
 setup((app: App) => {
   app

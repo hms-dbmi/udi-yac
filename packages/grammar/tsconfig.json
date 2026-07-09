@@ -1,0 +1,13 @@
+// Typecheck/editor/eslint project config. The build dts configs are
+// tsconfig.lib.json (Vue lib) and tsconfig.react.json (react-wrapper).
+{
+  "extends": "./tsconfig.lib.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "emitDeclarationOnly": false
+  },
+  // Unlike the lib build, stories and vite configs are included here so
+  // eslint's project service can type-lint them. react-wrapper stays out —
+  // it needs jsx and is typechecked via tsconfig.react.json in build:react.
+  "exclude": ["dist", "node_modules", "storybook-static", "react-wrapper"]
+}

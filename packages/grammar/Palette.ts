@@ -109,11 +109,14 @@ export function toTableRampInterpolator(
   if (Array.isArray(color)) {
     if (color.length === 0) return null;
     if (color.length === 1) {
-      const solid = color[0]!;
+      const solid = color[0];
       return () => solid;
     }
     const stops = color.map((_, i) => i / (color.length - 1));
-    const scale = scaleLinear<string, string>().domain(stops).range(color).clamp(true);
+    const scale = scaleLinear<string, string>()
+      .domain(stops)
+      .range(color)
+      .clamp(true);
     return (t: number) => scale(t);
   }
   return null;
@@ -124,7 +127,9 @@ export function toTableRampInterpolator(
  * Arrays pass through; a bare scheme-name string returns `null` so the caller
  * falls back to its default.
  */
-export function toTableCategoryColors(color: DiscreteColor | undefined): string[] | null {
+export function toTableCategoryColors(
+  color: DiscreteColor | undefined,
+): string[] | null {
   if (color == null) return null;
   return Array.isArray(color) ? color : null;
 }

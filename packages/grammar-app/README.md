@@ -2,7 +2,7 @@
 
 This repository contains the current type definitions for the Universal Discovery Interface (UDI) Grammar.
 
-The Grammar is defined with TypeScript typings in [GrammarTypes.ts](./src/components/GrammarTypes.ts).
+The Grammar is defined with TypeScript typings in [GrammarTypes.ts](../grammar/GrammarTypes.ts).
 
 The Grammar maps variables to visual encodings. For instance, to create a scatterplot of height and weight we can map `height_value` to `x` and `weight_value` to `y` from the example `donors.csv` file.
 
@@ -143,7 +143,7 @@ These data transformations can get more complex. For instance to create a relati
 
 ## Using udi-toolkit
 
-The `udi-toolkit` npm package (built from `src/components/`) renders UDI grammar specs as interactive visualizations. It supports three consumption modes:
+The `udi-toolkit` npm package (built from [`packages/grammar/`](../grammar)) renders UDI grammar specs as interactive visualizations. It supports three consumption modes:
 
 ### Vue
 
@@ -259,8 +259,8 @@ const allDomains: DataFieldDomain[] = [];
 
 await loadDataPackage(
   [
-    { name: 'donors',   url: '/data/donors.csv'   },
-    { name: 'samples',  url: '/data/samples.csv'  },
+    { name: 'donors', url: '/data/donors.csv' },
+    { name: 'samples', url: '/data/samples.csv' },
     { name: 'datasets', url: '/data/datasets.csv' },
   ],
   {
@@ -337,9 +337,9 @@ ce-entry is already imported.
 ### Building the library
 
 ```bash
-cd src/components
-yarn build:all    # Builds Vue, Custom Element, and React targets
-yarn test         # Builds + runs smoke tests
+cd packages/grammar
+pnpm build:all    # Builds Vue, Custom Element, and React targets
+pnpm test         # Builds + runs smoke tests
 ```
 
 ## Quick start for developers

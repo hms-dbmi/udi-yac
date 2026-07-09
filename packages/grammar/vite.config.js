@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import tsConfigPaths from 'vite-tsconfig-paths';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig({
@@ -35,10 +34,13 @@ export default defineConfig({
   },
   plugins: [
     vue(),
-    tsConfigPaths(),
     dts({
       tsconfigPath: 'tsconfig.lib.json',
-      exclude: ['react-wrapper/**', 'vite.config.ce.ts', 'vite.config.react.ts'],
+      exclude: [
+        'react-wrapper/**',
+        'vite.config.ce.ts',
+        'vite.config.react.ts',
+      ],
     }),
   ],
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import UDIVis from 'src/components/UDIVis.vue';
+import { UDIVis } from 'udi-toolkit';
 import { ref, computed, shallowRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { decompressFromEncodedURIComponent } from 'lz-string';
@@ -15,7 +15,7 @@ const MONACO_EDITOR_OPTIONS = {
   formatOnPaste: true,
 };
 
-// "$schema": "https://raw.githubusercontent.com/hms-dbmi/udi-grammar/refs/heads/main/UDIGrammarSchema.json",
+// "$schema": "https://raw.githubusercontent.com/hms-dbmi/udi-yac/refs/heads/main/packages/grammar/UDIGrammarSchema.json",
 
 const code = ref(`{
   "source": {

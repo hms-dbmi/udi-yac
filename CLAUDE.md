@@ -6,16 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Monorepo for the **Universal Discovery Interface (UDI)** — an AI-powered system for querying and visualizing biomedical datasets via natural language. Formerly four separate repos, merged via `git subtree` with full history (browse a package's pre-merge history via the second parent of its `Add 'packages/<name>/'` merge commit).
 
-| Directory              | Published as                               | Stack                                | Role                                                              |
-| ---------------------- | ------------------------------------------ | ------------------------------------ | ----------------------------------------------------------------- |
-| `packages/grammar/`    | `udi-toolkit` (npm, from `src/components`) | TypeScript, Vue 3, Quasar, Vite      | Grammar types + UDIVis + Storybook + demo app (`udi-grammar-app`) |
-| `packages/chat/`       | `udi-yac` (npm)                            | TypeScript, React 19, Tailwind, Vite | Chat UI — library + standalone SPA                                |
-| `packages/agent/`      | `udiagent` (PyPI)                          | Python, OpenAI, FastAPI (optional)   | LLM orchestrator + reference FastAPI server                       |
-| `packages/grammar-py/` | `udi-grammar-py` (PyPI)                    | Python, hatchling                    | Python library for building UDI grammar specs                     |
+| Directory               | Published as            | Stack                                | Role                                          |
+| ----------------------- | ----------------------- | ------------------------------------ | --------------------------------------------- |
+| `packages/grammar/`     | `udi-toolkit` (npm)     | TypeScript, Vue 3, Vite              | Grammar types + UDIVis + Storybook            |
+| `packages/grammar-app/` | — (private)             | TypeScript, Vue 3, Quasar, Vite      | Demo app (`udi-grammar-app`) for the toolkit  |
+| `packages/chat/`        | `udi-yac` (npm)         | TypeScript, React 19, Tailwind, Vite | Chat UI — library + standalone SPA            |
+| `packages/agent/`       | `udiagent` (PyPI)       | Python, OpenAI, FastAPI (optional)   | LLM orchestrator + reference FastAPI server   |
+| `packages/grammar-py/`  | `udi-grammar-py` (PyPI) | Python, hatchling                    | Python library for building UDI grammar specs |
 
 Two workspaces share the repo root:
 
-- **pnpm workspace** (`pnpm-workspace.yaml`): `packages/chat`, `packages/grammar`, and the nested `packages/grammar/src/components` (udi-toolkit). `packages/chat` depends on `udi-toolkit: workspace:*` — toolkit exports point at `dist/`, so **build the toolkit before building/testing chat**. Root `.npmrc` sets `shamefully-hoist=true` (required by Quasar under pnpm). Dependency `overrides` (former yarn `resolutions`) live in `pnpm-workspace.yaml`; the vite pin is deliberately scoped to `udi-toolkit>vite` / `@quasar/app-vite>vite` so chat's vitest keeps its own internal vite.
+- **pnpm workspace** (`pnpm-workspace.yaml`): `packages/chat`, `packages/grammar` (udi-toolkit), `packages/grammar-app`. Both chat and grammar-app depend on `udi-toolkit: workspace:*` — toolkit exports point at `dist/`, so **build the toolkit before building/typechecking its consumers**. grammar-app additionally aliases `udi-toolkit` to the toolkit's _source_ in its `quasar.config.ts` `extendViteConf`, so component edits hot-reload in the demo app (typechecking still reads `dist/index.d.ts`). Root `.npmrc` sets `shamefully-hoist=true` (required by Quasar under pnpm). Dependency `overrides` (former yarn `resolutions`) live in `pnpm-workspace.yaml`; the vite pin is deliberately scoped to `udi-toolkit>vite` / `@quasar/app-vite>vite` so chat's vitest keeps its own internal vite.
 - **uv workspace** (`pyproject.toml`): `packages/agent` + `packages/grammar-py`, single root `uv.lock`. `udiagent[codegen]` resolves `udi-grammar-py` from the workspace during development. Note: `uv build` in a member dir writes to the workspace **root** `dist/` unless you pass `--out-dir`.
 
 ## Build & Dev Commands
@@ -27,13 +28,13 @@ pnpm install            # whole JS workspace; runs quasar prepare + husky
 pnpm build:toolkit      # udi-toolkit build:all (Vue + CE + React targets)
 pnpm build:chat         # toolkit, then chat standalone SPA
 pnpm build:chat:lib     # toolkit, then udi-yac library build
-pnpm build:grammar      # quasar demo app (base path /udi-yac/grammar/)
-pnpm build:storybook    # storybook static build
+pnpm build:grammar      # toolkit, then quasar demo app (base path /udi-yac/grammar/)
+pnpm build:storybook    # toolkit storybook static build
 pnpm test               # toolkit build, then all JS tests
 pnpm lint / pnpm format # recursive
 ```
 
-Per-package (use `--filter`, no cd needed): `pnpm --filter udi-yac typecheck|test|lint|format:check|build|build:lib`, `pnpm --filter udi-toolkit build:all`, `pnpm --filter udi-grammar-app dev|storybook`.
+Per-package (use `--filter`, no cd needed): `pnpm --filter udi-yac typecheck|test|lint|format:check|build|build:lib`, `pnpm --filter udi-toolkit build:all|storybook|build-schema`, `pnpm --filter udi-grammar-app dev`.
 
 Python:
 
@@ -43,7 +44,7 @@ cd packages/grammar-py && uv sync && uv run pytest
 uv run fastapi dev packages/agent/src/udiagent/server/app.py --port 8007   # dev server
 ```
 
-Toolkit smoke tests (after `pnpm build:toolkit`): `node test/smoke-{vue,ce,react,exports}.mjs` in `packages/grammar/src/components`.
+Toolkit smoke tests (after `pnpm build:toolkit`): `node test/smoke-{vue,ce,react,exports}.mjs` in `packages/grammar`.
 
 ## CI / Releases (.github/workflows/)
 
@@ -53,7 +54,7 @@ Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml`, `ci-python.yml`. Com
 
 ### UDI Grammar Spec
 
-JSON spec with three top-level keys: **`source`** (CSV data sources), **`transformation`** (groupby, rollup, binby, join, derive, filter, orderby, kde), **`representation`** (bar/point/line/area/arc/text/rect/geometry layers or row-based tables). Canonical TypeScript definition: `packages/grammar/src/components/GrammarTypes.ts`; `UDIGrammarSchema.json` is generated from it (`yarn build-schema` equivalent: `pnpm --filter udi-grammar-app build-schema`).
+JSON spec with three top-level keys: **`source`** (CSV data sources), **`transformation`** (groupby, rollup, binby, join, derive, filter, orderby, kde), **`representation`** (bar/point/line/area/arc/text/rect/geometry layers or row-based tables). Canonical TypeScript definition: `packages/grammar/GrammarTypes.ts`; `UDIGrammarSchema.json` (checked in at `packages/grammar/`) is generated from it via `pnpm --filter udi-toolkit build-schema`.
 
 ### Data Flow
 
@@ -72,7 +73,7 @@ User query → chat ChatPanel → POST /v1/yac/completions (udiagent.server)
 
 ### Key details
 
-- **udi-toolkit** (`packages/grammar/src/components/`) exposes `UDIVis` plus headless APIs from `udi-toolkit/react` (and `/ce`): `loadDataPackage`, `queryData` (memoized per sources/transformations/selectionHash/tablesVersion; `{ displayDataOnly: true }` skips the allData pass), `subscribeToSelections`, `clearAllSelections`. All share one Pinia `DataSourcesStore` singleton.
+- **udi-toolkit** (`packages/grammar/`) exposes `UDIVis` plus headless APIs from `udi-toolkit/react` (and `/ce`): `loadDataPackage`, `queryData` (memoized per sources/transformations/selectionHash/tablesVersion; `{ displayDataOnly: true }` skips the allData pass), `subscribeToSelections`, `clearAllSelections`. All share one Pinia `DataSourcesStore` singleton.
 - **chat** bridges the toolkit as a Vue Custom Element via `udi-toolkit/react`. Zustand stores are **vanilla** (`createStore`), instantiated per-provider in `src/app/UDIChatContext.tsx` — never import a store module directly into a component. Pinia is the single source of truth for brush selections; no React-side mirror. Path alias `@/` → `src/`. Debug mode: type `!/admin` in chat input.
 - **agent** is a publishable library — configuration via constructor params, not env vars; server (`udiagent.server`, `[server]` extra) is a reference app; JWT auth (`INSECURE_DEV_MODE=1` skips in dev); langfuse optional via `_compat.py`.
 - Feature boundaries in chat follow bulletproof-react: `app/`, `features/{chat,dashboard,data-package,tool-calls}` with `index.ts` barrels, shared code in top-level `components/`/`stores/`/`types/`/`utils/`.

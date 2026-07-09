@@ -2,16 +2,17 @@ name: Deploy to GitHub Pages
 
 # Combined Pages site:
 #   /            ← chat SPA (packages/chat)
-#   /grammar/    ← quasar demo app (packages/grammar)
+#   /grammar/    ← quasar demo app (packages/grammar-app)
 
 on:
   push:
     branches: [main]
     paths:
-      - 'packages/chat/**'
-      - 'packages/grammar/**'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/pages.yml'
+      - "packages/chat/**"
+      - "packages/grammar/**"
+      - "packages/grammar-app/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -54,14 +55,14 @@ jobs:
           VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
 
       - name: Build grammar demo app
-        run: pnpm run build:grammar
+        run: pnpm --filter udi-grammar-app build
 
       - name: Assemble site
         run: |
           mkdir site
           cp -r packages/chat/dist/* site/
           mkdir site/grammar
-          cp -r packages/grammar/dist/spa/* site/grammar/
+          cp -r packages/grammar-app/dist/spa/* site/grammar/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

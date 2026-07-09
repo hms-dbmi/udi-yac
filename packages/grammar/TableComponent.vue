@@ -48,7 +48,9 @@ const props = defineProps<TableComponentProps>();
 // Palette fallback chain: own prop → UDIToolkitProvider's injected palette →
 // undefined (cell renderers handle the DEFAULT_PALETTE fallback themselves).
 const injectedPalette = inject(UDI_PALETTE_KEY, null);
-const effectivePalette = computed(() => props.palette ?? injectedPalette?.value);
+const effectivePalette = computed(
+  () => props.palette ?? injectedPalette?.value,
+);
 
 const representations = computed<RowLayer[] | null>(() => {
   if (!props.spec) return null;
@@ -119,7 +121,7 @@ const flatColumnMapping = computed<LayeredRowMapping[]>(() => {
   const flatColumnMapping: LayeredRowMapping[] = [];
   for (let i = 0; i < columnMappingLayers.value.length; i++) {
     const columnMappingLayer = columnMappingLayers.value[i];
-    for (const columnMapping of columnMappingLayer!) {
+    for (const columnMapping of columnMappingLayer) {
       flatColumnMapping.push({ layer: i.toString(), ...columnMapping });
     }
   }
@@ -182,7 +184,7 @@ function getStringDomain(
   for (const field of fieldList) {
     const valueList = data
       .filter((d) => d[field] !== null && typeof d[field] !== 'undefined')
-      .map((d) => d[field]) as string[];
+      .map((d) => d[field]);
     for (const value of valueList) {
       values.add(value);
     }

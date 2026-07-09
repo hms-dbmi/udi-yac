@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import tsConfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   build: {
@@ -34,7 +33,6 @@ export default defineConfig({
   },
   plugins: [
     vue(),
-    tsConfigPaths(),
     // Types for CE are provided via a hand-written ce.d.ts (see dist/ce.d.ts)
     // because the rollupTypes option conflicts with api-extractor for custom element definitions.
   ],

@@ -45,6 +45,7 @@ export type {
   DataSelection,
   VisualizationLayer,
   RowLayer,
+  RowMapping,
 } from './GrammarTypes';
 
 export type {

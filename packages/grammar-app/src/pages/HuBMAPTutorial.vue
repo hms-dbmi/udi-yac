@@ -1,11 +1,9 @@
 <script setup lang="ts">
-
-import UDIVis from 'src/components/UDIVis.vue';
+import { UDIVis } from 'udi-toolkit';
 import { tutorialExamples } from 'src/specs/TutorialSpecs';
 import { useEditorStore } from 'src/stores/EditorStore';
 
 const editorStore = useEditorStore();
-
 </script>
 
 <template>
@@ -15,8 +13,9 @@ const editorStore = useEditorStore();
         HuBMAP Visualization Tutorial
       </p>
       <p class="text-body1 q-mb-lg">
-        This tutorial walks through the process of how the UDI grammar can be used to create a heatmap visualization
-        showing HuBMAP dataset counts by source organ and assay type.
+        This tutorial walks through the process of how the UDI grammar can be
+        used to create a heatmap visualization showing HuBMAP dataset counts by
+        source organ and assay type.
       </p>
 
       <div
@@ -24,7 +23,6 @@ const editorStore = useEditorStore();
         :key="exampleIndex"
         class="q-mb-xl full-width"
       >
-      
         <!-- Visualization Header -->
         <div class="row items-center q-mb-md">
           <div class="text-subtitle1 text-bold text-primary">
@@ -44,15 +42,19 @@ const editorStore = useEditorStore();
           {{ example.description }}
         </div>
 
-        
         <!-- Spec / Code panel -->
         <div class="col-12 col-md-6">
           <q-card flat bordered class="q-pa-md bg-grey-1 full-height">
             <div class="code-block">
               <div
-                v-for="(line, i) in JSON.stringify(example.spec, null, 2).split('\n')"
+                v-for="(line, i) in JSON.stringify(example.spec, null, 2).split(
+                  '\n',
+                )"
                 :key="i"
-                :class="['code-line', { 'highlight-line': example.highlightLines?.includes(i + 1) }]"
+                :class="[
+                  'code-line',
+                  { 'highlight-line': example.highlightLines?.includes(i + 1) },
+                ]"
               >
                 {{ line }}
               </div>
@@ -72,7 +74,6 @@ const editorStore = useEditorStore();
     </div>
   </q-page>
 </template>
-
 
 <style scoped>
 .tutorial-container {

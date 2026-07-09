@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { type ParsedUDIGrammar } from './Parser';
-import UDIVis from 'src/components/UDIVis.vue';
+import UDIVis from './UDIVis.vue';
 
 interface TestMultipleSpecsProps {
   specs: ParsedUDIGrammar[];

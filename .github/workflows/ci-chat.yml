@@ -4,19 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/chat/**'
-      - 'packages/grammar/src/components/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/ci-chat.yml'
+      - "packages/chat/**"
+      - "packages/grammar/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/ci-chat.yml"
   pull_request:
     branches: [main]
     paths:
-      - 'packages/chat/**'
-      - 'packages/grammar/src/components/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/ci-chat.yml'
+      - "packages/chat/**"
+      - "packages/grammar/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/ci-chat.yml"
 
 jobs:
   ci:

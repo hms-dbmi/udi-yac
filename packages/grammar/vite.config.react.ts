@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import tsConfigPaths from 'vite-tsconfig-paths';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig({
@@ -36,9 +35,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [
-    vue(),
-    tsConfigPaths(),
-    dts({ tsconfigPath: 'tsconfig.react.json' }),
-  ],
+  plugins: [vue(), dts({ tsconfigPath: 'tsconfig.react.json' })],
 });

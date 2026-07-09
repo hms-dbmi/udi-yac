@@ -2,6 +2,7 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app/wrappers';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig((/* ctx */) => {
   return {
@@ -42,18 +43,33 @@ export default defineConfig((/* ctx */) => {
       typescript: {
         strict: true,
         vueShim: true,
-        extendTsConfig(tsConfig) {
-          tsConfig.exclude = [
-            ...(tsConfig.exclude || []), // Keep the existing exclusions if any
-            './../src/components/dist',
-            './../src/components/node_modules',
-            './../src/components/index.ts',
-            // React entry: .tsx built separately via tsconfig.react.json (jsx
-            // enabled). The Vue app's vue-tsc has no jsx, so typechecking it
-            // here errors with "'--jsx' is not set".
-            './../src/components/react-wrapper',
-          ];
-        },
+      },
+
+      // Resolve udi-toolkit to its workspace source so editing components in
+      // packages/grammar hot-reloads the demo app. Typechecking still goes
+      // through the package's dist/index.d.ts (build the toolkit first).
+      extendViteConf(viteConf) {
+        viteConf.resolve = viteConf.resolve ?? {};
+        viteConf.resolve.alias = {
+          ...viteConf.resolve.alias,
+          'udi-toolkit': fileURLToPath(
+            new URL('../grammar/index.ts', import.meta.url),
+          ),
+        };
+        // Quasar injects `@import 'quasar/src/css/variables.sass'` into every
+        // scss block. Toolkit SFCs live outside this package, where `quasar`
+        // isn't node-resolvable — let sass find it via this app's node_modules.
+        viteConf.css = viteConf.css ?? {};
+        viteConf.css.preprocessorOptions =
+          viteConf.css.preprocessorOptions ?? {};
+        const scss = viteConf.css.preprocessorOptions.scss ?? {};
+        viteConf.css.preprocessorOptions.scss = {
+          ...scss,
+          loadPaths: [
+            ...(scss.loadPaths ?? []),
+            fileURLToPath(new URL('./node_modules', import.meta.url)),
+          ],
+        };
       },
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
