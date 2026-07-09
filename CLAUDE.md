@@ -6,17 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Monorepo for the **Universal Discovery Interface (UDI)** — an AI-powered system for querying and visualizing biomedical datasets via natural language. Formerly four separate repos, merged via `git subtree` with full history (browse a package's pre-merge history via the second parent of its `Add 'packages/<name>/'` merge commit).
 
-| Directory               | Published as            | Stack                                | Role                                          |
-| ----------------------- | ----------------------- | ------------------------------------ | --------------------------------------------- |
-| `packages/grammar/`     | `udi-toolkit` (npm)     | TypeScript, Vue 3, Vite              | Grammar types + UDIVis + Storybook            |
-| `packages/grammar-app/` | — (private)             | TypeScript, Vue 3, Quasar, Vite      | Demo app (`udi-grammar-app`) for the toolkit  |
-| `packages/chat/`        | `udi-yac` (npm)         | TypeScript, React 19, Tailwind, Vite | Chat UI — library + standalone SPA            |
-| `packages/agent/`       | `udiagent` (PyPI)       | Python, OpenAI, FastAPI (optional)   | LLM orchestrator + reference FastAPI server   |
-| `packages/grammar-py/`  | `udi-grammar-py` (PyPI) | Python, hatchling                    | Python library for building UDI grammar specs |
+| Directory              | Published as            | Stack                                | Role                                          |
+| ---------------------- | ----------------------- | ------------------------------------ | --------------------------------------------- |
+| `packages/grammar/`    | `udi-toolkit` (npm)     | TypeScript, Vue 3, Vite              | Grammar types + UDIVis + Storybook            |
+| `apps/grammar-app/`    | — (private)             | TypeScript, Vue 3, Quasar, Vite      | Demo app (`udi-grammar-app`) for the toolkit  |
+| `packages/chat/`       | `udi-yac` (npm)         | TypeScript, React 19, Tailwind, Vite | Chat UI — library + standalone SPA            |
+| `packages/agent/`      | `udiagent` (PyPI)       | Python, OpenAI, FastAPI (optional)   | LLM orchestrator + reference FastAPI server   |
+| `packages/grammar-py/` | `udi-grammar-py` (PyPI) | Python, hatchling                    | Python library for building UDI grammar specs |
 
 Two workspaces share the repo root:
 
-- **pnpm workspace** (`pnpm-workspace.yaml`): `packages/chat`, `packages/grammar` (udi-toolkit), `packages/grammar-app`. Both chat and grammar-app depend on `udi-toolkit: workspace:*` — toolkit exports point at `dist/`, so **build the toolkit before building/typechecking its consumers**. grammar-app additionally aliases `udi-toolkit` to the toolkit's _source_ in its `quasar.config.ts` `extendViteConf`, so component edits hot-reload in the demo app (typechecking still reads `dist/index.d.ts`). Root `.npmrc` sets `shamefully-hoist=true` (required by Quasar under pnpm). Dependency `overrides` (former yarn `resolutions`) live in `pnpm-workspace.yaml`; the vite pin is deliberately scoped to `udi-toolkit>vite` / `@quasar/app-vite>vite` so chat's vitest keeps its own internal vite.
+- **pnpm workspace** (`pnpm-workspace.yaml`): `packages/chat`, `packages/grammar` (udi-toolkit), `apps/grammar-app`. Both chat and grammar-app depend on `udi-toolkit: workspace:*` — toolkit exports point at `dist/`, so **build the toolkit before building/typechecking its consumers**. grammar-app additionally aliases `udi-toolkit` to the toolkit's _source_ in its `quasar.config.ts` `extendViteConf`, so component edits hot-reload in the demo app (typechecking still reads `dist/index.d.ts`). Root `.npmrc` sets `shamefully-hoist=true` (required by Quasar under pnpm). Dependency `overrides` (former yarn `resolutions`) live in `pnpm-workspace.yaml`; the vite pin is deliberately scoped to `udi-toolkit>vite` / `@quasar/app-vite>vite` so chat's vitest keeps its own internal vite.
 - **uv workspace** (`pyproject.toml`): `packages/agent` + `packages/grammar-py`, single root `uv.lock`. `udiagent[codegen]` resolves `udi-grammar-py` from the workspace during development. Note: `uv build` in a member dir writes to the workspace **root** `dist/` unless you pass `--out-dir`.
 
 ## Build & Dev Commands

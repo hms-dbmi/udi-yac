@@ -53,7 +53,7 @@ export default defineConfig((/* ctx */) => {
         viteConf.resolve.alias = {
           ...viteConf.resolve.alias,
           'udi-toolkit': fileURLToPath(
-            new URL('../grammar/index.ts', import.meta.url),
+            new URL('../../packages/grammar/index.ts', import.meta.url),
           ),
         };
         // Quasar injects `@import 'quasar/src/css/variables.sass'` into every

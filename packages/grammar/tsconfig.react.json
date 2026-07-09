@@ -16,6 +16,6 @@
     "allowSyntheticDefaultImports": true,
     "strict": true
   },
-  "include": ["react-wrapper/**/*"],
+  "include": ["react-wrapper/**/*", "fast-kde.d.ts"],
   "exclude": []
 }

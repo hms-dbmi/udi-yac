@@ -1,7 +1,7 @@
 packages:
   - packages/chat
   - packages/grammar
-  - packages/grammar-app
+  - apps/grammar-app
 
 # merged from packages/chat/pnpm-workspace.yaml
 allowBuilds:

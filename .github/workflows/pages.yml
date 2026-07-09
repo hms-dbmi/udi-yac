@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 # Combined Pages site:
 #   /            ← chat SPA (packages/chat)
-#   /grammar/    ← quasar demo app (packages/grammar-app)
+#   /grammar/    ← quasar demo app (apps/grammar-app)
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
-      - "packages/grammar-app/**"
+      - "apps/grammar-app/**"
       - "pnpm-lock.yaml"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -62,7 +62,7 @@ jobs:
           mkdir site
           cp -r packages/chat/dist/* site/
           mkdir site/grammar
-          cp -r packages/grammar-app/dist/spa/* site/grammar/
+          cp -r apps/grammar-app/dist/spa/* site/grammar/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
