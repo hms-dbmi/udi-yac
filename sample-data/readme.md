@@ -53,4 +53,6 @@ there.**
 | `./example_*.csv`, `./match_test_*.csv`           | Small fixtures for tutorial/example specs.                                                                                                                    |
 
 To refresh HuBMAP: re-run the four `curl`s against the portal `/udi/` endpoint
-into `./hubmap/`, then set the manifest's `udi:path` back to `"./"`.
+into `./hubmap/`, then set the manifest's `udi:path` back to `"./data/hubmap/"`
+(consumers resolve it page-relative, i.e. against the served `/data` mount, not
+against the manifest's own location).
