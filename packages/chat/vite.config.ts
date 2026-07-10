@@ -29,7 +29,10 @@ export default defineConfig(({ mode }) => ({
     ...(mode === 'lib'
       ? [
           dts({
-            insertTypesEntry: true,
+            // No insertTypesEntry: under rolldown-vite it wrote an empty
+            // `export {}` stub at dist/index.d.ts (its computed source-entry
+            // path didn't match an emitted file). The real barrel is emitted at
+            // dist/src/index.d.ts; package.json "types" points there directly.
             include: ['src'],
             exclude: ['src/app/App.tsx', 'src/app/main.tsx'],
             tsconfigPath: resolve(__dirname, 'tsconfig.app.json'),

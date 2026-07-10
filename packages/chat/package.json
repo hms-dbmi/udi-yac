@@ -27,14 +27,14 @@
   "type": "module",
   "main": "dist/udi-yac.js",
   "module": "dist/udi-yac.js",
-  "types": "dist/index.d.ts",
+  "types": "dist/src/index.d.ts",
   "files": [
     "dist",
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/udi-yac.js"
     },
     "./style.css": "./dist/udi-yac.css"
