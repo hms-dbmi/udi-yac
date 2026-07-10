@@ -17,6 +17,12 @@ const LIB_EXTERNALS = [
 
 export default defineConfig(({ mode }) => ({
   base: mode === 'lib' ? '/' : (process.env.VITE_BASE ?? '/'),
+  // react-draggable@4.7.0 reads unguarded `process.env.DRAGGABLE_DEBUG`, which
+  // throws `process is not defined` in the browser (drag/resize dies on
+  // mousedown). Vite only auto-replaces NODE_ENV, so stub this one out.
+  define: {
+    'process.env.DRAGGABLE_DEBUG': 'undefined',
+  },
   plugins: [
     react(),
     tailwindcss(),
