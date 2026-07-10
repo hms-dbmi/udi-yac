@@ -5,15 +5,15 @@ import tailwindcss from '@tailwindcss/vite';
 import dts from 'vite-plugin-dts';
 import { esmExternalRequirePlugin } from 'rolldown/plugins';
 
-const LIB_EXTERNALS = [
-  'react',
-  'react-dom',
-  'react/jsx-runtime',
-  'arquero',
-  'vega',
-  'vega-embed',
-  'vega-lite',
-];
+// React (+ its subpaths) are peer deps and MUST stay external. Bundling a
+// second copy gives the lib its own React instance whose hook dispatcher is
+// never installed by the consumer's renderer, so the first hook (useRef) reads
+// a null dispatcher → "can't access property useRef, O() is null". Everything
+// else (arquero/vega, pulled in via udi-toolkit) is deliberately bundled so
+// consumers don't have to install it — only React breaks when duplicated.
+const REACT_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
+const isReactExternal = (id: string) =>
+  id === 'react' || id === 'react-dom' || id.startsWith('react/') || id.startsWith('react-dom/');
 
 export default defineConfig(({ mode }) => ({
   base: mode === 'lib' ? '/' : (process.env.VITE_BASE ?? '/'),
@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => ({
             exclude: ['src/app/App.tsx', 'src/app/main.tsx'],
             tsconfigPath: resolve(__dirname, 'tsconfig.app.json'),
           }),
-          esmExternalRequirePlugin({ external: LIB_EXTERNALS }),
+          esmExternalRequirePlugin({ external: REACT_EXTERNALS }),
         ]
       : []),
   ],
@@ -56,11 +56,12 @@ export default defineConfig(({ mode }) => ({
             formats: ['es'] as const,
           },
           rollupOptions: {
-            // Externals are declared on esmExternalRequirePlugin (configured in
-            // the plugins array above), which both externalizes them AND
-            // rewrites CJS `require("react")` shims inside deps like zustand
-            // into ESM imports. Listing them here too triggers a duplicate
-            // warning from the plugin.
+            // rollupOptions.external is what actually keeps React out of the
+            // bundle. esmExternalRequirePlugin (above) only rewrites CJS
+            // `require("react")` in bundled deps into ESM imports — it does NOT
+            // mark anything external on its own, so without this React was being
+            // inlined.
+            external: isReactExternal,
             output: {
               globals: {
                 react: 'React',
