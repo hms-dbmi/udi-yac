@@ -10,8 +10,9 @@
     "lint": "eslint -c ./eslint.config.js \"./src*/**/*.{ts,js,cjs,mjs,vue}\"",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
     "test": "echo \"No test specified\" && exit 0",
-    "dev": "quasar dev",
-    "build": "quasar build",
+    "sync-data": "node ../../scripts/copy-sample-data.mjs public/data",
+    "dev": "pnpm run sync-data && quasar dev",
+    "build": "pnpm run sync-data && quasar build",
     "postinstall": "quasar prepare"
   },
   "dependencies": {

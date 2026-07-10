@@ -7,7 +7,8 @@ node_modules
 /dist
 /quasar.config.*.temporary.compiled*
 /public/test
-/public/data/archive
+# Synced from repo-root sample-data/ on dev/build (see scripts/copy-sample-data.mjs)
+/public/data
 
 
 # Cordova related directories and files

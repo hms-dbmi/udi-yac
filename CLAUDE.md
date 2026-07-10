@@ -56,6 +56,10 @@ Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml`, `ci-python.yml`. Com
 
 JSON spec with three top-level keys: **`source`** (CSV data sources), **`transformation`** (groupby, rollup, binby, join, derive, filter, orderby, kde), **`representation`** (bar/point/line/area/arc/text/rect/geometry layers or row-based tables). Canonical TypeScript definition: `packages/grammar/GrammarTypes.ts`; `UDIGrammarSchema.json` (checked in at `packages/grammar/`) is generated from it via `pnpm --filter udi-toolkit build-schema`.
 
+### Dev/test data (single source of truth)
+
+Sample data packages live once at repo-root **`sample-data/`** (HuBMAP package fetched fresh from the production portal `…/metadata/v0/udi/`, plus penguins + loose HuBMAP CSVs + a curated `hubmap_examples/` subset). `scripts/copy-sample-data.mjs` syncs it into each frontend's static dir on dev/build (`packages/chat/public/data`, `apps/grammar-app/public/data` — both gitignored, wired via each package's `sync-data` script); the toolkit's Storybook mounts it via `staticDirs` (`.storybook/main.ts`, served at `/data`). **Edit `sample-data/`, not the `public/data` copies.** Chat defaults to the bundled `/data/hubmap/datapackage.json` (override with `VITE_UDI_DATA_PACKAGE`). The Python agent's `packages/agent/data/` is separate (JSON/JSONL benchmark fixtures, not these tabular packages).
+
 ### Data Flow
 
 ```

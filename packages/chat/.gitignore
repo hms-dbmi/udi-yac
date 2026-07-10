@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 
+# Synced from repo-root sample-data/ on dev/build (see scripts/copy-sample-data.mjs)
+public/data
+
 *.local
 
 # Editor directories and files

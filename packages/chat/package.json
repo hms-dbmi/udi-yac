@@ -47,8 +47,9 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "sync-data": "node ../../scripts/copy-sample-data.mjs public/data",
+    "dev": "pnpm run sync-data && vite",
+    "build": "pnpm run sync-data && tsc -b && vite build",
     "build:lib": "tsc -b && vite build --mode lib",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",

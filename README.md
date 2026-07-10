@@ -41,6 +41,10 @@ cd packages/agent && uv sync --extra server --extra langfuse --extra test && uv 
 cd packages/grammar-py && uv sync && uv run pytest
 ```
 
+## Sample data
+
+Dev/test data packages live once at [`sample-data/`](sample-data) (the single source of truth). Each frontend's `dev`/`build` syncs it into its own gitignored `public/data` via [`scripts/copy-sample-data.mjs`](scripts/copy-sample-data.mjs); the toolkit's Storybook serves it via `staticDirs`. Edit `sample-data/`, not the copies. See [`sample-data/readme.md`](sample-data/readme.md).
+
 ## Releases
 
 Tags are per-package: `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z`. Because `udi-yac` depends on `udi-toolkit: workspace:*` (rewritten to the exact in-tree version at publish time), **publish udi-toolkit before udi-yac** whenever the toolkit version moved.
