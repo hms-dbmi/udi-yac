@@ -22,7 +22,15 @@ Former homes: [udi-grammar](https://github.com/hms-dbmi/udi-grammar), [udi-chat-
 
 ## Quickstart
 
-JavaScript/TypeScript (pnpm workspace — `udi-toolkit` is consumed via `workspace:*`, so build it before the chat app):
+**Onboarding (one command).** Requires [Node ≥ 22](https://nodejs.org) with pnpm (`corepack enable`) and [uv](https://docs.astral.sh/uv/). Then:
+
+```bash
+node scripts/setup.mjs      # or: pnpm setup
+```
+
+This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:grammar`, `pnpm dev:storybook`).
+
+Manual/CI steps — JavaScript/TypeScript (pnpm workspace, `udi-toolkit` consumed via `workspace:*`, so build it before the chat app):
 
 ```bash
 pnpm install

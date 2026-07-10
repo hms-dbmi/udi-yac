@@ -21,6 +21,8 @@ Two workspaces share the repo root:
 
 ## Build & Dev Commands
 
+Onboarding: `pnpm setup` (or `node scripts/setup.mjs`) — creates local env files from templates (`packages/chat/.env.local`, `packages/agent/.env`; never clobbers), `pnpm install`, builds the toolkit, and `uv sync --all-extras`. Start dev via the `.vscode/tasks.json` **Dev: chat + agent** task (default build task) or `pnpm dev:chat` / `dev:agent` / `dev:grammar` / `dev:storybook`.
+
 Root scripts (pnpm ≥ 11):
 
 ```bash

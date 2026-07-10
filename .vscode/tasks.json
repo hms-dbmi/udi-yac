@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup dev environment",
+      "detail": "Create env files, install pnpm + uv deps, build the toolkit",
+      "type": "shell",
+      "command": "node scripts/setup.mjs",
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: chat",
+      "detail": "Chat SPA (Vite, http://localhost:5173)",
+      "type": "shell",
+      "command": "pnpm --filter udi-yac dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "group": "dev", "panel": "dedicated" }
+    },
+    {
+      "label": "Dev: agent",
+      "detail": "UDIAgent FastAPI server (http://localhost:8007)",
+      "type": "shell",
+      "command": "uv run fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "group": "dev", "panel": "dedicated" }
+    },
+    {
+      "label": "Dev: grammar app",
+      "detail": "Quasar demo app (http://localhost:9000/udi-yac/grammar/)",
+      "type": "shell",
+      "command": "pnpm --filter udi-grammar-app dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "group": "dev", "panel": "dedicated" }
+    },
+    {
+      "label": "Dev: storybook",
+      "detail": "udi-toolkit Storybook (http://localhost:6006)",
+      "type": "shell",
+      "command": "pnpm --filter udi-toolkit storybook",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "group": "dev", "panel": "dedicated" }
+    },
+    {
+      "label": "Dev: chat + agent",
+      "detail": "Start the core dev stack (chat SPA + agent server) together",
+      "dependsOn": ["Dev: agent", "Dev: chat"],
+      "dependsOrder": "parallel",
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    }
+  ]
+}

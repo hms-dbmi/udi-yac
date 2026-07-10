@@ -3,6 +3,11 @@
   "private": true,
   "packageManager": "pnpm@11.5.1",
   "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev:chat": "pnpm --filter udi-yac dev",
+    "dev:agent": "uv run fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
+    "dev:grammar": "pnpm --filter udi-grammar-app dev",
+    "dev:storybook": "pnpm --filter udi-toolkit storybook",
     "build:toolkit": "pnpm --filter udi-toolkit build:all",
     "build:chat": "pnpm run build:toolkit && pnpm --filter udi-yac build",
     "build:chat:lib": "pnpm run build:toolkit && pnpm --filter udi-yac build:lib",
