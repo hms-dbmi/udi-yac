@@ -8,6 +8,7 @@ import type {
   ExportRowSet,
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
+import { httpError } from '@/utils/httpError';
 import { loadDataPackage, type SourceSpec } from 'udi-toolkit/react';
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready' | 'error';
@@ -199,7 +200,7 @@ export function createDataPackageStore() {
       try {
         const response = await fetch(path, fetchOptions);
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+          throw await httpError(response);
         }
         const json = (await response.json()) as DataPackage;
         if (json.resources && Array.isArray(json.resources)) {

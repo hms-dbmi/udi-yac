@@ -1,4 +1,5 @@
 import type { Message } from '@/types/messages';
+import { httpError } from '@/utils/httpError';
 
 export interface QueryConfig {
   apiBaseUrl: string;
@@ -117,8 +118,7 @@ export async function queryLLM(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`HTTP ${response.status}: ${errorText}`);
+    throw await httpError(response);
   }
 
   const data = await response.json();
