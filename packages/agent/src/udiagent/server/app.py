@@ -17,6 +17,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from dotenv import load_dotenv
+from openai import AuthenticationError
 from fastapi import FastAPI, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -42,8 +43,14 @@ from udiagent.server.models import (
 
 load_dotenv()
 
+# Package root (packages/agent) — resolve bundled dev data relative to the
+# source tree, not the process CWD, so endpoints work no matter where the
+# server is launched from (repo root, packages/agent, or the Docker image).
+_PACKAGE_ROOT = Path(__file__).resolve().parents[3]
+_DATA_DIR = _PACKAGE_ROOT / "data"
+
 # --- Logging setup ---
-_log_dir = Path(__file__).resolve().parent.parent.parent.parent / "logs"
+_log_dir = _PACKAGE_ROOT / "logs"
 _log_dir.mkdir(exist_ok=True)
 
 logging.basicConfig(
@@ -114,6 +121,22 @@ async def _budget_exceeded_handler(request, exc: BudgetExceededError):
         headers=_usage_headers(exc.usage),
     )
 
+
+@app.exception_handler(AuthenticationError)
+async def _openai_auth_error_handler(request, exc: AuthenticationError):
+    """Surface a rejected OpenAI key as a clean 401 instead of a bare 500.
+
+    Fires when the caller's ``X-OpenAI-Key`` (or the server's configured key)
+    is rejected by OpenAI, so the frontend can show an actionable message
+    rather than a raw stack trace.
+    """
+    logger.warning("OpenAI authentication failed: %s", exc)
+    return JSONResponse(
+        status_code=401,
+        content={"error": "OpenAI rejected the API key (invalid or unauthorized)."},
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -168,6 +191,17 @@ def yac_completions(
         request,
     )
 
+    # No key from the caller and none configured server-side → actionable 401
+    # instead of the RuntimeError the orchestrator would raise (a bare 500).
+    if not x_openai_key and not config.openai_api_key:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "error": "No OpenAI API key. Set OPENAI_API_KEY in the agent's "
+                ".env or send one via the X-OpenAI-Key header."
+            },
+        )
+
     # Only enforce budget for users who don't bring their own key.
     budget_check = None if x_openai_key else app.state.budget_check
 
@@ -210,8 +244,8 @@ def yac_benchmark(
 
 @app.get("/v1/yac/examples")
 def yac_examples():
-    examples_path = "./data/example_prompts.json"
-    if not os.path.exists(examples_path):
+    examples_path = _DATA_DIR / "example_prompts.json"
+    if not examples_path.exists():
         return JSONResponse(
             content={"error": f"File {examples_path} not found."}, status_code=404
         )

@@ -30,7 +30,10 @@ class ServerConfig:
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
             insecure_dev_mode=int(os.getenv("INSECURE_DEV_MODE", "0")) == 1,
             gpt_model_name=os.getenv("GPT_MODEL_NAME", "gpt-5.4"),
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            # Treat blank/whitespace as absent so an empty OPENAI_API_KEY in a
+            # dev .env doesn't build an OpenAI(api_key="") client that crashes
+            # at startup — the per-request X-OpenAI-Key path is used instead.
+            openai_api_key=(os.getenv("OPENAI_API_KEY") or "").strip() or None,
             langfuse_public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
             langfuse_secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
             langfuse_host=os.getenv("LANGFUSE_HOST"),
