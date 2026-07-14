@@ -30,6 +30,7 @@ import {
   useDashboardStore,
   useMemoryBankStore,
   useDataPackage,
+  useDataFiltersStore,
   useGlobal,
   useTracker,
 } from '@/app/UDIChatContext';
@@ -46,6 +47,7 @@ interface DashboardCardProps {
 
 export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const dashboardStore = useDashboardStore();
+  const dataFiltersStore = useDataFiltersStore();
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const sourceFields = useDataPackage((s) => s.sourceFields);
@@ -91,22 +93,50 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     return `${src}|${repr}`;
   }, [viz.interactiveSpec]);
 
-  const externalSelections = useMemo(() => {
-    const filtered: DataSelections = {};
-    for (const [key, val] of Object.entries(selections)) {
-      if (key !== viz.uuid) filtered[key] = val;
-    }
-    return JSON.parse(JSON.stringify(filtered)) as DataSelections;
-  }, [selections, viz.uuid]);
+  // Pass the full selection set — including this viz's OWN brush (keyed by its
+  // uuid) — back to UDIVis. Feeding the own selection back lets an edit made
+  // elsewhere (the chat adjustment widget, or clearing the toolbar chip) drive
+  // this chart's rendered brush, and makes UDIVis bind the value into the
+  // shared Pinia DataSourcesStore. UDIVis treats an external selection equal to
+  // its current one as a no-op, so live brushing doesn't loop.
+  const externalSelections = useMemo(
+    () => JSON.parse(JSON.stringify(selections)) as DataSelections,
+    [selections],
+  );
 
   const handleClose = useCallback(() => {
     dashboardStore.getState().closeVisualization(vizKey, memoryBankStore);
     trackEvent('visualization_closed', { hasTitle: !!viz.title });
   }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title]);
 
-  // Brushes flow directly into the shared Pinia DataSourcesStore via
-  // UDIVis's Vega signal handlers, so we no longer mirror them to a
-  // React store — no `onSelectionChange` handler needed here.
+  // Mirror brush/click selections out of the shared Pinia DataSourcesStore into
+  // dataFiltersStore.internalDataSelections (keyed by viz uuid), matching the
+  // LLM-filter path. The filter toolbar and chat adjustment widgets read brush
+  // selections from there (see useBrushFilters). Cross-chart filtering still
+  // works via the shared Pinia store + named-filter entries in each viz's
+  // interactiveSpec.transformation.
+  const handleSelectionChange = useCallback(
+    (newSelections: DataSelections) => {
+      const plain = JSON.parse(JSON.stringify(newSelections)) as DataSelections;
+      dataFiltersStore.getState().updateInternalDataSelections(plain);
+    },
+    [dataFiltersStore],
+  );
+
+  // When this viz's own brush is cleared externally (e.g. removing its chip in
+  // the filter toolbar), UDIVis offers no programmatic way to drop a rendered
+  // brush rectangle. Remounting the component via a key change is the simplest
+  // reliable reset. We track the brush's presence in state and bump the key on
+  // the true→false transition only, so an active brush — or another viz's
+  // brush — never triggers a remount loop. This uses React's "adjust state
+  // during render" pattern rather than an effect.
+  const ownHasBrush = selections[viz.uuid]?.selection != null;
+  const [trackedHasBrush, setTrackedHasBrush] = useState(ownHasBrush);
+  const [brushResetKey, setBrushResetKey] = useState(0);
+  if (ownHasBrush !== trackedHasBrush) {
+    setTrackedHasBrush(ownHasBrush);
+    if (!ownHasBrush) setBrushResetKey((k) => k + 1);
+  }
 
   const [showTweak, setShowTweak] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -294,9 +324,10 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       <CardContent className="p-1 flex-1 min-h-0 overflow-hidden">
         <UDIVis
           className="block h-full w-full"
-          key={isTableView ? `table-${specKey}` : specKey}
+          key={`${isTableView ? `table-${specKey}` : specKey}-${brushResetKey}`}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
+          onSelectionChange={handleSelectionChange}
           sourceResolver={sourceResolver}
           palette={palette}
           fillContainer
