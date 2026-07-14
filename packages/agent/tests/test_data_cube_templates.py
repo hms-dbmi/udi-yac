@@ -260,3 +260,53 @@ def test_no_active_template_set_switch():
     import udiagent.vis_generate as vg
 
     assert not hasattr(vg, "ACTIVE_TEMPLATE_SET")
+
+
+def test_execute_generate_end_to_end_cube(monkeypatch):
+    """Drive the real _execute_generate path for a cube request, stubbing only
+    the LLM's tool choice. Proves selection -> validate -> instantiate yields a
+    grammar-valid cube spec with the marginal filter resolved from the schema."""
+    import udiagent.vis_generate as vg
+
+    # Pick a real cube bar tool and the args the model would return.
+    generated = _load_generated_tools()
+    _defs, tool_dispatch, _templates, tool_tags = generated
+    tool_name = next(
+        n for n, (i, pm) in tool_dispatch.items()
+        if tool_tags.get(n) == ["data_cube"] and pm == {"entity": "E", "dimension": "D"}
+    )
+    tool_args = {"entity": "encounter_counts", "dimension": "class_display"}
+
+    calls = {"selected_tool_names": None}
+
+    def fake_call(agent, messages, tools, config, usage=None, openai_api_key=None):
+        calls["selected_tool_names"] = {t["function"]["name"] for t in tools}
+        return tool_name, tool_args
+
+    monkeypatch.setattr(vg, "_call_llm_with_tools", fake_call)
+
+    schema_path = os.path.join(_AGENT_ROOT, "data", "data_domains", "encounter_cube_schema.json")
+    data_schema = open(schema_path).read()
+    context = {
+        "agent": object(),
+        "grammar": {},
+        "config": {},
+        "data_schema": data_schema,
+        "messages": [{"role": "user", "content": "encounters by class"}],
+        "openai_api_key": None,
+        "usage": None,
+    }
+    out = vg._execute_generate(skill=None, context=context)
+
+    # Only cube tools were offered to the model (tag selection worked).
+    assert calls["selected_tool_names"]
+    assert all(tool_tags[n] == ["data_cube"] for n in calls["selected_tool_names"])
+
+    # A concrete spec was produced, grammar-valid, with the resolved marginal.
+    spec = json.loads(out["spec_str"])
+    grammar = json.loads((_PKG / "UDIGrammarSchema.json").read_text())
+    jsonschema.validate(instance=spec, schema=grammar)
+    filt = spec["transformation"][0]["filter"]
+    assert "d['class_display'] != null" in filt
+    assert "d['gender'] == null" in filt
+    assert spec["source"]["source"].endswith("core__count_encounter_month.csv")

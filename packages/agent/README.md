@@ -54,6 +54,56 @@ result = orch.run(
 # result.orchestrator_choice — "render-visualization", "both", "explain", etc.
 ```
 
+### One agent, any schema
+
+`data_schema` / `data_domains` are **per request** — a single long-lived
+`Orchestrator` serves queries against arbitrary, unrelated datasets with no
+per-schema setup, regeneration, or restart. The visualization templates are
+schema-independent: the tool definitions expose free-form `entity` / `field` /
+`dimension` string arguments, and the schema needed to validate those bindings
+and fill in a concrete spec is parsed from the `data_schema` on each call. Just
+pass a different schema:
+
+```python
+orch = Orchestrator(agent)                       # once
+orch.run(messages=[...], data_schema=hubmap_schema, data_domains=hubmap_domains)
+orch.run(messages=[...], data_schema=penguins_schema, data_domains=penguins_domains)
+```
+
+### Visualization template sets and tags
+
+Templates are tagged, and the orchestrator selects the relevant set per request
+from the incoming schema:
+
+| Tag         | Used for                                     | Selected when                                    |
+| ----------- | -------------------------------------------- | ------------------------------------------------ |
+| `line_item` | Tidy, per-record tables (groupby/rollup)     | default                                          |
+| `data_cube` | Pre-aggregated "powerset" cubes (marginals)  | the schema marks a resource `udi:cube` (or declares `udi:dimensions` + `udi:measures`) |
+
+A **data cube** is a pre-aggregated table with one measure column and several
+dimension columns, where a row's empty dimensions mean it is aggregated over
+them. Cube templates read a value by *marginal filtering* (the active
+dimensions non-null, every other dimension null) instead of re-aggregating. The
+marginal filter is built at runtime from the schema's `udi:dimensions`, so the
+cube templates work for any cube — mark a resource like this:
+
+```jsonc
+{
+  "name": "encounter_counts",
+  "udi:cube": true,
+  "udi:measures": ["cnt"],
+  "udi:dimensions": ["period_start_month", "class_display", "gender", "..."],
+  "schema": { "fields": [ /* cnt + one field per dimension */ ] }
+}
+```
+
+Regenerate the template sets and the combined typed tool module (schema-free,
+deterministic) with:
+
+```bash
+python scripts/regenerate_vis_tools.py
+```
+
 ### With LangFuse observability
 
 LangFuse tracing is opt-in. Install the extra (`pip install udiagent[langfuse]`) and pass any of the three credentials to `UDIAgent`:
