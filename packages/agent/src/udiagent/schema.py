@@ -4,15 +4,43 @@ import json
 
 
 def parse_schema_from_dict(raw: dict) -> dict:
-    """Parse a data schema dict into the structure expected by structured_functions.
+    """Parse a UDI data schema dict into a structured representation.
 
-    Similar to generate_tools.parse_schema but works with an in-memory dict
-    instead of a file path.
+    Works with an in-memory dict (e.g. the per-request ``data_schema``) instead
+    of a file path. This is the single source of truth for schema parsing;
+    ``generate_tools.parse_schema`` loads a file and delegates here.
+
+    Returns::
+
+        {
+            "base_path": str,
+            "entities": {
+                "name": {
+                    "url": str,
+                    "row_count": int,
+                    "fields": {"field_name": {"type": str, "cardinality": int}},
+                },
+            },
+            "relationships": [
+                {
+                    "from_entity": str, "to_entity": str,
+                    "from_field": str, "to_field": str,
+                    "from_cardinality": str, "to_cardinality": str,
+                }
+            ],
+        }
+
+    The ``url`` and ``relationships`` data is required by the visualization
+    template instantiation/validation path (``vis_generate``) so that a single
+    agent can resolve templates against whatever schema arrives per request.
     """
+    base_path = raw.get("udi:path", "./")
     entities = {}
+    relationships = []
     for resource in raw.get("resources", []):
         name = resource["name"]
         row_count = resource.get("udi:row_count", 0)
+        url = base_path + resource.get("path", "")
         fields = {}
         for field in resource.get("schema", {}).get("fields", []):
             cardinality = field.get("udi:cardinality", 0)
@@ -22,8 +50,22 @@ def parse_schema_from_dict(raw: dict) -> dict:
                 "type": field.get("udi:data_type", ""),
                 "cardinality": cardinality,
             }
-        entities[name] = {"row_count": row_count, "fields": fields}
-    return {"entities": entities}
+        entities[name] = {"url": url, "row_count": row_count, "fields": fields}
+
+        for fk in resource.get("schema", {}).get("foreignKeys", []):
+            card = fk.get("udi:cardinality", {})
+            relationships.append(
+                {
+                    "from_entity": name,
+                    "to_entity": fk["reference"]["resource"],
+                    "from_field": fk["fields"][0],
+                    "to_field": fk["reference"]["fields"][0],
+                    "from_cardinality": card.get("from", "many"),
+                    "to_cardinality": card.get("to", "one"),
+                }
+            )
+
+    return {"base_path": base_path, "entities": entities, "relationships": relationships}
 
 
 def simplify_data_schema(data_schema):

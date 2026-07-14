@@ -402,13 +402,37 @@ def validate_bindings(spec_template, bindings, schema):
 
 
 def _load_generated_tools():
-    """Load generated tool data. Returns (tool_defs, tool_dispatch, templates, schema) or None."""
-    try:
-        from udiagent.generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+    """Load generated tool data. Returns (tool_defs, tool_dispatch, templates) or None.
 
-        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+    The generated module is schema-independent — the schema used for binding
+    validation and template instantiation comes from the per-request
+    ``data_schema`` (see ``_execute_generate``), not from this module.
+    """
+    try:
+        from udiagent.generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES
+
+        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES
     except ImportError:
         return None
+
+
+def _parse_request_schema(data_schema):
+    """Parse the per-request ``data_schema`` into the structured form used by
+    ``validate_bindings`` / ``instantiate_template``.
+
+    Accepts a JSON string or an already-parsed dict. Returns an empty schema
+    (no entities/relationships) if parsing fails, so the caller degrades to the
+    single-shot fallback path instead of raising.
+    """
+    from udiagent.schema import parse_schema_from_dict
+
+    try:
+        raw = json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+        if not isinstance(raw, dict):
+            raise TypeError("data_schema is not an object")
+        return parse_schema_from_dict(raw)
+    except (json.JSONDecodeError, TypeError, KeyError, AttributeError):
+        return {"base_path": "./", "entities": {}, "relationships": []}
 
 
 def _execute_generate(skill, context):
@@ -419,10 +443,17 @@ def _execute_generate(skill, context):
     data_schema = context["data_schema"]
     data_schema_simple = simplify_data_schema(data_schema)
 
+    # Parse the per-request schema into the structured form ({entities: {url,
+    # fields}, relationships}) used to validate tool bindings and instantiate
+    # template placeholders. Routing the request's own schema here (rather than
+    # a schema baked into the generated tools) is what lets one agent serve
+    # arbitrary datasets.
+    request_schema = _parse_request_schema(data_schema)
+
     # --- Primary path: function-calling with generated tools ---
     generated = _load_generated_tools()
     if generated is not None:
-        tool_defs, tool_dispatch, templates, tool_schema = generated
+        tool_defs, tool_dispatch, templates = generated
 
         system_msg = (
             "You are a data visualization assistant. The user wants a visualization "
@@ -451,7 +482,7 @@ def _execute_generate(skill, context):
             template_idx, param_map = dispatch
             bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
             validation_errors = validate_bindings(
-                templates[template_idx], bindings, tool_schema
+                templates[template_idx], bindings, request_schema
             )
 
             if validation_errors:
@@ -480,7 +511,7 @@ def _execute_generate(skill, context):
 
             try:
                 spec_dict = instantiate_template(
-                    templates[template_idx], bindings, tool_schema
+                    templates[template_idx], bindings, request_schema
                 )
                 spec_str = json.dumps(spec_dict)
                 context["spec_str"] = spec_str
