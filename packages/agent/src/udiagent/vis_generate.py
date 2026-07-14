@@ -188,6 +188,28 @@ def _resolve_placeholder(tag, bindings, schema):
         entity_name = bindings.get(entity_key, "")
         return schema.get("entities", {}).get(entity_name, {}).get("url", "")
 
+    # Data-cube measure column: <M> resolves to entity E's measure from schema.
+    if tag == "M":
+        entity_name = bindings.get("E", "")
+        entity = schema.get("entities", {}).get(entity_name, {})
+        measures = entity.get("measures") or []
+        return measures[0] if measures else ""
+
+    # Data-cube marginal filter: <MARGINAL> (grand total) or <MARGINAL:D1,D2>.
+    # Selects the pre-aggregated rows where the bound (active) dimensions are
+    # non-null and every OTHER dimension of the cube is null. The full dimension
+    # list comes from the per-request schema, so one template serves any cube.
+    if tag == "MARGINAL" or tag.startswith("MARGINAL:"):
+        _, _, active_spec = tag.partition(":")
+        active_keys = [k for k in active_spec.split(",") if k]
+        active = [bindings.get(k, "") for k in active_keys]
+        entity_name = bindings.get("E", "")
+        dims = schema.get("entities", {}).get(entity_name, {}).get("dimensions", [])
+        clauses = [
+            f"d['{d}'] != null" if d in active else f"d['{d}'] == null" for d in dims
+        ]
+        return " && ".join(clauses)
+
     # Relationship join keys: E1.r.E2.id.from, E1.r.E2.id.to
     if ".r." in tag and ".id." in tag:
         parts = tag.split(".")
@@ -373,6 +395,17 @@ def validate_bindings(spec_template, bindings, schema):
             )
             continue
 
+        # Cube dimension bindings (D, D1, D2, ...) must name a declared
+        # dimension of the cube, not the measure or an undeclared column.
+        if re.fullmatch(r"D\d*", key.split(":")[0]):
+            dims = entities[entity_name].get("dimensions")
+            if dims is not None and field_name not in dims:
+                errors.append(
+                    f"Field '{field_name}' is not a dimension of cube "
+                    f"'{entity_name}'. Available dimensions: {', '.join(dims)}"
+                )
+                continue
+
         field_info = entity_fields[field_name]
         actual_type = field_info["type"] if isinstance(field_info, dict) else field_info
         cardinality = (
@@ -381,7 +414,12 @@ def validate_bindings(spec_template, bindings, schema):
 
         expected_type = placeholder_types.get(key)
         if expected_type:
-            if actual_type != expected_type:
+            # A temporal field is validly encoded on an ordinal axis (the grammar
+            # has no temporal type), so it satisfies an ordinal requirement.
+            compatible = actual_type == expected_type or (
+                expected_type == "ordinal" and actual_type == "temporal"
+            )
+            if not compatible:
                 matching = [
                     fn
                     for fn, fi in entity_fields.items()
@@ -402,13 +440,66 @@ def validate_bindings(spec_template, bindings, schema):
 
 
 def _load_generated_tools():
-    """Load generated tool data. Returns (tool_defs, tool_dispatch, templates, schema) or None."""
-    try:
-        from udiagent.generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+    """Load generated tool data.
 
-        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, SCHEMA
+    Returns ``(tool_defs, tool_dispatch, templates, tool_tags)`` or None.
+
+    The generated module is schema-independent — the schema used for binding
+    validation and template instantiation comes from the per-request
+    ``data_schema`` (see ``_execute_generate``), not from this module.
+    ``tool_tags`` maps each tool name to its template tags (e.g. ``line_item``,
+    ``data_cube``) for per-request template selection.
+    """
+    try:
+        from udiagent.generated_vis_tools import (
+            TOOL_DEFS,
+            TOOL_DISPATCH,
+            TEMPLATES,
+            TOOL_TAGS,
+        )
+
+        return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, TOOL_TAGS
     except ImportError:
         return None
+
+
+def _active_template_tags(request_schema):
+    """Tags to select templates for this request: cube schemas get the
+    ``data_cube`` templates, everything else the ``line_item`` templates."""
+    from udiagent.schema import schema_is_cube
+
+    return {"data_cube"} if schema_is_cube(request_schema) else {"line_item"}
+
+
+def _select_tools(tool_defs, tool_tags, active_tags):
+    """Keep tools whose tags intersect ``active_tags`` (untagged tools always
+    kept). Falls back to all tools if the selection would be empty."""
+    selected = [
+        d
+        for d in tool_defs
+        if not tool_tags.get(d["function"]["name"])
+        or (set(tool_tags.get(d["function"]["name"], [])) & active_tags)
+    ]
+    return selected or tool_defs
+
+
+def _parse_request_schema(data_schema):
+    """Parse the per-request ``data_schema`` into the structured form used by
+    ``validate_bindings`` / ``instantiate_template``.
+
+    Accepts a JSON string or an already-parsed dict. Returns an empty schema
+    (no entities/relationships) if parsing fails, so the caller degrades to the
+    single-shot fallback path instead of raising.
+    """
+    from udiagent.schema import parse_schema_from_dict
+
+    try:
+        raw = json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+        if not isinstance(raw, dict):
+            raise TypeError("data_schema is not an object")
+        return parse_schema_from_dict(raw)
+    except (json.JSONDecodeError, TypeError, KeyError, AttributeError):
+        return {"base_path": "./", "entities": {}, "relationships": []}
 
 
 def _execute_generate(skill, context):
@@ -419,10 +510,22 @@ def _execute_generate(skill, context):
     data_schema = context["data_schema"]
     data_schema_simple = simplify_data_schema(data_schema)
 
+    # Parse the per-request schema into the structured form ({entities: {url,
+    # fields}, relationships}) used to validate tool bindings and instantiate
+    # template placeholders. Routing the request's own schema here (rather than
+    # a schema baked into the generated tools) is what lets one agent serve
+    # arbitrary datasets.
+    request_schema = _parse_request_schema(data_schema)
+
     # --- Primary path: function-calling with generated tools ---
     generated = _load_generated_tools()
     if generated is not None:
-        tool_defs, tool_dispatch, templates, tool_schema = generated
+        tool_defs, tool_dispatch, templates, tool_tags = generated
+
+        # Select the template subset for this request by tag (e.g. cube schemas
+        # get the data-cube tools). Replaces a hard-coded active-set switch.
+        active_tags = _active_template_tags(request_schema)
+        selected_defs = _select_tools(tool_defs, tool_tags, active_tags)
 
         system_msg = (
             "You are a data visualization assistant. The user wants a visualization "
@@ -437,7 +540,7 @@ def _execute_generate(skill, context):
         openai_api_key = context.get("openai_api_key")
         usage = context.get("usage")
         result = _call_llm_with_tools(
-            agent, tool_messages, tool_defs, config,
+            agent, tool_messages, selected_defs, config,
             usage=usage, openai_api_key=openai_api_key,
         )
         for _attempt in range(2):
@@ -451,7 +554,7 @@ def _execute_generate(skill, context):
             template_idx, param_map = dispatch
             bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
             validation_errors = validate_bindings(
-                templates[template_idx], bindings, tool_schema
+                templates[template_idx], bindings, request_schema
             )
 
             if validation_errors:
@@ -471,7 +574,7 @@ def _execute_generate(skill, context):
                         },
                     ]
                     result = _call_llm_with_tools(
-                        agent, retry_messages, tool_defs, config,
+                        agent, retry_messages, selected_defs, config,
                         usage=usage, openai_api_key=openai_api_key,
                     )
                     continue
@@ -480,7 +583,7 @@ def _execute_generate(skill, context):
 
             try:
                 spec_dict = instantiate_template(
-                    templates[template_idx], bindings, tool_schema
+                    templates[template_idx], bindings, request_schema
                 )
                 spec_str = json.dumps(spec_dict)
                 context["spec_str"] = spec_str

@@ -21,93 +21,17 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 def parse_schema(schema_path: str) -> dict:
-    """Parse a UDI data schema into a structured representation.
+    """Parse a UDI data schema file into a structured representation.
 
-    Returns:
-        {
-            "base_path": str,
-            "entities": {
-                "name": {
-                    "url": str,
-                    "row_count": int,
-                    "fields": { "field_name": {"type": str, "cardinality": int} },
-                },
-            },
-            "relationships": [
-                {
-                    "from_entity": str, "to_entity": str,
-                    "from_field": str, "to_field": str,
-                    "from_cardinality": str, "to_cardinality": str,
-                }
-            ]
-        }
+    Thin file-loading wrapper around :func:`udiagent.schema.parse_schema_from_dict`,
+    which is the single source of truth for schema parsing (see it for the
+    returned structure).
     """
+    from udiagent.schema import parse_schema_from_dict
+
     with open(schema_path) as f:
         raw = json.load(f)
-
-    base_path = raw.get("udi:path", "./")
-    entities = {}
-    relationships = []
-
-    for resource in raw.get("resources", []):
-        name = resource["name"]
-        row_count = resource.get("udi:row_count", 0)
-        path = resource.get("path", "")
-        url = base_path + path
-
-        fields = {}
-        for field in resource.get("schema", {}).get("fields", []):
-            cardinality = field.get("udi:cardinality", 0)
-            if cardinality == 0:
-                continue
-            fields[field["name"]] = {
-                "type": field.get("udi:data_type", ""),
-                "cardinality": cardinality,
-            }
-
-        entities[name] = {
-            "url": url,
-            "row_count": row_count,
-            "fields": fields,
-        }
-
-        for fk in resource.get("schema", {}).get("foreignKeys", []):
-            card = fk.get("udi:cardinality", {})
-            relationships.append({
-                "from_entity": name,
-                "to_entity": fk["reference"]["resource"],
-                "from_field": fk["fields"][0],
-                "to_field": fk["reference"]["fields"][0],
-                "from_cardinality": card.get("from", "many"),
-                "to_cardinality": card.get("to", "one"),
-            })
-
-    return {"base_path": base_path, "entities": entities, "relationships": relationships}
-
-
-# ---------------------------------------------------------------------------
-# Constraint evaluation (entity-level only, used to skip inapplicable tools)
-# ---------------------------------------------------------------------------
-
-def _eval_entity_constraints(constraints: list[str], entity_info: dict, prefix: str = "E") -> bool:
-    """Check if an entity satisfies constraints like 'E.c > 0'."""
-    row_count = entity_info["row_count"]
-    for constraint in constraints:
-        c = constraint.strip()
-        m = re.match(rf'^{re.escape(prefix)}\.c\s*(<=|>=|<|>|==)\s*(\d+)$', c)
-        if m:
-            op, val = m.group(1), int(m.group(2))
-            if op == '<=' and not (row_count <= val):
-                return False
-            if op == '>=' and not (row_count >= val):
-                return False
-            if op == '<' and not (row_count < val):
-                return False
-            if op == '>' and not (row_count > val):
-                return False
-            if op == '==' and not (row_count == val):
-                return False
-    return True
+    return parse_schema_from_dict(raw)
 
 
 # ---------------------------------------------------------------------------
@@ -291,23 +215,16 @@ def _build_field_description(field_type: str | None, encoding_info: dict | None)
 # ---------------------------------------------------------------------------
 
 def _generate_single_entity_tool(
-    template: dict, index: int, schema: dict
-) -> tuple[dict, dict] | None:
+    template: dict, index: int
+) -> tuple[dict, dict]:
     """Generate tool definition + param map for a single-entity template.
 
-    Returns (tool_def, param_map) or None if no valid entities exist.
+    Schema-independent: the tool exposes free-form ``entity``/``field`` string
+    parameters that the model fills in from the per-request data schema at
+    runtime, so a single agent serves any dataset.
     """
-    constraints = template.get("constraints", [])
     spec_template = template.get("spec_template", "")
     placeholders = _extract_placeholders(spec_template)
-
-    # Check at least one entity satisfies constraints
-    valid = any(
-        _eval_entity_constraints(constraints, info, "E")
-        for info in schema["entities"].values()
-    )
-    if not valid:
-        return None
 
     tool_name = _derive_tool_name(template, index)
     description = _build_tool_description(template)
@@ -319,24 +236,32 @@ def _generate_single_entity_tool(
     required = ["entity"]
     param_map = {"entity": "E"}
 
-    # Determine field parameters from placeholders
+    # Determine field/dimension parameters from placeholders. F* are line-item
+    # fields; D* are data-cube dimensions (the measure <M> and the <MARGINAL:…>
+    # filter are resolved from the schema at runtime, so they get no param).
     seen = set()
     for ph in sorted(placeholders):
         if ph in ("E", "E.url"):
             continue
-        m = re.match(r'(F\d*)', ph)
+        m = re.match(r'(F\d*|D\d*)', ph)
         if not m:
             continue
-        base = m.group(1)  # F, F1, F2, F3
-        param_name = {"F": "field", "F1": "field1", "F2": "field2", "F3": "field3"}.get(base)
+        base = m.group(1)  # F, F1, F2, F3 or D, D1, D2, D3
+        param_name = {
+            "F": "field", "F1": "field1", "F2": "field2", "F3": "field3",
+            "D": "dimension", "D1": "dimension1", "D2": "dimension2", "D3": "dimension3",
+        }.get(base)
         if not param_name or param_name in seen:
             continue
         seen.add(param_name)
 
         field_type = _get_field_type_for_placeholder(ph)
+        description = _build_field_description(field_type, encoding_info.get(base))
+        if base.startswith("D"):
+            description = "cube " + description.replace("field", "dimension", 1)
         properties[param_name] = {
             "type": "string",
-            "description": _build_field_description(field_type, encoding_info.get(base)),
+            "description": description,
         }
         required.append(param_name)
         param_map[param_name] = base
@@ -362,35 +287,16 @@ def _generate_single_entity_tool(
 # ---------------------------------------------------------------------------
 
 def _generate_join_entity_tool(
-    template: dict, index: int, schema: dict
-) -> tuple[dict, dict] | None:
+    template: dict, index: int
+) -> tuple[dict, dict]:
     """Generate tool definition + param map for a two-entity join template.
 
-    Returns (tool_def, param_map) or None if no valid entity pairs exist.
+    Schema-independent (see :func:`_generate_single_entity_tool`). Whether a
+    given entity pair actually has a joining relationship is checked at runtime
+    by ``validate_bindings`` against the per-request schema.
     """
-    constraints = template.get("constraints", [])
     spec_template = template.get("spec_template", "")
     placeholders = _extract_placeholders(spec_template)
-
-    # Check at least one valid entity pair exists (either direction)
-    has_valid_pair = False
-    for rel in schema["relationships"]:
-        e1 = schema["entities"].get(rel["from_entity"])
-        e2 = schema["entities"].get(rel["to_entity"])
-        if not e1 or not e2:
-            continue
-        # Check forward direction
-        if _eval_entity_constraints(constraints, e1, "E1") and \
-           _eval_entity_constraints(constraints, e2, "E2"):
-            has_valid_pair = True
-            break
-        # Check reverse direction
-        if _eval_entity_constraints(constraints, e2, "E1") and \
-           _eval_entity_constraints(constraints, e1, "E2"):
-            has_valid_pair = True
-            break
-    if not has_valid_pair:
-        return None
 
     tool_name = _derive_tool_name(template, index)
     description = _build_tool_description(template)
@@ -451,74 +357,80 @@ def _generate_join_entity_tool(
 # Main generation
 # ---------------------------------------------------------------------------
 
-def generate(templates_path: str, schema_path: str, output_path: str):
-    """Generate the typed vis tools module (data only, no builder code)."""
-    with open(templates_path) as f:
-        templates = json.load(f)
+def _rel_to_cwd(path: str) -> str:
+    """Path relative to cwd if possible, else the bare filename (stable in-tree)."""
+    resolved = Path(path).resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd()))
+    except ValueError:
+        return resolved.name
 
-    schema = parse_schema(schema_path)
 
+def generate(template_sources, output_path: str):
+    """Generate the typed vis tools module (data only, no builder code).
+
+    ``template_sources`` is a list of ``(templates_path, default_tags)``. All
+    sources are combined into one module; each tool records the tags of its
+    template (its own ``tags`` field, or the source's ``default_tags``) in
+    ``TOOL_TAGS``, which drives per-request template selection.
+
+    The output is **schema-independent**: tool parameters are free-form
+    ``entity``/``field``/``dimension`` strings, and every template produces a
+    tool unconditionally. Applicability to a specific dataset is enforced at
+    runtime by ``vis_generate.validate_bindings`` against the per-request
+    schema, so one generated module serves arbitrary schemas.
+    """
     tool_defs = []
     spec_templates = []
     tool_dispatch = {}
+    tool_tags = {}
     tool_name_set = {}
+    sources_used = []
+    counter = 0
 
-    for i, template in enumerate(templates):
-        spec_template = template.get("spec_template", "")
-        placeholders = _extract_placeholders(spec_template)
-        is_join = "E1" in placeholders or "E2" in placeholders
+    for templates_path, default_tags in template_sources:
+        with open(templates_path) as f:
+            templates = json.load(f)
+        sources_used.append(_rel_to_cwd(templates_path))
 
-        if is_join:
-            result = _generate_join_entity_tool(template, i, schema)
-        else:
-            result = _generate_single_entity_tool(template, i, schema)
+        for template in templates:
+            spec_template = template.get("spec_template", "")
+            placeholders = _extract_placeholders(spec_template)
+            is_join = "E1" in placeholders or "E2" in placeholders
 
-        if result is None:
-            continue
+            if is_join:
+                tool_def, param_map = _generate_join_entity_tool(template, counter)
+            else:
+                tool_def, param_map = _generate_single_entity_tool(template, counter)
 
-        tool_def, param_map = result
-        tool_name = tool_def["function"]["name"]
+            tool_name = tool_def["function"]["name"]
 
-        # Handle duplicate names
-        if tool_name in tool_name_set:
-            tool_name = f"{tool_name}_{i}"
-            tool_def["function"]["name"] = tool_name
-        tool_name_set[tool_name] = i
+            # Handle duplicate names
+            if tool_name in tool_name_set:
+                tool_name = f"{tool_name}_{counter}"
+                tool_def["function"]["name"] = tool_name
+            tool_name_set[tool_name] = counter
 
-        template_idx = len(spec_templates)
-        spec_templates.append(spec_template)
-        tool_defs.append(tool_def)
-        tool_dispatch[tool_name] = (template_idx, param_map)
-
-    # Build schema for runtime (URLs, field metadata, and relationships)
-    schema_data = {
-        "entities": {
-            name: {
-                "url": info["url"],
-                "fields": {
-                    fname: {"type": finfo["type"], "cardinality": finfo["cardinality"]}
-                    for fname, finfo in info["fields"].items()
-                },
-            }
-            for name, info in schema["entities"].items()
-        },
-        "relationships": schema["relationships"],
-    }
+            template_idx = len(spec_templates)
+            spec_templates.append(spec_template)
+            tool_defs.append(tool_def)
+            tool_dispatch[tool_name] = (template_idx, param_map)
+            tool_tags[tool_name] = list(template.get("tags") or default_tags)
+            counter += 1
 
     output = [
         '"""',
         'Auto-generated visualization tool definitions.',
         '',
-        f'Generated from: {Path(templates_path).resolve().relative_to(Path.cwd())}',
-        f'Schema: {Path(schema_path).resolve().relative_to(Path.cwd())}',
+        f'Generated from: {", ".join(sources_used)}',
         f'Tools: {len(tool_defs)}',
         '',
-        'DO NOT EDIT — regenerate with: python src/generate_tools.py',
+        'Schema-independent: tool params are free-form strings resolved against the',
+        'per-request data schema at runtime (see vis_generate._execute_generate).',
+        'TOOL_TAGS maps each tool to its template tags for per-request selection.',
+        '',
+        'DO NOT EDIT — regenerate with: python scripts/regenerate_vis_tools.py',
         '"""',
-        '',
-        '',
-        '# Schema metadata (entity URLs and relationships)',
-        f'SCHEMA = {pprint.pformat(schema_data, width=120)}',
         '',
         '',
         '# Spec template strings (indexed by position)',
@@ -532,6 +444,10 @@ def generate(templates_path: str, schema_path: str, output_path: str):
         '# Dispatch: tool name -> (template_index, param_to_binding_map)',
         f'TOOL_DISPATCH = {pprint.pformat(tool_dispatch, width=120)}',
         '',
+        '',
+        '# Tags per tool name (drives per-request template selection)',
+        f'TOOL_TAGS = {pprint.pformat(tool_tags, width=120)}',
+        '',
     ]
 
     Path(output_path).write_text("\n".join(output))
@@ -543,9 +459,29 @@ def generate(templates_path: str, schema_path: str, output_path: str):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate typed visualization tools from templates + schema")
-    parser.add_argument("--templates", default="src/skills/template_visualizations.json", help="Path to template visualizations JSON")
-    parser.add_argument("--schema", default="data/data_domains/hubmap_data_schema.json", help="Path to data schema JSON")
-    parser.add_argument("--output", default="src/generated_vis_tools.py", help="Output Python module path")
+    import os
+
+    parser = argparse.ArgumentParser(
+        description="Generate schema-independent typed visualization tools from templates"
+    )
+    parser.add_argument(
+        "--templates",
+        default="src/udiagent/data/skills/template_visualizations.json",
+        help="Path to the line-item template visualizations JSON",
+    )
+    parser.add_argument(
+        "--cube-templates",
+        default="src/udiagent/data/skills/template_visualizations_cube.json",
+        help="Path to the data-cube template visualizations JSON (skipped if missing)",
+    )
+    parser.add_argument(
+        "--output",
+        default="src/udiagent/generated_vis_tools.py",
+        help="Output Python module path",
+    )
     args = parser.parse_args()
-    generate(args.templates, args.schema, args.output)
+
+    sources = [(args.templates, ["line_item"])]
+    if args.cube_templates and os.path.exists(args.cube_templates):
+        sources.append((args.cube_templates, ["data_cube"]))
+    generate(sources, args.output)

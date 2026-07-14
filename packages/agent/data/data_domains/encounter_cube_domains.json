@@ -1,0 +1,86 @@
+[
+  {
+    "entity": "encounter_counts",
+    "field": "cnt",
+    "type": "interval",
+    "fieldDescription": "A count of encounter records matching the dimension values on the row (a pre-aggregated measure).",
+    "domain": {
+      "min": 10,
+      "max": 109745
+    }
+  },
+  {
+    "entity": "encounter_counts",
+    "field": "period_start_month",
+    "type": "interval",
+    "fieldDescription": "The month in which the encounter began (derived from Encounter.period).",
+    "domain": {
+      "min": "1/1/1932",
+      "max": "4/1/2023"
+    }
+  },
+  {
+    "entity": "encounter_counts",
+    "field": "class_display",
+    "type": "point",
+    "fieldDescription": "The context in which the encounter occurred (e.g. ambulatory, emergency, inpatient).",
+    "domain": {
+      "values": [
+        "ambulatory",
+        "emergency",
+        "home health",
+        "inpatient encounter",
+        "virtual"
+      ]
+    }
+  },
+  {
+    "entity": "encounter_counts",
+    "field": "age_at_visit",
+    "type": "interval",
+    "fieldDescription": "The patient's age in years at the time of the encounter.",
+    "domain": {
+      "min": 0,
+      "max": 96
+    }
+  },
+  {
+    "entity": "encounter_counts",
+    "field": "gender",
+    "type": "point",
+    "fieldDescription": "The patient's administrative gender.",
+    "domain": {
+      "values": [
+        "female",
+        "male"
+      ]
+    }
+  },
+  {
+    "entity": "encounter_counts",
+    "field": "race_display",
+    "type": "point",
+    "fieldDescription": "The patient's race.",
+    "domain": {
+      "values": [
+        "asian",
+        "black or african american",
+        "native hawaiian or other pacific islander",
+        "unknown",
+        "white"
+      ]
+    }
+  },
+  {
+    "entity": "encounter_counts",
+    "field": "ethnicity_display",
+    "type": "point",
+    "fieldDescription": "The patient's ethnicity.",
+    "domain": {
+      "values": [
+        "hispanic or latino",
+        "not hispanic or latino"
+      ]
+    }
+  }
+]

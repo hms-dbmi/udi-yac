@@ -13,6 +13,9 @@
       "Compute_Derived_Value",
       "Determine_Range"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Counts entities grouped by a nominal field, displayed as a vertical bar chart.",
     "design_considerations":"Vertical orientation chosen because category count is small (<=4), keeping x-axis labels readable.",
     "tasks":"Compare counts across categories; identify the most or least common category; assess the range of counts."
@@ -31,6 +34,9 @@
       "Compute_Derived_Value",
       "Determine_Range"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Counts entities grouped by a nominal field, displayed as a horizontal bar chart.",
     "design_considerations":"Horizontal orientation chosen because category count is high (>4), allowing longer labels on the y-axis.",
     "tasks":"Compare counts across categories; identify the most or least common category; assess the range of counts."
@@ -46,6 +52,9 @@
     "spec_key_count":18,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Joins two entities and counts records grouped by a field from the related entity, displayed as a vertical bar chart.",
     "design_considerations":"Cross-entity join groups by a field not native to the counted entity. Vertical orientation for small category counts (<=4).",
@@ -63,6 +72,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Joins two entities and counts records grouped by a field from the related entity, displayed as a horizontal bar chart.",
     "design_considerations":"Cross-entity join with horizontal orientation for higher category counts (>4).",
     "tasks":"Compare counts across categories from a related entity; discover cross-entity frequency patterns."
@@ -78,6 +90,9 @@
     "spec_key_count":22,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Joins two entities and produces a vertical stacked bar chart of counts grouped by two nominal fields.",
     "design_considerations":"Stacked bars show part-to-whole composition within each category. Vertical layout for small category counts (<=4). Color encodes the secondary grouping field from the related entity. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
@@ -95,6 +110,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Joins two entities and produces a horizontal stacked bar chart of counts grouped by two nominal fields.",
     "design_considerations":"Horizontal orientation for higher category counts (>4). Color encodes the primary grouping field. Cross-entity join required. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
@@ -110,6 +128,9 @@
     "spec_key_count":15,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Counts entities grouped by two nominal fields, displayed as a vertical stacked bar chart.",
     "design_considerations":"Vertical stacked layout for small category counts (<=4). Color encodes the sub-group field; x-axis shows the primary grouping. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
@@ -128,6 +149,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Counts entities grouped by two nominal fields, displayed as a horizontal stacked bar chart.",
     "design_considerations":"Horizontal stacked layout for higher category counts (>4). Color encodes the sub-group; stacking shows part-to-whole within each bar. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
@@ -143,6 +167,9 @@
     "spec_key_count":18,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) vertical bar chart.",
     "design_considerations":"Uses xOffset for side-by-side grouping, allowing direct comparison between sub-groups. Suitable for small category counts (<=4).",
@@ -160,6 +187,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) horizontal bar chart.",
     "design_considerations":"Uses yOffset for side-by-side grouping in horizontal orientation. Chosen when at least one field has more than 4 categories.",
     "tasks":"Directly compare sub-group counts within and across categories."
@@ -175,6 +205,9 @@
     "spec_key_count":24,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Shows the relative frequency (proportion) of one nominal field within each category of another, as a vertical normalized bar chart.",
     "design_considerations":"Normalization computes proportions per group, enabling fair comparison across groups of different sizes. Vertical layout for small category counts (<=4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
@@ -192,6 +225,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Shows the relative frequency (proportion) of one nominal field within each category of another, as a horizontal normalized bar chart.",
     "design_considerations":"Normalization for proportional comparison. Horizontal layout for higher category counts (>4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare relative proportions across categories; identify which sub-groups dominate in each group."
@@ -207,6 +243,9 @@
     "spec_key_count":12,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Computes the minimum of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the minimum aggregate value for easy comparison.",
@@ -224,6 +263,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Computes the minimum of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the minimum aggregate value.",
     "tasks":"Compare the minimum value across categories; identify which group has the highest or lowest minimum."
@@ -239,6 +281,9 @@
     "spec_key_count":12,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Computes the maximum of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the maximum aggregate value for easy comparison.",
@@ -256,6 +301,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Computes the maximum of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the maximum aggregate value.",
     "tasks":"Compare the maximum value across categories; identify which group has the highest or lowest maximum."
@@ -271,6 +319,9 @@
     "spec_key_count":12,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Computes the average of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the average aggregate value for easy comparison.",
@@ -288,6 +339,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Computes the average of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the average aggregate value.",
     "tasks":"Compare the average value across categories; identify which group has the highest or lowest average."
@@ -303,6 +357,9 @@
     "spec_key_count":12,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Computes the median of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the median aggregate value for easy comparison.",
@@ -320,6 +377,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Computes the median of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the median aggregate value.",
     "tasks":"Compare the median value across categories; identify which group has the highest or lowest median."
@@ -336,6 +396,9 @@
     "task_types":[
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Computes the total of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the total aggregate value for easy comparison.",
     "tasks":"Compare the total value across categories; identify which group has the highest or lowest total."
@@ -351,6 +414,9 @@
     "spec_key_count":12,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Computes the total of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the total aggregate value.",
@@ -373,6 +439,9 @@
       "Determine_Range",
       "Find_Extremum"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Plots two quantitative fields as a scatterplot to explore their relationship.",
     "design_considerations":"Point marks on two quantitative axes reveal correlations, clusters, and outliers. Data size capped at 100k rows for rendering performance.",
     "tasks":"Assess correlation between two variables; identify clusters, outliers, extremes, and the range of both variables."
@@ -389,6 +458,9 @@
     "task_types":[
       "Compute_Derived_Value",
       "Determine_Range"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Creates a vertical stacked bar chart of counts grouped by two nominal fields.",
     "design_considerations":"Vertical stacked layout for small primary category counts (<=4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
@@ -407,6 +479,9 @@
       "Compute_Derived_Value",
       "Determine_Range"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Creates a horizontal stacked bar chart of counts grouped by two nominal fields.",
     "design_considerations":"Horizontal stacked layout for higher primary category counts (>4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks":"Compare group compositions across categories; assess the overall range of counts."
@@ -423,6 +498,9 @@
     "task_types":[
       "Compute_Derived_Value",
       "Determine_Range"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Creates a pie chart showing the proportional distribution of a nominal field.",
     "design_considerations":"Arc marks with theta encoding map proportion to angle. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
@@ -441,6 +519,9 @@
       "Compute_Derived_Value",
       "Determine_Range"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Creates a donut chart showing the proportional distribution of a nominal field.",
     "design_considerations":"Donut variant with inner\/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
     "tasks":"Assess part-to-whole proportions; identify the dominant category."
@@ -456,6 +537,9 @@
     "spec_key_count":3,
     "task_types":[
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Counts the total number of records in an entity and displays the result as a single-row table.",
     "design_considerations":"Simple rollup with no visual encoding beyond the count value. Useful as a quick data quality or size check.",
@@ -477,6 +561,9 @@
       "Find_Anomalies",
       "Find_Extremum"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Displays the raw data for an entity as a table.",
     "design_considerations":"No aggregation or transformation applied; shows the underlying data as-is for exploration.",
     "tasks":"Explore raw data; retrieve specific values; understand field values and ranges; identify anomalies and extremes."
@@ -497,6 +584,9 @@
       "Find_Anomalies",
       "Find_Extremum"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Joins two related entities and displays the combined data as a table.",
     "design_considerations":"Cross-entity join enriches the view by combining fields from two related entities. Requires a valid foreign-key relationship.",
     "tasks":"Explore combined data from two related entities; retrieve specific values; identify anomalies and extremes."
@@ -515,6 +605,9 @@
       "Retrieve_Value",
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Finds which related entity record has the highest count of associated records, displayed as a ranked table with bar indicators.",
     "design_considerations":"Groups by foreign key, counts, ranks, and highlights the top record with color encoding. Bar marks on the count column provide visual comparison.",
     "tasks":"Identify the record with the most associated entities; compare counts across records."
@@ -531,6 +624,9 @@
     "task_types":[
       "Find_Extremum",
       "Retrieve_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Finds the record with the largest value in a quantitative field, displayed as a ranked table with bar indicators.",
     "design_considerations":"Sorts descending by the target field, derives a rank, and highlights the top record with color. Bar marks provide visual magnitude comparison.",
@@ -550,6 +646,9 @@
       "Retrieve_Value",
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Joins two entities, computes the maximum of a quantitative field per group, and ranks the results in a table with bar indicators.",
     "design_considerations":"Cross-entity join followed by group-level max aggregation. Highlights the top record with color encoding.",
     "tasks":"Identify which related record has the largest aggregated value; compare across groups."
@@ -566,6 +665,9 @@
     "task_types":[
       "Find_Extremum",
       "Retrieve_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Finds the record with the smallest value in a quantitative field, displayed as a ranked table with conditional formatting.",
     "design_considerations":"Sorts ascending by the target field, derives a rank, and highlights the top record with background color. Uses rect mark for row-level highlighting.",
@@ -584,6 +686,9 @@
       "Find_Extremum",
       "Retrieve_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Joins two entities, computes the minimum of a quantitative field per group, and ranks the results in a table with conditional formatting.",
     "design_considerations":"Cross-entity join followed by group-level min aggregation. Highlights the top record with background color via rect mark.",
     "tasks":"Identify which related record has the smallest aggregated value; compare across groups."
@@ -599,6 +704,9 @@
     "spec_key_count":17,
     "task_types":[
       "Sort"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Sorts entity records by a quantitative field and displays the result as an ordered table with in-cell bar marks.",
     "design_considerations":"Ordered by the quantitative field with nulls filtered out. In-cell bar marks provide visual comparison of magnitude alongside the text values.",
@@ -616,6 +724,9 @@
     "task_types":[
       "Determine_Range"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Computes the minimum and maximum of a quantitative field and displays them as a single-row table.",
     "design_considerations":"Simple rollup of min and max. Filters out nulls before aggregation for accuracy.",
     "tasks":"Determine the range of a quantitative field."
@@ -632,6 +743,9 @@
     "task_types":[
       "Determine_Range"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Lists all distinct values of a nominal field with their counts, displayed as a table with in-cell bar marks.",
     "design_considerations":"Groups by the nominal field and counts occurrences. In-cell bars provide visual frequency comparison.",
     "tasks":"Determine the range (distinct values) of a nominal field; compare category frequencies."
@@ -647,6 +761,9 @@
     "spec_key_count":38,
     "task_types":[
       "Determine_Range"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Computes the min and max of a quantitative field for each category of a nominal field, displayed as a table with range bar marks.",
     "design_considerations":"Groups by nominal field, computes min\/max and derived range, then orders by range descending. Uses x\/x2 encoding to show the span between min and max values.",
@@ -666,6 +783,9 @@
       "Retrieve_Value",
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Finds the most frequent value of a nominal field, displayed as a ranked table with bar marks and conditional formatting.",
     "design_considerations":"Groups by nominal field, counts, ranks, and highlights the top value. Combines bar marks for count comparison and background color for emphasis.",
     "tasks":"Identify the most frequent category; compare frequencies across all categories."
@@ -683,6 +803,9 @@
     "task_types":[
       "Characterize_Distribution"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Shows the cumulative distribution function (CDF) of a quantitative field as a line chart.",
     "design_considerations":"Sorts by value, computes rolling percentile, and draws a line. The CDF reveals the full distribution shape including median, quartiles, and tails.",
     "tasks":"Characterize the distribution of a variable; identify median, quartiles, and concentration of values."
@@ -699,6 +822,9 @@
     "spec_key_count":18,
     "task_types":[
       "Characterize_Distribution"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
     "design_considerations":"Groups by nominal field before computing per-group CDF. Color encodes group identity. Limited to fewer than 5 groups for readability.",
@@ -719,6 +845,9 @@
       "Compute_Derived_Value",
       "Correlate"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Displays the count of entities for each combination of two nominal fields as a heatmap with labeled cells.",
     "design_considerations":"Rect marks with quantitative color encoding show density. Overlaid text marks display exact counts. Text color adapts based on cell intensity for readability. The field with more unique values is preferably placed on the y-axis, where longer labels remain readable.",
     "tasks":"Identify clusters or patterns in the co-occurrence of two fields; compare counts across combinations; find correlations."
@@ -737,6 +866,9 @@
       "Compute_Derived_Value",
       "Correlate"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Displays the average of a quantitative field for each combination of two nominal fields as a heatmap.",
     "design_considerations":"Uses three fields: a quantitative measure aggregated by average, and two nominal axes. Color encodes the aggregate value. The field with more unique values is preferably placed on the y-axis for better label readability.",
     "tasks":"Identify patterns in the average value across two categorical dimensions; find combinations with extreme values."
@@ -753,6 +885,9 @@
     "task_types":[
       "Cluster"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Plots two quantitative fields as a scatterplot with points colored by a nominal field to reveal group-level clusters.",
     "design_considerations":"Adds color encoding to a standard scatterplot to separate groups visually. Limited to fewer than 8 color categories for perceptual clarity.",
     "tasks":"Identify clusters that separate by group; assess whether the relationship between two quantitative fields differs across groups."
@@ -766,9 +901,12 @@
     "creation_method":"template",
     "chart_type":"histogram",
     "chart_complexity":"medium",
-    "spec_key_count":18,
+    "spec_key_count":19,
     "task_types":[
       "Characterize_Distribution"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Shows the distribution of a quantitative field as a histogram with automatically computed bins.",
     "design_considerations":"Uses binby to create equal-width bins. Rect marks span from bin start to bin end on x, with count on y.",
@@ -786,6 +924,9 @@
     "task_types":[
       "Characterize_Distribution"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Shows the distribution of a quantitative field as a smooth density curve (KDE) rendered as an area chart.",
     "design_considerations":"Kernel density estimation produces a smooth curve. Area mark fills below the density line. Used for moderate cardinality (50-250) where a smooth estimate is more informative than binning.",
     "tasks":"Characterize the shape of a distribution; identify modes and overall density patterns."
@@ -801,6 +942,9 @@
     "spec_key_count":6,
     "task_types":[
       "Characterize_Distribution"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Shows the distribution of a quantitative field as individual points along a single axis.",
     "design_considerations":"Point marks on a single quantitative x-axis. Best for small datasets (50 or fewer values) where individual observations are meaningful and overplotting is minimal.",
@@ -818,6 +962,9 @@
     "task_types":[
       "Characterize_Distribution"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Compares the distribution of a quantitative field across categories using overlapping density curves (KDE) with area and line marks.",
     "design_considerations":"Per-group KDE with semi-transparent area fills and line outlines. Color encodes group identity. Limited to fewer than 4 groups to avoid excessive overlap. Opacity set to 0.25 for layering.",
     "tasks":"Compare distribution shapes across groups; identify shifts in central tendency or spread."
@@ -833,6 +980,9 @@
     "spec_key_count":12,
     "task_types":[
       "Characterize_Distribution"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Compares the distribution of a quantitative field across categories using dot strips, with one row per category.",
     "design_considerations":"Points plotted on a quantitative x-axis with nominal y-axis for group separation. Color reinforces group identity. Best for small datasets (50 or fewer values per group).",
@@ -852,6 +1002,9 @@
       "Filter",
       "Compute_Derived_Value"
     ],
+    "tags":[
+      "line_item"
+    ],
     "description":"Analyzes data completeness by counting and computing the percentage of records with non-null values in a specified field.",
     "design_considerations":"Derives total count before filtering, then computes valid count and percentage. Percentage bar with 50% reference line provides visual context for data completeness.",
     "tasks":"Assess data completeness for a field; determine how many records have valid values and what proportion."
@@ -869,6 +1022,9 @@
     "task_types":[
       "Filter",
       "Compute_Derived_Value"
+    ],
+    "tags":[
+      "line_item"
     ],
     "description":"Analyzes data quality by counting and computing the percentage of records with null values in a specified field.",
     "design_considerations":"Derives null count as total minus valid count. Percentage bar shows the null proportion with a 50% reference line.",

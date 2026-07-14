@@ -62,6 +62,7 @@ def add_row(
         "chart_complexity": complexity,
         "spec_key_count": spec_key_count,
         "task_types": task_types,
+        "tags": ["line_item"],
         "description": description,
         "design_considerations": design_considerations,
         "tasks": tasks,
@@ -88,6 +89,7 @@ def generate():
             "chart_complexity",
             "spec_key_count",
             "task_types",
+            "tags",
             "description",
             "design_considerations",
             "tasks",
@@ -1514,9 +1516,18 @@ def generate():
 
 
 if __name__ == "__main__":
+    import argparse
     import os
+    from pathlib import Path
 
-    os.makedirs("./out", exist_ok=True)
+    _default_out = (
+        Path(__file__).resolve().parent.parent
+        / "src" / "udiagent" / "data" / "skills" / "template_visualizations.json"
+    )
+    parser = argparse.ArgumentParser(description="Generate line-item visualization templates.")
+    parser.add_argument("-o", "--output", default=str(_default_out), help="Output template JSON path.")
+    args = parser.parse_args()
+
     df = generate()
 
     # Serialize task_types enum values to strings
@@ -1527,5 +1538,6 @@ if __name__ == "__main__":
     print(f"\nChart types: {df['chart_type'].value_counts().to_dict()}")
     print(f"Complexity: {df['chart_complexity'].value_counts().to_dict()}")
 
-    df.to_json("./src/skills/template_visualizations.json", orient="records", indent=2)
-    print(f"\nExported to ./src/skills/template_visualizations.json")
+    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    df.to_json(args.output, orient="records", indent=2)
+    print(f"\nExported to {args.output}")
