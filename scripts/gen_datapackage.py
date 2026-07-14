@@ -107,7 +107,7 @@ def _profile_table(name: str, header: list[str], rows: list[list[str]]) -> dict:
 def _infer_foreign_keys(resources: list[dict]) -> None:
     """Link tables on shared columns that are unique in exactly one table.
 
-    ponytail: single-column keys only; the lone table where a shared column is
+    single-column keys only; the lone table where a shared column is
     unique is treated as the parent (many->one). Ambiguous (0 or >1 unique)
     columns are left unlinked — declare those FKs by hand in the JSON.
     """
