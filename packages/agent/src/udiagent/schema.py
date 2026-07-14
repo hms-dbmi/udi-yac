@@ -50,7 +50,21 @@ def parse_schema_from_dict(raw: dict) -> dict:
                 "type": field.get("udi:data_type", ""),
                 "cardinality": cardinality,
             }
-        entities[name] = {"url": url, "row_count": row_count, "fields": fields}
+        entity = {"url": url, "row_count": row_count, "fields": fields}
+
+        # Pre-aggregated "powerset cube" metadata (used by the data-cube
+        # visualization templates). ``udi:cube`` marks the resource as a cube;
+        # ``udi:dimensions`` / ``udi:measures`` name its dimension and measure
+        # columns. These let the cube templates build marginal filters against
+        # whatever cube schema arrives per request.
+        dimensions = resource.get("udi:dimensions") or []
+        measures = resource.get("udi:measures") or []
+        is_cube = bool(resource.get("udi:cube")) or bool(dimensions and measures)
+        if is_cube:
+            entity["is_cube"] = True
+            entity["dimensions"] = list(dimensions)
+            entity["measures"] = list(measures)
+        entities[name] = entity
 
         for fk in resource.get("schema", {}).get("foreignKeys", []):
             card = fk.get("udi:cardinality", {})
@@ -66,6 +80,17 @@ def parse_schema_from_dict(raw: dict) -> dict:
             )
 
     return {"base_path": base_path, "entities": entities, "relationships": relationships}
+
+
+def schema_is_cube(parsed_schema: dict) -> bool:
+    """True if any entity in a parsed schema is a pre-aggregated data cube.
+
+    Drives tag-based visualization-template selection: cube schemas get the
+    ``data_cube`` templates, everything else the ``line_item`` templates.
+    """
+    return any(
+        entity.get("is_cube") for entity in parsed_schema.get("entities", {}).values()
+    )
 
 
 def simplify_data_schema(data_schema):
@@ -97,6 +122,17 @@ def simplify_data_schema(data_schema):
         lines.append(f"    path: {path}")
         if description:
             lines.append(f"    description: {description}")
+
+        # Flag pre-aggregated cubes so the model treats dimensions/measures
+        # correctly (a cube is read by marginal filtering, not re-aggregation).
+        dimensions = resource.get("udi:dimensions") or []
+        measures = resource.get("udi:measures") or []
+        if resource.get("udi:cube") or (dimensions and measures):
+            lines.append("    kind: data_cube (pre-aggregated; read by marginal filtering)")
+            if measures:
+                lines.append(f"    measures: [{', '.join(measures)}]")
+            if dimensions:
+                lines.append(f"    dimensions: [{', '.join(dimensions)}]")
 
         fields = resource.get("schema", {}).get("fields", [])
         columns = []

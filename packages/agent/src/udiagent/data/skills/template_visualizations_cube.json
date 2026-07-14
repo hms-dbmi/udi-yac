@@ -1,0 +1,227 @@
+[
+  {
+    "query_templates": [
+      "How many are there by <dimension>?",
+      "Make a bar chart of the measure by a categorical dimension."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D>\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<D:n>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<M>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the pre-aggregated cube measure for each category of a nominal dimension as a bar chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube.",
+    "tasks": "Compare the measure across categories; identify the most or least common category."
+  },
+  {
+    "query_templates": [
+      "Make a bar chart of the measure across a quantitative dimension."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D>\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<D:q>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<M>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Characterize_Distribution",
+      "Determine_Range"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the pre-aggregated cube measure across the values of a quantitative dimension as a bar chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube.",
+    "tasks": "Assess how the measure is distributed across a numeric dimension."
+  },
+  {
+    "query_templates": [
+      "How does the measure change over <dimension>?",
+      "Make a line chart of the measure over an ordered (e.g. temporal) dimension."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D>\"}, {\"orderby\": {\"field\": \"<D>\", \"order\": \"asc\"}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<D:o>\", \"type\": \"ordinal\"}, {\"encoding\": \"y\", \"field\": \"<M>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "line",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": [
+      "Characterize_Distribution",
+      "Determine_Range"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the pre-aggregated cube measure over an ordered dimension (e.g. time) as a line chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. The axis is ordered ascending; a temporal dimension is encoded as an ordered (ordinal) axis.",
+    "tasks": "Identify trends over time; spot peaks, troughs, and seasonality."
+  },
+  {
+    "query_templates": [
+      "Make a pie chart of the measure by a categorical dimension."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D>\"}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"<M>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<D:n>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "circular",
+    "chart_complexity": "simple",
+    "spec_key_count": 10,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the proportional cube measure for each category of a nominal dimension as a pie chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. The measure maps to angle and the renderer normalizes each slice against the total. Best for a small number of categories.",
+    "tasks": "Assess part-to-whole proportions; identify the dominant category."
+  },
+  {
+    "query_templates": [
+      "Make a donut chart of the measure by a categorical dimension."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D>\"}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"<M>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<D:n>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
+    "creation_method": "template",
+    "chart_type": "circular",
+    "chart_complexity": "medium",
+    "spec_key_count": 14,
+    "task_types": [
+      "Compute_Derived_Value",
+      "Determine_Range"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the proportional cube measure for each category of a nominal dimension as a donut chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. The measure maps to angle and the renderer normalizes each slice against the total. Best for a small number of categories.",
+    "tasks": "Assess part-to-whole proportions; identify the dominant category."
+  },
+  {
+    "query_templates": [
+      "How many are there by <dimension1> and <dimension2>?",
+      "Make a stacked bar chart across two categorical dimensions."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D1,D2>\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<D1:n>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<M>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 13,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the pre-aggregated cube measure by two nominal dimensions as a vertical stacked bar chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. Color encodes the sub-group; prefer the dimension with fewer categories for color.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups."
+  },
+  {
+    "query_templates": [
+      "Make a grouped (side-by-side) bar chart across two categorical dimensions."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D1,D2>\"}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<D1:n>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<M>\", \"type\": \"quantitative\"}, {\"encoding\": \"xOffset\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) bar chart.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. xOffset gives side-by-side grouping for direct comparison of the sub-group within each category.",
+    "tasks": "Directly compare sub-group values within and across categories."
+  },
+  {
+    "query_templates": [
+      "What is the proportion of <dimension2> for each <dimension1>?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D1,D2>\"}, {\"groupby\": \"<D1>\", \"out\": \"groupTotals\"}, {\"rollup\": {\"axis_total\": {\"op\": \"sum\", \"field\": \"<M>\"}}}, {\"groupby\": [\"<D2>\", \"<D1>\"], \"in\": \"<E>\"}, {\"rollup\": {\"cell_total\": {\"op\": \"sum\", \"field\": \"<M>\"}}}, {\"join\": {\"on\": \"<D1>\"}, \"in\": [\"<E>\", \"groupTotals\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": \"d['cell_total'] / d['axis_total']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<D1:n>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "complex",
+    "spec_key_count": 27,
+    "task_types": [
+      "Compute_Derived_Value"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the relative proportion of one nominal dimension within each category of another as a normalized stacked bar chart.",
+    "design_considerations": "First filters to the two-dimension marginal (expanded from the schema), then sums the measure per primary-dimension group and divides each cell by its group total to obtain proportions. Color is preferably the dimension with fewer categories.",
+    "tasks": "Compare relative proportions across categories; identify dominant sub-groups."
+  },
+  {
+    "query_templates": [
+      "Are there clusters in the measure across two dimensions?",
+      "Make a heatmap across two categorical dimensions."
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D1,D2>\"}, {\"derive\": {\"udi_internal_percentile\": \"d['<M>'] / max(d['<M>'])\"}}, {\"derive\": {\"udi_internal_text_color_threshold\": \"d.udi_internal_percentile > .5 ? 'large' : 'small'\"}}], \"representation\": [{\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"<M>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<D1:n>\", \"type\": \"nominal\"}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<M>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<D2:n>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<D1:n>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"udi_internal_text_color_threshold\", \"type\": \"nominal\", \"domain\": [\"large\", \"small\"], \"range\": [\"white\", \"black\"], \"omitLegend\": true}]}]}",
+    "creation_method": "template",
+    "chart_type": "heatmap",
+    "chart_complexity": "complex",
+    "spec_key_count": 33,
+    "task_types": [
+      "Cluster",
+      "Compute_Derived_Value",
+      "Correlate"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the pre-aggregated cube measure for each combination of two nominal dimensions as a labeled heatmap.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. The measure maps to cell color with overlaid contrast-aware value labels. Prefer the dimension with more categories on the y-axis.",
+    "tasks": "Identify clusters or patterns across two dimensions; compare values across combinations."
+  },
+  {
+    "query_templates": [
+      "What is the grand total of the measure?",
+      "How many are there in total?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL>\"}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<M>\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "simple",
+    "spec_key_count": 8,
+    "task_types": [
+      "Retrieve_Value",
+      "Compute_Derived_Value"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Shows the grand-total cube measure as a single-row table.",
+    "design_considerations": "Reads the grand-total row directly by filtering to the marginal where every dimension is empty; no aggregation is performed.",
+    "tasks": "Retrieve the overall total."
+  },
+  {
+    "query_templates": [
+      "List the measure for each category of a dimension.",
+      "What is the range of values for a dimension?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"<MARGINAL:D>\"}, {\"orderby\": {\"field\": \"<M>\", \"order\": \"desc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<D:n>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<M>\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": [
+      "Determine_Range",
+      "Sort",
+      "Retrieve_Value"
+    ],
+    "tags": [
+      "data_cube"
+    ],
+    "description": "Lists each category of a nominal dimension with its pre-aggregated measure as a sorted table with in-cell bars.",
+    "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. Ordered by the measure descending with in-cell bars for visual comparison.",
+    "tasks": "Determine the distinct values of a dimension; compare category counts."
+  }
+]

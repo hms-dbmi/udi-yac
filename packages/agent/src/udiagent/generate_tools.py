@@ -236,24 +236,32 @@ def _generate_single_entity_tool(
     required = ["entity"]
     param_map = {"entity": "E"}
 
-    # Determine field parameters from placeholders
+    # Determine field/dimension parameters from placeholders. F* are line-item
+    # fields; D* are data-cube dimensions (the measure <M> and the <MARGINAL:…>
+    # filter are resolved from the schema at runtime, so they get no param).
     seen = set()
     for ph in sorted(placeholders):
         if ph in ("E", "E.url"):
             continue
-        m = re.match(r'(F\d*)', ph)
+        m = re.match(r'(F\d*|D\d*)', ph)
         if not m:
             continue
-        base = m.group(1)  # F, F1, F2, F3
-        param_name = {"F": "field", "F1": "field1", "F2": "field2", "F3": "field3"}.get(base)
+        base = m.group(1)  # F, F1, F2, F3 or D, D1, D2, D3
+        param_name = {
+            "F": "field", "F1": "field1", "F2": "field2", "F3": "field3",
+            "D": "dimension", "D1": "dimension1", "D2": "dimension2", "D3": "dimension3",
+        }.get(base)
         if not param_name or param_name in seen:
             continue
         seen.add(param_name)
 
         field_type = _get_field_type_for_placeholder(ph)
+        description = _build_field_description(field_type, encoding_info.get(base))
+        if base.startswith("D"):
+            description = "cube " + description.replace("field", "dimension", 1)
         properties[param_name] = {
             "type": "string",
-            "description": _build_field_description(field_type, encoding_info.get(base)),
+            "description": description,
         }
         required.append(param_name)
         param_map[param_name] = base
@@ -358,55 +366,68 @@ def _rel_to_cwd(path: str) -> str:
         return resolved.name
 
 
-def generate(templates_path: str, output_path: str):
+def generate(template_sources, output_path: str):
     """Generate the typed vis tools module (data only, no builder code).
 
-    The output is **schema-independent**: tool parameters are free-form
-    ``entity``/``field`` strings, and every template produces a tool
-    unconditionally. Applicability to a specific dataset is enforced at runtime
-    by ``vis_generate.validate_bindings`` against the per-request schema, so one
-    generated module serves arbitrary schemas.
-    """
-    with open(templates_path) as f:
-        templates = json.load(f)
+    ``template_sources`` is a list of ``(templates_path, default_tags)``. All
+    sources are combined into one module; each tool records the tags of its
+    template (its own ``tags`` field, or the source's ``default_tags``) in
+    ``TOOL_TAGS``, which drives per-request template selection.
 
+    The output is **schema-independent**: tool parameters are free-form
+    ``entity``/``field``/``dimension`` strings, and every template produces a
+    tool unconditionally. Applicability to a specific dataset is enforced at
+    runtime by ``vis_generate.validate_bindings`` against the per-request
+    schema, so one generated module serves arbitrary schemas.
+    """
     tool_defs = []
     spec_templates = []
     tool_dispatch = {}
+    tool_tags = {}
     tool_name_set = {}
+    sources_used = []
+    counter = 0
 
-    for i, template in enumerate(templates):
-        spec_template = template.get("spec_template", "")
-        placeholders = _extract_placeholders(spec_template)
-        is_join = "E1" in placeholders or "E2" in placeholders
+    for templates_path, default_tags in template_sources:
+        with open(templates_path) as f:
+            templates = json.load(f)
+        sources_used.append(_rel_to_cwd(templates_path))
 
-        if is_join:
-            tool_def, param_map = _generate_join_entity_tool(template, i)
-        else:
-            tool_def, param_map = _generate_single_entity_tool(template, i)
+        for template in templates:
+            spec_template = template.get("spec_template", "")
+            placeholders = _extract_placeholders(spec_template)
+            is_join = "E1" in placeholders or "E2" in placeholders
 
-        tool_name = tool_def["function"]["name"]
+            if is_join:
+                tool_def, param_map = _generate_join_entity_tool(template, counter)
+            else:
+                tool_def, param_map = _generate_single_entity_tool(template, counter)
 
-        # Handle duplicate names
-        if tool_name in tool_name_set:
-            tool_name = f"{tool_name}_{i}"
-            tool_def["function"]["name"] = tool_name
-        tool_name_set[tool_name] = i
+            tool_name = tool_def["function"]["name"]
 
-        template_idx = len(spec_templates)
-        spec_templates.append(spec_template)
-        tool_defs.append(tool_def)
-        tool_dispatch[tool_name] = (template_idx, param_map)
+            # Handle duplicate names
+            if tool_name in tool_name_set:
+                tool_name = f"{tool_name}_{counter}"
+                tool_def["function"]["name"] = tool_name
+            tool_name_set[tool_name] = counter
+
+            template_idx = len(spec_templates)
+            spec_templates.append(spec_template)
+            tool_defs.append(tool_def)
+            tool_dispatch[tool_name] = (template_idx, param_map)
+            tool_tags[tool_name] = list(template.get("tags") or default_tags)
+            counter += 1
 
     output = [
         '"""',
         'Auto-generated visualization tool definitions.',
         '',
-        f'Generated from: {_rel_to_cwd(templates_path)}',
+        f'Generated from: {", ".join(sources_used)}',
         f'Tools: {len(tool_defs)}',
         '',
         'Schema-independent: tool params are free-form strings resolved against the',
         'per-request data schema at runtime (see vis_generate._execute_generate).',
+        'TOOL_TAGS maps each tool to its template tags for per-request selection.',
         '',
         'DO NOT EDIT — regenerate with: python scripts/regenerate_vis_tools.py',
         '"""',
@@ -423,6 +444,10 @@ def generate(templates_path: str, output_path: str):
         '# Dispatch: tool name -> (template_index, param_to_binding_map)',
         f'TOOL_DISPATCH = {pprint.pformat(tool_dispatch, width=120)}',
         '',
+        '',
+        '# Tags per tool name (drives per-request template selection)',
+        f'TOOL_TAGS = {pprint.pformat(tool_tags, width=120)}',
+        '',
     ]
 
     Path(output_path).write_text("\n".join(output))
@@ -434,13 +459,20 @@ def generate(templates_path: str, output_path: str):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    import os
+
     parser = argparse.ArgumentParser(
         description="Generate schema-independent typed visualization tools from templates"
     )
     parser.add_argument(
         "--templates",
         default="src/udiagent/data/skills/template_visualizations.json",
-        help="Path to template visualizations JSON",
+        help="Path to the line-item template visualizations JSON",
+    )
+    parser.add_argument(
+        "--cube-templates",
+        default="src/udiagent/data/skills/template_visualizations_cube.json",
+        help="Path to the data-cube template visualizations JSON (skipped if missing)",
     )
     parser.add_argument(
         "--output",
@@ -448,4 +480,8 @@ if __name__ == "__main__":
         help="Output Python module path",
     )
     args = parser.parse_args()
-    generate(args.templates, args.output)
+
+    sources = [(args.templates, ["line_item"])]
+    if args.cube_templates and os.path.exists(args.cube_templates):
+        sources.append((args.cube_templates, ["data_cube"]))
+    generate(sources, args.output)
