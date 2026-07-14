@@ -38,6 +38,23 @@ export type { UDIPalette, ContinuousColor, DiscreteColor } from './Palette';
 // Expression AST compiler (Expr -> Arquero expression string)
 export { exprToArquero, isExpr } from './exprToArquero';
 
+// Query backend seam (local Arquero vs remote /v1/yac/query)
+export {
+  setQueryBackend,
+  getQueryBackend,
+  createRemoteBackend,
+  LOCAL_BACKEND,
+} from './queryBackend';
+export type {
+  QueryBackend,
+  LocalQueryBackend,
+  RemoteQueryBackend,
+  RemoteQueryRequest,
+  RemoteVizResult,
+  RemoteBackendConfig,
+  QueryDataResult,
+} from './queryBackend';
+
 // Grammar spec types
 export type {
   UDIGrammar,

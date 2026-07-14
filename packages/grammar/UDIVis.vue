@@ -25,6 +25,7 @@ import type {
 import type { UDIPalette } from './Palette';
 import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
+import { getQueryBackend } from './queryBackend';
 const dataSourcesStore = useDataSourcesStore();
 import { storeToRefs } from 'pinia';
 import { debounce } from 'lodash';
@@ -108,10 +109,13 @@ async function render() {
   // Load data sources BEFORE binding selections — binding can change
   // selectionHash which triggers the [loading, selectionHash] watcher.
   // If data isn't loaded yet that watcher would hit empty dataSources.
-  await dataSourcesStore.initDataSources(
-    parsedSpec.value.source,
-    props.sourceResolver,
-  );
+  // Remote backend: no local tables — the server owns the data.
+  if (getQueryBackend().kind === 'local') {
+    await dataSourcesStore.initDataSources(
+      parsedSpec.value.source,
+      props.sourceResolver,
+    );
+  }
   instanceReady.value = true;
   if (props.selections) {
     dataSourcesStore.bindExternalDataSelections(props.selections);
@@ -192,6 +196,10 @@ watch([loading, selectionHash, tablesVersion], () => {
   debouncedBuildVisualization();
 });
 
+// Guards remote responses against out-of-order arrival: only the latest
+// in-flight query may write results.
+let remoteQueryEpoch = 0;
+
 function buildVisualization(): void {
   if (!props.spec) {
     return;
@@ -201,11 +209,49 @@ function buildVisualization(): void {
   // when the filter is cleared.
   parsedSpec.value = parseSpecification(JSON.parse(JSON.stringify(props.spec)));
 
+  const backend = getQueryBackend();
+  if (backend.kind === 'remote') {
+    const epoch = ++remoteQueryEpoch;
+    transformError.value = null;
+    void backend
+      .query({
+        source: parsedSpec.value.source,
+        transformation: parsedSpec.value.transformation,
+        // The local path reads brush state implicitly from the shared
+        // store; the remote path forwards it explicitly.
+        selections: { ...dataSourcesStore.dataSelections, ...props.selections },
+      })
+      .then((result) => {
+        if (epoch !== remoteQueryEpoch) return; // stale response
+        // Keep previous data visible while null — same as the local path.
+        if (result == null) return;
+        transformedData.value = result.displayData;
+        transformedDataFull.value = result.allData;
+        isTransformedDataSubset.value = result.isSubset;
+        finishBuildVisualization();
+      })
+      .catch((error) => {
+        if (epoch !== remoteQueryEpoch) return;
+        console.error('Remote data query failed', error);
+        transformError.value = error;
+        transformedData.value = [];
+        transformedDataFull.value = [];
+      });
+    return;
+  }
+
   performDataTransformation(parsedSpec.value);
   if (transformedData.value == null) {
     return;
   }
+  finishBuildVisualization();
+}
 
+// The render tail shared by the sync (local) and async (remote) query paths.
+function finishBuildVisualization(): void {
+  if (!parsedSpec.value) {
+    return;
+  }
   // Always lock axis domains to the full data extent. If we only did this
   // when isTransformedDataSubset is true, the initial chart would have a
   // dynamic scale, and when a filter later shrinks the data the scale

@@ -13,9 +13,17 @@ const table = from([
 
 // Each case: [description, legacy string, AST node]
 const filterCases = [
-  ["not-null filter d['f'] != null", "d['f'] != null", { op: '!=', left: { field: 'f' }, right: { literal: null } }],
+  [
+    "not-null filter d['f'] != null",
+    "d['f'] != null",
+    { op: '!=', left: { field: 'f' }, right: { literal: null } },
+  ],
   ["truthy filter d['f']", "d['f']", { field: 'f' }],
-  ['comparison d.g > 2.5', "d['g'] > 2.5", { op: '>', left: { field: 'g' }, right: { literal: 2.5 } }],
+  [
+    'comparison d.g > 2.5',
+    "d['g'] > 2.5",
+    { op: '>', left: { field: 'g' }, right: { literal: 2.5 } },
+  ],
 ];
 
 for (const [desc, legacy, ast] of filterCases) {
@@ -26,7 +34,11 @@ for (const [desc, legacy, ast] of filterCases) {
 }
 
 const deriveCases = [
-  ['ratio d.f / d.g', "d['f'] / d['g']", { op: '/', left: { field: 'f' }, right: { field: 'g' } }],
+  [
+    'ratio d.f / d.g',
+    "d['f'] / d['g']",
+    { op: '/', left: { field: 'f' }, right: { field: 'g' } },
+  ],
   ['count() broadcast', 'count()', { agg: 'count' }],
   ["max(d['g']) broadcast", "max(d['g'])", { agg: 'max', field: 'g' }],
   ['rank()', 'rank()', { window: 'rank' }],
@@ -71,8 +83,16 @@ assert.equal(
 );
 
 // Non-Expr shapes must be rejected by the guard (named filters, rolling).
-assert.equal(isExpr({ name: 'sel1', source: 'donors' }), false, 'FilterDataSelection is not Expr');
-assert.equal(isExpr({ rolling: { expression: 'count()' } }), false, 'RollingDeriveExpression is not Expr');
+assert.equal(
+  isExpr({ name: 'sel1', source: 'donors' }),
+  false,
+  'FilterDataSelection is not Expr',
+);
+assert.equal(
+  isExpr({ rolling: { expression: 'count()' } }),
+  false,
+  'RollingDeriveExpression is not Expr',
+);
 assert.equal(isExpr("d['f']"), false, 'string is not Expr');
 
 // Untrusted input must throw, not compile.
@@ -83,7 +103,10 @@ for (const bad of [
   { literal: { nested: 'object' } },
   { field: '' },
 ]) {
-  assert.throws(() => exprToArquero(bad), `should reject: ${JSON.stringify(bad)}`);
+  assert.throws(
+    () => exprToArquero(bad),
+    `should reject: ${JSON.stringify(bad)}`,
+  );
 }
 
 console.log('expr-to-arquero: all assertions passed');

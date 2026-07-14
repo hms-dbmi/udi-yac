@@ -1,7 +1,11 @@
 import { createPinia } from 'pinia';
 import { defineCustomElement, watch } from 'vue';
 import UDIVisComp from './UDIVis.vue';
-import type { UDIGrammar, DataSource, DataTransformation } from './GrammarTypes';
+import type {
+  UDIGrammar,
+  DataSource,
+  DataTransformation,
+} from './GrammarTypes';
 import { useDataSourcesStore, type DataSelections } from './DataSourcesStore';
 import {
   loadDataPackage as loadDataPackageImpl,
@@ -13,6 +17,7 @@ import type {
   IntervalDomain,
   CategoricalDomain,
 } from './domainTypes';
+import { getQueryBackend, type QueryDataResult } from './queryBackend';
 
 // Shared Pinia instance for all <udi-vis> elements on the page.
 // This enables cross-chart filtering: all instances share the same
@@ -38,11 +43,26 @@ export interface QueryDataSpec {
   transformation?: DataTransformation[];
 }
 
-export interface QueryDataResult {
-  displayData: object[];
-  allData: object[];
-  isSubset: boolean;
-}
+// Re-exported from the backend seam so existing imports keep working.
+export type { QueryDataResult };
+
+// ── Query backend seam ──────────────────────────────────────────────────────
+// Local (default) = the in-browser Arquero engine below. Remote = batched
+// POSTs to a /v1/yac/query server. See queryBackend.ts.
+export {
+  setQueryBackend,
+  getQueryBackend,
+  createRemoteBackend,
+  LOCAL_BACKEND,
+} from './queryBackend';
+export type {
+  QueryBackend,
+  LocalQueryBackend,
+  RemoteQueryBackend,
+  RemoteQueryRequest,
+  RemoteVizResult,
+  RemoteBackendConfig,
+} from './queryBackend';
 
 export interface QueryDataOptions {
   /** Maps entity names → canonical URLs, overriding URLs embedded in the spec. */
@@ -76,7 +96,22 @@ export async function queryData(
 ): Promise<QueryDataResult | null> {
   const store = useDataSourcesStore(pinia);
 
-  const sources: DataSource[] = Array.isArray(spec.source) ? spec.source : [spec.source];
+  const sources: DataSource[] = Array.isArray(spec.source)
+    ? spec.source
+    : [spec.source];
+
+  const backend = getQueryBackend();
+  if (backend.kind === 'remote') {
+    // Include live brush state alongside the caller's external selections —
+    // the local path picks brushes up implicitly from the shared store, so
+    // the remote path must forward them explicitly.
+    return backend.query({
+      source: sources,
+      transformation: spec.transformation,
+      selections: { ...store.dataSelections, ...selections },
+      displayDataOnly: options?.displayDataOnly === true,
+    });
+  }
 
   await store.initDataSources(sources, options?.sourceResolver);
 

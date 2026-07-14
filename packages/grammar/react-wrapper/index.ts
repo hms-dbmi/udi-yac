@@ -28,12 +28,34 @@ export type { UDIGrammar } from '../GrammarTypes';
 // clobbers the Vue build's `dist/index.js`. The value is still exported from
 // the main (`udi-toolkit`) and `udi-toolkit/ce` entries.
 export type { UDIPalette, ContinuousColor, DiscreteColor } from '../Palette';
-export type { DataSelections, ActiveDataSelection as DataSelection, RangeSelection, PointSelection } from '../DataSourcesStore';
+export type {
+  DataSelections,
+  ActiveDataSelection as DataSelection,
+  RangeSelection,
+  PointSelection,
+} from '../DataSourcesStore';
 export { queryData } from './queryData';
-export type { QueryDataSpec, QueryDataResult, QueryDataOptions } from '../ce-entry';
+export type {
+  QueryDataSpec,
+  QueryDataResult,
+  QueryDataOptions,
+} from '../ce-entry';
+export { setQueryBackend, createRemoteBackend } from './queryBackend';
+export type {
+  QueryBackend,
+  LocalQueryBackend,
+  RemoteQueryBackend,
+  RemoteQueryRequest,
+  RemoteVizResult,
+  RemoteBackendConfig,
+} from '../queryBackend';
 export { loadDataPackage } from './loadDataPackage';
 export type { SourceSpec, LoadDataPackageOptions } from '../loadDataPackage';
-export { subscribeToSelections, clearAllSelections, getDataSelections } from './selections';
+export {
+  subscribeToSelections,
+  clearAllSelections,
+  getDataSelections,
+} from './selections';
 export type {
   DataFieldDomain,
   IntervalDomain,
