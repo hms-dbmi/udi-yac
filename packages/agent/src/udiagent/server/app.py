@@ -265,6 +265,39 @@ def _load_query_engines() -> dict:
 
 
 app.state.query_engines = _load_query_engines()
+# package name -> MetadataCache (created lazily per configured engine)
+app.state.metadata_caches = {}
+
+
+@app.get("/v1/yac/metadata")
+def yac_metadata(
+    package: str | None = None,
+    refresh: bool = False,
+    token_payload: dict = Depends(verify_jwt),
+):
+    """Backend-introspected dataSchema/dataDomains for a package — the
+    remote-mode replacement for browser-side CSV domain computation. Cached
+    with a TTL; pass ?refresh=1 to force re-introspection."""
+    engines = app.state.query_engines
+    key = package if package in engines else "default"
+    engine = engines.get(key)
+    if engine is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"no query backend configured for package {package!r}"},
+        )
+    caches = app.state.metadata_caches
+    if key not in caches:
+        from udiagent.query import MetadataCache
+
+        ttl = float(os.getenv("UDI_METADATA_TTL_SECONDS", "3600"))
+        caches[key] = MetadataCache(engine, package or key, ttl_seconds=ttl)
+    metadata = caches[key].refresh() if refresh else caches[key].get()
+    return {
+        "package": package or key,
+        "interactive": False,
+        **metadata,
+    }
 
 
 @app.post("/v1/yac/query")
