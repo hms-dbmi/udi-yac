@@ -12,9 +12,11 @@ import sys
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent
-_default_templates = _repo_root / "src" / "skills" / "template_visualizations.json"
+_default_templates = (
+    _repo_root / "src" / "udiagent" / "data" / "skills" / "template_visualizations.json"
+)
 _default_schema = _repo_root / "data" / "data_domains" / "hubmap_data_schema.json"
-_default_tools_output = _repo_root / "src" / "generated_vis_tools.py"
+_default_tools_output = _repo_root / "src" / "udiagent" / "generated_vis_tools.py"
 
 
 def main():
@@ -60,7 +62,7 @@ def main():
     result = subprocess.run(
         [
             sys.executable,
-            str(_repo_root / "src" / "generate_tools.py"),
+            str(_repo_root / "src" / "udiagent" / "generate_tools.py"),
             "--templates", args.templates_output,
             "--schema", args.schema,
             "--output", args.tools_output,

@@ -35,6 +35,9 @@ export type { SourceSpec, LoadDataPackageOptions } from './loadDataPackage';
 export { DEFAULT_PALETTE } from './Palette';
 export type { UDIPalette, ContinuousColor, DiscreteColor } from './Palette';
 
+// Expression AST compiler (Expr -> Arquero expression string)
+export { exprToArquero, isExpr } from './exprToArquero';
+
 // Grammar spec types
 export type {
   UDIGrammar,
@@ -43,6 +46,7 @@ export type {
   DataSource,
   DataTransformation,
   DataSelection,
+  Expr,
   VisualizationLayer,
   RowLayer,
   RowMapping,

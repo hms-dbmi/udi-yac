@@ -2,6 +2,21 @@
   "$ref": "#/definitions/UDIGrammar",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "AggregateExpr": {
+      "additionalProperties": false,
+      "description": "A per-group aggregate broadcast back to every row of the group (a window aggregate, not a row-reducing rollup). Legacy forms: `count()`, `max(d['n'])`. `field` is omitted for `count`.",
+      "properties": {
+        "agg": {
+          "enum": ["count", "sum", "mean", "min", "max", "median"],
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        }
+      },
+      "required": ["agg"],
+      "type": "object"
+    },
     "AggregateFunction": {
       "additionalProperties": false,
       "description": "An aggregate function for summarizing data.",
@@ -152,6 +167,42 @@
       "required": ["binby"],
       "type": "object"
     },
+    "BinaryExpr": {
+      "additionalProperties": false,
+      "description": "A binary operation. Legacy forms: `d['a'] / d['b']`, `d['x'] > 0.5`, `d['f'] != null`.",
+      "properties": {
+        "left": {
+          "$ref": "#/definitions/Expr"
+        },
+        "op": {
+          "$ref": "#/definitions/BinaryOperator"
+        },
+        "right": {
+          "$ref": "#/definitions/Expr"
+        }
+      },
+      "required": ["op", "left", "right"],
+      "type": "object"
+    },
+    "BinaryOperator": {
+      "description": "The operators permitted in a BinaryExpr.",
+      "enum": [
+        "+",
+        "-",
+        "*",
+        "/",
+        "%",
+        "==",
+        "!=",
+        ">",
+        ">=",
+        "<",
+        "<=",
+        "&&",
+        "||"
+      ],
+      "type": "string"
+    },
     "CategoryFieldUnion": {
       "additionalProperties": false,
       "description": "Field Unions require a list of fields, and the domain is the union of the fields. Or if a.domain = ['cat', 'dog'], b.domain = ['cat', 'mouse'], then the domain is ['cat', 'dog', 'mouse'].",
@@ -164,6 +215,23 @@
         }
       },
       "required": ["categoryFields"],
+      "type": "object"
+    },
+    "ConditionalExpr": {
+      "additionalProperties": false,
+      "description": "A ternary conditional. Legacy form: `d['rank'] == 1 ? 'yes' : 'no'`.",
+      "properties": {
+        "else": {
+          "$ref": "#/definitions/Expr"
+        },
+        "if": {
+          "$ref": "#/definitions/Expr"
+        },
+        "then": {
+          "$ref": "#/definitions/Expr"
+        }
+      },
+      "required": ["if", "then", "else"],
       "type": "object"
     },
     "DataSelection": {
@@ -329,10 +397,13 @@
           "type": "string"
         },
         {
+          "$ref": "#/definitions/Expr"
+        },
+        {
           "$ref": "#/definitions/RollingDeriveExpression"
         }
       ],
-      "description": "A derive expression, which can be a string or a rolling derive expression."
+      "description": "A derive expression: a structured expression (Expr), a rolling window expression, or the legacy raw Arquero string form (accepted during migration)."
     },
     "DirectionalOrder": {
       "additionalProperties": false,
@@ -364,6 +435,40 @@
         }
       ],
       "description": "Represents a domain for visual encodings. This can be a numerical domain, a string domain, or a field union."
+    },
+    "Expr": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/FieldExpr"
+        },
+        {
+          "$ref": "#/definitions/LiteralExpr"
+        },
+        {
+          "$ref": "#/definitions/BinaryExpr"
+        },
+        {
+          "$ref": "#/definitions/ConditionalExpr"
+        },
+        {
+          "$ref": "#/definitions/AggregateExpr"
+        },
+        {
+          "$ref": "#/definitions/WindowExpr"
+        }
+      ],
+      "description": "A backend-neutral expression AST used by `derive` and `filter`, so the same spec can be compiled to Arquero (client/interactive) or SQL (server/remote).\n\nIt is deliberately NOT a general expression language: it covers exactly the surface the visualization templates emit today — field references, literals, binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates (count/sum/…), and window functions (rank). Add a node only when a template needs one.\n\nThe union is untagged; nodes are distinguished by key (`field` | `literal` | `op` | `if` | `agg` | `window`) without a `type` tag. CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field` prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node uses `agg`.\n\nponytail: the `string` form in DeriveExpression/FilterExpression is transitional. Once all templates/specs emit Expr, drop `string |` from those unions and the SQL backend no longer needs to reject raw expressions."
+    },
+    "FieldExpr": {
+      "additionalProperties": false,
+      "description": "A reference to a column in the current table. Legacy form: `d['age']`.",
+      "properties": {
+        "field": {
+          "type": "string"
+        }
+      },
+      "required": ["field"],
+      "type": "object"
     },
     "FieldUnion": {
       "anyOf": [
@@ -442,10 +547,13 @@
           "type": "string"
         },
         {
+          "$ref": "#/definitions/Expr"
+        },
+        {
           "$ref": "#/definitions/FilterDataSelection"
         }
       ],
-      "description": "A filter expression, which can be a string or a data selection."
+      "description": "A filter expression: a structured expression (Expr) that evaluates to a boolean, or a data selection. The legacy raw Arquero string form is still accepted during migration (see Expr)."
     },
     "FilterMatch": {
       "description": "A filter match type, which specifies how to match the filter data selection.",
@@ -1378,6 +1486,17 @@
       "$ref": "#/definitions/GenericValueMapping%3CLineEncodingOptions%3E",
       "description": "A value mapping for line marks."
     },
+    "LiteralExpr": {
+      "additionalProperties": false,
+      "description": "A constant value. `null` is permitted (used by not-null filters).",
+      "properties": {
+        "literal": {
+          "type": ["string", "number", "boolean", "null"]
+        }
+      },
+      "required": ["literal"],
+      "type": "object"
+    },
     "NumberDomain": {
       "additionalProperties": false,
       "description": "Represents a numerical domain with a minimum and maximum value.",
@@ -1562,8 +1681,15 @@
           "description": "Configuration for the rolling derive expression.",
           "properties": {
             "expression": {
-              "description": "The expression to apply.",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/Expr"
+                }
+              ],
+              "description": "The expression to apply."
             },
             "window": {
               "description": "The rolling window size. Optional.",
@@ -1781,6 +1907,18 @@
         }
       ],
       "description": "A visualization layer for rendering data. This can include various types of marks such as lines, bars, points, etc."
+    },
+    "WindowExpr": {
+      "additionalProperties": false,
+      "description": "A window function over the current ordering. Legacy form: `rank()`.",
+      "properties": {
+        "window": {
+          "const": "rank",
+          "type": "string"
+        }
+      },
+      "required": ["window"],
+      "type": "object"
     }
   }
 }
