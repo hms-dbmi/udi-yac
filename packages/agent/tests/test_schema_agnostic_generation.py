@@ -102,7 +102,7 @@ def _single_entity_field_templates():
     """All generated single-entity templates whose param_map is {entity:E, field:F}."""
     generated = _load_generated_tools()
     assert generated is not None, "generated_vis_tools must be importable"
-    _tool_defs, tool_dispatch, templates = generated
+    _tool_defs, tool_dispatch, templates, _tool_tags = generated
     out = []
     for _name, (idx, param_map) in tool_dispatch.items():
         template = templates[idx]
