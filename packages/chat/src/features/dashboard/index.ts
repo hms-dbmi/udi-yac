@@ -25,6 +25,13 @@ export {
 
 export { createMemoryBankStore, type MemoryBankState } from './stores/memoryBankStore';
 
+export {
+  useBrushFilters,
+  selectBrushFilters,
+  brushHasValue,
+  type BrushFilter,
+} from './hooks/useBrushFilters';
+
 export type {
   DownloadAction,
   DownloadActionContext,
