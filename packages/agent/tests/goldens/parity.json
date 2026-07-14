@@ -1,0 +1,1193 @@
+{
+  "sources": {
+    "penguins": "penguins.csv",
+    "donors": "donors.csv",
+    "samples": "samples.csv"
+  },
+  "cases": [
+    {
+      "name": "groupby-rollup-count",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "count": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "count": 152
+          },
+          {
+            "species": "Chinstrap",
+            "count": 68
+          },
+          {
+            "species": "Gentoo",
+            "count": 124
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "count": 152
+          },
+          {
+            "species": "Chinstrap",
+            "count": 68
+          },
+          {
+            "species": "Gentoo",
+            "count": 124
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "rollup-numeric-aggs",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "total": {
+                "op": "sum",
+                "field": "body_mass_g"
+              },
+              "avg": {
+                "op": "mean",
+                "field": "body_mass_g"
+              },
+              "lo": {
+                "op": "min",
+                "field": "body_mass_g"
+              },
+              "hi": {
+                "op": "max",
+                "field": "body_mass_g"
+              },
+              "mid": {
+                "op": "median",
+                "field": "body_mass_g"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "total": 558800,
+            "avg": 3700.662251655629,
+            "lo": 2850,
+            "hi": 4775,
+            "mid": 3700
+          },
+          {
+            "species": "Chinstrap",
+            "total": 253850,
+            "avg": 3733.088235294118,
+            "lo": 2700,
+            "hi": 4800,
+            "mid": 3700
+          },
+          {
+            "species": "Gentoo",
+            "total": 624350,
+            "avg": 5076.016260162601,
+            "lo": 3950,
+            "hi": 6300,
+            "mid": 5000
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "total": 558800,
+            "avg": 3700.662251655629,
+            "lo": 2850,
+            "hi": 4775,
+            "mid": 3700
+          },
+          {
+            "species": "Chinstrap",
+            "total": 253850,
+            "avg": 3733.088235294118,
+            "lo": 2700,
+            "hi": 4800,
+            "mid": 3700
+          },
+          {
+            "species": "Gentoo",
+            "total": 624350,
+            "avg": 5076.016260162601,
+            "lo": 3950,
+            "hi": 6300,
+            "mid": 5000
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "frequency-rollup",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "groupby": "island"
+          },
+          {
+            "rollup": {
+              "freq": {
+                "op": "frequency"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "island": "Torgersen",
+            "freq": 0.1511627906976744
+          },
+          {
+            "island": "Biscoe",
+            "freq": 0.4883720930232558
+          },
+          {
+            "island": "Dream",
+            "freq": 0.36046511627906974
+          }
+        ],
+        "allData": [
+          {
+            "island": "Torgersen",
+            "freq": 0.1511627906976744
+          },
+          {
+            "island": "Biscoe",
+            "freq": 0.4883720930232558
+          },
+          {
+            "island": "Dream",
+            "freq": 0.36046511627906974
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "filter-expr-comparison",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "bill_length_mm"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "filter": {
+              "op": "&&",
+              "left": {
+                "op": ">",
+                "left": {
+                  "field": "bill_length_mm"
+                },
+                "right": {
+                  "literal": 45
+                }
+              },
+              "right": {
+                "op": "==",
+                "left": {
+                  "field": "sex"
+                },
+                "right": {
+                  "literal": "MALE"
+                }
+              }
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "n": 3
+          },
+          {
+            "species": "Chinstrap",
+            "n": 34
+          },
+          {
+            "species": "Gentoo",
+            "n": 59
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "n": 3
+          },
+          {
+            "species": "Chinstrap",
+            "n": 34
+          },
+          {
+            "species": "Gentoo",
+            "n": 59
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "derive-ratio-and-ternary",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "flipper_length_mm"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "mass": {
+                "op": "sum",
+                "field": "body_mass_g"
+              },
+              "flipper": {
+                "op": "sum",
+                "field": "flipper_length_mm"
+              }
+            }
+          },
+          {
+            "derive": {
+              "ratio": {
+                "op": "/",
+                "left": {
+                  "field": "mass"
+                },
+                "right": {
+                  "field": "flipper"
+                }
+              },
+              "size": {
+                "if": {
+                  "op": ">",
+                  "left": {
+                    "field": "mass"
+                  },
+                  "right": {
+                    "literal": 1000000
+                  }
+                },
+                "then": {
+                  "literal": "big"
+                },
+                "else": {
+                  "literal": "small"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "mass": 558800,
+            "flipper": 28683,
+            "ratio": 19.481923090332252,
+            "size": "small"
+          },
+          {
+            "species": "Chinstrap",
+            "mass": 253850,
+            "flipper": 13316,
+            "ratio": 19.06353259237008,
+            "size": "small"
+          },
+          {
+            "species": "Gentoo",
+            "mass": 624350,
+            "flipper": 26714,
+            "ratio": 23.37164033839934,
+            "size": "small"
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "mass": 558800,
+            "flipper": 28683,
+            "ratio": 19.481923090332252,
+            "size": "small"
+          },
+          {
+            "species": "Chinstrap",
+            "mass": 253850,
+            "flipper": 13316,
+            "ratio": 19.06353259237008,
+            "size": "small"
+          },
+          {
+            "species": "Gentoo",
+            "mass": 624350,
+            "flipper": 26714,
+            "ratio": 23.37164033839934,
+            "size": "small"
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "orderby-rank-ternary",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "groupby": "island"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          },
+          {
+            "orderby": {
+              "field": "n",
+              "order": "desc"
+            }
+          },
+          {
+            "derive": {
+              "rank": {
+                "window": "rank"
+              }
+            }
+          },
+          {
+            "derive": {
+              "top": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "rank"
+                  },
+                  "right": {
+                    "literal": 1
+                  }
+                },
+                "then": {
+                  "literal": "yes"
+                },
+                "else": {
+                  "literal": "no"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "island": "Biscoe",
+            "n": 168,
+            "rank": 1,
+            "top": "yes"
+          },
+          {
+            "island": "Dream",
+            "n": 124,
+            "rank": 2,
+            "top": "no"
+          },
+          {
+            "island": "Torgersen",
+            "n": 52,
+            "rank": 3,
+            "top": "no"
+          }
+        ],
+        "allData": [
+          {
+            "island": "Biscoe",
+            "n": 168,
+            "rank": 1,
+            "top": "yes"
+          },
+          {
+            "island": "Dream",
+            "n": 124,
+            "rank": 2,
+            "top": "no"
+          },
+          {
+            "island": "Torgersen",
+            "n": 52,
+            "rank": 3,
+            "top": "no"
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "rolling-percentile",
+      "spec": {
+        "source": {
+          "name": "donors",
+          "source": "donors.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "age_value"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "orderby": {
+              "field": "hubmap_id",
+              "order": "asc"
+            }
+          },
+          {
+            "derive": {
+              "total": {
+                "agg": "count"
+              }
+            }
+          },
+          {
+            "derive": {
+              "percentile": {
+                "rolling": {
+                  "expression": {
+                    "op": "/",
+                    "left": {
+                      "agg": "count"
+                    },
+                    "right": {
+                      "field": "total"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "groupby": "sex"
+          },
+          {
+            "rollup": {
+              "max_pct": {
+                "op": "max",
+                "field": "percentile"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sex": "Male",
+            "max_pct": 0.9924812030075187
+          },
+          {
+            "sex": "Female",
+            "max_pct": 1
+          }
+        ],
+        "allData": [
+          {
+            "sex": "Male",
+            "max_pct": 0.9924812030075187
+          },
+          {
+            "sex": "Female",
+            "max_pct": 1
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "groupby-derive-window-agg",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "derive": {
+              "species_max": {
+                "agg": "max",
+                "field": "body_mass_g"
+              },
+              "species_n": {
+                "agg": "count"
+              }
+            }
+          },
+          {
+            "groupby": ["species", "species_max", "species_n"]
+          },
+          {
+            "rollup": {
+              "rows": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "species_max": 4775,
+            "species_n": 151,
+            "rows": 151
+          },
+          {
+            "species": "Chinstrap",
+            "species_max": 4800,
+            "species_n": 68,
+            "rows": 68
+          },
+          {
+            "species": "Gentoo",
+            "species_max": 6300,
+            "species_n": 123,
+            "rows": 123
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "species_max": 4775,
+            "species_n": 151,
+            "rows": 151
+          },
+          {
+            "species": "Chinstrap",
+            "species_max": 4800,
+            "species_n": 68,
+            "rows": 68
+          },
+          {
+            "species": "Gentoo",
+            "species_max": 6300,
+            "species_n": 123,
+            "rows": 123
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "binby-histogram",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "binby": {
+              "field": "body_mass_g",
+              "bins": 10,
+              "nice": true
+            }
+          },
+          {
+            "rollup": {
+              "count": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "start": 3500,
+            "end": 4000,
+            "count": 94
+          },
+          {
+            "start": 3000,
+            "end": 3500,
+            "count": 62
+          },
+          {
+            "start": 4500,
+            "end": 5000,
+            "count": 51
+          },
+          {
+            "start": 4000,
+            "end": 4500,
+            "count": 59
+          },
+          {
+            "start": 2500,
+            "end": 3000,
+            "count": 9
+          },
+          {
+            "start": 5500,
+            "end": 6000,
+            "count": 29
+          },
+          {
+            "start": 5000,
+            "end": 5500,
+            "count": 34
+          },
+          {
+            "start": 6000,
+            "end": 6500,
+            "count": 4
+          }
+        ],
+        "allData": [
+          {
+            "start": 3500,
+            "end": 4000,
+            "count": 94
+          },
+          {
+            "start": 3000,
+            "end": 3500,
+            "count": 62
+          },
+          {
+            "start": 4500,
+            "end": 5000,
+            "count": 51
+          },
+          {
+            "start": 4000,
+            "end": 4500,
+            "count": 59
+          },
+          {
+            "start": 2500,
+            "end": 3000,
+            "count": 9
+          },
+          {
+            "start": 5500,
+            "end": 6000,
+            "count": 29
+          },
+          {
+            "start": 5000,
+            "end": 5500,
+            "count": 34
+          },
+          {
+            "start": 6000,
+            "end": 6500,
+            "count": 4
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "derive-percent-of-max",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "groupby": "island"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          },
+          {
+            "derive": {
+              "pct": {
+                "op": "/",
+                "left": {
+                  "field": "n"
+                },
+                "right": {
+                  "agg": "max",
+                  "field": "n"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "island": "Torgersen",
+            "n": 52,
+            "pct": 0.30952380952380953
+          },
+          {
+            "island": "Biscoe",
+            "n": 168,
+            "pct": 1
+          },
+          {
+            "island": "Dream",
+            "n": 124,
+            "pct": 0.7380952380952381
+          }
+        ],
+        "allData": [
+          {
+            "island": "Torgersen",
+            "n": 52,
+            "pct": 0.30952380952380953
+          },
+          {
+            "island": "Biscoe",
+            "n": 168,
+            "pct": 1
+          },
+          {
+            "island": "Dream",
+            "n": 124,
+            "pct": 0.7380952380952381
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "join-rollup",
+      "spec": {
+        "source": [
+          {
+            "name": "donors",
+            "source": "donors.csv"
+          },
+          {
+            "name": "samples",
+            "source": "samples.csv"
+          }
+        ],
+        "transformation": [
+          {
+            "join": {
+              "on": ["hubmap_id", "donor.hubmap_id"]
+            },
+            "in": ["donors", "samples"],
+            "out": "joined"
+          },
+          {
+            "groupby": "sex"
+          },
+          {
+            "rollup": {
+              "samples_count": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sex": "Male",
+            "samples_count": 995
+          },
+          {
+            "sex": "Female",
+            "samples_count": 1359
+          }
+        ],
+        "allData": [
+          {
+            "sex": "Male",
+            "samples_count": 995
+          },
+          {
+            "sex": "Female",
+            "samples_count": 1359
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "named-filter-same-entity",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_interval",
+              "source": "penguins"
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_interval": {
+          "dataSourceKey": "penguins",
+          "selection": {
+            "body_mass_g": [4000, 5000]
+          },
+          "type": "interval"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "n": 39
+          },
+          {
+            "species": "Chinstrap",
+            "n": 16
+          },
+          {
+            "species": "Gentoo",
+            "n": 61
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "n": 152
+          },
+          {
+            "species": "Chinstrap",
+            "n": 68
+          },
+          {
+            "species": "Gentoo",
+            "n": 124
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
+      "name": "named-filter-cross-entity",
+      "spec": {
+        "source": {
+          "name": "samples",
+          "source": "samples.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_donor",
+              "source": "donors",
+              "entityRelationship": {
+                "originKey": "hubmap_id",
+                "targetKey": "donor.hubmap_id"
+              }
+            }
+          },
+          {
+            "groupby": "sample_category"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_donor": {
+          "dataSourceKey": "donors",
+          "selection": {
+            "sex": ["Female"]
+          },
+          "type": "point"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sample_category": "block",
+            "n": 393
+          },
+          {
+            "sample_category": "organ",
+            "n": 207
+          },
+          {
+            "sample_category": "suspension",
+            "n": 53
+          },
+          {
+            "sample_category": "section",
+            "n": 706
+          }
+        ],
+        "allData": [
+          {
+            "sample_category": "section",
+            "n": 1182
+          },
+          {
+            "sample_category": "block",
+            "n": 756
+          },
+          {
+            "sample_category": "organ",
+            "n": 344
+          },
+          {
+            "sample_category": "suspension",
+            "n": 72
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
+      "name": "named-filter-display-vs-extent",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_species",
+              "source": "penguins"
+            }
+          },
+          {
+            "groupby": "island"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_species": {
+          "dataSourceKey": "penguins",
+          "selection": {
+            "species": ["Adelie"]
+          },
+          "type": "point"
+        }
+      },
+      "displayDataOnly": false,
+      "expect": {
+        "displayData": [
+          {
+            "island": "Torgersen",
+            "n": 52
+          },
+          {
+            "island": "Biscoe",
+            "n": 44
+          },
+          {
+            "island": "Dream",
+            "n": 56
+          }
+        ],
+        "allData": [
+          {
+            "island": "Torgersen",
+            "n": 52
+          },
+          {
+            "island": "Biscoe",
+            "n": 168
+          },
+          {
+            "island": "Dream",
+            "n": 124
+          }
+        ],
+        "isSubset": true
+      }
+    }
+  ]
+}

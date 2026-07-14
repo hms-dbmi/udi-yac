@@ -35,6 +35,7 @@ from udiagent.server.auth import make_verify_jwt
 from udiagent.server.models import (
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
+    YACQueryRequest,
 )
 
 # ---------------------------------------------------------------------------
@@ -220,6 +221,71 @@ def yac_completions(
         content=result.tool_calls,
         headers=_usage_headers(result.usage),
     )
+
+
+# ---------------------------------------------------------------------------
+# Query backends (/v1/yac/query)
+# ---------------------------------------------------------------------------
+# Registry of package name -> QueryEngine. Configure programmatically
+# (``app.state.query_engines[pkg] = engine``) or via UDI_QUERY_BACKENDS, a
+# path to a JSON file: {"<package>": {"type": "duckdb"|"starrocks", ...}}.
+# The key "default" (or null package) serves requests without a package match.
+
+
+def _engine_from_config(spec: dict):
+    # Lazy imports: duckdb / pymysql are optional extras.
+    from udiagent.query import DuckDBConnector, QueryEngine, StarRocksConnector
+
+    backend_type = spec.get("type")
+    if backend_type == "duckdb":
+        connector = DuckDBConnector(
+            database=spec.get("database", ":memory:"),
+            views=spec.get("views"),
+        )
+    elif backend_type == "starrocks":
+        connector = StarRocksConnector(**spec.get("connection", {}))
+    else:
+        raise ValueError(f"unknown query backend type: {backend_type!r}")
+    return QueryEngine(
+        connector,
+        table_map=spec.get("tables", {}),
+        row_cap=spec.get("rowCap", 5000),
+    )
+
+
+def _load_query_engines() -> dict:
+    path = os.getenv("UDI_QUERY_BACKENDS")
+    if not path:
+        return {}
+    engines = {}
+    for package, spec in json.loads(Path(path).read_text()).items():
+        engines[package] = _engine_from_config(spec)
+    logger.info("query backends configured: %s", sorted(engines))
+    return engines
+
+
+app.state.query_engines = _load_query_engines()
+
+
+@app.post("/v1/yac/query")
+def yac_query(
+    request: YACQueryRequest,
+    token_payload: dict = Depends(verify_jwt),
+):
+    engines = app.state.query_engines
+    engine = engines.get(request.package) or engines.get("default")
+    if engine is None:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": f"no query backend configured for package {request.package!r}"
+            },
+        )
+    results = engine.run_batch(
+        [q.model_dump() for q in request.queries],
+        request.selections,
+    )
+    return {"results": results}
 
 
 @app.post("/v1/yac/benchmark")

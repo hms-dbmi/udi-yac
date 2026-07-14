@@ -75,3 +75,8 @@ export type {
   RangeSelection,
   PointSelection,
 } from './DataSourcesStore';
+
+// The shared store factory. Exposed for headless/tooling use — e.g. the
+// parity-golden generator (scripts/gen-parity-goldens.mjs) runs the Arquero
+// executor in node as the reference for the server-side SQL compiler.
+export { useDataSourcesStore } from './DataSourcesStore';

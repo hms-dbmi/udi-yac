@@ -30,8 +30,15 @@ codegen = [
     "pandas>=2.0.0",
     "udi-grammar-py",
 ]
+duckdb = [
+    "duckdb>=1.0.0",
+]
+starrocks = [
+    "pymysql>=1.1.0",
+]
 test = [
     "pytest>=8.0.0",
+    "duckdb>=1.0.0",
 ]
 all = [
     "udiagent[langfuse,server,benchmark,codegen]",
