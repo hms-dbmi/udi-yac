@@ -169,10 +169,17 @@ def introspect(
     """
     resources = []
     all_domains: list[dict] = []
+    entity_schemas = getattr(engine, "entity_schemas", None) or {}
     for entity, table in engine.table_map.items():
         resource, domains = introspect_table(
             engine.connector, table, entity, distinct_cap
         )
+        # Relationship metadata (primaryKey/foreignKeys) isn't introspectable
+        # from the database — merge it from the engine's configured schemas so
+        # the chat's cross-entity filtering can resolve entity relationships.
+        extras = entity_schemas.get(entity)
+        if extras:
+            resource["schema"].update(extras)
         resources.append(resource)
         all_domains.extend(domains)
     return {

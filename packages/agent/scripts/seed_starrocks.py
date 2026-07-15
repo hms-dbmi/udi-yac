@@ -82,7 +82,17 @@ def load_package(data_dir: Path) -> list[dict]:
     if package_path.exists():
         package = json.loads(package_path.read_text())
         for resource in package.get("resources", []):
-            fields = resource.get("schema", {}).get("fields", [])
+            schema = resource.get("schema", {})
+            fields = schema.get("fields", [])
+            # Relationship metadata can't be introspected from the database
+            # (StarRocks stores no FK constraints), yet the chat's
+            # cross-entity filtering depends on it — carry it through to the
+            # backends config so /v1/yac/metadata can serve it.
+            relationship_schema = {
+                key: schema[key]
+                for key in ("primaryKey", "foreignKeys")
+                if key in schema
+            }
             entries.append(
                 {
                     "entity": resource["name"],
@@ -94,6 +104,7 @@ def load_package(data_dir: Path) -> list[dict]:
                         if f.get("udi:data_type") == "quantitative"
                     },
                     "row_count": resource.get("udi:row_count"),
+                    "schema_extras": relationship_schema or None,
                 }
             )
     else:
@@ -105,6 +116,7 @@ def load_package(data_dir: Path) -> list[dict]:
                     "csv_path": csv_path,
                     "quantitative": None,  # sniff from data below
                     "row_count": None,
+                    "schema_extras": None,
                 }
             )
     if not entries:
@@ -195,6 +207,11 @@ def write_backends_config(
             "tables": {e["entity"]: e["table"] for e in entries},
         }
     }
+    schemas = {
+        e["entity"]: e["schema_extras"] for e in entries if e.get("schema_extras")
+    }
+    if schemas:
+        config[database]["schemas"] = schemas
     existing = {}
     if out_path.exists():
         try:

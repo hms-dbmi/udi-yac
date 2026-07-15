@@ -31,15 +31,21 @@ class QueryEngine:
         connector,
         table_map: dict[str, str],
         row_cap: int = DEFAULT_ROW_CAP,
+        entity_schemas: dict[str, dict] | None = None,
     ):
         """
         connector: DuckDBConnector / StarRocksConnector (execute + dialect).
         table_map: entity name -> physical table/view name.
         row_cap: max rows returned for row-level (non-aggregated) results.
+        entity_schemas: entity name -> extra schema metadata that can't be
+            introspected from the database — primaryKey/foreignKeys — merged
+            into each resource by introspect(). The chat's cross-entity
+            filtering (getEntityRelationship) depends on foreignKeys.
         """
         self.connector = connector
         self.table_map = table_map
         self.row_cap = row_cap
+        self.entity_schemas = entity_schemas or {}
         self._columns_cache: dict[str, set] = {}
 
     # ── public API ───────────────────────────────────────────────────────────

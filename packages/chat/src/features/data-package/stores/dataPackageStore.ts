@@ -202,9 +202,37 @@ export function createDataPackageStore() {
         }
         return null;
       };
+
+      // Sibling entities that both FK the same parent (star schema, e.g.
+      // Event → Patient ← Surgery) share the parent's key domain, so the
+      // two-hop relationship collapses to a single hop between their FK
+      // columns — a shape the executors already support. Direct FKs keep
+      // precedence; this only runs when both direct searches miss.
+      // ponytail: first common parent in resource order wins; disambiguate
+      // if a package ever has entities linked through multiple parents.
+      const searchSharedParent = (origin: string, target: string) => {
+        const fkTo = (source: string, parent: string) =>
+          dp.resources
+            .find((r) => r.name === source)
+            ?.schema?.foreignKeys?.find((fk) => fk.reference.resource === parent) ?? null;
+        for (const parent of dp.resources) {
+          if (parent.name === origin || parent.name === target) continue;
+          const originFk = fkTo(origin, parent.name!);
+          const targetFk = fkTo(target, parent.name!);
+          if (originFk && targetFk) {
+            return {
+              originKey: originFk.fields[originFk.fields.length - 1],
+              targetKey: targetFk.fields[targetFk.fields.length - 1],
+            };
+          }
+        }
+        return null;
+      };
+
       return (
         searchOneDirection(originSource, targetSource) ??
-        searchOneDirection(targetSource, originSource, true)
+        searchOneDirection(targetSource, originSource, true) ??
+        searchSharedParent(originSource, targetSource)
       );
     },
 

@@ -61,6 +61,29 @@ def test_introspect_domains(engine):
     assert ("donors", "hubmap_id") not in by_key
 
 
+def test_entity_schemas_merged_into_resources():
+    """primaryKey/foreignKeys can't be introspected from the database; they
+    come from the engine's configured entity_schemas — the chat's
+    cross-entity filtering (getEntityRelationship) depends on them."""
+    connector = DuckDBConnector(views={"penguins": str(_SAMPLE / "penguins.csv")})
+    fk = [
+        {
+            "fields": ["species"],
+            "reference": {"resource": "taxa", "fields": ["name"]},
+        }
+    ]
+    engine = QueryEngine(
+        connector,
+        table_map={"penguins": "penguins"},
+        entity_schemas={"penguins": {"primaryKey": ["species"], "foreignKeys": fk}},
+    )
+    resource = introspect(engine, "p")["dataSchema"]["resources"][0]
+    assert resource["schema"]["foreignKeys"] == fk
+    assert resource["schema"]["primaryKey"] == ["species"]
+    # Introspected fields remain intact alongside the merge.
+    assert any(f["name"] == "body_mass_g" for f in resource["schema"]["fields"])
+
+
 def test_metadata_cache_ttl(engine):
     cache = MetadataCache(engine, "p", ttl_seconds=10_000)
     first = cache.get()

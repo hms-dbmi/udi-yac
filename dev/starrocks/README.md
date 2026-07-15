@@ -35,8 +35,12 @@ mouse-up — runs on StarRocks via `POST /v1/yac/query`.
 `seed_starrocks.py <csv-dir> --database <name>` seeds any directory of CSVs.
 If the directory has a `datapackage.json` (generate one with the stdlib-only
 `python3 scripts/gen_datapackage.py <csv-dir>` from the repo root), its
-entity names and field types drive the table schemas; without one, column
-types are sniffed (all-numeric columns → BIGINT/DOUBLE, else VARCHAR).
+entity names and field types drive the table schemas, and its
+`primaryKey`/`foreignKeys` are carried into the backends config — the
+database itself stores no FK constraints, and the chat's cross-entity
+filtering depends on them (served back via `/v1/yac/metadata`). Without a
+datapackage, column types are sniffed (all-numeric columns → BIGINT/DOUBLE,
+else VARCHAR) and no entity relationships are available.
 Re-running is idempotent (tables are truncated and reloaded). Each run merges
 its package into `packages/agent/starrocks-backends.json` (gitignored).
 
