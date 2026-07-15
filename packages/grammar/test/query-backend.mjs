@@ -34,7 +34,11 @@ const fakeFetch = async (url, init) => {
           extent: [{ a: 1 }, { a: 2 }],
           isSubset: true,
         },
-        [body.queries[1]?.vizId]: { displayData: [{ b: 2 }] },
+        [body.queries[1]?.vizId]: {
+          displayData: [{ b: 2 }],
+          aggregated: false,
+          truncated: { cap: 5000, sampled: false },
+        },
       },
     }),
   };
@@ -105,6 +109,13 @@ assert.deepEqual(
 );
 assert.equal(r2.isSubset, false, 'missing isSubset defaults false');
 assert.equal(r3, null, 'missing vizId resolves null (keep previous data)');
+assert.equal(r1.truncated, undefined, 'no truncation flag when absent');
+assert.deepEqual(
+  r2.truncated,
+  { cap: 5000, sampled: false },
+  'truncated passes through',
+);
+assert.equal(r2.aggregated, false, 'aggregated passes through');
 
 // A later query is a NEW batch.
 await backend.query({ source: src });

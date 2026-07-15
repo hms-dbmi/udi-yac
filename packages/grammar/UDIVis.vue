@@ -69,6 +69,8 @@ const emit = defineEmits<{
       data: object[] | null;
       allData: object[] | null;
       isSubset: boolean;
+      /** Non-null when a remote row-level result was capped server-side. */
+      truncated: { cap: number; sampled: boolean } | null;
     },
   ): void;
 }>();
@@ -228,6 +230,7 @@ function buildVisualization(): void {
         transformedData.value = result.displayData;
         transformedDataFull.value = result.allData;
         isTransformedDataSubset.value = result.isSubset;
+        truncatedInfo.value = result.truncated ?? null;
         finishBuildVisualization();
       })
       .catch((error) => {
@@ -272,6 +275,7 @@ function finishBuildVisualization(): void {
       data: transformedData.value,
       allData: transformedDataFull.value,
       isSubset: isTransformedDataSubset.value,
+      truncated: truncatedInfo.value,
     });
   }
 }
@@ -509,10 +513,14 @@ const transformError = ref();
 const transformedData = ref<object[] | null>(null);
 const transformedDataFull = ref<object[] | null>(null);
 const isTransformedDataSubset = ref<boolean>(false);
+// Set when a remote row-level result was capped server-side (the browser
+// only has the first `cap` rows). Always null in local mode.
+const truncatedInfo = ref<{ cap: number; sampled: boolean } | null>(null);
 
 function performDataTransformation(spec: ParsedUDIGrammar) {
   try {
     transformError.value = null;
+    truncatedInfo.value = null;
     const dataObjects = dataSourcesStore.getDataObject(
       spec.source.map((x) => x.name),
       spec.transformation,
@@ -767,6 +775,10 @@ const slots = useSlots();
     <div class="error-message" v-if="transformError">
       {{ transformError.message }}
     </div>
+    <div class="truncation-note" v-if="truncatedInfo">
+      Showing first {{ truncatedInfo.cap.toLocaleString() }} rows (result
+      truncated server-side)
+    </div>
     <template v-if="slots.default">
       <slot
         :data="transformedData"
@@ -803,5 +815,10 @@ const slots = useSlots();
 .error-message {
   color: #e53935; // $negative, but don't want quasar vars in component
   margin: 6px;
+}
+.truncation-note {
+  color: #757575; // muted; keep quasar vars out of the component
+  font-size: 0.75rem;
+  margin: 2px 6px;
 }
 </style>

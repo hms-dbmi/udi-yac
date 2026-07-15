@@ -22,6 +22,12 @@ export interface QueryDataResult {
   displayData: object[];
   allData: object[];
   isSubset: boolean;
+  /** True when the result is aggregated (cube) data rather than row-level.
+   *  Only populated by remote backends; undefined locally. */
+  aggregated?: boolean;
+  /** Present when a row-level result was capped server-side — the browser
+   *  received only the first `cap` rows. Never set by the local engine. */
+  truncated?: { cap: number; sampled: boolean } | null;
 }
 
 export interface RemoteQueryRequest {
@@ -176,6 +182,10 @@ export function createRemoteBackend(
           displayData: result.displayData,
           allData: result.extent ?? result.displayData,
           isSubset: result.isSubset ?? false,
+          ...(result.aggregated !== undefined
+            ? { aggregated: result.aggregated }
+            : {}),
+          ...(result.truncated ? { truncated: result.truncated } : {}),
         });
       }
     } catch (error) {
