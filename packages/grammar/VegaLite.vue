@@ -271,8 +271,14 @@ const reembedForResize = debounce(() => {
 }, 150);
 
 // Remote (non-interactive) mode: each live brush tick would trigger a server
-// round-trip, so buffer ticks here and commit once on mouse-up. The listener
-// is window-level so releasing the pointer outside the chart still commits.
+// round-trip, so buffer ticks here and commit once on pointer release. The
+// listeners are window-level so releasing outside the chart still commits.
+// NOTE: 'pointerup' is the primary trigger — Vega cancels pointerdown
+// (preventDefault) during brush drags, which per the pointer-events spec
+// SUPPRESSES compatibility mouse events, so a 'mouseup'-only listener never
+// fires after a brush. 'mouseup' is kept as a fallback for non-pointer
+// environments; the flush is idempotent (the map clears), so double-firing
+// is harmless.
 const pendingRemoteCommits = new Map<string, RangeSelection | null>();
 function commitRemoteSelections(): void {
   for (const [key, selection] of pendingRemoteCommits) {
@@ -292,6 +298,8 @@ function routeSelectionUpdate(
 }
 
 onMounted(() => {
+  window.addEventListener('pointerup', commitRemoteSelections);
+  window.addEventListener('pointercancel', commitRemoteSelections);
   window.addEventListener('mouseup', commitRemoteSelections);
   initVegaChart();
   if (vegaContainer.value && typeof ResizeObserver !== 'undefined') {
@@ -314,6 +322,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('pointerup', commitRemoteSelections);
+  window.removeEventListener('pointercancel', commitRemoteSelections);
   window.removeEventListener('mouseup', commitRemoteSelections);
   reembedForResize.cancel();
   if (resizeObserver) {
