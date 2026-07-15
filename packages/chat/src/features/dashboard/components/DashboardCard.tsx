@@ -13,6 +13,7 @@ import {
   BarChart3,
   ExternalLink,
   GripVertical,
+  Loader2,
 } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
@@ -49,6 +50,9 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  // Remote (non-interactive) mode: true while a batched server round-trip is
+  // updating the dashboard — drives the per-card loading overlay.
+  const remoteQueryPending = useDataPackage((s) => s.remoteQueryPending);
   const palette = usePalette();
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
@@ -291,7 +295,12 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           />
         </div>
       )}
-      <CardContent className="p-1 flex-1 min-h-0 overflow-hidden">
+      <CardContent className="relative p-1 flex-1 min-h-0 overflow-hidden">
+        {remoteQueryPending && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
         <UDIVis
           className="block h-full w-full"
           key={isTableView ? `table-${specKey}` : specKey}

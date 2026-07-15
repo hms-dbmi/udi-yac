@@ -56,6 +56,10 @@ export interface RemoteQueryBackend {
   kind: 'remote';
   interactive: false;
   query(request: RemoteQueryRequest): Promise<QueryDataResult | null>;
+  /** Fires with `true` when a batch round-trip starts and `false` when the
+   *  last in-flight batch settles — drive loading overlays with this.
+   *  Returns an unsubscribe function. */
+  subscribePending(callback: (pending: boolean) => void): () => void;
 }
 
 export type QueryBackend = LocalQueryBackend | RemoteQueryBackend;
@@ -118,12 +122,19 @@ export function createRemoteBackend(
   let pending: PendingQuery[] = [];
   let flushScheduled = false;
   let vizCounter = 0;
+  let inflight = 0;
+  const pendingSubscribers = new Set<(pending: boolean) => void>();
+
+  function notifyPending(value: boolean): void {
+    for (const cb of pendingSubscribers) cb(value);
+  }
 
   async function flush(): Promise<void> {
     const batch = pending;
     pending = [];
     flushScheduled = false;
     if (batch.length === 0) return;
+    if (++inflight === 1) notifyPending(true);
 
     // All queries in a batch share the dashboard's selection state; merge
     // per-request maps by name (in practice they are the same store state).
@@ -171,6 +182,8 @@ export function createRemoteBackend(
       for (const q of batch) {
         q.reject(error);
       }
+    } finally {
+      if (--inflight === 0) notifyPending(false);
     }
   }
 
@@ -185,6 +198,10 @@ export function createRemoteBackend(
           setTimeout(() => void flush(), config.batchWindowMs ?? 0);
         }
       });
+    },
+    subscribePending(callback: (pending: boolean) => void): () => void {
+      pendingSubscribers.add(callback);
+      return () => pendingSubscribers.delete(callback);
     },
   };
 }

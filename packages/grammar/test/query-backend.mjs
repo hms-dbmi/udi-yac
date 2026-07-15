@@ -126,6 +126,37 @@ assert.ok(
   'HTTP failure rejects every query in the batch',
 );
 
+// ── pending subscription ─────────────────────────────────────────────────────
+const transitions = [];
+const pendingBackend = createRemoteBackend({
+  url: 'https://example.test/v1/yac/query',
+  fetchFn: async (url, init) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      results: Object.fromEntries(
+        JSON.parse(init.body).queries.map((q) => [
+          q.vizId,
+          { displayData: [] },
+        ]),
+      ),
+    }),
+  }),
+});
+const unsubscribe = pendingBackend.subscribePending((p) => transitions.push(p));
+await Promise.all([
+  pendingBackend.query({ source: src }),
+  pendingBackend.query({ source: src }),
+]);
+assert.deepEqual(
+  transitions,
+  [true, false],
+  'one pending on/off cycle per batch round-trip',
+);
+unsubscribe();
+await pendingBackend.query({ source: src });
+assert.equal(transitions.length, 2, 'unsubscribed callback no longer fires');
+
 // ── reset ────────────────────────────────────────────────────────────────────
 setQueryBackend(null);
 assert.equal(

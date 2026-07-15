@@ -9,7 +9,12 @@ import type {
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
 import { httpError } from '@/utils/httpError';
-import { loadDataPackage, type SourceSpec } from 'udi-toolkit/react';
+import {
+  loadDataPackage,
+  createRemoteBackend,
+  setQueryBackend,
+  type SourceSpec,
+} from 'udi-toolkit/react';
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready' | 'error';
 
@@ -28,7 +33,21 @@ export interface DataPackageState {
   /** Maps entity names to canonical data URLs (from udi:path + resource.path). */
   sourceResolver: Record<string, string>;
   filteredData: Map<string, ExportRowSet>;
+  /** False when the package is served by a remote query backend — live
+   *  (per-brush-tick) cross-filtering is unavailable; brushes commit on
+   *  mouse-up with a server round-trip. */
+  interactiveMode: boolean;
+  /** True while a remote batched query round-trip is in flight. */
+  remoteQueryPending: boolean;
   fetchDataPackage: (path: string, fetchOptions?: RequestInit) => Promise<void>;
+  /** Load a server-side package: fetches introspected metadata from
+   *  GET /v1/yac/metadata and routes all queries through POST /v1/yac/query
+   *  instead of loading CSVs into the browser. */
+  fetchRemotePackage: (
+    apiBaseUrl: string,
+    packageName: string,
+    authToken?: string,
+  ) => Promise<void>;
   setDataPackage: (
     dataPackage: DataPackage,
     precomputedDomains?: DataFieldDomain[],
@@ -135,6 +154,8 @@ export function createDataPackageStore() {
     dataDomainsString: '',
     sourceResolver: {},
     filteredData: new Map(),
+    interactiveMode: true,
+    remoteQueryPending: false,
 
     getDomainForField: (entity: string, field: string) => {
       return get().dataFieldDomains.find((d) => d.entity === entity && d.field === field);
@@ -195,9 +216,50 @@ export function createDataPackageStore() {
       });
     },
 
+    fetchRemotePackage: async (apiBaseUrl: string, packageName: string, authToken?: string) => {
+      set({ loadingPhase: 'fetching', error: null });
+      try {
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${authToken ?? 'dev'}`,
+        };
+        const response = await fetch(
+          `${apiBaseUrl}/v1/yac/metadata?package=${encodeURIComponent(packageName)}`,
+          { headers },
+        );
+        if (!response.ok) {
+          throw await httpError(response);
+        }
+        const metadata = (await response.json()) as {
+          dataSchema: DataPackage;
+          dataDomains: DataFieldDomain[];
+        };
+
+        // Route all toolkit queries through the server BEFORE applying the
+        // package, so no UDIVis render ever tries to fetch a CSV.
+        const backend = await createRemoteBackend({
+          url: `${apiBaseUrl}/v1/yac/query`,
+          packageName,
+          headers,
+        });
+        backend.subscribePending((pending) => set({ remoteQueryPending: pending }));
+        await setQueryBackend(backend);
+        set({ interactiveMode: false });
+
+        // The introspected dataSchema IS a DataPackage descriptor and the
+        // domains match DataFieldDomain — reuse the local pipeline, skipping
+        // CSV domain computation.
+        await get().setDataPackage(metadata.dataSchema, metadata.dataDomains);
+      } catch (e) {
+        set({ error: String(e), loadingPhase: 'error' });
+      }
+    },
+
     fetchDataPackage: async (path: string, fetchOptions?: RequestInit) => {
       set({ loadingPhase: 'fetching', error: null });
       try {
+        // A previous session may have installed a remote backend.
+        await setQueryBackend(null);
+        set({ interactiveMode: true, remoteQueryPending: false });
         const response = await fetch(path, fetchOptions);
         if (!response.ok) {
           throw await httpError(response);

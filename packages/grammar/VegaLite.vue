@@ -11,6 +11,7 @@ import type {
   RangeSelection,
 } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
+import { getQueryBackend } from './queryBackend';
 import type { View } from 'vega';
 import type { VisualizationSpec } from 'vega-embed';
 import { changeset } from 'vega';
@@ -141,8 +142,7 @@ function initVegaChart() {
         // single multi-field selection update.
         const tupleFieldsKey = signalKeyFormatted + '_tuple_fields';
         const tupleFields = view.signal(tupleFieldsKey) as
-          | Array<{ channel: string; field: string }>
-          | undefined;
+          Array<{ channel: string; field: string }> | undefined;
         const channels = (tupleFields ?? []).map((t) => t.channel);
         const fieldMap = props.signalFieldMap?.[signalKey];
 
@@ -150,9 +150,13 @@ function initVegaChart() {
           const combined: RangeSelection = {};
           for (const tf of tupleFields ?? []) {
             const channelSignal = `${signalKeyFormatted}_${tf.channel}`;
-            const pixelRange = view.signal(channelSignal) as [number, number] | undefined;
+            const pixelRange = view.signal(channelSignal) as
+              [number, number] | undefined;
             if (pixelRange == null) continue;
-            const dataRange = fromPixelRange(pixelRange, tf.channel as 'x' | 'y');
+            const dataRange = fromPixelRange(
+              pixelRange,
+              tf.channel as 'x' | 'y',
+            );
             // Skip degenerate ranges (single-point click before drag starts)
             if (Math.abs(dataRange[1] - dataRange[0]) < 1e-9) continue;
             const dataField = fieldMap?.[tf.field] ?? tf.field;
@@ -171,10 +175,7 @@ function initVegaChart() {
             const channelSignal = `${signalKeyFormatted}_${channel}`;
             view.addSignalListener(channelSignal, () => {
               if (ignore.value) return;
-              dataSourcesStore.updateDataSelection(
-                signalKey,
-                buildCombinedSelection(),
-              );
+              routeSelectionUpdate(signalKey, buildCombinedSelection());
             });
           }
         } else {
@@ -186,12 +187,9 @@ function initVegaChart() {
               for (const [k, v] of Object.entries(value)) {
                 remapped[fieldMap[k] ?? k] = v as [number, number];
               }
-              dataSourcesStore.updateDataSelection(signalKey, remapped);
+              routeSelectionUpdate(signalKey, remapped);
             } else {
-              dataSourcesStore.updateDataSelection(
-                signalKey,
-                value as RangeSelection | null,
-              );
+              routeSelectionUpdate(signalKey, value as RangeSelection | null);
             }
           });
         }
@@ -272,7 +270,29 @@ const reembedForResize = debounce(() => {
   initVegaChart();
 }, 150);
 
+// Remote (non-interactive) mode: each live brush tick would trigger a server
+// round-trip, so buffer ticks here and commit once on mouse-up. The listener
+// is window-level so releasing the pointer outside the chart still commits.
+const pendingRemoteCommits = new Map<string, RangeSelection | null>();
+function commitRemoteSelections(): void {
+  for (const [key, selection] of pendingRemoteCommits) {
+    dataSourcesStore.updateDataSelection(key, selection);
+  }
+  pendingRemoteCommits.clear();
+}
+function routeSelectionUpdate(
+  signalKey: string,
+  selection: RangeSelection | null,
+): void {
+  if (getQueryBackend().kind === 'remote') {
+    pendingRemoteCommits.set(signalKey, selection);
+  } else {
+    dataSourcesStore.updateDataSelection(signalKey, selection);
+  }
+}
+
 onMounted(() => {
+  window.addEventListener('mouseup', commitRemoteSelections);
   initVegaChart();
   if (vegaContainer.value && typeof ResizeObserver !== 'undefined') {
     lastW = vegaContainer.value.offsetWidth;
@@ -294,6 +314,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('mouseup', commitRemoteSelections);
   reembedForResize.cancel();
   if (resizeObserver) {
     resizeObserver.disconnect();
@@ -318,8 +339,7 @@ async function updateVegaChart() {
     const state = vegaView.value.getState().signals;
     if (!state) continue;
     const tupleFields = state[tupleFieldsKey] as
-      | Array<{ channel: string; field: string }>
-      | undefined;
+      Array<{ channel: string; field: string }> | undefined;
     for (const tf of tupleFields ?? []) {
       const channelSignal = `${sk}_${tf.channel}`;
       const val = state[channelSignal];
