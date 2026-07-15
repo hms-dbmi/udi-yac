@@ -554,8 +554,12 @@ export function createDashboardStore() {
           dataPackageStore,
         );
         const baseTrans = structuredClone(viz.spec.transformation ?? []) as object[];
+        // Structured expression AST, not the legacy raw string form — the
+        // remote query backend rejects raw Arquero strings by design.
         const nullFilters = state.filterAllNullValues
-          ? getRepresentedFields(viz.spec).map((field) => ({ filter: `d['${field}'] != null` }))
+          ? getRepresentedFields(viz.spec).map((field) => ({
+              filter: { op: '!=', left: { field }, right: { literal: null } },
+            }))
           : [];
 
         const newTransformation = [

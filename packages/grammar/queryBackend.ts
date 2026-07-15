@@ -41,6 +41,9 @@ export interface RemoteQueryRequest {
 
 /** One visualization's slice of a batched /v1/yac/query response. */
 export interface RemoteVizResult {
+  /** Per-viz failure (e.g. an unsupported spec): the query rejects with this
+   *  message; other queries in the batch are unaffected. */
+  error?: string;
   displayData: object[];
   /** Unfiltered rows (or a reduced extent set) for stable scale domains —
    *  the server-side analogue of the local `allData` pass. */
@@ -176,6 +179,10 @@ export function createRemoteBackend(
           // Same semantics as the local engine returning null: caller keeps
           // its previous data.
           q.resolve(null);
+          continue;
+        }
+        if (result.error) {
+          q.reject(new Error(`Remote query failed: ${result.error}`));
           continue;
         }
         q.resolve({

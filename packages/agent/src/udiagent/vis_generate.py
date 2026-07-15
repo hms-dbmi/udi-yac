@@ -154,8 +154,13 @@ def _call_llm(
     return "{}"
 
 
-def _parse_and_validate(spec_str, schema_dict):
+def _parse_and_validate(spec_str, schema_dict, entity_fields=None):
     """Parse JSON string and validate against schema.
+
+    When `entity_fields` ({entity name -> set of field names}) is provided,
+    additionally checks that every representation mapping field exists in the
+    transformation pipeline's output columns — the JSON schema can't catch a
+    mapping that references a column the pipeline never produces.
 
     Returns (spec_dict | None, errors list).
     """
@@ -172,7 +177,146 @@ def _parse_and_validate(spec_str, schema_dict):
     except jsonschema.SchemaError as e:
         errors.append(f"Schema error: {e.message}")
 
+    if not errors and entity_fields:
+        errors.extend(spec_mapping_errors(spec_dict, entity_fields))
+
     return spec_dict, errors
+
+
+def entity_fields_from_schema(data_schema) -> dict:
+    """{entity name -> set of field names} from a dataSchema JSON string/dict."""
+    try:
+        raw = (
+            json.loads(data_schema) if isinstance(data_schema, str) else data_schema
+        ) or {}
+    except json.JSONDecodeError:
+        return {}
+    return {
+        resource["name"]: {
+            field["name"]
+            for field in resource.get("schema", {}).get("fields", [])
+            if "name" in field
+        }
+        for resource in raw.get("resources", [])
+        if "name" in resource
+    }
+
+
+def spec_mapping_errors(spec_dict, entity_fields) -> list:
+    """Verify each representation mapping.field exists in the pipeline output.
+
+    Metadata-only column-flow walk mirroring both executors (the toolkit's
+    Arquero DataSourcesStore and the server's SQL compiler): groupby defers,
+    rollup narrows to group keys + aggregate outputs, derive/binby add
+    columns, join unions, kde replaces with group keys + sample/density.
+    """
+    if not isinstance(spec_dict, dict):
+        return []
+    sources = spec_dict.get("source") or []
+    if isinstance(sources, dict):
+        sources = [sources]
+
+    unknown = [
+        s.get("name")
+        for s in sources
+        if isinstance(s, dict) and s.get("name") not in entity_fields
+    ]
+    if unknown:
+        return [
+            f"unknown source entity(ies) {unknown}; available entities: "
+            f"{sorted(entity_fields)}"
+        ]
+
+    # Named-table environment (in/out), same convention as the executors.
+    env = {
+        s["name"]: set(entity_fields[s["name"]])
+        for s in sources
+        if isinstance(s, dict)
+    }
+    if not env:
+        return []
+    current_name = sources[0]["name"]
+    current = set(env[current_name])
+    pending_group = []
+
+    def resolve_in(transform):
+        in_name = transform.get("in")
+        if isinstance(in_name, str) and in_name in env:
+            return set(env[in_name])
+        return set(current)
+
+    for transform in spec_dict.get("transformation") or []:
+        if not isinstance(transform, dict):
+            continue
+        if "groupby" in transform:
+            gb = transform["groupby"]
+            pending_group = [gb] if isinstance(gb, str) else list(gb)
+            cols = resolve_in(transform)
+        elif "rollup" in transform and isinstance(transform["rollup"], dict):
+            cols = set(pending_group) | set(transform["rollup"].keys())
+            pending_group = []
+        elif "binby" in transform and isinstance(transform["binby"], dict):
+            output = transform["binby"].get("output") or {}
+            start = output.get("bin_start", "start")
+            end = output.get("bin_end", "end")
+            cols = resolve_in(transform) | {start, end}
+            pending_group = [start, end]
+        elif "derive" in transform and isinstance(transform["derive"], dict):
+            cols = resolve_in(transform) | set(transform["derive"].keys())
+        elif "join" in transform:
+            in_names = transform.get("in")
+            if isinstance(in_names, list) and len(in_names) == 2:
+                cols = env.get(in_names[0], set()) | env.get(in_names[1], set())
+            else:
+                cols = set(current)
+            pending_group = []
+        elif "kde" in transform and isinstance(transform["kde"], dict):
+            output = transform["kde"].get("output") or {}
+            cols = set(pending_group) | {
+                output.get("sample", "sample"),
+                output.get("density", "density"),
+            }
+            pending_group = []
+        else:  # filter / orderby: no column change
+            cols = resolve_in(transform)
+
+        current = cols
+        out_name = transform.get("out")
+        if out_name:
+            env[out_name] = set(current)
+            current_name = out_name
+        elif current_name:
+            env[current_name] = set(current)
+
+    errors = []
+    representation = spec_dict.get("representation")
+    layers = (
+        representation
+        if isinstance(representation, list)
+        else [representation]
+        if representation
+        else []
+    )
+    for layer in layers:
+        if not isinstance(layer, dict):
+            continue
+        mappings = layer.get("mapping")
+        mapping_list = (
+            mappings if isinstance(mappings, list) else [mappings] if mappings else []
+        )
+        for mapping in mapping_list:
+            if not isinstance(mapping, dict):
+                continue
+            field = mapping.get("field")
+            if not field or field == "*":
+                continue
+            if field not in current:
+                errors.append(
+                    f"mapping field '{field}' (encoding "
+                    f"'{mapping.get('encoding')}') does not exist in the "
+                    f"transformed data; available columns: {sorted(current)}"
+                )
+    return errors
 
 
 # ---------------------------------------------------------------------------
@@ -524,11 +668,16 @@ def _execute_validate(skill, context):
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
-    max_corrections = config.get("max_corrections", 0)
+    # Default matches generate_vis_spec's documented behavior; a 0 default
+    # here silently disabled the correction loop in the server path.
+    max_corrections = config.get("max_corrections", 2)
     spec_str = context.get("spec_str", "{}")
     gen_messages = context.get("gen_messages", list(context["messages"]))
+    entity_fields = entity_fields_from_schema(context.get("data_schema"))
 
-    spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
+    spec_dict, errors = _parse_and_validate(
+        spec_str, grammar["schema_dict"], entity_fields
+    )
 
     examples_path = config.get("examples_path")
     examples = _load_examples(examples_path)
@@ -558,7 +707,9 @@ def _execute_validate(skill, context):
             openai_api_key=context.get("openai_api_key"),
             op="create_visualization.validate",
         )
-        spec_dict, errors = _parse_and_validate(spec_str, grammar["schema_dict"])
+        spec_dict, errors = _parse_and_validate(
+            spec_str, grammar["schema_dict"], entity_fields
+        )
         corrections += 1
 
     context["spec_str"] = spec_str
@@ -666,5 +817,8 @@ def generate_vis_spec(
             "tool_used": context.get("tool_used"),
             "tool_args": context.get("tool_args"),
             "validation_retries": context.get("validation_retries", 0),
+            "valid": context["valid"],
+            "validation_errors": context["errors"],
+            "corrections": context["corrections"],
         },
     }

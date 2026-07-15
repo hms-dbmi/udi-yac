@@ -428,11 +428,18 @@ describe('dashboardStore — cross-store filter propagation', () => {
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 
     const viz = dashboard.getState().activeVisualizations.get('0-0')!;
-    const transformation = (viz.interactiveSpec as { transformation: Array<{ filter: string }> })
+    const transformation = (viz.interactiveSpec as { transformation: Array<{ filter: object }> })
       .transformation;
-    const filterStrings = transformation.map((t) => t.filter).filter(Boolean);
-    expect(filterStrings).toContain("d['age_value'] != null");
-    expect(filterStrings).toContain("d['weight_value'] != null");
+    // Structured expression AST (not the legacy raw string) — the remote
+    // query backend rejects raw Arquero strings.
+    const filters = transformation.map((t) => t.filter).filter(Boolean);
+    const notNull = (field: string) => ({
+      op: '!=',
+      left: { field },
+      right: { literal: null },
+    });
+    expect(filters).toContainEqual(notNull('age_value'));
+    expect(filters).toContainEqual(notNull('weight_value'));
   });
 
   it('updateSpecFilters omits null filters when filterAllNullValues is false', () => {

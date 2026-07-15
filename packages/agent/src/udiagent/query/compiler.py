@@ -113,17 +113,23 @@ class PipelineCompiler:
         dialect,
         selections: dict[str, Any] | None = None,
         probe: Callable[[str, list], list[dict]] | None = None,
+        columns_of: Callable[[str], set] | None = None,
     ):
         """
         table_map: entity name -> physical table/view name.
         dialect: quoting/placeholder/median provider (see connectors).
         selections: name -> ActiveDataSelection ({dataSourceKey, selection, type}).
         probe: executes SQL NOW and returns rows (used for binby extents).
+        columns_of: entity name -> physical column set. Enables the local
+            engine's guard: named filters whose selection fields don't exist
+            in the target table are SKIPPED (a brush on one dataset applied to
+            another), matching GetMappedArqueroFilter in DataSourcesStore.ts.
         """
         self.table_map = table_map
         self.dialect = dialect
         self.selections = selections or {}
         self.probe = probe
+        self.columns_of = columns_of
 
     # ── public entry ─────────────────────────────────────────────────────────
 
@@ -322,7 +328,14 @@ class PipelineCompiler:
                 )
         return " AND ".join(clauses) if clauses else None
 
-    def _named_filter_sql(self, st: _State, filt: dict) -> str | None:
+    def _entity_columns(self, entity: str | None) -> set | None:
+        """Physical column set for an entity, or None when unknowable
+        (no columns_of hook, or the name isn't a physical entity)."""
+        if self.columns_of is None or entity is None or entity not in self.table_map:
+            return None
+        return self.columns_of(entity)
+
+    def _named_filter_sql(self, st: _State, filt: dict, in_entity: str | None) -> str | None:
         """FilterDataSelection -> WHERE clause (or None to skip)."""
         selection = self.selections.get(filt.get("name"))
         if selection is None:
@@ -331,14 +344,33 @@ class PipelineCompiler:
         pred = self._selection_predicate(selection, pred_params)
         if pred is None:
             return None
+        selection_fields = set((selection.get("selection") or {}).keys())
 
         relationship = filt.get("entityRelationship")
         if not relationship:
+            # Local-parity guard (GetMappedArqueroFilter): skip same-entity
+            # filters whose selection references columns the target table
+            # doesn't have — e.g. a brush on an aggregated output column.
+            columns = self._entity_columns(in_entity)
+            if columns is not None and not selection_fields <= columns:
+                return None
             st.params.extend(pred_params)
             return pred
 
         origin = self._q(relationship["originKey"])
         target = self._q(relationship["targetKey"])
+        source_entity = filt.get("source")
+        source_columns = self._entity_columns(source_entity)
+        if source_columns is not None:
+            missing = selection_fields - source_columns
+            if missing:
+                # Local parity: Arquero fails compiling the source-table
+                # predicate; fail this viz with a clear message instead of a
+                # cryptic SQL error.
+                raise UnsupportedQueryError(
+                    f"selection field(s) {sorted(missing)} not found in "
+                    f"source entity '{source_entity}'"
+                )
         source_ref = st.env.get(filt.get("source")) or self._table_ref(filt["source"])
         st.params.extend(pred_params)
         if filt.get("match") == "all":
@@ -382,7 +414,12 @@ class PipelineCompiler:
         st.contains_named_filter = True
         if skip_named:
             return
-        pred = self._named_filter_sql(st, filt)
+        # ponytail: the guard uses the entity's PHYSICAL columns. Filters
+        # don't change columns, and producers inject named filters at the
+        # head of the pipeline; a named filter after a derive/rollup that
+        # renames columns would be guarded against stale columns.
+        in_entity = transform.get("in") or st.current_name
+        pred = self._named_filter_sql(st, filt, in_entity if isinstance(in_entity, str) else None)
         if pred is None:
             return
         st.applied_named_filter = True

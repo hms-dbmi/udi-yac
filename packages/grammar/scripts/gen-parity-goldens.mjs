@@ -281,6 +281,27 @@ const CASES = [
     },
   ],
   [
+    // A brush whose fields don't exist in the target table (e.g. landed on
+    // an aggregated output column): the filter is SKIPPED, not an error —
+    // GetMappedArqueroFilter's missing-column guard, mirrored server-side.
+    'named-filter-skipped-missing-field',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: { name: 'sel_agg', source: 'penguins' } },
+        { groupby: 'species' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+    {
+      sel_agg: {
+        dataSourceKey: 'penguins',
+        selection: { 'count penguins': [1, 5] },
+        type: 'interval',
+      },
+    },
+  ],
+  [
     'named-filter-display-vs-extent',
     {
       source: src('penguins'),

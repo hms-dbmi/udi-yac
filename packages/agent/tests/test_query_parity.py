@@ -11,20 +11,54 @@ semantics change:
 
 import json
 import math
+import os
+import sys
 from pathlib import Path
 
 import pytest
 
-from udiagent.query import DuckDBConnector, QueryEngine, UnsupportedQueryError
+from udiagent.query import (
+    DuckDBConnector,
+    QueryEngine,
+    StarRocksConnector,
+    UnsupportedQueryError,
+)
 
 _TESTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _TESTS_DIR.parents[2]
 _SAMPLE_DATA = _REPO_ROOT / "sample-data"
 _GOLDENS = json.loads((_TESTS_DIR / "goldens" / "parity.json").read_text())
 
+# Opt-in second leg: run every parity case against a live StarRocks too
+# (dev/starrocks/README.md). Seeds the golden CSVs into a `udi_parity`
+# database on first use via the seed script.
+_STARROCKS_ENABLED = os.getenv("UDI_STARROCKS_TEST") == "1"
+_ENGINE_PARAMS = ["duckdb"] + (["starrocks"] if _STARROCKS_ENABLED else [])
 
-@pytest.fixture(scope="module")
-def engine():
+
+def _starrocks_conn_args() -> dict:
+    return {
+        "host": os.getenv("UDI_STARROCKS_HOST", "127.0.0.1"),
+        "port": int(os.getenv("UDI_STARROCKS_PORT", "9030")),
+        "user": os.getenv("UDI_STARROCKS_USER", "root"),
+        "password": os.getenv("UDI_STARROCKS_PASSWORD", ""),
+    }
+
+
+@pytest.fixture(scope="module", params=_ENGINE_PARAMS)
+def engine(request):
+    if request.param == "starrocks":
+        sys.path.insert(0, str(_TESTS_DIR.parent / "scripts"))
+        import seed_starrocks
+
+        args = _starrocks_conn_args()
+        entries = seed_starrocks.seed(
+            _SAMPLE_DATA, "udi_parity", only=set(_GOLDENS["sources"]), **args
+        )
+        connector = StarRocksConnector(**args, database="udi_parity")
+        return QueryEngine(
+            connector, table_map={e["entity"]: e["table"] for e in entries}
+        )
     views = {
         name: str(_SAMPLE_DATA / filename)
         for name, filename in _GOLDENS["sources"].items()
@@ -103,6 +137,52 @@ def test_run_batch_isolates_per_viz_errors(engine):
     assert len(results["ok"]["displayData"]) == 3
     assert results["ok"]["aggregated"] is True
     assert "error" in results["bad"]
+
+
+def test_cross_entity_selection_with_missing_field_errors_clearly(engine):
+    """A brush that landed on an aggregated output column can't map back to
+    the source table — the viz fails with an actionable message (and, via
+    run_batch, without sinking the batch)."""
+    results = engine.run_batch(
+        [
+            {
+                "vizId": "bad",
+                "source": {"name": "samples", "source": "samples.csv"},
+                "transformation": [
+                    {
+                        "filter": {
+                            "name": "sel",
+                            "source": "donors",
+                            "entityRelationship": {
+                                "originKey": "hubmap_id",
+                                "targetKey": "donor.hubmap_id",
+                            },
+                        }
+                    },
+                    {"groupby": "sample_category"},
+                    {"rollup": {"n": {"op": "count"}}},
+                ],
+            },
+            {
+                "vizId": "ok",
+                "source": {"name": "penguins", "source": "penguins.csv"},
+                "transformation": [
+                    {"groupby": "species"},
+                    {"rollup": {"n": {"op": "count"}}},
+                ],
+            },
+        ],
+        selections={
+            "sel": {
+                "dataSourceKey": "donors",
+                "selection": {"count donors": [1, 5]},  # aggregated output col
+                "type": "interval",
+            }
+        },
+    )
+    assert "error" in results["bad"]
+    assert "count donors" in results["bad"]["error"]
+    assert len(results["ok"]["displayData"]) == 3, "batch not sunk"
 
 
 def test_row_level_cap_and_truncation():

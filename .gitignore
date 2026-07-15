@@ -17,3 +17,5 @@ __pycache__/
 storybook-static/
 
 sample-data/pcx
+# Written by packages/agent/scripts/seed_starrocks.py (contains local connection details)
+packages/agent/starrocks-backends.json

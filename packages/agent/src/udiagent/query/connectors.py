@@ -88,7 +88,15 @@ class DuckDBConnector:
 
 
 class StarRocksConnector:
-    """StarRocks over the MySQL wire protocol (pymysql, `[starrocks]` extra)."""
+    """StarRocks over the MySQL wire protocol (pymysql, `[starrocks]` extra).
+
+    The connection is long-lived (engines are created once at server startup)
+    so it must survive idle timeouts: every execute pings with reconnect and
+    retries once if the socket died mid-query. pymysql connections are not
+    thread-safe and FastAPI runs sync endpoints in a threadpool, so a lock
+    serializes access.
+    ponytail: one locked connection — add a small pool if throughput matters.
+    """
 
     dialect = StarRocksDialect()
 
@@ -101,22 +109,50 @@ class StarRocksConnector:
         database: str | None = None,
         **kwargs: Any,
     ):
+        import threading
+
+        self._connect_args: dict[str, Any] = {
+            "host": host,
+            "port": port,
+            "user": user,
+            "password": password,
+            "database": database,
+            **kwargs,
+        }
+        self._lock = threading.Lock()
+        self._conn = None
+
+    def _connect(self):
         import pymysql  # lazy: optional extra
         import pymysql.cursors
 
         self._conn = pymysql.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database,
             cursorclass=pymysql.cursors.DictCursor,
             autocommit=True,
-            **kwargs,
+            **self._connect_args,
         )
+        return self._conn
 
     def execute(self, sql: str, params: list | None = None) -> list[dict]:
-        with self._conn.cursor() as cursor:
-            cursor.execute(sql, params or [])
-            rows = cursor.fetchall()
+        import pymysql
+
+        with self._lock:
+            conn = self._conn or self._connect()
+            try:
+                # Reconnects transparently if the connection timed out idle.
+                conn.ping(reconnect=True)
+                rows = self._run(conn, sql, params)
+            except (pymysql.err.InterfaceError, pymysql.err.OperationalError):
+                # Socket died between ping and query — reconnect, retry once.
+                try:
+                    conn.close()
+                except Exception:  # noqa: BLE001 - already broken
+                    pass
+                rows = self._run(self._connect(), sql, params)
         return [{c: _normalize_value(v) for c, v in row.items()} for row in rows]
+
+    @staticmethod
+    def _run(conn, sql: str, params: list | None) -> list[dict]:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, params or [])
+            return cursor.fetchall()

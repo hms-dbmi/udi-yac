@@ -21,7 +21,7 @@
       "label": "Dev: agent",
       "detail": "UDIAgent FastAPI server (http://localhost:8007)",
       "type": "shell",
-      "command": "uv run fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
+      "command": "uv run --project packages/agent --extra server fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": { "group": "dev", "panel": "dedicated" }

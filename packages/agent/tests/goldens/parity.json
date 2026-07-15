@@ -1122,6 +1122,74 @@
       }
     },
     {
+      "name": "named-filter-skipped-missing-field",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_agg",
+              "source": "penguins"
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_agg": {
+          "dataSourceKey": "penguins",
+          "selection": {
+            "count penguins": [1, 5]
+          },
+          "type": "interval"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "n": 152
+          },
+          {
+            "species": "Chinstrap",
+            "n": 68
+          },
+          {
+            "species": "Gentoo",
+            "n": 124
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "n": 152
+          },
+          {
+            "species": "Chinstrap",
+            "n": 68
+          },
+          {
+            "species": "Gentoo",
+            "n": 124
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
       "name": "named-filter-display-vs-extent",
       "spec": {
         "source": {

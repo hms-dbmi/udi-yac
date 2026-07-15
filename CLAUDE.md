@@ -43,10 +43,12 @@ Python:
 ```bash
 cd packages/agent && uv sync --extra server --extra langfuse --extra test && uv run pytest
 cd packages/grammar-py && uv sync && uv run pytest
-uv run fastapi dev packages/agent/src/udiagent/server/app.py --port 8007   # dev server
+uv run --project packages/agent --extra server fastapi dev packages/agent/src/udiagent/server/app.py --port 8007   # dev server
 ```
 
 Toolkit smoke tests (after `pnpm build:toolkit`): `node test/smoke-{vue,ce,react,exports}.mjs` in `packages/grammar`.
+
+Local StarRocks (server-side query backend dev/testing): `dev/starrocks/README.md` — docker compose up, then `uv run python scripts/seed_starrocks.py` in `packages/agent` seeds any CSV dir (default `sample-data/pcx`, gitignored). `UDI_STARROCKS_TEST=1 uv run pytest tests/test_query_parity.py` replays the Arquero parity goldens against the live instance.
 
 ## CI / Releases (.github/workflows/)
 

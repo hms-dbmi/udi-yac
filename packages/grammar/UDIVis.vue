@@ -239,6 +239,11 @@ function buildVisualization(): void {
         transformError.value = error;
         transformedData.value = [];
         transformedDataFull.value = [];
+        truncatedInfo.value = null;
+        // Still finish: the error message renders inside the
+        // visualizationBuilt-gated template — without this the card shows
+        // "Loading..." forever instead of the failure.
+        finishBuildVisualization();
       });
     return;
   }

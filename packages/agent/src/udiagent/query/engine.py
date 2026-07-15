@@ -12,11 +12,14 @@ Mirrors the toolkit's getDataObject contract (DataSourcesStore.ts):
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from .compiler import PipelineCompiler, ends_in_rollup
 from .errors import UnsupportedQueryError
 from .kde import gaussian_kde
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_ROW_CAP = 5000
@@ -37,6 +40,7 @@ class QueryEngine:
         self.connector = connector
         self.table_map = table_map
         self.row_cap = row_cap
+        self._columns_cache: dict[str, set] = {}
 
     # ── public API ───────────────────────────────────────────────────────────
 
@@ -60,6 +64,10 @@ class QueryEngine:
                 )
             except UnsupportedQueryError as error:
                 results[viz_id] = {"error": str(error)}
+            except Exception as error:  # noqa: BLE001 - one bad spec (e.g. a
+                # SQL error from an unexpected column) must not sink the batch.
+                logger.exception("query failed for viz %s", viz_id)
+                results[viz_id] = {"error": f"{type(error).__name__}: {error}"}
         return results
 
     def run_query(
@@ -75,6 +83,7 @@ class QueryEngine:
             dialect=self.connector.dialect,
             selections=selections,
             probe=self.connector.execute,
+            columns_of=self._columns_of,
         )
 
         # Same default as getDataObject: a trailing rollup yields a small
@@ -87,7 +96,9 @@ class QueryEngine:
 
         result: dict = {
             "displayData": display_rows,
-            "isSubset": display.applied_named_filter,
+            # Local parity (getDataObject): true when the pipeline CONTAINS a
+            # named filter, even if it was skipped / had no active selection.
+            "isSubset": display.contains_named_filter,
             "aggregated": display.aggregated or display.kde_post is not None,
         }
         if truncated:
@@ -100,6 +111,17 @@ class QueryEngine:
         return result
 
     # ── internals ────────────────────────────────────────────────────────────
+
+    def _columns_of(self, entity: str) -> set:
+        """Cached physical column names for an entity (DESCRIBE)."""
+        if entity not in self._columns_cache:
+            from .introspect import _describe
+
+            table = self.table_map[entity]
+            self._columns_cache[entity] = {
+                name for name, _ in _describe(self.connector, table)
+            }
+        return self._columns_cache[entity]
 
     def _execute(self, compiled) -> tuple[list[dict], bool]:
         # Aggregated/kde results are small by construction; only cap raw rows.

@@ -137,6 +137,32 @@ assert.ok(
   'HTTP failure rejects every query in the batch',
 );
 
+// ── per-viz error results reject individually ────────────────────────────────
+const errBackend = createRemoteBackend({
+  url: 'https://example.test/v1/yac/query',
+  fetchFn: async (url, init) => {
+    const qs = JSON.parse(init.body).queries;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        results: {
+          [qs[0].vizId]: { error: 'unsupported transformation' },
+          [qs[1].vizId]: { displayData: [{ ok: 1 }] },
+        },
+      }),
+    };
+  },
+});
+const [errOutcome, okOutcome] = await Promise.allSettled([
+  errBackend.query({ source: src }),
+  errBackend.query({ source: src }),
+]);
+assert.equal(errOutcome.status, 'rejected', 'per-viz error rejects that query');
+assert.match(String(errOutcome.reason), /unsupported transformation/);
+assert.equal(okOutcome.status, 'fulfilled', 'sibling query unaffected');
+assert.deepEqual(okOutcome.value.displayData, [{ ok: 1 }]);
+
 // ── pending subscription ─────────────────────────────────────────────────────
 const transitions = [];
 const pendingBackend = createRemoteBackend({
