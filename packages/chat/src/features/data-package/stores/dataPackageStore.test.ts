@@ -286,6 +286,22 @@ describe('dataPackageStore — getEntityRelationship shared-parent bridge', () =
   });
 });
 
+describe('dataPackageStore — getKeyFields', () => {
+  it('collects primary key, FK fields, and udi:unique fields in schema order', async () => {
+    const store = createDataPackageStore();
+    const pkg = makePackage();
+    // donors: add a PK and a unique field; samples already has an FK.
+    pkg.resources[0].schema!.primaryKey = ['organ'];
+    (pkg.resources[0].schema!.fields[0] as Record<string, unknown>)['udi:unique'] = true;
+    await store.getState().setDataPackage(pkg, []);
+
+    // Schema field order: age_value (unique) before organ (PK).
+    expect(store.getState().getKeyFields('donors')).toEqual(['age_value', 'organ']);
+    expect(store.getState().getKeyFields('samples')).toEqual(['donor_id']);
+    expect(store.getState().getKeyFields('ghosts')).toEqual([]);
+  });
+});
+
 describe('dataPackageStore — setFilteredData', () => {
   it('inserts data per entity and produces a fresh Map reference', async () => {
     const store = createDataPackageStore();

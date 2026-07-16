@@ -120,6 +120,15 @@ assert.equal(r2.aggregated, false, 'aggregated passes through');
 // A later query is a NEW batch.
 await backend.query({ source: src });
 assert.equal(calls.length, 2, 'later query starts a second batch');
+assert.equal(
+  'offset' in calls[1].body.queries[0],
+  false,
+  'offset omitted when not set',
+);
+
+// Offset passthrough (load-more paging).
+await backend.query({ source: src, offset: 5000 });
+assert.equal(calls[2].body.queries[0].offset, 5000, 'offset forwarded');
 
 // ── error semantics ──────────────────────────────────────────────────────────
 const failing = createRemoteBackend({

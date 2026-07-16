@@ -21,6 +21,8 @@ class YACQueryItem(BaseModel):
     source: list[dict] | dict
     transformation: list[dict] | None = None
     displayDataOnly: bool | None = None
+    #: Row offset for paging row-level results past the cap ("load more").
+    offset: int | None = None
 
 
 class YACQueryRequest(BaseModel):

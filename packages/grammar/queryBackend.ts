@@ -37,6 +37,10 @@ export interface RemoteQueryRequest {
    *  name. The server resolves named `filter` transforms against these. */
   selections?: DataSelections;
   displayDataOnly?: boolean;
+  /** Row offset for paging row-level results past the server cap
+   *  ("load more"). Deterministic only when the spec carries an orderby on
+   *  a unique key. */
+  offset?: number;
 }
 
 /** One visualization's slice of a batched /v1/yac/query response. */
@@ -164,6 +168,7 @@ export function createRemoteBackend(
             source: q.request.source,
             transformation: q.request.transformation,
             displayDataOnly: q.request.displayDataOnly,
+            ...(q.request.offset ? { offset: q.request.offset } : {}),
           })),
         }),
       });

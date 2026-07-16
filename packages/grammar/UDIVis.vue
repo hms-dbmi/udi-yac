@@ -521,6 +521,38 @@ const isTransformedDataSubset = ref<boolean>(false);
 // Set when a remote row-level result was capped server-side (the browser
 // only has the first `cap` rows). Always null in local mode.
 const truncatedInfo = ref<{ cap: number; sampled: boolean } | null>(null);
+const loadingMore = ref(false);
+
+/** Fetch the next window of a capped row-level result and append it.
+ *  Guarded by the epoch: a selection change mid-request restarts from
+ *  offset 0 and discards this append. */
+async function loadMoreRows(): Promise<void> {
+  const backend = getQueryBackend();
+  if (backend.kind !== 'remote' || !parsedSpec.value || loadingMore.value) {
+    return;
+  }
+  const epoch = remoteQueryEpoch;
+  loadingMore.value = true;
+  try {
+    const result = await backend.query({
+      source: parsedSpec.value.source,
+      transformation: parsedSpec.value.transformation,
+      selections: { ...dataSourcesStore.dataSelections, ...props.selections },
+      offset: transformedData.value?.length ?? 0,
+    });
+    if (epoch !== remoteQueryEpoch || result == null) return;
+    transformedData.value = [
+      ...(transformedData.value ?? []),
+      ...result.displayData,
+    ];
+    truncatedInfo.value = result.truncated ?? null;
+    finishBuildVisualization();
+  } catch (error) {
+    console.error('Loading more rows failed', error);
+  } finally {
+    loadingMore.value = false;
+  }
+}
 
 function performDataTransformation(spec: ParsedUDIGrammar) {
   try {
@@ -781,8 +813,20 @@ const slots = useSlots();
       {{ transformError.message }}
     </div>
     <div class="truncation-note" v-if="truncatedInfo">
-      Showing first {{ truncatedInfo.cap.toLocaleString() }} rows (result
-      truncated server-side)
+      Showing first
+      {{ (transformedData?.length ?? truncatedInfo.cap).toLocaleString() }}
+      rows (result truncated server-side)
+      <button
+        class="load-more-button"
+        :disabled="loadingMore"
+        @click="loadMoreRows"
+      >
+        {{
+          loadingMore
+            ? 'Loading…'
+            : `Load ${truncatedInfo.cap.toLocaleString()} more`
+        }}
+      </button>
     </div>
     <template v-if="slots.default">
       <slot
@@ -825,5 +869,20 @@ const slots = useSlots();
   color: #757575; // muted; keep quasar vars out of the component
   font-size: 0.75rem;
   margin: 2px 6px;
+}
+.load-more-button {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  color: #1976d2;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  &:disabled {
+    color: #9e9e9e;
+    cursor: default;
+    text-decoration: none;
+  }
 }
 </style>

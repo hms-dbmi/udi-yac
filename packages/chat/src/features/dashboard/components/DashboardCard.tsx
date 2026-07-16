@@ -14,6 +14,7 @@ import {
   ExternalLink,
   GripVertical,
   Loader2,
+  Columns3,
 } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
@@ -38,6 +39,7 @@ import { VizTweakComponent } from './VizTweakComponent';
 import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
 import { hasTweakableFields } from '../utils/tweakability';
+import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
 
 interface DashboardCardProps {
   vizKey: string;
@@ -114,14 +116,27 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   const [showTweak, setShowTweak] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Table view defaults to the fields relevant to the visualization (chart
+  // mappings + entity key columns); toggled to all fields per card.
+  const [showAllFields, setShowAllFields] = useState(false);
+  const getKeyFields = useDataPackage((s) => s.getKeyFields);
 
-  // For table view: strip representation so UDIVis renders as a table
+  // For table view: replace the chart representation with a row layer —
+  // relevant fields by default, or all fields ('*') when toggled.
   const tableSpec = useMemo(() => {
     if (!isTableView) return plainSpec;
     const s = JSON.parse(JSON.stringify(plainSpec));
     delete s.representation;
+    if (!showAllFields) {
+      const source = Array.isArray(viz.spec.source) ? viz.spec.source[0] : viz.spec.source;
+      const keyFields = source?.name ? getKeyFields(source.name) : [];
+      const mapping = buildRelevantRowMapping(viz.spec, keyFields);
+      if (mapping) {
+        s.representation = { mark: 'row', mapping };
+      }
+    }
     return s;
-  }, [plainSpec, isTableView]);
+  }, [plainSpec, isTableView, showAllFields, viz.spec, getKeyFields]);
 
   const specJson = useMemo(() => JSON.stringify(viz.spec, null, 2), [viz.spec]);
 
@@ -206,6 +221,25 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
             </TooltipTrigger>
             <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
           </Tooltip>
+          {isTableView && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn('h-6 w-6', showAllFields && 'text-primary')}
+                    onClick={() => setShowAllFields((v) => !v)}
+                  />
+                }
+              >
+                <Columns3 className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {showAllFields ? 'Show relevant fields only' : 'Show all fields'}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {debugMode && (
             <Dialog>
               <Tooltip>

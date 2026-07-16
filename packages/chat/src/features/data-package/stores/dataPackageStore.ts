@@ -57,6 +57,10 @@ export interface DataPackageState {
   isValidIntervalFilter: (entity: string, field: string) => ValidStatus;
   isValidPointFilter: (entity: string, field: string, values: unknown[]) => ValidStatus;
   getEntityRelationship: (originSource: string, targetSource: string) => EntityRelationship | null;
+  /** Key columns of an entity — primary key, foreign keys, and udi:unique
+   *  fields, in schema field order. Used by the table view's "relevant
+   *  fields" mode so rows stay identifiable. */
+  getKeyFields: (entity: string) => string[];
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
@@ -234,6 +238,27 @@ export function createDataPackageStore() {
         searchOneDirection(targetSource, originSource, true) ??
         searchSharedParent(originSource, targetSource)
       );
+    },
+
+    getKeyFields: (entity: string): string[] => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      if (!resource?.schema) return [];
+      const keys = new Set<string>(resource.schema.primaryKey ?? []);
+      for (const fk of resource.schema.foreignKeys ?? []) {
+        for (const field of fk.fields ?? []) keys.add(field);
+      }
+      for (const field of resource.schema.fields ?? []) {
+        if ((field as Record<string, unknown>)['udi:unique'] === true) {
+          keys.add(field.name);
+        }
+      }
+      // Deterministic order: schema field order, then any PK/FK names that
+      // aren't listed as fields (shouldn't happen, but keep them).
+      const fieldOrder = (resource.schema.fields ?? []).map((f) => f.name);
+      return [
+        ...fieldOrder.filter((name) => keys.has(name)),
+        ...[...keys].filter((name) => !fieldOrder.includes(name)),
+      ];
     },
 
     setFilteredData: (entity: string, data: ExportRowSet) => {

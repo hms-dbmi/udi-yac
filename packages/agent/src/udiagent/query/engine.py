@@ -67,6 +67,7 @@ class QueryEngine:
                     transformation=query.get("transformation"),
                     selections=selections,
                     display_data_only=query.get("displayDataOnly"),
+                    offset=query.get("offset") or 0,
                 )
             except UnsupportedQueryError as error:
                 results[viz_id] = {"error": str(error)}
@@ -82,7 +83,11 @@ class QueryEngine:
         transformation: list[dict] | None = None,
         selections: dict[str, Any] | None = None,
         display_data_only: bool | None = None,
+        offset: int = 0,
     ) -> dict:
+        """`offset` pages row-level results past the cap (LIMIT cap OFFSET n
+        on the display pass). ponytail: pages are only deterministic when the
+        spec carries an orderby — SQL row order is otherwise unspecified."""
         sources = source if isinstance(source, list) else [source]
         compiler = PipelineCompiler(
             table_map=self.table_map,
@@ -98,7 +103,7 @@ class QueryEngine:
             display_data_only = ends_in_rollup(transformation)
 
         display = compiler.compile(sources, transformation, skip_named_filters=False)
-        display_rows, truncated = self._execute(display)
+        display_rows, truncated = self._execute(display, offset=offset)
 
         result: dict = {
             "displayData": display_rows,
@@ -129,12 +134,14 @@ class QueryEngine:
             }
         return self._columns_cache[entity]
 
-    def _execute(self, compiled) -> tuple[list[dict], bool]:
+    def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], bool]:
         # Aggregated/kde results are small by construction; only cap raw rows.
         cap = None if (compiled.aggregated or compiled.kde_post) else self.row_cap + 1
         if cap is not None:
             # Re-emit with LIMIT; compile() built the SQL without one.
             sql = f"{compiled.sql} LIMIT {cap}"
+            if offset > 0:
+                sql += f" OFFSET {int(offset)}"
         else:
             sql = compiled.sql
         rows = self.connector.execute(sql, compiled.params)

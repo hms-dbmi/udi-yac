@@ -198,6 +198,44 @@ def test_row_level_cap_and_truncation():
     assert result["aggregated"] is False
 
 
+def test_offset_pages_row_level_results():
+    """`offset` windows row-level results deterministically when the spec
+    orders by a UNIQUE key (tie order is otherwise unspecified in SQL —
+    same caveat as rolling windows)."""
+    views = {"donors": str(_SAMPLE_DATA / "donors.csv")}
+    engine = QueryEngine(
+        DuckDBConnector(views=views), table_map={"donors": "donors"}, row_cap=100
+    )
+    spec = {
+        "source": {"name": "donors", "source": "donors.csv"},
+        "transformation": [
+            {"orderby": [{"field": "hubmap_id", "order": "asc"}]},
+        ],
+    }
+    first = engine.run_query(**spec)
+    assert len(first["displayData"]) == 100
+    assert first["truncated"] == {"cap": 100, "sampled": False}
+
+    second = engine.run_query(**spec, offset=100)
+    assert len(second["displayData"]) == 100
+    assert second["displayData"][0] != first["displayData"][0]
+
+    # Windows must tile the full ordered result: page1+page2 == first 200.
+    full = QueryEngine(
+        DuckDBConnector(views=views), table_map={"donors": "donors"}, row_cap=400
+    ).run_query(**spec)
+    assert first["displayData"] + second["displayData"] == full["displayData"][:200]
+
+    # Last window: donors has 266 rows -> offset 250 yields 16, untruncated.
+    tail = engine.run_query(**spec, offset=250)
+    assert len(tail["displayData"]) == 16
+    assert "truncated" not in tail
+
+    # run_batch forwards offset.
+    batch = engine.run_batch([{"vizId": "q", **spec, "offset": 250}], selections=None)
+    assert len(batch["q"]["displayData"]) == 16
+
+
 def test_kde_structural():
     views = {"penguins": str(_SAMPLE_DATA / "penguins.csv")}
     engine = QueryEngine(DuckDBConnector(views=views), table_map={"penguins": "penguins"})
