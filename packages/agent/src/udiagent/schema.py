@@ -26,6 +26,68 @@ def parse_schema_from_dict(raw: dict) -> dict:
     return {"entities": entities}
 
 
+def derive_relationships(schema: dict) -> list[dict]:
+    """Entity relationships from a data package dict: direct foreign keys,
+    plus derived sibling links between entities that share a parent (star
+    schema) — the same shared-parent bridge the chat's getEntityRelationship
+    applies, so the LLM can reference any relationship the UI can filter on.
+
+    Returns [{from_entity, from_field, to_entity, to_field, kind, via?}]
+    where kind is 'direct' (with optional 'cardinality') or 'sibling'.
+    """
+    direct: list[dict] = []
+    for resource in schema.get("resources", []):
+        name = resource.get("name")
+        if not name:
+            continue
+        for fk in resource.get("schema", {}).get("foreignKeys", []) or []:
+            fields = fk.get("fields") or []
+            ref = fk.get("reference") or {}
+            ref_fields = ref.get("fields") or []
+            if not fields or not ref_fields or not ref.get("resource"):
+                continue
+            card = fk.get("udi:cardinality") or {}
+            direct.append(
+                {
+                    "from_entity": name,
+                    "from_field": fields[-1],
+                    "to_entity": ref["resource"],
+                    "to_field": ref_fields[-1],
+                    "kind": "direct",
+                    "cardinality": f"{card.get('from', 'many')}-to-{card.get('to', 'one')}",
+                }
+            )
+
+    # Sibling bridge: children of the same parent share its key domain, so
+    # their FK columns relate directly (ponytail: one shared parent, no
+    # multi-hop paths through intermediate tables — see sample-data/readme.md).
+    by_parent: dict[str, list[dict]] = {}
+    for rel in direct:
+        by_parent.setdefault(rel["to_entity"], []).append(rel)
+    siblings: list[dict] = []
+    seen: set[tuple] = set()
+    for parent, children in by_parent.items():
+        for i, a in enumerate(children):
+            for b in children[i + 1 :]:
+                if a["from_entity"] == b["from_entity"]:
+                    continue
+                key = tuple(sorted((a["from_entity"], b["from_entity"]))) + (parent,)
+                if key in seen:
+                    continue
+                seen.add(key)
+                siblings.append(
+                    {
+                        "from_entity": a["from_entity"],
+                        "from_field": a["from_field"],
+                        "to_entity": b["from_entity"],
+                        "to_field": b["from_field"],
+                        "kind": "sibling",
+                        "via": parent,
+                    }
+                )
+    return direct + siblings
+
+
 def simplify_data_schema(data_schema):
     """Simplify the data schema for better LLM consumption.
 
@@ -76,6 +138,22 @@ def simplify_data_schema(data_schema):
         if columns:
             lines.append("    columns:")
             lines.extend(columns)
+
+    relationships = derive_relationships(schema)
+    if relationships:
+        lines.append("relationships:")
+        for rel in relationships:
+            link = (
+                f"{rel['from_entity']}.{rel['from_field']} -> "
+                f"{rel['to_entity']}.{rel['to_field']}"
+            )
+            if rel["kind"] == "direct":
+                lines.append(f"  - {link} ({rel['cardinality']})")
+            else:
+                lines.append(
+                    f"  - {link} (siblings — both reference {rel['via']}; "
+                    f"join or filter across them on these keys)"
+                )
 
     return "\n".join(lines)
 

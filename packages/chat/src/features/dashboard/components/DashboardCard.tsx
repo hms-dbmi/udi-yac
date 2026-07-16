@@ -297,8 +297,15 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       )}
       <CardContent className="relative p-1 flex-1 min-h-0 overflow-hidden">
         {remoteQueryPending && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          // Non-blocking corner indicator: the chart stays visible and
+          // interactive in its current state while the round-trip is in
+          // flight. Delay-shown (300ms, backwards fill keeps it invisible
+          // during the delay) so fast responses cause no visual change.
+          <div
+            className="pointer-events-none absolute top-1 right-1 z-10 animate-in fade-in duration-150"
+            style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}
+          >
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         )}
         <UDIVis

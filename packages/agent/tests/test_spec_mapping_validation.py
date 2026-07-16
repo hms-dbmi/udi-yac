@@ -220,10 +220,16 @@ def test_correction_loop_fixes_mapping(monkeypatch):
 
 
 def test_all_templates_pass_mapping_validation():
-    """The 52 generated templates are self-consistent — the validator must
-    produce zero false positives on them (guards template + validator drift)."""
+    """Every generated template must instantiate into a spec that (a) passes
+    the grammar JSON schema and (b) produces zero mapping-validation false
+    positives (guards template + schema + validator drift)."""
+    import jsonschema
+
     from udiagent.generated_vis_tools import TEMPLATES
+    from udiagent.grammar import load_grammar
     from udiagent.vis_generate import instantiate_template
+
+    grammar_schema = load_grammar("udi")["schema_dict"]
 
     fake_schema = {
         "entities": {
@@ -253,10 +259,15 @@ def test_all_templates_pass_mapping_validation():
             spec = instantiate_template(template, bindings, fake_schema)
         except Exception:
             continue  # instantiation quirks are covered elsewhere
+        try:
+            jsonschema.validate(spec, grammar_schema)
+        except jsonschema.ValidationError as error:
+            failures.append((index, f"schema: {error.message[:120]}"))
+            continue
         errors = spec_mapping_errors(spec, fields)
         if errors:
             failures.append((index, errors))
-    assert not failures, f"templates with mapping errors: {failures}"
+    assert not failures, f"invalid templates: {failures}"
 
 
 def test_parse_and_validate_without_entity_fields_unchanged():

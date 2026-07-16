@@ -33,6 +33,35 @@ For each data field:
 | `udi:data_type`          | One of `quantitative`, `ordinal`, or `nominal`.                                                             |
 | `udi:overlapping_fields` | List of fields that are non-null on at least one row together. If all fields overlap, this should be `all`. |
 
+## Entity relationships (foreignKeys) — modeling guidance
+
+Cross-entity filtering (brushing one chart filters the others) and LLM join
+generation resolve relationships from each resource's standard frictionless
+`schema.foreignKeys`. Two relationship shapes are supported:
+
+1. **Direct FK** — a table references another (`samples.donor_id →
+donors.id`).
+2. **Shared-parent siblings (star schema)** — two tables each FK the same
+   parent (`Event → Patient ← Surgery`). Their FK columns share the parent's
+   key domain, so filters and joins bridge them automatically — no FK
+   between the siblings themselves is needed.
+
+**Current limitation — no multi-hop paths.** Relationships are NOT resolved
+through chains that require traversing an intermediate table's _rows_, e.g.
+two tables linked only through a shared **child** (`donors ← files →
+studies`), or chains with different keys per hop (`A.x → B.x`, `B.y → C.y`).
+When authoring a data package, model it as a **star schema** where possible:
+give every child table an FK directly to the parent(s) it should filter
+against, even if that denormalizes a key column. If a table should
+cross-filter with another and neither shape above applies, add the linking
+key column to one of them.
+
+`scripts/gen_datapackage.py` infers FKs from shared key columns when
+generating a `datapackage.json` for a CSV directory; for remote (StarRocks)
+packages the seed script carries these FKs into the server config — the
+database itself has no FK metadata, so a package without `foreignKeys` gets
+no cross-entity filtering at all.
+
 ## Single source of truth
 
 This `sample-data/` directory (repo root) is the **one** canonical copy of the

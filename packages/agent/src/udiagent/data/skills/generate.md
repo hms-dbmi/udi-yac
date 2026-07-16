@@ -33,6 +33,12 @@ The output must be a valid UDI Grammar JSON object with three top-level keys. On
   - window function: `{"window": "rank"}`
   - `{"binby": {"field": "name", "step": number}}`
 
+  Cross-table specs (joins, cross-entity filters) must follow the
+  `relationships:` section of the data schema — join on exactly the listed
+  key pairs. Sibling relationships (two tables referencing the same parent)
+  can be joined or filtered directly on the listed keys. Do not invent
+  relationships between tables that have none listed.
+
 - **representation** (optional): visualization specification with:
   - `"mark"`: one of `"bar"`, `"line"`, `"point"`, `"area"`, `"arc"`, `"rect"`, `"text"`, `"geometry"`
   - `"mapping"`: array of field mappings, each with `"encoding"` (e.g. `"x"`, `"y"`, `"color"`), `"field"` (string), and `"type"` (`"quantitative"`, `"nominal"`, `"ordinal"`, `"temporal"`)

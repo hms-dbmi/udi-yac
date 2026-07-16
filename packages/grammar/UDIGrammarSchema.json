@@ -1498,18 +1498,35 @@
       "type": "object"
     },
     "NumberDomain": {
-      "additionalProperties": false,
-      "description": "Represents a numerical domain with a minimum and maximum value.",
-      "properties": {
-        "max": {
-          "type": "number"
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "max": {
+              "type": "number"
+            },
+            "min": {
+              "type": "number"
+            }
+          },
+          "required": ["min"],
+          "type": "object"
         },
-        "min": {
-          "type": "number"
+        {
+          "additionalProperties": false,
+          "properties": {
+            "max": {
+              "type": "number"
+            },
+            "min": {
+              "type": "number"
+            }
+          },
+          "required": ["max"],
+          "type": "object"
         }
-      },
-      "required": ["min", "max"],
-      "type": "object"
+      ],
+      "description": "Numeric domain bounds. Either bound may be omitted to keep that end data-driven — e.g. `{ min: 0 }` pins a zero baseline while the max follows the data (TableComponent merges partial domains over the computed extent)."
     },
     "NumberFieldUnion": {
       "additionalProperties": false,

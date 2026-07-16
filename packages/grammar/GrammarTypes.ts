@@ -867,10 +867,13 @@ export interface RowMapping extends GenericFieldMapping<RowEncodingOptions> {
 /**
  * Represents a numerical domain with a minimum and maximum value.
  */
-export interface NumberDomain {
-  min: number;
-  max: number;
-}
+/**
+ * Numeric domain bounds. Either bound may be omitted to keep that end
+ * data-driven — e.g. `{ min: 0 }` pins a zero baseline while the max follows
+ * the data (TableComponent merges partial domains over the computed extent).
+ */
+export type NumberDomain =
+  { min: number; max?: number } | { min?: number; max: number };
 
 /**
  * Field Unions require a list of fields, and the domain is the
