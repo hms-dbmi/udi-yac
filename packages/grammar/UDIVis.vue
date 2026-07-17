@@ -220,8 +220,11 @@ function buildVisualization(): void {
         source: parsedSpec.value.source,
         transformation: parsedSpec.value.transformation,
         // The local path reads brush state implicitly from the shared
-        // store; the remote path forwards it explicitly.
-        selections: { ...dataSourcesStore.dataSelections, ...props.selections },
+        // store; the remote path forwards it explicitly. The STORE spreads
+        // last: props.selections may include a React-side snapshot of this
+        // viz's own brush that lags the store by a render — the store is
+        // the source of truth for brush state.
+        selections: { ...props.selections, ...dataSourcesStore.dataSelections },
       })
       .then((result) => {
         if (epoch !== remoteQueryEpoch) return; // stale response
@@ -537,7 +540,8 @@ async function loadMoreRows(): Promise<void> {
     const result = await backend.query({
       source: parsedSpec.value.source,
       transformation: parsedSpec.value.transformation,
-      selections: { ...dataSourcesStore.dataSelections, ...props.selections },
+      // Store last — same precedence rationale as buildVisualization.
+      selections: { ...props.selections, ...dataSourcesStore.dataSelections },
       offset: transformedData.value?.length ?? 0,
     });
     if (epoch !== remoteQueryEpoch || result == null) return;
