@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDashboard, useDashboardStore, useDataFilters, useGlobal } from '@/app/UDIChatContext';
 import { DashboardGrid } from './DashboardGrid';
 import { ScrollAffordances } from './ScrollAffordances';
@@ -30,6 +30,7 @@ function DashboardHeader() {
 export function DashboardPanel() {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
   const filterAllNullValues = useDashboard((s) => s.filterAllNullValues);
   const debugMode = useGlobal((s) => s.debugMode);
   const dashboardStore = useDashboardStore();
@@ -58,10 +59,17 @@ export function DashboardPanel() {
     return () => observer.disconnect();
   }, []);
 
-  // Brush selections live in the shared Pinia DataSourcesStore — UDIVis's
-  // signal handlers write them there directly. We only pass LLM-set filters
-  // via the `selections` prop; UDIVis merges with Pinia state internally.
-  const mergedSelections = dataSelections;
+  // Selections passed down to each visualization's UDIVis: LLM-set filters
+  // (`dataSelections`) merged with mirrored brush selections
+  // (`internalDataSelections`, keyed by viz uuid). Threading the brush values
+  // back through the `selections` prop lets a chip-clear or chat-widget edit
+  // round-trip to the source viz's UDIVis and back into the shared Pinia store
+  // (updating counts and clearing the rendered brush). UDIVis treats a bind
+  // equal to its current selection as a no-op, so live brushing doesn't loop.
+  const mergedSelections = useMemo(
+    () => ({ ...dataSelections, ...internalDataSelections }),
+    [dataSelections, internalDataSelections],
+  );
 
   const hasEntries = activeVisualizations.size > 0;
 

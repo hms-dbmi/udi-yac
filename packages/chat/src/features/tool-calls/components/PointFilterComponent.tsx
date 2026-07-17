@@ -17,12 +17,19 @@ interface PointFilterComponentProps {
   dataSelection: DataSelection;
   tweakable: boolean;
   filterKey: string;
+  /**
+   * Optional override for where an edit is written. Defaults to
+   * `dataFiltersStore.setDataSelection(filterKey, …)` (the LLM-filter path).
+   * Brush-originated filters pass a writer that targets the brush store.
+   */
+  onCommit?: (selection: DataSelection) => void;
 }
 
 export function PointFilterComponent({
   dataSelection,
   tweakable,
   filterKey,
+  onCommit,
 }: PointFilterComponentProps) {
   const entityNames = useDataPackage((s) => s.entityNames);
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
@@ -50,13 +57,21 @@ export function PointFilterComponent({
     ? isValidPointFilter(entity, field, selectedValues).isValid === 'yes'
     : false;
 
+  const commit = useCallback(
+    (selection: DataSelection) => {
+      if (onCommit) onCommit(selection);
+      else setDataSelection(filterKey, selection);
+    },
+    [onCommit, setDataSelection, filterKey],
+  );
+
   const handleToggle = useCallback(
     (value: string, checked: boolean) => {
       if (!field) return;
       const next = checked ? [...selectedValues, value] : selectedValues.filter((v) => v !== value);
       const current = (dataSelection.selection ?? {}) as PointSelection;
       const nextSelection: PointSelection = { ...current, [field]: next };
-      setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
+      commit({ ...dataSelection, selection: nextSelection });
       trackEvent('filter_selection_changed', {
         entity,
         field,
@@ -65,26 +80,26 @@ export function PointFilterComponent({
         selectionCount: next.length,
       });
     },
-    [setDataSelection, filterKey, dataSelection, field, selectedValues, trackEvent, entity],
+    [commit, dataSelection, field, selectedValues, trackEvent, entity],
   );
 
   const handleClearAll = useCallback(() => {
     if (!field) return;
     const current = (dataSelection.selection ?? {}) as PointSelection;
     const nextSelection: PointSelection = { ...current, [field]: [] };
-    setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
+    commit({ ...dataSelection, selection: nextSelection });
     trackEvent('filter_selection_changed', {
       entity,
       field,
       action: 'clear_all',
       selectionCount: 0,
     });
-  }, [setDataSelection, filterKey, dataSelection, field, trackEvent, entity]);
+  }, [commit, dataSelection, field, trackEvent, entity]);
 
   const handleEntityChange = useCallback(
     (val: string | null) => {
       if (!val) return;
-      setDataSelection(filterKey, {
+      commit({
         ...dataSelection,
         dataSourceKey: val,
         selection: field ? { [field]: [] } : {},
@@ -95,13 +110,13 @@ export function PointFilterComponent({
         field,
       });
     },
-    [setDataSelection, filterKey, dataSelection, field, trackEvent],
+    [commit, dataSelection, field, trackEvent],
   );
 
   const handleFieldChange = useCallback(
     (val: string | null) => {
       if (!val) return;
-      setDataSelection(filterKey, {
+      commit({
         ...dataSelection,
         selection: { [val]: [] },
       });
@@ -111,7 +126,7 @@ export function PointFilterComponent({
         field: val,
       });
     },
-    [setDataSelection, filterKey, dataSelection, trackEvent, entity],
+    [commit, dataSelection, trackEvent, entity],
   );
 
   const fieldOptions = categoricalSourceFields?.[entity] ?? [];

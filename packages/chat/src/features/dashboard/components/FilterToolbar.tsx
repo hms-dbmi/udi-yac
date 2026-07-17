@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDataFilters, useDataPackageStore } from '@/app/UDIChatContext';
+import { useBrushFilters, brushHasValue } from '@/features/dashboard';
 import type { DataSelection } from '@/features/dashboard';
 
 interface ChipInfo {
@@ -41,8 +42,10 @@ function formatSelectionFields(sel: DataSelection): { label: string; value: stri
 export function FilterToolbar() {
   const dataPackageStore = useDataPackageStore();
   const dataSelections = useDataFilters((s) => s.dataSelections);
-  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
   const clearFilter = useDataFilters((s) => s.clearFilter);
+  // Brush/click selections, gated to currently-active visualizations so a
+  // closed viz's stale selection never renders a chip.
+  const brushFilters = useBrushFilters();
 
   const chips = useMemo<ChipInfo[]>(() => {
     const validate = {
@@ -73,7 +76,13 @@ export function FilterToolbar() {
       return false;
     });
 
-    const allEntries = [...validExternalSelections, ...Object.entries(internalDataSelections)];
+    // Visualization brush/click selections (already gated to active vizzes).
+    // A present-but-empty point brush keeps its chat widget but has no chip.
+    const brushEntries: [string, DataSelection][] = brushFilters
+      .filter((b) => brushHasValue(b.selection))
+      .map((b) => [b.uuid, b.selection]);
+
+    const allEntries = [...validExternalSelections, ...brushEntries];
 
     const result: ChipInfo[] = [];
     for (const [id, sel] of allEntries) {
@@ -88,7 +97,7 @@ export function FilterToolbar() {
       }
     }
     return result;
-  }, [dataSelections, internalDataSelections, dataPackageStore]);
+  }, [dataSelections, brushFilters, dataPackageStore]);
 
   if (chips.length === 0) {
     return (
