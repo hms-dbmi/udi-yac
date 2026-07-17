@@ -318,7 +318,9 @@ class PipelineCompiler:
                 clauses.append(f"({col} >= {ph} AND {col} <= {ph})")
             elif isinstance(value, (list, tuple)):
                 if not value:
-                    clauses.append("FALSE")
+                    # Local parity (PointSelectionToArqueroFilter): an empty
+                    # value list means NO constraint on this field — a fully
+                    # deselected multiselect, not "match nothing".
                     continue
                 params.extend(value)
                 clauses.append(f"{col} IN ({', '.join([ph] * len(value))})")

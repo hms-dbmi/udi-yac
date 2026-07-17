@@ -40,8 +40,12 @@ entity names and field types drive the table schemas, and its
 database itself stores no FK constraints, and the chat's cross-entity
 filtering depends on them (served back via `/v1/yac/metadata`). Without a
 datapackage, column types are sniffed (all-numeric columns → BIGINT/DOUBLE,
-else VARCHAR) and no entity relationships are available.
-Re-running is idempotent (tables are truncated and reloaded). Each run merges
+else VARCHAR) and no entity relationships are available. Placeholder strings
+("Not Available", "Not Reported", "Unknown", …) in otherwise-numeric columns
+are ingested as NULL so those columns stay numeric — extend the set with
+`--null-values "Pending,TBD"`; in categorical columns they remain real
+values.
+Re-running is idempotent (tables are dropped and recreated, so schema changes take effect). Each run merges
 its package into `packages/agent/starrocks-backends.json` (gitignored).
 
 Loading uses batched INSERTs — fine for sample-sized data (up to ~100k

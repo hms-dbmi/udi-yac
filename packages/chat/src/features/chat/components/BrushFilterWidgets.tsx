@@ -11,9 +11,24 @@ function BrushFilterWidget({ brush }: { brush: BrushFilter }) {
       // Keep the (possibly empty) selection rather than deleting it, so a point
       // brush with every value unchecked persists its widget for re-selection.
       // The brush is fully removed only via the toolbar chip's clear action.
-      dataFiltersStore.getState().updateInternalDataSelections({ [brush.uuid]: next });
+      const store = dataFiltersStore.getState();
+      // Point filters are split per field — merge this field's edit back into
+      // the uuid's full multi-field selection so sibling fields survive.
+      let merged: DataSelection = next;
+      if (brush.field) {
+        const current = store.internalDataSelections[brush.uuid];
+        merged = {
+          ...current,
+          ...next,
+          selection: {
+            ...(current?.selection ?? {}),
+            ...(next.selection ?? {}),
+          } as DataSelection['selection'],
+        };
+      }
+      store.updateInternalDataSelections({ [brush.uuid]: merged });
     },
-    [dataFiltersStore, brush.uuid],
+    [dataFiltersStore, brush.uuid, brush.field],
   );
 
   const { selection } = brush;
@@ -28,7 +43,7 @@ function BrushFilterWidget({ brush }: { brush: BrushFilter }) {
             dataSelection={selection}
             fieldIndex={idx}
             tweakable={false}
-            filterKey={brush.uuid}
+            filterKey={brush.id}
             onCommit={handleCommit}
           />
         ))}
@@ -41,7 +56,7 @@ function BrushFilterWidget({ brush }: { brush: BrushFilter }) {
       <PointFilterComponent
         dataSelection={selection}
         tweakable={false}
-        filterKey={brush.uuid}
+        filterKey={brush.id}
         onCommit={handleCommit}
       />
     </div>
@@ -63,7 +78,7 @@ export function BrushFilterWidgets() {
   return (
     <>
       {brushFilters.map((brush) => (
-        <div key={brush.uuid} data-message className="flex scroll-mt-6 justify-start">
+        <div key={brush.id} data-message className="flex scroll-mt-6 justify-start">
           <div className="max-w-[85%] min-w-0 rounded-lg bg-muted px-3 py-2 wrap-break-word">
             <BrushFilterWidget brush={brush} />
           </div>

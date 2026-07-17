@@ -4,12 +4,20 @@ import type { ActiveVisualization } from '../stores/dashboardStore';
 import { useDataFilters, useDashboard } from '@/app/UDIChatContext';
 
 export interface BrushFilter {
+  /** Stable identity for chips/widgets and per-filter clearing: the viz uuid
+   *  for interval brushes, `${uuid}::${field}` for point selections (which
+   *  are split into one filter per field). */
+  id: string;
   /** Selection key — the source visualization's uuid. */
   uuid: string;
   /** Dashboard key of the source visualization (for remount/hover coordination). */
   vizKey: string;
   /** Human-readable label for the source visualization. */
   title: string;
+  /** For point selections: the single field this filter covers. Edits and
+   *  clears must merge back into the uuid's full multi-field selection. */
+  field?: string;
+  /** For point filters, narrowed to `field`; the full selection for interval. */
   selection: DataSelection;
 }
 
@@ -51,7 +59,23 @@ export function selectBrushFilters(
     const meta = byUuid.get(uuid);
     if (!meta) continue;
     if (selection.selection == null) continue;
-    result.push({ uuid, vizKey: meta.vizKey, title: meta.title, selection });
+    if (selection.type === 'point') {
+      // A chart click selects on every categorical encoding at once (e.g. a
+      // stacked-bar segment → organization AND event type). Split into one
+      // filter per field so each can be adjusted/cleared independently.
+      for (const [field, values] of Object.entries(selection.selection)) {
+        result.push({
+          id: `${uuid}::${field}`,
+          uuid,
+          vizKey: meta.vizKey,
+          title: meta.title,
+          field,
+          selection: { ...selection, selection: { [field]: values } },
+        });
+      }
+    } else {
+      result.push({ id: uuid, uuid, vizKey: meta.vizKey, title: meta.title, selection });
+    }
   }
   return result;
 }

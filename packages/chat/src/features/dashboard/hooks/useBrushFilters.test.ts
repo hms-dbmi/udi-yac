@@ -67,6 +67,44 @@ describe('selectBrushFilters', () => {
 
     expect(selectBrushFilters(internal, active)[0].title).toBe('show ages');
   });
+
+  it('splits a multi-field point selection into one filter per field', () => {
+    const active = new Map([['viz-key-1', viz('uuid-1', { title: 'Events' })]]);
+    const internal: DataSelections = {
+      'uuid-1': {
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { organization_name: ['CHOP'], event_type: ['Deceased'] },
+      },
+    };
+
+    const result = selectBrushFilters(internal, active);
+    expect(result).toHaveLength(2);
+    expect(result.map((b) => b.id).sort()).toEqual([
+      'uuid-1::event_type',
+      'uuid-1::organization_name',
+    ]);
+    const org = result.find((b) => b.field === 'organization_name')!;
+    // Narrowed to its own field — sibling fields never leak into a chip/widget.
+    expect(org.selection.selection).toEqual({ organization_name: ['CHOP'] });
+    expect(org.uuid).toBe('uuid-1');
+  });
+
+  it('keeps interval selections as a single unsplit filter', () => {
+    const active = new Map([['viz-key-1', viz('uuid-1')]]);
+    const internal: DataSelections = {
+      'uuid-1': {
+        dataSourceKey: 'donors',
+        type: 'interval',
+        selection: { age: [10, 90], weight: [50, 80] },
+      },
+    };
+
+    const result = selectBrushFilters(internal, active);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('uuid-1');
+    expect(result[0].field).toBeUndefined();
+  });
 });
 
 describe('brushHasValue', () => {

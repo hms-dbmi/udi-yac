@@ -302,6 +302,46 @@ const CASES = [
     },
   ],
   [
+    // A multi-field point selection where one field is fully deselected:
+    // the empty field imposes NO constraint (fully unchecked multiselect),
+    // the other still filters.
+    'named-filter-partially-empty-point',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: { name: 'sel_multi', source: 'penguins' } },
+        { groupby: 'species' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+    {
+      sel_multi: {
+        dataSourceKey: 'penguins',
+        selection: { species: [], island: ['Biscoe'] },
+        type: 'point',
+      },
+    },
+  ],
+  [
+    // Every field deselected: the whole filter is a no-op (unfiltered data).
+    'named-filter-all-empty-point',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: { name: 'sel_empty', source: 'penguins' } },
+        { groupby: 'species' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+    {
+      sel_empty: {
+        dataSourceKey: 'penguins',
+        selection: { species: [], island: [] },
+        type: 'point',
+      },
+    },
+  ],
+  [
     'named-filter-display-vs-extent',
     {
       source: src('penguins'),

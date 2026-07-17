@@ -76,11 +76,13 @@ export function FilterToolbar() {
       return false;
     });
 
-    // Visualization brush/click selections (already gated to active vizzes).
-    // A present-but-empty point brush keeps its chat widget but has no chip.
+    // Visualization brush/click selections (already gated to active vizzes;
+    // point selections arrive pre-split, one filter per field, so each chip
+    // clears independently). A present-but-empty point filter keeps its chat
+    // widget but has no chip.
     const brushEntries: [string, DataSelection][] = brushFilters
       .filter((b) => brushHasValue(b.selection))
-      .map((b) => [b.uuid, b.selection]);
+      .map((b) => [b.id, b.selection]);
 
     const allEntries = [...validExternalSelections, ...brushEntries];
 

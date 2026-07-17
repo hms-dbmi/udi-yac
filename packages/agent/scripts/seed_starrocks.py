@@ -13,7 +13,8 @@ Usage (from packages/agent):
     uv run --extra starrocks python scripts/seed_starrocks.py            # sample-data/pcx
     uv run --extra starrocks python scripts/seed_starrocks.py <csv-dir> --database mydb
 
-Idempotent: CREATE IF NOT EXISTS + TRUNCATE before load.
+Idempotent: tables are dropped and recreated on each run (schema changes,
+e.g. type reclassification, take effect on re-seed).
 
 ponytail: batched INSERTs — fine to ~100k rows; switch to Stream Load
 (HTTP PUT to FE :8030) if seeds outgrow that.
@@ -34,6 +35,25 @@ _DEFAULT_DATA_DIR = _REPO_ROOT / "sample-data" / "pcx"
 _DEFAULT_CONFIG_OUT = Path(__file__).resolve().parents[1] / "starrocks-backends.json"
 
 BATCH_SIZE = 1000
+
+# Placeholder strings that mean "no value" in otherwise-numeric columns
+# (common in de-identified clinical exports). Case-insensitive. They are
+# ingested as NULL *only* in columns that are numeric apart from them —
+# in categorical columns they remain real category values.
+DEFAULT_NULL_SENTINELS = frozenset(
+    {
+        "not available",
+        "not applicable",
+        "not reported",
+        "unavailable",
+        "unknown",
+        "n/a",
+        "na",
+        "none",
+        "null",
+        "nan",
+    }
+)
 
 
 def table_name_for(entity: str) -> str:
@@ -135,24 +155,44 @@ def _is_number(value: str) -> bool:
     return value.lower() not in ("nan", "inf", "-inf", "+inf", "infinity")
 
 
-def read_csv(entry: dict) -> tuple[list[str], list[list[str | None]], set[str]]:
-    """(header, rows-with-None-for-empty, quantitative field names)."""
+def read_csv(
+    entry: dict, null_sentinels: frozenset[str] = DEFAULT_NULL_SENTINELS
+) -> tuple[list[str], list[list[str | None]], set[str]]:
+    """(header, cleaned rows, quantitative field names).
+
+    A column is numeric when it has numeric evidence and EVERY non-empty
+    value is a number or a null sentinel ("Not Reported", ...); sentinel
+    cells in such columns become NULL. Columns with genuine non-sentinel
+    strings stay VARCHAR (no data loss), and sentinels in categorical
+    columns remain real values. The datapackage's `udi:data_type` hint only
+    decides columns with no numeric evidence at all (e.g. entirely
+    sentinel/empty).
+    """
     with open(entry["csv_path"], newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
         header = next(reader)
         raw_rows = [row for row in reader if row]
 
-    quantitative = entry["quantitative"]
-    if quantitative is None:
-        # No datapackage: a column is numeric when every non-empty value is.
-        quantitative = set()
-        for i, name in enumerate(header):
-            values = [r[i] for r in raw_rows if i < len(r) and r[i].strip()]
-            if values and all(_is_number(v) for v in values):
-                quantitative.add(name)
+    hint = entry.get("quantitative") or set()
+    is_sentinel = lambda v: v.strip().lower() in null_sentinels  # noqa: E731
+
+    quantitative: set[str] = set()
+    for i, name in enumerate(header):
+        values = [r[i] for r in raw_rows if i < len(r) and r[i].strip()]
+        numeric = [v for v in values if _is_number(v)]
+        clean = all(_is_number(v) or is_sentinel(v) for v in values)
+        if clean and (numeric or name in hint):
+            quantitative.add(name)
+
+    def cell_value(cell: str, name: str) -> str | None:
+        if cell.strip() == "":
+            return None
+        if name in quantitative and is_sentinel(cell):
+            return None
+        return cell
 
     rows: list[list[str | None]] = [
-        [(cell if cell.strip() != "" else None) for cell in row] for row in raw_rows
+        [cell_value(cell, header[i]) for i, cell in enumerate(row)] for row in raw_rows
     ]
     return header, rows, quantitative
 
@@ -166,8 +206,11 @@ def _column_type(name: str, quantitative: set[str], rows: list, index: int) -> s
     return "DOUBLE"
 
 
-def create_and_load(conn, database: str, entry: dict) -> int:
-    header, rows, quantitative = read_csv(entry)
+def create_and_load(
+    conn, database: str, entry: dict,
+    null_sentinels: frozenset[str] = DEFAULT_NULL_SENTINELS,
+) -> int:
+    header, rows, quantitative = read_csv(entry, null_sentinels)
     table = entry["table"]
     cols_sql = ", ".join(
         f"`{name}` {_column_type(name, quantitative, rows, i)}"
@@ -175,12 +218,15 @@ def create_and_load(conn, database: str, entry: dict) -> int:
     )
     first = header[0]
     with conn.cursor() as cur:
+        # Drop-and-recreate rather than truncate: re-seeding must be able to
+        # CHANGE column types (e.g. a column newly classified numeric after
+        # sentinel cleaning) — TRUNCATE keeps the old schema.
+        cur.execute(f"DROP TABLE IF EXISTS `{database}`.`{table}`")
         cur.execute(
-            f"CREATE TABLE IF NOT EXISTS `{database}`.`{table}` ({cols_sql}) "
+            f"CREATE TABLE `{database}`.`{table}` ({cols_sql}) "
             f"DUPLICATE KEY(`{first}`) DISTRIBUTED BY HASH(`{first}`) BUCKETS 1 "
             f'PROPERTIES ("replication_num" = "1")'
         )
-        cur.execute(f"TRUNCATE TABLE `{database}`.`{table}`")
         placeholders = ", ".join(["%s"] * len(header))
         col_list = ", ".join(f"`{c}`" for c in header)
         insert = f"INSERT INTO `{database}`.`{table}` ({col_list}) VALUES ({placeholders})"
@@ -228,6 +274,7 @@ def seed(
     user: str = "root", password: str = "",
     config_out: Path | None = None,
     only: set[str] | None = None,
+    null_sentinels: frozenset[str] = DEFAULT_NULL_SENTINELS,
 ) -> list[dict]:
     """Full seed: wait, create db, create+load each table, write config.
     `only` restricts to the named entities. Returns the package entries
@@ -243,7 +290,7 @@ def seed(
         with conn.cursor() as cur:
             cur.execute(f"CREATE DATABASE IF NOT EXISTS `{database}`")
         for entry in entries:
-            loaded = create_and_load(conn, database, entry)
+            loaded = create_and_load(conn, database, entry, null_sentinels)
             entry["loaded"] = loaded
             expected = entry["row_count"]
             status = "OK" if expected in (None, loaded) else f"EXPECTED {expected}!"
@@ -268,7 +315,16 @@ def main() -> None:
     parser.add_argument("--password", default="")
     parser.add_argument("--config-out", default=str(_DEFAULT_CONFIG_OUT),
                         help="Where to write the UDI_QUERY_BACKENDS JSON (merged if it exists)")
+    parser.add_argument("--null-values", default="",
+                        help="Extra comma-separated placeholder strings to ingest as NULL "
+                             "in otherwise-numeric columns (extends the built-in set: "
+                             "Not Available, Not Applicable, Not Reported, ...)")
     args = parser.parse_args()
+
+    null_sentinels = frozenset(
+        DEFAULT_NULL_SENTINELS
+        | {v.strip().lower() for v in args.null_values.split(",") if v.strip()}
+    )
 
     data_dir = Path(args.data_dir).resolve()
     if not data_dir.is_dir():
@@ -280,6 +336,7 @@ def main() -> None:
         data_dir, database,
         host=args.host, port=args.port, user=args.user, password=args.password,
         config_out=Path(args.config_out),
+        null_sentinels=null_sentinels,
     )
     print(
         "\nNext steps:\n"

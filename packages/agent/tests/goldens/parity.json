@@ -1190,6 +1190,140 @@
       }
     },
     {
+      "name": "named-filter-partially-empty-point",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_multi",
+              "source": "penguins"
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_multi": {
+          "dataSourceKey": "penguins",
+          "selection": {
+            "species": [],
+            "island": ["Biscoe"]
+          },
+          "type": "point"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "n": 44
+          },
+          {
+            "species": "Gentoo",
+            "n": 124
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "n": 152
+          },
+          {
+            "species": "Chinstrap",
+            "n": 68
+          },
+          {
+            "species": "Gentoo",
+            "n": 124
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
+      "name": "named-filter-all-empty-point",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_empty",
+              "source": "penguins"
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_empty": {
+          "dataSourceKey": "penguins",
+          "selection": {
+            "species": [],
+            "island": []
+          },
+          "type": "point"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "n": 152
+          },
+          {
+            "species": "Chinstrap",
+            "n": 68
+          },
+          {
+            "species": "Gentoo",
+            "n": 124
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "n": 152
+          },
+          {
+            "species": "Chinstrap",
+            "n": 68
+          },
+          {
+            "species": "Gentoo",
+            "n": 124
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
       "name": "named-filter-display-vs-extent",
       "spec": {
         "source": {
