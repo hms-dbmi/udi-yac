@@ -15,8 +15,11 @@ import { toTableRampInterpolator, toTableCategoryColors } from './Palette';
 
 // Define props
 
-export interface UDICellRendererParams<TData, TValue, TContext>
-  extends ICellRendererParams<TData, TValue, TContext> {
+export interface UDICellRendererParams<
+  TData,
+  TValue,
+  TContext,
+> extends ICellRendererParams<TData, TValue, TContext> {
   udiColumnMapping: ExtendedRowMapping[];
   /** Consumer-supplied color palette, forwarded from TableComponent. */
   palette?: UDIPalette;
@@ -142,7 +145,13 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
     let numberDomain: [number, number] = [0, 1];
     let stringDomain: string[] = ['unknown'];
     if ('min' in domain && 'max' in domain) {
-      numberDomain = [domain.min, domain.max];
+      // NumberDomain permits partial bounds at the type level ({min} or
+      // {max}); the value guard both narrows away `undefined` and keeps the
+      // [0, 1] default if a bound is somehow absent. In practice
+      // TableComponent resolves partials to a full extent before this.
+      if (typeof domain.min === 'number' && typeof domain.max === 'number') {
+        numberDomain = [domain.min, domain.max];
+      }
     } else if ('numberFields' in domain || 'categoryFields' in domain) {
       throw new Error('numberFields is not supported');
     } else {
@@ -152,7 +161,15 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
     let stringRange: string[] | null = null;
     if (mapping.range) {
       if ('min' in mapping.range && 'max' in mapping.range) {
-        numberRange = [mapping.range.min, mapping.range.max];
+        // Value guard narrows the now-partial NumberDomain bounds; keep the
+        // outer `in` check so the else branches still discriminate
+        // StringDomain.
+        if (
+          typeof mapping.range.min === 'number' &&
+          typeof mapping.range.max === 'number'
+        ) {
+          numberRange = [mapping.range.min, mapping.range.max];
+        }
       } else if (
         'numberFields' in mapping.range ||
         'categoryFields' in mapping.range
@@ -178,7 +195,8 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
             .unknown(defaultRange.unknownColor);
         } else {
           const nominalColors =
-            toTableCategoryColors(palette?.category) ?? defaultRange.nominalColor;
+            toTableCategoryColors(palette?.category) ??
+            defaultRange.nominalColor;
           colorScale = scaleOrdinal<string, string>(nominalColors)
             .domain(stringDomain)
             .range(stringRange ?? nominalColors)

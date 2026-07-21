@@ -338,12 +338,20 @@ async function updateVegaChart() {
   const { success, specObject } = parseSpec();
   if (!success || isEmpty(specObject)) return;
 
-  // Save per-channel selection signals ONLY when there's an active brush.
-  // Saving empty/cleared signals and re-applying them can leave Vega's
-  // dataflow in a stale state where points render at wrong positions after
-  // the brush is cleared.
+  // For a brush that has an EXTERNAL selection (props.selections — e.g. the
+  // chat adjustment widget / filter chips mirror brushes there), that
+  // selection is the source of truth: we re-apply it in DATA space after the
+  // rebuild (see updateVegaChartSelections below), so it never needs the
+  // pixel save/restore. Only brushes WITHOUT an external mirror (a purely
+  // local live brush, e.g. bare toolkit/Storybook usage) fall back to saving
+  // and restoring their pixel signals across the data changeset — pixel
+  // values are scale-relative, so this is a best-effort preservation for the
+  // no-external-selection case only.
+  const hasExternal = (signalKey: string) =>
+    props.selections?.[signalKey]?.selection != null;
   const savedSignals: Record<string, unknown> = {};
   for (const signalKey of props.signalKeys ?? []) {
+    if (hasExternal(signalKey)) continue;
     const sk = formatVegaSignalKey(signalKey);
     const tupleFieldsKey = sk + '_tuple_fields';
     const state = vegaView.value.getState().signals;
@@ -375,7 +383,7 @@ async function updateVegaChart() {
       .insert(specObject.data.values ?? []),
   );
 
-  // Restore only the verified-active brush signals
+  // Restore only the verified-active brush signals (no-external-selection case)
   for (const [key, value] of Object.entries(savedSignals)) {
     vegaView.value.signal(key, value);
   }
@@ -387,6 +395,13 @@ async function updateVegaChart() {
   // is dismissed).
   await vegaView.value.resize().runAsync();
   ignore.value = false;
+
+  // Re-assert the external selection as the FINAL step, against the now-
+  // current (post-resize) scales. This makes the rendered brush a
+  // deterministic function of props.selections regardless of watcher/query
+  // ordering — the fix for "editing a filter's sliders doesn't move the
+  // brush". No-op when props.selections is empty.
+  await updateVegaChartSelections();
 }
 
 watch(() => props.spec, updateVegaChart);
@@ -417,7 +432,13 @@ async function updateVegaChartSelections() {
   // console.log('Current signals:', currentSignals);
 
   for (const [selectionName, selection] of Object.entries(props.selections)) {
-    updateVegaChartSelection(selectionName, selection);
+    // Isolate each selection: a malformed entry (or one for a signal this
+    // chart doesn't have) must not abort applying the others.
+    try {
+      updateVegaChartSelection(selectionName, selection);
+    } catch (error) {
+      console.error(`Failed to apply selection "${selectionName}"`, error);
+    }
   }
 
   await vegaView.value.runAsync();
@@ -430,10 +451,23 @@ function updateVegaChartSelection(
 ) {
   if (!vegaView.value) return;
   if (selection.type !== 'interval') return;
-  const currentSignals = vegaView.value.getState().signals;
-  if (!currentSignals) return;
 
-  // Build reverse field map: remapped field -> encoding field
+  const signalKeyStart = formatVegaSignalKey(selectionName);
+
+  // Read the interval's tuple fields the SAME way the working read path does
+  // (initVegaChart's brush listeners): via `view.signal(...)`, NOT
+  // `getState().signals`. getState() applies Vega's default signal filter,
+  // which can omit `_tuple_fields` in the embedded canvas view and made this
+  // whole function silently no-op. A missing tuple (this chart has no such
+  // interval selection) → nothing to do.
+  const tupleFields = vegaView.value.signal(
+    `${signalKeyStart}_tuple_fields`,
+  ) as Array<{ channel: string; field: string }> | undefined;
+  if (!Array.isArray(tupleFields) || tupleFields.length === 0) return;
+
+  // Reverse field map: stored (possibly remapped) field -> encoding field,
+  // so a selection keyed by the display/override field still resolves to the
+  // right x/y channel.
   const reverseFieldMap: Record<string, string> = {};
   const fmap = props.signalFieldMap?.[selectionName];
   if (fmap) {
@@ -442,36 +476,44 @@ function updateVegaChartSelection(
     }
   }
 
-  for (const [field, range] of Object.entries(
-    selection.selection as RangeSelection,
-  )) {
+  const rangeSelection = (selection.selection ?? {}) as RangeSelection;
+  const fieldEntries = Object.entries(rangeSelection);
+
+  for (let i = 0; i < fieldEntries.length; i++) {
+    const [field, range] = fieldEntries[i];
+    if (!Array.isArray(range) || range.length !== 2) continue;
     const vegaField = reverseFieldMap[field] ?? field;
-    const signalKeyStart = formatVegaSignalKey(selectionName);
-    const signalTupleInfo = signalKeyStart + '_tuple_fields';
-    if (!(signalTupleInfo in currentSignals)) continue;
-    const signalTuple = currentSignals[signalTupleInfo];
-    const channel = (
-      signalTuple as Array<{ channel: string; field: string }>
-    ).find((t) => t.field === vegaField)?.channel;
-    // Vega-Lite only emits `_tuple_fields` entries for the x/y channels of
-    // an interval selection, so this narrowing is safe at runtime. The
-    // optional-chain on `.find()?.channel` still leaves `channel` as
-    // `string | undefined` at the type level, so guard explicitly: if we
-    // didn't find a matching tuple field there's no signal to update for
-    // this entry and we move on. Mirrors the `as 'x' | 'y'` narrowing
-    // already used at the top of this file for the symmetric read path.
+
+    // Resolve the channel by field match; fall back to the tuple entry at the
+    // same position when the field name doesn't line up (keeps a 2D brush
+    // working even if the stored keys and encoding fields diverge).
+    let channel = tupleFields.find((t) => t.field === vegaField)?.channel;
+    if (channel !== 'x' && channel !== 'y') {
+      channel = tupleFields[i]?.channel;
+    }
     if (channel !== 'x' && channel !== 'y') continue;
+
     const signalKeyFull = `${signalKeyStart}_${channel}`;
-    let testNew = range;
-    testNew = toPixelRange(testNew, channel);
+    const testNew = toPixelRange(range, channel);
+
+    // Skip only when the current signal is a usable 2-number tuple that
+    // already matches — otherwise (empty/null/uninitialised) always write,
+    // and never let a bad `currentVal` throw and abort the loop.
     const currentVal = vegaView.value.signal(signalKeyFull);
-    const closeEnough = (x: number, y: number, eps = 1e-6) =>
-      Math.abs(x - y) < eps;
     if (
-      closeEnough(Math.min(...currentVal), Math.min(...testNew)) &&
-      closeEnough(Math.max(...currentVal), Math.max(...testNew))
+      Array.isArray(currentVal) &&
+      currentVal.length === 2 &&
+      typeof currentVal[0] === 'number' &&
+      typeof currentVal[1] === 'number'
     ) {
-      continue;
+      const closeEnough = (x: number, y: number, eps = 1e-6) =>
+        Math.abs(x - y) < eps;
+      if (
+        closeEnough(Math.min(...currentVal), Math.min(...testNew)) &&
+        closeEnough(Math.max(...currentVal), Math.max(...testNew))
+      ) {
+        continue;
+      }
     }
 
     vegaView.value.signal(signalKeyFull, testNew);

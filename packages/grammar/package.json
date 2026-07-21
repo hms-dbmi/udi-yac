@@ -40,7 +40,7 @@
   "scripts": {
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
-    "test": "npm run build:all && node test/smoke-vue.mjs && node test/smoke-ce.mjs && node test/smoke-react.mjs && node test/smoke-exports.mjs && node test/expr-to-arquero.mjs && node test/query-backend.mjs",
+    "test": "npm run build:all && node test/smoke-vue.mjs && node test/smoke-ce.mjs && node test/smoke-react.mjs && node test/smoke-exports.mjs && node test/expr-to-arquero.mjs && node test/query-backend.mjs && node test/brush-render.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "build-schema": "ts-json-schema-generator --path './GrammarTypes.ts' --type 'UDIGrammar' --tsconfig ./tsconfig.json > UDIGrammarSchema.json",
