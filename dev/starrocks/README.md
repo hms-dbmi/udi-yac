@@ -1,7 +1,9 @@
 # Local StarRocks for UDI development
 
 Single-node StarRocks (FE+BE in one container) to exercise the server-side
-query backend (`udiagent.query.StarRocksConnector`) end-to-end.
+query backend (`udiagent.query.StarRocksConnector`) end-to-end. For how that
+backend works and its full configuration/integration reference, see
+[`packages/agent/src/udiagent/query/README.md`](../../packages/agent/src/udiagent/query/README.md).
 
 The seed data itself is **not** checked into the repo. The default dataset is
 `sample-data/pcx/` (de-identified pediatric CNS-tumor tables) — ask a
