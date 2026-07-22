@@ -48,7 +48,7 @@ uv run --project packages/agent --extra server fastapi dev packages/agent/src/ud
 
 Toolkit smoke tests (after `pnpm build:toolkit`): `node test/smoke-{vue,ce,react,exports}.mjs` in `packages/grammar`.
 
-Local StarRocks (server-side query backend dev/testing): `dev/starrocks/README.md` — docker compose up, then `uv run python scripts/seed_starrocks.py` in `packages/agent` seeds any CSV dir (default `sample-data/pcx`, gitignored). `UDI_STARROCKS_TEST=1 uv run pytest tests/test_query_parity.py` replays the Arquero parity goldens against the live instance.
+Local StarRocks (server-side query backend dev/testing): `dev/starrocks/README.md` — docker compose up, then `uv run python scripts/seed_starrocks.py` in `packages/agent` seeds any CSV dir (default `sample-data/pcx`, gitignored). The `.vscode/tasks.json` **Data: Regenerate + seed pcx** task chains container-up → `gen_datapackage.py` → `seed_starrocks.py` for a one-click refresh after editing `sample-data/pcx`. `UDI_STARROCKS_TEST=1 uv run pytest tests/test_query_parity.py` replays the Arquero parity goldens against the live instance.
 
 ## CI / Releases (.github/workflows/)
 

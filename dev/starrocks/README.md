@@ -32,6 +32,12 @@ The chat now loads schema/domains from `GET /v1/yac/metadata` (no CSVs enter
 the browser) and every query — including brush cross-filtering, committed on
 mouse-up — runs on StarRocks via `POST /v1/yac/query`.
 
+**VS Code shortcut:** the **Data: Regenerate + seed pcx** task (Run Task…)
+chains steps 1–2 — starts the container, regenerates
+`sample-data/pcx/datapackage.json`, and seeds the database — so re-running
+after editing the pcx CSVs is one click. Individual `Data: *` tasks run each
+step alone.
+
 ## Seeding other datasets
 
 `seed_starrocks.py <csv-dir> --database <name>` seeds any directory of CSVs.
