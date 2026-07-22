@@ -19,3 +19,6 @@ storybook-static/
 sample-data/pcx
 # Written by packages/agent/scripts/seed_starrocks.py (contains local connection details)
 packages/agent/starrocks-backends.json
+# Written by packages/agent/scripts/seed_duckdb.py (local backend config + seeded DB file)
+packages/agent/duckdb-backends.json
+packages/agent/*.duckdb

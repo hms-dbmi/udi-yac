@@ -48,7 +48,7 @@ uv run --project packages/agent --extra server fastapi dev packages/agent/src/ud
 
 Toolkit smoke tests (after `pnpm build:toolkit`): `node test/smoke-{vue,ce,react,exports}.mjs` in `packages/grammar`.
 
-Local StarRocks (server-side query backend dev/testing): `dev/starrocks/README.md` — docker compose up, then `uv run python scripts/seed_starrocks.py` in `packages/agent` seeds any CSV dir (default `sample-data/pcx`, gitignored). The `.vscode/tasks.json` **Data: Regenerate + seed pcx** task chains container-up → `gen_datapackage.py` → `seed_starrocks.py` for a one-click refresh after editing `sample-data/pcx`. `UDI_STARROCKS_TEST=1 uv run pytest tests/test_query_parity.py` replays the Arquero parity goldens against the live instance.
+Local query backends (server-side data dev/testing): **DuckDB** (`dev/duckdb/README.md`) is the no-container path — `seed_duckdb.py` loads any CSV dir into a local `.duckdb` file + `duckdb-backends.json`; **StarRocks** (`dev/starrocks/README.md`) is the container path — docker compose up, then `seed_starrocks.py`. Both share CSV cleaning/typing/FK carry-through so results match. `.vscode/tasks.json` **Data:** tasks automate each (`Data: Regenerate + seed pcx` for StarRocks, `Data: Regenerate + seed pcx (DuckDB)` for DuckDB) — both chain `gen_datapackage.py` → seed. `UDI_STARROCKS_TEST=1 uv run pytest tests/test_query_parity.py` runs parity goldens on live StarRocks; the default `uv run pytest` already runs them on DuckDB.
 
 ## CI / Releases (.github/workflows/)
 

@@ -86,6 +86,24 @@
       ],
       "dependsOrder": "sequence",
       "problemMatcher": []
+    },
+    {
+      "label": "Data: Seed DuckDB (pcx)",
+      "detail": "Seed sample-data/pcx into a local packages/agent/pcx.duckdb file + write duckdb-backends.json — no container needed. Stop the agent before re-seeding.",
+      "type": "shell",
+      "command": "uv run --project packages/agent --extra duckdb python packages/agent/scripts/seed_duckdb.py",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
+    },
+    {
+      "label": "Data: Regenerate + seed pcx (DuckDB)",
+      "detail": "Regenerate the pcx datapackage, then seed a local DuckDB file — zero-infrastructure alternative to StarRocks (no Docker)",
+      "dependsOn": [
+        "Data: Generate pcx datapackage",
+        "Data: Seed DuckDB (pcx)"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
     }
   ]
 }

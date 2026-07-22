@@ -195,8 +195,17 @@ The key `default` (or a package with no explicit match) serves requests whose
 }
 ```
 
-DuckDB variant: `{ "type": "duckdb", "database": ":memory:",
-"views": { "Event": "/abs/path/event.csv" }, "tables": { "Event": "event" } }`.
+DuckDB has two forms:
+
+- **Seeded file (recommended)** — `{ "type": "duckdb", "database":
+"/abs/pcx.duckdb", "tables": { "Event": "event" }, "schemas": { ... } }`.
+  Tables are pre-loaded with the same cleaning as StarRocks (sentinel-nulling,
+  typing), so results match. Produced by `seed_duckdb.py`.
+- **In-memory CSV views** — `{ "type": "duckdb", "database": ":memory:",
+"views": { "event": "/abs/event.csv" }, "tables": { "Event": "event" } }`.
+  Reads CSVs live via `read_csv_auto` — no seeding, but **no sentinel
+  cleaning**, so mixed numeric/placeholder columns (e.g. `"Not Available"` in
+  a date column) type as text and won't brush. Handy for quick tests.
 
 Then run the server with the extras and the env var:
 
@@ -209,11 +218,15 @@ UDI_QUERY_BACKENDS=/path/to/backends.json INSECURE_DEV_MODE=1 \
 Related env var: `UDI_METADATA_TTL_SECONDS` (default `3600`) — introspection
 cache TTL.
 
-**Generating the config for a CSV dataset.** `packages/agent/scripts/seed_starrocks.py`
-seeds a StarRocks database from any CSV directory and **writes this config for
-you** (`packages/agent/starrocks-backends.json`), carrying `foreignKeys`/
-`primaryKey` from the directory's `datapackage.json` into `schemas`. See
-`dev/starrocks/README.md`.
+**Generating the config for a CSV dataset.** Two seeders write this config for
+you, carrying `foreignKeys`/`primaryKey` from the directory's
+`datapackage.json` into `schemas` and applying identical CSV cleaning:
+
+- `packages/agent/scripts/seed_duckdb.py` → a local `.duckdb` file +
+  `duckdb-backends.json`. **No container** — the easiest option. See
+  `dev/duckdb/README.md`.
+- `packages/agent/scripts/seed_starrocks.py` → a running StarRocks database +
+  `starrocks-backends.json`. See `dev/starrocks/README.md`.
 
 ### 3.2 HTTP contract (for a non-toolkit consumer)
 
