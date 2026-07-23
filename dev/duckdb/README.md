@@ -32,6 +32,10 @@ pnpm dev:chat
 Or use the VS Code tasks: **Data: Regenerate + seed pcx (DuckDB)** (regenerate
 the datapackage + seed), then run the agent/chat.
 
+To switch the chat **back** to the bundled HuBMAP CSV dumps (browser mode, no
+server backend), run the **Data: Use HuBMAP (CSV, browser mode)** task (or
+`node scripts/set-chat-data-source.mjs hubmap`).
+
 ## How it compares to StarRocks
 
 |                       | DuckDB                                | StarRocks                           |

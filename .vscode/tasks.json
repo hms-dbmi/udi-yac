@@ -104,6 +104,14 @@
       ],
       "dependsOrder": "sequence",
       "problemMatcher": []
+    },
+    {
+      "label": "Data: Use HuBMAP (CSV, browser mode)",
+      "detail": "Reset the chat to the bundled HuBMAP CSV dumps in interactive (browser) mode — points VITE_UDI_DATA_PACKAGE at /data/hubmap and disables VITE_UDI_REMOTE_PACKAGE in packages/chat/.env.local. Restart the chat dev server after. (The underlying script takes a package arg, e.g. `pcx`, for other bundled sources.)",
+      "type": "shell",
+      "command": "node scripts/set-chat-data-source.mjs hubmap",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
     }
   ]
 }

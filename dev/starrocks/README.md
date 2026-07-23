@@ -36,7 +36,9 @@ mouse-up — runs on StarRocks via `POST /v1/yac/query`.
 chains steps 1–2 — starts the container, regenerates
 `sample-data/pcx/datapackage.json`, and seeds the database — so re-running
 after editing the pcx CSVs is one click. Individual `Data: *` tasks run each
-step alone.
+step alone. To switch the chat **back** to the bundled HuBMAP CSV dumps
+(browser mode, no server backend), run **Data: Use HuBMAP (CSV, browser
+mode)**.
 
 ## Seeding other datasets
 
