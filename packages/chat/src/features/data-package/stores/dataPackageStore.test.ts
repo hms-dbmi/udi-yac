@@ -199,6 +199,109 @@ describe('dataPackageStore — getEntityRelationship', () => {
   });
 });
 
+describe('dataPackageStore — getEntityRelationship shared-parent bridge', () => {
+  // pcx-shaped star schema: two child entities each FK the same parent.
+  function makeStarPackage(surgeryFkField = 'research_id'): DataPackage {
+    const child = (name: string, fkField: string) => ({
+      name,
+      path: `${name}.csv`,
+      'udi:row_count': 10,
+      schema: {
+        fields: [{ name: fkField, 'udi:data_type': 'nominal' as const }],
+        foreignKeys: [
+          {
+            fields: [fkField],
+            reference: { resource: 'Patient', fields: ['research_id'] },
+          },
+        ],
+      },
+      encoding: '',
+      format: '',
+      mediatype: '',
+      scheme: '',
+      type: '',
+    });
+    return {
+      'udi:path': 'https://example.test/data',
+      resources: [
+        {
+          name: 'Patient',
+          path: 'patient.csv',
+          'udi:row_count': 5,
+          schema: { fields: [{ name: 'research_id', 'udi:data_type': 'nominal' }] },
+          encoding: '',
+          format: '',
+          mediatype: '',
+          scheme: '',
+          type: '',
+        },
+        child('Event', 'research_id'),
+        child('Surgery', surgeryFkField),
+      ],
+    };
+  }
+
+  it('bridges sibling entities through a shared parent', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeStarPackage(), []);
+    expect(store.getState().getEntityRelationship('Event', 'Surgery')).toEqual({
+      originKey: 'research_id',
+      targetKey: 'research_id',
+    });
+    expect(store.getState().getEntityRelationship('Surgery', 'Event')).toEqual({
+      originKey: 'research_id',
+      targetKey: 'research_id',
+    });
+  });
+
+  it('maps differing FK column names per side', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeStarPackage('patient_ref'), []);
+    expect(store.getState().getEntityRelationship('Event', 'Surgery')).toEqual({
+      originKey: 'research_id',
+      targetKey: 'patient_ref',
+    });
+    expect(store.getState().getEntityRelationship('Surgery', 'Event')).toEqual({
+      originKey: 'patient_ref',
+      targetKey: 'research_id',
+    });
+  });
+
+  it('direct FK to the parent still takes precedence over the bridge', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeStarPackage(), []);
+    expect(store.getState().getEntityRelationship('Event', 'Patient')).toEqual({
+      originKey: 'research_id',
+      targetKey: 'research_id',
+    });
+  });
+
+  it('returns null for siblings without a common parent', async () => {
+    const store = createDataPackageStore();
+    const pkg = makeStarPackage();
+    // Point Surgery's FK at a different (missing) parent.
+    pkg.resources[2].schema!.foreignKeys![0].reference.resource = 'Other';
+    await store.getState().setDataPackage(pkg, []);
+    expect(store.getState().getEntityRelationship('Event', 'Surgery')).toBeNull();
+  });
+});
+
+describe('dataPackageStore — getKeyFields', () => {
+  it('collects primary key, FK fields, and udi:unique fields in schema order', async () => {
+    const store = createDataPackageStore();
+    const pkg = makePackage();
+    // donors: add a PK and a unique field; samples already has an FK.
+    pkg.resources[0].schema!.primaryKey = ['organ'];
+    (pkg.resources[0].schema!.fields[0] as Record<string, unknown>)['udi:unique'] = true;
+    await store.getState().setDataPackage(pkg, []);
+
+    // Schema field order: age_value (unique) before organ (PK).
+    expect(store.getState().getKeyFields('donors')).toEqual(['age_value', 'organ']);
+    expect(store.getState().getKeyFields('samples')).toEqual(['donor_id']);
+    expect(store.getState().getKeyFields('ghosts')).toEqual([]);
+  });
+});
+
 describe('dataPackageStore — setFilteredData', () => {
   it('inserts data per entity and produces a fresh Map reference', async () => {
     const store = createDataPackageStore();

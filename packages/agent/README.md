@@ -108,17 +108,19 @@ uv run fastapi run src/udiagent/server/app.py --port 8007
 
 ### Server Environment Variables
 
-| Variable              | Required | Default   | Description                                                                         |
-| --------------------- | -------- | --------- | ----------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`      | No       | —         | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header. |
-| `GPT_MODEL_NAME`      | No       | `gpt-5.4` | OpenAI model for orchestration                                                      |
-| `JWT_SECRET_KEY`      | Yes\*    | —         | JWT signing key (\*not required if `INSECURE_DEV_MODE=1`)                           |
-| `JWT_ALGORITHM`       | No       | `HS256`   | JWT algorithm                                                                       |
-| `INSECURE_DEV_MODE`   | No       | `0`       | Set to `1` to skip JWT verification (development only)                              |
-| `LANGFUSE_SECRET_KEY` | No       | —         | LangFuse observability secret key (opt-in; tracing is disabled when unset)          |
-| `LANGFUSE_PUBLIC_KEY` | No       | —         | LangFuse observability public key (opt-in; tracing is disabled when unset)          |
-| `LANGFUSE_HOST`       | No       | —         | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                           |
-| `LANGFUSE_ENVIRONMENT`| No       | —         | Tags traces with an environment label (e.g. `production`); does not enable tracing  |
+| Variable                   | Required | Default   | Description                                                                         |
+| -------------------------- | -------- | --------- | ----------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`           | No       | —         | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header. |
+| `GPT_MODEL_NAME`           | No       | `gpt-5.4` | OpenAI model for orchestration                                                      |
+| `JWT_SECRET_KEY`           | Yes\*    | —         | JWT signing key (\*not required if `INSECURE_DEV_MODE=1`)                           |
+| `JWT_ALGORITHM`            | No       | `HS256`   | JWT algorithm                                                                       |
+| `INSECURE_DEV_MODE`        | No       | `0`       | Set to `1` to skip JWT verification (development only)                              |
+| `LANGFUSE_SECRET_KEY`      | No       | —         | LangFuse observability secret key (opt-in; tracing is disabled when unset)          |
+| `LANGFUSE_PUBLIC_KEY`      | No       | —         | LangFuse observability public key (opt-in; tracing is disabled when unset)          |
+| `LANGFUSE_HOST`            | No       | —         | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                           |
+| `LANGFUSE_ENVIRONMENT`     | No       | —         | Tags traces with an environment label (e.g. `production`); does not enable tracing  |
+| `UDI_QUERY_BACKENDS`       | No       | —         | Path to a JSON file configuring server-side query backends (see below)              |
+| `UDI_METADATA_TTL_SECONDS` | No       | `3600`    | TTL for the introspected-metadata cache                                             |
 
 ### Server Endpoints
 
@@ -126,10 +128,24 @@ uv run fastapi run src/udiagent/server/app.py --port 8007
 | ------------------------------ | ------ | ----------------------------------------------------- |
 | `/`                            | GET    | API status and info                                   |
 | `/v1/yac/completions`          | POST   | Main orchestrator — routes user requests to tools     |
+| `/v1/yac/query`                | POST   | Server-side data: batched grammar→SQL query execution |
+| `/v1/yac/metadata`             | GET    | Server-side data: introspected dataSchema/dataDomains |
 | `/v1/yac/benchmark`            | POST   | Benchmark variant with optional orchestrator override |
 | `/v1/yac/examples`             | GET    | Example prompts from `data/example_prompts.json`      |
 | `/v1/yac/structured_functions` | GET    | Structured function registry                          |
 | `/v1/yac/benchmark_analysis`   | GET    | Latest benchmark analysis results                     |
+
+### Server-side query backends
+
+`/v1/yac/query` and `/v1/yac/metadata` let data stay on the server: the agent
+compiles UDI grammar transformation pipelines to SQL and runs them against a
+configured database (StarRocks, DuckDB) instead of the browser loading CSVs.
+Configure backends via `UDI_QUERY_BACKENDS` (a package→backend JSON map) and
+point the chat at a package with `VITE_UDI_REMOTE_PACKAGE`.
+
+**Full architecture + integration guide:
+[`src/udiagent/query/README.md`](src/udiagent/query/README.md).**
+Local dev instance: [`dev/starrocks/README.md`](../../dev/starrocks/README.md).
 
 ### Docker
 

@@ -227,6 +227,29 @@ describe('dataFiltersStore', () => {
     expect(sel.selection).toBeNull();
   });
 
+  it('clearFilter with a `uuid::field` key drops only that field of a split point filter', () => {
+    const store = createDataFiltersStore();
+    store.getState().updateInternalDataSelections({
+      'uuid-1': {
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { organization_name: ['CHOP'], event_type: ['Deceased'] },
+      },
+    });
+
+    store.getState().clearFilter('uuid-1::event_type');
+    let sel = store.getState().internalDataSelections['uuid-1'];
+    // Sibling field survives; the cleared field is removed entirely (its
+    // chip AND widget go away — clearing is an explicit filter removal).
+    expect(sel.selection).toEqual({ organization_name: ['CHOP'] });
+
+    store.getState().clearFilter('uuid-1::organization_name');
+    sel = store.getState().internalDataSelections['uuid-1'];
+    // Last field cleared -> the whole selection is null (full-clear
+    // semantics, which also triggers the source chart's brush reset).
+    expect(sel.selection).toBeNull();
+  });
+
   describe('getValidDataSelections', () => {
     it('drops selections that are not message-filter-prefixed', () => {
       const store = createDataFiltersStore();

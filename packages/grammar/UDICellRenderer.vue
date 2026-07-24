@@ -15,8 +15,11 @@ import { toTableRampInterpolator, toTableCategoryColors } from './Palette';
 
 // Define props
 
-export interface UDICellRendererParams<TData, TValue, TContext>
-  extends ICellRendererParams<TData, TValue, TContext> {
+export interface UDICellRendererParams<
+  TData,
+  TValue,
+  TContext,
+> extends ICellRendererParams<TData, TValue, TContext> {
   udiColumnMapping: ExtendedRowMapping[];
   /** Consumer-supplied color palette, forwarded from TableComponent. */
   palette?: UDIPalette;
@@ -141,25 +144,40 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
     const domain = mapping.domain;
     let numberDomain: [number, number] = [0, 1];
     let stringDomain: string[] = ['unknown'];
-    if ('min' in domain && 'max' in domain) {
-      numberDomain = [domain.min, domain.max];
+    // Discriminate StringDomain first via Array.isArray — it narrows cleanly,
+    // whereas `'min' in domain` no longer does now that NumberDomain permits
+    // partial bounds ({min} or {max}). The final branch is a NumberDomain;
+    // the value guard narrows away `undefined` and keeps the [0, 1] default
+    // if a bound is somehow absent (TableComponent resolves partials to a
+    // full extent before this).
+    if (Array.isArray(domain)) {
+      stringDomain = domain;
     } else if ('numberFields' in domain || 'categoryFields' in domain) {
       throw new Error('numberFields is not supported');
-    } else {
-      stringDomain = domain;
+    } else if (
+      typeof domain.min === 'number' &&
+      typeof domain.max === 'number'
+    ) {
+      numberDomain = [domain.min, domain.max];
     }
     let numberRange: [number, number] | null = null;
     let stringRange: string[] | null = null;
     if (mapping.range) {
-      if ('min' in mapping.range && 'max' in mapping.range) {
-        numberRange = [mapping.range.min, mapping.range.max];
+      // Same discrimination order as domain above: Array.isArray narrows the
+      // StringDomain cleanly; the remaining branch is a NumberDomain whose
+      // (now-partial) bounds are value-guarded.
+      if (Array.isArray(mapping.range)) {
+        stringRange = mapping.range;
       } else if (
         'numberFields' in mapping.range ||
         'categoryFields' in mapping.range
       ) {
         throw new Error('numberFields is not supported');
-      } else {
-        stringRange = mapping.range;
+      } else if (
+        typeof mapping.range.min === 'number' &&
+        typeof mapping.range.max === 'number'
+      ) {
+        numberRange = [mapping.range.min, mapping.range.max];
       }
     }
 
@@ -178,7 +196,8 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
             .unknown(defaultRange.unknownColor);
         } else {
           const nominalColors =
-            toTableCategoryColors(palette?.category) ?? defaultRange.nominalColor;
+            toTableCategoryColors(palette?.category) ??
+            defaultRange.nominalColor;
           colorScale = scaleOrdinal<string, string>(nominalColors)
             .domain(stringDomain)
             .range(stringRange ?? nominalColors)

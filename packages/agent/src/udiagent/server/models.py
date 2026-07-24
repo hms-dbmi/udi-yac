@@ -14,3 +14,22 @@ class YACBenchmarkCompletionRequest(BaseModel):
     dataSchema: str
     dataDomains: str
     orchestrator_choice: str | None = None
+
+
+class YACQueryItem(BaseModel):
+    vizId: str
+    source: list[dict] | dict
+    transformation: list[dict] | None = None
+    displayDataOnly: bool | None = None
+    #: Row offset for paging row-level results past the cap ("load more").
+    offset: int | None = None
+
+
+class YACQueryRequest(BaseModel):
+    """Stateless batched query: every visible viz spec + the current
+    selection state, in one request. Mirrors the toolkit's
+    createRemoteBackend wire contract (packages/grammar/queryBackend.ts)."""
+
+    package: str | None = None
+    selections: dict[str, dict] = {}
+    queries: list[YACQueryItem]

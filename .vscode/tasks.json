@@ -21,7 +21,7 @@
       "label": "Dev: agent",
       "detail": "UDIAgent FastAPI server (http://localhost:8007)",
       "type": "shell",
-      "command": "uv run fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
+      "command": "uv run --project packages/agent --extra server fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": { "group": "dev", "panel": "dedicated" }
@@ -51,6 +51,67 @@
       "dependsOrder": "parallel",
       "problemMatcher": [],
       "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Data: Start StarRocks",
+      "detail": "docker compose up the local StarRocks container (idempotent; ~30-60s to become healthy)",
+      "type": "shell",
+      "command": "docker compose -f dev/starrocks/docker-compose.yml up -d",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
+    },
+    {
+      "label": "Data: Generate pcx datapackage",
+      "detail": "Regenerate sample-data/pcx/datapackage.json from the CSVs (stdlib only). For another dataset, run scripts/gen_datapackage.py directly.",
+      "type": "shell",
+      "command": "python3 scripts/gen_datapackage.py sample-data/pcx --strip pcx_30_ --strip _level_deid",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
+    },
+    {
+      "label": "Data: Seed StarRocks (pcx)",
+      "detail": "Load sample-data/pcx into StarRocks and write packages/agent/starrocks-backends.json (waits for the container to be ready)",
+      "type": "shell",
+      "command": "uv run --project packages/agent --extra starrocks python packages/agent/scripts/seed_starrocks.py",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
+    },
+    {
+      "label": "Data: Regenerate + seed pcx",
+      "detail": "Start StarRocks, regenerate the pcx datapackage, then seed the database — one-click refresh after editing sample-data/pcx",
+      "dependsOn": [
+        "Data: Start StarRocks",
+        "Data: Generate pcx datapackage",
+        "Data: Seed StarRocks (pcx)"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Data: Seed DuckDB (pcx)",
+      "detail": "Seed sample-data/pcx into a local packages/agent/pcx.duckdb file + write duckdb-backends.json — no container needed. Stop the agent before re-seeding.",
+      "type": "shell",
+      "command": "uv run --project packages/agent --extra duckdb python packages/agent/scripts/seed_duckdb.py",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
+    },
+    {
+      "label": "Data: Regenerate + seed pcx (DuckDB)",
+      "detail": "Regenerate the pcx datapackage, then seed a local DuckDB file — zero-infrastructure alternative to StarRocks (no Docker)",
+      "dependsOn": [
+        "Data: Generate pcx datapackage",
+        "Data: Seed DuckDB (pcx)"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Data: Use HuBMAP (CSV, browser mode)",
+      "detail": "Reset the chat to the bundled HuBMAP CSV dumps in interactive (browser) mode — points VITE_UDI_DATA_PACKAGE at /data/hubmap and disables VITE_UDI_REMOTE_PACKAGE in packages/chat/.env.local. Restart the chat dev server after. (The underlying script takes a package arg, e.g. `pcx`, for other bundled sources.)",
+      "type": "shell",
+      "command": "node scripts/set-chat-data-source.mjs hubmap",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
     }
   ]
 }

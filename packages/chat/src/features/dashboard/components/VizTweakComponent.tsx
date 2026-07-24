@@ -14,8 +14,13 @@ import {
   useTracker,
 } from '@/app/UDIChatContext';
 import type { UDIGrammar } from 'udi-toolkit/react';
-import { setMappingFieldByEncoding, collectLockedFields } from '@/utils/specMutations';
-import type { TweakableParam, LayerLike, MappingLike } from './VizTweakComponent.types';
+import {
+  setMappingFieldByEncoding,
+  swapDimensionField,
+  swapMeasureField,
+} from '@/utils/specMutations';
+import { computeTweakableParams } from '../utils/tweakability';
+import type { TweakableParam } from './VizTweakComponent.types';
 
 interface VizTweakComponentProps {
   spec: UDIGrammar;
@@ -32,87 +37,40 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   const dataPackageStore = useDataPackageStore();
   const trackEvent = useTracker();
 
-  const sourceName = useMemo(() => {
-    const src = Array.isArray(spec.source)
-      ? (spec.source as Array<{ name?: string }>)[0]
-      : (spec.source as { name?: string });
-    return src?.name ?? null;
-  }, [spec.source]);
-
-  // Fields referenced by schema-defining transformations (groupby, binby,
-  // rollup.field, kde, join.on). Swapping a mapping that references one of
-  // these would leave the pipeline pointing at the old field, silently
-  // breaking the chart — so such mappings are hidden from the tweak UI.
-  const lockedFields = useMemo(() => collectLockedFields(spec), [spec]);
-
-  const tweakableParams = useMemo<TweakableParam[]>(() => {
-    if (!spec.representation) return [];
-    const representations = (
-      Array.isArray(spec.representation) ? spec.representation : [spec.representation]
-    ) as LayerLike[];
-
-    const allMappings: MappingLike[] = [];
-    for (const layer of representations) {
-      if (layer.mark === 'row') continue;
-      const mappings: MappingLike[] = Array.isArray(layer.mapping)
-        ? layer.mapping
-        : layer.mapping
-          ? [layer.mapping]
-          : [];
-      allMappings.push(...mappings);
-    }
-
-    const entityFields = sourceName ? (sourceFields?.[sourceName] ?? []) : [];
-    const seen = new Set<string>();
-
-    const isComplete = (
-      m: MappingLike,
-    ): m is Required<Pick<MappingLike, 'field' | 'encoding' | 'type'>> =>
-      Boolean(m?.field && m?.encoding && m?.type);
-
-    return allMappings
-      .filter(isComplete)
-      .filter((m) => entityFields.includes(m.field))
-      .filter((m) => !lockedFields.has(m.field))
-      .filter((m) => {
-        if (seen.has(m.encoding)) return false;
-        seen.add(m.encoding);
-        return true;
-      })
-      .map((m) => ({
-        field: m.field as string,
-        encoding: m.encoding as string,
-        options:
-          m.type === 'quantitative'
-            ? sourceName
-              ? (quantitativeSourceFields?.[sourceName] ?? [])
-              : []
-            : sourceName
-              ? (categoricalSourceFields?.[sourceName] ?? [])
-              : [],
-      }));
-  }, [
-    spec,
-    sourceName,
-    sourceFields,
-    quantitativeSourceFields,
-    categoricalSourceFields,
-    lockedFields,
-  ]);
+  const tweakableParams = useMemo<TweakableParam[]>(
+    () =>
+      computeTweakableParams(spec, sourceFields, quantitativeSourceFields, categoricalSourceFields),
+    [spec, sourceFields, quantitativeSourceFields, categoricalSourceFields],
+  );
 
   const handleFieldChange = useCallback(
-    (encoding: string, newField: string | null) => {
+    (param: TweakableParam, newField: string | null) => {
       if (!newField) return;
-      const updatedSpec = setMappingFieldByEncoding(spec, encoding, newField);
-      // Reference-equal when the helper detected a no-op (encoding not found
-      // or already bound to newField). Skip the store update in that case.
+      let updatedSpec: UDIGrammar;
+      switch (param.kind) {
+        case 'dimension':
+          // Rewrite this encoding's mapping and keep the groupby in sync, so the
+          // aggregation regroups on the new field without disturbing another
+          // encoding bound to the same dimension.
+          updatedSpec = swapDimensionField(spec, param.encoding, newField);
+          break;
+        case 'measure':
+          // Rewrite the rollup's input field (+ its output column) so the
+          // aggregation recomputes over the new measure.
+          updatedSpec = param.outputKey ? swapMeasureField(spec, param.outputKey, newField) : spec;
+          break;
+        default:
+          updatedSpec = setMappingFieldByEncoding(spec, param.encoding, newField);
+      }
+      // Reference-equal when the mutation was a no-op (unchanged field, encoding
+      // not found, etc.). Skip the store update in that case.
       if (updatedSpec === spec) return;
 
       const vizKey = dashboardStore.getState().vizKey(messageIndex, toolCallIndex);
       dashboardStore.getState().updateActiveVisualizationSpec(vizKey, updatedSpec, sourceFields);
       // Reapply filter transformations to the updated spec (null filters, named filters)
       dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
-      trackEvent('visualization_tweaked', { encoding });
+      trackEvent('visualization_tweaked', { encoding: param.encoding, kind: param.kind });
     },
     [
       spec,
@@ -134,7 +92,7 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
         <Select
           key={param.encoding}
           value={param.field}
-          onValueChange={(val) => handleFieldChange(param.encoding, val)}
+          onValueChange={(val) => handleFieldChange(param, val)}
         >
           <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
             <span className="text-muted-foreground mr-1">{param.encoding}:</span>

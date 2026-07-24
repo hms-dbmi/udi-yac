@@ -9,7 +9,12 @@ import type {
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
 import { httpError } from '@/utils/httpError';
-import { loadDataPackage, type SourceSpec } from 'udi-toolkit/react';
+import {
+  loadDataPackage,
+  createRemoteBackend,
+  setQueryBackend,
+  type SourceSpec,
+} from 'udi-toolkit/react';
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready' | 'error';
 
@@ -28,7 +33,21 @@ export interface DataPackageState {
   /** Maps entity names to canonical data URLs (from udi:path + resource.path). */
   sourceResolver: Record<string, string>;
   filteredData: Map<string, ExportRowSet>;
+  /** False when the package is served by a remote query backend — live
+   *  (per-brush-tick) cross-filtering is unavailable; brushes commit on
+   *  mouse-up with a server round-trip. */
+  interactiveMode: boolean;
+  /** True while a remote batched query round-trip is in flight. */
+  remoteQueryPending: boolean;
   fetchDataPackage: (path: string, fetchOptions?: RequestInit) => Promise<void>;
+  /** Load a server-side package: fetches introspected metadata from
+   *  GET /v1/yac/metadata and routes all queries through POST /v1/yac/query
+   *  instead of loading CSVs into the browser. */
+  fetchRemotePackage: (
+    apiBaseUrl: string,
+    packageName: string,
+    authToken?: string,
+  ) => Promise<void>;
   setDataPackage: (
     dataPackage: DataPackage,
     precomputedDomains?: DataFieldDomain[],
@@ -38,6 +57,10 @@ export interface DataPackageState {
   isValidIntervalFilter: (entity: string, field: string) => ValidStatus;
   isValidPointFilter: (entity: string, field: string, values: unknown[]) => ValidStatus;
   getEntityRelationship: (originSource: string, targetSource: string) => EntityRelationship | null;
+  /** Key columns of an entity — primary key, foreign keys, and udi:unique
+   *  fields, in schema field order. Used by the table view's "relevant
+   *  fields" mode so rows stay identifiable. */
+  getKeyFields: (entity: string) => string[];
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
@@ -135,6 +158,8 @@ export function createDataPackageStore() {
     dataDomainsString: '',
     sourceResolver: {},
     filteredData: new Map(),
+    interactiveMode: true,
+    remoteQueryPending: false,
 
     getDomainForField: (entity: string, field: string) => {
       return get().dataFieldDomains.find((d) => d.entity === entity && d.field === field);
@@ -181,10 +206,59 @@ export function createDataPackageStore() {
         }
         return null;
       };
+
+      // Sibling entities that both FK the same parent (star schema, e.g.
+      // Event → Patient ← Surgery) share the parent's key domain, so the
+      // two-hop relationship collapses to a single hop between their FK
+      // columns — a shape the executors already support. Direct FKs keep
+      // precedence; this only runs when both direct searches miss.
+      // ponytail: first common parent in resource order wins; disambiguate
+      // if a package ever has entities linked through multiple parents.
+      const searchSharedParent = (origin: string, target: string) => {
+        const fkTo = (source: string, parent: string) =>
+          dp.resources
+            .find((r) => r.name === source)
+            ?.schema?.foreignKeys?.find((fk) => fk.reference.resource === parent) ?? null;
+        for (const parent of dp.resources) {
+          if (parent.name === origin || parent.name === target) continue;
+          const originFk = fkTo(origin, parent.name!);
+          const targetFk = fkTo(target, parent.name!);
+          if (originFk && targetFk) {
+            return {
+              originKey: originFk.fields[originFk.fields.length - 1],
+              targetKey: targetFk.fields[targetFk.fields.length - 1],
+            };
+          }
+        }
+        return null;
+      };
+
       return (
         searchOneDirection(originSource, targetSource) ??
-        searchOneDirection(targetSource, originSource, true)
+        searchOneDirection(targetSource, originSource, true) ??
+        searchSharedParent(originSource, targetSource)
       );
+    },
+
+    getKeyFields: (entity: string): string[] => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      if (!resource?.schema) return [];
+      const keys = new Set<string>(resource.schema.primaryKey ?? []);
+      for (const fk of resource.schema.foreignKeys ?? []) {
+        for (const field of fk.fields ?? []) keys.add(field);
+      }
+      for (const field of resource.schema.fields ?? []) {
+        if ((field as Record<string, unknown>)['udi:unique'] === true) {
+          keys.add(field.name);
+        }
+      }
+      // Deterministic order: schema field order, then any PK/FK names that
+      // aren't listed as fields (shouldn't happen, but keep them).
+      const fieldOrder = (resource.schema.fields ?? []).map((f) => f.name);
+      return [
+        ...fieldOrder.filter((name) => keys.has(name)),
+        ...[...keys].filter((name) => !fieldOrder.includes(name)),
+      ];
     },
 
     setFilteredData: (entity: string, data: ExportRowSet) => {
@@ -195,9 +269,50 @@ export function createDataPackageStore() {
       });
     },
 
+    fetchRemotePackage: async (apiBaseUrl: string, packageName: string, authToken?: string) => {
+      set({ loadingPhase: 'fetching', error: null });
+      try {
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${authToken ?? 'dev'}`,
+        };
+        const response = await fetch(
+          `${apiBaseUrl}/v1/yac/metadata?package=${encodeURIComponent(packageName)}`,
+          { headers },
+        );
+        if (!response.ok) {
+          throw await httpError(response);
+        }
+        const metadata = (await response.json()) as {
+          dataSchema: DataPackage;
+          dataDomains: DataFieldDomain[];
+        };
+
+        // Route all toolkit queries through the server BEFORE applying the
+        // package, so no UDIVis render ever tries to fetch a CSV.
+        const backend = await createRemoteBackend({
+          url: `${apiBaseUrl}/v1/yac/query`,
+          packageName,
+          headers,
+        });
+        backend.subscribePending((pending) => set({ remoteQueryPending: pending }));
+        await setQueryBackend(backend);
+        set({ interactiveMode: false });
+
+        // The introspected dataSchema IS a DataPackage descriptor and the
+        // domains match DataFieldDomain — reuse the local pipeline, skipping
+        // CSV domain computation.
+        await get().setDataPackage(metadata.dataSchema, metadata.dataDomains);
+      } catch (e) {
+        set({ error: String(e), loadingPhase: 'error' });
+      }
+    },
+
     fetchDataPackage: async (path: string, fetchOptions?: RequestInit) => {
       set({ loadingPhase: 'fetching', error: null });
       try {
+        // A previous session may have installed a remote backend.
+        await setQueryBackend(null);
+        set({ interactiveMode: true, remoteQueryPending: false });
         const response = await fetch(path, fetchOptions);
         if (!response.ok) {
           throw await httpError(response);

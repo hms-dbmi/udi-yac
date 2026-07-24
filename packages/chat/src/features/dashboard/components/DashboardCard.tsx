@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { UDIVis } from 'udi-toolkit/react';
+import { UDIVis, describeTransformations } from 'udi-toolkit/react';
 import type { DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -13,6 +13,9 @@ import {
   BarChart3,
   ExternalLink,
   GripVertical,
+  Loader2,
+  Columns3,
+  Info,
 } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
@@ -30,6 +33,7 @@ import {
   useDashboardStore,
   useMemoryBankStore,
   useDataPackage,
+  useDataFiltersStore,
   useGlobal,
   useTracker,
 } from '@/app/UDIChatContext';
@@ -37,6 +41,7 @@ import { VizTweakComponent } from './VizTweakComponent';
 import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
 import { hasTweakableFields } from '../utils/tweakability';
+import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
 
 interface DashboardCardProps {
   vizKey: string;
@@ -46,9 +51,13 @@ interface DashboardCardProps {
 
 export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const dashboardStore = useDashboardStore();
+  const dataFiltersStore = useDataFiltersStore();
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  // Remote (non-interactive) mode: true while a batched server round-trip is
+  // updating the dashboard — drives the per-card loading overlay.
+  const remoteQueryPending = useDataPackage((s) => s.remoteQueryPending);
   const palette = usePalette();
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
@@ -91,33 +100,79 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     return `${src}|${repr}`;
   }, [viz.interactiveSpec]);
 
-  const externalSelections = useMemo(() => {
-    const filtered: DataSelections = {};
-    for (const [key, val] of Object.entries(selections)) {
-      if (key !== viz.uuid) filtered[key] = val;
-    }
-    return JSON.parse(JSON.stringify(filtered)) as DataSelections;
-  }, [selections, viz.uuid]);
+  // Pass the full selection set — including this viz's OWN brush (keyed by its
+  // uuid) — back to UDIVis. Feeding the own selection back lets an edit made
+  // elsewhere (the chat adjustment widget, or clearing the toolbar chip) drive
+  // this chart's rendered brush, and makes UDIVis bind the value into the
+  // shared Pinia DataSourcesStore. UDIVis treats an external selection equal to
+  // its current one as a no-op, so live brushing doesn't loop.
+  const externalSelections = useMemo(
+    () => JSON.parse(JSON.stringify(selections)) as DataSelections,
+    [selections],
+  );
 
   const handleClose = useCallback(() => {
     dashboardStore.getState().closeVisualization(vizKey, memoryBankStore);
     trackEvent('visualization_closed', { hasTitle: !!viz.title });
   }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title]);
 
-  // Brushes flow directly into the shared Pinia DataSourcesStore via
-  // UDIVis's Vega signal handlers, so we no longer mirror them to a
-  // React store — no `onSelectionChange` handler needed here.
+  // Mirror brush/click selections out of the shared Pinia DataSourcesStore into
+  // dataFiltersStore.internalDataSelections (keyed by viz uuid), matching the
+  // LLM-filter path. The filter toolbar and chat adjustment widgets read brush
+  // selections from there (see useBrushFilters). Cross-chart filtering still
+  // works via the shared Pinia store + named-filter entries in each viz's
+  // interactiveSpec.transformation.
+  const handleSelectionChange = useCallback(
+    (newSelections: DataSelections) => {
+      const plain = JSON.parse(JSON.stringify(newSelections)) as DataSelections;
+      dataFiltersStore.getState().updateInternalDataSelections(plain);
+    },
+    [dataFiltersStore],
+  );
+
+  // When this viz's own brush is cleared externally (e.g. removing its chip in
+  // the filter toolbar), UDIVis offers no programmatic way to drop a rendered
+  // brush rectangle. Remounting the component via a key change is the simplest
+  // reliable reset. We track the brush's presence in state and bump the key on
+  // the true→false transition only, so an active brush — or another viz's
+  // brush — never triggers a remount loop. This uses React's "adjust state
+  // during render" pattern rather than an effect.
+  const ownHasBrush = selections[viz.uuid]?.selection != null;
+  const [trackedHasBrush, setTrackedHasBrush] = useState(ownHasBrush);
+  const [brushResetKey, setBrushResetKey] = useState(0);
+  if (ownHasBrush !== trackedHasBrush) {
+    setTrackedHasBrush(ownHasBrush);
+    if (!ownHasBrush) setBrushResetKey((k) => k + 1);
+  }
 
   const [showTweak, setShowTweak] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Table view defaults to the fields relevant to the visualization (chart
+  // mappings + entity key columns); toggled to all fields per card.
+  const [showAllFields, setShowAllFields] = useState(false);
+  const getKeyFields = useDataPackage((s) => s.getKeyFields);
 
-  // For table view: strip representation so UDIVis renders as a table
+  // For table view: replace the chart representation with a row layer —
+  // relevant fields by default, or all fields ('*') when toggled.
   const tableSpec = useMemo(() => {
     if (!isTableView) return plainSpec;
     const s = JSON.parse(JSON.stringify(plainSpec));
     delete s.representation;
+    if (!showAllFields) {
+      const source = Array.isArray(viz.spec.source) ? viz.spec.source[0] : viz.spec.source;
+      const keyFields = source?.name ? getKeyFields(source.name) : [];
+      const mapping = buildRelevantRowMapping(viz.spec, keyFields);
+      if (mapping) {
+        s.representation = { mark: 'row', mapping };
+      }
+    }
     return s;
-  }, [plainSpec, isTableView]);
+  }, [plainSpec, isTableView, showAllFields, viz.spec, getKeyFields]);
+
+  // Plain-language summary of the transformation pipeline, shown as an info
+  // tooltip (in both chart and table views) so the user can see how the
+  // displayed data was derived (grouped, aggregated, sorted, …).
+  const transformSteps = useMemo(() => describeTransformations(viz.spec), [viz.spec]);
 
   const specJson = useMemo(() => JSON.stringify(viz.spec, null, 2), [viz.spec]);
 
@@ -202,6 +257,42 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
             </TooltipTrigger>
             <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
           </Tooltip>
+          {isTableView && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn('h-6 w-6', showAllFields && 'text-primary')}
+                    onClick={() => setShowAllFields((v) => !v)}
+                  />
+                }
+              >
+                <Columns3 className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {showAllFields ? 'Show relevant fields only' : 'Show all fields'}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {transformSteps.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger render={<Button variant="ghost" size="icon" className="h-6 w-6" />}>
+                <Info className="h-3 w-3 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="max-w-xs">
+                  <p className="font-medium mb-1">Transformations</p>
+                  <ol className="list-decimal pl-4 space-y-0.5">
+                    {transformSteps.map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
           {debugMode && (
             <Dialog>
               <Tooltip>
@@ -291,12 +382,25 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           />
         </div>
       )}
-      <CardContent className="p-1 flex-1 min-h-0 overflow-hidden">
+      <CardContent className="relative p-1 flex-1 min-h-0 overflow-hidden">
+        {remoteQueryPending && (
+          // Non-blocking corner indicator: the chart stays visible and
+          // interactive in its current state while the round-trip is in
+          // flight. Delay-shown (300ms, backwards fill keeps it invisible
+          // during the delay) so fast responses cause no visual change.
+          <div
+            className="pointer-events-none absolute top-1 right-1 z-10 animate-in fade-in duration-150"
+            style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}
+          >
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
         <UDIVis
           className="block h-full w-full"
-          key={isTableView ? `table-${specKey}` : specKey}
+          key={`${isTableView ? `table-${specKey}` : specKey}-${brushResetKey}`}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
+          onSelectionChange={handleSelectionChange}
           sourceResolver={sourceResolver}
           palette={palette}
           fillContainer

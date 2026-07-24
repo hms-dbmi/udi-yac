@@ -1,877 +1,694 @@
 [
   {
-    "query_templates":[
+    "query_templates": [
       "How many <E> are there, grouped by <F:n>?",
       "Make a bar chart of <E> <F:n>."
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"<E> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<E> count\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":11,
-    "task_types":[
-      "Compute_Derived_Value",
-      "Determine_Range"
-    ],
-    "description":"Counts entities grouped by a nominal field, displayed as a vertical bar chart.",
-    "design_considerations":"Vertical orientation chosen because category count is small (<=4), keeping x-axis labels readable.",
-    "tasks":"Compare counts across categories; identify the most or least common category; assess the range of counts."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"<E> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<E> count\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 11,
+    "task_types": ["Compute_Derived_Value", "Determine_Range"],
+    "description": "Counts entities grouped by a nominal field, displayed as a vertical bar chart.",
+    "design_considerations": "Vertical orientation chosen because category count is small (<=4), keeping x-axis labels readable.",
+    "tasks": "Compare counts across categories; identify the most or least common category; assess the range of counts."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "How many <E> are there, grouped by <F:n>?",
       "Make a bar chart of <E> <F:n>."
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"<E> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E> count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":11,
-    "task_types":[
-      "Compute_Derived_Value",
-      "Determine_Range"
-    ],
-    "description":"Counts entities grouped by a nominal field, displayed as a horizontal bar chart.",
-    "design_considerations":"Horizontal orientation chosen because category count is high (>4), allowing longer labels on the y-axis.",
-    "tasks":"Compare counts across categories; identify the most or least common category; assess the range of counts."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"<E> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E> count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 11,
+    "task_types": ["Compute_Derived_Value", "Determine_Range"],
+    "description": "Counts entities grouped by a nominal field, displayed as a horizontal bar chart.",
+    "design_considerations": "Horizontal orientation chosen because category count is high (>4), allowing longer labels on the y-axis.",
+    "tasks": "Compare counts across categories; identify the most or least common category; assess the range of counts."
   },
   {
-    "query_templates":[
-      "How many <E1> are there, grouped by <E2.F:n>?"
-    ],
-    "spec_template":"{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E2.F>\"}, {\"rollup\": {\"<E1> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E2.F>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<E1> count\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"medium",
-    "spec_key_count":18,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Joins two entities and counts records grouped by a field from the related entity, displayed as a vertical bar chart.",
-    "design_considerations":"Cross-entity join groups by a field not native to the counted entity. Vertical orientation for small category counts (<=4).",
-    "tasks":"Compare counts across categories from a related entity; discover cross-entity frequency patterns."
+    "query_templates": ["How many <E1> are there, grouped by <E2.F:n>?"],
+    "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E2.F>\"}, {\"rollup\": {\"<E1> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E2.F>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<E1> count\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "medium",
+    "spec_key_count": 18,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Joins two entities and counts records grouped by a field from the related entity, displayed as a vertical bar chart.",
+    "design_considerations": "Cross-entity join groups by a field not native to the counted entity. Vertical orientation for small category counts (<=4).",
+    "tasks": "Compare counts across categories from a related entity; discover cross-entity frequency patterns."
   },
   {
-    "query_templates":[
-      "How many <E1> are there, grouped by <E2.F:n>?"
-    ],
-    "spec_template":"{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E2.F>\"}, {\"rollup\": {\"<E1> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E1> count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<E2.F>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"medium",
-    "spec_key_count":18,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Joins two entities and counts records grouped by a field from the related entity, displayed as a horizontal bar chart.",
-    "design_considerations":"Cross-entity join with horizontal orientation for higher category counts (>4).",
-    "tasks":"Compare counts across categories from a related entity; discover cross-entity frequency patterns."
+    "query_templates": ["How many <E1> are there, grouped by <E2.F:n>?"],
+    "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E2.F>\"}, {\"rollup\": {\"<E1> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E1> count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<E2.F>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "medium",
+    "spec_key_count": 18,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Joins two entities and counts records grouped by a field from the related entity, displayed as a horizontal bar chart.",
+    "design_considerations": "Cross-entity join with horizontal orientation for higher category counts (>4).",
+    "tasks": "Compare counts across categories from a related entity; discover cross-entity frequency patterns."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "How many <E1> are there, grouped by <E1.F1:n> and <E2.F2:n>?"
     ],
-    "spec_template":"{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": [\"<E2.F2>\", \"<E1.F1>\"]}, {\"rollup\": {\"count <E1>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"count <E1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<E2.F2>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<E1.F1>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":22,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Joins two entities and produces a vertical stacked bar chart of counts grouped by two nominal fields.",
-    "design_considerations":"Stacked bars show part-to-whole composition within each category. Vertical layout for small category counts (<=4). Color encodes the secondary grouping field from the related entity. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
-    "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
+    "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": [\"<E2.F2>\", \"<E1.F1>\"]}, {\"rollup\": {\"count <E1>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"count <E1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<E2.F2>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<E1.F1>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 22,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Joins two entities and produces a vertical stacked bar chart of counts grouped by two nominal fields.",
+    "design_considerations": "Stacked bars show part-to-whole composition within each category. Vertical layout for small category counts (<=4). Color encodes the secondary grouping field from the related entity. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups within each bar."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "How many <E1> are there, grouped by <E1.F1:n> and <E2.F2:n>?"
     ],
-    "spec_template":"{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": [\"<E2.F2>\", \"<E1.F1>\"]}, {\"rollup\": {\"count <E1>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count <E1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<E1.F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<E2.F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":22,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Joins two entities and produces a horizontal stacked bar chart of counts grouped by two nominal fields.",
-    "design_considerations":"Horizontal orientation for higher category counts (>4). Color encodes the primary grouping field. Cross-entity join required. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
-    "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
+    "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": [\"<E2.F2>\", \"<E1.F1>\"]}, {\"rollup\": {\"count <E1>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count <E1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<E1.F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<E2.F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 22,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Joins two entities and produces a horizontal stacked bar chart of counts grouped by two nominal fields.",
+    "design_considerations": "Horizontal orientation for higher category counts (>4). Color encodes the primary grouping field. Cross-entity join required. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups within each bar."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "How many <E> are there, grouped by <F1:n> and <F2:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F2>\", \"<F1>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":15,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Counts entities grouped by two nominal fields, displayed as a vertical stacked bar chart.",
-    "design_considerations":"Vertical stacked layout for small category counts (<=4). Color encodes the sub-group field; x-axis shows the primary grouping. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
-    "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F2>\", \"<F1>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 15,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Counts entities grouped by two nominal fields, displayed as a vertical stacked bar chart.",
+    "design_considerations": "Vertical stacked layout for small category counts (<=4). Color encodes the sub-group field; x-axis shows the primary grouping. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups within each bar."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "How many <E> are there, grouped by <F1:n> and <F2:n>?",
       "What is the count of <F1:n> for each <F2:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":15,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Counts entities grouped by two nominal fields, displayed as a horizontal stacked bar chart.",
-    "design_considerations":"Horizontal stacked layout for higher category counts (>4). Color encodes the sub-group; stacking shows part-to-whole within each bar. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
-    "tasks":"Compare group compositions across categories; identify dominant sub-groups within each bar."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 15,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Counts entities grouped by two nominal fields, displayed as a horizontal stacked bar chart.",
+    "design_considerations": "Horizontal stacked layout for higher category counts (>4). Color encodes the sub-group; stacking shows part-to-whole within each bar. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
+    "tasks": "Compare group compositions across categories; identify dominant sub-groups within each bar."
   },
   {
-    "query_templates":[
-      "What is the count of <F1:n> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"xOffset\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":18,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) vertical bar chart.",
-    "design_considerations":"Uses xOffset for side-by-side grouping, allowing direct comparison between sub-groups. Suitable for small category counts (<=4).",
-    "tasks":"Directly compare sub-group counts within and across categories."
+    "query_templates": ["What is the count of <F1:n> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"xOffset\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 18,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) vertical bar chart.",
+    "design_considerations": "Uses xOffset for side-by-side grouping, allowing direct comparison between sub-groups. Suitable for small category counts (<=4).",
+    "tasks": "Directly compare sub-group counts within and across categories."
   },
   {
-    "query_templates":[
-      "What is the count of <F1:n> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"yOffset\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":18,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) horizontal bar chart.",
-    "design_considerations":"Uses yOffset for side-by-side grouping in horizontal orientation. Chosen when at least one field has more than 4 categories.",
-    "tasks":"Directly compare sub-group counts within and across categories."
+    "query_templates": ["What is the count of <F1:n> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"yOffset\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 18,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) horizontal bar chart.",
+    "design_considerations": "Uses yOffset for side-by-side grouping in horizontal orientation. Chosen when at least one field has more than 4 categories.",
+    "tasks": "Directly compare sub-group counts within and across categories."
   },
   {
-    "query_templates":[
-      "What is the proportion of <F1:n> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\", \"out\": \"groupCounts\"}, {\"rollup\": {\"<F2>_count\": {\"op\": \"count\"}}}, {\"groupby\": [\"<F1>\", \"<F2>\"], \"in\": \"<E>\"}, {\"rollup\": {\"<F1>_and_<F2>_count\": {\"op\": \"count\"}}}, {\"join\": {\"on\": \"<F2>\"}, \"in\": [\"<E>\", \"groupCounts\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": \"d['<F1>_and_<F2>_count'] \/ d['<F2>_count']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":24,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Shows the relative frequency (proportion) of one nominal field within each category of another, as a vertical normalized bar chart.",
-    "design_considerations":"Normalization computes proportions per group, enabling fair comparison across groups of different sizes. Vertical layout for small category counts (<=4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
-    "tasks":"Compare relative proportions across categories; identify which sub-groups dominate in each group."
+    "query_templates": ["What is the proportion of <F1:n> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\", \"out\": \"groupCounts\"}, {\"rollup\": {\"<F2>_count\": {\"op\": \"count\"}}}, {\"groupby\": [\"<F1>\", \"<F2>\"], \"in\": \"<E>\"}, {\"rollup\": {\"<F1>_and_<F2>_count\": {\"op\": \"count\"}}}, {\"join\": {\"on\": \"<F2>\"}, \"in\": [\"<E>\", \"groupCounts\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": {\"op\": \"\/\", \"left\": {\"field\": \"<F1>_and_<F2>_count\"}, \"right\": {\"field\": \"<F2>_count\"}}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"y\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "complex",
+    "spec_key_count": 26,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Shows the relative frequency (proportion) of one nominal field within each category of another, as a vertical normalized bar chart.",
+    "design_considerations": "Normalization computes proportions per group, enabling fair comparison across groups of different sizes. Vertical layout for small category counts (<=4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
+    "tasks": "Compare relative proportions across categories; identify which sub-groups dominate in each group."
   },
   {
-    "query_templates":[
-      "What is the proportion of <F1:n> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\", \"out\": \"groupCounts\"}, {\"rollup\": {\"<F2>_count\": {\"op\": \"count\"}}}, {\"groupby\": [\"<F1>\", \"<F2>\"], \"in\": \"<E>\"}, {\"rollup\": {\"<F1>_and_<F2>_count\": {\"op\": \"count\"}}}, {\"join\": {\"on\": \"<F2>\"}, \"in\": [\"<E>\", \"groupCounts\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": \"d['<F1>_and_<F2>_count'] \/ d['<F2>_count']\"}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":24,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Shows the relative frequency (proportion) of one nominal field within each category of another, as a horizontal normalized bar chart.",
-    "design_considerations":"Normalization for proportional comparison. Horizontal layout for higher category counts (>4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
-    "tasks":"Compare relative proportions across categories; identify which sub-groups dominate in each group."
+    "query_templates": ["What is the proportion of <F1:n> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\", \"out\": \"groupCounts\"}, {\"rollup\": {\"<F2>_count\": {\"op\": \"count\"}}}, {\"groupby\": [\"<F1>\", \"<F2>\"], \"in\": \"<E>\"}, {\"rollup\": {\"<F1>_and_<F2>_count\": {\"op\": \"count\"}}}, {\"join\": {\"on\": \"<F2>\"}, \"in\": [\"<E>\", \"groupCounts\"], \"out\": \"datasets\"}, {\"derive\": {\"proportion\": {\"op\": \"\/\", \"left\": {\"field\": \"<F1>_and_<F2>_count\"}, \"right\": {\"field\": \"<F2>_count\"}}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"proportion\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "complex",
+    "spec_key_count": 26,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Shows the relative frequency (proportion) of one nominal field within each category of another, as a horizontal normalized bar chart.",
+    "design_considerations": "Normalization for proportional comparison. Horizontal layout for higher category counts (>4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
+    "tasks": "Compare relative proportions across categories; identify which sub-groups dominate in each group."
   },
   {
-    "query_templates":[
-      "What is the minimum <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"minimum <F1>\": {\"op\": \"min\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"minimum <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the minimum of a quantitative field for each category, displayed as a horizontal bar chart.",
-    "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the minimum aggregate value for easy comparison.",
-    "tasks":"Compare the minimum value across categories; identify which group has the highest or lowest minimum."
+    "query_templates": ["What is the minimum <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"minimum <F1>\": {\"op\": \"min\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"minimum <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the minimum of a quantitative field for each category, displayed as a horizontal bar chart.",
+    "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the minimum aggregate value for easy comparison.",
+    "tasks": "Compare the minimum value across categories; identify which group has the highest or lowest minimum."
   },
   {
-    "query_templates":[
-      "What is the minimum <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"minimum <F1>\": {\"op\": \"min\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"minimum <F1>\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the minimum of a quantitative field for each category, displayed as a vertical bar chart.",
-    "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the minimum aggregate value.",
-    "tasks":"Compare the minimum value across categories; identify which group has the highest or lowest minimum."
+    "query_templates": ["What is the minimum <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"minimum <F1>\": {\"op\": \"min\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"minimum <F1>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the minimum of a quantitative field for each category, displayed as a vertical bar chart.",
+    "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the minimum aggregate value.",
+    "tasks": "Compare the minimum value across categories; identify which group has the highest or lowest minimum."
   },
   {
-    "query_templates":[
-      "What is the maximum <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"maximum <F1>\": {\"op\": \"max\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"maximum <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the maximum of a quantitative field for each category, displayed as a horizontal bar chart.",
-    "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the maximum aggregate value for easy comparison.",
-    "tasks":"Compare the maximum value across categories; identify which group has the highest or lowest maximum."
+    "query_templates": ["What is the maximum <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"maximum <F1>\": {\"op\": \"max\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"maximum <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the maximum of a quantitative field for each category, displayed as a horizontal bar chart.",
+    "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the maximum aggregate value for easy comparison.",
+    "tasks": "Compare the maximum value across categories; identify which group has the highest or lowest maximum."
   },
   {
-    "query_templates":[
-      "What is the maximum <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"maximum <F1>\": {\"op\": \"max\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"maximum <F1>\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the maximum of a quantitative field for each category, displayed as a vertical bar chart.",
-    "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the maximum aggregate value.",
-    "tasks":"Compare the maximum value across categories; identify which group has the highest or lowest maximum."
+    "query_templates": ["What is the maximum <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"maximum <F1>\": {\"op\": \"max\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"maximum <F1>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the maximum of a quantitative field for each category, displayed as a vertical bar chart.",
+    "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the maximum aggregate value.",
+    "tasks": "Compare the maximum value across categories; identify which group has the highest or lowest maximum."
   },
   {
-    "query_templates":[
-      "What is the average <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"average <F1>\": {\"op\": \"mean\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"average <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the average of a quantitative field for each category, displayed as a horizontal bar chart.",
-    "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the average aggregate value for easy comparison.",
-    "tasks":"Compare the average value across categories; identify which group has the highest or lowest average."
+    "query_templates": ["What is the average <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"average <F1>\": {\"op\": \"mean\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"average <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the average of a quantitative field for each category, displayed as a horizontal bar chart.",
+    "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the average aggregate value for easy comparison.",
+    "tasks": "Compare the average value across categories; identify which group has the highest or lowest average."
   },
   {
-    "query_templates":[
-      "What is the average <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"average <F1>\": {\"op\": \"mean\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"average <F1>\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the average of a quantitative field for each category, displayed as a vertical bar chart.",
-    "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the average aggregate value.",
-    "tasks":"Compare the average value across categories; identify which group has the highest or lowest average."
+    "query_templates": ["What is the average <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"average <F1>\": {\"op\": \"mean\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"average <F1>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the average of a quantitative field for each category, displayed as a vertical bar chart.",
+    "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the average aggregate value.",
+    "tasks": "Compare the average value across categories; identify which group has the highest or lowest average."
   },
   {
-    "query_templates":[
-      "What is the median <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"median <F1>\": {\"op\": \"median\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"median <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the median of a quantitative field for each category, displayed as a horizontal bar chart.",
-    "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the median aggregate value for easy comparison.",
-    "tasks":"Compare the median value across categories; identify which group has the highest or lowest median."
+    "query_templates": ["What is the median <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"median <F1>\": {\"op\": \"median\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"median <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the median of a quantitative field for each category, displayed as a horizontal bar chart.",
+    "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the median aggregate value for easy comparison.",
+    "tasks": "Compare the median value across categories; identify which group has the highest or lowest median."
   },
   {
-    "query_templates":[
-      "What is the median <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"median <F1>\": {\"op\": \"median\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"median <F1>\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the median of a quantitative field for each category, displayed as a vertical bar chart.",
-    "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the median aggregate value.",
-    "tasks":"Compare the median value across categories; identify which group has the highest or lowest median."
+    "query_templates": ["What is the median <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"median <F1>\": {\"op\": \"median\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"median <F1>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the median of a quantitative field for each category, displayed as a vertical bar chart.",
+    "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the median aggregate value.",
+    "tasks": "Compare the median value across categories; identify which group has the highest or lowest median."
   },
   {
-    "query_templates":[
-      "What is the total <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"total <F1>\": {\"op\": \"sum\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"total <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the total of a quantitative field for each category, displayed as a horizontal bar chart.",
-    "design_considerations":"Horizontal orientation for many categories (>4). Bar length encodes the total aggregate value for easy comparison.",
-    "tasks":"Compare the total value across categories; identify which group has the highest or lowest total."
+    "query_templates": ["What is the total <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"total <F1>\": {\"op\": \"sum\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"total <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the total of a quantitative field for each category, displayed as a horizontal bar chart.",
+    "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the total aggregate value for easy comparison.",
+    "tasks": "Compare the total value across categories; identify which group has the highest or lowest total."
   },
   {
-    "query_templates":[
-      "What is the total <F1:q> for each <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"total <F1>\": {\"op\": \"sum\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"total <F1>\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"barchart",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Computes the total of a quantitative field for each category, displayed as a vertical bar chart.",
-    "design_considerations":"Vertical orientation for few categories (<=4). Bar height encodes the total aggregate value.",
-    "tasks":"Compare the total value across categories; identify which group has the highest or lowest total."
+    "query_templates": ["What is the total <F1:q> for each <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F2>\"}, {\"rollup\": {\"total <F1>\": {\"op\": \"sum\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"total <F1>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Computes the total of a quantitative field for each category, displayed as a vertical bar chart.",
+    "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the total aggregate value.",
+    "tasks": "Compare the total value across categories; identify which group has the highest or lowest total."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "Is there a correlation between <F1:q> and <F2:q>?",
       "Make a scatterplot of <F1:q> and <F2:q>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"representation\": {\"mark\": \"point\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"scatterplot",
-    "chart_complexity":"simple",
-    "spec_key_count":9,
-    "task_types":[
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"representation\": {\"mark\": \"point\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "scatterplot",
+    "chart_complexity": "simple",
+    "spec_key_count": 9,
+    "task_types": [
       "Correlate",
       "Cluster",
       "Find_Anomalies",
       "Determine_Range",
       "Find_Extremum"
     ],
-    "description":"Plots two quantitative fields as a scatterplot to explore their relationship.",
-    "design_considerations":"Point marks on two quantitative axes reveal correlations, clusters, and outliers. Data size capped at 100k rows for rendering performance.",
-    "tasks":"Assess correlation between two variables; identify clusters, outliers, extremes, and the range of both variables."
+    "description": "Plots two quantitative fields as a scatterplot to explore their relationship.",
+    "design_considerations": "Point marks on two quantitative axes reveal correlations, clusters, and outliers. Data size capped at 100k rows for rendering performance.",
+    "tasks": "Assess correlation between two variables; identify clusters, outliers, extremes, and the range of both variables."
   },
   {
-    "query_templates":[
-      "Make a stacked bar chart of <F1:n> and <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":15,
-    "task_types":[
-      "Compute_Derived_Value",
-      "Determine_Range"
-    ],
-    "description":"Creates a vertical stacked bar chart of counts grouped by two nominal fields.",
-    "design_considerations":"Vertical stacked layout for small primary category counts (<=4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
-    "tasks":"Compare group compositions across categories; assess the overall range of counts."
+    "query_templates": ["Make a stacked bar chart of <F1:n> and <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 15,
+    "task_types": ["Compute_Derived_Value", "Determine_Range"],
+    "description": "Creates a vertical stacked bar chart of counts grouped by two nominal fields.",
+    "design_considerations": "Vertical stacked layout for small primary category counts (<=4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
+    "tasks": "Compare group compositions across categories; assess the overall range of counts."
   },
   {
-    "query_templates":[
-      "Make a stacked bar chart of <F1:n> and <F2:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"stacked_bar",
-    "chart_complexity":"medium",
-    "spec_key_count":15,
-    "task_types":[
-      "Compute_Derived_Value",
-      "Determine_Range"
-    ],
-    "description":"Creates a horizontal stacked bar chart of counts grouped by two nominal fields.",
-    "design_considerations":"Horizontal stacked layout for higher primary category counts (>4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
-    "tasks":"Compare group compositions across categories; assess the overall range of counts."
+    "query_templates": ["Make a stacked bar chart of <F1:n> and <F2:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F1>\", \"<F2>\"]}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "stacked_bar",
+    "chart_complexity": "medium",
+    "spec_key_count": 15,
+    "task_types": ["Compute_Derived_Value", "Determine_Range"],
+    "description": "Creates a horizontal stacked bar chart of counts grouped by two nominal fields.",
+    "design_considerations": "Horizontal stacked layout for higher primary category counts (>4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
+    "tasks": "Compare group compositions across categories; assess the overall range of counts."
   },
   {
-    "query_templates":[
-      "Make a pie chart of <F:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"circular",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Compute_Derived_Value",
-      "Determine_Range"
-    ],
-    "description":"Creates a pie chart showing the proportional distribution of a nominal field.",
-    "design_considerations":"Arc marks with theta encoding map proportion to angle. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
-    "tasks":"Assess part-to-whole proportions; identify the dominant category."
+    "query_templates": ["Make a pie chart of <F:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "circular",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value", "Determine_Range"],
+    "description": "Creates a pie chart showing the proportional distribution of a nominal field.",
+    "design_considerations": "Arc marks with theta encoding map proportion to angle. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
+    "tasks": "Assess part-to-whole proportions; identify the dominant category."
   },
   {
-    "query_templates":[
-      "Make a donut chart of <F:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
-    "creation_method":"template",
-    "chart_type":"circular",
-    "chart_complexity":"medium",
-    "spec_key_count":16,
-    "task_types":[
-      "Compute_Derived_Value",
-      "Determine_Range"
-    ],
-    "description":"Creates a donut chart showing the proportional distribution of a nominal field.",
-    "design_considerations":"Donut variant with inner\/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
-    "tasks":"Assess part-to-whole proportions; identify the dominant category."
+    "query_templates": ["Make a donut chart of <F:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
+    "creation_method": "template",
+    "chart_type": "circular",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": ["Compute_Derived_Value", "Determine_Range"],
+    "description": "Creates a donut chart showing the proportional distribution of a nominal field.",
+    "design_considerations": "Donut variant with inner\/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
+    "tasks": "Assess part-to-whole proportions; identify the dominant category."
   },
   {
-    "query_templates":[
-      "How many <E> records are there?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"rollup\": {\"<E> Records\": {\"op\": \"count\"}}}]}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"simple",
-    "spec_key_count":3,
-    "task_types":[
-      "Compute_Derived_Value"
-    ],
-    "description":"Counts the total number of records in an entity and displays the result as a single-row table.",
-    "design_considerations":"Simple rollup with no visual encoding beyond the count value. Useful as a quick data quality or size check.",
-    "tasks":"Retrieve the total record count for an entity."
+    "query_templates": ["How many <E> records are there?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"rollup\": {\"<E> Records\": {\"op\": \"count\"}}}]}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "simple",
+    "spec_key_count": 3,
+    "task_types": ["Compute_Derived_Value"],
+    "description": "Counts the total number of records in an entity and displays the result as a single-row table.",
+    "design_considerations": "Simple rollup with no visual encoding beyond the count value. Useful as a quick data quality or size check.",
+    "tasks": "Retrieve the total record count for an entity."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "What does the <E> data look like?",
       "Make a table of <E>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"simple",
-    "spec_key_count":2,
-    "task_types":[
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "simple",
+    "spec_key_count": 2,
+    "task_types": [
       "Determine_Range",
       "Retrieve_Value",
       "Find_Anomalies",
       "Find_Extremum"
     ],
-    "description":"Displays the raw data for an entity as a table.",
-    "design_considerations":"No aggregation or transformation applied; shows the underlying data as-is for exploration.",
-    "tasks":"Explore raw data; retrieve specific values; understand field values and ranges; identify anomalies and extremes."
+    "description": "Displays the raw data for an entity as a table.",
+    "design_considerations": "No aggregation or transformation applied; shows the underlying data as-is for exploration.",
+    "tasks": "Explore raw data; retrieve specific values; understand field values and ranges; identify anomalies and extremes."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "What does the combined data of <E1> and <E2> look like?",
       "Make a table that combines <E1> and <E2>."
     ],
-    "spec_template":"{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}]}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"simple",
-    "spec_key_count":9,
-    "task_types":[
+    "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}]}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "simple",
+    "spec_key_count": 9,
+    "task_types": [
       "Determine_Range",
       "Retrieve_Value",
       "Find_Anomalies",
       "Find_Extremum"
     ],
-    "description":"Joins two related entities and displays the combined data as a table.",
-    "design_considerations":"Cross-entity join enriches the view by combining fields from two related entities. Requires a valid foreign-key relationship.",
-    "tasks":"Explore combined data from two related entities; retrieve specific values; identify anomalies and extremes."
+    "description": "Joins two related entities and displays the combined data as a table.",
+    "design_considerations": "Cross-entity join enriches the view by combining fields from two related entities. Requires a valid foreign-key relationship.",
+    "tasks": "Explore combined data from two related entities; retrieve specific values; identify anomalies and extremes."
   },
   {
-    "query_templates":[
-      "What <E2> has the most <E1>?"
-    ],
-    "spec_template":"{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E1.r.E2.id.from>\"}, {\"rollup\": {\"<E1> count\": {\"op\": \"count\"}}}, {\"orderby\": {\"field\": \"<E1> count\", \"order\": \"desc\"}}, {\"derive\": {\"rank\": \"rank()\"}}, {\"derive\": {\"most frequent\": \"d.rank == 1 ? 'yes' : 'no'\"}}], \"representation\": [{\"mark\": \"row\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E1> count\", \"mark\": \"bar\", \"type\": \"quantitative\", \"domain\": {\"min\": 0}}, {\"encoding\": \"color\", \"column\": \"<E1> count\", \"mark\": \"bar\", \"field\": \"most frequent\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#FFA500\", \"#c6cfd8\"]}]}, {\"mark\": \"row\", \"mapping\": {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}}]}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"complex",
-    "spec_key_count":35,
-    "task_types":[
-      "Find_Extremum",
-      "Retrieve_Value",
-      "Compute_Derived_Value"
-    ],
-    "description":"Finds which related entity record has the highest count of associated records, displayed as a ranked table with bar indicators.",
-    "design_considerations":"Groups by foreign key, counts, ranks, and highlights the top record with color encoding. Bar marks on the count column provide visual comparison.",
-    "tasks":"Identify the record with the most associated entities; compare counts across records."
+    "query_templates": ["What <E2> has the most <E1>?"],
+    "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E1.r.E2.id.from>\"}, {\"rollup\": {\"<E1> count\": {\"op\": \"count\"}}}, {\"orderby\": {\"field\": \"<E1> count\", \"order\": \"desc\"}}, {\"derive\": {\"rank\": {\"window\": \"rank\"}}}, {\"derive\": {\"most frequent\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": \"yes\"}, \"else\": {\"literal\": \"no\"}}}}], \"representation\": [{\"mark\": \"row\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E1> count\", \"mark\": \"bar\", \"type\": \"quantitative\", \"domain\": {\"min\": 0}}, {\"encoding\": \"color\", \"column\": \"<E1> count\", \"mark\": \"bar\", \"field\": \"most frequent\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#FFA500\", \"#c6cfd8\"]}]}, {\"mark\": \"row\", \"mapping\": {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}}]}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 39,
+    "task_types": ["Find_Extremum", "Retrieve_Value", "Compute_Derived_Value"],
+    "description": "Finds which related entity record has the highest count of associated records, displayed as a ranked table with bar indicators.",
+    "design_considerations": "Groups by foreign key, counts, ranks, and highlights the top record with color encoding. Bar marks on the count column provide visual comparison.",
+    "tasks": "Identify the record with the most associated entities; compare counts across records."
   },
   {
-    "query_templates":[
-      "What Record in <E> has the largest <F:q>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"desc\"}}, {\"derive\": {\"largest\": \"rank() == 1 ? 'largest' : 'not'\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"mark\": \"bar\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"column\": \"<F>\", \"mark\": \"bar\", \"field\": \"largest\", \"type\": \"nominal\", \"domain\": [\"largest\", \"not\"], \"range\": [\"#FFA500\", \"c6cfd8\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"medium",
-    "spec_key_count":24,
-    "task_types":[
-      "Find_Extremum",
-      "Retrieve_Value"
-    ],
-    "description":"Finds the record with the largest value in a quantitative field, displayed as a ranked table with bar indicators.",
-    "design_considerations":"Sorts descending by the target field, derives a rank, and highlights the top record with color. Bar marks provide visual magnitude comparison.",
-    "tasks":"Identify the record with the largest value; compare values across records."
+    "query_templates": ["What Record in <E> has the largest <F:q>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"desc\"}}, {\"derive\": {\"largest\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": \"largest\"}, \"else\": {\"literal\": \"not\"}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"mark\": \"bar\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"column\": \"<F>\", \"mark\": \"bar\", \"field\": \"largest\", \"type\": \"nominal\", \"domain\": [\"largest\", \"not\"], \"range\": [\"#FFA500\", \"c6cfd8\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "complex",
+    "spec_key_count": 30,
+    "task_types": ["Find_Extremum", "Retrieve_Value"],
+    "description": "Finds the record with the largest value in a quantitative field, displayed as a ranked table with bar indicators.",
+    "design_considerations": "Sorts descending by the target field, derives a rank, and highlights the top record with color. Bar marks provide visual magnitude comparison.",
+    "tasks": "Identify the record with the largest value; compare values across records."
   },
   {
-    "query_templates":[
-      "What Record in <E2> has the largest <E1> <E1.F:q>?"
-    ],
-    "spec_template":"{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E1.r.E2.id.from>\"}, {\"rollup\": {\"Largest <E1.F>\": {\"op\": \"max\", \"field\": \"<E1.F>\"}}}, {\"filter\": \"d['Largest <E1.F>'] != null\"}, {\"orderby\": {\"field\": \"Largest <E1.F>\", \"order\": \"desc\"}}, {\"derive\": {\"rank\": \"rank()\"}}, {\"derive\": {\"largest\": \"d.rank == 1 ? 'yes' : 'no'\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"Largest <E1.F>\", \"mark\": \"bar\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"column\": \"Largest <E1.F>\", \"mark\": \"bar\", \"field\": \"largest\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#FFA500\", \"#c6cfd8\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"complex",
-    "spec_key_count":35,
-    "task_types":[
-      "Find_Extremum",
-      "Retrieve_Value",
-      "Compute_Derived_Value"
-    ],
-    "description":"Joins two entities, computes the maximum of a quantitative field per group, and ranks the results in a table with bar indicators.",
-    "design_considerations":"Cross-entity join followed by group-level max aggregation. Highlights the top record with color encoding.",
-    "tasks":"Identify which related record has the largest aggregated value; compare across groups."
+    "query_templates": ["What Record in <E2> has the largest <E1> <E1.F:q>?"],
+    "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E1.r.E2.id.from>\"}, {\"rollup\": {\"Largest <E1.F>\": {\"op\": \"max\", \"field\": \"<E1.F>\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"Largest <E1.F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"Largest <E1.F>\", \"order\": \"desc\"}}, {\"derive\": {\"rank\": {\"window\": \"rank\"}}}, {\"derive\": {\"largest\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": \"yes\"}, \"else\": {\"literal\": \"no\"}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"Largest <E1.F>\", \"mark\": \"bar\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"column\": \"Largest <E1.F>\", \"mark\": \"bar\", \"field\": \"largest\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#FFA500\", \"#c6cfd8\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 41,
+    "task_types": ["Find_Extremum", "Retrieve_Value", "Compute_Derived_Value"],
+    "description": "Joins two entities, computes the maximum of a quantitative field per group, and ranks the results in a table with bar indicators.",
+    "design_considerations": "Cross-entity join followed by group-level max aggregation. Highlights the top record with color encoding.",
+    "tasks": "Identify which related record has the largest aggregated value; compare across groups."
   },
   {
-    "query_templates":[
-      "What Record in <E> has the smallest <F:q>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}, {\"derive\": {\"smallest\": \"rank() == 1 ? 'smallest' : 'not'\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"color\", \"column\": \"<F>\", \"mark\": \"rect\", \"orderby\": \"<F>\", \"field\": \"smallest\", \"type\": \"nominal\", \"domain\": [\"smallest\", \"not\"], \"range\": [\"#ffdb9a\", \"white\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"medium",
-    "spec_key_count":21,
-    "task_types":[
-      "Find_Extremum",
-      "Retrieve_Value"
-    ],
-    "description":"Finds the record with the smallest value in a quantitative field, displayed as a ranked table with conditional formatting.",
-    "design_considerations":"Sorts ascending by the target field, derives a rank, and highlights the top record with background color. Uses rect mark for row-level highlighting.",
-    "tasks":"Identify the record with the smallest value; compare values across records."
+    "query_templates": ["What Record in <E> has the smallest <F:q>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}, {\"derive\": {\"smallest\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": \"smallest\"}, \"else\": {\"literal\": \"not\"}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"color\", \"column\": \"<F>\", \"mark\": \"rect\", \"orderby\": \"<F>\", \"field\": \"smallest\", \"type\": \"nominal\", \"domain\": [\"smallest\", \"not\"], \"range\": [\"#ffdb9a\", \"white\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "complex",
+    "spec_key_count": 27,
+    "task_types": ["Find_Extremum", "Retrieve_Value"],
+    "description": "Finds the record with the smallest value in a quantitative field, displayed as a ranked table with conditional formatting.",
+    "design_considerations": "Sorts ascending by the target field, derives a rank, and highlights the top record with background color. Uses rect mark for row-level highlighting.",
+    "tasks": "Identify the record with the smallest value; compare values across records."
   },
   {
-    "query_templates":[
-      "What Record in <E2> has the smallest <E1> <E1.F:q>?"
-    ],
-    "spec_template":"{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E1.r.E2.id.from>\"}, {\"rollup\": {\"Smallest <E1.F>\": {\"op\": \"min\", \"field\": \"<E1.F>\"}}}, {\"filter\": \"d['Smallest <E1.F>'] != null\"}, {\"orderby\": {\"field\": \"Smallest <E1.F>\", \"order\": \"asc\"}}, {\"derive\": {\"rank\": \"rank()\"}}, {\"derive\": {\"smallest\": \"d.rank == 1 ? 'yes' : 'no'\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"color\", \"column\": \"Smallest <E1.F>\", \"mark\": \"bar\", \"orderby\": \"Smallest <E1.F>\", \"field\": \"smallest\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#ffdb9a\", \"white\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"complex",
-    "spec_key_count":32,
-    "task_types":[
-      "Find_Extremum",
-      "Retrieve_Value"
-    ],
-    "description":"Joins two entities, computes the minimum of a quantitative field per group, and ranks the results in a table with conditional formatting.",
-    "design_considerations":"Cross-entity join followed by group-level min aggregation. Highlights the top record with background color via rect mark.",
-    "tasks":"Identify which related record has the smallest aggregated value; compare across groups."
+    "query_templates": ["What Record in <E2> has the smallest <E1> <E1.F:q>?"],
+    "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E1.r.E2.id.from>\"}, {\"rollup\": {\"Smallest <E1.F>\": {\"op\": \"min\", \"field\": \"<E1.F>\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"Smallest <E1.F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"Smallest <E1.F>\", \"order\": \"asc\"}}, {\"derive\": {\"rank\": {\"window\": \"rank\"}}}, {\"derive\": {\"smallest\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": \"yes\"}, \"else\": {\"literal\": \"no\"}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"color\", \"column\": \"Smallest <E1.F>\", \"mark\": \"bar\", \"orderby\": \"Smallest <E1.F>\", \"field\": \"smallest\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#ffdb9a\", \"white\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 38,
+    "task_types": ["Find_Extremum", "Retrieve_Value"],
+    "description": "Joins two entities, computes the minimum of a quantitative field per group, and ranks the results in a table with conditional formatting.",
+    "design_considerations": "Cross-entity join followed by group-level min aggregation. Highlights the top record with background color via rect mark.",
+    "tasks": "Identify which related record has the smallest aggregated value; compare across groups."
   },
   {
-    "query_templates":[
-      "Order the <E> by <F:q>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"x\", \"column\": \"<F>\", \"mark\": \"bar\", \"field\": \"<F>\", \"type\": \"quantitative\", \"range\": {\"min\": 0.2, \"max\": 1}}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"medium",
-    "spec_key_count":17,
-    "task_types":[
-      "Sort"
-    ],
-    "description":"Sorts entity records by a quantitative field and displays the result as an ordered table with in-cell bar marks.",
-    "design_considerations":"Ordered by the quantitative field with nulls filtered out. In-cell bar marks provide visual comparison of magnitude alongside the text values.",
-    "tasks":"View records in sorted order; compare relative magnitudes."
+    "query_templates": ["Order the <E> by <F:q>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"x\", \"column\": \"<F>\", \"mark\": \"bar\", \"field\": \"<F>\", \"type\": \"quantitative\", \"range\": {\"min\": 0.2, \"max\": 1}}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "medium",
+    "spec_key_count": 19,
+    "task_types": ["Sort"],
+    "description": "Sorts entity records by a quantitative field and displays the result as an ordered table with in-cell bar marks.",
+    "design_considerations": "Ordered by the quantitative field with nulls filtered out. In-cell bar marks provide visual comparison of magnitude alongside the text values.",
+    "tasks": "View records in sorted order; compare relative magnitudes."
   },
   {
-    "query_templates":[
-      "What is the range of <E> <F:q> values?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"rollup\": {\"<F> min\": {\"op\": \"min\", \"field\": \"<F>\"}, \"<F> max\": {\"op\": \"max\", \"field\": \"<F>\"}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<F> min\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"text\", \"field\": \"<F> max\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"medium",
-    "spec_key_count":16,
-    "task_types":[
-      "Determine_Range"
-    ],
-    "description":"Computes the minimum and maximum of a quantitative field and displays them as a single-row table.",
-    "design_considerations":"Simple rollup of min and max. Filters out nulls before aggregation for accuracy.",
-    "tasks":"Determine the range of a quantitative field."
+    "query_templates": ["What is the range of <E> <F:q> values?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"rollup\": {\"<F> min\": {\"op\": \"min\", \"field\": \"<F>\"}, \"<F> max\": {\"op\": \"max\", \"field\": \"<F>\"}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<F> min\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"text\", \"field\": \"<F> max\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "medium",
+    "spec_key_count": 18,
+    "task_types": ["Determine_Range"],
+    "description": "Computes the minimum and maximum of a quantitative field and displays them as a single-row table.",
+    "design_considerations": "Simple rollup of min and max. Filters out nulls before aggregation for accuracy.",
+    "tasks": "Determine the range of a quantitative field."
   },
   {
-    "query_templates":[
-      "What is the range of <E> <F:n> values?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"groupby\": \"<F>\"}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<F>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"count\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"medium",
-    "spec_key_count":16,
-    "task_types":[
-      "Determine_Range"
-    ],
-    "description":"Lists all distinct values of a nominal field with their counts, displayed as a table with in-cell bar marks.",
-    "design_considerations":"Groups by the nominal field and counts occurrences. In-cell bars provide visual frequency comparison.",
-    "tasks":"Determine the range (distinct values) of a nominal field; compare category frequencies."
+    "query_templates": ["What is the range of <E> <F:n> values?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"groupby\": \"<F>\"}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<F>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"count\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "medium",
+    "spec_key_count": 18,
+    "task_types": ["Determine_Range"],
+    "description": "Lists all distinct values of a nominal field with their counts, displayed as a table with in-cell bar marks.",
+    "design_considerations": "Groups by the nominal field and counts occurrences. In-cell bars provide visual frequency comparison.",
+    "tasks": "Determine the range (distinct values) of a nominal field; compare category frequencies."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "What is the range of <E> <F1:q> values for every <F2:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F1>'] != null\"}, {\"groupby\": \"<F2>\"}, {\"rollup\": {\"<F1> min\": {\"op\": \"min\", \"field\": \"<F1>\"}, \"<F1> max\": {\"op\": \"max\", \"field\": \"<F1>\"}}}, {\"derive\": {\"range\": \"d['<F1> max'] - d['<F1> min']\"}}, {\"orderby\": {\"field\": \"range\", \"order\": \"desc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<F2>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"text\", \"field\": \"<F1> min\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"column\": \"range\", \"mark\": \"bar\", \"field\": \"<F1> min\", \"type\": \"quantitative\", \"domain\": {\"numberFields\": [\"<F1> min\", \"<F1> max\"]}}, {\"encoding\": \"x2\", \"column\": \"range\", \"mark\": \"bar\", \"field\": \"<F1> max\", \"type\": \"quantitative\", \"domain\": {\"numberFields\": [\"<F1> min\", \"<F1> max\"]}}, {\"encoding\": \"text\", \"field\": \"<F1> max\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"extra complex",
-    "spec_key_count":38,
-    "task_types":[
-      "Determine_Range"
-    ],
-    "description":"Computes the min and max of a quantitative field for each category of a nominal field, displayed as a table with range bar marks.",
-    "design_considerations":"Groups by nominal field, computes min\/max and derived range, then orders by range descending. Uses x\/x2 encoding to show the span between min and max values.",
-    "tasks":"Compare the spread of a quantitative field across categories; identify which group has the widest or narrowest range."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F1>\"}, \"right\": {\"literal\": null}}}, {\"groupby\": \"<F2>\"}, {\"rollup\": {\"<F1> min\": {\"op\": \"min\", \"field\": \"<F1>\"}, \"<F1> max\": {\"op\": \"max\", \"field\": \"<F1>\"}}}, {\"derive\": {\"range\": {\"op\": \"-\", \"left\": {\"field\": \"<F1> max\"}, \"right\": {\"field\": \"<F1> min\"}}}}, {\"orderby\": {\"field\": \"range\", \"order\": \"desc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<F2>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"text\", \"field\": \"<F1> min\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"column\": \"range\", \"mark\": \"bar\", \"field\": \"<F1> min\", \"type\": \"quantitative\", \"domain\": {\"numberFields\": [\"<F1> min\", \"<F1> max\"]}}, {\"encoding\": \"x2\", \"column\": \"range\", \"mark\": \"bar\", \"field\": \"<F1> max\", \"type\": \"quantitative\", \"domain\": {\"numberFields\": [\"<F1> min\", \"<F1> max\"]}}, {\"encoding\": \"text\", \"field\": \"<F1> max\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 42,
+    "task_types": ["Determine_Range"],
+    "description": "Computes the min and max of a quantitative field for each category of a nominal field, displayed as a table with range bar marks.",
+    "design_considerations": "Groups by nominal field, computes min\/max and derived range, then orders by range descending. Uses x\/x2 encoding to show the span between min and max values.",
+    "tasks": "Compare the spread of a quantitative field across categories; identify which group has the widest or narrowest range."
   },
   {
-    "query_templates":[
-      "What is the most frequent <F:n>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>']\"}, {\"groupby\": \"<F>\"}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}, {\"orderby\": {\"field\": \"count\", \"order\": \"desc\"}}, {\"derive\": {\"rank\": \"rank()\"}}, {\"derive\": {\"most frequent\": \"d.rank == 1 ? 'yes' : 'no'\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"color\", \"column\": \"<F>\", \"mark\": \"bar\", \"orderby\": \"<F>\", \"field\": \"most frequent\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#ffdb9a\", \"white\"]}, {\"encoding\": \"text\", \"field\": \"<F>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"count\", \"mark\": \"bar\", \"type\": \"quantitative\", \"domain\": {\"min\": 0}}, {\"encoding\": \"color\", \"column\": \"count\", \"mark\": \"bar\", \"field\": \"most frequent\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#FFA500\", \"#c6cfd8\"]}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"extra complex",
-    "spec_key_count":38,
-    "task_types":[
-      "Find_Extremum",
-      "Retrieve_Value",
-      "Compute_Derived_Value"
-    ],
-    "description":"Finds the most frequent value of a nominal field, displayed as a ranked table with bar marks and conditional formatting.",
-    "design_considerations":"Groups by nominal field, counts, ranks, and highlights the top value. Combines bar marks for count comparison and background color for emphasis.",
-    "tasks":"Identify the most frequent category; compare frequencies across all categories."
+    "query_templates": ["What is the most frequent <F:n>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"field\": \"<F>\"}}, {\"groupby\": \"<F>\"}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}, {\"orderby\": {\"field\": \"count\", \"order\": \"desc\"}}, {\"derive\": {\"rank\": {\"window\": \"rank\"}}}, {\"derive\": {\"most frequent\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": \"yes\"}, \"else\": {\"literal\": \"no\"}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"color\", \"column\": \"<F>\", \"mark\": \"bar\", \"orderby\": \"<F>\", \"field\": \"most frequent\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#ffdb9a\", \"white\"]}, {\"encoding\": \"text\", \"field\": \"<F>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"count\", \"mark\": \"bar\", \"type\": \"quantitative\", \"domain\": {\"min\": 0}}, {\"encoding\": \"color\", \"column\": \"count\", \"mark\": \"bar\", \"field\": \"most frequent\", \"type\": \"nominal\", \"domain\": [\"yes\", \"no\"], \"range\": [\"#FFA500\", \"#c6cfd8\"]}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 42,
+    "task_types": ["Find_Extremum", "Retrieve_Value", "Compute_Derived_Value"],
+    "description": "Finds the most frequent value of a nominal field, displayed as a ranked table with bar marks and conditional formatting.",
+    "design_considerations": "Groups by nominal field, counts, ranks, and highlights the top value. Combines bar marks for count comparison and background color for emphasis.",
+    "tasks": "Identify the most frequent category; compare frequencies across all categories."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "What is the cumulative distribution of <F:q>?",
       "Make a CDF plot of <F:q>."
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}, {\"derive\": {\"total\": \"count()\"}}, {\"derive\": {\"percentile\": {\"rolling\": {\"expression\": \"count() \/ d.total\"}}}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"percentile\", \"type\": \"quantitative\"}]}}",
-    "creation_method":"template",
-    "chart_type":"line",
-    "chart_complexity":"medium",
-    "spec_key_count":14,
-    "task_types":[
-      "Characterize_Distribution"
-    ],
-    "description":"Shows the cumulative distribution function (CDF) of a quantitative field as a line chart.",
-    "design_considerations":"Sorts by value, computes rolling percentile, and draws a line. The CDF reveals the full distribution shape including median, quartiles, and tails.",
-    "tasks":"Characterize the distribution of a variable; identify median, quartiles, and concentration of values."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}, {\"derive\": {\"total\": {\"agg\": \"count\"}}}, {\"derive\": {\"percentile\": {\"rolling\": {\"expression\": {\"op\": \"\/\", \"left\": {\"agg\": \"count\"}, \"right\": {\"field\": \"total\"}}}}}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"percentile\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "line",
+    "chart_complexity": "medium",
+    "spec_key_count": 18,
+    "task_types": ["Characterize_Distribution"],
+    "description": "Shows the cumulative distribution function (CDF) of a quantitative field as a line chart.",
+    "design_considerations": "Sorts by value, computes rolling percentile, and draws a line. The CDF reveals the full distribution shape including median, quartiles, and tails.",
+    "tasks": "Characterize the distribution of a variable; identify median, quartiles, and concentration of values."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "What is the cumulative distribution of <F1:q> for each <F2:n>?",
       "Make a CDF plot of <F1:q> with a line for each <F2:n>."
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F1>'] != null\"}, {\"orderby\": {\"field\": \"<F1>\", \"order\": \"asc\"}}, {\"groupby\": \"<F2>\"}, {\"derive\": {\"total\": \"count()\"}}, {\"derive\": {\"percentile\": {\"rolling\": {\"expression\": \"count() \/ d.total\"}}}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"percentile\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"grouped_line",
-    "chart_complexity":"medium",
-    "spec_key_count":18,
-    "task_types":[
-      "Characterize_Distribution"
-    ],
-    "description":"Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
-    "design_considerations":"Groups by nominal field before computing per-group CDF. Color encodes group identity. Limited to fewer than 5 groups for readability.",
-    "tasks":"Compare distributions across groups; identify which groups have higher or lower concentrations of values."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F1>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F1>\", \"order\": \"asc\"}}, {\"groupby\": \"<F2>\"}, {\"derive\": {\"total\": {\"agg\": \"count\"}}}, {\"derive\": {\"percentile\": {\"rolling\": {\"expression\": {\"op\": \"\/\", \"left\": {\"agg\": \"count\"}, \"right\": {\"field\": \"total\"}}}}}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"percentile\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "grouped_line",
+    "chart_complexity": "medium",
+    "spec_key_count": 22,
+    "task_types": ["Characterize_Distribution"],
+    "description": "Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
+    "design_considerations": "Groups by nominal field before computing per-group CDF. Color encodes group identity. Limited to fewer than 5 groups for readability.",
+    "tasks": "Compare distributions across groups; identify which groups have higher or lower concentrations of values."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "Are there any clusters with respect to <E> counts of <F1:n> and <F2:n>?",
       "Make a heatmap of <E> <F1:n> and <F2:n>."
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F2>\", \"<F1>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}, {\"derive\": {\"udi_internal_percentile\": \"d['count <E>'] \/ max(d['count <E>'])\"}}, {\"derive\": {\"udi_internal_text_color_threshold\": \"d.udi_internal_percentile > .5 ? 'large' : 'small'\"}}], \"representation\": [{\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"udi_internal_text_color_threshold\", \"type\": \"nominal\", \"domain\": [\"large\", \"small\"], \"range\": [\"white\", \"black\"], \"omitLegend\": true}]}]}",
-    "creation_method":"template",
-    "chart_type":"heatmap",
-    "chart_complexity":"complex",
-    "spec_key_count":35,
-    "task_types":[
-      "Cluster",
-      "Compute_Derived_Value",
-      "Correlate"
-    ],
-    "description":"Displays the count of entities for each combination of two nominal fields as a heatmap with labeled cells.",
-    "design_considerations":"Rect marks with quantitative color encoding show density. Overlaid text marks display exact counts. Text color adapts based on cell intensity for readability. The field with more unique values is preferably placed on the y-axis, where longer labels remain readable.",
-    "tasks":"Identify clusters or patterns in the co-occurrence of two fields; compare counts across combinations; find correlations."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F2>\", \"<F1>\"]}, {\"rollup\": {\"count <E>\": {\"op\": \"count\"}}}, {\"derive\": {\"udi_internal_percentile\": {\"op\": \"\/\", \"left\": {\"field\": \"count <E>\"}, \"right\": {\"agg\": \"max\", \"field\": \"count <E>\"}}}}, {\"derive\": {\"udi_internal_text_color_threshold\": {\"if\": {\"op\": \">\", \"left\": {\"field\": \"udi_internal_percentile\"}, \"right\": {\"literal\": 0.5}}, \"then\": {\"literal\": \"large\"}, \"else\": {\"literal\": \"small\"}}}}], \"representation\": [{\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"count <E>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F1>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"udi_internal_text_color_threshold\", \"type\": \"nominal\", \"domain\": [\"large\", \"small\"], \"range\": [\"white\", \"black\"], \"omitLegend\": true}]}]}",
+    "creation_method": "template",
+    "chart_type": "heatmap",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 42,
+    "task_types": ["Cluster", "Compute_Derived_Value", "Correlate"],
+    "description": "Displays the count of entities for each combination of two nominal fields as a heatmap with labeled cells.",
+    "design_considerations": "Rect marks with quantitative color encoding show density. Overlaid text marks display exact counts. Text color adapts based on cell intensity for readability. The field with more unique values is preferably placed on the y-axis, where longer labels remain readable.",
+    "tasks": "Identify clusters or patterns in the co-occurrence of two fields; compare counts across combinations; find correlations."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "What is the average <F1:q> for each <F2:n> and <F3:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F3>\", \"<F2>\"]}, {\"rollup\": {\"average <F1>\": {\"op\": \"mean\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"average <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F3>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"heatmap",
-    "chart_complexity":"medium",
-    "spec_key_count":16,
-    "task_types":[
-      "Cluster",
-      "Compute_Derived_Value",
-      "Correlate"
-    ],
-    "description":"Displays the average of a quantitative field for each combination of two nominal fields as a heatmap.",
-    "design_considerations":"Uses three fields: a quantitative measure aggregated by average, and two nominal axes. Color encodes the aggregate value. The field with more unique values is preferably placed on the y-axis for better label readability.",
-    "tasks":"Identify patterns in the average value across two categorical dimensions; find combinations with extreme values."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": [\"<F3>\", \"<F2>\"]}, {\"rollup\": {\"average <F1>\": {\"op\": \"mean\", \"field\": \"<F1>\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"color\", \"field\": \"average <F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"<F3>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "heatmap",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": ["Cluster", "Compute_Derived_Value", "Correlate"],
+    "description": "Displays the average of a quantitative field for each combination of two nominal fields as a heatmap.",
+    "design_considerations": "Uses three fields: a quantitative measure aggregated by average, and two nominal axes. Color encodes the aggregate value. The field with more unique values is preferably placed on the y-axis for better label readability.",
+    "tasks": "Identify patterns in the average value across two categorical dimensions; find combinations with extreme values."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "Are there clusters of <E> <F1:q> and <F2:q> values across different <F3:n> groups?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"representation\": {\"mark\": \"point\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F3>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"grouped_scatter",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Cluster"
-    ],
-    "description":"Plots two quantitative fields as a scatterplot with points colored by a nominal field to reveal group-level clusters.",
-    "design_considerations":"Adds color encoding to a standard scatterplot to separate groups visually. Limited to fewer than 8 color categories for perceptual clarity.",
-    "tasks":"Identify clusters that separate by group; assess whether the relationship between two quantitative fields differs across groups."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"representation\": {\"mark\": \"point\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F3>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "grouped_scatter",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Cluster"],
+    "description": "Plots two quantitative fields as a scatterplot with points colored by a nominal field to reveal group-level clusters.",
+    "design_considerations": "Adds color encoding to a standard scatterplot to separate groups visually. Limited to fewer than 8 color categories for perceptual clarity.",
+    "tasks": "Identify clusters that separate by group; assess whether the relationship between two quantitative fields differs across groups."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "What is the distribution of <F:q>?",
       "Make a histogram of <F:q>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"binby\": {\"field\": \"<F>\", \"output\": {\"bin_start\": \"start\", \"bin_end\": \"end\"}}}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"start\", \"type\": \"quantitative\", \"title\": \"<F>\"}, {\"encoding\": \"x2\", \"field\": \"end\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
-    "creation_method":"template",
-    "chart_type":"histogram",
-    "chart_complexity":"medium",
-    "spec_key_count":18,
-    "task_types":[
-      "Characterize_Distribution"
-    ],
-    "description":"Shows the distribution of a quantitative field as a histogram with automatically computed bins.",
-    "design_considerations":"Uses binby to create equal-width bins. Rect marks span from bin start to bin end on x, with count on y.",
-    "tasks":"Characterize the shape of a distribution; identify modes, skewness, and gaps."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"binby\": {\"field\": \"<F>\", \"output\": {\"bin_start\": \"start\", \"bin_end\": \"end\"}}}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"start\", \"type\": \"quantitative\", \"title\": \"<F>\"}, {\"encoding\": \"x2\", \"field\": \"end\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
+    "creation_method": "template",
+    "chart_type": "histogram",
+    "chart_complexity": "medium",
+    "spec_key_count": 21,
+    "task_types": ["Characterize_Distribution"],
+    "description": "Shows the distribution of a quantitative field as a histogram with automatically computed bins.",
+    "design_considerations": "Uses binby to create equal-width bins. Rect marks span from bin start to bin end on x, with count on y.",
+    "tasks": "Characterize the shape of a distribution; identify modes, skewness, and gaps."
   },
   {
-    "query_templates":[
-      "What is the distribution of <F:q>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F>'] != null\"}, {\"kde\": {\"field\": \"<F>\", \"output\": {\"sample\": \"<F>\", \"density\": \"density\"}}}], \"representation\": {\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
-    "creation_method":"template",
-    "chart_type":"area",
-    "chart_complexity":"medium",
-    "spec_key_count":14,
-    "task_types":[
-      "Characterize_Distribution"
-    ],
-    "description":"Shows the distribution of a quantitative field as a smooth density curve (KDE) rendered as an area chart.",
-    "design_considerations":"Kernel density estimation produces a smooth curve. Area mark fills below the density line. Used for moderate cardinality (50-250) where a smooth estimate is more informative than binning.",
-    "tasks":"Characterize the shape of a distribution; identify modes and overall density patterns."
+    "query_templates": ["What is the distribution of <F:q>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"kde\": {\"field\": \"<F>\", \"output\": {\"sample\": \"<F>\", \"density\": \"density\"}}}], \"representation\": {\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
+    "creation_method": "template",
+    "chart_type": "area",
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
+    "task_types": ["Characterize_Distribution"],
+    "description": "Shows the distribution of a quantitative field as a smooth density curve (KDE) rendered as an area chart.",
+    "design_considerations": "Kernel density estimation produces a smooth curve. Area mark fills below the density line. Used for moderate cardinality (50-250) where a smooth estimate is more informative than binning.",
+    "tasks": "Characterize the shape of a distribution; identify modes and overall density patterns."
   },
   {
-    "query_templates":[
-      "What is the distribution of <F:q>?"
-    ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"representation\": {\"mark\": \"point\", \"mapping\": {\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}}}",
-    "creation_method":"template",
-    "chart_type":"dot",
-    "chart_complexity":"simple",
-    "spec_key_count":6,
-    "task_types":[
-      "Characterize_Distribution"
-    ],
-    "description":"Shows the distribution of a quantitative field as individual points along a single axis.",
-    "design_considerations":"Point marks on a single quantitative x-axis. Best for small datasets (50 or fewer values) where individual observations are meaningful and overplotting is minimal.",
-    "tasks":"Characterize the distribution; identify individual values, clusters, and outliers."
+    "query_templates": ["What is the distribution of <F:q>?"],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"representation\": {\"mark\": \"point\", \"mapping\": {\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}}}",
+    "creation_method": "template",
+    "chart_type": "dot",
+    "chart_complexity": "simple",
+    "spec_key_count": 6,
+    "task_types": ["Characterize_Distribution"],
+    "description": "Shows the distribution of a quantitative field as individual points along a single axis.",
+    "design_considerations": "Point marks on a single quantitative x-axis. Best for small datasets (50 or fewer values) where individual observations are meaningful and overplotting is minimal.",
+    "tasks": "Characterize the distribution; identify individual values, clusters, and outliers."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "Is the distribution of <F1:q> similar for each <F2:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": \"d['<F1>'] != null\"}, {\"groupby\": \"<F2>\"}, {\"kde\": {\"field\": \"<F1>\", \"output\": {\"sample\": \"<F1>\", \"density\": \"density\"}}}], \"representation\": [{\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"opacity\", \"value\": 0.25}]}, {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}]}",
-    "creation_method":"template",
-    "chart_type":"grouped_area",
-    "chart_complexity":"complex",
-    "spec_key_count":31,
-    "task_types":[
-      "Characterize_Distribution"
-    ],
-    "description":"Compares the distribution of a quantitative field across categories using overlapping density curves (KDE) with area and line marks.",
-    "design_considerations":"Per-group KDE with semi-transparent area fills and line outlines. Color encodes group identity. Limited to fewer than 4 groups to avoid excessive overlap. Opacity set to 0.25 for layering.",
-    "tasks":"Compare distribution shapes across groups; identify shifts in central tendency or spread."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F1>\"}, \"right\": {\"literal\": null}}}, {\"groupby\": \"<F2>\"}, {\"kde\": {\"field\": \"<F1>\", \"output\": {\"sample\": \"<F1>\", \"density\": \"density\"}}}], \"representation\": [{\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"opacity\", \"value\": 0.25}]}, {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}]}",
+    "creation_method": "template",
+    "chart_type": "grouped_area",
+    "chart_complexity": "complex",
+    "spec_key_count": 33,
+    "task_types": ["Characterize_Distribution"],
+    "description": "Compares the distribution of a quantitative field across categories using overlapping density curves (KDE) with area and line marks.",
+    "design_considerations": "Per-group KDE with semi-transparent area fills and line outlines. Color encodes group identity. Limited to fewer than 4 groups to avoid excessive overlap. Opacity set to 0.25 for layering.",
+    "tasks": "Compare distribution shapes across groups; identify shifts in central tendency or spread."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "Is the distribution of <F1:q> similar for each <F2:n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"representation\": {\"mark\": \"point\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
-    "creation_method":"template",
-    "chart_type":"grouped_dot",
-    "chart_complexity":"simple",
-    "spec_key_count":12,
-    "task_types":[
-      "Characterize_Distribution"
-    ],
-    "description":"Compares the distribution of a quantitative field across categories using dot strips, with one row per category.",
-    "design_considerations":"Points plotted on a quantitative x-axis with nominal y-axis for group separation. Color reinforces group identity. Best for small datasets (50 or fewer values per group).",
-    "tasks":"Compare distributions across groups; identify clusters and outliers within each group."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"representation\": {\"mark\": \"point\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F2>\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "grouped_dot",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Characterize_Distribution"],
+    "description": "Compares the distribution of a quantitative field across categories using dot strips, with one row per category.",
+    "design_considerations": "Points plotted on a quantitative x-axis with nominal y-axis for group separation. Color reinforces group identity. Best for small datasets (50 or fewer values per group).",
+    "tasks": "Compare distributions across groups; identify clusters and outliers within each group."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "How many <E> records have a non-null <F:q|o|n>?",
       "What percentage of <E> records have a non-null <F:q|o|n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"derive\": {\"<E> Count\": \"count()\"}}, {\"filter\": \"d['<F>'] != null\"}, {\"rollup\": {\"Valid <F> Count\": {\"op\": \"count\"}, \"<E> Count\": {\"op\": \"median\", \"field\": \"<E> Count\"}}}, {\"derive\": {\"Valid <F> %\": \"d['Valid <F> Count'] \/ d['<E> Count']\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"Valid <F> Count\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"text\", \"field\": \"<E> Count\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"Valid <F> %\", \"mark\": \"bar\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 1}}, {\"encoding\": \"y\", \"field\": \"Valid <F> %\", \"mark\": \"line\", \"type\": \"quantitative\", \"range\": {\"min\": 0.5, \"max\": 0.5}}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"complex",
-    "spec_key_count":29,
-    "task_types":[
-      "Filter",
-      "Compute_Derived_Value"
-    ],
-    "description":"Analyzes data completeness by counting and computing the percentage of records with non-null values in a specified field.",
-    "design_considerations":"Derives total count before filtering, then computes valid count and percentage. Percentage bar with 50% reference line provides visual context for data completeness.",
-    "tasks":"Assess data completeness for a field; determine how many records have valid values and what proportion."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"derive\": {\"<E> Count\": {\"agg\": \"count\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"rollup\": {\"Valid <F> Count\": {\"op\": \"count\"}, \"<E> Count\": {\"op\": \"median\", \"field\": \"<E> Count\"}}}, {\"derive\": {\"Valid <F> %\": {\"op\": \"\/\", \"left\": {\"field\": \"Valid <F> Count\"}, \"right\": {\"field\": \"<E> Count\"}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"Valid <F> Count\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"text\", \"field\": \"<E> Count\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"Valid <F> %\", \"mark\": \"bar\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 1}}, {\"encoding\": \"y\", \"field\": \"Valid <F> %\", \"mark\": \"line\", \"type\": \"quantitative\", \"range\": {\"min\": 0.5, \"max\": 0.5}}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "complex",
+    "spec_key_count": 33,
+    "task_types": ["Filter", "Compute_Derived_Value"],
+    "description": "Analyzes data completeness by counting and computing the percentage of records with non-null values in a specified field.",
+    "design_considerations": "Derives total count before filtering, then computes valid count and percentage. Percentage bar with 50% reference line provides visual context for data completeness.",
+    "tasks": "Assess data completeness for a field; determine how many records have valid values and what proportion."
   },
   {
-    "query_templates":[
+    "query_templates": [
       "How many <E> records have a null <F:q|o|n>?",
       "What percentage of <E> records have a null <F:q|o|n>?"
     ],
-    "spec_template":"{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"derive\": {\"<E> Count\": \"count()\"}}, {\"filter\": \"d['<F>'] != null\"}, {\"rollup\": {\"Valid <F> Count\": {\"op\": \"count\"}, \"<E> Count\": {\"op\": \"median\", \"field\": \"<E> Count\"}}}, {\"derive\": {\"Null <F> Count\": \"d['<E> Count'] - d['Valid <F> Count']\", \"Null <F> %\": \"1 - d['Valid <F> Count'] \/ d['<E> Count']\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"Null <F> Count\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"text\", \"field\": \"<E> Count\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"Null <F> %\", \"mark\": \"bar\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 1}}, {\"encoding\": \"y\", \"field\": \"Null <F> %\", \"mark\": \"line\", \"type\": \"quantitative\", \"range\": {\"min\": 0.5, \"max\": 0.5}}]}}",
-    "creation_method":"template",
-    "chart_type":"table",
-    "chart_complexity":"complex",
-    "spec_key_count":30,
-    "task_types":[
-      "Filter",
-      "Compute_Derived_Value"
-    ],
-    "description":"Analyzes data quality by counting and computing the percentage of records with null values in a specified field.",
-    "design_considerations":"Derives null count as total minus valid count. Percentage bar shows the null proportion with a 50% reference line.",
-    "tasks":"Assess data quality; determine how many records are missing a value and what proportion."
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"derive\": {\"<E> Count\": {\"agg\": \"count\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"rollup\": {\"Valid <F> Count\": {\"op\": \"count\"}, \"<E> Count\": {\"op\": \"median\", \"field\": \"<E> Count\"}}}, {\"derive\": {\"Null <F> Count\": {\"op\": \"-\", \"left\": {\"field\": \"<E> Count\"}, \"right\": {\"field\": \"Valid <F> Count\"}}, \"Null <F> %\": {\"op\": \"-\", \"left\": {\"literal\": 1}, \"right\": {\"op\": \"\/\", \"left\": {\"field\": \"Valid <F> Count\"}, \"right\": {\"field\": \"<E> Count\"}}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"Null <F> Count\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"text\", \"field\": \"<E> Count\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"Null <F> %\", \"mark\": \"bar\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 1}}, {\"encoding\": \"y\", \"field\": \"Null <F> %\", \"mark\": \"line\", \"type\": \"quantitative\", \"range\": {\"min\": 0.5, \"max\": 0.5}}]}}",
+    "creation_method": "template",
+    "chart_type": "table",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 38,
+    "task_types": ["Filter", "Compute_Derived_Value"],
+    "description": "Analyzes data quality by counting and computing the percentage of records with null values in a specified field.",
+    "design_considerations": "Derives null count as total minus valid count. Percentage bar shows the null proportion with a 50% reference line.",
+    "tasks": "Assess data quality; determine how many records are missing a value and what proportion."
   }
 ]

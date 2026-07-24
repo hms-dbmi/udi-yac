@@ -9,6 +9,7 @@ import type {
   FilterEntityRelationship,
   FilterMatch,
 } from './GrammarTypes';
+import { exprToArquero, isExpr } from './exprToArquero';
 // import { DuckDB, init } from './dataWrappers/DuckDB.js';
 import {
   loadCSV,
@@ -561,6 +562,9 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         // Just apply the filter if it's a string
         if (typeof filter === 'string') {
           currentTable.table = inTable.filter(filter).reify();
+        } else if (isExpr(filter)) {
+          // Structured expression AST — compile to the same Arquero dialect
+          currentTable.table = inTable.filter(exprToArquero(filter)).reify();
         } else {
           // Otherwise, we assume it's a named filter
           containsNamedFilter = true;
@@ -676,8 +680,18 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         const inTable = getInTable(transform.in);
         const derive = cloneDeep(transform.derive);
         for (const [as, expr] of Object.entries(derive)) {
-          if (typeof expr !== 'string') {
-            derive[as] = rolling(expr.rolling.expression, expr.rolling.window);
+          if (typeof expr === 'string') {
+            continue;
+          }
+          if (isExpr(expr)) {
+            // Structured expression AST — compile to the same Arquero dialect
+            derive[as] = exprToArquero(expr);
+          } else {
+            const rollingExpr = expr.rolling.expression;
+            derive[as] = rolling(
+              isExpr(rollingExpr) ? exprToArquero(rollingExpr) : rollingExpr,
+              expr.rolling.window,
+            );
           }
         }
         currentTable.table = inTable.derive(derive);

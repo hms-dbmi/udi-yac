@@ -35,6 +35,29 @@ export type { SourceSpec, LoadDataPackageOptions } from './loadDataPackage';
 export { DEFAULT_PALETTE } from './Palette';
 export type { UDIPalette, ContinuousColor, DiscreteColor } from './Palette';
 
+// Expression AST compiler (Expr -> Arquero expression string)
+export { exprToArquero, isExpr } from './exprToArquero';
+
+// Plain-language summary of a spec's transformation pipeline (for info tooltips)
+export { describeTransformations } from './describeTransformations';
+
+// Query backend seam (local Arquero vs remote /v1/yac/query)
+export {
+  setQueryBackend,
+  getQueryBackend,
+  createRemoteBackend,
+  LOCAL_BACKEND,
+} from './queryBackend';
+export type {
+  QueryBackend,
+  LocalQueryBackend,
+  RemoteQueryBackend,
+  RemoteQueryRequest,
+  RemoteVizResult,
+  RemoteBackendConfig,
+  QueryDataResult,
+} from './queryBackend';
+
 // Grammar spec types
 export type {
   UDIGrammar,
@@ -43,6 +66,7 @@ export type {
   DataSource,
   DataTransformation,
   DataSelection,
+  Expr,
   VisualizationLayer,
   RowLayer,
   RowMapping,
@@ -54,3 +78,8 @@ export type {
   RangeSelection,
   PointSelection,
 } from './DataSourcesStore';
+
+// The shared store factory. Exposed for headless/tooling use — e.g. the
+// parity-golden generator (scripts/gen-parity-goldens.mjs) runs the Arquero
+// executor in node as the reference for the server-side SQL compiler.
+export { useDataSourcesStore } from './DataSourcesStore';

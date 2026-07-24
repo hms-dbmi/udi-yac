@@ -428,11 +428,18 @@ describe('dashboardStore — cross-store filter propagation', () => {
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 
     const viz = dashboard.getState().activeVisualizations.get('0-0')!;
-    const transformation = (viz.interactiveSpec as { transformation: Array<{ filter: string }> })
+    const transformation = (viz.interactiveSpec as { transformation: Array<{ filter: object }> })
       .transformation;
-    const filterStrings = transformation.map((t) => t.filter).filter(Boolean);
-    expect(filterStrings).toContain("d['age_value'] != null");
-    expect(filterStrings).toContain("d['weight_value'] != null");
+    // Structured expression AST (not the legacy raw string) — the remote
+    // query backend rejects raw Arquero strings.
+    const filters = transformation.map((t) => t.filter).filter(Boolean);
+    const notNull = (field: string) => ({
+      op: '!=',
+      left: { field },
+      right: { literal: null },
+    });
+    expect(filters).toContainEqual(notNull('age_value'));
+    expect(filters).toContainEqual(notNull('weight_value'));
   });
 
   it('updateSpecFilters omits null filters when filterAllNullValues is false', () => {
@@ -452,6 +459,66 @@ describe('dashboardStore — cross-store filter propagation', () => {
     // The null-filter transformations use `filter: string`. None should remain.
     const stringFilters = transformation.filter((t) => typeof t.filter === 'string');
     expect(stringFilters).toHaveLength(0);
+  });
+
+  it('updateSpecFilters injects bridged cross-entity filters between sibling entities', () => {
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+
+    // Star schema: Event and Surgery both FK Patient on research_id.
+    const dataPackage = createDataPackageStore();
+    const child = (name: string) => ({
+      name,
+      path: `${name}.csv`,
+      'udi:row_count': 10,
+      schema: {
+        fields: [{ name: 'research_id', 'udi:data_type': 'nominal' as const }],
+        foreignKeys: [
+          { fields: ['research_id'], reference: { resource: 'Patient', fields: ['research_id'] } },
+        ],
+      },
+    });
+    dataPackage.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          {
+            name: 'Patient',
+            path: 'patient.csv',
+            'udi:row_count': 5,
+            schema: { fields: [{ name: 'research_id', 'udi:data_type': 'nominal' }] },
+          },
+          child('Event'),
+          child('Surgery'),
+        ],
+      } as never,
+      loadingPhase: 'ready',
+    });
+
+    const specFor = (entity: string) =>
+      makeSpec({ source: { name: entity, source: `${entity}.csv` } });
+    dashboard
+      .getState()
+      .addActiveVisualization(0, 0, specFor('Event'), '', { Event: ['research_id'] });
+    dashboard
+      .getState()
+      .addActiveVisualization(0, 1, specFor('Surgery'), '', { Surgery: ['research_id'] });
+    dashboard.getState().setFilterAllNullValues(false);
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const eventUuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
+    const surgeryViz = dashboard.getState().activeVisualizations.get('0-1')!;
+    const filters = (
+      surgeryViz.interactiveSpec as { transformation: Array<{ filter?: unknown }> }
+    ).transformation
+      .map((t) => t.filter)
+      .filter(Boolean);
+
+    expect(filters).toContainEqual({
+      name: eventUuid,
+      source: 'Event',
+      entityRelationship: { originKey: 'research_id', targetKey: 'research_id' },
+    });
   });
 });
 

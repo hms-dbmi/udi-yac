@@ -1,0 +1,27 @@
+# Single-node StarRocks for local UDI development.
+# Quickstart: see README.md in this directory.
+services:
+  starrocks:
+    image: starrocks/allin1-ubuntu:3.3-latest
+    container_name: udi-starrocks
+    restart: unless-stopped
+    ports:
+      - "9030:9030" # FE MySQL protocol (connectors, seed script)
+      - "8030:8030" # FE HTTP (web UI, stream load)
+      - "8040:8040" # BE HTTP
+    volumes:
+      - starrocks-data:/data/deploy
+    healthcheck:
+      # FE is up AND at least one BE reports Alive.
+      test:
+        [
+          "CMD-SHELL",
+          "mysql -h127.0.0.1 -P9030 -uroot -N -e 'SHOW BACKENDS\\G' | grep -q 'Alive: true'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  starrocks-data:
