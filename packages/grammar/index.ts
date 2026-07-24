@@ -38,6 +38,9 @@ export type { UDIPalette, ContinuousColor, DiscreteColor } from './Palette';
 // Expression AST compiler (Expr -> Arquero expression string)
 export { exprToArquero, isExpr } from './exprToArquero';
 
+// Plain-language summary of a spec's transformation pipeline (for info tooltips)
+export { describeTransformations } from './describeTransformations';
+
 // Query backend seam (local Arquero vs remote /v1/yac/query)
 export {
   setQueryBackend,

@@ -22,6 +22,8 @@ export type {
   UseQueryDataMapOptions,
 } from './hooks';
 export type { UDIGrammar } from '../GrammarTypes';
+// Pure spec helper (no Vue/React/d3 deps) — safe to expose from the react entry.
+export { describeTransformations } from '../describeTransformations';
 // Types only — re-exporting the DEFAULT_PALETTE *value* here would statically
 // pull Palette.ts (and its non-externalized d3-scale import) into the react
 // entry, which makes Rollup split it into a chunk named `index.js` that

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { UDIVis } from 'udi-toolkit/react';
+import { UDIVis, describeTransformations } from 'udi-toolkit/react';
 import type { DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import {
   GripVertical,
   Loader2,
   Columns3,
+  Info,
 } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
@@ -168,6 +169,11 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     return s;
   }, [plainSpec, isTableView, showAllFields, viz.spec, getKeyFields]);
 
+  // Plain-language summary of the transformation pipeline, shown as an info
+  // tooltip (in both chart and table views) so the user can see how the
+  // displayed data was derived (grouped, aggregated, sorted, …).
+  const transformSteps = useMemo(() => describeTransformations(viz.spec), [viz.spec]);
+
   const specJson = useMemo(() => JSON.stringify(viz.spec, null, 2), [viz.spec]);
 
   const specEditorUrl = useMemo(() => {
@@ -267,6 +273,23 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
               </TooltipTrigger>
               <TooltipContent>
                 {showAllFields ? 'Show relevant fields only' : 'Show all fields'}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {transformSteps.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger render={<Button variant="ghost" size="icon" className="h-6 w-6" />}>
+                <Info className="h-3 w-3 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="max-w-xs">
+                  <p className="font-medium mb-1">Transformations</p>
+                  <ol className="list-decimal pl-4 space-y-0.5">
+                    {transformSteps.map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
               </TooltipContent>
             </Tooltip>
           )}
