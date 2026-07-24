@@ -295,7 +295,7 @@ describe('swapDimensionField', () => {
     }) as unknown as UDIGrammar;
 
   it('rewrites groupby, dependent rollup output column, and both mappings', () => {
-    const next = swapDimensionField(countBySex(), 'sex', 'race');
+    const next = swapDimensionField(countBySex(), 'x', 'race');
     const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
       .transformation;
     expect(t[0]).toEqual({ groupby: 'race' });
@@ -313,7 +313,7 @@ describe('swapDimensionField', () => {
       transformation: [{ groupby: ['organ', 'sex'] }, { rollup: { count: { op: 'count' } } }],
       representation: { mark: 'bar', mapping: [{ encoding: 'x', field: 'sex', type: 'nominal' }] },
     } as unknown as UDIGrammar;
-    const next = swapDimensionField(spec, 'sex', 'race');
+    const next = swapDimensionField(spec, 'x', 'race');
     const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
       .transformation;
     expect(t[0]).toEqual({ groupby: ['organ', 'race'] });
@@ -333,22 +333,50 @@ describe('swapDimensionField', () => {
         ],
       },
     } as unknown as UDIGrammar;
-    const next = swapDimensionField(spec, 'sex', 'race');
+    const next = swapDimensionField(spec, 'x', 'race');
     const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
     expect(mapping[0].field).toBe('race');
     expect(mapping[1].field).toBe('count');
   });
 
-  it('returns the same reference on a no-op (unchanged or absent field)', () => {
+  it('does NOT disturb another encoding bound to the same dimension', () => {
+    // Regression: bar with x=sex AND color=sex. Swapping x must leave color
+    // alone and instead group by both fields.
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { sex_count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'color', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'sex_count', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+    const next = swapDimensionField(spec, 'x', 'race');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    // groups by both now, and the count column is left as-is (sex still shown)
+    expect(t[0]).toEqual({ groupby: ['sex', 'race'] });
+    expect(t[1]).toEqual({ rollup: { sex_count: { op: 'count' } } });
+    const mapping = (next.representation as { mapping: Array<{ encoding: string; field: string }> })
+      .mapping;
+    expect(mapping[0]).toEqual({ encoding: 'x', field: 'race', type: 'nominal' });
+    expect(mapping[1]).toEqual({ encoding: 'color', field: 'sex', type: 'nominal' });
+    expect(mapping[2]).toEqual({ encoding: 'y', field: 'sex_count', type: 'quantitative' });
+  });
+
+  it('returns the same reference on a no-op (unchanged field or absent encoding)', () => {
     const spec = countBySex();
-    expect(swapDimensionField(spec, 'sex', 'sex')).toBe(spec);
-    expect(swapDimensionField(spec, 'not_here', 'race')).toBe(spec);
+    expect(swapDimensionField(spec, 'x', 'sex')).toBe(spec);
+    expect(swapDimensionField(spec, 'zzz', 'race')).toBe(spec);
   });
 
   it('does not mutate the input spec', () => {
     const spec = countBySex();
     const before = JSON.parse(JSON.stringify(spec));
-    swapDimensionField(spec, 'sex', 'race');
+    swapDimensionField(spec, 'x', 'race');
     expect(spec).toEqual(before);
   });
 });

@@ -49,9 +49,10 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       let updatedSpec: UDIGrammar;
       switch (param.kind) {
         case 'dimension':
-          // Rewrite the groupby entry (+ dependent rollup output columns)
-          // alongside the mapping so the aggregation regroups on the new field.
-          updatedSpec = swapDimensionField(spec, param.field, newField);
+          // Rewrite this encoding's mapping and keep the groupby in sync, so the
+          // aggregation regroups on the new field without disturbing another
+          // encoding bound to the same dimension.
+          updatedSpec = swapDimensionField(spec, param.encoding, newField);
           break;
         case 'measure':
           // Rewrite the rollup's input field (+ its output column) so the

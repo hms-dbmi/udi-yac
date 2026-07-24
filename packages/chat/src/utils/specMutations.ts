@@ -309,24 +309,92 @@ function applyRenamePlan(spec: UDIGrammar, plan: RenamePlan): UDIGrammar {
   } as UDIGrammar;
 }
 
+/** The field currently bound to `encoding` (first match across layers). */
+function fieldForEncoding(spec: UDIGrammar, encoding: string): string | undefined {
+  const rep = spec.representation as RepresentationLike | RepresentationLike[] | undefined;
+  if (rep == null) return undefined;
+  const layers = Array.isArray(rep) ? rep : [rep];
+  for (const layer of layers) {
+    if (layer?.mapping == null) continue;
+    const mappings = Array.isArray(layer.mapping) ? layer.mapping : [layer.mapping];
+    for (const m of mappings) if (m?.encoding === encoding) return m.field;
+  }
+  return undefined;
+}
+
+/** True if any representation mapping is bound to `field`. */
+function specReferencesField(spec: UDIGrammar, field: string): boolean {
+  const rep = spec.representation as RepresentationLike | RepresentationLike[] | undefined;
+  if (rep == null) return false;
+  const layers = Array.isArray(rep) ? rep : [rep];
+  for (const layer of layers) {
+    if (layer?.mapping == null) continue;
+    const mappings = Array.isArray(layer.mapping) ? layer.mapping : [layer.mapping];
+    if (mappings.some((m) => m?.field === field)) return true;
+  }
+  return false;
+}
+
+/** Add `newField` to every groupby step that already groups by `anchorField`. */
+function addGroupbyField(spec: UDIGrammar, anchorField: string, newField: string): UDIGrammar {
+  const transformation = (spec as { transformation?: TransformationLike[] }).transformation;
+  if (!Array.isArray(transformation)) return spec;
+  let changed = false;
+  const next = transformation.map((t): TransformationLike => {
+    if (t == null || typeof t !== 'object' || t.groupby == null) return t;
+    const arr = typeof t.groupby === 'string' ? [t.groupby] : t.groupby;
+    if (!arr.includes(anchorField) || arr.includes(newField)) return t;
+    changed = true;
+    return { ...t, groupby: [...arr, newField] };
+  });
+  if (!changed) return spec;
+  return { ...spec, transformation: next } as UDIGrammar;
+}
+
 /**
- * Swap a group-by dimension (e.g. sex → race), keeping the aggregation. Renames
- * the field in every groupby entry, every encoding mapping, and every orderby
- * ref, and additionally renames any rollup output column that embeds the old
- * dimension name (`sex_count` → `race_count`) so axis labels track the swap.
+ * Swap the group-by dimension shown on ONE encoding (e.g. the x axis, sex →
+ * race), keeping the aggregation. The mapping rewrite is scoped to `encoding`,
+ * so a field shared by another encoding (a bar with `x=sex` AND `color=sex`) is
+ * not disturbed.
+ *
+ * The groupby is kept consistent with what the chart displays:
+ *   - if the old field is no longer shown anywhere, it is replaced by `newField`
+ *     in the groupby, and any rollup output column embedding it (`sex_count`) is
+ *     renamed (`race_count`) so labels track the swap;
+ *   - if the old field is still shown on another encoding, `newField` is instead
+ *     added to the groupby (the chart now groups by both) and nothing else is
+ *     renamed.
+ *
+ * Returns the same reference on a no-op (encoding absent, or already newField).
  */
 export function swapDimensionField(
   spec: UDIGrammar,
-  oldField: string,
+  encoding: string,
   newField: string,
 ): UDIGrammar {
-  if (oldField === newField) return spec;
+  const oldField = fieldForEncoding(spec, encoding);
+  if (oldField == null || oldField === newField) return spec;
+
+  // 1. Rewrite only the edited encoding's mapping.
+  const afterMapping = setMappingFieldByEncoding(spec, encoding, newField);
+  if (afterMapping === spec) return spec;
+
+  // 2. Old field still shown elsewhere → group by both, rename nothing else.
+  if (specReferencesField(afterMapping, oldField)) {
+    return addGroupbyField(afterMapping, oldField, newField);
+  }
+
+  // 3. Old field fully replaced → rename it in the groupby/orderby, plus any
+  //    rollup output column that embeds it so labels stay accurate.
   const columnRenames = new Map<string, string>([[oldField, newField]]);
-  for (const key of Object.keys(collectRollupOutputs(spec))) {
+  for (const key of Object.keys(collectRollupOutputs(afterMapping))) {
     const renamed = renameToken(key, oldField, newField);
     if (renamed !== key) columnRenames.set(key, renamed);
   }
-  return applyRenamePlan(spec, { columnRenames, groupbyRename: { from: oldField, to: newField } });
+  return applyRenamePlan(afterMapping, {
+    columnRenames,
+    groupbyRename: { from: oldField, to: newField },
+  });
 }
 
 /**
