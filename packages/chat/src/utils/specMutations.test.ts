@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { setMappingFieldByEncoding, collectLockedFields } from './specMutations';
+import {
+  setMappingFieldByEncoding,
+  collectLockedFields,
+  collectGroupbyFields,
+  collectRollupOutputs,
+  swapDimensionField,
+  swapMeasureField,
+} from './specMutations';
 import type { UDIGrammar } from 'udi-toolkit/react';
 
 function specWithTransformation(transformation: unknown[]): UDIGrammar {
@@ -158,14 +165,18 @@ describe('collectLockedFields', () => {
     expect([...collectLockedFields(specWithTransformation([]))]).toEqual([]);
   });
 
-  it('locks a single-string groupby', () => {
-    const locked = collectLockedFields(specWithTransformation([{ groupby: 'organ' }]));
-    expect([...locked]).toEqual(['organ']);
+  it('does NOT lock groupby (swappable via swapDimensionField)', () => {
+    const single = collectLockedFields(specWithTransformation([{ groupby: 'organ' }]));
+    expect([...single]).toEqual([]);
+    const array = collectLockedFields(specWithTransformation([{ groupby: ['organ', 'sex'] }]));
+    expect([...array]).toEqual([]);
   });
 
-  it('locks every entry of an array groupby', () => {
-    const locked = collectLockedFields(specWithTransformation([{ groupby: ['organ', 'sex'] }]));
-    expect([...locked].sort()).toEqual(['organ', 'sex']);
+  it('does NOT lock rollup.field (swappable via swapMeasureField)', () => {
+    const locked = collectLockedFields(
+      specWithTransformation([{ rollup: { total: { op: 'sum', field: 'weight_value' } } }]),
+    );
+    expect([...locked]).toEqual([]);
   });
 
   it('locks binby.field', () => {
@@ -173,34 +184,6 @@ describe('collectLockedFields', () => {
       specWithTransformation([{ binby: { field: 'age_value', bins: 10 } }]),
     );
     expect([...locked]).toEqual(['age_value']);
-  });
-
-  it('locks a rollup aggregation with a field', () => {
-    const locked = collectLockedFields(
-      specWithTransformation([{ rollup: { total: { op: 'sum', field: 'weight_value' } } }]),
-    );
-    expect([...locked]).toEqual(['weight_value']);
-  });
-
-  it('locks nothing for a rollup count op (no field)', () => {
-    const locked = collectLockedFields(
-      specWithTransformation([{ rollup: { count: { op: 'count' } } }]),
-    );
-    expect([...locked]).toEqual([]);
-  });
-
-  it('locks only the rollup aggregations that have a field', () => {
-    const locked = collectLockedFields(
-      specWithTransformation([
-        {
-          rollup: {
-            total: { op: 'sum', field: 'weight_value' },
-            count: { op: 'count' },
-          },
-        },
-      ]),
-    );
-    expect([...locked]).toEqual(['weight_value']);
   });
 
   it('locks kde.field', () => {
@@ -247,13 +230,185 @@ describe('collectLockedFields', () => {
     expect([...locked]).toEqual([]);
   });
 
-  it('unions field references across a multi-step pipeline', () => {
+  it('a group+rollup pipeline locks nothing (both are swappable)', () => {
     const locked = collectLockedFields(
       specWithTransformation([
         { groupby: 'organ' },
         { rollup: { total: { op: 'sum', field: 'weight_value' } } },
       ]),
     );
-    expect([...locked].sort()).toEqual(['organ', 'weight_value']);
+    expect([...locked]).toEqual([]);
+  });
+});
+
+describe('collectGroupbyFields', () => {
+  it('collects a single-string groupby', () => {
+    expect([...collectGroupbyFields(specWithTransformation([{ groupby: 'organ' }]))]).toEqual([
+      'organ',
+    ]);
+  });
+
+  it('collects every entry of an array groupby across steps', () => {
+    const fields = collectGroupbyFields(
+      specWithTransformation([{ groupby: ['organ', 'sex'] }, { groupby: 'donor' }]),
+    );
+    expect([...fields].sort()).toEqual(['donor', 'organ', 'sex']);
+  });
+
+  it('returns empty when there is no groupby', () => {
+    expect([...collectGroupbyFields(specWithTransformation([{ kde: { field: 'x' } }]))]).toEqual(
+      [],
+    );
+  });
+});
+
+describe('collectRollupOutputs', () => {
+  it('maps output columns to their aggregation, including a missing field for count', () => {
+    const outputs = collectRollupOutputs(
+      specWithTransformation([
+        { rollup: { sex_count: { op: 'count' }, avg_age: { op: 'mean', field: 'age' } } },
+      ]),
+    );
+    expect(outputs).toEqual({
+      sex_count: { op: 'count', field: undefined },
+      avg_age: { op: 'mean', field: 'age' },
+    });
+  });
+});
+
+describe('swapDimensionField', () => {
+  const countBySex = () =>
+    ({
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [
+        { groupby: 'sex' },
+        { rollup: { sex_count: { op: 'count' } } },
+        { orderby: { field: 'sex_count', order: 'desc' } },
+      ],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'sex_count', type: 'quantitative' },
+        ],
+      },
+    }) as unknown as UDIGrammar;
+
+  it('rewrites groupby, dependent rollup output column, and both mappings', () => {
+    const next = swapDimensionField(countBySex(), 'sex', 'race');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({ groupby: 'race' });
+    expect(t[1]).toEqual({ rollup: { race_count: { op: 'count' } } });
+    // orderby ref followed the renamed output column
+    expect(t[2]).toEqual({ orderby: { field: 'race_count', order: 'desc' } });
+    const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
+    expect(mapping[0].field).toBe('race');
+    expect(mapping[1].field).toBe('race_count');
+  });
+
+  it('renames only the matching entry of an array groupby', () => {
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: ['organ', 'sex'] }, { rollup: { count: { op: 'count' } } }],
+      representation: { mark: 'bar', mapping: [{ encoding: 'x', field: 'sex', type: 'nominal' }] },
+    } as unknown as UDIGrammar;
+    const next = swapDimensionField(spec, 'sex', 'race');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({ groupby: ['organ', 'race'] });
+    // 'count' has no old-field token, so its output column is left alone
+    expect(t[1]).toEqual({ rollup: { count: { op: 'count' } } });
+  });
+
+  it('leaves a count output column alone when it does not embed the old field', () => {
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+    const next = swapDimensionField(spec, 'sex', 'race');
+    const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
+    expect(mapping[0].field).toBe('race');
+    expect(mapping[1].field).toBe('count');
+  });
+
+  it('returns the same reference on a no-op (unchanged or absent field)', () => {
+    const spec = countBySex();
+    expect(swapDimensionField(spec, 'sex', 'sex')).toBe(spec);
+    expect(swapDimensionField(spec, 'not_here', 'race')).toBe(spec);
+  });
+
+  it('does not mutate the input spec', () => {
+    const spec = countBySex();
+    const before = JSON.parse(JSON.stringify(spec));
+    swapDimensionField(spec, 'sex', 'race');
+    expect(spec).toEqual(before);
+  });
+});
+
+describe('swapMeasureField', () => {
+  const avgAgeBySex = () =>
+    ({
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { avg_age: { op: 'mean', field: 'age' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'avg_age', type: 'quantitative' },
+        ],
+      },
+    }) as unknown as UDIGrammar;
+
+  it('rewrites the rollup input field, output column, and encoding ref; leaves groupby alone', () => {
+    const next = swapMeasureField(avgAgeBySex(), 'avg_age', 'weight');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({ groupby: 'sex' });
+    expect(t[1]).toEqual({ rollup: { avg_weight: { op: 'mean', field: 'weight' } } });
+    const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
+    expect(mapping[0].field).toBe('sex');
+    expect(mapping[1].field).toBe('avg_weight');
+  });
+
+  it('rewrites the input field but keeps the output column when it does not embed the field', () => {
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { mean: { op: 'mean', field: 'age' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [{ encoding: 'y', field: 'mean', type: 'quantitative' }],
+      },
+    } as unknown as UDIGrammar;
+    const next = swapMeasureField(spec, 'mean', 'weight');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[1]).toEqual({ rollup: { mean: { op: 'mean', field: 'weight' } } });
+    const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
+    expect(mapping[0].field).toBe('mean');
+  });
+
+  it('returns the same reference for a count output (no input field to swap)', () => {
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { sex_count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [{ encoding: 'y', field: 'sex_count', type: 'quantitative' }],
+      },
+    } as unknown as UDIGrammar;
+    expect(swapMeasureField(spec, 'sex_count', 'weight')).toBe(spec);
+  });
+
+  it('returns the same reference when the field is unchanged', () => {
+    const spec = avgAgeBySex();
+    expect(swapMeasureField(spec, 'avg_age', 'age')).toBe(spec);
   });
 });
