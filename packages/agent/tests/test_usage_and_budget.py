@@ -401,3 +401,25 @@ class TestServerUsage:
         body = resp.json()
         assert body["usage"]["total_tokens"] == 3
         assert body["usage"]["operations"][0]["op"] == "orchestrate"
+
+    def test_benchmark_analysis_uses_package_output_directory(
+        self, monkeypatch, tmp_path
+    ):
+        package_output_dir = tmp_path / "package" / "out"
+        package_output_dir.mkdir(parents=True)
+        expected = {"scores": {"overall_score": 1.0}}
+        (package_output_dir / "benchmark_analysis.json").write_text(
+            '{"scores": {"overall_score": 1.0}}'
+        )
+        working_directory = tmp_path / "different-working-directory"
+        working_directory.mkdir()
+        monkeypatch.setattr(self.server_app, "_OUTPUT_DIR", package_output_dir)
+        monkeypatch.chdir(working_directory)
+
+        resp = self.client.get(
+            "/v1/yac/benchmark_analysis",
+            headers={"Authorization": "Bearer test"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.json() == expected

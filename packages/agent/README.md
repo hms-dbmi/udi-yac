@@ -120,6 +120,10 @@ uv run fastapi run src/udiagent/server/app.py --port 8007
 | `LANGFUSE_HOST`       | No       | —         | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                           |
 | `LANGFUSE_ENVIRONMENT`| No       | —         | Tags traces with an environment label (e.g. `production`); does not enable tracing  |
 
+### Authentication
+
+When `INSECURE_DEV_MODE` is not enabled, the completion, benchmark, and benchmark-analysis endpoints require a bearer JWT signed with `JWT_SECRET_KEY`.
+
 ### Server Endpoints
 
 | Endpoint                       | Method | Description                                           |
