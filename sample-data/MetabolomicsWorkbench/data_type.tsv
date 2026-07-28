@@ -1,3 +1,0 @@
-id	name	description	synonyms
-data:2536	Mass spectrometry data	Data concerning a mass spectrometry measurement.	[]
-data:3488	NMR spectrum	Spectral information for a molecule from a nuclear magnetic resonance experiment.	['NMR spectra']
