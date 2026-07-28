@@ -1,0 +1,101 @@
+{
+  "name": "scfind_cell_type_data",
+  "udi:name": "scfind_cell_type_data",
+  "udi:path": "scfind_cell_type_data.csv",
+  "resources": [
+    {
+      "name": "scfind_cell_type_data",
+      "path": "scfind_cell_type_data.csv",
+      "udi:row_count": 5380,
+      "udi:column_count": 6,
+      "schema": {
+        "fields": [
+          {
+            "name": "Dataset UUID",
+            "type": "string",
+            "udi:cardinality": 162,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": [
+              "Cell Ontology ID",
+              "Cell Type Count",
+              "Cell Type Label",
+              "Percentage",
+              "Total Count"
+            ]
+          },
+          {
+            "name": "Cell Ontology ID",
+            "type": "string",
+            "udi:cardinality": 105,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": [
+              "Cell Type Count",
+              "Cell Type Label",
+              "Dataset UUID",
+              "Percentage",
+              "Total Count"
+            ]
+          },
+          {
+            "name": "Cell Type Label",
+            "type": "string",
+            "udi:cardinality": 140,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": [
+              "Cell Ontology ID",
+              "Cell Type Count",
+              "Dataset UUID",
+              "Percentage",
+              "Total Count"
+            ]
+          },
+          {
+            "name": "Cell Type Count",
+            "type": "string",
+            "udi:cardinality": 1197,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": [
+              "Cell Ontology ID",
+              "Cell Type Label",
+              "Dataset UUID",
+              "Percentage",
+              "Total Count"
+            ]
+          },
+          {
+            "name": "Total Count",
+            "type": "string",
+            "udi:cardinality": 161,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": [
+              "Cell Ontology ID",
+              "Cell Type Count",
+              "Cell Type Label",
+              "Dataset UUID",
+              "Percentage"
+            ]
+          },
+          {
+            "name": "Percentage",
+            "type": "string",
+            "udi:cardinality": 1108,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": [
+              "Cell Ontology ID",
+              "Cell Type Count",
+              "Cell Type Label",
+              "Dataset UUID",
+              "Total Count"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

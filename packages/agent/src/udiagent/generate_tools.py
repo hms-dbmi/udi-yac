@@ -459,20 +459,13 @@ def generate(template_sources, output_path: str):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import os
-
     parser = argparse.ArgumentParser(
         description="Generate schema-independent typed visualization tools from templates"
     )
     parser.add_argument(
         "--templates",
         default="src/udiagent/data/skills/template_visualizations.json",
-        help="Path to the line-item template visualizations JSON",
-    )
-    parser.add_argument(
-        "--cube-templates",
-        default="src/udiagent/data/skills/template_visualizations_cube.json",
-        help="Path to the data-cube template visualizations JSON (skipped if missing)",
+        help="Path to the unified template visualizations JSON (line-item + data-cube, tagged)",
     )
     parser.add_argument(
         "--output",
@@ -481,7 +474,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    sources = [(args.templates, ["line_item"])]
-    if args.cube_templates and os.path.exists(args.cube_templates):
-        sources.append((args.cube_templates, ["data_cube"]))
-    generate(sources, args.output)
+    # Tags come from each template's own ``tags`` field (line_item / data_cube +
+    # chart type); the source-level default is only a fallback for untagged rows.
+    generate([(args.templates, [])], args.output)

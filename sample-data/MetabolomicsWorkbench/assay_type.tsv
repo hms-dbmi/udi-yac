@@ -1,0 +1,5 @@
+id	name	description	synonyms
+OBI:0000470	mass spectrometry assay	An assay that identifies the amount and type of material entities present in a sample by fragmenting the sample and measuring the mass-to-charge ratio of the resulting particles.	[]
+OBI:0000623	NMR spectroscopy assay	An assay that exploits the magnetic properties of certain nuclei (those with a spin) to resonate when placed in particular magnetic field conditions. Instruments recording NMR spectrum and sets of analysis can be used to deduce identity of chemical as well as composition of complex chemical mixtures.	['Nuclear magnetic resonance spectroscopy']
+OBI:0003097	liquid chromatography mass spectrometry assay	A mass spectrometry assay where a sample mixture is first separated by liquid chromatography before being converted into ions which are characterized by using mass spectrometry based on their mass-to-charge ratio and relative abundance.	['LC-MS']
+OBI:0003110	gas chromatography mass spectrometry assay	A mass spectrometry assay combining mass spectrometry and gas chromatography for the qualitative as well as quantitative determination of compounds.	['GC-MS']

@@ -1,0 +1,2 @@
+id	dcc_name	dcc_abbreviation	dcc_description	contact_email	contact_name	dcc_url	project_id_namespace	project_local_id
+cfde_registry_dcc:motrpac	MoTrPAC Molecular Transducers of Physical Activity Consortium	MoTrPAC	"MoTrPAC is a national research consortium designed to discover and perform preliminary characterization of the range of molecular transducers (the ""molecular map"") that underlie the effects of physical activity in humans."	jzhen@stanford.edu	Jimmy Zhen	https://motrpac-data.org	tag:motrpac-data.org,2023:	motrpac

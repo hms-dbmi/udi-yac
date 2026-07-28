@@ -1,0 +1,395 @@
+subject_id_namespace	subject_local_id	role_id	taxonomy_id
+https://data.4dnucleome.org	c1f610d2-a25d-400a-b807-5306c34fe3fc	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	e1a1a9c3-c927-46f3-9975-12ad1671e04f	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ca925612-1a41-4802-93da-a86f863196a5	single organism	NCBI:txid9606
+https://data.4dnucleome.org	38b444a0-ce35-4495-897d-01fb4c313ed4	single organism	NCBI:txid9606
+https://data.4dnucleome.org	0496e98e-1961-4a5a-b0dd-bcad7b51fcdb	single organism	NCBI:txid9606
+https://data.4dnucleome.org	e264d450-5391-4983-88c6-0ffda4bf0121	single organism	NCBI:txid9606
+https://data.4dnucleome.org	2ef08fd0-65a7-47ca-82bd-4cb6226c8936	single organism	NCBI:txid9606
+https://data.4dnucleome.org	f7ad9211-5786-41ba-8741-4cd341c2da72	single organism	NCBI:txid9606
+https://data.4dnucleome.org	8fbed5c4-8f4a-4e7a-b5c9-ba2fc26fbe27	single organism	NCBI:txid9606
+https://data.4dnucleome.org	65930e0b-57f8-4a80-a4a3-b4ab92a13e0f	single organism	NCBI:txid9606
+https://data.4dnucleome.org	499a238e-1a7d-44b5-b9bd-4a26f1256956	single organism	NCBI:txid9606
+https://data.4dnucleome.org	8971ba6c-1c14-4236-acbe-3b55f580fbd1	single organism	NCBI:txid9606
+https://data.4dnucleome.org	d8026862-7e3f-4c18-9489-89133bcd5b8b	single organism	NCBI:txid9606
+https://data.4dnucleome.org	6f05f9dd-95cb-4de1-8c32-7d51b13141f3	single organism	NCBI:txid9606
+https://data.4dnucleome.org	4aa990c5-1ccf-4ef6-8d12-19c6a209c8cc	single organism	NCBI:txid9606
+https://data.4dnucleome.org	a477367b-7552-49d3-a2c1-08907933b9b4	single organism	NCBI:txid9606
+https://data.4dnucleome.org	c2aa8d0b-e0ef-4ea2-a310-95eefed7112a	single organism	NCBI:txid9606
+https://data.4dnucleome.org	559275e2-1ccb-4bf8-a797-e8c11439ebdc	single organism	NCBI:txid9606
+https://data.4dnucleome.org	e3eafe2d-4685-42e6-8f51-237fd8ed4982	single organism	NCBI:txid9606
+https://data.4dnucleome.org	a56eda62-0766-4fdb-957b-54a96a47b7c5	single organism	NCBI:txid9606
+https://data.4dnucleome.org	9177488b-df79-43b4-b288-8c98a3a99968	single organism	NCBI:txid9606
+https://data.4dnucleome.org	0d61ba6b-0191-4d4a-a16b-a64b26798b4c	single organism	NCBI:txid9606
+https://data.4dnucleome.org	3c5dc5c7-2df3-4cd2-b850-13f4d750f269	single organism	NCBI:txid9606
+https://data.4dnucleome.org	13522e92-c32a-49d1-a75e-9e4f8613ae93	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ae6a7853-3b07-4fad-a990-731244f05284	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ce2fa895-2bfb-44a0-8d9d-ae2da7a8aab4	single organism	NCBI:txid9606
+https://data.4dnucleome.org	24fa1da4-6e02-4c56-9fc2-11568e2b0f30	single organism	NCBI:txid9606
+https://data.4dnucleome.org	016745c7-f472-42d1-b0ca-fd5af9c35640	single organism	NCBI:txid9606
+https://data.4dnucleome.org	71900cae-28ca-49a0-9fd4-65950bc8814b	single organism	NCBI:txid9606
+https://data.4dnucleome.org	bffc0734-6644-4128-be8e-176b123a6bdf	single organism	NCBI:txid9606
+https://data.4dnucleome.org	48b74a23-a1e9-4009-a11e-d3f91b85e339	single organism	NCBI:txid9606
+https://data.4dnucleome.org	1845efe1-73fe-4299-85aa-166d53f9197e	single organism	NCBI:txid9606
+https://data.4dnucleome.org	dd5f0e18-6c68-4963-8f78-99fd38d10861	single organism	NCBI:txid9606
+https://data.4dnucleome.org	7f7f3288-1a0e-4d1b-a25f-d844ba6de295	single organism	NCBI:txid9606
+https://data.4dnucleome.org	140cc8d1-6591-4138-a726-bbfc35894e4d	single organism	NCBI:txid9606
+https://data.4dnucleome.org	bb250bba-6ea7-40d9-8dd3-9880577e9916	single organism	NCBI:txid9606
+https://data.4dnucleome.org	1b0d2aa2-ba33-486b-b836-15522d41be3d	single organism	NCBI:txid9606
+https://data.4dnucleome.org	3d1d3c37-fef6-40bc-9f48-cfd532a9b7b8	single organism	NCBI:txid9606
+https://data.4dnucleome.org	9dc98602-fcc6-4846-b3df-1a3099780e7b	single organism	NCBI:txid9606
+https://data.4dnucleome.org	f14f2a10-f8e8-4c04-9004-7a4022ed460d	single organism	NCBI:txid9606
+https://data.4dnucleome.org	dcb6178a-21aa-4b87-89b5-5eda68d9e2af	single organism	NCBI:txid9606
+https://data.4dnucleome.org	3bb3ce92-f264-4f66-bd9a-b93239072209	single organism	NCBI:txid9606
+https://data.4dnucleome.org	97c9f150-2090-41fd-9de2-d9628975f396	single organism	NCBI:txid9606
+https://data.4dnucleome.org	4d1b0ebb-3394-4399-9b3a-338b7a6f4de9	single organism	NCBI:txid9606
+https://data.4dnucleome.org	35800ad3-2f6a-4019-b209-0862072d153e	single organism	NCBI:txid9606
+https://data.4dnucleome.org	bc9712ad-3aa7-4b9a-a648-5136efb6f6f1	single organism	NCBI:txid9606
+https://data.4dnucleome.org	20b5bce5-e1cf-4862-af83-088e7aa7184e	single organism	NCBI:txid9606
+https://data.4dnucleome.org	8526d215-7c92-4fef-a761-5da1049b94cd	single organism	NCBI:txid9606
+https://data.4dnucleome.org	e72fdcef-1dc0-40ef-97c5-16b2f194e8e4	single organism	NCBI:txid9606
+https://data.4dnucleome.org	a19e56b4-8faf-4abf-81d4-b337031f1b1e	single organism	NCBI:txid9606
+https://data.4dnucleome.org	32a67064-da24-46e2-aa2e-1fd19408d816	single organism	NCBI:txid9606
+https://data.4dnucleome.org	70663024-a80f-4b1c-9a4e-d8121c77e34a	single organism	NCBI:txid9606
+https://data.4dnucleome.org	5fe0a3f1-bf17-4e4f-aace-c071b5af958a	single organism	NCBI:txid9606
+https://data.4dnucleome.org	a472adf0-ad9b-4c96-bc74-40cd75ad1323	single organism	NCBI:txid9606
+https://data.4dnucleome.org	6cdfe67b-4441-4753-ba19-5bdda756cb71	single organism	NCBI:txid9606
+https://data.4dnucleome.org	509e1996-b1dc-43d9-9139-4c69a910e4be	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	451687f0-8195-496d-aa37-fead86dba857	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	c7b496cf-e6a9-4bca-9a0a-f6f142683dc1	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	75b10d92-6c32-4b85-b5b2-e17faa562cd5	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	ac2e942e-22a3-430e-8155-ac7434cc58a8	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	26ebb2b1-2902-4446-a25f-9fc6523ed5cf	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	b1963bed-6a69-427d-9cd6-4cc2a07de075	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	a69f6cc8-ebe1-4a23-a37b-5ce456578f09	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	6b8ff501-ffd8-4a50-b046-d59b36ce5997	single organism	NCBI:txid7227
+https://data.4dnucleome.org	f01caf67-dd73-40ae-9476-940f0762b9c2	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	6286f2cc-5630-41eb-9c4c-abed57f8d657	single organism	NCBI:txid9031
+https://data.4dnucleome.org	aa46af19-6d43-4c6f-8cf7-655b00492030	single organism	NCBI:txid9031
+https://data.4dnucleome.org	f69831c0-a82a-4abe-be30-487c8ffe6275	single organism	NCBI:txid10090
+https://data.4dnucleome.org	656cb39f-43b6-4418-af20-d3f6b41b6308	single organism	NCBI:txid10090
+https://data.4dnucleome.org	393880ea-f928-406d-a4bf-78435b8975ef	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	72b1cd95-60a6-4cde-927c-704c05e62d7d	single organism	NCBI:txid10090
+https://data.4dnucleome.org	1d7e0721-cc38-4581-8442-fc5b8dea4931	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	b350063c-d715-41eb-85d3-f75858f2de45	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	0f011b1e-b772-4f2a-8c24-cc55de28a994	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	2b46c4e3-780f-40bc-929f-f1c1a2e181f1	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	236b9e6f-184b-4eb4-b57f-5fc84e3a7dd5	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	09df211d-62d9-439a-b546-81a8a6f463bc	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	a1e9e01d-8b5e-4d90-9143-d2f3e2883d3f	single organism	NCBI:txid9606
+https://data.4dnucleome.org	276ac129-0878-458b-9c7b-44bdf2deeb9c	single organism	NCBI:txid10090
+https://data.4dnucleome.org	ead011d3-a059-4e69-845f-dd52e87d199f	single organism	NCBI:txid10090
+https://data.4dnucleome.org	17d7cb85-8fee-4fe4-b29d-a84d12b34ba9	single organism	NCBI:txid10090
+https://data.4dnucleome.org	d7fc593e-7f3f-4d06-b88c-a7d500a3c0f1	single organism	NCBI:txid10090
+https://data.4dnucleome.org	3e341ec1-8afa-45fe-bddf-7e8c27e14e34	single organism	NCBI:txid9606
+https://data.4dnucleome.org	06e8810d-a160-41d3-8683-85301919ba43	single organism	NCBI:txid9606
+https://data.4dnucleome.org	d24e9b68-4dae-46d2-a3df-9cbb8f0bdeb7	single organism	NCBI:txid9606
+https://data.4dnucleome.org	9a26312f-17ae-4b02-8e79-8417710d9004	single organism	NCBI:txid9606
+https://data.4dnucleome.org	dd54397e-2310-4470-9c09-2366c04fd910	single organism	NCBI:txid9606
+https://data.4dnucleome.org	3781a958-1586-450d-b5e4-7613b77a8134	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7120f909-81f5-42a7-82c0-995592460327	single organism	NCBI:txid10090
+https://data.4dnucleome.org	28b12d44-6f9a-4833-827e-09a37903ae3b	single organism	NCBI:txid10090
+https://data.4dnucleome.org	4c0afe67-8bf1-46ea-a79e-5733b4d869b2	single organism	NCBI:txid10090
+https://data.4dnucleome.org	c6555c3d-fa52-43d6-a5f2-123e247c1209	single organism	NCBI:txid10090
+https://data.4dnucleome.org	6fc2e927-7ef0-4e9a-b7a8-c6d1702d066a	single organism	NCBI:txid10090
+https://data.4dnucleome.org	d1d1bfc8-5d27-4088-8c30-77112924ea46	single organism	NCBI:txid10090
+https://data.4dnucleome.org	0add03df-4f1a-459b-9105-523198abaeac	single organism	NCBI:txid10090
+https://data.4dnucleome.org	d8227a64-60b7-4ecf-ae02-81d20a1d2ebc	single organism	NCBI:txid10090
+https://data.4dnucleome.org	da9c8779-986d-4e01-aeee-b2fe4c6b19b5	single organism	NCBI:txid10090
+https://data.4dnucleome.org	cf12e626-c642-4731-ad39-cdc95f48bfe0	single organism	NCBI:txid10090
+https://data.4dnucleome.org	d18740c6-26b5-41b9-9885-febca589260f	single organism	NCBI:txid10090
+https://data.4dnucleome.org	5f7c3300-c667-40a4-88a2-94e3c955dc66	single organism	NCBI:txid10090
+https://data.4dnucleome.org	db3d2eaf-9b2c-4af7-96eb-b24ea0e58101	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7256801c-9c6e-4563-a97a-a295fccf5f07	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	60a1d1d7-c211-46b3-91fd-74ae3d8ee0d4	single organism	NCBI:txid10090
+https://data.4dnucleome.org	d1476202-461a-4a26-a955-c9c68154f6d8	single organism	NCBI:txid10090
+https://data.4dnucleome.org	92ded906-5f73-471a-a4bb-33a29e4b71eb	single organism	NCBI:txid10090
+https://data.4dnucleome.org	77d312c2-5737-4aa1-9f1e-1bde96458627	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	122774a3-7354-4d73-a8de-c111cd195066	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	55cc449a-df7a-4c5a-b2b3-e394e1884607	single organism	NCBI:txid10090
+https://data.4dnucleome.org	93953513-0681-4a2e-a8b8-5fce8f3daa7b	single organism	NCBI:txid10090
+https://data.4dnucleome.org	4c6af33d-3b91-4283-9d63-a1605218c78d	single organism	NCBI:txid10090
+https://data.4dnucleome.org	1272936d-006d-444f-8819-cc2943b6da6e	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	1032c021-c18a-49ab-90d2-fd2cc5a8e1b7	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	95553cc5-a402-4bbc-8b07-0ecdd8c6878a	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	51dfd657-1cf9-4d5c-a47f-9f087083e470	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	cc76f823-860f-480f-9cb0-dac1178db885	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	45504e4e-d767-4704-babd-d958ef38fd8a	single organism	NCBI:txid10090
+https://data.4dnucleome.org	005b34b7-b568-4831-ba35-53125410659c	single organism	NCBI:txid10090
+https://data.4dnucleome.org	e2a0e141-49b3-487b-af1b-aa17ca4b6046	single organism	NCBI:txid10090
+https://data.4dnucleome.org	471506ca-3b60-4b87-9c40-54b1f35ed0eb	single organism	NCBI:txid10090
+https://data.4dnucleome.org	0f8b7bd8-342d-4e0a-bf3d-6a75f871c43b	single organism	NCBI:txid10090
+https://data.4dnucleome.org	53decd06-4d21-46e8-b905-2108868b4e61	single organism	NCBI:txid10090
+https://data.4dnucleome.org	f39ad341-462a-4604-af44-db89a7b6d339	single organism	NCBI:txid10090
+https://data.4dnucleome.org	fddae075-bdaa-4194-9622-240575cd16c9	single organism	NCBI:txid10090
+https://data.4dnucleome.org	698786c8-3475-4b7a-bfe3-3877fbcbc268	single organism	NCBI:txid10090
+https://data.4dnucleome.org	81c8552e-3968-40bc-bdee-06a6a46eea40	single organism	NCBI:txid10090
+https://data.4dnucleome.org	6f58cd46-6248-4873-a3d6-e8b3b386abb7	single organism	NCBI:txid10090
+https://data.4dnucleome.org	5101ccc3-d793-463f-9abf-6d073195b53d	single organism	NCBI:txid10090
+https://data.4dnucleome.org	d6fc198d-513f-4db0-95d3-c892702416be	single organism	NCBI:txid10090
+https://data.4dnucleome.org	8ca8e3f1-acd1-46cd-abb5-f0ba0d1e2221	single organism	NCBI:txid10090
+https://data.4dnucleome.org	be73e9a5-b5e3-4067-97df-bae1b317580a	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	7353cd9a-1a70-47f2-821f-eafd51b1ac5c	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	760c778e-cd2b-4cd9-9eac-b1dd8e3024de	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	425d0e26-2a21-47d7-85a5-8ea345e15325	single organism	NCBI:txid9606
+https://data.4dnucleome.org	e3aee465-e5ba-46f1-97bd-a9054fc1d0c0	single organism	NCBI:txid9606
+https://data.4dnucleome.org	666e6447-4684-41b2-9a58-3defba0a3204	single organism	NCBI:txid9606
+https://data.4dnucleome.org	3bb15ff0-1856-4367-b2f1-2b88f9d96766	single organism	NCBI:txid9606
+https://data.4dnucleome.org	d036e19b-8dd2-4fba-8bf7-7cfbdea8e761	single organism	NCBI:txid9606
+https://data.4dnucleome.org	9cb24ae2-4d95-4608-8c57-cdab0b950839	single organism	NCBI:txid9606
+https://data.4dnucleome.org	f70eeb3f-0b4d-4755-8cb8-40e9a3d0e204	single organism	NCBI:txid9606
+https://data.4dnucleome.org	fdb1be0a-5a13-4079-86cc-f571df604fdf	single organism	NCBI:txid9606
+https://data.4dnucleome.org	1365a551-1f49-4c98-b3d4-655bd84fc55d	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	66d6ae78-6b0e-4546-8307-95320e124e1c	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	9fd3c189-7169-4336-bfd1-545c3b53ca44	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	08f44886-feb2-4445-8b21-a53afc7499ab	single organism	NCBI:txid7227
+https://data.4dnucleome.org	e0412de1-a5a8-4920-be12-97cd88d49f56	single organism	NCBI:txid7227
+https://data.4dnucleome.org	13d6cdaf-79dc-41a8-ab0c-15f2331eda8f	single organism	NCBI:txid7227
+https://data.4dnucleome.org	c32bda75-01f5-482f-bd01-b42005062b72	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	c54e6b03-8557-41de-bb0a-d745d805cb05	single organism	NCBI:txid10090
+https://data.4dnucleome.org	b6b39766-e253-4e23-8d9e-0acdba8f86b9	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	de21f255-bb0c-4a4a-8c0c-59f6192d789d	single organism	NCBI:txid10090
+https://data.4dnucleome.org	354fbb30-50c1-4e1a-887b-8a4161740c1c	single organism	NCBI:txid10090
+https://data.4dnucleome.org	a5730740-8bce-49f3-abe4-4c3c074c2f7c	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	4418d27e-d4ac-4dc9-a240-0389c45dde05	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7a6140ea-8b98-4722-92d5-d79a5251af5a	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	044733e7-db6c-412c-b1c3-eb77c811dd3e	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	304b1fca-909f-4da1-9fb9-eab9d2bd69db	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	9a60dbc8-3421-43a4-bf3a-b0c6b577f3a2	single organism	NCBI:txid7227
+https://data.4dnucleome.org	742ef336-6e8c-4e91-bb21-83aa49508180	single organism	NCBI:txid7227
+https://data.4dnucleome.org	224cf207-98a5-4b28-b541-5a99b479a392	single organism	NCBI:txid10090
+https://data.4dnucleome.org	2a5f936d-6aa7-40d2-9ce6-7134f7e6d511	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	cc1fedaa-50ae-4c47-9d6a-b2b75e67ebb7	single organism	NCBI:txid10090
+https://data.4dnucleome.org	ac4c6a7c-6240-4260-93af-cea244e83155	single organism	NCBI:txid10090
+https://data.4dnucleome.org	3943a5db-abd2-4324-8615-3682124202ab	single organism	NCBI:txid10090
+https://data.4dnucleome.org	cb2fc46c-319d-4586-a384-f58a8e4b51c8	single organism	NCBI:txid10090
+https://data.4dnucleome.org	01defb78-f711-402d-8b93-3091d9f2a8e5	single organism	NCBI:txid10090
+https://data.4dnucleome.org	f3ceece1-644e-4660-81df-e71e2c1c74bf	single organism	NCBI:txid10090
+https://data.4dnucleome.org	e8037465-c47a-487a-a8ff-ffc64ba1ebf8	single organism	NCBI:txid10090
+https://data.4dnucleome.org	da66043b-dea5-44ff-9384-812f59f186b2	single organism	NCBI:txid10090
+https://data.4dnucleome.org	476d5ee9-f589-492d-80b9-d580222535b9	single organism	NCBI:txid10090
+https://data.4dnucleome.org	6058a20d-fd4b-4ada-a325-b63f6d50a259	single organism	NCBI:txid10090
+https://data.4dnucleome.org	c66ed5bb-769a-4123-bf3d-84c1395d7ade	single organism	NCBI:txid10090
+https://data.4dnucleome.org	32b001b9-f8f2-4d47-b518-6bc6b89cb404	single organism	NCBI:txid10090
+https://data.4dnucleome.org	ed3e1390-83cc-4d50-9ff0-7b100ff7217e	single organism	NCBI:txid10090
+https://data.4dnucleome.org	5a5b4f28-5ee0-4fd1-a018-4941e76de186	single organism	NCBI:txid10090
+https://data.4dnucleome.org	946138eb-01bb-4fb2-b75b-a42b42191177	single organism	NCBI:txid10090
+https://data.4dnucleome.org	a4a02e97-bfda-4f18-9686-1d5e7c44844e	single organism	NCBI:txid10090
+https://data.4dnucleome.org	e14dd136-6b15-46fa-bc6b-d50da9e5d2c7	single organism	NCBI:txid10090
+https://data.4dnucleome.org	27bb6e6a-fd4a-4033-87e3-801c5430e672	single organism	NCBI:txid10090
+https://data.4dnucleome.org	c27451a6-6837-4f9b-bb73-be45e67f7d91	single organism	NCBI:txid10090
+https://data.4dnucleome.org	c2547c81-8a78-42e4-a77e-6c571c01e48e	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7868aff0-9e6e-4dfe-baf3-d73ac28c2165	single organism	NCBI:txid10090
+https://data.4dnucleome.org	a1b8dd42-0a0d-4578-bd84-d6f13f49ad73	single organism	NCBI:txid10090
+https://data.4dnucleome.org	771fd7d5-1cd1-4850-9998-b40cade3c52a	single organism	NCBI:txid10090
+https://data.4dnucleome.org	68172441-97c4-40cc-b73f-d0f5dbc5cc05	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	082cdfcc-8702-48b6-80f6-562167c2ae69	single organism	NCBI:txid10036
+https://data.4dnucleome.org	d1586f88-0fdf-42dd-bfd3-953bdef7b76e	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	de5741b2-fed9-46a7-a671-933b6d0ae29a	single organism	NCBI:txid10036
+https://data.4dnucleome.org	c9affe27-c09e-46be-ac1c-a614df02587a	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	10aa2d32-9fd4-46ce-a585-827d8c7810c3	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	621ec75f-d694-4ea8-adea-cce674ac3b19	single organism	NCBI:txid7227
+https://data.4dnucleome.org	a962aea0-2937-446e-88b5-9f79aeaca336	single organism	NCBI:txid7227
+https://data.4dnucleome.org	1fcf3cdc-b830-41b4-900a-4bf0fa3ad0a0	single organism	NCBI:txid7227
+https://data.4dnucleome.org	270ef459-6f5c-450e-998f-f2edef0467cb	single organism	NCBI:txid7227
+https://data.4dnucleome.org	668e2079-162c-42cf-8fc6-8bea1a2f6de9	single organism	NCBI:txid7227
+https://data.4dnucleome.org	037b3600-b6dd-4625-a06f-7c43b9d3664e	single organism	NCBI:txid7227
+https://data.4dnucleome.org	5e74680c-c99c-48a0-ad8e-6c974ae6d30c	single organism	NCBI:txid7227
+https://data.4dnucleome.org	c3d25a35-c88f-4e00-b019-2298e5c11d4c	single organism	NCBI:txid7227
+https://data.4dnucleome.org	6890dbf4-b14d-4b5f-98ad-ca40d7a9fb0f	single organism	NCBI:txid7227
+https://data.4dnucleome.org	5a57f963-b849-4799-a57f-799825f1ea37	single organism	NCBI:txid7227
+https://data.4dnucleome.org	e3ef6b9f-7e27-48dd-9741-2f1da3433be9	single organism	NCBI:txid7227
+https://data.4dnucleome.org	41067090-4dd1-4c59-8010-69b2dd75f2c5	single organism	NCBI:txid7227
+https://data.4dnucleome.org	40bf9373-5631-468a-bca2-7a63f564982f	single organism	NCBI:txid7227
+https://data.4dnucleome.org	85b1e0d9-6d5a-4ddf-b964-3f712e7949d6	single organism	NCBI:txid9606
+https://data.4dnucleome.org	9b648444-2b84-449a-b6ca-c879d518866c	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	d0f30ba8-3e43-4b72-b3cb-32b83c170785	single organism	NCBI:txid9606
+https://data.4dnucleome.org	e1f99f91-6fd0-4d19-9570-3fe25b25a713	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	4ece180e-4283-46a0-9b12-972fb8e0b2a6	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	2c69ce50-c2a2-4000-ba32-3186383e9807	single organism	NCBI:txid10090
+https://data.4dnucleome.org	119a15a5-ec63-4a5f-8b90-402477df78a1	single organism	NCBI:txid10090
+https://data.4dnucleome.org	f20edcb7-9b1e-407e-9978-e88318c69b1f	single organism	NCBI:txid10090
+https://data.4dnucleome.org	93dd48ce-feb1-403c-95a8-4698df4593f1	single organism	NCBI:txid9606
+https://data.4dnucleome.org	01aca506-de9d-482c-999e-07b05b8439d4	single organism	NCBI:txid9606
+https://data.4dnucleome.org	78c87cb5-af2c-46d1-8b3f-75dd5607d3b9	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ac21b901-db3d-4dfa-af51-3caa41b3f80e	single organism	NCBI:txid9606
+https://data.4dnucleome.org	66c71151-887b-4648-bb0b-0580a854ad76	single organism	NCBI:txid9606
+https://data.4dnucleome.org	7a189d19-451a-4854-b63c-b2a3ee785859	single organism	NCBI:txid9606
+https://data.4dnucleome.org	c98cc50f-70b7-4118-925b-5fed1c767f70	single organism	NCBI:txid9606
+https://data.4dnucleome.org	54d88236-e708-45cc-84a3-90c0125c27a5	single organism	NCBI:txid9606
+https://data.4dnucleome.org	14456b79-33a6-4504-a020-2bad9e6ddd10	single organism	NCBI:txid9606
+https://data.4dnucleome.org	464dd79b-2b3e-459c-839e-e34fe371c0c4	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ceca462e-fe1f-41dd-859e-df09a0512d8f	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ae731996-1881-45c0-91e3-6ba8be650469	single organism	NCBI:txid9606
+https://data.4dnucleome.org	687ffa02-b7ab-499c-aa18-35f72b248115	single organism	NCBI:txid9606
+https://data.4dnucleome.org	f145c177-b4eb-4ba4-978d-affbed81adc2	single organism	NCBI:txid9606
+https://data.4dnucleome.org	7bb97645-f512-420b-a4be-2f5c85042096	single organism	NCBI:txid9606
+https://data.4dnucleome.org	57a4c1f3-7e22-45ca-97a7-28a765944871	single organism	NCBI:txid9606
+https://data.4dnucleome.org	6a747788-0bc2-494d-acc6-90d9fcf71812	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ea312e60-902b-4606-8baf-799108c78971	single organism	NCBI:txid9606
+https://data.4dnucleome.org	e4dc6186-f299-4bba-95e8-281405596ec4	single organism	NCBI:txid9606
+https://data.4dnucleome.org	08d79f91-8083-4332-bd20-8362367721e0	single organism	NCBI:txid9606
+https://data.4dnucleome.org	04bc6930-3f65-40c9-8b50-5b447c023108	single organism	NCBI:txid9606
+https://data.4dnucleome.org	99a1211c-db36-4ee7-9254-b829dbe77f75	single organism	NCBI:txid9606
+https://data.4dnucleome.org	0ebba9d7-1d6d-4fa2-a0de-b11971755f31	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ec2a0864-0112-40d2-a868-97f1fadf5ef6	single organism	NCBI:txid9606
+https://data.4dnucleome.org	771ff2c1-298e-450a-9a20-c02c12c08ab9	single organism	NCBI:txid9606
+https://data.4dnucleome.org	be7518fa-cd72-45d9-a46a-1482f2a7ce74	single organism	NCBI:txid9606
+https://data.4dnucleome.org	d48884a1-6a29-4aeb-a5a7-ea4dbe5b43fe	single organism	NCBI:txid9606
+https://data.4dnucleome.org	68513c81-d679-466b-8da7-b5a9c0e76383	single organism	NCBI:txid7227
+https://data.4dnucleome.org	c672da47-5283-4892-b626-f261e426f8df	single organism	NCBI:txid7227
+https://data.4dnucleome.org	ef56d559-7387-4424-85b6-9160eba0dd2e	single organism	NCBI:txid7227
+https://data.4dnucleome.org	4d9463ad-8ff5-4996-ae60-f31a7c974c7a	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	b71b4a8a-5f08-4b04-ac7e-e0de2d935af4	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	e8e3a71f-c13b-4253-8017-8eb6841f2044	single organism	NCBI:txid10090
+https://data.4dnucleome.org	ae6c9f73-7b18-40a7-972d-de29807fefd0	single organism	NCBI:txid10090
+https://data.4dnucleome.org	fdb22a23-c292-4275-895e-79515614e94a	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	08e26295-f751-4dc4-afef-96bb43ec696e	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	d6643241-157d-4c96-bd82-069b93e02a24	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	cccc57cf-fe00-427d-8d3e-aa021ac3f192	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	d1bea116-5bce-4dc7-8109-023fd7a58859	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	aa222236-9dde-40ae-913f-73325b696065	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	84f52474-077b-4e33-8551-036307c512f8	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	c9e6c7b4-36a2-4b88-9735-3652902b4f80	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	18cddfcb-c2d6-41fe-98a9-d98f2bf1afd7	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	6dde00ed-88d8-467d-a9e2-e144a7d1cf38	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	44b0b763-065f-40f3-8432-8bd66d9f1be3	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	187d7227-366c-4e7d-b9ae-11f27efd4918	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	8b5c75bd-7fcd-4a10-a40d-fc8206f879fd	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	a7aa4e34-de17-4336-9e0c-2844fd326a96	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	0f3d5870-28ba-4cdd-b1fd-45c6235f182a	single organism	NCBI:txid7955
+https://data.4dnucleome.org	bdf0e9db-e054-4e50-90cc-9a34f59da113	single organism	NCBI:txid9606
+https://data.4dnucleome.org	d4cda8f1-c75b-42c7-83ff-42ddd1faa38a	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	36695ce5-94a4-4168-b4fa-e4931cded315	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	368d57f8-6889-4dcd-8353-42e8731b1e2b	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	0f89a762-b37c-413f-8c43-67913ec8307c	single organism	NCBI:txid9606
+https://data.4dnucleome.org	d99e6d57-2418-4a01-9784-f102e72c579c	single organism	NCBI:txid10090
+https://data.4dnucleome.org	2b5b3fb9-df7f-42c8-bce5-40439cdc5c62	single organism	NCBI:txid10090
+https://data.4dnucleome.org	b95e7786-f56a-474b-945c-8b36e5bb0663	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	07b93f25-1a9b-4e0f-82de-de79e85ce37c	single organism	NCBI:txid10090
+https://data.4dnucleome.org	393c31f1-3cbf-4bbc-af15-302606f57f2a	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7be713aa-2c2f-4620-a6b9-7d29ac704618	single organism	NCBI:txid10090
+https://data.4dnucleome.org	4d9a1543-3e33-4412-ac67-205a496e759b	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7729de0a-b025-4ec1-b9a9-6ea27692bf72	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7aa2b5ae-7cbd-46fc-8ba7-67c728086848	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7bead523-62f4-4ae5-9a64-cbeb454e2e41	single organism	NCBI:txid10090
+https://data.4dnucleome.org	45627f02-19f3-471a-8d69-a91893ce3997	single organism	NCBI:txid10090
+https://data.4dnucleome.org	f8ddbc70-a311-490b-b0ef-7549868a059c	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	15180a95-b2ca-4be7-99b1-7a9f7b2620aa	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	24d9c9db-9db4-4341-84c1-9dff61dad666	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	71f4e7dc-e8bf-4ddf-be3c-1eb10fef84a7	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	681aeb99-5945-4c3e-af24-316abe411e0b	single organism	NCBI:txid7227
+https://data.4dnucleome.org	4f48f43e-4cef-4718-ac43-e9f7f29fb7bc	single organism	NCBI:txid7227
+https://data.4dnucleome.org	d15f97fd-c73a-452b-8464-658f20fb2de2	single organism	NCBI:txid10090
+https://data.4dnucleome.org	abdba0ac-92aa-4943-9e4e-19a587e0c1bf	single organism	NCBI:txid10090
+https://data.4dnucleome.org	2fce5b88-7c48-4601-9f0f-f504c434f574	single organism	NCBI:txid10090
+https://data.4dnucleome.org	313ca9fc-7ae6-4113-ad8d-c3058d15e599	single organism	NCBI:txid10090
+https://data.4dnucleome.org	aadb6ced-1564-454f-8803-62c4726b6fa8	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	dbc5d3ff-3e19-48a8-8285-44ccf09cef15	single organism	NCBI:txid10090
+https://data.4dnucleome.org	03961cfa-e1f7-4c15-a191-036a1cab9e0a	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	b248308c-d93a-4441-bafc-c9e43ef1cc05	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	1fa2289c-2b3d-46b0-8d00-a4fece1836e7	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	c60f7cf5-a3d6-4946-8f75-5170a36482b0	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	744b3707-04e2-4943-91f4-dcd90f046404	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	610bbbf4-d96d-4b9b-8159-086029afc8e9	cell line ancestor	NCBI:txid60711
+https://data.4dnucleome.org	85588b12-6c86-4a60-aead-5af6f7b71da1	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	771e0bad-9d7c-4b8b-9f9f-a95d05f19519	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	3c3dc156-e3d3-4526-89b2-df995f756034	single organism	NCBI:txid10090
+https://data.4dnucleome.org	7ddb012d-bc03-4c95-a163-79c9532eb455	single organism	NCBI:txid10090
+https://data.4dnucleome.org	e743955a-ec85-4f6d-b85b-cef258a37558	single organism	NCBI:txid10090
+https://data.4dnucleome.org	e13b442e-11ef-4dee-82dd-40b15ab34da1	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	44ea206c-8b31-4754-a603-c646f4920103	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	38652913-021b-41ce-833d-f6f0a4bb5784	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	4ab9856c-ed15-41c4-bfd8-67056de74f49	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	8c7841ae-8f7e-41e0-b560-2b686a3cd636	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	982fe7c1-43c6-4236-bf29-c17f5764bc87	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	80b3974c-963d-4cbb-a620-0040c3c46372	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	e6f2a139-288c-490f-820d-27e74a8843df	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	e1033cbc-41cd-4819-9731-5bff808f9f15	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	a3ebdd9f-2afc-4c1f-b729-468a4474ac00	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	abcaff6b-c97e-4e25-8297-67d5a0e7ad52	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	8d78485f-872d-403d-bb5d-2ccc2c56ba72	single organism	NCBI:txid9606
+https://data.4dnucleome.org	a70fc18e-ff52-452e-9388-1ac372886c97	single organism	NCBI:txid9606
+https://data.4dnucleome.org	a07a5fcc-eb61-42e7-a5e6-dd566c03ada3	single organism	NCBI:txid9606
+https://data.4dnucleome.org	63ab6bf4-9a95-411d-96b5-b00c5f48c258	single organism	NCBI:txid9606
+https://data.4dnucleome.org	48561002-fe1b-4930-aa6d-fc57fcfcf163	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	5c4f486e-4f36-4d57-a38a-966e0ea29716	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	469a5e58-d40f-4536-8df9-5c603111ba1f	single organism	NCBI:txid10090
+https://data.4dnucleome.org	aff65913-920d-4d7c-a051-77f2e399037f	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	4101fd9b-449a-4dc9-913e-944e1038ddf1	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	0e212fbb-0895-4cbd-b29e-4baead329adc	cell line ancestor	NCBI:txid9031
+https://data.4dnucleome.org	fa5fef67-fd18-4aa1-a92b-1d8a87cd2d9b	cell line ancestor	NCBI:txid9031
+https://data.4dnucleome.org	ef807f51-66c2-47d2-b5bb-a2c39f3bf430	cell line ancestor	NCBI:txid9031
+https://data.4dnucleome.org	bdb9d92e-1f52-4e84-a484-78e595791e5e	cell line ancestor	NCBI:txid9031
+https://data.4dnucleome.org	18fc203e-0b65-43b7-8373-0c8fdf5eff57	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	ccc0a0c3-9654-401e-ae1f-6640c0ff9bb3	cell line ancestor	NCBI:txid7227
+https://data.4dnucleome.org	04002d71-b846-4788-b8f6-f6d7813b903b	single organism	NCBI:txid9606
+https://data.4dnucleome.org	2ac5fbce-a34a-4f70-ae08-499d26299f1d	single organism	NCBI:txid9606
+https://data.4dnucleome.org	3d5b5764-8328-4a02-851a-0b9b038134d1	single organism	NCBI:txid9606
+https://data.4dnucleome.org	df80d793-f77a-4791-94f8-5f3c80a782f6	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	007b911f-3016-48d6-97d4-65a34882f9b2	single organism	NCBI:txid9606
+https://data.4dnucleome.org	181e0c85-7fbe-41fb-87e9-b6c5a22dac4f	single organism	NCBI:txid9606
+https://data.4dnucleome.org	bfa2d570-3d90-4f42-ae51-a4c3714f8466	single organism	NCBI:txid9606
+https://data.4dnucleome.org	be294d56-a8bd-4f0b-80d3-624940362d22	single organism	NCBI:txid9606
+https://data.4dnucleome.org	4b606af8-2725-459f-b306-d0263fa1fd06	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	d636932a-2150-4f00-9dfe-103a8ca75a19	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	ce78fe9f-0f1c-4142-966b-4eb54e4190e4	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	7849d935-640b-4216-8e64-e3e179a31c43	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	032da4cd-e501-4bd4-bf62-beb541466f23	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	39c6898b-788b-4d7e-b5d6-9fddf9b75960	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	37cd12e1-1c7b-49af-ba27-38b742b7738d	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	ee273d46-04e6-491a-ae63-17d33dac2159	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	fbc4dd7f-4d4e-4285-ae22-c3f48739d322	single organism	NCBI:txid10090
+https://data.4dnucleome.org	25946356-2f25-4199-9f29-f52d8053f9de	single organism	NCBI:txid10090
+https://data.4dnucleome.org	2a057513-5a1a-497f-99e8-39cb098e7fb5	single organism	NCBI:txid10090
+https://data.4dnucleome.org	e8baf7ca-94a1-4913-93f3-10828481cc58	single organism	NCBI:txid10090
+https://data.4dnucleome.org	99830291-05c6-4f3f-9841-a1cddb709e9e	single organism	NCBI:txid10090
+https://data.4dnucleome.org	6c70bef5-52e2-4f51-96bb-ec3aec4eaac9	single organism	NCBI:txid10090
+https://data.4dnucleome.org	c323f4ab-cf08-45d3-9e88-fe1bb0e5ee26	single organism	NCBI:txid10090
+https://data.4dnucleome.org	a39c0ab9-bef1-42b0-bd00-1c83db384959	single organism	NCBI:txid10090
+https://data.4dnucleome.org	f8fd510a-c120-4a66-bdff-c45c9a5c85b7	single organism	NCBI:txid10090
+https://data.4dnucleome.org	3add03b3-8bf9-4ae1-b447-147560618559	single organism	NCBI:txid10090
+https://data.4dnucleome.org	96c88f61-4ae8-4aa6-9fa2-3a36444e45a9	single organism	NCBI:txid10090
+https://data.4dnucleome.org	f10cacdd-2560-4183-9c2b-e4c0ee15a49c	single organism	NCBI:txid10090
+https://data.4dnucleome.org	ef0368de-a181-4498-b5c4-3fc45586be3a	single organism	NCBI:txid10090
+https://data.4dnucleome.org	13e689ba-3ae3-4302-817b-3818bda0862f	single organism	NCBI:txid10090
+https://data.4dnucleome.org	54f6a5b4-3d38-44bd-96e5-e597c5ab1794	single organism	NCBI:txid10090
+https://data.4dnucleome.org	8fde4be0-71c6-4bf7-8822-facb50cf2a02	single organism	NCBI:txid10090
+https://data.4dnucleome.org	8e419427-a5c7-4c10-b5c5-6eebb4879f1f	single organism	NCBI:txid10090
+https://data.4dnucleome.org	02228548-7064-4520-a0d6-cca54868afe4	single organism	NCBI:txid10090
+https://data.4dnucleome.org	4fc11116-e262-43b5-ac57-2e117c7f6302	single organism	NCBI:txid10090
+https://data.4dnucleome.org	796a3861-5ae0-451b-906c-00607554f522	single organism	NCBI:txid10090
+https://data.4dnucleome.org	45742e2b-1046-498b-b89a-509a9dd23eb4	single organism	NCBI:txid10090
+https://data.4dnucleome.org	cfaec5d7-b1a0-4141-84f5-a05566577c99	single organism	NCBI:txid10090
+https://data.4dnucleome.org	142c2f14-5bd9-414c-a98f-57c96b25b740	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	da52b273-da4b-48fb-855c-26589bc54584	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	c7d2c331-0275-4e7b-aeb2-9d052d11df0e	single organism	NCBI:txid10090
+https://data.4dnucleome.org	89192d04-6024-484c-b33c-70c201f93e97	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	e6cf228a-a40e-4647-bda9-cc87b673b26c	single organism	NCBI:txid9606
+https://data.4dnucleome.org	ae41a73a-f573-4972-a40c-2d8f1dcc3501	single organism	NCBI:txid10090
+https://data.4dnucleome.org	97e7afb1-34cc-4c5e-95a4-8d5104dc1740	single organism	NCBI:txid10090
+https://data.4dnucleome.org	4e96368a-b340-4f0c-951e-d56e105504fa	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	51b7a88d-46af-48c6-ba3b-dcfe86d51c4a	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	c894258f-d089-40ef-9973-ec34dd44085a	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	2a9cf0be-0ed3-4e2e-bd06-db1098c2b6f2	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	be9f5d58-2c26-43f1-8fe6-14fc7fff803f	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	c0427088-d8b5-4d27-8c74-fd34dc1c2abd	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	1def5d96-712e-4c76-a27f-c260d2a2b313	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	ba32438b-2a06-4270-8416-3b4df142e6b3	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	61d48cf3-1db5-4993-b021-4170a1a3bf65	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	71a82a54-9d79-4340-b283-7eb20af849e5	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	9aa1c5d6-ee94-4c12-9e91-30d4bd92c8d5	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	4e23a36b-3a27-461d-a6ab-8b4f4231fb8d	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	bc66e873-bc11-45bb-a54d-2afcea2377c8	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	a2c72d28-20fa-4537-8aae-e3391b07ab3c	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	2b2f1955-c5d5-4699-9fcd-27dc8f30feb6	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	37ccbcbd-dfce-4a06-9d6f-f5a0e73f9125	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	d8731a9d-de45-4590-aefa-a927b61a34f0	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	185118a3-b078-4217-a98f-9f02441521e8	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	889d63d3-89a4-432c-afd1-6419d596fe9f	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	3c1f9688-daae-4de6-85fb-ad9bb465b057	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	07cafdf2-0280-4ff9-9e43-e52b40d8a0b0	cell line ancestor	NCBI:txid10090
+https://data.4dnucleome.org	9e9a7a59-9089-4da2-b3aa-ddc50b18f21d	single organism	NCBI:txid9606
+https://data.4dnucleome.org	3da22e80-1015-4b48-a061-21b6c6d66a04	cell line ancestor	NCBI:txid9606
+https://data.4dnucleome.org	7cea4590-fd81-477d-8e83-abc115de45bf	single organism	NCBI:txid9606
+https://data.4dnucleome.org	6d259b58-67fb-450b-9e0e-94a8335418b1	single organism	NCBI:txid9606

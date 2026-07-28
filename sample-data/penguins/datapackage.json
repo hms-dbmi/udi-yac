@@ -1,0 +1,105 @@
+{
+  "name": "penguins",
+  "resources": [
+    {
+      "name": "penguins",
+      "type": "table",
+      "path": "penguins.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "rowid",
+            "type": "string",
+            "description": "row id",
+            "udi:cardinality": 281,
+            "udi:unique": true,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "species",
+            "type": "string",
+            "description": "species name of the penguin",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "island",
+            "type": "string",
+            "description": "island penguin lives on",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "sex  of the penguin",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "bill_length_mm",
+            "type": "number",
+            "description": "bill length of the penguin in millimeters",
+            "udi:cardinality": 330,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "bill_depth_mm",
+            "type": "number",
+            "description": "bill depth of the penguin in millimeters",
+            "udi:cardinality": 330,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "flipper_length_mm",
+            "type": "number",
+            "description": "flipper length of the penguin in millimeters",
+            "udi:cardinality": 330,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "body_mass_g",
+            "type": "number",
+            "description": "body mass of the penguin in grams",
+            "udi:cardinality": 330,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "year",
+            "type": "number",
+            "description": "the year the penguin was recorded",
+            "udi:cardinality": 330,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "primaryKey": ["rowid"],
+        "foreignKeys": []
+      },
+      "udi:row_count": 344,
+      "udi:column_count": 9
+    }
+  ],
+  "udi:name": "penguins",
+  "udi:path": "./data/penguins/"
+}

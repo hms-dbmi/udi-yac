@@ -1,0 +1,4 @@
+id	name	description	synonyms
+OBI:0000726	peak matching	Peak matching is a data transformation performed on a dataset of a graph of ordered data points (e.g. a spectrum) with the objective of pattern matching local maxima above a noise threshold	[]
+OBI:0200085	mass spectrometry analysis	A data transformation which has the objective of spectrum analysis.	[]
+OBI:0200199	gas chromatography mass spectrometry	Gas chromatography mass spectrometry is a data transformation combining mass spectrometry and   gas chromatography for the qualitative as well as quantitative   determinations of compounds.	[]

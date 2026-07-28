@@ -32,8 +32,9 @@ EXCLUDED_CHART_TYPES = {
 
 
 def _cube_templates():
-    path = _PKG / "skills" / "template_visualizations_cube.json"
-    return json.loads(path.read_text())
+    # Cube templates now live in the unified template file, tagged data_cube.
+    path = _PKG / "skills" / "template_visualizations.json"
+    return [t for t in json.loads(path.read_text()) if "data_cube" in t["tags"]]
 
 
 def _encounter_cube_schema():
@@ -75,7 +76,9 @@ def test_cube_templates_load_and_are_tagged():
     templates = _cube_templates()
     assert len(templates) == 11
     for t in templates:
-        assert t["tags"] == ["data_cube"]
+        # multi-axis tags: the data-shape tag plus the chart-type tag
+        assert t["tags"][0] == "data_cube"
+        assert t["tags"][1] == t["chart_type"]
 
 
 def test_cube_templates_exclude_per_record_chart_types():
@@ -137,7 +140,7 @@ def _cube_tools_by_param(param_map):
     _defs, tool_dispatch, templates, tool_tags = generated
     out = []
     for name, (idx, pm) in tool_dispatch.items():
-        if tool_tags.get(name) == ["data_cube"] and pm == param_map:
+        if "data_cube" in tool_tags.get(name, []) and pm == param_map:
             out.append(templates[idx])
     return out
 
@@ -211,7 +214,7 @@ def test_line_template_accepts_temporal_dimension():
     enc = _encounter_cube_schema()
     line_ok = False
     for name, (idx, pm) in tool_dispatch.items():
-        if tool_tags.get(name) != ["data_cube"]:
+        if "data_cube" not in tool_tags.get(name, []):
             continue
         t = templates[idx]
         if '"mark": "line"' in t:
@@ -245,13 +248,13 @@ def test_selection_scopes_tools_by_tag():
     cube_only = _select_tools(tool_defs, tool_tags, {"data_cube"})
     names = {d["function"]["name"] for d in cube_only}
     assert names, "cube selection must be non-empty"
-    assert all(tool_tags[n] == ["data_cube"] for n in names)
+    assert all("data_cube" in tool_tags[n] for n in names)
     # line-item tools are excluded from a cube request
-    assert not any(tool_tags[n] == ["line_item"] for n in names)
+    assert not any("line_item" in tool_tags[n] for n in names)
 
     line_only = _select_tools(tool_defs, tool_tags, {"line_item"})
     lnames = {d["function"]["name"] for d in line_only}
-    assert all(tool_tags[n] == ["line_item"] for n in lnames)
+    assert all("line_item" in tool_tags[n] for n in lnames)
     assert len(cube_only) == 11 and len(line_only) == 52
 
 
@@ -273,7 +276,7 @@ def test_execute_generate_end_to_end_cube(monkeypatch):
     _defs, tool_dispatch, _templates, tool_tags = generated
     tool_name = next(
         n for n, (i, pm) in tool_dispatch.items()
-        if tool_tags.get(n) == ["data_cube"] and pm == {"entity": "E", "dimension": "D"}
+        if "data_cube" in tool_tags.get(n, []) and pm == {"entity": "E", "dimension": "D"}
     )
     tool_args = {"entity": "encounter_counts", "dimension": "class_display"}
 
@@ -300,7 +303,7 @@ def test_execute_generate_end_to_end_cube(monkeypatch):
 
     # Only cube tools were offered to the model (tag selection worked).
     assert calls["selected_tool_names"]
-    assert all(tool_tags[n] == ["data_cube"] for n in calls["selected_tool_names"])
+    assert all("data_cube" in tool_tags[n] for n in calls["selected_tool_names"])
 
     # A concrete spec was produced, grammar-valid, with the resolved marginal.
     spec = json.loads(out["spec_str"])

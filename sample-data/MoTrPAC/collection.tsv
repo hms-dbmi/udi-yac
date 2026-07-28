@@ -1,0 +1,8 @@
+id_namespace	local_id	persistent_id	creation_time	abbreviation	name	description	has_time_series_data
+tag:motrpac-data.org,2023:	motrpac-pass1b-06-transcriptomics				Young Rats Endurance Exercise Training Transcriptomics		True
+tag:motrpac-data.org,2023:	motrpac-pass1b-06-epigenomics				Young Rats Endurance Exercise Training Epigenomics		True
+tag:motrpac-data.org,2023:	motrpac-pass1b-06-proteomics-targeted				Young Rats Endurance Exercise Training Proteomics Targeted		True
+tag:motrpac-data.org,2023:	motrpac-pass1b-06-proteomics-untargeted				Young Rats Endurance Exercise Training Proteomics Untargeted		True
+tag:motrpac-data.org,2023:	motrpac-pass1b-06-metabolomics-targeted				Young Rats Endurance Exercise Training Metabolomics Targeted		True
+tag:motrpac-data.org,2023:	motrpac-pass1b-06-metabolomics-untargeted				Young Rats Endurance Exercise Training Metabolomics Untargeted		True
+tag:motrpac-data.org,2023:	motrpac-pass1b-06-phenotype				Young Rats Endurance Exercise Training Phenotype		True

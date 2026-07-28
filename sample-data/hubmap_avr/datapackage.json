@@ -1,0 +1,312 @@
+{
+  "name": "hubmap_avr",
+  "resources": [
+    {
+      "name": "avr",
+      "type": "table",
+      "path": "avr.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "target_symbol",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 266,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "uniprot_accession_number",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 273,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "clonality",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "clone_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 412,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "method",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 9,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "tissue_preservation",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 8,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "avr_pdf_filename",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 800,
+            "udi:unique": true,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "antibody_hubmap_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 799,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "host",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 9,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "rrid",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 597,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "catalog_number",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 609,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "lot_number",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 398,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "vendor_name",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 46,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "recombinant",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "organ",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 18,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "author_orcids",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 25,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "hgnc_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 267,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "isotype",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 22,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "concentration_value",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 26,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "dilution_factor",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 25,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "conjugate",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 50,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "cycle_number",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 33,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "fluorescent_reporter",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 12,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "manuscript_doi",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 12,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "protocol_doi",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 24,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "vendor_affiliation",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "organ_uberon_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 67,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "antigen_retrieval",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "omap_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 31,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "created_by_user_email",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "previous_version_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "next_version_id",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "primaryKey": ["rowid"],
+        "foreignKeys": []
+      },
+      "udi:row_count": 800,
+      "udi:column_count": 32
+    }
+  ],
+  "udi:name": "hubmap_avr",
+  "udi:path": "./data/hubmap_avr/"
+}

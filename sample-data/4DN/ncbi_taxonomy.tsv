@@ -1,0 +1,8 @@
+id	clade	name	description	synonyms
+NCBI:txid10036	species	Mesocricetus auratus	Syrian hamster	['Syrian hamster', 'Cricetus auratus', 'Golden hamsters', 'Syrian hamsters']
+NCBI:txid10090	species	Mus musculus	mouse	['mouse']
+NCBI:txid60711	species	Chlorocebus sabaeus		['Cercopithecus aethiops sabaeus', 'Cercopithecus sabaeus', 'Cercopithecus sabeus', 'Chlorocebus aethiops sabaeus', 'Chlorocebus aethiops sabeus', 'Chlorocebus sabeus', 'Simia sabaea']
+NCBI:txid7227	species	Drosophila melanogaster		['Sophophora melanogaster']
+NCBI:txid7955	species	Danio rerio	zebra fish	['zebra fish', 'Brachydanio rerio', 'Brachydanio rerio frankei', 'Cyprinus rerio', 'Danio frankei', 'Danio rerio frankei']
+NCBI:txid9031	species	Gallus gallus	chickens	['chickens', 'Gallus domesticus', 'Gallus gallus domesticus', 'Phasianus gallus']
+NCBI:txid9606	species	Homo sapiens		[]

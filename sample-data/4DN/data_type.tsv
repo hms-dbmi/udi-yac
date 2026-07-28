@@ -1,0 +1,6 @@
+id	name	description	synonyms
+data:1383	Nucleic acid sequence alignment	Alignment of multiple nucleotide sequences.	['Sequence alignment (nucleic acid)', 'RNA sequence alignment', 'DNA sequence alignment']
+data:2082	Matrix	An array of numerical values.	['Array']
+data:2887	Nucleic acid sequence record	A nucleic acid sequence and associated metadata.	['Sequence record (nucleic acid)', 'Nucleotide sequence record', 'DNA sequence record', 'RNA sequence record']
+data:2968	Image	Data (typically biological or biomedical) that has been rendered into an image, typically for display on screen.	['Image data']
+data:3002	Annotation track	Annotation of one particular positional feature on a biomolecular (typically genome) sequence, suitable for import and display in a genome browser.	['Genome-browser track', 'Genome annotation track', 'Genomic track', 'Genome track', 'Sequence annotation track']
