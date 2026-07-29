@@ -112,7 +112,7 @@ uv run fastapi run src/udiagent/server/app.py --port 8007
 | --------------------- | -------- | --------- | ----------------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`      | No       | —         | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header. |
 | `GPT_MODEL_NAME`      | No       | `gpt-5.4` | OpenAI model for orchestration                                                      |
-| `JWT_SECRET_KEY`      | Yes\*    | —         | JWT signing key (\*not required if `INSECURE_DEV_MODE=1`)                           |
+| `JWT_SECRET_KEY`      | Yes\*    | —         | JWT signing key; the server refuses startup when missing (\*not required if `INSECURE_DEV_MODE=1`) |
 | `JWT_ALGORITHM`       | No       | `HS256`   | JWT algorithm                                                                       |
 | `INSECURE_DEV_MODE`   | No       | `0`       | Set to `1` to skip JWT verification (development only)                              |
 | `LANGFUSE_SECRET_KEY` | No       | —         | LangFuse observability secret key (opt-in; tracing is disabled when unset)          |
