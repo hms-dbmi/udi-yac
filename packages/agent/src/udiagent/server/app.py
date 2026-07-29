@@ -187,9 +187,13 @@ def yac_completions(
     x_conversation_id: str | None = Header(None, alias="X-Conversation-Id"),
 ):
     logger.info(
-        "Received /v1/yac/completions request (conversation=%s): %s",
-        x_conversation_id,
-        request,
+        "Received /v1/yac/completions request "
+        "(message_count=%d, schema_char_count=%d, domain_char_count=%d, "
+        "has_conversation_id=%s)",
+        len(request.messages),
+        len(request.dataSchema),
+        len(request.dataDomains),
+        x_conversation_id is not None,
     )
 
     # No key from the caller and none configured server-side → actionable 401
@@ -216,7 +220,11 @@ def yac_completions(
     )
     logger.info("orchestrator_choice: %s", result.orchestrator_choice)
     logger.info("usage: %s", result.usage)
-    logger.info("tool_calls: %s", result.tool_calls)
+    logger.info(
+        "tool_calls: count=%d names=%s",
+        len(result.tool_calls),
+        [tool_call.get("name", "unknown") for tool_call in result.tool_calls],
+    )
     return JSONResponse(
         content=result.tool_calls,
         headers=_usage_headers(result.usage),

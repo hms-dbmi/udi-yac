@@ -7,7 +7,8 @@ def parse_schema_from_dict(raw: dict) -> dict:
     """Parse a data schema dict into the structure expected by structured_functions.
 
     Similar to generate_tools.parse_schema but works with an in-memory dict
-    instead of a file path.
+    instead of a file path. All declared fields are preserved so structured
+    text matches the schema rendered by the frontend.
     """
     entities = {}
     for resource in raw.get("resources", []):
@@ -16,8 +17,6 @@ def parse_schema_from_dict(raw: dict) -> dict:
         fields = {}
         for field in resource.get("schema", {}).get("fields", []):
             cardinality = field.get("udi:cardinality", 0)
-            if cardinality == 0:
-                continue
             fields[field["name"]] = {
                 "type": field.get("udi:data_type", ""),
                 "cardinality": cardinality,
