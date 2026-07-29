@@ -236,12 +236,28 @@ def yac_benchmark(
     token_payload: dict = Depends(verify_jwt),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
-    result = orchestrator.run(
-        messages=request.messages,
-        data_schema=request.dataSchema,
-        data_domains=request.dataDomains,
-        openai_api_key=x_openai_key,
-    )
+    if request.orchestrator_choice is None:
+        result = orchestrator.run(
+            messages=request.messages,
+            data_schema=request.dataSchema,
+            data_domains=request.dataDomains,
+            openai_api_key=x_openai_key,
+        )
+    elif request.orchestrator_choice == "render-visualization":
+        result = orchestrator.run_visualization(
+            messages=request.messages,
+            data_schema=request.dataSchema,
+            data_domains=request.dataDomains,
+            openai_api_key=x_openai_key,
+        )
+    else:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "Benchmark orchestrator bypass only supports "
+                "'render-visualization'."
+            },
+        )
 
     return {
         "tool_calls": result.tool_calls,

@@ -628,7 +628,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--no-orchestrator",
         action="store_true",
-        help="If set, the benchmark will bypass the orchestrator step and directly call the correct tools.",
+        help=(
+            "Bypass routing for visualization-only cases. Other expected "
+            "orchestrator choices are rejected."
+        ),
     )
 
     parser.add_argument(

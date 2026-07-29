@@ -211,6 +211,44 @@ class Orchestrator:
                 budget_check=budget_check,
             )
 
+    def run_visualization(
+        self,
+        messages: list[dict],
+        data_schema: str,
+        data_domains: str,
+        openai_api_key: str | None = None,
+        session_id: str | None = None,
+    ) -> OrchestratorResult:
+        """Generate a visualization without first running the routing completion.
+
+        Callers must already know that the request requires a visualization.
+        This is used by visualization-only benchmarks to measure generation
+        independently from orchestration.
+        """
+        description = ""
+        for message in reversed(messages):
+            content = message.get("content")
+            if message.get("role") == "user" and isinstance(content, str):
+                description = content
+                break
+
+        usage = Usage()
+        tool_args = {"description": description} if description else {}
+        with self.agent.trace(session_id=session_id, name="visualization-run"):
+            tool_call = self._handle_create_visualization(
+                tool_args,
+                messages,
+                data_schema,
+                data_domains,
+                usage,
+                openai_api_key=openai_api_key,
+            )
+        return OrchestratorResult(
+            tool_calls=[tool_call],
+            orchestrator_choice="render-visualization",
+            usage=usage,
+        )
+
     def _run(
         self,
         messages: list[dict],
