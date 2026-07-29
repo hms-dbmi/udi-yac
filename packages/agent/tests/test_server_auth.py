@@ -13,3 +13,12 @@ def test_missing_jwt_secret_is_rejected_outside_insecure_dev_mode(secret_key):
             algorithm="HS256",
             insecure_dev_mode=False,
         )
+
+
+@pytest.mark.parametrize("secret_key", ["", " \t\n "])
+def test_missing_jwt_secret_is_allowed_in_insecure_dev_mode(secret_key):
+    make_verify_jwt(
+        secret_key=secret_key,
+        algorithm="HS256",
+        insecure_dev_mode=True,
+    )
