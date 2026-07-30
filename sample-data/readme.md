@@ -73,13 +73,14 @@ there.**
 
 ## Contents
 
-| Path                                              | Description                                                                                                                                                   |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./hubmap/datapackage.json`                       | Full HuBMAP data package (donors, samples, datasets), fetched fresh from `https://portal.hubmapconsortium.org/metadata/v0/udi/`. Chat's default data package. |
-| `./hubmap_examples/`                              | Curated HuBMAP subset (TSVs + chart thumbnails) used by the grammar-app examples page.                                                                        |
-| `./penguins.csv`                                  | Classic Palmer Penguins test dataset.                                                                                                                         |
-| `./donors.csv`, `./samples.csv`, `./datasets.csv` | Loose single-table HuBMAP CSVs used by toolkit stories and grammar-app.                                                                                       |
-| `./example_*.csv`, `./match_test_*.csv`           | Small fixtures for tutorial/example specs.                                                                                                                    |
+| Path                                              | Description                                                                                                                                                                                                                                              |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./hubmap/datapackage.json`                       | Full HuBMAP data package (donors, samples, datasets), fetched fresh from `https://portal.hubmapconsortium.org/metadata/v0/udi/`. Chat's default data package.                                                                                            |
+| `./hubmap_examples/`                              | Curated HuBMAP subset (TSVs + chart thumbnails) used by the grammar-app examples page.                                                                                                                                                                   |
+| `./penguins.csv`                                  | Classic Palmer Penguins test dataset (loose CSV used by toolkit stories, parity goldens, and agent tests).                                                                                                                                               |
+| `./penguins/`                                     | The same Penguins data as a self-contained package (`penguins.csv` + `datapackage.json`) — the committed default for the server-side query quickstart (`seed_duckdb.py` / `seed_starrocks.py`) and browser mode via `set-chat-data-source.mjs penguins`. |
+| `./donors.csv`, `./samples.csv`, `./datasets.csv` | Loose single-table HuBMAP CSVs used by toolkit stories and grammar-app.                                                                                                                                                                                  |
+| `./example_*.csv`, `./match_test_*.csv`           | Small fixtures for tutorial/example specs.                                                                                                                                                                                                               |
 
 To refresh HuBMAP: re-run the four `curl`s against the portal `/udi/` endpoint
 into `./hubmap/`, then set the manifest's `udi:path` back to `"./data/hubmap/"`

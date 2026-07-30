@@ -10,7 +10,7 @@ so both backends behave identically.
 Usage (from the repo root):
 
     uv run --project packages/agent --extra duckdb \
-      python packages/agent/scripts/seed_duckdb.py               # sample-data/pcx
+      python packages/agent/scripts/seed_duckdb.py               # sample-data/penguins
 
     ... python packages/agent/scripts/seed_duckdb.py <csv-dir> --database mydb
 
@@ -42,7 +42,7 @@ from seed_starrocks import (  # noqa: E402
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_DEFAULT_DATA_DIR = _REPO_ROOT / "sample-data" / "pcx"
+_DEFAULT_DATA_DIR = _REPO_ROOT / "sample-data" / "penguins"
 _AGENT_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_CONFIG_OUT = _AGENT_ROOT / "duckdb-backends.json"
 

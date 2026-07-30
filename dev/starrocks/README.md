@@ -5,9 +5,9 @@ query backend (`udiagent.query.StarRocksConnector`) end-to-end. For how that
 backend works and its full configuration/integration reference, see
 [`packages/agent/src/udiagent/query/README.md`](../../packages/agent/src/udiagent/query/README.md).
 
-The seed data itself is **not** checked into the repo. The default dataset is
-`sample-data/pcx/` (de-identified pediatric CNS-tumor tables) — ask a
-teammate for the CSVs — but any directory of related CSVs works.
+The default dataset is `sample-data/penguins/` — a small, well-known example
+that ships in the repo, so this quickstart runs with no extra data setup. Any
+other directory of related CSVs works too (see _Seeding other datasets_).
 
 ## Quickstart
 
@@ -18,13 +18,13 @@ docker compose -f dev/starrocks/docker-compose.yml up -d
 
 # 2. Seed it (waits for readiness automatically). From packages/agent:
 uv sync --extra starrocks
-uv run python scripts/seed_starrocks.py            # seeds sample-data/pcx -> database `pcx`
+uv run python scripts/seed_starrocks.py            # seeds sample-data/penguins -> database `penguins`
 
 # 3. Point the agent + chat at it
 UDI_QUERY_BACKENDS=$(pwd)/starrocks-backends.json INSECURE_DEV_MODE=1 \
   uv run fastapi dev src/udiagent/server/app.py --port 8007
 # and in packages/chat/.env.local:
-#   VITE_UDI_REMOTE_PACKAGE=pcx
+#   VITE_UDI_REMOTE_PACKAGE=penguins
 pnpm dev:chat
 ```
 
@@ -33,12 +33,12 @@ the browser) and every query — including brush cross-filtering, committed on
 mouse-up — runs on StarRocks via `POST /v1/yac/query`.
 
 **VS Code shortcut:** the **Data: Regenerate + seed pcx** task (Run Task…)
-chains steps 1–2 — starts the container, regenerates
-`sample-data/pcx/datapackage.json`, and seeds the database — so re-running
-after editing the pcx CSVs is one click. Individual `Data: *` tasks run each
-step alone. To switch the chat **back** to the bundled HuBMAP CSV dumps
-(browser mode, no server backend), run **Data: Use HuBMAP (CSV, browser
-mode)**.
+chains steps 1–2 for the team's `pcx` dataset — starts the container,
+regenerates `sample-data/pcx/datapackage.json`, and seeds the database — so
+re-running after editing the pcx CSVs is one click. Individual `Data: *` tasks
+run each step alone. For penguins or your own CSVs, use the seed command above.
+To switch the chat **back** to the bundled HuBMAP CSV dumps (browser mode, no
+server backend), run **Data: Use HuBMAP (CSV, browser mode)**.
 
 ## Seeding other datasets
 

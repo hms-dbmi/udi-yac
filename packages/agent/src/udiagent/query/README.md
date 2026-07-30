@@ -162,34 +162,44 @@ The key `default` (or a package with no explicit match) serves requests whose
 
 ```jsonc
 {
-  "pcx": {
-    "type": "starrocks", // or "duckdb"
+  // Simple single-table package — what the DuckDB quickstart seeds
+  // (sample-data/penguins, in the repo).
+  "penguins": {
+    "type": "duckdb", // or "starrocks"
+    "database": "/abs/penguins.duckdb", // duckdb: path to the seeded file
+    "tables": {
+      // entity name → physical table
+      "Penguins": "penguins",
+    },
+    "rowCap": 5000, // optional (default 5000)
+  },
+
+  // Multi-table package: a StarRocks connection + `schemas` so the compiler
+  // can resolve cross-entity brush filters. The seeders carry these
+  // foreignKeys/primaryKey over from the directory's datapackage.json — the
+  // database itself stores no FK constraints.
+  "my_cohort": {
+    "type": "starrocks",
     "connection": {
       // starrocks: pymysql kwargs
       "host": "127.0.0.1",
       "port": 9030,
       "user": "root",
       "password": "",
-      "database": "pcx",
+      "database": "my_cohort",
     },
-    "tables": {
-      // entity name → physical table
-      "Patient": "patient",
-      "Event": "event",
-      "Surgery": "surgery",
-    },
-    "rowCap": 5000, // optional (default 5000)
+    "tables": { "donors": "donors", "samples": "samples" },
     "schemas": {
       // optional but REQUIRED for cross-entity filtering
-      "Event": {
+      "samples": {
         "foreignKeys": [
           {
-            "fields": ["research_id"],
-            "reference": { "resource": "Patient", "fields": ["research_id"] },
+            "fields": ["donor_id"],
+            "reference": { "resource": "donors", "fields": ["id"] },
           },
         ],
       },
-      "Patient": { "primaryKey": ["research_id"] },
+      "donors": { "primaryKey": ["id"] },
     },
   },
 }
@@ -198,7 +208,7 @@ The key `default` (or a package with no explicit match) serves requests whose
 DuckDB has two forms:
 
 - **Seeded file (recommended)** — `{ "type": "duckdb", "database":
-"/abs/pcx.duckdb", "tables": { "Event": "event" }, "schemas": { ... } }`.
+"/abs/penguins.duckdb", "tables": { "Penguins": "penguins" }, "schemas": { ... } }`.
   Tables are pre-loaded with the same cleaning as StarRocks (sentinel-nulling,
   typing), so results match. Produced by `seed_duckdb.py`.
 - **In-memory CSV views** — `{ "type": "duckdb", "database": ":memory:",
@@ -237,7 +247,7 @@ dev`).
 for a package:
 
 ```jsonc
-{ "package": "pcx", "interactive": false,
+{ "package": "penguins", "interactive": false,
   "dataSchema":  { "name": "...", "resources": [ ... ] },   // frictionless + udi: fields
   "dataDomains": [ { "entity": "...", "field": "...", "type": "point|interval",
                      "domain": { "values": [...] } | { "min": n, "max": n } } ] }
@@ -248,13 +258,13 @@ current selection state, in one request):
 
 ```jsonc
 // request
-{ "package": "pcx",
+{ "package": "penguins",
   "selections": {                              // name → ActiveDataSelection
-    "brush1": { "dataSourceKey": "Event", "type": "interval",
-                "selection": { "event_date": [1000, 2000] } } },
+    "brush1": { "dataSourceKey": "Penguins", "type": "interval",
+                "selection": { "body_mass_g": [3000, 4000] } } },
   "queries": [
     { "vizId": "q1",
-      "source": [ { "name": "Event", "source": "event" } ],
+      "source": [ { "name": "Penguins", "source": "penguins" } ],
       "transformation": [ /* named filter refs brush1, groupby, rollup, ... */ ],
       "displayDataOnly": false,                // optional
       "offset": 0 } ] }                        // optional (load-more paging)

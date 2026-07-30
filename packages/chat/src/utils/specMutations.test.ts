@@ -6,6 +6,7 @@ import {
   collectRollupOutputs,
   swapDimensionField,
   swapMeasureField,
+  swapPlainField,
 } from './specMutations';
 import type { UDIGrammar } from 'udi-toolkit/react';
 
@@ -438,5 +439,86 @@ describe('swapMeasureField', () => {
   it('returns the same reference when the field is unchanged', () => {
     const spec = avgAgeBySex();
     expect(swapMeasureField(spec, 'avg_age', 'age')).toBe(spec);
+  });
+});
+
+describe('swapPlainField', () => {
+  // A CDF: filter drops nulls of the plotted field, orderby sorts by it, and a
+  // percentile is derived from that order. Swapping the plotted field must move
+  // the filter + orderby too, or the percentile is computed in the old order.
+  function cdf(field: string): UDIGrammar {
+    return {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [
+        { filter: { op: '!=', left: { field }, right: { literal: null } } },
+        { orderby: { field, order: 'asc' } },
+        { derive: { total: { agg: 'count' } } },
+        {
+          derive: {
+            percentile: {
+              rolling: {
+                expression: { op: '/', left: { agg: 'count' }, right: { field: 'total' } },
+              },
+            },
+          },
+        },
+      ],
+      representation: {
+        mark: 'line',
+        mapping: [
+          { encoding: 'x', field, type: 'quantitative' },
+          { encoding: 'y', field: 'percentile', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+  }
+
+  it('follows the plotted field through filter and orderby', () => {
+    const next = swapPlainField(cdf('weight_value'), 'x', 'age_value');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({
+      filter: { op: '!=', left: { field: 'age_value' }, right: { literal: null } },
+    });
+    expect(t[1]).toEqual({ orderby: { field: 'age_value', order: 'asc' } });
+    // derived percentile pipeline is untouched
+    expect(t[2]).toEqual({ derive: { total: { agg: 'count' } } });
+    // x mapping updated, y (percentile) left alone
+    const mapping = (next.representation as { mapping: Array<{ encoding: string; field: string }> })
+      .mapping;
+    expect(mapping[0]).toEqual({ encoding: 'x', field: 'age_value', type: 'quantitative' });
+    expect(mapping[1].field).toBe('percentile');
+  });
+
+  it('leaves transforms alone when the old field is still shown on another encoding', () => {
+    // density: x and y both on the same field; swapping x should not touch the
+    // orderby/filter (ambiguous which axis they belong to).
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [
+        { filter: { op: '!=', left: { field: 'age_value' }, right: { literal: null } } },
+        { orderby: { field: 'age_value', order: 'asc' } },
+      ],
+      representation: {
+        mark: 'point',
+        mapping: [
+          { encoding: 'x', field: 'age_value', type: 'quantitative' },
+          { encoding: 'y', field: 'age_value', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+    const next = swapPlainField(spec, 'x', 'weight_value');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({
+      filter: { op: '!=', left: { field: 'age_value' }, right: { literal: null } },
+    });
+    expect(t[1]).toEqual({ orderby: { field: 'age_value', order: 'asc' } });
+  });
+
+  it('returns the same reference on a no-op (unchanged field / missing encoding)', () => {
+    const spec = cdf('weight_value');
+    expect(swapPlainField(spec, 'x', 'weight_value')).toBe(spec);
+    expect(swapPlainField(spec, 'zzz', 'age_value')).toBe(spec);
   });
 });

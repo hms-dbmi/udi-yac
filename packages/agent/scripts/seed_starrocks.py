@@ -10,7 +10,7 @@ UDI_QUERY_BACKENDS config.
 
 Usage (from packages/agent):
 
-    uv run --extra starrocks python scripts/seed_starrocks.py            # sample-data/pcx
+    uv run --extra starrocks python scripts/seed_starrocks.py            # sample-data/penguins
     uv run --extra starrocks python scripts/seed_starrocks.py <csv-dir> --database mydb
 
 Idempotent: tables are dropped and recreated on each run (schema changes,
@@ -31,7 +31,7 @@ import time
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_DEFAULT_DATA_DIR = _REPO_ROOT / "sample-data" / "pcx"
+_DEFAULT_DATA_DIR = _REPO_ROOT / "sample-data" / "penguins"
 _DEFAULT_CONFIG_OUT = Path(__file__).resolve().parents[1] / "starrocks-backends.json"
 
 BATCH_SIZE = 1000

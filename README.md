@@ -49,6 +49,48 @@ cd packages/agent && uv sync --extra server --extra langfuse --extra test && uv 
 cd packages/grammar-py && uv sync && uv run pytest
 ```
 
+### Running against data: browser (Arquero) vs. server-side (remote)
+
+The chat gets its data one of two ways. Both run the same grammar; the SQL
+executor's results are held in parity with the Arquero one by a test suite.
+
+**Browser / interactive mode (default).** CSVs load into the browser and the
+toolkit runs the grammar pipeline client-side with Arquero — no database, no
+query backend. The chat defaults to the bundled HuBMAP package
+(`/data/hubmap/datapackage.json`); reset to it or switch to another bundled
+package with `node scripts/set-chat-data-source.mjs [package]` (or the **Data:
+Use HuBMAP (CSV, browser mode)** VS Code task).
+
+**Server-side / remote mode.** Data stays in a database; the agent compiles the
+grammar to SQL and runs it there, so the browser never loads the CSVs. Both
+backends seed the committed `sample-data/penguins` package by default.
+
+- **DuckDB — no container** (easiest):
+
+  ```bash
+  uv run --project packages/agent --extra duckdb \
+    python packages/agent/scripts/seed_duckdb.py            # → packages/agent/penguins.duckdb
+  UDI_QUERY_BACKENDS=packages/agent/duckdb-backends.json INSECURE_DEV_MODE=1 \
+    uv run --project packages/agent --extra server --extra duckdb \
+    fastapi dev packages/agent/src/udiagent/server/app.py --port 8007
+  ```
+
+  Then set `VITE_UDI_REMOTE_PACKAGE=penguins` in `packages/chat/.env.local` and
+  `pnpm dev:chat`. Full guide: [`dev/duckdb/README.md`](dev/duckdb/README.md).
+
+- **StarRocks — Docker** (closest to a production OLAP target):
+
+  ```bash
+  docker compose -f dev/starrocks/docker-compose.yml up -d
+  cd packages/agent && uv sync --extra starrocks && uv run python scripts/seed_starrocks.py
+  ```
+
+  Then set `VITE_UDI_REMOTE_PACKAGE=penguins`, start the agent
+  (`UDI_QUERY_BACKENDS=$(pwd)/starrocks-backends.json`), and `pnpm dev:chat`.
+  Full guide: [`dev/starrocks/README.md`](dev/starrocks/README.md).
+
+How the compiler and parity work: [`packages/agent/src/udiagent/query/README.md`](packages/agent/src/udiagent/query/README.md).
+
 ## Sample data
 
 Dev/test data packages live once at [`sample-data/`](sample-data) (the single source of truth). Each frontend's `dev`/`build` syncs it into its own gitignored `public/data` via [`scripts/copy-sample-data.mjs`](scripts/copy-sample-data.mjs); the toolkit's Storybook serves it via `staticDirs`. Edit `sample-data/`, not the copies. See [`sample-data/readme.md`](sample-data/readme.md).

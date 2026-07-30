@@ -14,11 +14,7 @@ import {
   useTracker,
 } from '@/app/UDIChatContext';
 import type { UDIGrammar } from 'udi-toolkit/react';
-import {
-  setMappingFieldByEncoding,
-  swapDimensionField,
-  swapMeasureField,
-} from '@/utils/specMutations';
+import { swapPlainField, swapDimensionField, swapMeasureField } from '@/utils/specMutations';
 import { computeTweakableParams } from '../utils/tweakability';
 import type { TweakableParam } from './VizTweakComponent.types';
 
@@ -60,7 +56,10 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
           updatedSpec = param.outputKey ? swapMeasureField(spec, param.outputKey, newField) : spec;
           break;
         default:
-          updatedSpec = setMappingFieldByEncoding(spec, param.encoding, newField);
+          // Plain field swap: rewrite this encoding's mapping AND follow the
+          // field through orderby/filter (e.g. a CDF orders by and drops nulls
+          // of the plotted field), so it doesn't stay ordered/filtered by the old one.
+          updatedSpec = swapPlainField(spec, param.encoding, newField);
       }
       // Reference-equal when the mutation was a no-op (unchanged field, encoding
       // not found, etc.). Skip the store update in that case.

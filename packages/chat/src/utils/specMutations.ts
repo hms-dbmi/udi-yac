@@ -99,7 +99,8 @@ export function setMappingFieldByEncoding(
  *   rollup    each aggregation's `.field` is swappable via swapMeasureField —
  *             the mapping references the rollup *output* column, not the input
  *
- * Skipped (schema-preserving / free-form):
+ * Skipped (schema-preserving; don't lock a swap, but ARE followed when the
+ * swapped field is fully replaced — see swapPlainField / applyRenamePlan):
  *   filter    row-count-only effect, schema unchanged
  *   orderby   sort only; schema unchanged
  *   derive    only creates new output fields
@@ -197,6 +198,35 @@ interface RenamePlan {
   rollupFieldRename?: { outputKey: string; to: string };
 }
 
+/**
+ * Recursively rename structured-`Expr` field references (`{ field: X }`) via
+ * `renames`, used for `filter` (and any Expr-shaped) expressions. Only the Expr
+ * child positions are traversed, so non-Expr filter objects (named cross-entity
+ * selections) and raw-string expressions are returned unchanged.
+ */
+function renameExprFields(
+  node: unknown,
+  renames: Map<string, string>,
+): { value: unknown; changed: boolean } {
+  if (node == null || typeof node !== 'object') return { value: node, changed: false };
+  const obj = node as Record<string, unknown>;
+  if (typeof obj.field === 'string' && renames.has(obj.field)) {
+    return { value: { ...obj, field: renames.get(obj.field) }, changed: true };
+  }
+  let changed = false;
+  const next: Record<string, unknown> = { ...obj };
+  for (const key of ['left', 'right', 'if', 'then', 'else'] as const) {
+    if (key in obj) {
+      const r = renameExprFields(obj[key], renames);
+      if (r.changed) {
+        changed = true;
+        next[key] = r.value;
+      }
+    }
+  }
+  return changed ? { value: next, changed } : { value: node, changed: false };
+}
+
 function renameOrderby(
   orderby: unknown,
   renames: Map<string, string>,
@@ -276,6 +306,14 @@ function applyRenamePlan(spec: UDIGrammar, plan: RenamePlan): UDIGrammar {
           if (obChanged) {
             changed = true;
             next = { ...next, orderby: value as TransformationLike['orderby'] };
+          }
+        }
+
+        if (next.filter != null) {
+          const { value, changed: fChanged } = renameExprFields(next.filter, columnRenames);
+          if (fChanged) {
+            changed = true;
+            next = { ...next, filter: value as TransformationLike['filter'] };
           }
         }
 
@@ -395,6 +433,36 @@ export function swapDimensionField(
     columnRenames,
     groupbyRename: { from: oldField, to: newField },
   });
+}
+
+/**
+ * Swap a plain (non-aggregated, non-groupby) field shown on ONE encoding, and
+ * follow that field through the pipeline. A raw source field can also drive
+ * `orderby` and `filter` steps (e.g. a CDF orders by the plotted field and
+ * derives a percentile from that order, and drops its nulls) — rewriting only
+ * the mapping would leave the chart ordered/filtered by the old field while
+ * plotted against the new one. So:
+ *   - rewrite only the edited encoding's mapping (scoped, like the dimension swap);
+ *   - if the old field is still shown on another encoding, stop there (ambiguous
+ *     which axis the transforms belong to — mirror swapDimensionField);
+ *   - otherwise rename the old field → new field in orderby + filter refs.
+ *
+ * Returns the same reference on a no-op.
+ */
+export function swapPlainField(spec: UDIGrammar, encoding: string, newField: string): UDIGrammar {
+  const oldField = fieldForEncoding(spec, encoding);
+  if (oldField == null || oldField === newField) return spec;
+
+  const afterMapping = setMappingFieldByEncoding(spec, encoding, newField);
+  if (afterMapping === spec) return spec;
+
+  // Old field still shown elsewhere → leave the transforms alone.
+  if (specReferencesField(afterMapping, oldField)) return afterMapping;
+
+  // Fully replaced → follow it through orderby + filter. The mapping rename is
+  // already a no-op here (nothing references oldField), so applyRenamePlan only
+  // touches the transform refs.
+  return applyRenamePlan(afterMapping, { columnRenames: new Map([[oldField, newField]]) });
 }
 
 /**
