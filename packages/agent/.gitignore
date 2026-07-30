@@ -154,3 +154,5 @@ data_collection/data_untill_1112
 data_collection/data_tmp
 
 .DS_Store
+# Raw data-cube CSV/parquet (fetch locally; not committed)
+data/example_data_cube/
