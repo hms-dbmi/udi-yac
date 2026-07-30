@@ -1,0 +1,99 @@
+{
+  "name": "encounter_counts",
+  "resources": [
+    {
+      "name": "encounter_counts",
+      "type": "table",
+      "path": "core__count_encounter_month.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "cnt",
+            "type": "number",
+            "description": "A count of encounter records matching the dimension values on the row (a pre-aggregated measure).",
+            "udi:cardinality": 1327,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "period_start_month",
+            "type": "string",
+            "description": "The month in which the encounter began (derived from Encounter.period).",
+            "udi:cardinality": 881,
+            "udi:unique": false,
+            "udi:data_type": "temporal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "class_display",
+            "type": "string",
+            "description": "The context in which the encounter occurred (e.g. ambulatory, emergency, inpatient).",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "age_at_visit",
+            "type": "number",
+            "description": "The patient's age in years at the time of the encounter.",
+            "udi:cardinality": 97,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "gender",
+            "type": "string",
+            "description": "The patient's administrative gender.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "race_display",
+            "type": "string",
+            "description": "The patient's race.",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "ethnicity_display",
+            "type": "string",
+            "description": "The patient's ethnicity.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "primaryKey": [],
+        "foreignKeys": []
+      },
+      "udi:row_count": 25202,
+      "udi:column_count": 7,
+      "udi:cube": true,
+      "udi:measures": [
+        "cnt"
+      ],
+      "udi:dimensions": [
+        "period_start_month",
+        "class_display",
+        "age_at_visit",
+        "gender",
+        "race_display",
+        "ethnicity_display"
+      ]
+    }
+  ],
+  "udi:name": "encounter_counts",
+  "udi:path": "./data/example_data_cube/"
+}

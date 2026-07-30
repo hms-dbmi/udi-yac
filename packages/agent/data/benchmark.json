@@ -22,9 +22,7 @@
                 "min": 0,
                 "max": 0
               },
-              "pointValues": [
-                "Gentoo"
-              ]
+              "pointValues": ["Gentoo"]
             },
             "entity": "penguins",
             "field": "species"
@@ -81,9 +79,7 @@
                 "min": 5000,
                 "max": 6300
               },
-              "pointValues": [
-                ""
-              ]
+              "pointValues": [""]
             },
             "entity": "penguins",
             "field": "body_mass_g"
@@ -116,9 +112,7 @@
                 "min": 0,
                 "max": 0
               },
-              "pointValues": [
-                "Dream"
-              ]
+              "pointValues": ["Dream"]
             },
             "entity": "penguins",
             "field": "island"
@@ -151,10 +145,7 @@
                 "min": 0,
                 "max": 0
               },
-              "pointValues": [
-                "Adelie",
-                "Chinstrap"
-              ]
+              "pointValues": ["Adelie", "Chinstrap"]
             },
             "entity": "penguins",
             "field": "species"
@@ -187,9 +178,7 @@
                 "min": 32.1,
                 "max": 40
               },
-              "pointValues": [
-                ""
-              ]
+              "pointValues": [""]
             },
             "entity": "penguins",
             "field": "bill_length_mm"
@@ -222,9 +211,7 @@
                 "min": 190,
                 "max": 210
               },
-              "pointValues": [
-                ""
-              ]
+              "pointValues": [""]
             },
             "entity": "penguins",
             "field": "flipper_length_mm"

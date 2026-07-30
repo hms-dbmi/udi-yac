@@ -1,6 +1,13 @@
+import json
+from enum import Enum
+from pathlib import Path
+
+import jsonschema
 import pandas as pd
 from udi_grammar_py import Chart, Op, rolling
-from enum import Enum
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_GRAMMAR = _REPO_ROOT / "src" / "udiagent" / "data" / "UDIGrammarSchema.json"
 
 
 class ChartType(Enum):
@@ -35,6 +42,17 @@ class TaskType(Enum):
     CORRELATE = "Correlate"
 
 
+# Shared design note for data-cube templates: a cube is read by marginal
+# filtering, and the marginal filter (<MARGINAL:...>) is expanded at runtime
+# from the per-request schema's dimension list, so one template serves any cube.
+_CUBE_MARGINAL_NOTE = (
+    "Reads the cube marginal by filtering to rows where the chosen dimension(s) "
+    "are present and every other dimension is empty; the measure is mapped "
+    "directly with no re-aggregation. The marginal filter is expanded from the "
+    "per-request schema's dimension list, so this template works for any cube."
+)
+
+
 def add_row(
     df,
     query_templates,
@@ -44,6 +62,7 @@ def add_row(
     description: str = "",
     design_considerations: str = "",
     tasks: str = "",
+    shape: str = "line_item",
 ):
     spec_key_count = get_total_key_count(spec.to_dict())
     if spec_key_count <= 12:
@@ -54,6 +73,11 @@ def add_row(
         complexity = "complex"
     else:
         complexity = "extra complex"
+    # Multi-axis tags: the data shape it targets ("line_item" tidy tables vs
+    # "data_cube" pre-aggregated cubes) plus the chart type. `shape` drives
+    # per-request template selection; the chart-type tag is extra metadata for
+    # finer selection later.
+    tags = [shape, chart_type.value]
     df.loc[len(df)] = {
         "query_templates": query_templates,
         "spec_template": spec.to_json(),
@@ -62,6 +86,7 @@ def add_row(
         "chart_complexity": complexity,
         "spec_key_count": spec_key_count,
         "task_types": task_types,
+        "tags": tags,
         "description": description,
         "design_considerations": design_considerations,
         "tasks": tasks,
@@ -78,6 +103,32 @@ def get_total_key_count(nested_dict):
         return 1
 
 
+def validate_specs(df, grammar_path, strict=False):
+    """Validate every template's spec against the UDI grammar schema.
+
+    Reports non-conforming templates. Non-fatal by default (some pre-existing
+    line-item templates use encodings not covered by the checked-in schema);
+    pass ``strict=True`` to fail hard once templates + schema are reconciled.
+    """
+    schema = json.loads(Path(grammar_path).read_text())
+    failures = []
+    for i, spec_str in enumerate(df["spec_template"]):
+        try:
+            jsonschema.validate(instance=json.loads(spec_str), schema=schema)
+        except jsonschema.ValidationError as e:
+            failures.append((i, df["chart_type"][i], list(df["tags"][i]), e.message))
+
+    if failures:
+        print(f"\n⚠ {len(failures)}/{len(df)} template(s) do not conform to the grammar:")
+        for i, chart_type, tags, message in failures:
+            print(f"  #{i} [{chart_type}] tags={tags}: {message.splitlines()[0][:140]}")
+        if strict:
+            raise SystemExit("Grammar validation failed (--strict).")
+    else:
+        print(f"\nAll {len(df)} templates conform to the grammar.")
+    return failures
+
+
 def generate():
     df = pd.DataFrame(
         columns=[
@@ -88,6 +139,7 @@ def generate():
             "chart_complexity",
             "spec_key_count",
             "task_types",
+            "tags",
             "description",
             "design_considerations",
             "tasks",
@@ -210,6 +262,49 @@ def generate():
         tasks="Compare counts across categories from a related entity; discover cross-entity frequency patterns.",
     )
 
+    # DATA CUBE: bar of the measure by a single nominal dimension (its marginal)
+    df = add_row(
+        df,
+        query_templates=[
+            "How many are there by <dimension>?",
+            "Make a bar chart of the measure by a categorical dimension.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D>")
+            .mark("bar")
+            .x(field="<D:n>", type="nominal")
+            .y(field="<M>", type="quantitative")
+        ),
+        chart_type=ChartType.BARCHART,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
+        description="Shows the pre-aggregated cube measure for each category of a nominal dimension as a bar chart.",
+        design_considerations=_CUBE_MARGINAL_NOTE,
+        tasks="Compare the measure across categories; identify the most or least common category.",
+        shape="data_cube",
+    )
+
+    # DATA CUBE: bar of the measure across a quantitative dimension (its marginal)
+    df = add_row(
+        df,
+        query_templates=["Make a bar chart of the measure across a quantitative dimension."],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D>")
+            .mark("bar")
+            .x(field="<D:q>", type="quantitative")
+            .y(field="<M>", type="quantitative")
+        ),
+        chart_type=ChartType.BARCHART,
+        task_types=[TaskType.CHARACTERIZE_DISTRIBUTION, TaskType.DETERMINE_RANGE],
+        description="Shows the pre-aggregated cube measure across the values of a quantitative dimension as a bar chart.",
+        design_considerations=_CUBE_MARGINAL_NOTE,
+        tasks="Assess how the measure is distributed across a numeric dimension.",
+        shape="data_cube",
+    )
+
     # ---------------------------------------------------------------
     # Stacked bar charts — two-field grouping
     # ---------------------------------------------------------------
@@ -327,6 +422,33 @@ def generate():
         tasks="Compare group compositions across categories; identify dominant sub-groups within each bar.",
     )
 
+    # DATA CUBE: vertical stacked bar of the measure by two nominal dimensions
+    df = add_row(
+        df,
+        query_templates=[
+            "How many are there by <dimension1> and <dimension2>?",
+            "Make a stacked bar chart across two categorical dimensions.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D1,D2>")
+            .mark("bar")
+            .x(field="<D1:n>", type="nominal")
+            .y(field="<M>", type="quantitative")
+            .color(field="<D2:n>", type="nominal")
+        ),
+        chart_type=ChartType.STACKED_BAR,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE],
+        description="Shows the pre-aggregated cube measure by two nominal dimensions as a vertical stacked bar chart.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " Color encodes the sub-group; prefer the dimension with "
+            "fewer categories for color."
+        ),
+        tasks="Compare group compositions across categories; identify dominant sub-groups.",
+        shape="data_cube",
+    )
+
     # ---------------------------------------------------------------
     # Grouped bar charts — side-by-side comparison
     # ---------------------------------------------------------------
@@ -381,6 +503,31 @@ def generate():
         description="Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) horizontal bar chart.",
         design_considerations="Uses yOffset for side-by-side grouping in horizontal orientation. Chosen when at least one field has more than 4 categories.",
         tasks="Directly compare sub-group counts within and across categories.",
+    )
+
+    # DATA CUBE: grouped (side-by-side) bar of the measure by two nominal dims
+    df = add_row(
+        df,
+        query_templates=["Make a grouped (side-by-side) bar chart across two categorical dimensions."],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D1,D2>")
+            .mark("bar")
+            .x(field="<D1:n>", type="nominal")
+            .y(field="<M>", type="quantitative")
+            .xOffset(field="<D2:n>", type="nominal")
+            .color(field="<D2:n>", type="nominal")
+        ),
+        chart_type=ChartType.GROUPED_BAR,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE],
+        description="Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) bar chart.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " xOffset gives side-by-side grouping for direct comparison "
+            "of the sub-group within each category."
+        ),
+        tasks="Directly compare sub-group values within and across categories.",
+        shape="data_cube",
     )
 
     # ---------------------------------------------------------------
@@ -451,6 +598,37 @@ def generate():
         description="Shows the relative frequency (proportion) of one nominal field within each category of another, as a horizontal normalized bar chart.",
         design_considerations="Normalization for proportional comparison. Horizontal layout for higher category counts (>4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare relative proportions across categories; identify which sub-groups dominate in each group.",
+    )
+
+    # DATA CUBE: normalized (proportional) stacked bar of two nominal dimensions
+    df = add_row(
+        df,
+        query_templates=["What is the proportion of <dimension2> for each <dimension1>?"],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D1,D2>")
+            .groupby("<D1>", out_name="groupTotals")
+            .rollup({"axis_total": Op.sum("<M>")})
+            .groupby(["<D2>", "<D1>"], in_name="<E>")
+            .rollup({"cell_total": Op.sum("<M>")})
+            .join("<D1>", in_name=["<E>", "groupTotals"], out_name="datasets")
+            .derive({"proportion": "d['cell_total'] / d['axis_total']"})
+            .mark("bar")
+            .x(field="<D1:n>", type="nominal")
+            .y(field="proportion", type="quantitative")
+            .color(field="<D2:n>", type="nominal")
+        ),
+        chart_type=ChartType.NORMALIZED_BAR,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE],
+        description="Shows the relative proportion of one nominal dimension within each category of another as a normalized stacked bar chart.",
+        design_considerations=(
+            "First filters to the two-dimension marginal (expanded from the schema), then sums "
+            "the measure per primary-dimension group and divides each cell by its group total to "
+            "obtain proportions. Color is preferably the dimension with fewer categories."
+        ),
+        tasks="Compare relative proportions across categories; identify dominant sub-groups.",
+        shape="data_cube",
     )
 
     # ---------------------------------------------------------------
@@ -659,6 +837,54 @@ def generate():
         description="Creates a donut chart showing the proportional distribution of a nominal field.",
         design_considerations="Donut variant with inner/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
         tasks="Assess part-to-whole proportions; identify the dominant category.",
+    )
+
+    # DATA CUBE: pie of the measure by a single nominal dimension (its marginal)
+    df = add_row(
+        df,
+        query_templates=["Make a pie chart of the measure by a categorical dimension."],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D>")
+            .mark("arc")
+            .theta(field="<M>", type="quantitative")
+            .color(field="<D:n>", type="nominal")
+        ),
+        chart_type=ChartType.CIRCULAR,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
+        description="Shows the proportional cube measure for each category of a nominal dimension as a pie chart.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " The measure maps to angle and the renderer normalizes each "
+            "slice against the total. Best for a small number of categories."
+        ),
+        tasks="Assess part-to-whole proportions; identify the dominant category.",
+        shape="data_cube",
+    )
+
+    # DATA CUBE: donut of the measure by a single nominal dimension (its marginal)
+    df = add_row(
+        df,
+        query_templates=["Make a donut chart of the measure by a categorical dimension."],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D>")
+            .mark("arc")
+            .theta(field="<M>", type="quantitative")
+            .color(field="<D:n>", type="nominal")
+            .radius(value=60)
+            .radius2(value=80)
+        ),
+        chart_type=ChartType.CIRCULAR,
+        task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
+        description="Shows the proportional cube measure for each category of a nominal dimension as a donut chart.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " The measure maps to angle and the renderer normalizes each "
+            "slice against the total. Best for a small number of categories."
+        ),
+        tasks="Assess part-to-whole proportions; identify the dominant category.",
+        shape="data_cube",
     )
 
     # ---------------------------------------------------------------
@@ -1110,6 +1336,55 @@ def generate():
         tasks="Identify the most frequent category; compare frequencies across all categories.",
     )
 
+    # DATA CUBE: grand-total single-row table (the all-empty marginal)
+    df = add_row(
+        df,
+        query_templates=["What is the grand total of the measure?", "How many are there in total?"],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL>")
+            .mark("row")
+            .text(field="<M>", mark="text", type="nominal")
+        ),
+        chart_type=ChartType.TABLE,
+        task_types=[TaskType.RETRIEVE_VALUE, TaskType.COMPUTE_DERIVED_VALUE],
+        description="Shows the grand-total cube measure as a single-row table.",
+        design_considerations=(
+            "Reads the grand-total row directly by filtering to the marginal where every "
+            "dimension is empty; no aggregation is performed."
+        ),
+        tasks="Retrieve the overall total.",
+        shape="data_cube",
+    )
+
+    # DATA CUBE: per-category table with in-cell bars, sorted by the measure
+    df = add_row(
+        df,
+        query_templates=[
+            "List the measure for each category of a dimension.",
+            "What is the range of values for a dimension?",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D>")
+            .orderby("<M>", ascending=False)
+            .mark("row")
+            .text(field="<D:n>", mark="text", type="nominal")
+            .x(field="<M>", mark="bar", type="quantitative", range={"min": 0.1, "max": 1})
+        ),
+        chart_type=ChartType.TABLE,
+        task_types=[TaskType.DETERMINE_RANGE, TaskType.SORT, TaskType.RETRIEVE_VALUE],
+        description="Lists each category of a nominal dimension with its pre-aggregated measure as a sorted table with in-cell bars.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " Ordered by the measure descending with in-cell bars for "
+            "visual comparison."
+        ),
+        tasks="Determine the distinct values of a dimension; compare category counts.",
+        shape="data_cube",
+    )
+
     # ---------------------------------------------------------------
     # Line / CDF charts
     # ---------------------------------------------------------------
@@ -1168,6 +1443,33 @@ def generate():
         description="Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
         design_considerations="Groups by nominal field before computing per-group CDF. Color encodes group identity. Limited to fewer than 5 groups for readability.",
         tasks="Compare distributions across groups; identify which groups have higher or lower concentrations of values.",
+    )
+
+    # DATA CUBE: line of the measure over an ordered (e.g. temporal) dimension
+    df = add_row(
+        df,
+        query_templates=[
+            "How does the measure change over <dimension>?",
+            "Make a line chart of the measure over an ordered (e.g. temporal) dimension.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D>")
+            .orderby("<D>", ascending=True)
+            .mark("line")
+            .x(field="<D:o>", type="ordinal")
+            .y(field="<M>", type="quantitative")
+        ),
+        chart_type=ChartType.LINE,
+        task_types=[TaskType.CHARACTERIZE_DISTRIBUTION, TaskType.DETERMINE_RANGE],
+        description="Shows the pre-aggregated cube measure over an ordered dimension (e.g. time) as a line chart.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " The axis is ordered ascending; a temporal dimension is "
+            "encoded as an ordered (ordinal) axis."
+        ),
+        tasks="Identify trends over time; spot peaks, troughs, and seasonality.",
+        shape="data_cube",
     )
 
     # ---------------------------------------------------------------
@@ -1247,6 +1549,50 @@ def generate():
             design_considerations=f"Uses three fields: a quantitative measure aggregated by {name}, and two nominal axes. Color encodes the aggregate value. The field with more unique values is preferably placed on the y-axis for better label readability.",
             tasks=f"Identify patterns in the {name} value across two categorical dimensions; find combinations with extreme values.",
         )
+
+    # DATA CUBE: labeled heatmap of the measure across two nominal dimensions
+    df = add_row(
+        df,
+        query_templates=[
+            "Are there clusters in the measure across two dimensions?",
+            "Make a heatmap across two categorical dimensions.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter("<MARGINAL:D1,D2>")
+            .derive({"udi_internal_percentile": "d['<M>'] / max(d['<M>'])"})
+            .derive(
+                {
+                    "udi_internal_text_color_threshold": "d.udi_internal_percentile > .5 ? 'large' : 'small'"
+                }
+            )
+            .mark("rect")
+            .color(field="<M>", type="quantitative")
+            .y(field="<D2:n>", type="nominal")
+            .x(field="<D1:n>", type="nominal")
+            .mark("text")
+            .text(field="<M>", type="quantitative")
+            .y(field="<D2:n>", type="nominal")
+            .x(field="<D1:n>", type="nominal")
+            .color(
+                field="udi_internal_text_color_threshold",
+                type="nominal",
+                domain=["large", "small"],
+                range=["white", "black"],
+                omitLegend=True,
+            )
+        ),
+        chart_type=ChartType.HEATMAP,
+        task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
+        description="Shows the pre-aggregated cube measure for each combination of two nominal dimensions as a labeled heatmap.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " The measure maps to cell color with overlaid contrast-aware "
+            "value labels. Prefer the dimension with more categories on the y-axis."
+        ),
+        tasks="Identify clusters or patterns across two dimensions; compare values across combinations.",
+        shape="data_cube",
+    )
 
     # ---------------------------------------------------------------
     # Grouped scatter — clusters with color
@@ -1514,9 +1860,22 @@ def generate():
 
 
 if __name__ == "__main__":
+    import argparse
     import os
 
-    os.makedirs("./out", exist_ok=True)
+    _default_out = (
+        _REPO_ROOT / "src" / "udiagent" / "data" / "skills" / "template_visualizations.json"
+    )
+    parser = argparse.ArgumentParser(
+        description="Generate the unified visualization templates (line-item + data-cube)."
+    )
+    parser.add_argument("-o", "--output", default=str(_default_out), help="Output template JSON path.")
+    parser.add_argument("--grammar", default=str(_GRAMMAR), help="Path to UDIGrammarSchema.json.")
+    parser.add_argument(
+        "--strict", action="store_true", help="Fail if any template does not conform to the grammar."
+    )
+    args = parser.parse_args()
+
     df = generate()
 
     # Serialize task_types enum values to strings
@@ -1526,6 +1885,10 @@ if __name__ == "__main__":
     print(f"\nColumns: {list(df.columns)}")
     print(f"\nChart types: {df['chart_type'].value_counts().to_dict()}")
     print(f"Complexity: {df['chart_complexity'].value_counts().to_dict()}")
+    print(f"Shapes: {df['tags'].apply(lambda t: t[0]).value_counts().to_dict()}")
 
-    df.to_json("./src/skills/template_visualizations.json", orient="records", indent=2)
-    print(f"\nExported to ./src/skills/template_visualizations.json")
+    validate_specs(df, args.grammar, strict=args.strict)
+
+    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    df.to_json(args.output, orient="records", indent=2)
+    print(f"\nExported to {args.output}")
