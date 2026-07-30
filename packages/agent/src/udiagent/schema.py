@@ -8,7 +8,9 @@ def parse_schema_from_dict(raw: dict) -> dict:
 
     Works with an in-memory dict (e.g. the per-request ``data_schema``) instead
     of a file path. This is the single source of truth for schema parsing;
-    ``generate_tools.parse_schema`` loads a file and delegates here.
+    ``generate_tools.parse_schema`` loads a file and delegates here. All declared
+    fields are preserved so structured text matches the schema rendered by the
+    frontend.
 
     Returns::
 
@@ -44,8 +46,6 @@ def parse_schema_from_dict(raw: dict) -> dict:
         fields = {}
         for field in resource.get("schema", {}).get("fields", []):
             cardinality = field.get("udi:cardinality", 0)
-            if cardinality == 0:
-                continue
             fields[field["name"]] = {
                 "type": field.get("udi:data_type", ""),
                 "cardinality": cardinality,

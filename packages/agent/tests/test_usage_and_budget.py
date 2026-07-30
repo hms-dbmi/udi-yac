@@ -1,5 +1,6 @@
 """Tests for token usage accumulation and budget-check rebuff behavior."""
 
+import logging
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -300,6 +301,61 @@ class TestServerUsage:
         body = resp.json()
         assert isinstance(body, list)
         assert body[0]["name"] == "RenderVisualization"
+
+    def test_completions_logs_metadata_without_payloads(self, caplog):
+        from udiagent.orchestrator import OrchestratorResult
+
+        sensitive_message = "patient-message-should-not-be-logged"
+        sensitive_schema = "patient-schema-should-not-be-logged"
+        sensitive_domains = "patient-domains-should-not-be-logged"
+        sensitive_tool_argument = "patient-tool-argument-should-not-be-logged"
+        sensitive_conversation_id = "patient-conversation-id-should-not-be-logged"
+        body = {
+            "messages": [{"role": "user", "content": sensitive_message}],
+            "dataSchema": sensitive_schema,
+            "dataDomains": sensitive_domains,
+        }
+        result = OrchestratorResult(
+            tool_calls=[
+                {
+                    "name": "FilterData",
+                    "arguments": {"pointValues": [sensitive_tool_argument]},
+                }
+            ],
+            orchestrator_choice="get-subset-of-data",
+            usage=Usage(),
+        )
+
+        with (
+            patch.object(self.server_app.orchestrator, "run", return_value=result),
+            caplog.at_level(logging.INFO, logger=self.server_app.__name__),
+        ):
+            resp = self.client.post(
+                "/v1/yac/completions",
+                json=body,
+                headers={
+                    "Authorization": "Bearer test",
+                    "X-Conversation-Id": sensitive_conversation_id,
+                },
+            )
+
+        assert resp.status_code == 200
+        log_messages = [
+            record.getMessage()
+            for record in caplog.records
+            if record.name == self.server_app.__name__
+        ]
+        logs = "\n".join(log_messages)
+        for sensitive_value in (
+            sensitive_message,
+            sensitive_schema,
+            sensitive_domains,
+            sensitive_tool_argument,
+            sensitive_conversation_id,
+        ):
+            assert sensitive_value not in logs
+        assert "message_count=1" in logs
+        assert "tool_calls: count=1 names=['FilterData']" in logs
 
     def test_completions_budget_rebuff_returns_200(self):
         """Hooking app.state.budget_check produces a Rebuff body + usage headers."""

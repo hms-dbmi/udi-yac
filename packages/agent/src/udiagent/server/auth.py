@@ -8,6 +8,12 @@ def make_verify_jwt(secret_key: str, algorithm: str, insecure_dev_mode: bool):
 
     In insecure dev mode, verification is skipped entirely.
     """
+    if not insecure_dev_mode and not secret_key.strip():
+        raise RuntimeError(
+            "JWT_SECRET_KEY must be set unless INSECURE_DEV_MODE=1. "
+            "Refusing to start with an empty JWT signing key."
+        )
+
     from jose import jwt, JWTError
 
     def verify_jwt(authorization: str = Header(...)):
