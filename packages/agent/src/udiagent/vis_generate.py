@@ -349,10 +349,18 @@ def _resolve_placeholder(tag, bindings, schema):
         active = [bindings.get(k, "") for k in active_keys]
         entity_name = bindings.get("E", "")
         dims = schema.get("entities", {}).get(entity_name, {}).get("dimensions", [])
+        # Each dimension is null-checked; && -chained into one structured Expr
+        # object so the cube filter compiles to SQL server-side (a raw Arquero
+        # string would be rejected by the query compiler). instantiate_template
+        # strips the surrounding quotes so this injects as a JSON object.
         clauses = [
-            f"d['{d}'] != null" if d in active else f"d['{d}'] == null" for d in dims
+            {"op": "!=" if d in active else "==", "left": {"field": d}, "right": {"literal": None}}
+            for d in dims
         ]
-        return " && ".join(clauses)
+        expr = clauses[0] if clauses else {"literal": True}
+        for clause in clauses[1:]:
+            expr = {"op": "&&", "left": expr, "right": clause}
+        return json.dumps(expr)
 
     # Relationship join keys: E1.r.E2.id.from, E1.r.E2.id.to
     if ".r." in tag and ".id." in tag:
@@ -384,6 +392,10 @@ def instantiate_template(spec_template, bindings, schema):
     Returns: Parsed spec dict.
     """
     spec = spec_template
+    # The cube marginal filter resolves to a structured Expr object, not a
+    # string; strip the quotes around its placeholder so it injects unquoted
+    # ("filter": {...}) and stays valid JSON.
+    spec = re.sub(r'"(<MARGINAL[^>"]*>)"', r"\1", spec)
     while True:
         match = re.search(r"<([^>]+)>", spec)
         if not match:

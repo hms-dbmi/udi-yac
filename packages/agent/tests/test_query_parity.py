@@ -236,6 +236,75 @@ def test_offset_pages_row_level_results():
     assert len(batch["q"]["displayData"]) == 16
 
 
+def test_cube_template_marginal_filter_runs_in_sql(tmp_path):
+    """A data-cube template must execute in server-side SQL mode: the
+    <MARGINAL> resolver has to emit a structured Expr && -chain, not a raw
+    Arquero string (which the compiler rejects — see
+    test_legacy_string_expressions_rejected). Guards against that regressing.
+    """
+    import json
+
+    from udiagent import vis_generate as vg
+    from udiagent.schema import parse_schema_from_dict
+
+    # Tiny powerset cube: grand total, 1D marginals, and a 2D cell. A 1D
+    # gender marginal must select exactly the gender!=null, class==null rows.
+    csv = tmp_path / "cube.csv"
+    csv.write_text(
+        "gender,class_display,cnt\n"
+        ",,100\n"
+        "M,,60\n"
+        "F,,40\n"
+        ",inpatient,70\n"
+        ",outpatient,30\n"
+        "M,inpatient,45\n"
+    )
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "cube",
+                    "path": str(csv),
+                    "udi:cube": True,
+                    "udi:dimensions": ["gender", "class_display"],
+                    "udi:measures": ["cnt"],
+                    "schema": {
+                        "fields": [
+                            {"name": "gender", "udi:data_type": "nominal"},
+                            {"name": "class_display", "udi:data_type": "nominal"},
+                            {"name": "cnt", "udi:data_type": "quantitative"},
+                        ]
+                    },
+                }
+            ],
+        }
+    )
+
+    tpls = json.loads(
+        (
+            _REPO_ROOT
+            / "packages/agent/src/udiagent/data/skills/template_visualizations.json"
+        ).read_text()
+    )
+    cube_bar = next(t for t in tpls if t.get("tags") == ["data_cube", "barchart"])
+    spec = vg.instantiate_template(
+        cube_bar["spec_template"], {"E": "cube", "D": "gender"}, schema
+    )
+
+    marginal = spec["transformation"][0]["filter"]
+    assert isinstance(marginal, dict), "MARGINAL must resolve to a structured Expr"
+
+    engine = QueryEngine(
+        DuckDBConnector(views={"cube": str(csv)}), table_map={"cube": "cube"}
+    )
+    result = engine.run_query(
+        source=spec["source"], transformation=spec["transformation"]
+    )
+    rows = {(r["gender"], r["cnt"]) for r in result["displayData"]}
+    assert rows == {("M", 60), ("F", 40)}
+
+
 def test_kde_structural():
     views = {"penguins": str(_SAMPLE_DATA / "penguins.csv")}
     engine = QueryEngine(DuckDBConnector(views=views), table_map={"penguins": "penguins"})
