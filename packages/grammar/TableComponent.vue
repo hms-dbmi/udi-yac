@@ -314,6 +314,9 @@ const colDefs = computed<ColDef[]>(() => {
     :columnDefs="colDefs"
     :style="props.fillContainer ? { height: '100%' } : { height: '500px' }"
     :rowHeight="20"
+    :pagination="true"
+    :paginationPageSize="100"
+    :paginationPageSizeSelector="[25, 50, 100, 500]"
   >
   </ag-grid-vue>
 </template>

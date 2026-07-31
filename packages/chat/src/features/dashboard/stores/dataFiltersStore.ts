@@ -285,6 +285,24 @@ export function createDataFiltersStore() {
 
       const nextData = { ...dataSelections };
       const nextInternal = { ...internalDataSelections };
+
+      // Per-field clear for split point filters (`${uuid}::${field}`): drop
+      // only that field from the uuid's multi-field selection; the whole
+      // selection clears when the last field goes. Removing the key entirely
+      // (vs leaving `field: []`) also removes its chat widget — clearing a
+      // chip is an explicit "remove this filter".
+      const [base, field] = key.split('::');
+      if (field && nextInternal[base]?.selection) {
+        const remaining = { ...nextInternal[base].selection } as Record<string, unknown>;
+        delete remaining[field];
+        nextInternal[base] = {
+          ...nextInternal[base],
+          selection: Object.keys(remaining).length > 0 ? (remaining as never) : null,
+        };
+        set({ dataSelections: nextData, internalDataSelections: nextInternal });
+        return;
+      }
+
       if (nextData[key]) nextData[key] = { ...nextData[key], selection: null };
       if (nextInternal[key]) nextInternal[key] = { ...nextInternal[key], selection: null };
       set({ dataSelections: nextData, internalDataSelections: nextInternal });

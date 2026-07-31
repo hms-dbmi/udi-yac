@@ -69,14 +69,7 @@ export interface DataSource {
  * These include operations like grouping, filtering, joining, and more.
  */
 export type DataTransformation =
-  | GroupBy
-  | BinBy
-  | RollUp
-  | Join
-  | OrderBy
-  | Derive
-  | Filter
-  | KDE;
+  GroupBy | BinBy | RollUp | Join | OrderBy | Derive | Filter | KDE;
 
 /**
  * Base interface for all data transformations.
@@ -295,9 +288,11 @@ export interface Filter extends DataTransformationBase {
 }
 
 /**
- * A filter expression, which can be a string or a data selection.
+ * A filter expression: a structured expression (Expr) that evaluates to a
+ * boolean, or a data selection. The legacy raw Arquero string form is still
+ * accepted during migration (see Expr).
  */
-export type FilterExpression = string | FilterDataSelection;
+export type FilterExpression = string | Expr | FilterDataSelection;
 
 /**
  * A filter match type, which specifies how to match the filter data selection.
@@ -346,9 +341,10 @@ export interface FilterEntityRelationship {
 }
 
 /**
- * A derive expression, which can be a string or a rolling derive expression.
+ * A derive expression: a structured expression (Expr), a rolling window
+ * expression, or the legacy raw Arquero string form (accepted during migration).
  */
-export type DeriveExpression = string | RollingDeriveExpression;
+export type DeriveExpression = string | Expr | RollingDeriveExpression;
 
 /**
  * A rolling derive expression for creating new fields based on a rolling window.
@@ -361,13 +357,110 @@ export interface RollingDeriveExpression {
     /**
      * The expression to apply.
      */
-    expression: string;
+    expression: string | Expr;
 
     /**
      * The rolling window size. Optional.
      */
     window?: [number, number];
   };
+}
+
+/**
+ * A backend-neutral expression AST used by `derive` and `filter`, so the same
+ * spec can be compiled to Arquero (client/interactive) or SQL (server/remote).
+ *
+ * It is deliberately NOT a general expression language: it covers exactly the
+ * surface the visualization templates emit today — field references, literals,
+ * binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates
+ * (count/sum/…), and window functions (rank). Add a node only when a template
+ * needs one.
+ *
+ * The union is untagged; nodes are distinguished by key
+ * (`field` | `literal` | `op` | `if` | `agg` | `window`) without a `type` tag.
+ * CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field`
+ * prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr
+ * case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node
+ * uses `agg`.
+ *
+ * ponytail: the `string` form in DeriveExpression/FilterExpression is
+ * transitional. Once all templates/specs emit Expr, drop `string |` from those
+ * unions and the SQL backend no longer needs to reject raw expressions.
+ */
+export type Expr =
+  | FieldExpr
+  | LiteralExpr
+  | BinaryExpr
+  | ConditionalExpr
+  | AggregateExpr
+  | WindowExpr;
+
+/**
+ * A reference to a column in the current table. Legacy form: `d['age']`.
+ */
+export interface FieldExpr {
+  field: string;
+}
+
+/**
+ * A constant value. `null` is permitted (used by not-null filters).
+ */
+export interface LiteralExpr {
+  literal: string | number | boolean | null;
+}
+
+/**
+ * The operators permitted in a BinaryExpr.
+ */
+export type BinaryOperator =
+  | '+'
+  | '-'
+  | '*'
+  | '/'
+  | '%'
+  | '=='
+  | '!='
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+  | '&&'
+  | '||';
+
+/**
+ * A binary operation. Legacy forms: `d['a'] / d['b']`, `d['x'] > 0.5`,
+ * `d['f'] != null`.
+ */
+export interface BinaryExpr {
+  op: BinaryOperator;
+  left: Expr;
+  right: Expr;
+}
+
+/**
+ * A ternary conditional. Legacy form: `d['rank'] == 1 ? 'yes' : 'no'`.
+ */
+export interface ConditionalExpr {
+  if: Expr;
+  then: Expr;
+  else: Expr;
+}
+
+/**
+ * A per-group aggregate broadcast back to every row of the group (a window
+ * aggregate, not a row-reducing rollup). Legacy forms: `count()`, `max(d['n'])`.
+ * `field` is omitted for `count`.
+ */
+export interface AggregateExpr {
+  agg: 'count' | 'sum' | 'mean' | 'min' | 'max' | 'median';
+  field?: string;
+}
+
+/**
+ * A window function over the current ordering. Legacy form: `rank()`.
+ */
+export interface WindowExpr {
+  window: 'rank';
 }
 
 /**
@@ -507,11 +600,7 @@ export type VisualizationLayer =
  * Encoding options for arc marks.
  */
 export type ArcEncodingOptions =
-  | 'theta'
-  | 'theta2'
-  | 'radius'
-  | 'radius2'
-  | 'color';
+  'theta' | 'theta2' | 'radius' | 'radius2' | 'color';
 
 /**
  * A layer for rendering arc marks.
@@ -537,13 +626,7 @@ export type ArcValueMapping = GenericValueMapping<ArcEncodingOptions>;
  * Encoding options for text marks.
  */
 export type TextEncodingOptions =
-  | 'x'
-  | 'y'
-  | 'color'
-  | 'text'
-  | 'size'
-  | 'theta'
-  | 'radius';
+  'x' | 'y' | 'color' | 'text' | 'size' | 'theta' | 'radius';
 
 /**
  * A layer for rendering text marks.
@@ -594,12 +677,7 @@ export type LineValueMapping = GenericValueMapping<LineEncodingOptions>;
  * Encoding options for area marks.
  */
 export type AreaEncodingOptions =
-  | 'x'
-  | 'y'
-  | 'y2'
-  | 'color'
-  | 'stroke'
-  | 'opacity';
+  'x' | 'y' | 'y2' | 'color' | 'stroke' | 'opacity';
 
 /**
  * A layer for rendering area marks.
@@ -675,13 +753,7 @@ export type RectValueMapping = GenericValueMapping<RectEncodingOptions>;
  * Encoding options for bar marks.
  */
 export type BarEncodingOptions =
-  | 'x'
-  | 'x2'
-  | 'y'
-  | 'y2'
-  | 'xOffset'
-  | 'yOffset'
-  | 'color';
+  'x' | 'x2' | 'y' | 'y2' | 'xOffset' | 'yOffset' | 'color';
 
 /**
  * A layer for rendering bar marks.
@@ -707,13 +779,7 @@ export type BarValueMapping = GenericValueMapping<BarEncodingOptions>;
  * Encoding options for point marks.
  */
 export type PointEncodingOptions =
-  | 'x'
-  | 'y'
-  | 'xOffset'
-  | 'yOffset'
-  | 'color'
-  | 'size'
-  | 'shape';
+  'x' | 'y' | 'xOffset' | 'yOffset' | 'color' | 'size' | 'shape';
 
 /**
  * A layer for rendering point marks.
@@ -755,13 +821,7 @@ export type RowEncodingOptions =
  * Mark options for row layers.
  */
 export type RowMarkOptions =
-  | 'select'
-  | 'text'
-  | 'geometry'
-  | 'point'
-  | 'bar'
-  | 'rect'
-  | 'line';
+  'select' | 'text' | 'geometry' | 'point' | 'bar' | 'rect' | 'line';
 
 /**
  * A layer for rendering row marks.
@@ -807,10 +867,13 @@ export interface RowMapping extends GenericFieldMapping<RowEncodingOptions> {
 /**
  * Represents a numerical domain with a minimum and maximum value.
  */
-export interface NumberDomain {
-  min: number;
-  max: number;
-}
+/**
+ * Numeric domain bounds. Either bound may be omitted to keep that end
+ * data-driven — e.g. `{ min: 0 }` pins a zero baseline while the max follows
+ * the data (TableComponent merges partial domains over the computed extent).
+ */
+export type NumberDomain =
+  { min: number; max?: number } | { min?: number; max: number };
 
 /**
  * Field Unions require a list of fields, and the domain is the

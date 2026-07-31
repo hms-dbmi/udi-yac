@@ -1,0 +1,86 @@
+{
+  "name": "penguins",
+  "resources": [
+    {
+      "name": "Penguins",
+      "type": "table",
+      "path": "penguins.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 344,
+      "udi:column_count": 7,
+      "schema": {
+        "fields": [
+          {
+            "name": "species",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "island",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "bill_length_mm",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 164,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "bill_depth_mm",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 80,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "flipper_length_mm",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 55,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "body_mass_g",
+            "type": "number",
+            "description": "",
+            "udi:cardinality": 94,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": []
+      }
+    }
+  ],
+  "udi:name": "penguins",
+  "udi:path": "./data/penguins/"
+}

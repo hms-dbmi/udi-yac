@@ -1,4 +1,3 @@
-import { useMemo, useCallback } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import {
@@ -17,12 +16,19 @@ interface PointFilterComponentProps {
   dataSelection: DataSelection;
   tweakable: boolean;
   filterKey: string;
+  /**
+   * Optional override for where an edit is written. Defaults to
+   * `dataFiltersStore.setDataSelection(filterKey, …)` (the LLM-filter path).
+   * Brush-originated filters pass a writer that targets the brush store.
+   */
+  onCommit?: (selection: DataSelection) => void;
 }
 
 export function PointFilterComponent({
   dataSelection,
   tweakable,
   filterKey,
+  onCommit,
 }: PointFilterComponentProps) {
   const entityNames = useDataPackage((s) => s.entityNames);
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
@@ -32,87 +38,94 @@ export function PointFilterComponent({
   const trackEvent = useTracker();
 
   const entity = dataSelection.dataSourceKey;
+  // Chart clicks produce MULTI-field point selections (e.g. a stacked-bar
+  // segment selects {organization_name: [...], event_type: [...]}); the LLM
+  // FilterData path produces single-field ones. Render a multiselect per
+  // field. The entity/field pickers only make sense for the single-field
+  // tweakable (LLM) form.
   const allFields = Object.keys(dataSelection.selection ?? {});
   const field = allFields.length === 1 ? allFields[0] : '';
 
-  const selectedValues = useMemo(() => {
-    if (!field) return [] as string[];
-    return (dataSelection.selection?.[field] ?? []) as string[];
-  }, [dataSelection.selection, field]);
+  const selectedValuesOf = (f: string) => (dataSelection.selection?.[f] ?? []) as string[];
 
-  const domainValues = useMemo(() => {
-    if (!field) return [] as string[];
-    const domain = getDomainForField(entity, field);
-    return (domain?.domain as { values: string[] })?.values ?? [];
-  }, [getDomainForField, entity, field]);
+  // Options per field: the field's domain when known; otherwise (e.g. a
+  // high-cardinality field whose domain was dropped by removeLongDomains)
+  // fall back to the selected values so a chart click still renders as a
+  // usable multiselect instead of an error.
+  const optionsOf = (f: string): string[] => {
+    const domain = getDomainForField(entity, f);
+    const values = (domain?.domain as { values: string[] } | undefined)?.values;
+    if (values && values.length > 0) return values;
+    return selectedValuesOf(f);
+  };
 
-  const isValid = field
-    ? isValidPointFilter(entity, field, selectedValues).isValid === 'yes'
-    : false;
+  const selectedValues = field ? selectedValuesOf(field) : [];
 
-  const handleToggle = useCallback(
-    (value: string, checked: boolean) => {
-      if (!field) return;
-      const next = checked ? [...selectedValues, value] : selectedValues.filter((v) => v !== value);
-      const current = (dataSelection.selection ?? {}) as PointSelection;
-      const nextSelection: PointSelection = { ...current, [field]: next };
-      setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
-      trackEvent('filter_selection_changed', {
-        entity,
-        field,
-        action: 'toggle',
-        checked,
-        selectionCount: next.length,
-      });
-    },
-    [setDataSelection, filterKey, dataSelection, field, selectedValues, trackEvent, entity],
-  );
+  // Error only for the genuinely broken cases: no fields at all, or an LLM
+  // (tweakable) single-field filter whose values fail domain validation.
+  // Brush-origin selections came from real chart data — always renderable.
+  const isValid =
+    allFields.length > 0 &&
+    (!tweakable || !field || isValidPointFilter(entity, field, selectedValues).isValid !== 'no');
 
-  const handleClearAll = useCallback(() => {
-    if (!field) return;
+  const commit = (selection: DataSelection) => {
+    if (onCommit) onCommit(selection);
+    else setDataSelection(filterKey, selection);
+  };
+
+  const handleToggle = (f: string, value: string, checked: boolean) => {
+    const values = selectedValuesOf(f);
+    const next = checked ? [...values, value] : values.filter((v) => v !== value);
     const current = (dataSelection.selection ?? {}) as PointSelection;
-    const nextSelection: PointSelection = { ...current, [field]: [] };
-    setDataSelection(filterKey, { ...dataSelection, selection: nextSelection });
+    const nextSelection: PointSelection = { ...current, [f]: next };
+    commit({ ...dataSelection, selection: nextSelection });
     trackEvent('filter_selection_changed', {
       entity,
-      field,
+      field: f,
+      action: 'toggle',
+      checked,
+      selectionCount: next.length,
+    });
+  };
+
+  const handleClearAll = (f: string) => {
+    const current = (dataSelection.selection ?? {}) as PointSelection;
+    const nextSelection: PointSelection = { ...current, [f]: [] };
+    commit({ ...dataSelection, selection: nextSelection });
+    trackEvent('filter_selection_changed', {
+      entity,
+      field: f,
       action: 'clear_all',
       selectionCount: 0,
     });
-  }, [setDataSelection, filterKey, dataSelection, field, trackEvent, entity]);
+  };
 
-  const handleEntityChange = useCallback(
-    (val: string | null) => {
-      if (!val) return;
-      setDataSelection(filterKey, {
-        ...dataSelection,
-        dataSourceKey: val,
-        selection: field ? { [field]: [] } : {},
-      });
-      trackEvent('filter_entity_changed', {
-        filterType: 'point',
-        entity: val,
-        field,
-      });
-    },
-    [setDataSelection, filterKey, dataSelection, field, trackEvent],
-  );
+  const handleEntityChange = (val: string | null) => {
+    if (!val) return;
+    commit({
+      ...dataSelection,
+      dataSourceKey: val,
+      selection: field ? { [field]: [] } : {},
+    });
+    trackEvent('filter_entity_changed', {
+      filterType: 'point',
+      entity: val,
+      field,
+    });
+  };
 
-  const handleFieldChange = useCallback(
-    (val: string | null) => {
-      if (!val) return;
-      setDataSelection(filterKey, {
-        ...dataSelection,
-        selection: { [val]: [] },
-      });
-      trackEvent('filter_field_changed', {
-        filterType: 'point',
-        entity,
-        field: val,
-      });
-    },
-    [setDataSelection, filterKey, dataSelection, trackEvent, entity],
-  );
+  const handleFieldChange = (val: string | null) => {
+    if (!val) return;
+    commit({
+      ...dataSelection,
+      selection: { [val]: [] },
+    });
+    trackEvent('filter_field_changed', {
+      filterType: 'point',
+      entity,
+      field: val,
+    });
+  };
 
   const fieldOptions = categoricalSourceFields?.[entity] ?? [];
 
@@ -154,28 +167,45 @@ export function PointFilterComponent({
         )}
       </div>
       {isValid ? (
-        <div className="space-y-1.5 max-h-48 overflow-y-auto">
-          {domainValues.map((value) => {
-            const label = value == null ? '<null>' : String(value);
-            const id = `${filterKey}-${field}-${value}`;
+        <div className="space-y-2">
+          {allFields.map((f) => {
+            const values = selectedValuesOf(f);
             return (
-              <div key={value ?? '__null__'} className="flex items-center gap-2">
-                <Checkbox
-                  id={id}
-                  checked={selectedValues.includes(value)}
-                  onCheckedChange={(checked) => handleToggle(value, !!checked)}
-                />
-                <Label htmlFor={id} className="text-xs cursor-pointer">
-                  {label}
-                </Label>
+              <div key={f} className="space-y-1.5">
+                {allFields.length > 1 && (
+                  <div className="text-xs font-medium text-muted-foreground">{f}</div>
+                )}
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {optionsOf(f).map((value) => {
+                    const label = value == null ? '<null>' : String(value);
+                    const id = `${filterKey}-${f}-${value}`;
+                    return (
+                      <div key={value ?? '__null__'} className="flex items-center gap-2">
+                        <Checkbox
+                          id={id}
+                          checked={values.includes(value)}
+                          onCheckedChange={(checked) => handleToggle(f, value, !!checked)}
+                        />
+                        <Label htmlFor={id} className="text-xs cursor-pointer">
+                          {label}
+                        </Label>
+                      </div>
+                    );
+                  })}
+                  {values.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => handleClearAll(f)}
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}
-          {selectedValues.length > 0 && (
-            <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={handleClearAll}>
-              Clear all
-            </Button>
-          )}
         </div>
       ) : (
         <span className="text-sm text-destructive">Error: Invalid filter.</span>

@@ -50,10 +50,7 @@
     "type": "point",
     "fieldDescription": "The patient's administrative gender.",
     "domain": {
-      "values": [
-        "female",
-        "male"
-      ]
+      "values": ["female", "male"]
     }
   },
   {
@@ -77,10 +74,7 @@
     "type": "point",
     "fieldDescription": "The patient's ethnicity.",
     "domain": {
-      "values": [
-        "hispanic or latino",
-        "not hispanic or latino"
-      ]
+      "values": ["hispanic or latino", "not hispanic or latino"]
     }
   }
 ]

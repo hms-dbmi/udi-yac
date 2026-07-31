@@ -1,2 +1,2 @@
 from .spec import Chart
-from .helpers import Op, rolling
+from .helpers import Expr, Op, rolling

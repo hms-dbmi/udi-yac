@@ -25,6 +25,7 @@ import type {
 import type { UDIPalette } from './Palette';
 import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
+import { getQueryBackend } from './queryBackend';
 const dataSourcesStore = useDataSourcesStore();
 import { storeToRefs } from 'pinia';
 import { debounce } from 'lodash';
@@ -68,6 +69,8 @@ const emit = defineEmits<{
       data: object[] | null;
       allData: object[] | null;
       isSubset: boolean;
+      /** Non-null when a remote row-level result was capped server-side. */
+      truncated: { cap: number; sampled: boolean } | null;
     },
   ): void;
 }>();
@@ -108,10 +111,13 @@ async function render() {
   // Load data sources BEFORE binding selections — binding can change
   // selectionHash which triggers the [loading, selectionHash] watcher.
   // If data isn't loaded yet that watcher would hit empty dataSources.
-  await dataSourcesStore.initDataSources(
-    parsedSpec.value.source,
-    props.sourceResolver,
-  );
+  // Remote backend: no local tables — the server owns the data.
+  if (getQueryBackend().kind === 'local') {
+    await dataSourcesStore.initDataSources(
+      parsedSpec.value.source,
+      props.sourceResolver,
+    );
+  }
   instanceReady.value = true;
   if (props.selections) {
     dataSourcesStore.bindExternalDataSelections(props.selections);
@@ -192,6 +198,10 @@ watch([loading, selectionHash, tablesVersion], () => {
   debouncedBuildVisualization();
 });
 
+// Guards remote responses against out-of-order arrival: only the latest
+// in-flight query may write results.
+let remoteQueryEpoch = 0;
+
 function buildVisualization(): void {
   if (!props.spec) {
     return;
@@ -201,11 +211,58 @@ function buildVisualization(): void {
   // when the filter is cleared.
   parsedSpec.value = parseSpecification(JSON.parse(JSON.stringify(props.spec)));
 
+  const backend = getQueryBackend();
+  if (backend.kind === 'remote') {
+    const epoch = ++remoteQueryEpoch;
+    transformError.value = null;
+    void backend
+      .query({
+        source: parsedSpec.value.source,
+        transformation: parsedSpec.value.transformation,
+        // The local path reads brush state implicitly from the shared
+        // store; the remote path forwards it explicitly. The STORE spreads
+        // last: props.selections may include a React-side snapshot of this
+        // viz's own brush that lags the store by a render — the store is
+        // the source of truth for brush state.
+        selections: { ...props.selections, ...dataSourcesStore.dataSelections },
+      })
+      .then((result) => {
+        if (epoch !== remoteQueryEpoch) return; // stale response
+        // Keep previous data visible while null — same as the local path.
+        if (result == null) return;
+        transformedData.value = result.displayData;
+        transformedDataFull.value = result.allData;
+        isTransformedDataSubset.value = result.isSubset;
+        truncatedInfo.value = result.truncated ?? null;
+        finishBuildVisualization();
+      })
+      .catch((error) => {
+        if (epoch !== remoteQueryEpoch) return;
+        console.error('Remote data query failed', error);
+        transformError.value = error;
+        transformedData.value = [];
+        transformedDataFull.value = [];
+        truncatedInfo.value = null;
+        // Still finish: the error message renders inside the
+        // visualizationBuilt-gated template — without this the card shows
+        // "Loading..." forever instead of the failure.
+        finishBuildVisualization();
+      });
+    return;
+  }
+
   performDataTransformation(parsedSpec.value);
   if (transformedData.value == null) {
     return;
   }
+  finishBuildVisualization();
+}
 
+// The render tail shared by the sync (local) and async (remote) query paths.
+function finishBuildVisualization(): void {
+  if (!parsedSpec.value) {
+    return;
+  }
   // Always lock axis domains to the full data extent. If we only did this
   // when isTransformedDataSubset is true, the initial chart would have a
   // dynamic scale, and when a filter later shrinks the data the scale
@@ -226,6 +283,7 @@ function buildVisualization(): void {
       data: transformedData.value,
       allData: transformedDataFull.value,
       isSubset: isTransformedDataSubset.value,
+      truncated: truncatedInfo.value,
     });
   }
 }
@@ -463,10 +521,47 @@ const transformError = ref();
 const transformedData = ref<object[] | null>(null);
 const transformedDataFull = ref<object[] | null>(null);
 const isTransformedDataSubset = ref<boolean>(false);
+// Set when a remote row-level result was capped server-side (the browser
+// only has the first `cap` rows). Always null in local mode.
+const truncatedInfo = ref<{ cap: number; sampled: boolean } | null>(null);
+const loadingMore = ref(false);
+
+/** Fetch the next window of a capped row-level result and append it.
+ *  Guarded by the epoch: a selection change mid-request restarts from
+ *  offset 0 and discards this append. */
+async function loadMoreRows(): Promise<void> {
+  const backend = getQueryBackend();
+  if (backend.kind !== 'remote' || !parsedSpec.value || loadingMore.value) {
+    return;
+  }
+  const epoch = remoteQueryEpoch;
+  loadingMore.value = true;
+  try {
+    const result = await backend.query({
+      source: parsedSpec.value.source,
+      transformation: parsedSpec.value.transformation,
+      // Store last — same precedence rationale as buildVisualization.
+      selections: { ...props.selections, ...dataSourcesStore.dataSelections },
+      offset: transformedData.value?.length ?? 0,
+    });
+    if (epoch !== remoteQueryEpoch || result == null) return;
+    transformedData.value = [
+      ...(transformedData.value ?? []),
+      ...result.displayData,
+    ];
+    truncatedInfo.value = result.truncated ?? null;
+    finishBuildVisualization();
+  } catch (error) {
+    console.error('Loading more rows failed', error);
+  } finally {
+    loadingMore.value = false;
+  }
+}
 
 function performDataTransformation(spec: ParsedUDIGrammar) {
   try {
     transformError.value = null;
+    truncatedInfo.value = null;
     const dataObjects = dataSourcesStore.getDataObject(
       spec.source.map((x) => x.name),
       spec.transformation,
@@ -721,6 +816,22 @@ const slots = useSlots();
     <div class="error-message" v-if="transformError">
       {{ transformError.message }}
     </div>
+    <div class="truncation-note" v-if="truncatedInfo">
+      Showing first
+      {{ (transformedData?.length ?? truncatedInfo.cap).toLocaleString() }}
+      rows (result truncated server-side)
+      <button
+        class="load-more-button"
+        :disabled="loadingMore"
+        @click="loadMoreRows"
+      >
+        {{
+          loadingMore
+            ? 'Loading…'
+            : `Load ${truncatedInfo.cap.toLocaleString()} more`
+        }}
+      </button>
+    </div>
     <template v-if="slots.default">
       <slot
         :data="transformedData"
@@ -757,5 +868,25 @@ const slots = useSlots();
 .error-message {
   color: #e53935; // $negative, but don't want quasar vars in component
   margin: 6px;
+}
+.truncation-note {
+  color: #757575; // muted; keep quasar vars out of the component
+  font-size: 0.75rem;
+  margin: 2px 6px;
+}
+.load-more-button {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  color: #1976d2;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  &:disabled {
+    color: #9e9e9e;
+    cursor: default;
+    text-decoration: none;
+  }
 }
 </style>
