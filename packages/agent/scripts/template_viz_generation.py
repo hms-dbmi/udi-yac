@@ -63,6 +63,7 @@ def add_row(
     design_considerations: str = "",
     tasks: str = "",
     shape: str = "line_item",
+    review_hint: str = "",
 ):
     spec_key_count = get_total_key_count(spec.to_dict())
     if spec_key_count <= 12:
@@ -90,6 +91,12 @@ def add_row(
         "description": description,
         "design_considerations": design_considerations,
         "tasks": tasks,
+        # Static note from the template's author to a human reviewer (what to
+        # look at, why it was written this way). Distinct from the mutable review
+        # state in template_reviews.json, which the studio owns; this travels with
+        # the template and is never rewritten by the review UI. Not sent to the
+        # LLM — it exists only for the review loop.
+        "review_hint": review_hint,
     }
     return df
 
@@ -143,6 +150,7 @@ def generate():
             "description",
             "design_considerations",
             "tasks",
+            "review_hint",
         ]
     )
 
