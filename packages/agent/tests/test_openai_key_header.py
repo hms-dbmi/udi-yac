@@ -69,6 +69,44 @@ class TestGetGptClient:
 
 
 # ---------------------------------------------------------------------------
+# OpenAI-compatible backends (openai_base_url)
+# ---------------------------------------------------------------------------
+
+
+class TestCustomBaseUrl:
+    def setup_method(self):
+        _make_openai_client.cache_clear()
+
+    def _make_agent(self, **kwargs):
+        with patch("udiagent.agent.get_openai_class", return_value=_StubOpenAI):
+            return UDIAgent(gpt_model_name="local-model", **kwargs)
+
+    def test_base_url_reaches_default_client(self):
+        agent = self._make_agent(
+            openai_api_key="sk-test", openai_base_url="http://localhost:11434/v1"
+        )
+        assert agent.gpt_model._init_kwargs == {
+            "api_key": "sk-test",
+            "base_url": "http://localhost:11434/v1",
+        }
+
+    def test_base_url_without_key_still_builds_a_client(self):
+        """Self-hosted backends take no key; the agent must not degrade to
+        per-request-keys-only, which the server surfaces as a 401."""
+        agent = self._make_agent(openai_base_url="http://localhost:11434/v1")
+        assert agent.gpt_model is not None
+        assert agent.gpt_model._init_kwargs["api_key"]
+
+    def test_no_base_url_keeps_sdk_default(self):
+        agent = self._make_agent(openai_api_key="sk-test")
+        assert agent.gpt_model._init_kwargs == {"api_key": "sk-test", "base_url": None}
+
+    def test_no_key_and_no_base_url_requires_per_request_keys(self):
+        agent = self._make_agent()
+        assert agent.gpt_model is None
+
+
+# ---------------------------------------------------------------------------
 # Integration tests for API header extraction (new server app)
 # ---------------------------------------------------------------------------
 

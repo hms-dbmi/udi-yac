@@ -84,6 +84,7 @@ config = ServerConfig.from_env()
 agent = UDIAgent(
     gpt_model_name=config.gpt_model_name,
     openai_api_key=config.openai_api_key,
+    openai_base_url=config.openai_base_url,
     langfuse_public_key=config.langfuse_public_key,
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
@@ -208,7 +209,9 @@ def yac_completions(
 
     # No key from the caller and none configured server-side → actionable 401
     # instead of the RuntimeError the orchestrator would raise (a bare 500).
-    if not x_openai_key and not config.openai_api_key:
+    # A configured OPENAI_BASE_URL counts as credentialed: self-hosted backends
+    # take no key, and the agent builds a placeholder-key client for them.
+    if not x_openai_key and not config.openai_api_key and not config.openai_base_url:
         return JSONResponse(
             status_code=401,
             content={
