@@ -1,0 +1,8 @@
+# Sample data packages are fetched or generated (see scripts/gen-cube-sample-data.mjs).
+# Reformatting them makes regenerated output diff against the committed form for
+# no reason — same rationale as packages/chat/.prettierignore's `public/data`.
+sample-data/
+
+pnpm-lock.yaml
+node_modules
+dist
