@@ -156,12 +156,17 @@ The `udiagent.server` subpackage provides a reference FastAPI application that w
 
 ### Running the Server for Local Development
 
+Pass `--extra server` on every `uv run` (it provides the `fastapi` CLI). `uv
+run` prunes any extra you don't name, so a bare `uv run fastapi` errors with
+`Failed to spawn: fastapi`. Add the backend driver extra too when using
+server-side data (`--extra duckdb` and/or `--extra starrocks`).
+
 ```bash
 # Development
-uv run fastapi dev src/udiagent/server/app.py --port 8007
+uv run --extra server fastapi dev src/udiagent/server/app.py --port 8007
 
 # Production
-uv run fastapi run src/udiagent/server/app.py --port 8007
+uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 ```
 
 ### Server Environment Variables
@@ -265,7 +270,7 @@ uv run python scripts/regenerate_vis_tools.py --schema data/data_domains/SenNet_
 ### Step 0: Start the API server
 
 ```bash
-uv run fastapi dev src/udiagent/server/app.py --port 8007 &
+uv run --extra server fastapi dev src/udiagent/server/app.py --port 8007 &
 ```
 
 ### Step 1: Run tiny benchmark (1 example)
