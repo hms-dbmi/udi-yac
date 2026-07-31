@@ -90,7 +90,6 @@ export function setMappingFieldByEncoding(
  *
  * Locked operators — no supported swap:
  *   binby     `.field` becomes bin input; output replaces the row schema
- *   kde       `.field` is the density-estimation input
  *   join      `.on` fields define the join key
  *
  * NOT locked (swappable via a transform-aware mutation instead):
@@ -98,6 +97,9 @@ export function setMappingFieldByEncoding(
  *             (and dependent rollup output columns) alongside the mapping
  *   rollup    each aggregation's `.field` is swappable via swapMeasureField —
  *             the mapping references the rollup *output* column, not the input
+ *   kde       swappable via swapPlainField — the density input; its output
+ *             `sample` column is named after the field, so a plain field swap
+ *             renames kde.field + kde.output.sample alongside the mapping
  *
  * Skipped (schema-preserving; don't lock a swap, but ARE followed when the
  * swapped field is fully replaced — see swapPlainField / applyRenamePlan):
@@ -115,9 +117,6 @@ export function collectLockedFields(spec: UDIGrammar): Set<string> {
 
     // binby: { field, ... }
     if (t.binby?.field) locked.add(t.binby.field);
-
-    // kde: { field, ... }
-    if (t.kde?.field) locked.add(t.kde.field);
 
     // join.on: string | [string, string] | [string[], string[]]
     const on = t.join?.on;
@@ -314,6 +313,31 @@ function applyRenamePlan(spec: UDIGrammar, plan: RenamePlan): UDIGrammar {
           if (fChanged) {
             changed = true;
             next = { ...next, filter: value as TransformationLike['filter'] };
+          }
+        }
+
+        // kde: rename the density input `field` and its `output.sample` column
+        // (which the density templates name after the field, so the x mapping
+        // and the sample column stay in sync).
+        if (next.kde != null && typeof next.kde === 'object') {
+          const kde = next.kde as {
+            field?: string;
+            output?: { sample?: string; [k: string]: unknown };
+            [k: string]: unknown;
+          };
+          let newKde = kde;
+          if (kde.field != null && columnRenames.has(kde.field)) {
+            newKde = { ...newKde, field: columnRenames.get(kde.field) };
+          }
+          if (kde.output?.sample != null && columnRenames.has(kde.output.sample)) {
+            newKde = {
+              ...newKde,
+              output: { ...kde.output, sample: columnRenames.get(kde.output.sample) },
+            };
+          }
+          if (newKde !== kde) {
+            changed = true;
+            next = { ...next, kde: newKde as TransformationLike['kde'] };
           }
         }
 

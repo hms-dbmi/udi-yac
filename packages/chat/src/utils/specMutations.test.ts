@@ -187,9 +187,9 @@ describe('collectLockedFields', () => {
     expect([...locked]).toEqual(['age_value']);
   });
 
-  it('locks kde.field', () => {
+  it('does NOT lock kde.field (swappable via swapPlainField — renames kde too)', () => {
     const locked = collectLockedFields(specWithTransformation([{ kde: { field: 'age_value' } }]));
-    expect([...locked]).toEqual(['age_value']);
+    expect([...locked]).toEqual([]);
   });
 
   it('locks a string join.on', () => {
@@ -520,5 +520,40 @@ describe('swapPlainField', () => {
     const spec = cdf('weight_value');
     expect(swapPlainField(spec, 'x', 'weight_value')).toBe(spec);
     expect(swapPlainField(spec, 'zzz', 'age_value')).toBe(spec);
+  });
+
+  it('swaps a density (kde) field through filter, kde.field, kde.output.sample, and mapping', () => {
+    // A density plot: the kde output `sample` column is named after the field,
+    // and the x axis maps to it — so swapping x must rename the field in all
+    // four spots or the estimate stays on the old field.
+    const density = (field: string): UDIGrammar =>
+      ({
+        source: { name: 'donors', source: 'donors.csv' },
+        transformation: [
+          { filter: { op: '!=', left: { field }, right: { literal: null } } },
+          { kde: { field, output: { sample: field, density: 'density' } } },
+        ],
+        representation: {
+          mark: 'area',
+          mapping: [
+            { encoding: 'x', field, type: 'quantitative' },
+            { encoding: 'y', field: 'density', type: 'quantitative' },
+          ],
+        },
+      }) as unknown as UDIGrammar;
+
+    const next = swapPlainField(density('weight_value'), 'x', 'age_value');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({
+      filter: { op: '!=', left: { field: 'age_value' }, right: { literal: null } },
+    });
+    expect(t[1]).toEqual({
+      kde: { field: 'age_value', output: { sample: 'age_value', density: 'density' } },
+    });
+    const mapping = (next.representation as { mapping: Array<{ encoding: string; field: string }> })
+      .mapping;
+    expect(mapping[0]).toEqual({ encoding: 'x', field: 'age_value', type: 'quantitative' });
+    expect(mapping[1].field).toBe('density'); // untouched
   });
 });
