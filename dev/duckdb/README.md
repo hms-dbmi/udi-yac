@@ -14,26 +14,34 @@ how the query backend works, see
 
 ## Quickstart
 
+**One-click (VS Code):** run **Data: Use penguins (remote/DuckDB)** — it seeds
+penguins into a local DuckDB file and points the chat at it
+(`VITE_UDI_REMOTE_PACKAGE=penguins`) — then **Dev: chat + agent (remote/DuckDB)**
+to start the stack (the agent launches with `UDI_QUERY_BACKENDS` set; the plain
+**Dev: agent** task does _not_, so remote packages 404 there). Restart the chat
+dev server after the data task so it picks up the env change.
+
+Manual equivalent:
+
 ```bash
 # 1. Seed sample-data/penguins into packages/agent/penguins.duckdb
 #    (+ duckdb-backends.json). Instant — no container. From the repo root:
 uv run --project packages/agent --extra duckdb \
   python packages/agent/scripts/seed_duckdb.py
 
-# 2. Start the agent pointed at the DuckDB config:
+# 2. Start the agent pointed at the DuckDB config (WITHOUT UDI_QUERY_BACKENDS
+#    the agent has no query backends and every remote package 404s):
 UDI_QUERY_BACKENDS=packages/agent/duckdb-backends.json INSECURE_DEV_MODE=1 \
   uv run --project packages/agent --extra server --extra duckdb \
   fastapi dev packages/agent/src/udiagent/server/app.py --port 8007
 
-# 3. In packages/chat/.env.local:
-#      VITE_UDI_REMOTE_PACKAGE=penguins
+# 3. Point the chat at it, then start it:
+node scripts/set-chat-data-source.mjs penguins --remote   # VITE_UDI_REMOTE_PACKAGE=penguins
 pnpm dev:chat
 ```
 
-The **Data: Regenerate + seed pcx (DuckDB)** VS Code task automates the same
-flow for the team's `pcx` dataset (regenerate the datapackage + seed); for
-penguins or your own CSVs, run the seed command above (or point the task's
-scripts at your directory).
+The **Data: Regenerate + seed pcx (DuckDB)** task does the same for the team's
+`pcx` dataset; for your own CSVs, run the seed command with a directory arg.
 
 To switch the chat **back** to the bundled HuBMAP CSV dumps (browser mode, no
 server backend), run the **Data: Use HuBMAP (CSV, browser mode)** task (or

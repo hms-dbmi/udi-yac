@@ -53,6 +53,27 @@
       "group": { "kind": "build", "isDefault": true }
     },
     {
+      "label": "Dev: agent (remote/DuckDB)",
+      "detail": "UDIAgent server in server-side data mode — loads packages/agent/duckdb-backends.json so /v1/yac query + metadata serve the seeded packages. Run a Data: seed task first. http://localhost:8007",
+      "type": "shell",
+      "command": "uv run --project packages/agent --extra server --extra duckdb fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
+      "options": {
+        "env": {
+          "UDI_QUERY_BACKENDS": "${workspaceFolder}/packages/agent/duckdb-backends.json"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "group": "dev", "panel": "dedicated" }
+    },
+    {
+      "label": "Dev: chat + agent (remote/DuckDB)",
+      "detail": "Server-side data stack: chat SPA + agent with the DuckDB backend. Run 'Data: Use penguins (remote/DuckDB)' first to seed + point the chat at it.",
+      "dependsOn": ["Dev: agent (remote/DuckDB)", "Dev: chat"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
       "label": "Data: Start StarRocks",
       "detail": "docker compose up the local StarRocks container (idempotent; ~30-60s to become healthy)",
       "type": "shell",
@@ -104,6 +125,14 @@
       ],
       "dependsOrder": "sequence",
       "problemMatcher": []
+    },
+    {
+      "label": "Data: Use penguins (remote/DuckDB)",
+      "detail": "One-click server-side (remote) setup with the bundled penguins package: seed it into a local packages/agent/penguins.duckdb (+ duckdb-backends.json) and point the chat at it (VITE_UDI_REMOTE_PACKAGE=penguins). Then run 'Dev: chat + agent (remote/DuckDB)'. Stop the agent before re-seeding.",
+      "type": "shell",
+      "command": "uv run --project packages/agent --extra duckdb python packages/agent/scripts/seed_duckdb.py && node scripts/set-chat-data-source.mjs penguins --remote",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
     },
     {
       "label": "Data: Use HuBMAP (CSV, browser mode)",

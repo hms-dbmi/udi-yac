@@ -1,14 +1,18 @@
 #!/usr/bin/env node
-// Point the chat at a bundled data package in CSV / interactive (browser)
-// mode — the reset-to-CSV-dumps switch. Rewrites packages/chat/.env.local so
-// VITE_UDI_DATA_PACKAGE=/data/<package>/datapackage.json and comments out
-// VITE_UDI_REMOTE_PACKAGE (which otherwise takes precedence and puts the chat
-// in server-side/remote mode). Restart the chat dev server to pick it up.
+// Switch the chat between its two data modes by rewriting packages/chat/.env.local.
 //
-//   node scripts/set-chat-data-source.mjs [package]   # default: hubmap
+//   node scripts/set-chat-data-source.mjs [package]            # browser/CSV (default: hubmap)
+//   node scripts/set-chat-data-source.mjs [package] --remote   # server-side/remote (default: penguins)
 //
-// Data lands in packages/chat/public/data via the `sync-data` step that
-// `pnpm dev:chat` runs, so the package's CSVs must live under sample-data/.
+// Browser mode: VITE_UDI_DATA_PACKAGE=/data/<package>/datapackage.json and
+// VITE_UDI_REMOTE_PACKAGE commented out. The package's CSVs must live under
+// sample-data/ (synced into public/data by the `sync-data` step `pnpm dev:chat` runs).
+//
+// Remote mode: VITE_UDI_REMOTE_PACKAGE=<package> (takes precedence, routes the
+// chat through the agent's /v1/yac query + metadata endpoints) and
+// VITE_UDI_DATA_PACKAGE commented out. The package's data lives in a database
+// the agent serves (seed it with seed_duckdb.py / seed_starrocks.py), not in
+// sample-data/. Restart the chat dev server to pick up either change.
 import { existsSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -17,12 +21,14 @@ const ENV = abs('packages/chat/.env.local');
 const TEMPLATE = abs('packages/chat/.env.example');
 const SAMPLE_DATA = (pkg) => abs(`sample-data/${pkg}`);
 
-const pkg = process.argv[2] ?? 'hubmap';
+const args = process.argv.slice(2);
+const remote = args.includes('--remote');
+const pkg = args.find((a) => !a.startsWith('--')) ?? (remote ? 'penguins' : 'hubmap');
 
-if (!existsSync(SAMPLE_DATA(pkg))) {
-  console.error(
-    `✗ sample-data/${pkg} not found — expected a bundled package directory there.`,
-  );
+// Browser mode reads CSVs from sample-data/; remote reads from the agent's DB,
+// so only the browser path requires a bundled package directory.
+if (!remote && !existsSync(SAMPLE_DATA(pkg))) {
+  console.error(`✗ sample-data/${pkg} not found — expected a bundled package directory there.`);
   process.exit(1);
 }
 
@@ -46,11 +52,20 @@ function unsetEnv(text, key) {
 }
 
 let env = readFileSync(ENV, 'utf8');
-env = setEnv(env, 'VITE_UDI_DATA_PACKAGE', `/data/${pkg}/datapackage.json`);
-env = unsetEnv(env, 'VITE_UDI_REMOTE_PACKAGE');
+if (remote) {
+  env = setEnv(env, 'VITE_UDI_REMOTE_PACKAGE', pkg);
+  env = unsetEnv(env, 'VITE_UDI_DATA_PACKAGE');
+} else {
+  env = setEnv(env, 'VITE_UDI_DATA_PACKAGE', `/data/${pkg}/datapackage.json`);
+  env = unsetEnv(env, 'VITE_UDI_REMOTE_PACKAGE');
+}
 writeFileSync(ENV, env);
 
 console.log(
-  `✓ chat data source → /data/${pkg}/datapackage.json (CSV / interactive mode)\n` +
-    '  VITE_UDI_REMOTE_PACKAGE disabled. Restart the chat dev server to apply.',
+  remote
+    ? `✓ chat data source → remote package "${pkg}" (server-side query mode)\n` +
+        '  VITE_UDI_DATA_PACKAGE disabled. Make sure the agent runs with UDI_QUERY_BACKENDS\n' +
+        '  configured for this package, then restart the chat dev server to apply.'
+    : `✓ chat data source → /data/${pkg}/datapackage.json (CSV / interactive mode)\n` +
+        '  VITE_UDI_REMOTE_PACKAGE disabled. Restart the chat dev server to apply.',
 );

@@ -273,6 +273,22 @@ def _load_query_engines() -> dict:
     return engines
 
 
+def _no_backend_message(package, engines) -> str:
+    """Actionable 404 text: what's configured (if anything) and how to fix it."""
+    if not engines:
+        return (
+            f"no query backend configured for package {package!r}: the server has "
+            "no query backends loaded. Set UDI_QUERY_BACKENDS to a seeded config "
+            "(seed one with packages/agent/scripts/seed_duckdb.py, or run the "
+            "'Data: Use penguins (remote/DuckDB)' VS Code task) and restart the agent."
+        )
+    return (
+        f"no query backend configured for package {package!r}. Configured packages: "
+        f"{sorted(engines)}. Point VITE_UDI_REMOTE_PACKAGE at one of these, or seed "
+        f"{package!r} and restart the agent."
+    )
+
+
 app.state.query_engines = _load_query_engines()
 # package name -> MetadataCache (created lazily per configured engine)
 app.state.metadata_caches = {}
@@ -293,7 +309,7 @@ def yac_metadata(
     if engine is None:
         return JSONResponse(
             status_code=404,
-            content={"error": f"no query backend configured for package {package!r}"},
+            content={"error": _no_backend_message(package, engines)},
         )
     caches = app.state.metadata_caches
     if key not in caches:
@@ -319,9 +335,7 @@ def yac_query(
     if engine is None:
         return JSONResponse(
             status_code=404,
-            content={
-                "error": f"no query backend configured for package {request.package!r}"
-            },
+            content={"error": _no_backend_message(request.package, engines)},
         )
     results = engine.run_batch(
         [q.model_dump() for q in request.queries],

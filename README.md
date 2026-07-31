@@ -65,7 +65,9 @@ Use HuBMAP (CSV, browser mode)** VS Code task).
 grammar to SQL and runs it there, so the browser never loads the CSVs. Both
 backends seed the committed `sample-data/penguins` package by default.
 
-- **DuckDB — no container** (easiest):
+- **DuckDB — no container** (easiest). In VS Code, run the **Data: Use penguins
+  (remote/DuckDB)** task (seeds penguins + points the chat at it), then **Dev:
+  chat + agent (remote/DuckDB)**. Manually:
 
   ```bash
   uv run --project packages/agent --extra duckdb \
@@ -75,8 +77,10 @@ backends seed the committed `sample-data/penguins` package by default.
     fastapi dev packages/agent/src/udiagent/server/app.py --port 8007
   ```
 
-  Then set `VITE_UDI_REMOTE_PACKAGE=penguins` in `packages/chat/.env.local` and
-  `pnpm dev:chat`. Full guide: [`dev/duckdb/README.md`](dev/duckdb/README.md).
+  Then `node scripts/set-chat-data-source.mjs penguins --remote` and
+  `pnpm dev:chat`. (The plain `pnpm dev:agent` / **Dev: agent** task starts the
+  agent _without_ `UDI_QUERY_BACKENDS`, so remote packages 404 — use the remote
+  task/command above.) Full guide: [`dev/duckdb/README.md`](dev/duckdb/README.md).
 
 - **StarRocks — Docker** (closest to a production OLAP target):
 
