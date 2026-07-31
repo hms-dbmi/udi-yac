@@ -1463,6 +1463,11 @@ def generate():
                     )
                 }
             )
+            # Final sort by the derived percentile so the line renders as a
+            # monotonic step: at tied values, the rolling frame emits several
+            # percentiles for one x, and ordering by value alone leaves them in
+            # a non-ascending order that draws as downward jags.
+            .orderby("percentile")
             .mark("line")
             .x(field="<F>", type="quantitative")
             .y(field="percentile", type="quantitative")
@@ -1472,7 +1477,7 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the cumulative distribution function (CDF) of a quantitative field as a line chart.",
-        design_considerations="Sorts by value, computes rolling percentile, and draws a line. The CDF reveals the full distribution shape including median, quartiles, and tails.",
+        design_considerations="Sorts by value, computes rolling percentile, then sorts by percentile so the line is a monotonic step. The CDF reveals the full distribution shape including median, quartiles, and tails.",
         tasks="Characterize the distribution of a variable; identify median, quartiles, and concentration of values.",
     )
 
@@ -1487,8 +1492,11 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F1>"))
-            .orderby("<F1>")
+            # Group first, then sort within groups: the rolling percentile is a
+            # per-group cumulative, so grouping must be established before the
+            # ordered window is computed.
             .groupby("<F2>")
+            .orderby("<F1>")
             .derive({"total": Expr.agg("count")})
             .derive(
                 {
@@ -1497,6 +1505,9 @@ def generate():
                     )
                 }
             )
+            # Final sort by the derived percentile so each group's line renders
+            # as a monotonic step (see the single-field CDF above).
+            .orderby("percentile")
             .mark("line")
             .x(field="<F1>", type="quantitative")
             .y(field="percentile", type="quantitative")
@@ -1507,7 +1518,7 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
-        design_considerations="Groups by nominal field before computing per-group CDF. Color encodes group identity. Limited to fewer than 5 groups for readability.",
+        design_considerations="Groups by the nominal field, sorts within groups, computes the per-group rolling percentile, then sorts by percentile so each line is a monotonic step. Color encodes group identity. Limited to fewer than 5 groups for readability.",
         tasks="Compare distributions across groups; identify which groups have higher or lower concentrations of values.",
     )
 

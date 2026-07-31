@@ -227,14 +227,16 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
  '"<F>"}, "right": {"literal": null}}}, {"orderby": {"field": "<F>", "order": "asc"}}, {"derive": {"total": {"agg": '
  '"count"}}}, {"derive": {"percentile": {"rolling": {"expression": {"op": "/", "left": {"agg": "count"}, "right": '
- '{"field": "total"}}}}}}], "representation": {"mark": "line", "mapping": [{"encoding": "x", "field": "<F>", "type": '
- '"quantitative"}, {"encoding": "y", "field": "percentile", "type": "quantitative"}]}}',
+ '{"field": "total"}}}}}}, {"orderby": {"field": "percentile", "order": "asc"}}], "representation": {"mark": "line", '
+ '"mapping": [{"encoding": "x", "field": "<F>", "type": "quantitative"}, {"encoding": "y", "field": "percentile", '
+ '"type": "quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
- '"<F1>"}, "right": {"literal": null}}}, {"orderby": {"field": "<F1>", "order": "asc"}}, {"groupby": "<F2>"}, '
+ '"<F1>"}, "right": {"literal": null}}}, {"groupby": "<F2>"}, {"orderby": {"field": "<F1>", "order": "asc"}}, '
  '{"derive": {"total": {"agg": "count"}}}, {"derive": {"percentile": {"rolling": {"expression": {"op": "/", "left": '
- '{"agg": "count"}, "right": {"field": "total"}}}}}}], "representation": {"mark": "line", "mapping": [{"encoding": '
- '"x", "field": "<F1>", "type": "quantitative"}, {"encoding": "y", "field": "percentile", "type": "quantitative"}, '
- '{"encoding": "color", "field": "<F2>", "type": "nominal"}]}}',
+ '{"agg": "count"}, "right": {"field": "total"}}}}}}, {"orderby": {"field": "percentile", "order": "asc"}}], '
+ '"representation": {"mark": "line", "mapping": [{"encoding": "x", "field": "<F1>", "type": "quantitative"}, '
+ '{"encoding": "y", "field": "percentile", "type": "quantitative"}, {"encoding": "color", "field": "<F2>", "type": '
+ '"nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}, {"orderby": '
  '{"field": "<D>", "order": "asc"}}], "representation": {"mark": "line", "mapping": [{"encoding": "x", "field": '
  '"<D:o>", "type": "ordinal"}, {"encoding": "y", "field": "<M>", "type": "quantitative"}]}}',

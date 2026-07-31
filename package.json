@@ -5,7 +5,7 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "dev:chat": "pnpm --filter udi-yac dev",
-    "dev:agent": "uv run --project packages/agent --extra server --extra duckdb --extra starrocks fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
+    "dev:agent": "uv run --project packages/agent --extra server --extra duckdb --extra starrocks fastapi dev packages/agent/src/udiagent/server/app.py --port 8007 --reload-dir packages/agent/src --reload-dir packages/grammar-py/src",
     "dev:grammar": "pnpm --filter udi-grammar-app dev",
     "dev:storybook": "pnpm --filter udi-toolkit storybook",
     "build:toolkit": "pnpm --filter udi-toolkit build:all",

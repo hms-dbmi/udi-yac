@@ -305,6 +305,43 @@ def test_cube_template_marginal_filter_runs_in_sql(tmp_path):
     assert rows == {("M", 60), ("F", 40)}
 
 
+def test_grouped_cdf_output_is_render_stable():
+    """A grouped CDF (group -> ordered rolling percentile) must come out ordered
+    so each group's line renders monotonically. The rolling frame emits several
+    percentiles at a tied x; a final `orderby(percentile)` keeps them ascending
+    in output order (otherwise the line draws downward jags). Guards the CDF
+    template's ordering. Also exercises multi-field orderby ({field: [list]})."""
+    views = {"penguins": str(_SAMPLE_DATA / "penguins.csv")}
+    engine = QueryEngine(DuckDBConnector(views=views), table_map={"penguins": "penguins"})
+    result = engine.run_query(
+        source={"name": "penguins", "source": "penguins"},
+        transformation=[
+            {"filter": {"op": "!=", "left": {"field": "bill_depth_mm"}, "right": {"literal": None}}},
+            {"groupby": "species"},
+            {"orderby": {"field": "bill_depth_mm", "order": "asc"}},
+            {"derive": {"total": {"agg": "count"}}},
+            {"derive": {"percentile": {"rolling": {"expression": {
+                "op": "/", "left": {"agg": "count"}, "right": {"field": "total"}}}}}},
+            {"orderby": {"field": "percentile", "order": "asc"}},
+        ],
+    )
+    per_group: dict = {}
+    for row in result["displayData"]:
+        per_group.setdefault(row["species"], []).append((row["bill_depth_mm"], row["percentile"]))
+    for species, pts in per_group.items():
+        # output order must be non-decreasing in BOTH x and percentile per group
+        assert all(pts[i][0] >= pts[i - 1][0] - 1e-9 for i in range(1, len(pts))), species
+        assert all(pts[i][1] >= pts[i - 1][1] - 1e-9 for i in range(1, len(pts))), species
+        assert abs(pts[-1][1] - 1.0) < 1e-9, f"{species} CDF should end at 1.0"
+
+    # {field: [list]} multi-field orderby must compile (was an AttributeError).
+    multi = engine.run_query(
+        source={"name": "penguins", "source": "penguins"},
+        transformation=[{"orderby": {"field": ["species", "bill_depth_mm"], "order": "asc"}}],
+    )
+    assert len(multi["displayData"]) > 0
+
+
 def test_kde_structural():
     views = {"penguins": str(_SAMPLE_DATA / "penguins.csv")}
     engine = QueryEngine(DuckDBConnector(views=views), table_map={"penguins": "penguins"})

@@ -43,7 +43,7 @@ Python:
 ```bash
 cd packages/agent && uv sync --extra server --extra langfuse --extra test && uv run pytest
 cd packages/grammar-py && uv sync && uv run pytest
-uv run --project packages/agent --extra server fastapi dev packages/agent/src/udiagent/server/app.py --port 8007   # dev server
+uv run --project packages/agent --extra server fastapi dev packages/agent/src/udiagent/server/app.py --port 8007 --reload-dir packages/agent/src --reload-dir packages/grammar-py/src   # dev server (--reload-dir: don't watch the whole monorepo)
 ```
 
 Toolkit smoke tests (after `pnpm build:toolkit`): `node test/smoke-{vue,ce,react,exports}.mjs` in `packages/grammar`.

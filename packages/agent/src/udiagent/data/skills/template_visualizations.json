@@ -705,15 +705,15 @@
       "What is the cumulative distribution of <F:q>?",
       "Make a CDF plot of <F:q>."
     ],
-    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}, {\"derive\": {\"total\": {\"agg\": \"count\"}}}, {\"derive\": {\"percentile\": {\"rolling\": {\"expression\": {\"op\": \"\/\", \"left\": {\"agg\": \"count\"}, \"right\": {\"field\": \"total\"}}}}}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"percentile\", \"type\": \"quantitative\"}]}}",
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}, {\"derive\": {\"total\": {\"agg\": \"count\"}}}, {\"derive\": {\"percentile\": {\"rolling\": {\"expression\": {\"op\": \"\/\", \"left\": {\"agg\": \"count\"}, \"right\": {\"field\": \"total\"}}}}}}, {\"orderby\": {\"field\": \"percentile\", \"order\": \"asc\"}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"percentile\", \"type\": \"quantitative\"}]}}",
     "creation_method": "template",
     "chart_type": "line",
     "chart_complexity": "medium",
-    "spec_key_count": 18,
+    "spec_key_count": 20,
     "task_types": ["Characterize_Distribution"],
     "tags": ["line_item", "line"],
     "description": "Shows the cumulative distribution function (CDF) of a quantitative field as a line chart.",
-    "design_considerations": "Sorts by value, computes rolling percentile, and draws a line. The CDF reveals the full distribution shape including median, quartiles, and tails.",
+    "design_considerations": "Sorts by value, computes rolling percentile, then sorts by percentile so the line is a monotonic step. The CDF reveals the full distribution shape including median, quartiles, and tails.",
     "tasks": "Characterize the distribution of a variable; identify median, quartiles, and concentration of values."
   },
   {
@@ -721,15 +721,15 @@
       "What is the cumulative distribution of <F1:q> for each <F2:n>?",
       "Make a CDF plot of <F1:q> with a line for each <F2:n>."
     ],
-    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F1>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F1>\", \"order\": \"asc\"}}, {\"groupby\": \"<F2>\"}, {\"derive\": {\"total\": {\"agg\": \"count\"}}}, {\"derive\": {\"percentile\": {\"rolling\": {\"expression\": {\"op\": \"\/\", \"left\": {\"agg\": \"count\"}, \"right\": {\"field\": \"total\"}}}}}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"percentile\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F1>\"}, \"right\": {\"literal\": null}}}, {\"groupby\": \"<F2>\"}, {\"orderby\": {\"field\": \"<F1>\", \"order\": \"asc\"}}, {\"derive\": {\"total\": {\"agg\": \"count\"}}}, {\"derive\": {\"percentile\": {\"rolling\": {\"expression\": {\"op\": \"\/\", \"left\": {\"agg\": \"count\"}, \"right\": {\"field\": \"total\"}}}}}}, {\"orderby\": {\"field\": \"percentile\", \"order\": \"asc\"}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F1>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"percentile\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2>\", \"type\": \"nominal\"}]}}",
     "creation_method": "template",
     "chart_type": "grouped_line",
     "chart_complexity": "medium",
-    "spec_key_count": 22,
+    "spec_key_count": 24,
     "task_types": ["Characterize_Distribution"],
     "tags": ["line_item", "grouped_line"],
     "description": "Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
-    "design_considerations": "Groups by nominal field before computing per-group CDF. Color encodes group identity. Limited to fewer than 5 groups for readability.",
+    "design_considerations": "Groups by the nominal field, sorts within groups, computes the per-group rolling percentile, then sorts by percentile so each line is a monotonic step. Color encodes group identity. Limited to fewer than 5 groups for readability.",
     "tasks": "Compare distributions across groups; identify which groups have higher or lower concentrations of values."
   },
   {

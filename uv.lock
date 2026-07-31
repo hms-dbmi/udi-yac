@@ -1939,11 +1939,13 @@ dependencies = [
 [package.optional-dependencies]
 all = [
     { name = "datasets" },
+    { name = "duckdb" },
     { name = "fastapi", extra = ["standard"] },
     { name = "huggingface-hub" },
     { name = "ijson" },
     { name = "langfuse" },
     { name = "pandas" },
+    { name = "pymysql" },
     { name = "python-dotenv" },
     { name = "python-jose" },
     { name = "udi-grammar-py" },
@@ -1995,7 +1997,7 @@ requires-dist = [
     { name = "python-jose", marker = "extra == 'server'", specifier = ">=3.5.0" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "udi-grammar-py", marker = "extra == 'codegen'", editable = "packages/grammar-py" },
-    { name = "udiagent", extras = ["langfuse", "server", "benchmark", "codegen"], marker = "extra == 'all'" },
+    { name = "udiagent", extras = ["langfuse", "server", "benchmark", "codegen", "starrocks", "duckdb"], marker = "extra == 'all'" },
 ]
 provides-extras = ["langfuse", "server", "benchmark", "codegen", "duckdb", "starrocks", "test", "all"]
 

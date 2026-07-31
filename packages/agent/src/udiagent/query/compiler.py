@@ -468,7 +468,13 @@ class PipelineCompiler:
                 order.append((item, "ASC"))
             else:
                 direction = "DESC" if item.get("order") == "desc" else "ASC"
-                order.append((item["field"], direction))
+                field = item["field"]
+                # grammar-py's .orderby([...]) emits {field: [a, b], order}; a
+                # bare {field: str} is the common case. Expand either shape.
+                if isinstance(field, list):
+                    order.extend((f, direction) for f in field)
+                else:
+                    order.append((field, direction))
         st.order_by = order
         if transform.get("in") is not None:
             st.current = self._in_ref(st, transform["in"])

@@ -69,6 +69,12 @@ logging.basicConfig(
     ],
 )
 
+# uvicorn's --reload watcher passes watch_filter=None, so watchfiles logs EVERY
+# raw change at INFO. Our file handler is on the root logger and writes inside
+# the watched tree, so that log line is itself a change -> endless feedback
+# loop. uvicorn still logs its own "Detected changes ... Reloading" at WARNING.
+logging.getLogger("watchfiles").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 # --- Config ---

@@ -21,7 +21,7 @@
       "label": "Dev: agent",
       "detail": "UDIAgent FastAPI server (http://localhost:8007). Includes the duckdb/starrocks drivers so it serves whatever UDI_QUERY_BACKENDS in packages/agent/.env configures (or nothing → browser mode).",
       "type": "shell",
-      "command": "uv run --project packages/agent --extra server --extra duckdb --extra starrocks fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
+      "command": "uv run --project packages/agent --extra server --extra duckdb --extra starrocks fastapi dev packages/agent/src/udiagent/server/app.py --port 8007 --reload-dir packages/agent/src --reload-dir packages/grammar-py/src",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": { "group": "dev", "panel": "dedicated" }
@@ -56,7 +56,7 @@
       "label": "Dev: agent (remote/DuckDB)",
       "detail": "UDIAgent server in server-side data mode — loads packages/agent/duckdb-backends.json so /v1/yac query + metadata serve the seeded packages. Run a Data: seed task first. http://localhost:8007",
       "type": "shell",
-      "command": "uv run --project packages/agent --extra server --extra duckdb fastapi dev packages/agent/src/udiagent/server/app.py --port 8007",
+      "command": "uv run --project packages/agent --extra server --extra duckdb fastapi dev packages/agent/src/udiagent/server/app.py --port 8007 --reload-dir packages/agent/src --reload-dir packages/grammar-py/src",
       "options": {
         "env": {
           "UDI_QUERY_BACKENDS": "${workspaceFolder}/packages/agent/duckdb-backends.json"
