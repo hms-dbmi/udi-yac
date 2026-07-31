@@ -41,7 +41,7 @@ test = [
     "duckdb>=1.0.0",
 ]
 all = [
-    "udiagent[langfuse,server,benchmark,codegen]",
+    "udiagent[langfuse,server,benchmark,codegen,starrocks,duckdb]",
 ]
 
 [build-system]
