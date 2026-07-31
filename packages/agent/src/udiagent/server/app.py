@@ -42,12 +42,16 @@ from udiagent.server.models import (
 # Bootstrap
 # ---------------------------------------------------------------------------
 
-load_dotenv()
-
 # Package root (packages/agent) — resolve bundled dev data relative to the
 # source tree, not the process CWD, so endpoints work no matter where the
 # server is launched from (repo root, packages/agent, or the Docker image).
 _PACKAGE_ROOT = Path(__file__).resolve().parents[3]
+
+# Load packages/agent/.env by explicit path, NOT via CWD discovery: the dev
+# tasks and `pnpm dev:agent` launch from the repo root, where bare
+# load_dotenv() finds nothing — so UDI_QUERY_BACKENDS / OPENAI_API_KEY silently
+# wouldn't load. override=False keeps real env vars (Docker, shell) winning.
+load_dotenv(_PACKAGE_ROOT / ".env")
 _DATA_DIR = _PACKAGE_ROOT / "data"
 
 # --- Logging setup ---
@@ -268,7 +272,14 @@ def _load_query_engines() -> dict:
         return {}
     engines = {}
     for package, spec in json.loads(Path(path).read_text()).items():
-        engines[package] = _engine_from_config(spec)
+        try:
+            engines[package] = _engine_from_config(spec)
+        except Exception as exc:
+            # A single locked/missing/misconfigured backend (e.g. a DuckDB file
+            # held open by another process) must not sink the whole server —
+            # skip it so the other packages still load. DuckDB allows only one
+            # read-write handle per file (see dev/duckdb/README.md).
+            logger.warning("skipping query backend %r: %s", package, exc)
     logger.info("query backends configured: %s", sorted(engines))
     return engines
 

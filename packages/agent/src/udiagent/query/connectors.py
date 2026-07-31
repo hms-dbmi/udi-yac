@@ -67,7 +67,15 @@ class DuckDBConnector:
     def __init__(self, database: str = ":memory:", views: dict[str, str] | None = None):
         import duckdb  # lazy: optional extra
 
-        self._conn = duckdb.connect(database)
+        # A seeded file DB is only READ by the query engine (seeding uses its own
+        # connection), so open it read-only. DuckDB's default read-write handle
+        # takes an EXCLUSIVE lock, which collides whenever more than one handle
+        # opens the file — e.g. `fastapi dev` imports the app in both the reload
+        # supervisor and the worker, and each would try to lock it. Read-only
+        # handles share fine. :memory: and views-backed connectors must stay
+        # writable (they CREATE VIEW), so only lock down the plain file case.
+        read_only = database != ":memory:" and not views
+        self._conn = duckdb.connect(database, read_only=read_only)
         for name, path in (views or {}).items():
             if not _IDENT_RE.match(name):
                 raise ValueError(f"invalid view name: {name!r}")
