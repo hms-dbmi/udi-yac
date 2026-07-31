@@ -2,6 +2,7 @@ packages:
   - packages/chat
   - packages/grammar
   - apps/grammar-app
+  - apps/template-studio
 
 # merged from packages/chat/pnpm-workspace.yaml
 allowBuilds:

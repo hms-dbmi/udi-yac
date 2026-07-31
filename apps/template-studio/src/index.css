@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-udi-primary: #57b4e9;
+  --color-udi-gray-100: #eff3f5;
+  --color-udi-gray-300: #cad5da;
+  --color-udi-gray-800: #384853;
+}
+
+body {
+  margin: 0;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+
+/* UDIVis renders into a Vue custom element with shadowRoot: false, so the host
+   element itself needs to be a block that fills its card body. */
+udi-vis {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
