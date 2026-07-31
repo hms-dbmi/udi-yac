@@ -112,6 +112,43 @@ Generation validates every spec against the UDI grammar and reports any
 non-conforming templates (non-fatal; pass `--strict` to
 `template_viz_generation.py` to fail hard).
 
+### Third-party OpenAI-compatible backends
+
+Point `openai_base_url` at any OpenAI-compatible chat-completions root and set
+`gpt_model_name` to that backend's model id:
+
+```python
+agent = UDIAgent(
+    gpt_model_name="openai.gpt-oss-120b-1:0",
+    openai_api_key="...",
+    openai_base_url="https://bedrock-mantle.us-east-1.api.aws/openai/v1",
+)
+```
+
+| Backend             | `openai_base_url`                                   | Notes                                              |
+| ------------------- | --------------------------------------------------- | -------------------------------------------------- |
+| Azure AI Foundry    | `https://<resource>.openai.azure.com/openai/v1`     | Key is the Foundry API key                         |
+| Amazon Bedrock      | `https://bedrock-mantle.<region>.api.aws/openai/v1` | Key is a Bedrock API key (see below for IAM roles) |
+| OpenRouter          | `https://openrouter.ai/api/v1`                      | Model ids are `vendor/model`                       |
+| Ollama / vLLM / LMS | `http://localhost:11434/v1`                         | No key needed — a placeholder is supplied          |
+
+The backend must support **function calling** and **JSON-schema structured
+outputs** (`response_format: {type: "json_schema", strict: true}`); the
+orchestrator additionally uses `tool_choice: "required"`. Backends missing
+these will fall through to the non-LLM fallback paths and produce degraded
+results, so smoke-test one visualization request after switching.
+
+Scoping: passing `openai_base_url` to the constructor affects only the default
+client — per-request `X-OpenAI-Key` callers still reach api.openai.com. Setting
+the `OPENAI_BASE_URL` environment variable instead (as the server does) routes
+**every** client there, including per-request keys, because the OpenAI SDK
+applies that variable itself.
+
+Amazon Bedrock with an instance/task role rather than a static key is not
+wired up: it needs SigV4, i.e. `OpenAI(provider=openai.providers.bedrock(...))`
+plus the `openai[bedrock]` extra, which is mutually exclusive with
+`api_key`/`base_url`.
+
 ### With LangFuse observability
 
 LangFuse tracing is opt-in. Install the extra (`pip install udiagent[langfuse]`) and pass any of the three credentials to `UDIAgent`:
@@ -171,19 +208,20 @@ uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 
 ### Server Environment Variables
 
-| Variable                   | Required | Default   | Description                                                                                        |
-| -------------------------- | -------- | --------- | -------------------------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`           | No       | —         | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header.                |
-| `GPT_MODEL_NAME`           | No       | `gpt-5.4` | OpenAI model for orchestration                                                                     |
-| `JWT_SECRET_KEY`           | Yes\*    | —         | JWT signing key; the server refuses startup when missing (\*not required if `INSECURE_DEV_MODE=1`) |
-| `JWT_ALGORITHM`            | No       | `HS256`   | JWT algorithm                                                                                      |
-| `INSECURE_DEV_MODE`        | No       | `0`       | Set to `1` to skip JWT verification (development only)                                             |
-| `LANGFUSE_SECRET_KEY`      | No       | —         | LangFuse observability secret key (opt-in; tracing is disabled when unset)                         |
-| `LANGFUSE_PUBLIC_KEY`      | No       | —         | LangFuse observability public key (opt-in; tracing is disabled when unset)                         |
-| `LANGFUSE_HOST`            | No       | —         | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                                          |
-| `LANGFUSE_ENVIRONMENT`     | No       | —         | Tags traces with an environment label (e.g. `production`); does not enable tracing                 |
-| `UDI_QUERY_BACKENDS`       | No       | —         | Path to a JSON file configuring server-side query backends (see below)                             |
-| `UDI_METADATA_TTL_SECONDS` | No       | `3600`    | TTL for the introspected-metadata cache                                                            |
+| Variable                   | Required | Default   | Description                                                                                          |
+| -------------------------- | -------- | --------- | ---------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`           | No       | —         | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header.                  |
+| `OPENAI_BASE_URL`          | No       | —         | OpenAI-compatible backend root (see [Third-party backends](#third-party-openai-compatible-backends)) |
+| `GPT_MODEL_NAME`           | No       | `gpt-5.4` | Model for orchestration; with a custom base URL, that backend's model id                             |
+| `JWT_SECRET_KEY`           | Yes\*    | —         | JWT signing key; the server refuses startup when missing (\*not required if `INSECURE_DEV_MODE=1`)   |
+| `JWT_ALGORITHM`            | No       | `HS256`   | JWT algorithm                                                                                        |
+| `INSECURE_DEV_MODE`        | No       | `0`       | Set to `1` to skip JWT verification (development only)                                               |
+| `LANGFUSE_SECRET_KEY`      | No       | —         | LangFuse observability secret key (opt-in; tracing is disabled when unset)                           |
+| `LANGFUSE_PUBLIC_KEY`      | No       | —         | LangFuse observability public key (opt-in; tracing is disabled when unset)                           |
+| `LANGFUSE_HOST`            | No       | —         | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                                            |
+| `LANGFUSE_ENVIRONMENT`     | No       | —         | Tags traces with an environment label (e.g. `production`); does not enable tracing                   |
+| `UDI_QUERY_BACKENDS`       | No       | —         | Path to a JSON file configuring server-side query backends (see below)                               |
+| `UDI_METADATA_TTL_SECONDS` | No       | `3600`    | TTL for the introspected-metadata cache                                                              |
 
 ### Server Endpoints
 
