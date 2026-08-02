@@ -11,7 +11,6 @@ Run with::
 
 import json
 import logging
-import os
 from dataclasses import asdict
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -53,6 +52,7 @@ _PACKAGE_ROOT = Path(__file__).resolve().parents[3]
 # wouldn't load. override=False keeps real env vars (Docker, shell) winning.
 load_dotenv(_PACKAGE_ROOT / ".env")
 _DATA_DIR = _PACKAGE_ROOT / "data"
+_OUTPUT_DIR = _PACKAGE_ROOT / "out"
 
 # --- Logging setup ---
 _log_dir = _PACKAGE_ROOT / "logs"
@@ -401,14 +401,14 @@ def yac_structured_functions():
 
 
 @app.get("/v1/yac/benchmark_analysis")
-def yac_benchmark_analysis():
-    result_filename = "./out/benchmark_analysis.json"
-    if not os.path.exists(result_filename):
+def yac_benchmark_analysis(token_payload: dict = Depends(verify_jwt)):
+    result_path = _OUTPUT_DIR / "benchmark_analysis.json"
+    if not result_path.exists():
         return JSONResponse(
-            content={"error": f"File {result_filename} not found."}, status_code=404
+            content={"error": "Benchmark analysis not found."}, status_code=404
         )
 
-    with open(result_filename, "r") as f:
+    with result_path.open("r") as f:
         data = json.load(f)
 
     return JSONResponse(content=data)

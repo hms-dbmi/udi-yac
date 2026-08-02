@@ -185,6 +185,10 @@ uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 | `UDI_QUERY_BACKENDS`       | No       | —         | Path to a JSON file configuring server-side query backends (see below)                             |
 | `UDI_METADATA_TTL_SECONDS` | No       | `3600`    | TTL for the introspected-metadata cache                                                            |
 
+### Authentication
+
+When `INSECURE_DEV_MODE` is not enabled, the completion, benchmark, and benchmark-analysis endpoints require a bearer JWT signed with `JWT_SECRET_KEY`.
+
 ### Server Endpoints
 
 | Endpoint                       | Method | Description                                           |
