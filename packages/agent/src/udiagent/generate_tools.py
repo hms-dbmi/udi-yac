@@ -250,7 +250,7 @@ def _generate_single_entity_tool(
             continue
         base = m.group(1)  # F, F1, F2, F3 or D, D1, D2, D3
         param_name = {
-            "F": "field", "F1": "field1", "F2": "field2", "F3": "field3",
+            "F": "field", "F1": "field1", "F2": "field2", "F3": "field3", "F4": "field4",
             "D": "dimension", "D1": "dimension1", "D2": "dimension2", "D3": "dimension3",
         }.get(base)
         if not param_name or param_name in seen:

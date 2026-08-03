@@ -878,6 +878,35 @@
   },
   {
     "query_templates": [
+      "Show survival curves for <E> split by <F4:n>.",
+      "Compare survival between <F4:n> groups.",
+      "Does survival differ by <F4:n>?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F3:q>\"}, \"right\": {\"literal\": null}}}, {\"derive\": {\"start day\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"<F2:n>\"}, \"right\": {\"literal\": \"Initial CNS Tumor\"}}, \"then\": {\"field\": \"<F3>\"}, \"else\": {\"literal\": null}}, \"end day\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"<F2>\"}, \"right\": {\"literal\": \"Deceased\"}}, \"then\": {\"field\": \"<F3>\"}, \"else\": {\"literal\": null}}}}, {\"groupby\": [\"<F1:n>\", \"<F4:n>\"]}, {\"rollup\": {\"start day\": {\"op\": \"min\", \"field\": \"start day\"}, \"end day\": {\"op\": \"max\", \"field\": \"end day\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"start day\"}, \"right\": {\"literal\": null}}}, {\"groupby\": \"<F4>\"}, {\"derive\": {\"subjects\": {\"agg\": \"count\"}}}, {\"derive\": {\"survival days\": {\"op\": \"-\", \"left\": {\"field\": \"end day\"}, \"right\": {\"field\": \"start day\"}}}}, {\"filter\": {\"op\": \"&&\", \"left\": {\"op\": \"!=\", \"left\": {\"field\": \"survival days\"}, \"right\": {\"literal\": null}}, \"right\": {\"op\": \">=\", \"left\": {\"field\": \"survival days\"}, \"right\": {\"literal\": 0}}}}, {\"orderby\": {\"field\": \"survival days\", \"order\": \"asc\"}}, {\"derive\": {\"survival probability\": {\"rolling\": {\"expression\": {\"op\": \"-\", \"left\": {\"literal\": 1}, \"right\": {\"op\": \"/\", \"left\": {\"agg\": \"count\"}, \"right\": {\"field\": \"subjects\"}}}}}}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"survival days\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"survival probability\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F4>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "line",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 53,
+    "task_types": [
+      "Characterize_Distribution",
+      "Compute_Derived_Value",
+      "Correlate"
+    ],
+    "tags": ["line_item", "line"],
+    "description": "Survival curves split by a nominal field, built from an event log: pairs each subject's 'Initial CNS Tumor' and 'Deceased' events to derive a survival time, then plots one curve per category with its own cohort as the denominator.",
+    "design_considerations": "Groups by subject and stratum together so the stratum survives the per-subject rollup, then re-groups by stratum so each curve's denominator is its own cohort \u2014 otherwise the curves would be fractions of the whole table and would not each start near 1. Strata are drawn as colours because the grammar has no facet channel. Only for single-valued fields: a list-valued column such as tumor_locations would make every distinct combination its own stratum. The same censoring caveat as the unstratified survival curve applies, and it bites harder here: subjects with no end event hold their stratum's curve up, so comparing groups whose follow-up differs is misleading. This is not a Kaplan-Meier estimate and carries no significance test. Strata are also unequal in size, and a small one steps coarsely (n=4 moves in quarters), so a dramatic-looking curve may rest on a handful of subjects.",
+    "tasks": "Compare survival between groups; judge whether an attribute is associated with worse or better observed survival.",
+    "review_hint": "Each curve should start at 1 - 1/n for its own stratum, so a small group starts visibly lower and steps coarsely \u2014 on PCX, UCSF has n=4 and so starts at 0.75 and reaches 0. That is correct, not a denominator bug; the failure to look for is a curve starting near 1/(total cohort) instead. A 4-patient curve hitting zero looks dramatic and means very little, which is the main thing to be wary of here. Event-type values are hardcoded to PCX's vocabulary, and there is no at-risk weighting or significance test, so do not read group differences as real.",
+    "preview_bindings": {
+      "E": "Event",
+      "F1": "research_id",
+      "F2": "event_type",
+      "F3": "event_date",
+      "F4": "organization_name"
+    }
+  },
+  {
+    "query_templates": [
       "Are there any clusters with respect to <E> counts of <F1:n> and <F2:n>?",
       "Make a heatmap of <E> <F1:n> and <F2:n>."
     ],

@@ -1724,6 +1724,135 @@ def generate():
         },
     )
 
+    # Stratified: one curve per category of a single-valued nominal field
+    # (organization, diagnosis category, metastasis yes/no). Each subject belongs
+    # to exactly one stratum, so the cohort splits cleanly and each curve gets its
+    # own denominator. List-valued columns such as tumor_locations do NOT work
+    # here — see the note at the end of this section.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E> split by <F4:n>.",
+            "Compare survival between <F4:n> groups.",
+            "Does survival differ by <F4:n>?",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter(Expr.not_null("<F3:q>"))
+            .derive(
+                {
+                    "start day": Expr.cond(
+                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit(SURVIVAL_START_EVENT)),
+                        Expr.field("<F3>"),
+                        Expr.lit(None),
+                    ),
+                    "end day": Expr.cond(
+                        Expr.binop("==", Expr.field("<F2>"), Expr.lit(SURVIVAL_END_EVENT)),
+                        Expr.field("<F3>"),
+                        Expr.lit(None),
+                    ),
+                }
+            )
+            # Group by subject *and* stratum so the stratum survives the rollup.
+            # This assumes a subject's stratum is constant across their events; if
+            # it varies, that subject contributes to more than one curve.
+            .groupby(["<F1:n>", "<F4:n>"])
+            .rollup({"start day": Op.min("start day"), "end day": Op.max("end day")})
+            .filter(Expr.not_null("start day"))
+            # Per-stratum denominator: `agg` respects the grouping, so each curve
+            # is a fraction of its own cohort rather than of the whole table.
+            .groupby("<F4>")
+            .derive({"subjects": Expr.agg("count")})
+            .derive(
+                {
+                    "survival days": Expr.binop(
+                        "-", Expr.field("end day"), Expr.field("start day")
+                    )
+                }
+            )
+            .filter(
+                Expr.binop(
+                    "&&",
+                    Expr.not_null("survival days"),
+                    Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)),
+                )
+            )
+            .orderby("survival days")
+            .derive(
+                {
+                    "survival probability": rolling(
+                        Expr.binop(
+                            "-",
+                            Expr.lit(1),
+                            Expr.binop("/", Expr.agg("count"), Expr.field("subjects")),
+                        )
+                    )
+                }
+            )
+            .mark("line")
+            .x(field="survival days", type="quantitative")
+            .y(field="survival probability", type="quantitative")
+            .color(field="<F4>", type="nominal")
+        ),
+        chart_type=ChartType.LINE,
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            f"Survival curves split by a nominal field, built from an event log: pairs each "
+            f"subject's '{SURVIVAL_START_EVENT}' and '{SURVIVAL_END_EVENT}' events to derive a "
+            f"survival time, then plots one curve per category with its own cohort as the "
+            f"denominator."
+        ),
+        design_considerations=(
+            "Groups by subject and stratum together so the stratum survives the per-subject "
+            "rollup, then re-groups by stratum so each curve's denominator is its own cohort — "
+            "otherwise the curves would be fractions of the whole table and would not each start "
+            "near 1. Strata are drawn as colours because the grammar has no facet channel. "
+            "Only for single-valued fields: a list-valued column such as tumor_locations would "
+            "make every distinct combination its own stratum. "
+            "The same censoring caveat as the unstratified survival curve applies, and it bites "
+            "harder here: subjects with no end event hold their stratum's curve up, so comparing "
+            "groups whose follow-up differs is misleading. This is not a Kaplan-Meier estimate "
+            "and carries no significance test. Strata are also unequal in size, and a small one "
+            "steps coarsely (n=4 moves in quarters), so a dramatic-looking curve may rest on a "
+            "handful of subjects."
+        ),
+        tasks=(
+            "Compare survival between groups; judge whether an attribute is associated with "
+            "worse or better observed survival."
+        ),
+        review_hint=(
+            "Each curve should start at 1 - 1/n for its own stratum, so a small group starts "
+            "visibly lower and steps coarsely — on PCX, UCSF has n=4 and so starts at 0.75 and "
+            "reaches 0. That is correct, not a denominator bug; the failure to look for is a "
+            "curve starting near 1/(total cohort) instead. A 4-patient curve hitting zero looks "
+            "dramatic and means very little, which is the main thing to be wary of here. "
+            "Event-type values are hardcoded to PCX's vocabulary, and there is no at-risk "
+            "weighting or significance test, so do not read group differences as real."
+        ),
+        preview_bindings={
+            "E": "Event",
+            "F1": "research_id",
+            "F2": "event_type",
+            "F3": "event_date",
+            "F4": "organization_name",
+        },
+    )
+
+    # NOTE: a list-valued stratification (tumor_locations, metastasis_location —
+    # ";"-delimited sets, so a subject belongs to several strata at once) is NOT
+    # implemented, because it cannot be expressed in the grammar today: splitting
+    # one row into several needs a transformation that multiplies rows, and the
+    # grammar has only GroupBy/BinBy/RollUp/Join/OrderBy/Derive/Filter/KDE. Note
+    # `derive` cannot substitute — it is row-preserving by definition. Stratifying
+    # on the raw string instead is not a workaround: tumor_locations has 78
+    # distinct combinations (vs 22 individual locations), which both exceeds the
+    # 50-cardinality cap for an encoded field and would draw 78 curves.
+
     # ---------------------------------------------------------------
     # Heatmaps
     # ---------------------------------------------------------------
