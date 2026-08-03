@@ -99,16 +99,33 @@ binding a 400-cardinality ID column to an x-axis. Resolution lives in
 `""`, which is why a template referencing a cube placeholder against a tidy
 table produces a blank-field spec rather than an error.
 
-> **Always type-constrain an aggregated field.** `validate_bindings` infers a
-> required type from only two places: a `:q`/`:n`/`:o` suffix on the placeholder,
+> **Always type-constrain a field whose type matters.** `validate_bindings` infers
+> a required type from only two places: a `:q`/`:n`/`:o` suffix on the placeholder,
 > or the `type` declared on an encoding whose `field` is _exactly_ that
-> placeholder. A field referenced only as a rollup's `field`, or only inside a
-> composite string like `"minimum <F1>"`, gets **neither** — so any column can
-> bind to it. That produced a batch of silently blank charts: `min`/`mean`/`sum`
-> of a nominal column like `race`, plotted on a quantitative axis. Writing
-> `Op.min("<F1:q>")` rather than `Op.min("<F1>")` is what makes the constraint
-> real; a `<F1:q>` in the `query_templates` prose is documentation only and is
-> never enforced.
+> placeholder. These do **not** constrain anything:
+>
+> - a rollup's `field` — `Op.min("<F1>")`
+> - a composite string — `"minimum <F1>"`
+> - `binby(field=...)`, `orderby(...)`, `filter(...)`
+> - a mapping's `column` (as opposed to its `field`)
+> - a `<F:q>` in the `query_templates` prose — documentation only, never enforced
+>
+> Each of those produced real broken charts: `min` of a nominal column plotted on a
+> quantitative axis (blank), a histogram binning a categorical field, and a
+> "smallest value" table ranking `sample_category` alphabetically. Write the
+> suffix in the spec — `Op.min("<F1:q>")`, `binby(field="<F:q>")`,
+> `orderby("<F:q>")` — and it becomes real.
+>
+> `tests/test_template_type_constraints.py` enforces this: it fails if a type
+> promised in the prose isn't enforced by the spec, if a numeric aggregation can
+> bind a non-numeric column, or if `binby` is unconstrained. Run
+> `uv run pytest tests/test_template_type_constraints.py` after editing templates.
+> `<M>` is exempt — it resolves to the cube's declared measure, not to a binding.
+>
+> **Watch what a type suffix is holding up.** Removing the one mapping that
+> declared a placeholder's type silently un-constrains it, even if the template
+> still looks correct. That is easy to do when switching a text mapping to
+> `field="*"`; the test above is what catches it.
 
 ## Acting on review feedback
 
@@ -191,6 +208,11 @@ Reading it is the intended direction.
 - **A chart that draws axes but no marks is usually a binding-type problem**, not
   a rendering one: an aggregate over a nominal column yields a non-numeric value
   that a quantitative axis can't place. See the type-constraint note above.
+- **In-cell marks paint in mapping order.** They are absolutely positioned
+  siblings inside the cell, so a later mapping covers an earlier one. Put the
+  `bar`/`rect` mapping **before** the `text` mapping or the bar hides the number.
+  Give both the same `column="..."` to share one table column; column order in the
+  rendered table follows the order the columns are first mentioned.
 - **Charts are virtualized.** Only cards near the viewport mount a chart, so a
   card scrolled far off-screen shows a placeholder rather than a chart. Scroll to
   a template before judging it.

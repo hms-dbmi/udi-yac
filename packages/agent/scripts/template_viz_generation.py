@@ -1148,7 +1148,7 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F>"))
-            .orderby("<F>")
+            .orderby("<F:q>")
             .derive(
                 {
                     "smallest": Expr.cond(
@@ -1291,23 +1291,33 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F>"))
-            .groupby("<F>")
+            # `:n` is required here: the text mapping below uses field="*", so
+            # this groupby is the only place left that can constrain <F>'s type.
+            .groupby("<F:n>")
             .rollup({"count": Op.count()})
+            .orderby("count", ascending=False)
             .mark("row")
             .text(field="<F>", mark="text", type="nominal")
+            # The bar and the number share one column (`column="count"`, the same
+            # idiom the range table uses), so the count reads as a value and not
+            # just a length. Text comes after the bar deliberately: in-cell marks
+            # are absolutely positioned siblings, so the later mapping paints on
+            # top — with the text first the bar hid the number.
             .x(
+                column="count",
                 field="count",
                 mark="bar",
                 type="quantitative",
                 range={"min": 0.1, "max": 1},
             )
+            .text(column="count", field="count", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
             TaskType.DETERMINE_RANGE,
         ],
-        description="Lists all distinct values of a nominal field with their counts, displayed as a table with in-cell bar marks.",
-        design_considerations="Groups by the nominal field and counts occurrences. In-cell bars provide visual frequency comparison.",
+        description="Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks.",
+        design_considerations="Groups by the nominal field and counts occurrences, sorted descending so the bars are comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows relative frequency but not the value.",
         tasks="Determine the range (distinct values) of a nominal field; compare category frequencies.",
     )
 
@@ -1752,7 +1762,7 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F>"))
-            .binby(field="<F>", output={"bin_start": "start", "bin_end": "end"})
+            .binby(field="<F:q>", output={"bin_start": "start", "bin_end": "end"})
             .rollup({"count": Op.count()})
             .mark("rect")
             .x(field="start", type="quantitative", title="<F>")

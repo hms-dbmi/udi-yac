@@ -174,8 +174,8 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"nominal", "domain": ["yes", "no"], "range": ["#FFA500", "#c6cfd8"]}, {"encoding": "text", "field": "*", "mark": '
  '"text", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
- '"<F>"}, "right": {"literal": null}}}, {"orderby": {"field": "<F>", "order": "asc"}}, {"derive": {"smallest": {"if": '
- '{"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": "smallest"}, "else": '
+ '"<F>"}, "right": {"literal": null}}}, {"orderby": {"field": "<F:q>", "order": "asc"}}, {"derive": {"smallest": '
+ '{"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": "smallest"}, "else": '
  '{"literal": "not"}}}}], "representation": {"mark": "row", "mapping": [{"encoding": "color", "column": "<F>", "mark": '
  '"rect", "orderby": "<F>", "field": "smallest", "type": "nominal", "domain": ["smallest", "not"], "range": '
  '["#ffdb9a", "white"]}, {"encoding": "text", "field": "*", "mark": "text", "type": "nominal"}]}}',
@@ -197,9 +197,11 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"max", "field": "<F:q>"}}}], "representation": {"mark": "row", "mapping": [{"encoding": "text", "field": "<F> min", '
  '"mark": "text", "type": "nominal"}, {"encoding": "text", "field": "<F> max", "mark": "text", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
- '"<F>"}, "right": {"literal": null}}}, {"groupby": "<F>"}, {"rollup": {"count": {"op": "count"}}}], "representation": '
- '{"mark": "row", "mapping": [{"encoding": "text", "field": "<F>", "mark": "text", "type": "nominal"}, {"encoding": '
- '"x", "field": "count", "mark": "bar", "type": "quantitative", "range": {"min": 0.1, "max": 1}}]}}',
+ '"<F>"}, "right": {"literal": null}}}, {"groupby": "<F:n>"}, {"rollup": {"count": {"op": "count"}}}, {"orderby": '
+ '{"field": "count", "order": "desc"}}], "representation": {"mark": "row", "mapping": [{"encoding": "text", "field": '
+ '"<F>", "mark": "text", "type": "nominal"}, {"encoding": "x", "column": "count", "field": "count", "mark": "bar", '
+ '"type": "quantitative", "range": {"min": 0.1, "max": 1}}, {"encoding": "text", "column": "count", "field": "count", '
+ '"mark": "text", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
  '"<F1>"}, "right": {"literal": null}}}, {"groupby": "<F2>"}, {"rollup": {"<F1> min": {"op": "min", "field": '
  '"<F1:q>"}, "<F1> max": {"op": "max", "field": "<F1:q>"}}}, {"derive": {"range": {"op": "-", "left": {"field": "<F1> '
@@ -268,7 +270,7 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"field": "<F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "quantitative"}, {"encoding": '
  '"color", "field": "<F3>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
- '"<F>"}, "right": {"literal": null}}}, {"binby": {"field": "<F>", "output": {"bin_start": "start", "bin_end": '
+ '"<F>"}, "right": {"literal": null}}}, {"binby": {"field": "<F:q>", "output": {"bin_start": "start", "bin_end": '
  '"end"}}}, {"rollup": {"count": {"op": "count"}}}], "representation": {"mark": "rect", "mapping": [{"encoding": "x", '
  '"field": "start", "type": "quantitative", "title": "<F>"}, {"encoding": "x2", "field": "end", "type": '
  '"quantitative"}, {"encoding": "y", "field": "count", "type": "quantitative", "domainWhenFiltered": "filtered"}]}}',
@@ -849,7 +851,7 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'type': 'object'}},
   'type': 'function'},
  {'function': {'description': 'nominal field, encodes text label.',
-               'name': 'vis_044_table_count_distinct',
+               'name': 'vis_044_table_count_sorted_distinct',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1109,7 +1111,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_041_table_join_min_ranked': (41, {'entity1': 'E1', 'entity1_field': 'E1.F', 'entity2': 'E2'}),
  'vis_042_table_sorted': (42, {'entity': 'E', 'field': 'F'}),
  'vis_043_table_min': (43, {'entity': 'E', 'field': 'F'}),
- 'vis_044_table_count_distinct': (44, {'entity': 'E', 'field': 'F'}),
+ 'vis_044_table_count_sorted_distinct': (44, {'entity': 'E', 'field': 'F'}),
  'vis_045_table_range': (45, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_046_table_ranked_mode': (46, {'entity': 'E', 'field': 'F'}),
  'vis_047_table_sum': (47, {'entity': 'E'}),
@@ -1175,7 +1177,7 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_041_table_join_min_ranked': ['line_item', 'table'],
  'vis_042_table_sorted': ['line_item', 'table'],
  'vis_043_table_min': ['line_item', 'table'],
- 'vis_044_table_count_distinct': ['line_item', 'table'],
+ 'vis_044_table_count_sorted_distinct': ['line_item', 'table'],
  'vis_045_table_range': ['line_item', 'table'],
  'vis_046_table_ranked_mode': ['line_item', 'table'],
  'vis_047_table_sum': ['data_cube', 'table'],

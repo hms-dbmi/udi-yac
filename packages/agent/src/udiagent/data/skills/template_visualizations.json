@@ -617,7 +617,7 @@
   },
   {
     "query_templates": ["What Record in <E> has the smallest <F:q>?"],
-    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F>\", \"order\": \"asc\"}}, {\"derive\": {\"smallest\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": \"smallest\"}, \"else\": {\"literal\": \"not\"}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"color\", \"column\": \"<F>\", \"mark\": \"rect\", \"orderby\": \"<F>\", \"field\": \"smallest\", \"type\": \"nominal\", \"domain\": [\"smallest\", \"not\"], \"range\": [\"#ffdb9a\", \"white\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"orderby\": {\"field\": \"<F:q>\", \"order\": \"asc\"}}, {\"derive\": {\"smallest\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": \"smallest\"}, \"else\": {\"literal\": \"not\"}}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"color\", \"column\": \"<F>\", \"mark\": \"rect\", \"orderby\": \"<F>\", \"field\": \"smallest\", \"type\": \"nominal\", \"domain\": [\"smallest\", \"not\"], \"range\": [\"#ffdb9a\", \"white\"]}, {\"encoding\": \"text\", \"field\": \"*\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
     "creation_method": "template",
     "chart_type": "table",
     "chart_complexity": "complex",
@@ -673,15 +673,15 @@
   },
   {
     "query_templates": ["What is the range of <E> <F:n> values?"],
-    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"groupby\": \"<F>\"}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<F>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"field\": \"count\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}]}}",
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"groupby\": \"<F:n>\"}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}, {\"orderby\": {\"field\": \"count\", \"order\": \"desc\"}}], \"representation\": {\"mark\": \"row\", \"mapping\": [{\"encoding\": \"text\", \"field\": \"<F>\", \"mark\": \"text\", \"type\": \"nominal\"}, {\"encoding\": \"x\", \"column\": \"count\", \"field\": \"count\", \"mark\": \"bar\", \"type\": \"quantitative\", \"range\": {\"min\": 0.1, \"max\": 1}}, {\"encoding\": \"text\", \"column\": \"count\", \"field\": \"count\", \"mark\": \"text\", \"type\": \"nominal\"}]}}",
     "creation_method": "template",
     "chart_type": "table",
-    "chart_complexity": "medium",
-    "spec_key_count": 18,
+    "chart_complexity": "complex",
+    "spec_key_count": 26,
     "task_types": ["Determine_Range"],
     "tags": ["line_item", "table"],
-    "description": "Lists all distinct values of a nominal field with their counts, displayed as a table with in-cell bar marks.",
-    "design_considerations": "Groups by the nominal field and counts occurrences. In-cell bars provide visual frequency comparison.",
+    "description": "Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks.",
+    "design_considerations": "Groups by the nominal field and counts occurrences, sorted descending so the bars are comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows relative frequency but not the value.",
     "tasks": "Determine the range (distinct values) of a nominal field; compare category frequencies.",
     "review_hint": ""
   },
@@ -871,7 +871,7 @@
       "What is the distribution of <F:q>?",
       "Make a histogram of <F:q>?"
     ],
-    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"binby\": {\"field\": \"<F>\", \"output\": {\"bin_start\": \"start\", \"bin_end\": \"end\"}}}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"start\", \"type\": \"quantitative\", \"title\": \"<F>\"}, {\"encoding\": \"x2\", \"field\": \"end\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"binby\": {\"field\": \"<F:q>\", \"output\": {\"bin_start\": \"start\", \"bin_end\": \"end\"}}}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"start\", \"type\": \"quantitative\", \"title\": \"<F>\"}, {\"encoding\": \"x2\", \"field\": \"end\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
     "creation_method": "template",
     "chart_type": "histogram",
     "chart_complexity": "medium",
