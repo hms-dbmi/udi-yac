@@ -1,4 +1,11 @@
 {
+  "0185b91a044d": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:15:38.288Z",
+    "tool_name": "vis_004_barchart_basic",
+    "chart_type": "barchart"
+  },
   "0282e98be456": {
     "status": "approved",
     "feedback": "",
@@ -27,6 +34,20 @@
     "tool_name": "vis_000_barchart_count_vert_grouped",
     "chart_type": "barchart"
   },
+  "19172c803cd9": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:17:32.159Z",
+    "tool_name": "vis_010_stacked_bar_vert_stacked",
+    "chart_type": "stacked_bar"
+  },
+  "1b7967ddeaa0": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:17:39.025Z",
+    "tool_name": "vis_032_circular_proportion",
+    "chart_type": "circular"
+  },
   "2528d79ee7c0": {
     "status": "approved",
     "feedback": "",
@@ -40,13 +61,6 @@
     "reviewed_at": "2026-08-03T14:45:19.539Z",
     "tool_name": "vis_058_dot_distribution",
     "chart_type": "dot"
-  },
-  "2a0c17a9a97c": {
-    "status": "needs_changes",
-    "feedback": "This one highlighted a categorical field, I think it should be constrained to quantitative.",
-    "reviewed_at": "2026-08-03T15:50:06.135Z",
-    "tool_name": "vis_040_table_ranked",
-    "chart_type": "table"
   },
   "2cee3e3cbce2": {
     "status": "approved",
@@ -68,6 +82,13 @@
     "reviewed_at": "2026-08-03T14:42:00.738Z",
     "tool_name": "vis_050_grouped_line_cdf",
     "chart_type": "grouped_line"
+  },
+  "3dd1418656bf": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:18:07.677Z",
+    "tool_name": "vis_051_line_sorted",
+    "chart_type": "line"
   },
   "447fbb079569": {
     "status": "approved",
@@ -130,6 +151,13 @@
     "feedback": "",
     "reviewed_at": "2026-08-03T14:41:30.454Z",
     "tool_name": "vis_035_table_raw",
+    "chart_type": "table"
+  },
+  "584a0e8eab2d": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:17:47.365Z",
+    "tool_name": "vis_047_table_sum",
     "chart_type": "table"
   },
   "585b2c1f6e7c": {
@@ -216,12 +244,33 @@
     "tool_name": "vis_049_line_cdf",
     "chart_type": "line"
   },
+  "7ed99d62682d": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:17:40.183Z",
+    "tool_name": "vis_033_circular_proportion",
+    "chart_type": "circular"
+  },
+  "889bb5b5372c": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:18:06.514Z",
+    "tool_name": "vis_054_heatmap_basic",
+    "chart_type": "heatmap"
+  },
   "88e1cf9c1202": {
     "status": "approved",
     "feedback": "",
     "reviewed_at": "2026-08-03T15:52:55.699Z",
     "tool_name": "vis_041_table_join_min_ranked",
     "chart_type": "table"
+  },
+  "964686b916dc": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:15:22.708Z",
+    "tool_name": "vis_056_histogram_distribution",
+    "chart_type": "histogram"
   },
   "a4d63e397d15": {
     "status": "approved",
@@ -230,6 +279,13 @@
     "tool_name": "vis_002_barchart_join_count_vert_grouped",
     "chart_type": "barchart"
   },
+  "ac7d6d7d8512": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:15:16.283Z",
+    "tool_name": "vis_044_table_count_sorted_distinct",
+    "chart_type": "table"
+  },
   "ae78c5bc0123": {
     "status": "approved",
     "feedback": "",
@@ -237,12 +293,12 @@
     "tool_name": "vis_001_barchart_count_horiz_grouped",
     "chart_type": "barchart"
   },
-  "b16662c5cbb8": {
-    "status": "approved",
-    "feedback": "",
-    "reviewed_at": "2026-08-03T14:45:15.936Z",
-    "tool_name": "vis_056_histogram_distribution",
-    "chart_type": "histogram"
+  "b149dac8cede": {
+    "status": "needs_changes",
+    "feedback": "Show the counts here as well",
+    "reviewed_at": "2026-08-03T16:18:03.016Z",
+    "tool_name": "vis_048_table_sorted",
+    "chart_type": "table"
   },
   "b1b8d804a870": {
     "status": "archived",
@@ -257,6 +313,13 @@
     "reviewed_at": "2026-08-03T14:35:30.221Z",
     "tool_name": "vis_007_stacked_bar_join_count_horiz_stacked_grouped",
     "chart_type": "stacked_bar"
+  },
+  "b95d8567e1e7": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:15:19.564Z",
+    "tool_name": "vis_040_table_ranked",
+    "chart_type": "table"
   },
   "b9b8535d428b": {
     "status": "approved",
@@ -279,6 +342,13 @@
     "tool_name": "vis_057_area_density",
     "chart_type": "area"
   },
+  "cd44d4d63083": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:17:23.841Z",
+    "tool_name": "vis_005_barchart_basic",
+    "chart_type": "barchart"
+  },
   "d075b192710a": {
     "status": "approved",
     "feedback": "",
@@ -293,13 +363,6 @@
     "tool_name": "vis_028_stacked_bar_count_vert_stacked_grouped",
     "chart_type": "stacked_bar"
   },
-  "d8f19763fa56": {
-    "status": "needs_changes",
-    "feedback": "",
-    "reviewed_at": "2026-08-03T15:50:40.490Z",
-    "tool_name": "vis_044_table_count_distinct",
-    "chart_type": "table"
-  },
   "db2b99fa373e": {
     "status": "approved",
     "feedback": "",
@@ -307,11 +370,25 @@
     "tool_name": "vis_026_barchart_sum_vert",
     "chart_type": "barchart"
   },
+  "e1c10bda1d4b": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:17:33.175Z",
+    "tool_name": "vis_013_stacked_bar_grouped",
+    "chart_type": "stacked_bar"
+  },
   "e1ea3c3119f5": {
     "status": "approved",
     "feedback": "",
     "reviewed_at": "2026-08-03T14:35:38.933Z",
     "tool_name": "vis_014_stacked_bar_freq_vert_normalized",
+    "chart_type": "stacked_bar"
+  },
+  "e490c66af83c": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:17:35.331Z",
+    "tool_name": "vis_016_stacked_bar_proportion_stacked_normalized",
     "chart_type": "stacked_bar"
   },
   "e70581b0a481": {
