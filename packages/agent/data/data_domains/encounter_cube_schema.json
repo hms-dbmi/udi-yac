@@ -81,9 +81,7 @@
       "udi:row_count": 25202,
       "udi:column_count": 7,
       "udi:cube": true,
-      "udi:measures": [
-        "cnt"
-      ],
+      "udi:measures": ["cnt"],
       "udi:dimensions": [
         "period_start_month",
         "class_display",

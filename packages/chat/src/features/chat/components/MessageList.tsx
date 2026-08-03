@@ -4,6 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useConversation, useGlobal } from '@/app/UDIChatContext';
 import { MessageBubble } from './MessageBubble';
+import { BrushFilterWidgets } from './BrushFilterWidgets';
 import { useMessageListScroll } from '../hooks/useMessageListScroll';
 
 interface MessageListProps {
@@ -52,6 +53,7 @@ export function MessageList({
                 </div>
               </div>
             )}
+            <BrushFilterWidgets />
           </div>
         </div>
       </ScrollArea>

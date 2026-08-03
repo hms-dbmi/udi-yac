@@ -4,7 +4,17 @@ from pathlib import Path
 
 import jsonschema
 import pandas as pd
-from udi_grammar_py import Chart, Op, rolling
+from udi_grammar_py import Chart, Expr, Op, rolling
+
+# Shared AST fragment: legacy "d.rank == 1 ? 'yes' : 'no'". derive/filter carry
+# the structured Expr AST (not raw Arquero strings) so the same templates run
+# in the browser (Arquero) AND server-side (SQL) — raw strings are rejected by
+# the SQL compiler (see packages/agent/src/udiagent/query/expr.py).
+RANK_1_YES_NO = Expr.cond(
+    Expr.binop("==", Expr.field("rank"), Expr.lit(1)),
+    Expr.lit("yes"),
+    Expr.lit("no"),
+)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _GRAMMAR = _REPO_ROOT / "src" / "udiagent" / "data" / "UDIGrammarSchema.json"
@@ -560,7 +570,15 @@ def generate():
                 on="<F2>",
                 out_name="datasets",
             )
-            .derive({"proportion": "d['<F1>_and_<F2>_count'] / d['<F2>_count']"})
+            .derive(
+                {
+                    "proportion": Expr.binop(
+                        "/",
+                        Expr.field("<F1>_and_<F2>_count"),
+                        Expr.field("<F2>_count"),
+                    )
+                }
+            )
             .mark("bar")
             .y(field="proportion", type="quantitative")
             .color(field="<F1>", type="nominal")
@@ -593,7 +611,15 @@ def generate():
                 on="<F2>",
                 out_name="datasets",
             )
-            .derive({"proportion": "d['<F1>_and_<F2>_count'] / d['<F2>_count']"})
+            .derive(
+                {
+                    "proportion": Expr.binop(
+                        "/",
+                        Expr.field("<F1>_and_<F2>_count"),
+                        Expr.field("<F2>_count"),
+                    )
+                }
+            )
             .mark("bar")
             .x(field="proportion", type="quantitative")
             .color(field="<F1>", type="nominal")
@@ -621,7 +647,13 @@ def generate():
             .groupby(["<D2>", "<D1>"], in_name="<E>")
             .rollup({"cell_total": Op.sum("<M>")})
             .join("<D1>", in_name=["<E>", "groupTotals"], out_name="datasets")
-            .derive({"proportion": "d['cell_total'] / d['axis_total']"})
+            .derive(
+                {
+                    "proportion": Expr.binop(
+                        "/", Expr.field("cell_total"), Expr.field("axis_total")
+                    )
+                }
+            )
             .mark("bar")
             .x(field="<D1:n>", type="nominal")
             .y(field="proportion", type="quantitative")
@@ -986,8 +1018,8 @@ def generate():
             .groupby("<E1.r.E2.id.from>")
             .rollup({"<E1> count": Op.count()})
             .orderby("<E1> count", ascending=False)
-            .derive({"rank": "rank()"})
-            .derive({"most frequent": "d.rank == 1 ? 'yes' : 'no'"})
+            .derive({"rank": Expr.rank()})
+            .derive({"most frequent": RANK_1_YES_NO})
             .mark("row")
             .x(field="<E1> count", mark="bar", type="quantitative", domain={"min": 0})
             .color(
@@ -1021,9 +1053,17 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>'] != null")
+            .filter(Expr.not_null("<F>"))
             .orderby("<F>", ascending=False)
-            .derive({"largest": "rank() == 1 ? 'largest' : 'not'"})
+            .derive(
+                {
+                    "largest": Expr.cond(
+                        Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                        Expr.lit("largest"),
+                        Expr.lit("not"),
+                    )
+                }
+            )
             .mark("row")
             .x(field="<F>", mark="bar", type="quantitative")
             .color(
@@ -1063,10 +1103,10 @@ def generate():
             )
             .groupby("<E1.r.E2.id.from>")
             .rollup({"Largest <E1.F>": Op.max("<E1.F>")})
-            .filter("d['Largest <E1.F>'] != null")
+            .filter(Expr.not_null("Largest <E1.F>"))
             .orderby("Largest <E1.F>", ascending=False)
-            .derive({"rank": "rank()"})
-            .derive({"largest": "d.rank == 1 ? 'yes' : 'no'"})
+            .derive({"rank": Expr.rank()})
+            .derive({"largest": RANK_1_YES_NO})
             .mark("row")
             .x(field="Largest <E1.F>", mark="bar", type="quantitative")
             .color(
@@ -1099,9 +1139,17 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>'] != null")
+            .filter(Expr.not_null("<F>"))
             .orderby("<F>")
-            .derive({"smallest": "rank() == 1 ? 'smallest' : 'not'"})
+            .derive(
+                {
+                    "smallest": Expr.cond(
+                        Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                        Expr.lit("smallest"),
+                        Expr.lit("not"),
+                    )
+                }
+            )
             .mark("row")
             .color(
                 column="<F>",
@@ -1141,10 +1189,10 @@ def generate():
             )
             .groupby("<E1.r.E2.id.from>")
             .rollup({"Smallest <E1.F>": Op.min("<E1.F>")})
-            .filter("d['Smallest <E1.F>'] != null")
+            .filter(Expr.not_null("Smallest <E1.F>"))
             .orderby("Smallest <E1.F>", ascending=True)
-            .derive({"rank": "rank()"})
-            .derive({"smallest": "d.rank == 1 ? 'yes' : 'no'"})
+            .derive({"rank": Expr.rank()})
+            .derive({"smallest": RANK_1_YES_NO})
             .mark("row")
             .color(
                 column="Smallest <E1.F>",
@@ -1180,7 +1228,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>'] != null")
+            .filter(Expr.not_null("<F>"))
             .orderby("<F>")
             .mark("row")
             .x(
@@ -1210,7 +1258,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>'] != null")
+            .filter(Expr.not_null("<F>"))
             .rollup({"<F> min": Op.min("<F>"), "<F> max": Op.max("<F>")})
             .mark("row")
             .text(field="<F> min", mark="text", type="nominal")
@@ -1234,7 +1282,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>'] != null")
+            .filter(Expr.not_null("<F>"))
             .groupby("<F>")
             .rollup({"count": Op.count()})
             .mark("row")
@@ -1264,10 +1312,16 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F1>'] != null")
+            .filter(Expr.not_null("<F1>"))
             .groupby("<F2>")
             .rollup({"<F1> min": Op.min("<F1>"), "<F1> max": Op.max("<F1>")})
-            .derive({"range": "d['<F1> max'] - d['<F1> min']"})
+            .derive(
+                {
+                    "range": Expr.binop(
+                        "-", Expr.field("<F1> max"), Expr.field("<F1> min")
+                    )
+                }
+            )
             .orderby("range", ascending=False)
             .mark("row")
             .text(field="<F2>", mark="text", type="nominal")
@@ -1306,12 +1360,12 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>']")
+            .filter(Expr.field("<F>"))
             .groupby("<F>")
             .rollup({"count": Op.count()})
             .orderby("count", ascending=False)
-            .derive({"rank": "rank()"})
-            .derive({"most frequent": "d.rank == 1 ? 'yes' : 'no'"})
+            .derive({"rank": Expr.rank()})
+            .derive({"most frequent": RANK_1_YES_NO})
             .mark("row")
             .color(
                 column="<F>",
@@ -1407,10 +1461,21 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>'] != null")
+            .filter(Expr.not_null("<F>"))
             .orderby("<F>")
-            .derive({"total": "count()"})
-            .derive({"percentile": rolling("count() / d.total")})
+            .derive({"total": Expr.agg("count")})
+            .derive(
+                {
+                    "percentile": rolling(
+                        Expr.binop("/", Expr.agg("count"), Expr.field("total"))
+                    )
+                }
+            )
+            # Final sort by the derived percentile so the line renders as a
+            # monotonic step: at tied values, the rolling frame emits several
+            # percentiles for one x, and ordering by value alone leaves them in
+            # a non-ascending order that draws as downward jags.
+            .orderby("percentile")
             .mark("line")
             .x(field="<F>", type="quantitative")
             .y(field="percentile", type="quantitative")
@@ -1420,7 +1485,7 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the cumulative distribution function (CDF) of a quantitative field as a line chart.",
-        design_considerations="Sorts by value, computes rolling percentile, and draws a line. The CDF reveals the full distribution shape including median, quartiles, and tails.",
+        design_considerations="Sorts by value, computes rolling percentile, then sorts by percentile so the line is a monotonic step. The CDF reveals the full distribution shape including median, quartiles, and tails.",
         tasks="Characterize the distribution of a variable; identify median, quartiles, and concentration of values.",
     )
 
@@ -1434,11 +1499,23 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F1>'] != null")
-            .orderby("<F1>")
+            .filter(Expr.not_null("<F1>"))
+            # Group first, then sort within groups: the rolling percentile is a
+            # per-group cumulative, so grouping must be established before the
+            # ordered window is computed.
             .groupby("<F2>")
-            .derive({"total": "count()"})
-            .derive({"percentile": rolling("count() / d.total")})
+            .orderby("<F1>")
+            .derive({"total": Expr.agg("count")})
+            .derive(
+                {
+                    "percentile": rolling(
+                        Expr.binop("/", Expr.agg("count"), Expr.field("total"))
+                    )
+                }
+            )
+            # Final sort by the derived percentile so each group's line renders
+            # as a monotonic step (see the single-field CDF above).
+            .orderby("percentile")
             .mark("line")
             .x(field="<F1>", type="quantitative")
             .y(field="percentile", type="quantitative")
@@ -1449,7 +1526,7 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
-        design_considerations="Groups by nominal field before computing per-group CDF. Color encodes group identity. Limited to fewer than 5 groups for readability.",
+        design_considerations="Groups by the nominal field, sorts within groups, computes the per-group rolling percentile, then sorts by percentile so each line is a monotonic step. Color encodes group identity. Limited to fewer than 5 groups for readability.",
         tasks="Compare distributions across groups; identify which groups have higher or lower concentrations of values.",
     )
 
@@ -1496,10 +1573,22 @@ def generate():
             .source("<E>", "<E.url>")
             .groupby(["<F2>", "<F1>"])
             .rollup({"count <E>": Op.count()})
-            .derive({"udi_internal_percentile": "d['count <E>'] / max(d['count <E>'])"})
             .derive(
                 {
-                    "udi_internal_text_color_threshold": "d.udi_internal_percentile > .5 ? 'large' : 'small'"
+                    "udi_internal_percentile": Expr.binop(
+                        "/", Expr.field("count <E>"), Expr.agg("max", "count <E>")
+                    )
+                }
+            )
+            .derive(
+                {
+                    "udi_internal_text_color_threshold": Expr.cond(
+                        Expr.binop(
+                            ">", Expr.field("udi_internal_percentile"), Expr.lit(0.5)
+                        ),
+                        Expr.lit("large"),
+                        Expr.lit("small"),
+                    )
                 }
             )
             .mark("rect")
@@ -1569,10 +1658,22 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter("<MARGINAL:D1,D2>")
-            .derive({"udi_internal_percentile": "d['<M>'] / max(d['<M>'])"})
             .derive(
                 {
-                    "udi_internal_text_color_threshold": "d.udi_internal_percentile > .5 ? 'large' : 'small'"
+                    "udi_internal_percentile": Expr.binop(
+                        "/", Expr.field("<M>"), Expr.agg("max", "<M>")
+                    )
+                }
+            )
+            .derive(
+                {
+                    "udi_internal_text_color_threshold": Expr.cond(
+                        Expr.binop(
+                            ">", Expr.field("udi_internal_percentile"), Expr.lit(0.5)
+                        ),
+                        Expr.lit("large"),
+                        Expr.lit("small"),
+                    )
                 }
             )
             .mark("rect")
@@ -1642,7 +1743,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>'] != null")
+            .filter(Expr.not_null("<F>"))
             .binby(field="<F>", output={"bin_start": "start", "bin_end": "end"})
             .rollup({"count": Op.count()})
             .mark("rect")
@@ -1671,7 +1772,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F>'] != null")
+            .filter(Expr.not_null("<F>"))
             .kde(
                 field="<F>",
                 output={"sample": "<F>", "density": "density"},
@@ -1723,7 +1824,7 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .filter("d['<F1>'] != null")
+            .filter(Expr.not_null("<F1>"))
             .groupby("<F2>")
             .kde(
                 field="<F1>",
@@ -1785,12 +1886,18 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .derive({"<E> Count": "count()"})
-            .filter("d['<F>'] != null")
+            .derive({"<E> Count": Expr.agg("count")})
+            .filter(Expr.not_null("<F>"))
             .rollup(
                 {"Valid <F> Count": Op.count(), "<E> Count": Op.median("<E> Count")}
             )
-            .derive({"Valid <F> %": "d['Valid <F> Count'] / d['<E> Count']"})
+            .derive(
+                {
+                    "Valid <F> %": Expr.binop(
+                        "/", Expr.field("Valid <F> Count"), Expr.field("<E> Count")
+                    )
+                }
+            )
             .mark("row")
             .text(field="Valid <F> Count", mark="text", type="nominal")
             .text(field="<E> Count", mark="text", type="nominal")
@@ -1827,15 +1934,23 @@ def generate():
         spec=(
             Chart()
             .source("<E>", "<E.url>")
-            .derive({"<E> Count": "count()"})
-            .filter("d['<F>'] != null")
+            .derive({"<E> Count": Expr.agg("count")})
+            .filter(Expr.not_null("<F>"))
             .rollup(
                 {"Valid <F> Count": Op.count(), "<E> Count": Op.median("<E> Count")}
             )
             .derive(
                 {
-                    "Null <F> Count": "d['<E> Count'] - d['Valid <F> Count']",
-                    "Null <F> %": "1 - d['Valid <F> Count'] / d['<E> Count']",
+                    "Null <F> Count": Expr.binop(
+                        "-", Expr.field("<E> Count"), Expr.field("Valid <F> Count")
+                    ),
+                    "Null <F> %": Expr.binop(
+                        "-",
+                        Expr.lit(1),
+                        Expr.binop(
+                            "/", Expr.field("Valid <F> Count"), Expr.field("<E> Count")
+                        ),
+                    ),
                 }
             )
             .mark("row")

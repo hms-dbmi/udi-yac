@@ -45,7 +45,7 @@ class Chart:
         self.transformation().kde(field, **kwargs)
         return self
 
-    def derive(self, derive_options: Union[str, List[str]], **kwargs):
+    def derive(self, derive_options: Union[str, Dict], **kwargs):
         self.transformation().derive(derive_options, **kwargs)
         return self
 
@@ -187,7 +187,7 @@ class Transformation:
         self._state.append(transform)
         return self
 
-    def derive(self, derive_options: Union[str, List[str]], **kwargs):
+    def derive(self, derive_options: Union[str, Dict], **kwargs):
         transform = {"derive": derive_options}
         transfer_kwargs({"in", "out"}, transform, kwargs)
         self._state.append(transform)

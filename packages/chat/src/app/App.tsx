@@ -23,10 +23,16 @@ const HUBMAP_DATAPACKAGE_URL = '/data/hubmap/datapackage.json';
  *                            or any other reachable datapackage, to override.
  *   VITE_UDI_REQUIRE_API_KEY "false" to skip the in-app OpenAI key prompt
  *   VITE_UDI_MODEL           Optional LLM model name override
+ *   VITE_UDI_REMOTE_PACKAGE  Name of a server-side data package (configured
+ *                            via the agent server's query backends). When set,
+ *                            data stays on the server: metadata comes from
+ *                            /v1/yac/metadata and queries go to /v1/yac/query.
+ *                            Takes precedence over VITE_UDI_DATA_PACKAGE.
  */
 function App() {
   const apiBaseUrl = import.meta.env.VITE_UDI_API_BASE_URL ?? 'http://localhost:8007';
   const dataPackagePath = import.meta.env.VITE_UDI_DATA_PACKAGE ?? HUBMAP_DATAPACKAGE_URL;
+  const remotePackage = import.meta.env.VITE_UDI_REMOTE_PACKAGE;
   const requireApiKey = import.meta.env.VITE_UDI_REQUIRE_API_KEY !== 'false';
   const model = import.meta.env.VITE_UDI_MODEL;
 
@@ -34,6 +40,7 @@ function App() {
     <div className="h-screen">
       <UDIChat
         apiBaseUrl={apiBaseUrl}
+        remotePackage={remotePackage}
         dataPackagePath={dataPackagePath}
         requireApiKey={requireApiKey}
         model={model}

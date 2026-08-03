@@ -35,18 +35,23 @@ from udiagent.server.auth import make_verify_jwt
 from udiagent.server.models import (
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
+    YACQueryRequest,
 )
 
 # ---------------------------------------------------------------------------
 # Bootstrap
 # ---------------------------------------------------------------------------
 
-load_dotenv()
-
 # Package root (packages/agent) — resolve bundled dev data relative to the
 # source tree, not the process CWD, so endpoints work no matter where the
 # server is launched from (repo root, packages/agent, or the Docker image).
 _PACKAGE_ROOT = Path(__file__).resolve().parents[3]
+
+# Load packages/agent/.env by explicit path, NOT via CWD discovery: the dev
+# tasks and `pnpm dev:agent` launch from the repo root, where bare
+# load_dotenv() finds nothing — so UDI_QUERY_BACKENDS / OPENAI_API_KEY silently
+# wouldn't load. override=False keeps real env vars (Docker, shell) winning.
+load_dotenv(_PACKAGE_ROOT / ".env")
 _DATA_DIR = _PACKAGE_ROOT / "data"
 
 # --- Logging setup ---
@@ -63,6 +68,12 @@ logging.basicConfig(
         logging.StreamHandler(),
     ],
 )
+
+# uvicorn's --reload watcher passes watch_filter=None, so watchfiles logs EVERY
+# raw change at INFO. Our file handler is on the root logger and writes inside
+# the watched tree, so that log line is itself a change -> endless feedback
+# loop. uvicorn still logs its own "Detected changes ... Reloading" at WARNING.
+logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -228,6 +239,126 @@ def yac_completions(
         content=result.tool_calls,
         headers=_usage_headers(result.usage),
     )
+
+
+# ---------------------------------------------------------------------------
+# Query backends (/v1/yac/query)
+# ---------------------------------------------------------------------------
+# Registry of package name -> QueryEngine. Configure programmatically
+# (``app.state.query_engines[pkg] = engine``) or via UDI_QUERY_BACKENDS, a
+# path to a JSON file: {"<package>": {"type": "duckdb"|"starrocks", ...}}.
+# The key "default" (or null package) serves requests without a package match.
+
+
+def _engine_from_config(spec: dict):
+    # Lazy imports: duckdb / pymysql are optional extras.
+    from udiagent.query import DuckDBConnector, QueryEngine, StarRocksConnector
+
+    backend_type = spec.get("type")
+    if backend_type == "duckdb":
+        connector = DuckDBConnector(
+            database=spec.get("database", ":memory:"),
+            views=spec.get("views"),
+        )
+    elif backend_type == "starrocks":
+        connector = StarRocksConnector(**spec.get("connection", {}))
+    else:
+        raise ValueError(f"unknown query backend type: {backend_type!r}")
+    return QueryEngine(
+        connector,
+        table_map=spec.get("tables", {}),
+        row_cap=spec.get("rowCap", 5000),
+        entity_schemas=spec.get("schemas"),
+    )
+
+
+def _load_query_engines() -> dict:
+    path = os.getenv("UDI_QUERY_BACKENDS")
+    if not path:
+        return {}
+    engines = {}
+    for package, spec in json.loads(Path(path).read_text()).items():
+        try:
+            engines[package] = _engine_from_config(spec)
+        except Exception as exc:
+            # A single locked/missing/misconfigured backend (e.g. a DuckDB file
+            # held open by another process) must not sink the whole server —
+            # skip it so the other packages still load. DuckDB allows only one
+            # read-write handle per file (see dev/duckdb/README.md).
+            logger.warning("skipping query backend %r: %s", package, exc)
+    logger.info("query backends configured: %s", sorted(engines))
+    return engines
+
+
+def _no_backend_message(package, engines) -> str:
+    """Actionable 404 text: what's configured (if anything) and how to fix it."""
+    if not engines:
+        return (
+            f"no query backend configured for package {package!r}: the server has "
+            "no query backends loaded. Set UDI_QUERY_BACKENDS to a seeded config "
+            "(seed one with packages/agent/scripts/seed_duckdb.py, or run the "
+            "'Data: Use penguins (remote/DuckDB)' VS Code task) and restart the agent."
+        )
+    return (
+        f"no query backend configured for package {package!r}. Configured packages: "
+        f"{sorted(engines)}. Point VITE_UDI_REMOTE_PACKAGE at one of these, or seed "
+        f"{package!r} and restart the agent."
+    )
+
+
+app.state.query_engines = _load_query_engines()
+# package name -> MetadataCache (created lazily per configured engine)
+app.state.metadata_caches = {}
+
+
+@app.get("/v1/yac/metadata")
+def yac_metadata(
+    package: str | None = None,
+    refresh: bool = False,
+    token_payload: dict = Depends(verify_jwt),
+):
+    """Backend-introspected dataSchema/dataDomains for a package — the
+    remote-mode replacement for browser-side CSV domain computation. Cached
+    with a TTL; pass ?refresh=1 to force re-introspection."""
+    engines = app.state.query_engines
+    key = package if package in engines else "default"
+    engine = engines.get(key)
+    if engine is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": _no_backend_message(package, engines)},
+        )
+    caches = app.state.metadata_caches
+    if key not in caches:
+        from udiagent.query import MetadataCache
+
+        ttl = float(os.getenv("UDI_METADATA_TTL_SECONDS", "3600"))
+        caches[key] = MetadataCache(engine, package or key, ttl_seconds=ttl)
+    metadata = caches[key].refresh() if refresh else caches[key].get()
+    return {
+        "package": package or key,
+        "interactive": False,
+        **metadata,
+    }
+
+
+@app.post("/v1/yac/query")
+def yac_query(
+    request: YACQueryRequest,
+    token_payload: dict = Depends(verify_jwt),
+):
+    engines = app.state.query_engines
+    engine = engines.get(request.package) or engines.get("default")
+    if engine is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": _no_backend_message(request.package, engines)},
+        )
+    results = engine.run_batch(
+        [q.model_dump() for q in request.queries],
+        request.selections,
+    )
+    return {"results": results}
 
 
 @app.post("/v1/yac/benchmark")

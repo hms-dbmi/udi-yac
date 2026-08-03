@@ -37,6 +37,7 @@ export type { UDIChatConfig };
 
 function UDIChatInner({
   apiBaseUrl,
+  remotePackage,
   dataPackagePath,
   dataPackage: dataPackageProp,
   dataFieldDomains: dataFieldDomainsProp,
@@ -59,14 +60,25 @@ function UDIChatInner({
 
   // Load data package on mount
   useEffect(() => {
-    if (dataPackageProp) {
+    if (remotePackage) {
+      dataPackageStore.getState().fetchRemotePackage(apiBaseUrl, remotePackage, authToken);
+    } else if (dataPackageProp) {
       dataPackageStore
         .getState()
         .setDataPackage(dataPackageProp, dataFieldDomainsProp, fetchOptions);
     } else if (dataPackagePath) {
       dataPackageStore.getState().fetchDataPackage(dataPackagePath, fetchOptions);
     }
-  }, [dataPackageStore, dataPackagePath, dataPackageProp, dataFieldDomainsProp, fetchOptions]);
+  }, [
+    dataPackageStore,
+    remotePackage,
+    apiBaseUrl,
+    authToken,
+    dataPackagePath,
+    dataPackageProp,
+    dataFieldDomainsProp,
+    fetchOptions,
+  ]);
 
   // Auto-activate visualizations from new assistant messages (batched to avoid O(n^2) cascade)
   useEffect(() => {

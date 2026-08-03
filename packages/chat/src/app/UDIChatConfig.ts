@@ -21,6 +21,15 @@ export type TrackerFn = (name: string, properties?: Record<string, unknown>) => 
  */
 export interface UDIChatConfig {
   apiBaseUrl: string;
+  /**
+   * Name of a server-side data package (configured on the agent server's
+   * query backends). When set, the chat fetches introspected metadata from
+   * GET /v1/yac/metadata and routes all data queries through
+   * POST /v1/yac/query — no CSVs are loaded into the browser, and
+   * cross-filtering becomes non-interactive (commit on mouse-up with a
+   * loading overlay). Takes precedence over `dataPackage`/`dataPackagePath`.
+   */
+  remotePackage?: string;
   /** URL to fetch a datapackage_udi.json from. Ignored when `dataPackage` is provided. */
   dataPackagePath?: string;
   /** Provide a DataPackage object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`. */

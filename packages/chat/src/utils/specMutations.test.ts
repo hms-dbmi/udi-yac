@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { setMappingFieldByEncoding, collectLockedFields } from './specMutations';
+import {
+  setMappingFieldByEncoding,
+  collectLockedFields,
+  collectGroupbyFields,
+  collectRollupOutputs,
+  swapDimensionField,
+  swapMeasureField,
+  swapPlainField,
+} from './specMutations';
 import type { UDIGrammar } from 'udi-toolkit/react';
 
 function specWithTransformation(transformation: unknown[]): UDIGrammar {
@@ -158,14 +166,18 @@ describe('collectLockedFields', () => {
     expect([...collectLockedFields(specWithTransformation([]))]).toEqual([]);
   });
 
-  it('locks a single-string groupby', () => {
-    const locked = collectLockedFields(specWithTransformation([{ groupby: 'organ' }]));
-    expect([...locked]).toEqual(['organ']);
+  it('does NOT lock groupby (swappable via swapDimensionField)', () => {
+    const single = collectLockedFields(specWithTransformation([{ groupby: 'organ' }]));
+    expect([...single]).toEqual([]);
+    const array = collectLockedFields(specWithTransformation([{ groupby: ['organ', 'sex'] }]));
+    expect([...array]).toEqual([]);
   });
 
-  it('locks every entry of an array groupby', () => {
-    const locked = collectLockedFields(specWithTransformation([{ groupby: ['organ', 'sex'] }]));
-    expect([...locked].sort()).toEqual(['organ', 'sex']);
+  it('does NOT lock rollup.field (swappable via swapMeasureField)', () => {
+    const locked = collectLockedFields(
+      specWithTransformation([{ rollup: { total: { op: 'sum', field: 'weight_value' } } }]),
+    );
+    expect([...locked]).toEqual([]);
   });
 
   it('locks binby.field', () => {
@@ -175,37 +187,9 @@ describe('collectLockedFields', () => {
     expect([...locked]).toEqual(['age_value']);
   });
 
-  it('locks a rollup aggregation with a field', () => {
-    const locked = collectLockedFields(
-      specWithTransformation([{ rollup: { total: { op: 'sum', field: 'weight_value' } } }]),
-    );
-    expect([...locked]).toEqual(['weight_value']);
-  });
-
-  it('locks nothing for a rollup count op (no field)', () => {
-    const locked = collectLockedFields(
-      specWithTransformation([{ rollup: { count: { op: 'count' } } }]),
-    );
-    expect([...locked]).toEqual([]);
-  });
-
-  it('locks only the rollup aggregations that have a field', () => {
-    const locked = collectLockedFields(
-      specWithTransformation([
-        {
-          rollup: {
-            total: { op: 'sum', field: 'weight_value' },
-            count: { op: 'count' },
-          },
-        },
-      ]),
-    );
-    expect([...locked]).toEqual(['weight_value']);
-  });
-
-  it('locks kde.field', () => {
+  it('does NOT lock kde.field (swappable via swapPlainField — renames kde too)', () => {
     const locked = collectLockedFields(specWithTransformation([{ kde: { field: 'age_value' } }]));
-    expect([...locked]).toEqual(['age_value']);
+    expect([...locked]).toEqual([]);
   });
 
   it('locks a string join.on', () => {
@@ -247,13 +231,329 @@ describe('collectLockedFields', () => {
     expect([...locked]).toEqual([]);
   });
 
-  it('unions field references across a multi-step pipeline', () => {
+  it('a group+rollup pipeline locks nothing (both are swappable)', () => {
     const locked = collectLockedFields(
       specWithTransformation([
         { groupby: 'organ' },
         { rollup: { total: { op: 'sum', field: 'weight_value' } } },
       ]),
     );
-    expect([...locked].sort()).toEqual(['organ', 'weight_value']);
+    expect([...locked]).toEqual([]);
+  });
+});
+
+describe('collectGroupbyFields', () => {
+  it('collects a single-string groupby', () => {
+    expect([...collectGroupbyFields(specWithTransformation([{ groupby: 'organ' }]))]).toEqual([
+      'organ',
+    ]);
+  });
+
+  it('collects every entry of an array groupby across steps', () => {
+    const fields = collectGroupbyFields(
+      specWithTransformation([{ groupby: ['organ', 'sex'] }, { groupby: 'donor' }]),
+    );
+    expect([...fields].sort()).toEqual(['donor', 'organ', 'sex']);
+  });
+
+  it('returns empty when there is no groupby', () => {
+    expect([...collectGroupbyFields(specWithTransformation([{ kde: { field: 'x' } }]))]).toEqual(
+      [],
+    );
+  });
+});
+
+describe('collectRollupOutputs', () => {
+  it('maps output columns to their aggregation, including a missing field for count', () => {
+    const outputs = collectRollupOutputs(
+      specWithTransformation([
+        { rollup: { sex_count: { op: 'count' }, avg_age: { op: 'mean', field: 'age' } } },
+      ]),
+    );
+    expect(outputs).toEqual({
+      sex_count: { op: 'count', field: undefined },
+      avg_age: { op: 'mean', field: 'age' },
+    });
+  });
+});
+
+describe('swapDimensionField', () => {
+  const countBySex = () =>
+    ({
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [
+        { groupby: 'sex' },
+        { rollup: { sex_count: { op: 'count' } } },
+        { orderby: { field: 'sex_count', order: 'desc' } },
+      ],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'sex_count', type: 'quantitative' },
+        ],
+      },
+    }) as unknown as UDIGrammar;
+
+  it('rewrites groupby, dependent rollup output column, and both mappings', () => {
+    const next = swapDimensionField(countBySex(), 'x', 'race');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({ groupby: 'race' });
+    expect(t[1]).toEqual({ rollup: { race_count: { op: 'count' } } });
+    // orderby ref followed the renamed output column
+    expect(t[2]).toEqual({ orderby: { field: 'race_count', order: 'desc' } });
+    const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
+    expect(mapping[0].field).toBe('race');
+    expect(mapping[1].field).toBe('race_count');
+  });
+
+  it('renames only the matching entry of an array groupby', () => {
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: ['organ', 'sex'] }, { rollup: { count: { op: 'count' } } }],
+      representation: { mark: 'bar', mapping: [{ encoding: 'x', field: 'sex', type: 'nominal' }] },
+    } as unknown as UDIGrammar;
+    const next = swapDimensionField(spec, 'x', 'race');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({ groupby: ['organ', 'race'] });
+    // 'count' has no old-field token, so its output column is left alone
+    expect(t[1]).toEqual({ rollup: { count: { op: 'count' } } });
+  });
+
+  it('leaves a count output column alone when it does not embed the old field', () => {
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+    const next = swapDimensionField(spec, 'x', 'race');
+    const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
+    expect(mapping[0].field).toBe('race');
+    expect(mapping[1].field).toBe('count');
+  });
+
+  it('does NOT disturb another encoding bound to the same dimension', () => {
+    // Regression: bar with x=sex AND color=sex. Swapping x must leave color
+    // alone and instead group by both fields.
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { sex_count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'color', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'sex_count', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+    const next = swapDimensionField(spec, 'x', 'race');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    // groups by both now, and the count column is left as-is (sex still shown)
+    expect(t[0]).toEqual({ groupby: ['sex', 'race'] });
+    expect(t[1]).toEqual({ rollup: { sex_count: { op: 'count' } } });
+    const mapping = (next.representation as { mapping: Array<{ encoding: string; field: string }> })
+      .mapping;
+    expect(mapping[0]).toEqual({ encoding: 'x', field: 'race', type: 'nominal' });
+    expect(mapping[1]).toEqual({ encoding: 'color', field: 'sex', type: 'nominal' });
+    expect(mapping[2]).toEqual({ encoding: 'y', field: 'sex_count', type: 'quantitative' });
+  });
+
+  it('returns the same reference on a no-op (unchanged field or absent encoding)', () => {
+    const spec = countBySex();
+    expect(swapDimensionField(spec, 'x', 'sex')).toBe(spec);
+    expect(swapDimensionField(spec, 'zzz', 'race')).toBe(spec);
+  });
+
+  it('does not mutate the input spec', () => {
+    const spec = countBySex();
+    const before = JSON.parse(JSON.stringify(spec));
+    swapDimensionField(spec, 'x', 'race');
+    expect(spec).toEqual(before);
+  });
+});
+
+describe('swapMeasureField', () => {
+  const avgAgeBySex = () =>
+    ({
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { avg_age: { op: 'mean', field: 'age' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'avg_age', type: 'quantitative' },
+        ],
+      },
+    }) as unknown as UDIGrammar;
+
+  it('rewrites the rollup input field, output column, and encoding ref; leaves groupby alone', () => {
+    const next = swapMeasureField(avgAgeBySex(), 'avg_age', 'weight');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({ groupby: 'sex' });
+    expect(t[1]).toEqual({ rollup: { avg_weight: { op: 'mean', field: 'weight' } } });
+    const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
+    expect(mapping[0].field).toBe('sex');
+    expect(mapping[1].field).toBe('avg_weight');
+  });
+
+  it('rewrites the input field but keeps the output column when it does not embed the field', () => {
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { mean: { op: 'mean', field: 'age' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [{ encoding: 'y', field: 'mean', type: 'quantitative' }],
+      },
+    } as unknown as UDIGrammar;
+    const next = swapMeasureField(spec, 'mean', 'weight');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[1]).toEqual({ rollup: { mean: { op: 'mean', field: 'weight' } } });
+    const mapping = (next.representation as { mapping: Array<{ field: string }> }).mapping;
+    expect(mapping[0].field).toBe('mean');
+  });
+
+  it('returns the same reference for a count output (no input field to swap)', () => {
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [{ groupby: 'sex' }, { rollup: { sex_count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [{ encoding: 'y', field: 'sex_count', type: 'quantitative' }],
+      },
+    } as unknown as UDIGrammar;
+    expect(swapMeasureField(spec, 'sex_count', 'weight')).toBe(spec);
+  });
+
+  it('returns the same reference when the field is unchanged', () => {
+    const spec = avgAgeBySex();
+    expect(swapMeasureField(spec, 'avg_age', 'age')).toBe(spec);
+  });
+});
+
+describe('swapPlainField', () => {
+  // A CDF: filter drops nulls of the plotted field, orderby sorts by it, and a
+  // percentile is derived from that order. Swapping the plotted field must move
+  // the filter + orderby too, or the percentile is computed in the old order.
+  function cdf(field: string): UDIGrammar {
+    return {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [
+        { filter: { op: '!=', left: { field }, right: { literal: null } } },
+        { orderby: { field, order: 'asc' } },
+        { derive: { total: { agg: 'count' } } },
+        {
+          derive: {
+            percentile: {
+              rolling: {
+                expression: { op: '/', left: { agg: 'count' }, right: { field: 'total' } },
+              },
+            },
+          },
+        },
+      ],
+      representation: {
+        mark: 'line',
+        mapping: [
+          { encoding: 'x', field, type: 'quantitative' },
+          { encoding: 'y', field: 'percentile', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+  }
+
+  it('follows the plotted field through filter and orderby', () => {
+    const next = swapPlainField(cdf('weight_value'), 'x', 'age_value');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({
+      filter: { op: '!=', left: { field: 'age_value' }, right: { literal: null } },
+    });
+    expect(t[1]).toEqual({ orderby: { field: 'age_value', order: 'asc' } });
+    // derived percentile pipeline is untouched
+    expect(t[2]).toEqual({ derive: { total: { agg: 'count' } } });
+    // x mapping updated, y (percentile) left alone
+    const mapping = (next.representation as { mapping: Array<{ encoding: string; field: string }> })
+      .mapping;
+    expect(mapping[0]).toEqual({ encoding: 'x', field: 'age_value', type: 'quantitative' });
+    expect(mapping[1].field).toBe('percentile');
+  });
+
+  it('leaves transforms alone when the old field is still shown on another encoding', () => {
+    // density: x and y both on the same field; swapping x should not touch the
+    // orderby/filter (ambiguous which axis they belong to).
+    const spec = {
+      source: { name: 'donors', source: 'donors.csv' },
+      transformation: [
+        { filter: { op: '!=', left: { field: 'age_value' }, right: { literal: null } } },
+        { orderby: { field: 'age_value', order: 'asc' } },
+      ],
+      representation: {
+        mark: 'point',
+        mapping: [
+          { encoding: 'x', field: 'age_value', type: 'quantitative' },
+          { encoding: 'y', field: 'age_value', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+    const next = swapPlainField(spec, 'x', 'weight_value');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({
+      filter: { op: '!=', left: { field: 'age_value' }, right: { literal: null } },
+    });
+    expect(t[1]).toEqual({ orderby: { field: 'age_value', order: 'asc' } });
+  });
+
+  it('returns the same reference on a no-op (unchanged field / missing encoding)', () => {
+    const spec = cdf('weight_value');
+    expect(swapPlainField(spec, 'x', 'weight_value')).toBe(spec);
+    expect(swapPlainField(spec, 'zzz', 'age_value')).toBe(spec);
+  });
+
+  it('swaps a density (kde) field through filter, kde.field, kde.output.sample, and mapping', () => {
+    // A density plot: the kde output `sample` column is named after the field,
+    // and the x axis maps to it — so swapping x must rename the field in all
+    // four spots or the estimate stays on the old field.
+    const density = (field: string): UDIGrammar =>
+      ({
+        source: { name: 'donors', source: 'donors.csv' },
+        transformation: [
+          { filter: { op: '!=', left: { field }, right: { literal: null } } },
+          { kde: { field, output: { sample: field, density: 'density' } } },
+        ],
+        representation: {
+          mark: 'area',
+          mapping: [
+            { encoding: 'x', field, type: 'quantitative' },
+            { encoding: 'y', field: 'density', type: 'quantitative' },
+          ],
+        },
+      }) as unknown as UDIGrammar;
+
+    const next = swapPlainField(density('weight_value'), 'x', 'age_value');
+    const t = (next as unknown as { transformation: Array<Record<string, unknown>> })
+      .transformation;
+    expect(t[0]).toEqual({
+      filter: { op: '!=', left: { field: 'age_value' }, right: { literal: null } },
+    });
+    expect(t[1]).toEqual({
+      kde: { field: 'age_value', output: { sample: 'age_value', density: 'density' } },
+    });
+    const mapping = (next.representation as { mapping: Array<{ encoding: string; field: string }> })
+      .mapping;
+    expect(mapping[0]).toEqual({ encoding: 'x', field: 'age_value', type: 'quantitative' });
+    expect(mapping[1].field).toBe('density'); // untouched
   });
 });

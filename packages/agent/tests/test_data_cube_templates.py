@@ -21,6 +21,26 @@ from udiagent.vis_generate import (
 _PKG = _package_data_path()
 _AGENT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
+
+def _marginal_ops(filt):
+    """Flatten a marginal filter's && -chain of null-checks into
+    {field: op}, where op is '!=' (active dimension) or '==' (nulled out).
+    The filter is a structured Expr object so it compiles to SQL server-side.
+    """
+    ops = {}
+
+    def walk(node):
+        if not isinstance(node, dict) or "op" not in node:
+            return
+        if node["op"] == "&&":
+            walk(node["left"])
+            walk(node["right"])
+        else:  # a null-check clause: {op, left:{field}, right:{literal:None}}
+            ops[node["left"]["field"]] = node["op"]
+
+    walk(filt)
+    return ops
+
 # Chart types that are impossible on a pre-aggregated cube.
 EXCLUDED_CHART_TYPES = {
     "scatterplot",
@@ -160,11 +180,11 @@ def test_marginal_filter_generalizes_across_cube_schemas():
             break
     assert template is not None
     spec = instantiate_template(template, {"E": "encounter_counts", "D": dim}, enc)
-    filt = spec["transformation"][0]["filter"]
-    assert "d['class_display'] != null" in filt
+    ops = _marginal_ops(spec["transformation"][0]["filter"])
+    assert ops["class_display"] == "!="
     # every other encounter dimension is nulled out
     for other in ["period_start_month", "age_at_visit", "gender", "race_display", "ethnicity_display"]:
-        assert f"d['{other}'] == null" in filt
+        assert ops[other] == "=="
     # measure resolved from the schema
     assert any(m["field"] == "cnt" for m in spec["representation"]["mapping"])
 
@@ -172,9 +192,9 @@ def test_marginal_filter_generalizes_across_cube_schemas():
     sales = _parse_request_schema(SALES_CUBE)
     assert validate_bindings(template, {"E": "sales_cube", "D": "region"}, sales) == []
     spec2 = instantiate_template(template, {"E": "sales_cube", "D": "region"}, sales)
-    filt2 = spec2["transformation"][0]["filter"]
-    assert "d['region'] != null" in filt2
-    assert "d['product'] == null" in filt2 and "d['quarter'] == null" in filt2
+    ops2 = _marginal_ops(spec2["transformation"][0]["filter"])
+    assert ops2["region"] == "!="
+    assert ops2["product"] == "==" and ops2["quarter"] == "=="
     assert spec2["source"]["source"] == "https://example.org/sales/sales.csv"
     assert any(m["field"] == "revenue" for m in spec2["representation"]["mapping"])
 
@@ -192,10 +212,10 @@ def test_two_dimension_marginal_filter():
     spec = instantiate_template(
         template, {"E": "encounter_counts", "D1": "class_display", "D2": "gender"}, enc
     )
-    dumped = json.dumps(spec)
-    assert "d['class_display'] != null" in dumped
-    assert "d['gender'] != null" in dumped
-    assert "d['age_at_visit'] == null" in dumped
+    ops = _marginal_ops(spec["transformation"][0]["filter"])
+    assert ops["class_display"] == "!="
+    assert ops["gender"] == "!="
+    assert ops["age_at_visit"] == "=="
 
 
 def test_validate_rejects_measure_bound_as_dimension():
@@ -309,7 +329,7 @@ def test_execute_generate_end_to_end_cube(monkeypatch):
     spec = json.loads(out["spec_str"])
     grammar = json.loads((_PKG / "UDIGrammarSchema.json").read_text())
     jsonschema.validate(instance=spec, schema=grammar)
-    filt = spec["transformation"][0]["filter"]
-    assert "d['class_display'] != null" in filt
-    assert "d['gender'] == null" in filt
+    ops = _marginal_ops(spec["transformation"][0]["filter"])
+    assert ops["class_display"] == "!="
+    assert ops["gender"] == "=="
     assert spec["source"]["source"].endswith("core__count_encounter_month.csv")
