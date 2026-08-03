@@ -20,10 +20,40 @@ body {
     sans-serif;
 }
 
-/* UDIVis renders into a Vue custom element with shadowRoot: false, so the host
-   element itself needs to be a block that fills its card body. */
+/* The <udi-vis> custom element uses shadowRoot: false, so Vue's *scoped*
+   component styles are never injected into the document. The CE internals
+   depend on them for layout, so the critical rules have to be restated here
+   unscoped — same approach (and same reason) as packages/chat/src/index.css.
+
+   Without the .vega-chart-container rule below, that div stays
+   `display: inline-block; height: 0`, Vega's `width/height: 'container'`
+   sizing reads 0, and every chart renders as a 0x0 SVG — visible as a
+   completely blank card. */
 udi-vis {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* VegaLite.vue .vega-chart-container */
+udi-vis .vega-chart-container {
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+}
+
+/* TableComponent.vue mounts ag-grid, which also needs a definite height. */
+udi-vis .table-container,
+udi-vis .ag-root-wrapper {
+  height: 100%;
+}
+
+/* Let the browser skip style, layout and paint for cards that are scrolled out
+   of view. This is complementary to the JS-side chart virtualization: that stops
+   Vega from *mounting*, this stops the browser from *rendering* the rest of the
+   card. `contain-intrinsic-size` supplies a placeholder size for skipped cards
+   so the scrollbar stays stable instead of jumping as they come into view. */
+.template-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 460px;
 }

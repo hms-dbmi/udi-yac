@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Check, ChevronDown, ChevronUp, RotateCcw, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { useInViewport } from '@/lib/useInViewport';
 import type { Preview, ReviewStatus, TemplateRecord } from '@/types/previews';
 import { StatusBadge } from './StatusBadge';
 import { TemplateDetails } from './TemplateDetails';
@@ -25,6 +26,11 @@ export function TemplateCard({
   onReview,
 }: TemplateCardProps) {
   const [expanded, setExpanded] = useState(false);
+  // Only mount the chart while this card is near the viewport. Everything else
+  // on the card (metadata, review controls) is cheap and always rendered, so a
+  // reviewer can read and act on an off-screen card without waiting for a chart.
+  const previewRef = useRef<HTMLDivElement>(null);
+  const previewVisible = useInViewport(previewRef);
   const [draft, setDraft] = useState(feedback);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +63,7 @@ export function TemplateCard({
   return (
     <article
       className={cn(
-        'flex flex-col overflow-hidden rounded-lg border bg-white shadow-sm',
+        'template-card flex flex-col overflow-hidden rounded-lg border bg-white shadow-sm',
         status === 'approved' && 'border-emerald-300',
         status === 'rejected' && 'border-rose-300',
         status === 'needs_changes' && 'border-amber-300',
@@ -84,8 +90,14 @@ export function TemplateCard({
         </div>
       </header>
 
-      <div className="h-64 shrink-0 p-2">
-        <TemplatePreview preview={preview} sourceResolver={sourceResolver} />
+      {/* Fixed height whether or not the chart is mounted, so mounting and
+          unmounting never shifts the page under the reviewer's scroll. */}
+      <div ref={previewRef} className="h-64 shrink-0 p-2">
+        {previewVisible ? (
+          <TemplatePreview preview={preview} sourceResolver={sourceResolver} />
+        ) : (
+          <PreviewPlaceholder />
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-1 border-t border-slate-100 px-3 py-2">
@@ -157,6 +169,23 @@ export function TemplateCard({
 
       {expanded && <TemplateDetails template={template} preview={preview} />}
     </article>
+  );
+}
+
+/**
+ * Stand-in for a chart that hasn't been scrolled to yet.
+ *
+ * Deliberately neutral and wordless-but-labelled: it must never be mistakable
+ * for "this template can't render", which is a review-relevant finding shown by
+ * TemplatePreview's own empty states.
+ */
+function PreviewPlaceholder() {
+  return (
+    <div className="flex h-full items-center justify-center rounded-md bg-slate-50">
+      <span className="animate-pulse text-[10px] tracking-wide text-slate-400 uppercase">
+        chart loads when scrolled into view
+      </span>
+    </div>
   );
 }
 

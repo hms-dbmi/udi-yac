@@ -25,6 +25,38 @@ One card per template, with:
   (`line_item`) or pre-aggregated cubes (`data_cube`), and a template that can't
   apply to the selected package says so explicitly rather than rendering blank.
 
+## Rendering: two things that are easy to get wrong
+
+**The toolkit's scoped CSS must be restated unscoped.** `<udi-vis>` is a Vue
+custom element defined with `shadowRoot: false`, so Vue never injects its
+components' _scoped_ styles into the document. The CE internals depend on them
+for layout. Without `udi-vis .vega-chart-container { width: 100%; height: 100% }`
+in `src/index.css`, that div stays `display: inline-block; height: 0`, Vega's
+`width`/`height: 'container'` sizing reads 0, and **every chart renders as a 0×0
+SVG** — a completely blank card with no error anywhere. `packages/chat` carries
+the same rules for the same reason. Importing `udi-toolkit/style.css` is not a
+substitute: those selectors are scoped to a build-generated `[data-v-*]` hash.
+
+**Charts are virtualized.** Mounting 60+ Vega views at once is far too much work,
+so each card only mounts its chart while it is near the viewport
+(`src/lib/useInViewport.ts`) and drops it once well clear. Three details matter:
+
+- Mounting is deferred ~180ms after a card comes into range, so cards flicked
+  past during a fast scroll are never mounted. Unmounting is immediate.
+- The preview area keeps a fixed height either way, and cards use
+  `content-visibility: auto` with `contain-intrinsic-size`, so nothing shifts
+  under the reviewer's scroll.
+- Only the chart is lazy. Metadata and the review controls are always rendered,
+  so an off-screen card can still be read and acted on.
+
+Measured on the 52 `hubmap` templates: 9 charts mounted instead of 52, and median
+scroll frame time 170ms → ~13ms. Mounting a single chart still costs one long
+frame; that's inherent to compiling and embedding a Vega view.
+
+The placeholder says "chart loads when scrolled into view" — deliberately worded
+so it can never be confused with the _review-relevant_ empty states below
+("not applicable to this data package", "can't bind to this data package").
+
 ## How previews are produced
 
 Template placeholders (`<E>`, `<F:n>`, `<M>`, `<MARGINAL:D1,D2>`,
