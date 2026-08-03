@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AlertTriangle, FileWarning, Loader2 } from 'lucide-react';
+import { AlertTriangle, FileWarning, Loader2, RefreshCw } from 'lucide-react';
 import { loadStudioDataPackage } from '@/lib/dataPackage';
 import {
   countByStatus,
@@ -35,6 +35,8 @@ export function ReviewView() {
     error: string | null;
   } | null>(null);
 
+  // Bumped by the retry button to re-run the data-package load effect.
+  const [reloadToken, setReloadToken] = useState(0);
   const [statuses, setStatuses] = useState<Set<ReviewStatus>>(new Set());
   const [search, setSearch] = useState('');
   const [renderableOnly, setRenderableOnly] = useState(true);
@@ -105,7 +107,7 @@ export function ReviewView() {
     return () => {
       cancelled = true;
     };
-  }, [selectedPackage]);
+  }, [selectedPackage, reloadToken]);
 
   // Anything not yet reported for the *current* package is still in flight.
   const dataReady = dataState?.packageId === packageId;
@@ -233,9 +235,24 @@ export function ReviewView() {
       )}
 
       {dataError && (
-        <p className="mx-4 mt-3 flex items-center gap-1.5 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-          <AlertTriangle className="size-4" /> Failed to load data package: {dataError}
-        </p>
+        <div className="mx-4 mt-3 flex flex-wrap items-start gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span className="min-w-40 flex-1">
+            Could not load the <span className="font-mono">{packageId}</span> data package.{' '}
+            {dataError}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              // Drop the failed result so the loading state shows again.
+              setDataState(null);
+              setReloadToken((n) => n + 1);
+            }}
+            className="inline-flex items-center gap-1 rounded border border-rose-300 bg-white px-2 py-1 font-medium text-rose-800 hover:bg-rose-100"
+          >
+            <RefreshCw className="size-3.5" /> Retry
+          </button>
+        </div>
       )}
 
       <OrphanedReviews orphans={orphans} onDelete={onDeleteOrphan} />

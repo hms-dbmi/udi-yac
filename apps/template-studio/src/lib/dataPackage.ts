@@ -33,12 +33,44 @@ export interface LoadedDataPackage {
   entityNames: string[];
 }
 
-export async function loadStudioDataPackage(url: string): Promise<LoadedDataPackage> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`failed to fetch ${url} (${response.status})`);
+/**
+ * Fetch a datapackage descriptor, turning the two failure modes that actually
+ * happen in dev into messages that say what to do about them.
+ */
+async function fetchDataPackage(url: string): Promise<RawDataPackage> {
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    // A bare `TypeError: Failed to fetch` means the request never completed —
+    // almost always the dev server having been stopped while the tab stayed open.
+    throw new Error(
+      `cannot reach the dev server for ${url} — is \`pnpm dev:template-studio\` ` +
+        `still running? (${(err as Error).message})`,
+    );
   }
-  const dp = (await response.json()) as RawDataPackage;
+
+  if (!response.ok) {
+    throw new Error(`failed to fetch ${url} (HTTP ${response.status})`);
+  }
+
+  // Vite's SPA fallback answers unknown paths with index.html and a 200, so a
+  // missing sample-data directory looks like success until JSON.parse blows up
+  // on "<!doctype html>". Detect it here and name the actual problem.
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('json')) {
+    throw new Error(
+      `${url} did not return JSON (got ${contentType || 'no content-type'}). ` +
+        `The sample data is probably not synced — run ` +
+        `\`pnpm --filter udi-template-studio sync-data\`.`,
+    );
+  }
+
+  return (await response.json()) as RawDataPackage;
+}
+
+export async function loadStudioDataPackage(url: string): Promise<LoadedDataPackage> {
+  const dp = await fetchDataPackage(url);
   const folder = dp['udi:path'] ?? '';
 
   // Skip empty resources: the toolkit would fetch and parse a zero-row table for
