@@ -217,15 +217,17 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"literal": 1}}, "then": {"literal": "yes"}, "else": {"literal": "no"}}}}], "representation": {"mark": "row", '
  '"mapping": [{"encoding": "color", "column": "<F>", "mark": "bar", "orderby": "<F>", "field": "most frequent", '
  '"type": "nominal", "domain": ["yes", "no"], "range": ["#ffdb9a", "white"]}, {"encoding": "text", "field": "<F>", '
- '"mark": "text", "type": "nominal"}, {"encoding": "x", "field": "count", "mark": "bar", "type": "quantitative", '
- '"domain": {"min": 0}}, {"encoding": "color", "column": "count", "mark": "bar", "field": "most frequent", "type": '
- '"nominal", "domain": ["yes", "no"], "range": ["#FFA500", "#c6cfd8"]}]}}',
+ '"mark": "text", "type": "nominal"}, {"encoding": "x", "column": "count", "field": "count", "mark": "bar", "type": '
+ '"quantitative", "domain": {"min": 0}}, {"encoding": "color", "column": "count", "mark": "bar", "field": "most '
+ 'frequent", "type": "nominal", "domain": ["yes", "no"], "range": ["#FFA500", "#c6cfd8"]}, {"encoding": "text", '
+ '"column": "count", "field": "count", "mark": "text", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL>"}], "representation": '
  '{"mark": "row", "mapping": {"encoding": "text", "field": "<M>", "mark": "text", "type": "nominal"}}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}, {"orderby": '
  '{"field": "<M>", "order": "desc"}}], "representation": {"mark": "row", "mapping": [{"encoding": "text", "field": '
- '"<D:n>", "mark": "text", "type": "nominal"}, {"encoding": "x", "field": "<M>", "mark": "bar", "type": '
- '"quantitative", "range": {"min": 0.1, "max": 1}}]}}',
+ '"<D:n>", "mark": "text", "type": "nominal"}, {"encoding": "x", "column": "<M>", "field": "<M>", "mark": "bar", '
+ '"type": "quantitative", "range": {"min": 0.1, "max": 1}}, {"encoding": "text", "column": "<M>", "field": "<M>", '
+ '"mark": "text", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
  '"<F>"}, "right": {"literal": null}}}, {"orderby": {"field": "<F>", "order": "asc"}}, {"derive": {"total": {"agg": '
  '"count"}}}, {"derive": {"percentile": {"rolling": {"expression": {"op": "/", "left": {"agg": "count"}, "right": '

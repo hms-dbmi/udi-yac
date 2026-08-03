@@ -1395,7 +1395,7 @@ def generate():
                 range=["#ffdb9a", "white"],
             )
             .text(field="<F>", mark="text", type="nominal")
-            .x(field="count", mark="bar", type="quantitative", domain={"min": 0})
+            .x(column="count", field="count", mark="bar", type="quantitative", domain={"min": 0})
             .color(
                 column="count",
                 mark="bar",
@@ -1404,6 +1404,8 @@ def generate():
                 domain=["yes", "no"],
                 range=["#FFA500", "#c6cfd8"],
             )
+            # Last, so the count reads as a number on top of its bar.
+            .text(column="count", field="count", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -1452,14 +1454,24 @@ def generate():
             .orderby("<M>", ascending=False)
             .mark("row")
             .text(field="<D:n>", mark="text", type="nominal")
-            .x(field="<M>", mark="bar", type="quantitative", range={"min": 0.1, "max": 1})
+            # Bar and number share the measure's column. Text goes last: in-cell
+            # marks are absolutely positioned siblings, so the later mapping
+            # paints on top — text first and the bar would hide the value.
+            .x(
+                column="<M>",
+                field="<M>",
+                mark="bar",
+                type="quantitative",
+                range={"min": 0.1, "max": 1},
+            )
+            .text(column="<M>", field="<M>", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[TaskType.DETERMINE_RANGE, TaskType.SORT, TaskType.RETRIEVE_VALUE],
         description="Lists each category of a nominal dimension with its pre-aggregated measure as a sorted table with in-cell bars.",
         design_considerations=(
-            _CUBE_MARGINAL_NOTE + " Ordered by the measure descending with in-cell bars for "
-            "visual comparison."
+            _CUBE_MARGINAL_NOTE + " Ordered by the measure descending, with the measure drawn "
+            "as both an in-cell bar and a number so the value is readable and not just its length."
         ),
         tasks="Determine the distinct values of a dimension; compare category counts.",
         shape="data_cube",

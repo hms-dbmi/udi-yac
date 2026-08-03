@@ -208,11 +208,26 @@ Reading it is the intended direction.
 - **A chart that draws axes but no marks is usually a binding-type problem**, not
   a rendering one: an aggregate over a nominal column yields a non-numeric value
   that a quantitative axis can't place. See the type-constraint note above.
+- **An in-cell bar needs its number too.** A `bar`/`rect` shows relative magnitude
+  but not the value, so a column with a bar and no `text` mark leaves the number
+  unreadable. Give the bar and a text mark the same `column="..."` so they share
+  one table column:
+
+  ```python
+  .x(column="count", field="count", mark="bar", type="quantitative")
+  .text(column="count", field="count", mark="text", type="nominal")
+  ```
+
+  `tests/test_template_table_readability.py` enforces this. Exempt by shape, not by
+  name: a `field="*"` text mark (covers every column), a min..max span (`x` + `x2`),
+  and `%` columns that sit beside their raw counts.
+
 - **In-cell marks paint in mapping order.** They are absolutely positioned
   siblings inside the cell, so a later mapping covers an earlier one. Put the
-  `bar`/`rect` mapping **before** the `text` mapping or the bar hides the number.
-  Give both the same `column="..."` to share one table column; column order in the
-  rendered table follows the order the columns are first mentioned.
+  `bar`/`rect` mapping **before** the `text` mapping or the bar hides the number —
+  the DOM will contain the value while the screen shows only a bar. The same test
+  file checks this ordering. Column order in the rendered table follows the order
+  the columns are first mentioned, so keep the label mapping first.
 - **Charts are virtualized.** Only cards near the viewport mount a chart, so a
   card scrolled far off-screen shows a placeholder rather than a chart. Scroll to
   a template before judging it.
