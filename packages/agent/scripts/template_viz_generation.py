@@ -55,6 +55,15 @@ class TaskType(Enum):
 # Shared design note for data-cube templates: a cube is read by marginal
 # filtering, and the marginal filter (<MARGINAL:...>) is expanded at runtime
 # from the per-request schema's dimension list, so one template serves any cube.
+# The two event-log values that bracket a survival interval. These are literal
+# data *values*, not column names, and the placeholder system can only bind
+# columns — so unlike every other template these cannot be parameterised, and the
+# survival template only applies to event logs using this vocabulary (PCX's).
+# Making them bindable needs a literal-binding placeholder in vis_generate.
+SURVIVAL_START_EVENT = "Initial CNS Tumor"
+SURVIVAL_END_EVENT = "Deceased"
+
+
 _CUBE_MARGINAL_NOTE = (
     "Reads the cube marginal by filtering to rows where the chosen dimension(s) "
     "are present and every other dimension is empty; the measure is mapped "
@@ -74,6 +83,7 @@ def add_row(
     tasks: str = "",
     shape: str = "line_item",
     review_hint: str = "",
+    preview_bindings: dict | None = None,
 ):
     spec_key_count = get_total_key_count(spec.to_dict())
     if spec_key_count <= 12:
@@ -107,6 +117,11 @@ def add_row(
         # the template and is never rewritten by the review UI. Not sent to the
         # LLM — it exists only for the review loop.
         "review_hint": review_hint,
+        # Optional binding the template studio should preview with. Only needed
+        # when a template's meaning depends on particular *values* (an event
+        # vocabulary, say), which the studio's type-directed field search cannot
+        # infer. Ignored at runtime — the LLM still chooses its own bindings.
+        "preview_bindings": preview_bindings,
     }
     return df
 
@@ -169,6 +184,7 @@ def generate():
             "design_considerations",
             "tasks",
             "review_hint",
+            "preview_bindings",
         ]
     )
 
@@ -1585,6 +1601,127 @@ def generate():
         ),
         tasks="Identify trends over time; spot peaks, troughs, and seasonality.",
         shape="data_cube",
+    )
+
+    # ---------------------------------------------------------------
+    # Survival curves (event-log tables)
+    # ---------------------------------------------------------------
+
+    # An event log records one row per event per subject, so survival time is not
+    # a column — it has to be reconstructed by pairing two events for the same
+    # subject. This is the only template that derives its x-axis from the gap
+    # between two rows, which is why the pipeline is longer than the others.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show a survival curve for <E>.",
+            "Plot survival time from diagnosis to death for each <F1:n>.",
+            "What fraction of subjects are still alive over time after diagnosis?",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter(Expr.not_null("<F3:q>"))
+            # Project each subject's two anchor events onto their own columns so a
+            # single grouped rollup can pick both up; the grammar's aggregates take
+            # a column name, not an expression, so the conditional has to happen
+            # in a derive first.
+            .derive(
+                {
+                    "start day": Expr.cond(
+                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit(SURVIVAL_START_EVENT)),
+                        Expr.field("<F3>"),
+                        Expr.lit(None),
+                    ),
+                    "end day": Expr.cond(
+                        Expr.binop("==", Expr.field("<F2>"), Expr.lit(SURVIVAL_END_EVENT)),
+                        Expr.field("<F3>"),
+                        Expr.lit(None),
+                    ),
+                }
+            )
+            # One row per subject. min/max ignore the nulls left by the conditional
+            # above, so these pick the earliest start and the latest end event.
+            .groupby("<F1:n>")
+            .rollup({"start day": Op.min("start day"), "end day": Op.max("end day")})
+            # The cohort is everyone with a start event, counted *before* dropping
+            # subjects who have no end event. Using the full cohort as the
+            # denominator is what makes the curve plateau at the observed survival
+            # fraction instead of falling to zero.
+            .filter(Expr.not_null("start day"))
+            .derive({"subjects": Expr.agg("count")})
+            .derive(
+                {
+                    "survival days": Expr.binop(
+                        "-", Expr.field("end day"), Expr.field("start day")
+                    )
+                }
+            )
+            .filter(
+                Expr.binop(
+                    "&&",
+                    Expr.not_null("survival days"),
+                    Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)),
+                )
+            )
+            .orderby("survival days")
+            .derive(
+                {
+                    "survival probability": rolling(
+                        Expr.binop(
+                            "-",
+                            Expr.lit(1),
+                            Expr.binop("/", Expr.agg("count"), Expr.field("subjects")),
+                        )
+                    )
+                }
+            )
+            .mark("line")
+            .x(field="survival days", type="quantitative")
+            .y(field="survival probability", type="quantitative")
+        ),
+        chart_type=ChartType.LINE,
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+        ],
+        description=(
+            f"Survival curve built from an event log: pairs each subject's "
+            f"'{SURVIVAL_START_EVENT}' and '{SURVIVAL_END_EVENT}' events to derive a survival "
+            f"time, then plots the falling fraction of subjects without the end event."
+        ),
+        design_considerations=(
+            "Survival time is not stored anywhere; it is reconstructed as the gap between two "
+            "events for the same subject, so the template groups the event log by subject id and "
+            "rolls it up to one row each before computing anything. The subject id is only a "
+            "grouping key and is never encoded, so its cardinality does not matter. "
+            "IMPORTANT: this is a crude survival curve, not a Kaplan-Meier estimate. Subjects "
+            "with no end event are kept in the denominator but contribute no drop, which assumes "
+            "every one of them was followed for the whole window. A true Kaplan-Meier estimator "
+            "reweights by the number still at risk at each event time; that needs a cumulative "
+            "product and per-time at-risk counts, which the grammar cannot express today. Read "
+            "the curve as an observed-survival fraction over the cohort, and do not use it where "
+            "differences in follow-up length matter."
+        ),
+        tasks=(
+            "Judge how survival falls over time after a starting event; compare the observed "
+            "survival fraction of a cohort at a given number of days."
+        ),
+        review_hint=(
+            f"Event-type values are hardcoded to PCX's vocabulary "
+            f"('{SURVIVAL_START_EVENT}', '{SURVIVAL_END_EVENT}') because placeholders can only "
+            f"bind column names, not literal values. Check the caveat about censoring in the "
+            f"design considerations before approving."
+        ),
+        # The studio cannot infer which column is the subject id, which is the
+        # event type, or which holds the day offset — a type-directed search would
+        # pick three plausible-looking columns and draw an empty curve. Name them.
+        preview_bindings={
+            "E": "Event",
+            "F1": "research_id",
+            "F2": "event_type",
+            "F3": "event_date",
+        },
     )
 
     # ---------------------------------------------------------------

@@ -272,12 +272,26 @@
     "tool_name": "vis_056_histogram_distribution",
     "chart_type": "histogram"
   },
+  "9dbcbeaae48c": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:32:22.748Z",
+    "tool_name": "vis_048_table_sorted",
+    "chart_type": "table"
+  },
   "a4d63e397d15": {
     "status": "approved",
     "feedback": "",
     "reviewed_at": "2026-08-03T14:34:52.797Z",
     "tool_name": "vis_002_barchart_join_count_vert_grouped",
     "chart_type": "barchart"
+  },
+  "aad37f1e2f24": {
+    "status": "approved",
+    "feedback": "",
+    "reviewed_at": "2026-08-03T16:32:17.700Z",
+    "tool_name": "vis_046_table_ranked_mode",
+    "chart_type": "table"
   },
   "ac7d6d7d8512": {
     "status": "approved",

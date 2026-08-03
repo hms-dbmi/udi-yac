@@ -366,6 +366,56 @@ def _template_grammar_error(spec_template: str, grammar: dict | None) -> str:
     return _grammar_error(parsed, grammar)
 
 
+def _declared_binding(
+    spec_template: str,
+    declared: dict,
+    parsed_schema: dict,
+) -> tuple[dict[str, str] | None, dict | None, list[str]]:
+    """Try a template's own `preview_bindings` instead of searching.
+
+    Some templates only mean anything against particular columns *and values* — a
+    survival curve pairs two named event types, so a type-directed search would
+    happily pick three legible columns and draw an empty curve. When a template
+    declares its intended binding, use exactly that: it either applies to this
+    data package or the template genuinely doesn't fit it, and saying so is more
+    useful than a preview that renders but means nothing.
+    """
+    entities = parsed_schema.get("entities", {})
+    entity = declared.get("E")
+    if entity not in entities:
+        available = ", ".join(sorted(entities)) or "none"
+        return None, None, [
+            f"Template previews against entity '{entity}', which this data package does not have "
+            f"(has: {available}). It is written for a specific table shape."
+        ]
+
+    missing = [
+        f"{key}={value!r}"
+        for key, value in declared.items()
+        if key not in ("E", "E1", "E2") and value not in entities[entity].get("fields", {})
+    ]
+    if missing:
+        return None, None, [
+            f"Entity '{entity}' is missing the column(s) this template previews with: "
+            f"{', '.join(missing)}."
+        ]
+
+    errors = validate_bindings(spec_template, declared, parsed_schema)
+    if errors:
+        return None, None, errors
+
+    try:
+        spec = instantiate_template(spec_template, declared, parsed_schema)
+    except (json.JSONDecodeError, TypeError) as exc:
+        return None, None, [f"Template did not instantiate to valid JSON: {exc}"]
+
+    blanks = _blank_bindings(spec)
+    if blanks:
+        return None, None, [f"Placeholders resolved to empty strings at: {', '.join(blanks)}"]
+
+    return dict(declared), spec, []
+
+
 def _search_bindings(
     spec_template: str,
     binding_keys: list[str],
@@ -617,13 +667,19 @@ def main() -> int:
                 stats[pkg["id"]]["shape_mismatch"] += 1
                 continue
 
-            bindings, spec, errors = _search_bindings(
-                spec_template,
-                binding_keys,
-                pkg["parsed"],
-                _column_stats(pkg),
-                variation=index,
-            )
+            declared = template.get("preview_bindings") or None
+            if declared:
+                bindings, spec, errors = _declared_binding(
+                    spec_template, declared, pkg["parsed"]
+                )
+            else:
+                bindings, spec, errors = _search_bindings(
+                    spec_template,
+                    binding_keys,
+                    pkg["parsed"],
+                    _column_stats(pkg),
+                    variation=index,
+                )
             if spec is not None:
                 previews[pkg["id"]] = {
                     "status": "ok",

@@ -57,6 +57,21 @@ apps/template-studio  ← renders templates, writes review decisions to
    `line_item` templates are offered for tidy tables, `data_cube` ones for
    pre-aggregated cubes. A request never sees both sets.
 
+   **`preview_bindings`** (optional) names the entity and fields the studio should
+   preview with. Only needed when a template's meaning depends on particular
+   _values_ rather than just column types — the survival template pairs two named
+   event types, and the studio's type-directed search would otherwise pick three
+   plausible columns and draw an empty curve. When declared, a data package that
+   cannot satisfy it is reported as unsupported with the reason, which is more
+   useful than a preview that renders but means nothing. It is preview-only: the
+   model still chooses its own bindings at runtime.
+
+   **Placeholders bind column names, never literal values.** A template that has
+   to compare against a specific value (an event vocabulary, a status string) must
+   hardcode it — see `SURVIVAL_START_EVENT`/`SURVIVAL_END_EVENT`. Such a template
+   only applies to datasets using that vocabulary, so say so in its description.
+   Making values bindable needs a new placeholder kind in `vis_generate`.
+
 3. **Regenerate:**
 
    ```bash

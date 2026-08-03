@@ -163,3 +163,65 @@ def test_binby_requires_a_quantitative_field():
                     f"{enforced.get(base) or 'nothing'}"
                 )
     assert not gaps, "binby over unconstrained fields:\n" + "\n".join(gaps)
+
+
+def test_cardinality_cap_applies_only_to_encoded_fields():
+    """A grouping key the pipeline rolls up is never drawn, so it isn't capped.
+
+    The >50 cap exists because an axis or legend cannot show hundreds of
+    categories. Applying it to a groupby-only key blocked per-subject aggregation
+    (grouping an event log by patient id) for a readability problem that cannot
+    happen. Encoded fields must still be capped.
+    """
+    from udiagent.vis_generate import validate_bindings
+
+    schema = {
+        "entities": {
+            "events": {
+                "url": "events.csv",
+                "fields": {
+                    "subject_id": {"type": "nominal", "cardinality": 500},
+                    "kind": {"type": "nominal", "cardinality": 4},
+                    "day": {"type": "quantitative", "cardinality": 300},
+                },
+            }
+        },
+        "relationships": [],
+    }
+
+    # <F1> is only a grouping key; <F2> is drawn on the x axis.
+    grouped_only = json.dumps(
+        {
+            "source": {"name": "<E>", "source": "<E.url>"},
+            "transformation": [
+                {"groupby": "<F1:n>"},
+                {"rollup": {"n": {"op": "count"}}},
+            ],
+            "representation": {
+                "mark": "bar",
+                "mapping": [
+                    {"encoding": "x", "field": "<F2:n>", "type": "nominal"},
+                    {"encoding": "y", "field": "n", "type": "quantitative"},
+                ],
+            },
+        }
+    )
+    assert (
+        validate_bindings(grouped_only, {"E": "events", "F1": "subject_id", "F2": "kind"}, schema)
+        == []
+    ), "a high-cardinality grouping key that is never encoded must be allowed"
+
+    encoded = json.dumps(
+        {
+            "source": {"name": "<E>", "source": "<E.url>"},
+            "transformation": [{"groupby": "<F1:n>"}],
+            "representation": {
+                "mark": "bar",
+                "mapping": [{"encoding": "x", "field": "<F1:n>", "type": "nominal"}],
+            },
+        }
+    )
+    errors = validate_bindings(encoded, {"E": "events", "F1": "subject_id"}, schema)
+    assert any("too many" in e for e in errors), (
+        "a high-cardinality field that IS encoded must still be rejected"
+    )

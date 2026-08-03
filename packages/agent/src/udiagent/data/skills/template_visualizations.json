@@ -14,7 +14,8 @@
     "description": "Counts entities grouped by a nominal field, displayed as a vertical bar chart.",
     "design_considerations": "Vertical orientation chosen because category count is small (<=4), keeping x-axis labels readable.",
     "tasks": "Compare counts across categories; identify the most or least common category; assess the range of counts.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -31,7 +32,8 @@
     "description": "Counts entities grouped by a nominal field, displayed as a horizontal bar chart.",
     "design_considerations": "Horizontal orientation chosen because category count is high (>4), allowing longer labels on the y-axis.",
     "tasks": "Compare counts across categories; identify the most or least common category; assess the range of counts.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["How many <E1> are there, grouped by <E2.F:n>?"],
@@ -45,7 +47,8 @@
     "description": "Joins two entities and counts records grouped by a field from the related entity, displayed as a vertical bar chart.",
     "design_considerations": "Cross-entity join groups by a field not native to the counted entity. Vertical orientation for small category counts (<=4).",
     "tasks": "Compare counts across categories from a related entity; discover cross-entity frequency patterns.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["How many <E1> are there, grouped by <E2.F:n>?"],
@@ -59,7 +62,8 @@
     "description": "Joins two entities and counts records grouped by a field from the related entity, displayed as a horizontal bar chart.",
     "design_considerations": "Cross-entity join with horizontal orientation for higher category counts (>4).",
     "tasks": "Compare counts across categories from a related entity; discover cross-entity frequency patterns.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -76,7 +80,8 @@
     "description": "Shows the pre-aggregated cube measure for each category of a nominal dimension as a bar chart.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube.",
     "tasks": "Compare the measure across categories; identify the most or least common category.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -92,7 +97,8 @@
     "description": "Shows the pre-aggregated cube measure across the values of a quantitative dimension as a bar chart.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube.",
     "tasks": "Assess how the measure is distributed across a numeric dimension.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -108,7 +114,8 @@
     "description": "Joins two entities and produces a vertical stacked bar chart of counts grouped by two nominal fields.",
     "design_considerations": "Stacked bars show part-to-whole composition within each category. Vertical layout for small category counts (<=4). Color encodes the secondary grouping field from the related entity. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks": "Compare group compositions across categories; identify dominant sub-groups within each bar.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -124,7 +131,8 @@
     "description": "Joins two entities and produces a horizontal stacked bar chart of counts grouped by two nominal fields.",
     "design_considerations": "Horizontal orientation for higher category counts (>4). Color encodes the primary grouping field. Cross-entity join required. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks": "Compare group compositions across categories; identify dominant sub-groups within each bar.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -140,7 +148,8 @@
     "description": "Counts entities grouped by two nominal fields, displayed as a vertical stacked bar chart.",
     "design_considerations": "Vertical stacked layout for small category counts (<=4). Color encodes the sub-group field; x-axis shows the primary grouping. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks": "Compare group compositions across categories; identify dominant sub-groups within each bar.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -157,7 +166,8 @@
     "description": "Counts entities grouped by two nominal fields, displayed as a horizontal stacked bar chart.",
     "design_considerations": "Horizontal stacked layout for higher category counts (>4). Color encodes the sub-group; stacking shows part-to-whole within each bar. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks": "Compare group compositions across categories; identify dominant sub-groups within each bar.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -174,7 +184,8 @@
     "description": "Shows the pre-aggregated cube measure by two nominal dimensions as a vertical stacked bar chart.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. Color encodes the sub-group; prefer the dimension with fewer categories for color.",
     "tasks": "Compare group compositions across categories; identify dominant sub-groups.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the count of <F1:n> for each <F2:n>?"],
@@ -188,7 +199,8 @@
     "description": "Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) vertical bar chart.",
     "design_considerations": "Uses xOffset for side-by-side grouping, allowing direct comparison between sub-groups. Suitable for small category counts (<=4).",
     "tasks": "Directly compare sub-group counts within and across categories.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the count of <F1:n> for each <F2:n>?"],
@@ -202,7 +214,8 @@
     "description": "Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) horizontal bar chart.",
     "design_considerations": "Uses yOffset for side-by-side grouping in horizontal orientation. Chosen when at least one field has more than 4 categories.",
     "tasks": "Directly compare sub-group counts within and across categories.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -218,7 +231,8 @@
     "description": "Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) bar chart.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. xOffset gives side-by-side grouping for direct comparison of the sub-group within each category.",
     "tasks": "Directly compare sub-group values within and across categories.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the proportion of <F1:n> for each <F2:n>?"],
@@ -232,7 +246,8 @@
     "description": "Shows the relative frequency (proportion) of one nominal field within each category of another, as a vertical normalized bar chart.",
     "design_considerations": "Normalization computes proportions per group, enabling fair comparison across groups of different sizes. Vertical layout for small category counts (<=4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks": "Compare relative proportions across categories; identify which sub-groups dominate in each group.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the proportion of <F1:n> for each <F2:n>?"],
@@ -246,7 +261,8 @@
     "description": "Shows the relative frequency (proportion) of one nominal field within each category of another, as a horizontal normalized bar chart.",
     "design_considerations": "Normalization for proportional comparison. Horizontal layout for higher category counts (>4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks": "Compare relative proportions across categories; identify which sub-groups dominate in each group.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -262,7 +278,8 @@
     "description": "Shows the relative proportion of one nominal dimension within each category of another as a normalized stacked bar chart.",
     "design_considerations": "First filters to the two-dimension marginal (expanded from the schema), then sums the measure per primary-dimension group and divides each cell by its group total to obtain proportions. Color is preferably the dimension with fewer categories.",
     "tasks": "Compare relative proportions across categories; identify dominant sub-groups.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the minimum <F1:q> for each <F2:n>?"],
@@ -276,7 +293,8 @@
     "description": "Computes the minimum of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the minimum aggregate value for easy comparison.",
     "tasks": "Compare the minimum value across categories; identify which group has the highest or lowest minimum.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the minimum <F1:q> for each <F2:n>?"],
@@ -290,7 +308,8 @@
     "description": "Computes the minimum of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the minimum aggregate value.",
     "tasks": "Compare the minimum value across categories; identify which group has the highest or lowest minimum.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the maximum <F1:q> for each <F2:n>?"],
@@ -304,7 +323,8 @@
     "description": "Computes the maximum of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the maximum aggregate value for easy comparison.",
     "tasks": "Compare the maximum value across categories; identify which group has the highest or lowest maximum.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the maximum <F1:q> for each <F2:n>?"],
@@ -318,7 +338,8 @@
     "description": "Computes the maximum of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the maximum aggregate value.",
     "tasks": "Compare the maximum value across categories; identify which group has the highest or lowest maximum.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the average <F1:q> for each <F2:n>?"],
@@ -332,7 +353,8 @@
     "description": "Computes the average of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the average aggregate value for easy comparison.",
     "tasks": "Compare the average value across categories; identify which group has the highest or lowest average.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the average <F1:q> for each <F2:n>?"],
@@ -346,7 +368,8 @@
     "description": "Computes the average of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the average aggregate value.",
     "tasks": "Compare the average value across categories; identify which group has the highest or lowest average.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the median <F1:q> for each <F2:n>?"],
@@ -360,7 +383,8 @@
     "description": "Computes the median of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the median aggregate value for easy comparison.",
     "tasks": "Compare the median value across categories; identify which group has the highest or lowest median.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the median <F1:q> for each <F2:n>?"],
@@ -374,7 +398,8 @@
     "description": "Computes the median of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the median aggregate value.",
     "tasks": "Compare the median value across categories; identify which group has the highest or lowest median.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the total <F1:q> for each <F2:n>?"],
@@ -388,7 +413,8 @@
     "description": "Computes the total of a quantitative field for each category, displayed as a horizontal bar chart.",
     "design_considerations": "Horizontal orientation for many categories (>4). Bar length encodes the total aggregate value for easy comparison.",
     "tasks": "Compare the total value across categories; identify which group has the highest or lowest total.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the total <F1:q> for each <F2:n>?"],
@@ -402,7 +428,8 @@
     "description": "Computes the total of a quantitative field for each category, displayed as a vertical bar chart.",
     "design_considerations": "Vertical orientation for few categories (<=4). Bar height encodes the total aggregate value.",
     "tasks": "Compare the total value across categories; identify which group has the highest or lowest total.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -425,7 +452,8 @@
     "description": "Plots two quantitative fields as a scatterplot to explore their relationship.",
     "design_considerations": "Point marks on two quantitative axes reveal correlations, clusters, and outliers. Data size capped at 100k rows for rendering performance.",
     "tasks": "Assess correlation between two variables; identify clusters, outliers, extremes, and the range of both variables.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["Make a stacked bar chart of <F1:n> and <F2:n>?"],
@@ -439,7 +467,8 @@
     "description": "Creates a vertical stacked bar chart of counts grouped by two nominal fields.",
     "design_considerations": "Vertical stacked layout for small primary category counts (<=4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks": "Compare group compositions across categories; assess the overall range of counts.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["Make a stacked bar chart of <F1:n> and <F2:n>?"],
@@ -453,7 +482,8 @@
     "description": "Creates a horizontal stacked bar chart of counts grouped by two nominal fields.",
     "design_considerations": "Horizontal stacked layout for higher primary category counts (>4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
     "tasks": "Compare group compositions across categories; assess the overall range of counts.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["Make a pie chart of <F:n>?"],
@@ -467,7 +497,8 @@
     "description": "Creates a pie chart showing the proportional distribution of a nominal field.",
     "design_considerations": "Arc marks with theta encoding map proportion to angle. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
     "tasks": "Assess part-to-whole proportions; identify the dominant category.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["Make a donut chart of <F:n>?"],
@@ -481,7 +512,8 @@
     "description": "Creates a donut chart showing the proportional distribution of a nominal field.",
     "design_considerations": "Donut variant with inner/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
     "tasks": "Assess part-to-whole proportions; identify the dominant category.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -497,7 +529,8 @@
     "description": "Shows the proportional cube measure for each category of a nominal dimension as a pie chart.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. The measure maps to angle and the renderer normalizes each slice against the total. Best for a small number of categories.",
     "tasks": "Assess part-to-whole proportions; identify the dominant category.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -513,7 +546,8 @@
     "description": "Shows the proportional cube measure for each category of a nominal dimension as a donut chart.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. The measure maps to angle and the renderer normalizes each slice against the total. Best for a small number of categories.",
     "tasks": "Assess part-to-whole proportions; identify the dominant category.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["How many <E> records are there?"],
@@ -527,7 +561,8 @@
     "description": "Counts the total number of records in an entity and displays the result as a single-row table.",
     "design_considerations": "Simple rollup with no visual encoding beyond the count value. Useful as a quick data quality or size check.",
     "tasks": "Retrieve the total record count for an entity.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -549,7 +584,8 @@
     "description": "Displays the raw data for an entity as a table.",
     "design_considerations": "No aggregation or transformation applied; shows the underlying data as-is for exploration.",
     "tasks": "Explore raw data; retrieve specific values; understand field values and ranges; identify anomalies and extremes.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -571,7 +607,8 @@
     "description": "Joins two related entities and displays the combined data as a table.",
     "design_considerations": "Cross-entity join enriches the view by combining fields from two related entities. Requires a valid foreign-key relationship.",
     "tasks": "Explore combined data from two related entities; retrieve specific values; identify anomalies and extremes.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What <E2> has the most <E1>?"],
@@ -585,7 +622,8 @@
     "description": "Finds which related entity record has the highest count of associated records, displayed as a ranked table with bar indicators.",
     "design_considerations": "Groups by foreign key, counts, ranks, and highlights the top record with color encoding. Bar marks on the count column provide visual comparison.",
     "tasks": "Identify the record with the most associated entities; compare counts across records.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What Record in <E> has the largest <F:q>?"],
@@ -599,7 +637,8 @@
     "description": "Finds the record with the largest value in a quantitative field, displayed as a ranked table with bar indicators.",
     "design_considerations": "Sorts descending by the target field, derives a rank, and highlights the top record with color. Bar marks provide visual magnitude comparison.",
     "tasks": "Identify the record with the largest value; compare values across records.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What Record in <E2> has the largest <E1> <E1.F:q>?"],
@@ -613,7 +652,8 @@
     "description": "Joins two entities, computes the maximum of a quantitative field per group, and ranks the results in a table with bar indicators.",
     "design_considerations": "Cross-entity join followed by group-level max aggregation. Highlights the top record with color encoding.",
     "tasks": "Identify which related record has the largest aggregated value; compare across groups.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What Record in <E> has the smallest <F:q>?"],
@@ -627,7 +667,8 @@
     "description": "Finds the record with the smallest value in a quantitative field, displayed as a ranked table with conditional formatting.",
     "design_considerations": "Sorts ascending by the target field, derives a rank, and highlights the top record with background color. Uses rect mark for row-level highlighting.",
     "tasks": "Identify the record with the smallest value; compare values across records.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What Record in <E2> has the smallest <E1> <E1.F:q>?"],
@@ -641,7 +682,8 @@
     "description": "Joins two entities, computes the minimum of a quantitative field per group, and ranks the results in a table with conditional formatting.",
     "design_considerations": "Cross-entity join followed by group-level min aggregation. Highlights the top record with background color via rect mark.",
     "tasks": "Identify which related record has the smallest aggregated value; compare across groups.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["Order the <E> by <F:q>?"],
@@ -655,7 +697,8 @@
     "description": "Sorts entity records by a quantitative field and displays the result as an ordered table with in-cell bar marks.",
     "design_considerations": "Ordered by the quantitative field with nulls filtered out. In-cell bar marks provide visual comparison of magnitude alongside the text values.",
     "tasks": "View records in sorted order; compare relative magnitudes.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the range of <E> <F:q> values?"],
@@ -669,7 +712,8 @@
     "description": "Computes the minimum and maximum of a quantitative field and displays them as a single-row table.",
     "design_considerations": "Simple rollup of min and max. Filters out nulls before aggregation for accuracy.",
     "tasks": "Determine the range of a quantitative field.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the range of <E> <F:n> values?"],
@@ -683,7 +727,8 @@
     "description": "Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks.",
     "design_considerations": "Groups by the nominal field and counts occurrences, sorted descending so the bars are comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows relative frequency but not the value.",
     "tasks": "Determine the range (distinct values) of a nominal field; compare category frequencies.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -699,7 +744,8 @@
     "description": "Computes the min and max of a quantitative field for each category of a nominal field, displayed as a table with range bar marks.",
     "design_considerations": "Groups by nominal field, computes min/max and derived range, then orders by range descending. Uses x/x2 encoding to show the span between min and max values.",
     "tasks": "Compare the spread of a quantitative field across categories; identify which group has the widest or narrowest range.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the most frequent <F:n>?"],
@@ -713,7 +759,8 @@
     "description": "Finds the most frequent value of a nominal field, displayed as a ranked table with bar marks and conditional formatting.",
     "design_considerations": "Groups by nominal field, counts, ranks, and highlights the top value. Combines bar marks for count comparison and background color for emphasis.",
     "tasks": "Identify the most frequent category; compare frequencies across all categories.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -730,7 +777,8 @@
     "description": "Shows the grand-total cube measure as a single-row table.",
     "design_considerations": "Reads the grand-total row directly by filtering to the marginal where every dimension is empty; no aggregation is performed.",
     "tasks": "Retrieve the overall total.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -747,7 +795,8 @@
     "description": "Lists each category of a nominal dimension with its pre-aggregated measure as a sorted table with in-cell bars.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. Ordered by the measure descending, with the measure drawn as both an in-cell bar and a number so the value is readable and not just its length.",
     "tasks": "Determine the distinct values of a dimension; compare category counts.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -764,7 +813,8 @@
     "description": "Shows the cumulative distribution function (CDF) of a quantitative field as a line chart.",
     "design_considerations": "Sorts by value, computes rolling percentile, then sorts by percentile so the line is a monotonic step. The CDF reveals the full distribution shape including median, quartiles, and tails.",
     "tasks": "Characterize the distribution of a variable; identify median, quartiles, and concentration of values.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -781,7 +831,8 @@
     "description": "Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
     "design_considerations": "Groups by the nominal field, sorts within groups, computes the per-group rolling percentile, then sorts by percentile so each line is a monotonic step. Color encodes group identity. Limited to fewer than 5 groups for readability.",
     "tasks": "Compare distributions across groups; identify which groups have higher or lower concentrations of values.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -798,7 +849,32 @@
     "description": "Shows the pre-aggregated cube measure over an ordered dimension (e.g. time) as a line chart.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. The axis is ordered ascending; a temporal dimension is encoded as an ordered (ordinal) axis.",
     "tasks": "Identify trends over time; spot peaks, troughs, and seasonality.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
+  },
+  {
+    "query_templates": [
+      "Show a survival curve for <E>.",
+      "Plot survival time from diagnosis to death for each <F1:n>.",
+      "What fraction of subjects are still alive over time after diagnosis?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F3:q>\"}, \"right\": {\"literal\": null}}}, {\"derive\": {\"start day\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"<F2:n>\"}, \"right\": {\"literal\": \"Initial CNS Tumor\"}}, \"then\": {\"field\": \"<F3>\"}, \"else\": {\"literal\": null}}, \"end day\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"<F2>\"}, \"right\": {\"literal\": \"Deceased\"}}, \"then\": {\"field\": \"<F3>\"}, \"else\": {\"literal\": null}}}}, {\"groupby\": \"<F1:n>\"}, {\"rollup\": {\"start day\": {\"op\": \"min\", \"field\": \"start day\"}, \"end day\": {\"op\": \"max\", \"field\": \"end day\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"start day\"}, \"right\": {\"literal\": null}}}, {\"derive\": {\"subjects\": {\"agg\": \"count\"}}}, {\"derive\": {\"survival days\": {\"op\": \"-\", \"left\": {\"field\": \"end day\"}, \"right\": {\"field\": \"start day\"}}}}, {\"filter\": {\"op\": \"&&\", \"left\": {\"op\": \"!=\", \"left\": {\"field\": \"survival days\"}, \"right\": {\"literal\": null}}, \"right\": {\"op\": \">=\", \"left\": {\"field\": \"survival days\"}, \"right\": {\"literal\": 0}}}}, {\"orderby\": {\"field\": \"survival days\", \"order\": \"asc\"}}, {\"derive\": {\"survival probability\": {\"rolling\": {\"expression\": {\"op\": \"-\", \"left\": {\"literal\": 1}, \"right\": {\"op\": \"/\", \"left\": {\"agg\": \"count\"}, \"right\": {\"field\": \"subjects\"}}}}}}}], \"representation\": {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"survival days\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"survival probability\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "line",
+    "chart_complexity": "extra complex",
+    "spec_key_count": 48,
+    "task_types": ["Characterize_Distribution", "Compute_Derived_Value"],
+    "tags": ["line_item", "line"],
+    "description": "Survival curve built from an event log: pairs each subject's 'Initial CNS Tumor' and 'Deceased' events to derive a survival time, then plots the falling fraction of subjects without the end event.",
+    "design_considerations": "Survival time is not stored anywhere; it is reconstructed as the gap between two events for the same subject, so the template groups the event log by subject id and rolls it up to one row each before computing anything. The subject id is only a grouping key and is never encoded, so its cardinality does not matter. IMPORTANT: this is a crude survival curve, not a Kaplan-Meier estimate. Subjects with no end event are kept in the denominator but contribute no drop, which assumes every one of them was followed for the whole window. A true Kaplan-Meier estimator reweights by the number still at risk at each event time; that needs a cumulative product and per-time at-risk counts, which the grammar cannot express today. Read the curve as an observed-survival fraction over the cohort, and do not use it where differences in follow-up length matter.",
+    "tasks": "Judge how survival falls over time after a starting event; compare the observed survival fraction of a cohort at a given number of days.",
+    "review_hint": "Event-type values are hardcoded to PCX's vocabulary ('Initial CNS Tumor', 'Deceased') because placeholders can only bind column names, not literal values. Check the caveat about censoring in the design considerations before approving.",
+    "preview_bindings": {
+      "E": "Event",
+      "F1": "research_id",
+      "F2": "event_type",
+      "F3": "event_date"
+    }
   },
   {
     "query_templates": [
@@ -815,7 +891,8 @@
     "description": "Displays the count of entities for each combination of two nominal fields as a heatmap with labeled cells.",
     "design_considerations": "Rect marks with quantitative color encoding show density. Overlaid text marks display exact counts. Text color adapts based on cell intensity for readability. The field with more unique values is preferably placed on the y-axis, where longer labels remain readable.",
     "tasks": "Identify clusters or patterns in the co-occurrence of two fields; compare counts across combinations; find correlations.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -831,7 +908,8 @@
     "description": "Displays the average of a quantitative field for each combination of two nominal fields as a heatmap.",
     "design_considerations": "Uses three fields: a quantitative measure aggregated by average, and two nominal axes. Color encodes the aggregate value. The field with more unique values is preferably placed on the y-axis for better label readability.",
     "tasks": "Identify patterns in the average value across two categorical dimensions; find combinations with extreme values.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -848,7 +926,8 @@
     "description": "Shows the pre-aggregated cube measure for each combination of two nominal dimensions as a labeled heatmap.",
     "design_considerations": "Reads the cube marginal by filtering to rows where the chosen dimension(s) are present and every other dimension is empty; the measure is mapped directly with no re-aggregation. The marginal filter is expanded from the per-request schema's dimension list, so this template works for any cube. The measure maps to cell color with overlaid contrast-aware value labels. Prefer the dimension with more categories on the y-axis.",
     "tasks": "Identify clusters or patterns across two dimensions; compare values across combinations.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -864,7 +943,8 @@
     "description": "Plots two quantitative fields as a scatterplot with points colored by a nominal field to reveal group-level clusters.",
     "design_considerations": "Adds color encoding to a standard scatterplot to separate groups visually. Limited to fewer than 8 color categories for perceptual clarity.",
     "tasks": "Identify clusters that separate by group; assess whether the relationship between two quantitative fields differs across groups.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -881,7 +961,8 @@
     "description": "Shows the distribution of a quantitative field as a histogram with automatically computed bins.",
     "design_considerations": "Uses binby to create equal-width bins. Rect marks span from bin start to bin end on x, with count on y.",
     "tasks": "Characterize the shape of a distribution; identify modes, skewness, and gaps.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the distribution of <F:q>?"],
@@ -895,7 +976,8 @@
     "description": "Shows the distribution of a quantitative field as a smooth density curve (KDE) rendered as an area chart.",
     "design_considerations": "Kernel density estimation produces a smooth curve. Area mark fills below the density line. Used for moderate cardinality (50-250) where a smooth estimate is more informative than binning.",
     "tasks": "Characterize the shape of a distribution; identify modes and overall density patterns.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": ["What is the distribution of <F:q>?"],
@@ -909,7 +991,8 @@
     "description": "Shows the distribution of a quantitative field as individual points along a single axis.",
     "design_considerations": "Point marks on a single quantitative x-axis. Best for small datasets (50 or fewer values) where individual observations are meaningful and overplotting is minimal.",
     "tasks": "Characterize the distribution; identify individual values, clusters, and outliers.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -925,7 +1008,8 @@
     "description": "Compares the distribution of a quantitative field across categories using overlapping density curves (KDE) with area and line marks.",
     "design_considerations": "Per-group KDE with semi-transparent area fills and line outlines. Color encodes group identity. Limited to fewer than 4 groups to avoid excessive overlap. Opacity set to 0.25 for layering.",
     "tasks": "Compare distribution shapes across groups; identify shifts in central tendency or spread.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -941,7 +1025,8 @@
     "description": "Compares the distribution of a quantitative field across categories using dot strips, with one row per category.",
     "design_considerations": "Points plotted on a quantitative x-axis with nominal y-axis for group separation. Color reinforces group identity. Best for small datasets (50 or fewer values per group).",
     "tasks": "Compare distributions across groups; identify clusters and outliers within each group.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -958,7 +1043,8 @@
     "description": "Analyzes data completeness by counting and computing the percentage of records with non-null values in a specified field.",
     "design_considerations": "Derives total count before filtering, then computes valid count and percentage. Percentage bar with 50% reference line provides visual context for data completeness.",
     "tasks": "Assess data completeness for a field; determine how many records have valid values and what proportion.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
@@ -975,6 +1061,7 @@
     "description": "Analyzes data quality by counting and computing the percentage of records with null values in a specified field.",
     "design_considerations": "Derives null count as total minus valid count. Percentage bar shows the null proportion with a 50% reference line.",
     "tasks": "Assess data quality; determine how many records are missing a value and what proportion.",
-    "review_hint": ""
+    "review_hint": "",
+    "preview_bindings": null
   }
 ]

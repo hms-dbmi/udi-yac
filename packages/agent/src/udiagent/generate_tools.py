@@ -77,6 +77,8 @@ def _derive_tool_name(template: dict, index: int) -> str:
         suffixes.append("normalized")
     if "color" in desc or "colored" in desc:
         suffixes.append("by_color")
+    if "survival" in desc:
+        suffixes.append("survival")
     if "cumulative" in desc or "cdf" in desc:
         suffixes.append("cdf")
     if "density" in desc or "kde" in desc:
@@ -256,12 +258,16 @@ def _generate_single_entity_tool(
         seen.add(param_name)
 
         field_type = _get_field_type_for_placeholder(ph)
-        description = _build_field_description(field_type, encoding_info.get(base))
+        # Deliberately NOT named `description`: that holds the *tool* description
+        # built above, and shadowing it here used to leak the last parameter's
+        # blurb ("any type field.") out as the tool's own description — leaving
+        # every single-entity tool with nothing for the model to select on.
+        param_description = _build_field_description(field_type, encoding_info.get(base))
         if base.startswith("D"):
-            description = "cube " + description.replace("field", "dimension", 1)
+            param_description = "cube " + param_description.replace("field", "dimension", 1)
         properties[param_name] = {
             "type": "string",
-            "description": description,
+            "description": param_description,
         }
         required.append(param_name)
         param_map[param_name] = base

@@ -405,6 +405,41 @@ def instantiate_template(spec_template, bindings, schema):
     return json.loads(spec)
 
 
+def _encoded_placeholders(spec_template):
+    """Placeholder names that end up drawn on some visual channel.
+
+    The >50 cardinality cap below exists because a chart cannot legibly show
+    hundreds of categories on an axis or in a legend. That reasoning only applies
+    to fields that are actually *encoded*. A placeholder used solely as a grouping
+    key — e.g. grouping an event log per patient id before rolling it up to one row
+    each — is collapsed by the rollup and never rendered, so capping it would
+    block a legitimate aggregation for a readability problem that cannot occur.
+    """
+    encoded = set()
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return encoded
+
+    reps = spec.get("representation", {})
+    reps = reps if isinstance(reps, list) else [reps]
+    for rep in reps:
+        if not isinstance(rep, dict):
+            continue
+        mappings = rep.get("mapping", [])
+        mappings = mappings if isinstance(mappings, list) else [mappings]
+        for mapping in mappings:
+            if not isinstance(mapping, dict):
+                continue
+            # `field` is what gets drawn; `column` only places a table column.
+            for value in (mapping.get("field"), mapping.get("column")):
+                if not isinstance(value, str):
+                    continue
+                for placeholder in re.findall(r"<([^>]+)>", value):
+                    encoded.add(placeholder.split(":")[0])
+    return encoded
+
+
 def _extract_xy_placeholders(spec_template):
     """Extract placeholder names used in x and y encodings from a spec template."""
     result = {}
@@ -471,6 +506,8 @@ def validate_bindings(spec_template, bindings, schema):
         )
         if not has_rel:
             errors.append(f"No relationship between '{e1}' and '{e2}'")
+
+    encoded_placeholders = _encoded_placeholders(spec_template)
 
     # Check that x and y encodings don't resolve to the same field
     xy_placeholders = _extract_xy_placeholders(spec_template)
@@ -586,7 +623,13 @@ def validate_bindings(spec_template, bindings, schema):
                     f"Available {expected_type} fields: {', '.join(matching)}"
                 )
 
-        if (actual_type == "nominal" or actual_type == "ordinal") and cardinality > 50:
+        # Only cap fields that are actually drawn; a grouping key the pipeline
+        # rolls up never reaches a visual channel. See _encoded_placeholders.
+        if (
+            (actual_type == "nominal" or actual_type == "ordinal")
+            and cardinality > 50
+            and key in encoded_placeholders
+        ):
             errors.append(
                 f"Field '{field_name}' has {cardinality} unique values, which is too many "
                 f"for a visualization (max 50). Choose a different encoding or visualization."

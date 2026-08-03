@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 63
+Tools: 64
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -244,6 +244,20 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}, {"orderby": '
  '{"field": "<D>", "order": "asc"}}], "representation": {"mark": "line", "mapping": [{"encoding": "x", "field": '
  '"<D:o>", "type": "ordinal"}, {"encoding": "y", "field": "<M>", "type": "quantitative"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
+ '"<F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<F2:n>"}, '
+ '"right": {"literal": "Initial CNS Tumor"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}, "end day": {"if": '
+ '{"op": "==", "left": {"field": "<F2>"}, "right": {"literal": "Deceased"}}, "then": {"field": "<F3>"}, "else": '
+ '{"literal": null}}}}, {"groupby": "<F1:n>"}, {"rollup": {"start day": {"op": "min", "field": "start day"}, "end '
+ 'day": {"op": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": '
+ '{"literal": null}}}, {"derive": {"subjects": {"agg": "count"}}}, {"derive": {"survival days": {"op": "-", "left": '
+ '{"field": "end day"}, "right": {"field": "start day"}}}}, {"filter": {"op": "&&", "left": {"op": "!=", "left": '
+ '{"field": "survival days"}, "right": {"literal": null}}, "right": {"op": ">=", "left": {"field": "survival days"}, '
+ '"right": {"literal": 0}}}}, {"orderby": {"field": "survival days", "order": "asc"}}, {"derive": {"survival '
+ 'probability": {"rolling": {"expression": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": '
+ '"count"}, "right": {"field": "subjects"}}}}}}}], "representation": {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "survival days", "type": "quantitative"}, {"encoding": "y", "field": "survival probability", "type": '
+ '"quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F2>", "<F1>"]}, {"rollup": '
  '{"count <E>": {"op": "count"}}}, {"derive": {"udi_internal_percentile": {"op": "/", "left": {"field": "count <E>"}, '
  '"right": {"agg": "max", "field": "count <E>"}}}}, {"derive": {"udi_internal_text_color_threshold": {"if": {"op": '
@@ -313,7 +327,11 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
 
 
 # OpenAI function-calling tool definitions
-TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
+TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by a nominal field, displayed as a vertical bar '
+                              'chart. Design: Vertical orientation chosen because category count is small (<=4), '
+                              'keeping x-axis labels readable. Tasks: Compare counts across categories; identify the '
+                              'most or least common category; assess the range of counts. Query patterns: How many <E> '
+                              'are there, grouped by <F:n>?; Make a bar chart of <E> <F:n>.',
                'name': 'vis_000_barchart_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -323,7 +341,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[barchart] Counts entities grouped by a nominal field, displayed as a horizontal bar '
+                              'chart. Design: Horizontal orientation chosen because category count is high (>4), '
+                              'allowing longer labels on the y-axis. Tasks: Compare counts across categories; identify '
+                              'the most or least common category; assess the range of counts. Query patterns: How many '
+                              '<E> are there, grouped by <F:n>?; Make a bar chart of <E> <F:n>.',
                'name': 'vis_001_barchart_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -367,7 +389,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity1', 'entity2', 'entity2_field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube nominal dimension, encodes x-axis.',
+ {'function': {'description': '[barchart] Shows the pre-aggregated cube measure for each category of a nominal '
+                              'dimension as a bar chart. Design: Reads the cube marginal by filtering to rows where '
+                              'the chosen dimension(s) are present and every other dimension is empty; the measure is '
+                              'mapped directly with no re-aggregation. The marginal filter is expanded from the '
+                              "per-request schema's dimension list, so this template works for any cube. Tasks: "
+                              'Compare the measure across categories; identify the most or least common category. '
+                              'Query patterns: How many are there by <dimension>?; Make a bar chart of the measure by '
+                              'a categorical dimension.',
                'name': 'vis_004_barchart_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension': {'description': 'cube nominal dimension, encodes x-axis.',
@@ -377,7 +406,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube quantitative dimension, encodes x-axis.',
+ {'function': {'description': '[barchart] Shows the pre-aggregated cube measure across the values of a quantitative '
+                              'dimension as a bar chart. Design: Reads the cube marginal by filtering to rows where '
+                              'the chosen dimension(s) are present and every other dimension is empty; the measure is '
+                              'mapped directly with no re-aggregation. The marginal filter is expanded from the '
+                              "per-request schema's dimension list, so this template works for any cube. Tasks: Assess "
+                              'how the measure is distributed across a numeric dimension. Query patterns: Make a bar '
+                              'chart of the measure across a quantitative dimension.',
                'name': 'vis_005_barchart_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension': {'description': 'cube quantitative dimension, encodes '
@@ -430,7 +465,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity1', 'entity2', 'entity1_field', 'entity2_field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
+ {'function': {'description': '[stacked_bar] Counts entities grouped by two nominal fields, displayed as a vertical '
+                              'stacked bar chart. Design: Vertical stacked layout for small category counts (<=4). '
+                              'Color encodes the sub-group field; x-axis shows the primary grouping. Color is '
+                              'preferably mapped to the variable with fewer unique values for better discriminability. '
+                              'Tasks: Compare group compositions across categories; identify dominant sub-groups '
+                              'within each bar. Query patterns: How many <E> are there, grouped by <F1:n> and <F2:n>?',
                'name': 'vis_008_stacked_bar_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -442,7 +482,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[stacked_bar] Counts entities grouped by two nominal fields, displayed as a horizontal '
+                              'stacked bar chart. Design: Horizontal stacked layout for higher category counts (>4). '
+                              'Color encodes the sub-group; stacking shows part-to-whole within each bar. Color is '
+                              'preferably mapped to the variable with fewer unique values for better discriminability. '
+                              'Tasks: Compare group compositions across categories; identify dominant sub-groups '
+                              'within each bar. Query patterns: How many <E> are there, grouped by <F1:n> and <F2:n>?; '
+                              'What is the count of <F1:n> for each <F2:n>?',
                'name': 'vis_009_stacked_bar_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -454,7 +500,15 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube nominal dimension, encodes color.',
+ {'function': {'description': '[stacked_bar] Shows the pre-aggregated cube measure by two nominal dimensions as a '
+                              'vertical stacked bar chart. Design: Reads the cube marginal by filtering to rows where '
+                              'the chosen dimension(s) are present and every other dimension is empty; the measure is '
+                              'mapped directly with no re-aggregation. The marginal filter is expanded from the '
+                              "per-request schema's dimension list, so this template works for any cube. Color encodes "
+                              'the sub-group; prefer the dimension with fewer categories for color. Tasks: Compare '
+                              'group compositions across categories; identify dominant sub-groups. Query patterns: How '
+                              'many are there by <dimension1> and <dimension2>?; Make a stacked bar chart across two '
+                              'categorical dimensions.',
                'name': 'vis_010_stacked_bar_vert_stacked',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
@@ -466,7 +520,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'dimension1', 'dimension2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
+ {'function': {'description': '[stacked_bar] Counts entities grouped by two nominal fields, displayed as a grouped '
+                              '(side-by-side) vertical bar chart. Design: Uses xOffset for side-by-side grouping, '
+                              'allowing direct comparison between sub-groups. Suitable for small category counts '
+                              '(<=4). Tasks: Directly compare sub-group counts within and across categories. Query '
+                              'patterns: What is the count of <F1:n> for each <F2:n>?',
                'name': 'vis_011_stacked_bar_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -479,7 +537,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[stacked_bar] Counts entities grouped by two nominal fields, displayed as a grouped '
+                              '(side-by-side) horizontal bar chart. Design: Uses yOffset for side-by-side grouping in '
+                              'horizontal orientation. Chosen when at least one field has more than 4 categories. '
+                              'Tasks: Directly compare sub-group counts within and across categories. Query patterns: '
+                              'What is the count of <F1:n> for each <F2:n>?',
                'name': 'vis_012_stacked_bar_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -492,7 +554,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube nominal dimension, encodes x-axis sub-group, color.',
+ {'function': {'description': '[stacked_bar] Shows the pre-aggregated cube measure by two nominal dimensions as a '
+                              'grouped (side-by-side) bar chart. Design: Reads the cube marginal by filtering to rows '
+                              'where the chosen dimension(s) are present and every other dimension is empty; the '
+                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
+                              "the per-request schema's dimension list, so this template works for any cube. xOffset "
+                              'gives side-by-side grouping for direct comparison of the sub-group within each '
+                              'category. Tasks: Directly compare sub-group values within and across categories. Query '
+                              'patterns: Make a grouped (side-by-side) bar chart across two categorical dimensions.',
                'name': 'vis_013_stacked_bar_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
@@ -505,7 +574,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'dimension1', 'dimension2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
+ {'function': {'description': '[stacked_bar] Shows the relative frequency (proportion) of one nominal field within '
+                              'each category of another, as a vertical normalized bar chart. Design: Normalization '
+                              'computes proportions per group, enabling fair comparison across groups of different '
+                              'sizes. Vertical layout for small category counts (<=4). Color is preferably mapped to '
+                              'the variable with fewer unique values for better discriminability. Tasks: Compare '
+                              'relative proportions across categories; identify which sub-groups dominate in each '
+                              'group. Query patterns: What is the proportion of <F1:n> for each <F2:n>?',
                'name': 'vis_014_stacked_bar_freq_vert_normalized',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -517,7 +592,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[stacked_bar] Shows the relative frequency (proportion) of one nominal field within '
+                              'each category of another, as a horizontal normalized bar chart. Design: Normalization '
+                              'for proportional comparison. Horizontal layout for higher category counts (>4). Color '
+                              'is preferably mapped to the variable with fewer unique values for better '
+                              'discriminability. Tasks: Compare relative proportions across categories; identify which '
+                              'sub-groups dominate in each group. Query patterns: What is the proportion of <F1:n> for '
+                              'each <F2:n>?',
                'name': 'vis_015_stacked_bar_freq_horiz_normalized',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -529,7 +610,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube nominal dimension, encodes color.',
+ {'function': {'description': '[stacked_bar] Shows the relative proportion of one nominal dimension within each '
+                              'category of another as a normalized stacked bar chart. Design: First filters to the '
+                              'two-dimension marginal (expanded from the schema), then sums the measure per '
+                              'primary-dimension group and divides each cell by its group total to obtain proportions. '
+                              'Color is preferably the dimension with fewer categories. Tasks: Compare relative '
+                              'proportions across categories; identify dominant sub-groups. Query patterns: What is '
+                              'the proportion of <dimension2> for each <dimension1>?',
                'name': 'vis_016_stacked_bar_proportion_stacked_normalized',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
@@ -541,7 +628,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'dimension1', 'dimension2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[barchart] Computes the minimum of a quantitative field for each category, displayed as '
+                              'a horizontal bar chart. Design: Horizontal orientation for many categories (>4). Bar '
+                              'length encodes the minimum aggregate value for easy comparison. Tasks: Compare the '
+                              'minimum value across categories; identify which group has the highest or lowest '
+                              'minimum. Query patterns: What is the minimum <F1:q> for each <F2:n>?',
                'name': 'vis_017_barchart_min_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -552,7 +643,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
+ {'function': {'description': '[barchart] Computes the minimum of a quantitative field for each category, displayed as '
+                              'a vertical bar chart. Design: Vertical orientation for few categories (<=4). Bar height '
+                              'encodes the minimum aggregate value. Tasks: Compare the minimum value across '
+                              'categories; identify which group has the highest or lowest minimum. Query patterns: '
+                              'What is the minimum <F1:q> for each <F2:n>?',
                'name': 'vis_018_barchart_min_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -563,7 +658,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[barchart] Computes the maximum of a quantitative field for each category, displayed as '
+                              'a horizontal bar chart. Design: Horizontal orientation for many categories (>4). Bar '
+                              'length encodes the maximum aggregate value for easy comparison. Tasks: Compare the '
+                              'maximum value across categories; identify which group has the highest or lowest '
+                              'maximum. Query patterns: What is the maximum <F1:q> for each <F2:n>?',
                'name': 'vis_019_barchart_max_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -574,7 +673,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
+ {'function': {'description': '[barchart] Computes the maximum of a quantitative field for each category, displayed as '
+                              'a vertical bar chart. Design: Vertical orientation for few categories (<=4). Bar height '
+                              'encodes the maximum aggregate value. Tasks: Compare the maximum value across '
+                              'categories; identify which group has the highest or lowest maximum. Query patterns: '
+                              'What is the maximum <F1:q> for each <F2:n>?',
                'name': 'vis_020_barchart_max_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -585,7 +688,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[barchart] Computes the average of a quantitative field for each category, displayed as '
+                              'a horizontal bar chart. Design: Horizontal orientation for many categories (>4). Bar '
+                              'length encodes the average aggregate value for easy comparison. Tasks: Compare the '
+                              'average value across categories; identify which group has the highest or lowest '
+                              'average. Query patterns: What is the average <F1:q> for each <F2:n>?',
                'name': 'vis_021_barchart_avg_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -596,7 +703,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
+ {'function': {'description': '[barchart] Computes the average of a quantitative field for each category, displayed as '
+                              'a vertical bar chart. Design: Vertical orientation for few categories (<=4). Bar height '
+                              'encodes the average aggregate value. Tasks: Compare the average value across '
+                              'categories; identify which group has the highest or lowest average. Query patterns: '
+                              'What is the average <F1:q> for each <F2:n>?',
                'name': 'vis_022_barchart_avg_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -607,7 +718,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[barchart] Computes the median of a quantitative field for each category, displayed as '
+                              'a horizontal bar chart. Design: Horizontal orientation for many categories (>4). Bar '
+                              'length encodes the median aggregate value for easy comparison. Tasks: Compare the '
+                              'median value across categories; identify which group has the highest or lowest median. '
+                              'Query patterns: What is the median <F1:q> for each <F2:n>?',
                'name': 'vis_023_barchart_median_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -618,7 +733,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
+ {'function': {'description': '[barchart] Computes the median of a quantitative field for each category, displayed as '
+                              'a vertical bar chart. Design: Vertical orientation for few categories (<=4). Bar height '
+                              'encodes the median aggregate value. Tasks: Compare the median value across categories; '
+                              'identify which group has the highest or lowest median. Query patterns: What is the '
+                              'median <F1:q> for each <F2:n>?',
                'name': 'vis_024_barchart_median_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -629,7 +748,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis.',
+ {'function': {'description': '[barchart] Computes the total of a quantitative field for each category, displayed as a '
+                              'horizontal bar chart. Design: Horizontal orientation for many categories (>4). Bar '
+                              'length encodes the total aggregate value for easy comparison. Tasks: Compare the total '
+                              'value across categories; identify which group has the highest or lowest total. Query '
+                              'patterns: What is the total <F1:q> for each <F2:n>?',
                'name': 'vis_025_barchart_sum_horiz',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -640,7 +763,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
+ {'function': {'description': '[barchart] Computes the total of a quantitative field for each category, displayed as a '
+                              'vertical bar chart. Design: Vertical orientation for few categories (<=4). Bar height '
+                              'encodes the total aggregate value. Tasks: Compare the total value across categories; '
+                              'identify which group has the highest or lowest total. Query patterns: What is the total '
+                              '<F1:q> for each <F2:n>?',
                'name': 'vis_026_barchart_sum_vert',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -651,7 +778,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'quantitative field, encodes y-axis.',
+ {'function': {'description': '[scatterplot] Plots two quantitative fields as a scatterplot to explore their '
+                              'relationship. Design: Point marks on two quantitative axes reveal correlations, '
+                              'clusters, and outliers. Data size capped at 100k rows for rendering performance. Tasks: '
+                              'Assess correlation between two variables; identify clusters, outliers, extremes, and '
+                              'the range of both variables. Query patterns: Is there a correlation between <F1:q> and '
+                              '<F2:q>?; Make a scatterplot of <F1:q> and <F2:q>?',
                'name': 'vis_027_scatterplot_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -663,7 +795,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes color.',
+ {'function': {'description': '[stacked_bar] Creates a vertical stacked bar chart of counts grouped by two nominal '
+                              'fields. Design: Vertical stacked layout for small primary category counts (<=4). Color '
+                              'encodes the secondary field. Color is preferably mapped to the variable with fewer '
+                              'unique values for better discriminability. Tasks: Compare group compositions across '
+                              'categories; assess the overall range of counts. Query patterns: Make a stacked bar '
+                              'chart of <F1:n> and <F2:n>?',
                'name': 'vis_028_stacked_bar_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -675,7 +812,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes color.',
+ {'function': {'description': '[stacked_bar] Creates a horizontal stacked bar chart of counts grouped by two nominal '
+                              'fields. Design: Horizontal stacked layout for higher primary category counts (>4). '
+                              'Color encodes the secondary field. Color is preferably mapped to the variable with '
+                              'fewer unique values for better discriminability. Tasks: Compare group compositions '
+                              'across categories; assess the overall range of counts. Query patterns: Make a stacked '
+                              'bar chart of <F1:n> and <F2:n>?',
                'name': 'vis_029_stacked_bar_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -687,7 +829,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes color.',
+ {'function': {'description': '[circular] Creates a pie chart showing the proportional distribution of a nominal '
+                              'field. Design: Arc marks with theta encoding map proportion to angle. Suitable for '
+                              'fields with few categories (<8) where part-to-whole perception is the goal. Tasks: '
+                              'Assess part-to-whole proportions; identify the dominant category. Query patterns: Make '
+                              'a pie chart of <F:n>?',
                'name': 'vis_030_circular_proportion_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -697,7 +843,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes color.',
+ {'function': {'description': '[circular] Creates a donut chart showing the proportional distribution of a nominal '
+                              'field. Design: Donut variant with inner/outer radius creates a hollow center that can '
+                              'improve label readability. Suitable for few categories (<8). Tasks: Assess '
+                              'part-to-whole proportions; identify the dominant category. Query patterns: Make a donut '
+                              'chart of <F:n>?',
                'name': 'vis_031_circular_proportion_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -707,7 +857,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube nominal dimension, encodes color.',
+ {'function': {'description': '[circular] Shows the proportional cube measure for each category of a nominal dimension '
+                              'as a pie chart. Design: Reads the cube marginal by filtering to rows where the chosen '
+                              'dimension(s) are present and every other dimension is empty; the measure is mapped '
+                              'directly with no re-aggregation. The marginal filter is expanded from the per-request '
+                              "schema's dimension list, so this template works for any cube. The measure maps to angle "
+                              'and the renderer normalizes each slice against the total. Best for a small number of '
+                              'categories. Tasks: Assess part-to-whole proportions; identify the dominant category. '
+                              'Query patterns: Make a pie chart of the measure by a categorical dimension.',
                'name': 'vis_032_circular_proportion',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension': {'description': 'cube nominal dimension, encodes color.',
@@ -717,7 +874,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube nominal dimension, encodes color.',
+ {'function': {'description': '[circular] Shows the proportional cube measure for each category of a nominal dimension '
+                              'as a donut chart. Design: Reads the cube marginal by filtering to rows where the chosen '
+                              'dimension(s) are present and every other dimension is empty; the measure is mapped '
+                              'directly with no re-aggregation. The marginal filter is expanded from the per-request '
+                              "schema's dimension list, so this template works for any cube. The measure maps to angle "
+                              'and the renderer normalizes each slice against the total. Best for a small number of '
+                              'categories. Tasks: Assess part-to-whole proportions; identify the dominant category. '
+                              'Query patterns: Make a donut chart of the measure by a categorical dimension.',
                'name': 'vis_033_circular_proportion',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension': {'description': 'cube nominal dimension, encodes color.',
@@ -781,7 +945,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity1', 'entity2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'quantitative field, encodes x-axis.',
+ {'function': {'description': '[table] Finds the record with the largest value in a quantitative field, displayed as a '
+                              'ranked table with bar indicators. Design: Sorts descending by the target field, derives '
+                              'a rank, and highlights the top record with color. Bar marks provide visual magnitude '
+                              'comparison. Tasks: Identify the record with the largest value; compare values across '
+                              'records. Query patterns: What Record in <E> has the largest <F:q>?',
                'name': 'vis_038_table_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -807,7 +975,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity1', 'entity2', 'entity1_field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'any type field.',
+ {'function': {'description': '[table] Finds the record with the smallest value in a quantitative field, displayed as '
+                              'a ranked table with conditional formatting. Design: Sorts ascending by the target '
+                              'field, derives a rank, and highlights the top record with background color. Uses rect '
+                              'mark for row-level highlighting. Tasks: Identify the record with the smallest value; '
+                              'compare values across records. Query patterns: What Record in <E> has the smallest '
+                              '<F:q>?',
                'name': 'vis_040_table_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -833,7 +1006,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity1', 'entity2', 'entity1_field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'quantitative field, encodes x-axis.',
+ {'function': {'description': '[table] Sorts entity records by a quantitative field and displays the result as an '
+                              'ordered table with in-cell bar marks. Design: Ordered by the quantitative field with '
+                              'nulls filtered out. In-cell bar marks provide visual comparison of magnitude alongside '
+                              'the text values. Tasks: View records in sorted order; compare relative magnitudes. '
+                              'Query patterns: Order the <E> by <F:q>?',
                'name': 'vis_042_table_sorted',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -843,7 +1020,10 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'any type field.',
+ {'function': {'description': '[table] Computes the minimum and maximum of a quantitative field and displays them as a '
+                              'single-row table. Design: Simple rollup of min and max. Filters out nulls before '
+                              'aggregation for accuracy. Tasks: Determine the range of a quantitative field. Query '
+                              'patterns: What is the range of <E> <F:q> values?',
                'name': 'vis_043_table_min',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -852,7 +1032,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes text label.',
+ {'function': {'description': '[table] Lists all distinct values of a nominal field with their counts, ordered by '
+                              'descending count, displayed as a table with in-cell bar marks. Design: Groups by the '
+                              'nominal field and counts occurrences, sorted descending so the bars are comparable '
+                              'top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows '
+                              'relative frequency but not the value. Tasks: Determine the range (distinct values) of a '
+                              'nominal field; compare category frequencies. Query patterns: What is the range of <E> '
+                              '<F:n> values?',
                'name': 'vis_044_table_count_sorted_distinct',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -862,7 +1048,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes text label.',
+ {'function': {'description': '[table] Computes the min and max of a quantitative field for each category of a nominal '
+                              'field, displayed as a table with range bar marks. Design: Groups by nominal field, '
+                              'computes min/max and derived range, then orders by range descending. Uses x/x2 encoding '
+                              'to show the span between min and max values. Tasks: Compare the spread of a '
+                              'quantitative field across categories; identify which group has the widest or narrowest '
+                              'range. Query patterns: What is the range of <E> <F1:q> values for every <F2:n>?',
                'name': 'vis_045_table_range',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -873,7 +1064,11 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes text label.',
+ {'function': {'description': '[table] Finds the most frequent value of a nominal field, displayed as a ranked table '
+                              'with bar marks and conditional formatting. Design: Groups by nominal field, counts, '
+                              'ranks, and highlights the top value. Combines bar marks for count comparison and '
+                              'background color for emphasis. Tasks: Identify the most frequent category; compare '
+                              'frequencies across all categories. Query patterns: What is the most frequent <F:n>?',
                'name': 'vis_046_table_ranked_mode',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -894,7 +1089,15 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube nominal dimension, encodes text label.',
+ {'function': {'description': '[table] Lists each category of a nominal dimension with its pre-aggregated measure as a '
+                              'sorted table with in-cell bars. Design: Reads the cube marginal by filtering to rows '
+                              'where the chosen dimension(s) are present and every other dimension is empty; the '
+                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
+                              "the per-request schema's dimension list, so this template works for any cube. Ordered "
+                              'by the measure descending, with the measure drawn as both an in-cell bar and a number '
+                              'so the value is readable and not just its length. Tasks: Determine the distinct values '
+                              'of a dimension; compare category counts. Query patterns: List the measure for each '
+                              'category of a dimension.; What is the range of values for a dimension?',
                'name': 'vis_048_table_sorted',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension': {'description': 'cube nominal dimension, encodes text label.',
@@ -904,7 +1107,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'quantitative field, encodes x-axis.',
+ {'function': {'description': '[line] Shows the cumulative distribution function (CDF) of a quantitative field as a '
+                              'line chart. Design: Sorts by value, computes rolling percentile, then sorts by '
+                              'percentile so the line is a monotonic step. The CDF reveals the full distribution shape '
+                              'including median, quartiles, and tails. Tasks: Characterize the distribution of a '
+                              'variable; identify median, quartiles, and concentration of values. Query patterns: What '
+                              'is the cumulative distribution of <F:q>?; Make a CDF plot of <F:q>.',
                'name': 'vis_049_line_cdf',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -914,7 +1122,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes color.',
+ {'function': {'description': '[grouped_line] Shows the cumulative distribution of a quantitative field for each '
+                              'category of a nominal field, with separate lines per group. Design: Groups by the '
+                              'nominal field, sorts within groups, computes the per-group rolling percentile, then '
+                              'sorts by percentile so each line is a monotonic step. Color encodes group identity. '
+                              'Limited to fewer than 5 groups for readability. Tasks: Compare distributions across '
+                              'groups; identify which groups have higher or lower concentrations of values. Query '
+                              'patterns: What is the cumulative distribution of <F1:q> for each <F2:n>?; Make a CDF '
+                              'plot of <F1:q> with a line for each <F2:n>.',
                'name': 'vis_050_grouped_line_cdf',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -926,7 +1141,15 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube ordinal dimension, encodes x-axis.',
+ {'function': {'description': '[line] Shows the pre-aggregated cube measure over an ordered dimension (e.g. time) as a '
+                              'line chart. Design: Reads the cube marginal by filtering to rows where the chosen '
+                              'dimension(s) are present and every other dimension is empty; the measure is mapped '
+                              'directly with no re-aggregation. The marginal filter is expanded from the per-request '
+                              "schema's dimension list, so this template works for any cube. The axis is ordered "
+                              'ascending; a temporal dimension is encoded as an ordered (ordinal) axis. Tasks: '
+                              'Identify trends over time; spot peaks, troughs, and seasonality. Query patterns: How '
+                              'does the measure change over <dimension>?; Make a line chart of the measure over an '
+                              'ordered (e.g. temporal) dimension.',
                'name': 'vis_051_line_sorted',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension': {'description': 'cube ordinal dimension, encodes x-axis.',
@@ -936,8 +1159,38 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
-               'name': 'vis_052_heatmap_count',
+ {'function': {'description': "[line] Survival curve built from an event log: pairs each subject's 'Initial CNS Tumor' "
+                              "and 'Deceased' events to derive a survival time, then plots the falling fraction of "
+                              'subjects without the end event. Design: Survival time is not stored anywhere; it is '
+                              'reconstructed as the gap between two events for the same subject, so the template '
+                              'groups the event log by subject id and rolls it up to one row each before computing '
+                              'anything. The subject id is only a grouping key and is never encoded, so its '
+                              'cardinality does not matter. IMPORTANT: this is a crude survival curve, not a '
+                              'Kaplan-Meier estimate. Subjects with no end event are kept in the denominator but '
+                              'contribute no drop, which assumes every one of them was followed for the whole window. '
+                              'A true Kaplan-Meier estimator reweights by the number still at risk at each event time; '
+                              'that needs a cumulative product and per-time at-risk counts, which the grammar cannot '
+                              'express today. Read the curve as an observed-survival fraction over the cohort, and do '
+                              'not use it where ',
+               'name': 'vis_052_line_survival',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'field2': {'description': 'any type field.', 'type': 'string'},
+                                             'field3': {'description': 'any type field.', 'type': 'string'}},
+                              'required': ['entity', 'field1', 'field2', 'field3'],
+                              'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[heatmap] Displays the count of entities for each combination of two nominal fields as '
+                              'a heatmap with labeled cells. Design: Rect marks with quantitative color encoding show '
+                              'density. Overlaid text marks display exact counts. Text color adapts based on cell '
+                              'intensity for readability. The field with more unique values is preferably placed on '
+                              'the y-axis, where longer labels remain readable. Tasks: Identify clusters or patterns '
+                              'in the co-occurrence of two fields; compare counts across combinations; find '
+                              'correlations. Query patterns: Are there any clusters with respect to <E> counts of '
+                              '<F1:n> and <F2:n>?; Make a heatmap of <E> <F1:n> and <F2:n>.',
+               'name': 'vis_053_heatmap_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -948,8 +1201,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes x-axis.',
-               'name': 'vis_053_heatmap_avg',
+ {'function': {'description': '[heatmap] Displays the average of a quantitative field for each combination of two '
+                              'nominal fields as a heatmap. Design: Uses three fields: a quantitative measure '
+                              'aggregated by average, and two nominal axes. Color encodes the aggregate value. The '
+                              'field with more unique values is preferably placed on the y-axis for better label '
+                              'readability. Tasks: Identify patterns in the average value across two categorical '
+                              'dimensions; find combinations with extreme values. Query patterns: What is the average '
+                              '<F1:q> for each <F2:n> and <F3:n>?',
+               'name': 'vis_054_heatmap_avg',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -961,8 +1220,17 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2', 'field3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'cube nominal dimension, encodes y-axis.',
-               'name': 'vis_054_heatmap_basic',
+ {'function': {'description': '[heatmap] Shows the pre-aggregated cube measure for each combination of two nominal '
+                              'dimensions as a labeled heatmap. Design: Reads the cube marginal by filtering to rows '
+                              'where the chosen dimension(s) are present and every other dimension is empty; the '
+                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
+                              "the per-request schema's dimension list, so this template works for any cube. The "
+                              'measure maps to cell color with overlaid contrast-aware value labels. Prefer the '
+                              'dimension with more categories on the y-axis. Tasks: Identify clusters or patterns '
+                              'across two dimensions; compare values across combinations. Query patterns: Are there '
+                              'clusters in the measure across two dimensions?; Make a heatmap across two categorical '
+                              'dimensions.',
+               'name': 'vis_055_heatmap_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
                                                             'type': 'string'},
@@ -973,8 +1241,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'dimension1', 'dimension2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes color.',
-               'name': 'vis_055_grouped_scatter_by_color',
+ {'function': {'description': '[grouped_scatter] Plots two quantitative fields as a scatterplot with points colored by '
+                              'a nominal field to reveal group-level clusters. Design: Adds color encoding to a '
+                              'standard scatterplot to separate groups visually. Limited to fewer than 8 color '
+                              'categories for perceptual clarity. Tasks: Identify clusters that separate by group; '
+                              'assess whether the relationship between two quantitative fields differs across groups. '
+                              'Query patterns: Are there clusters of <E> <F1:q> and <F2:q> values across different '
+                              '<F3:n> groups?',
+               'name': 'vis_056_grouped_scatter_by_color',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -987,8 +1261,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2', 'field3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'any type field.',
-               'name': 'vis_056_histogram_distribution',
+ {'function': {'description': '[histogram] Shows the distribution of a quantitative field as a histogram with '
+                              'automatically computed bins. Design: Uses binby to create equal-width bins. Rect marks '
+                              'span from bin start to bin end on x, with count on y. Tasks: Characterize the shape of '
+                              'a distribution; identify modes, skewness, and gaps. Query patterns: What is the '
+                              'distribution of <F:q>?; Make a histogram of <F:q>?',
+               'name': 'vis_057_histogram_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -996,8 +1274,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'quantitative field, encodes x-axis.',
-               'name': 'vis_057_area_density',
+ {'function': {'description': '[area] Shows the distribution of a quantitative field as a smooth density curve (KDE) '
+                              'rendered as an area chart. Design: Kernel density estimation produces a smooth curve. '
+                              'Area mark fills below the density line. Used for moderate cardinality (50-250) where a '
+                              'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
+                              'distribution; identify modes and overall density patterns. Query patterns: What is the '
+                              'distribution of <F:q>?',
+               'name': 'vis_058_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1006,8 +1289,12 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'quantitative field, encodes x-axis.',
-               'name': 'vis_058_dot_distribution',
+ {'function': {'description': '[dot] Shows the distribution of a quantitative field as individual points along a '
+                              'single axis. Design: Point marks on a single quantitative x-axis. Best for small '
+                              'datasets (50 or fewer values) where individual observations are meaningful and '
+                              'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
+                              'values, clusters, and outliers. Query patterns: What is the distribution of <F:q>?',
+               'name': 'vis_059_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1016,8 +1303,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes color.',
-               'name': 'vis_059_grouped_area_density',
+ {'function': {'description': '[grouped_area] Compares the distribution of a quantitative field across categories '
+                              'using overlapping density curves (KDE) with area and line marks. Design: Per-group KDE '
+                              'with semi-transparent area fills and line outlines. Color encodes group identity. '
+                              'Limited to fewer than 4 groups to avoid excessive overlap. Opacity set to 0.25 for '
+                              'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
+                              'tendency or spread. Query patterns: Is the distribution of <F1:q> similar for each '
+                              '<F2:n>?',
+               'name': 'vis_060_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1028,8 +1321,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'nominal field, encodes y-axis, color.',
-               'name': 'vis_060_grouped_dot_distribution',
+ {'function': {'description': '[grouped_dot] Compares the distribution of a quantitative field across categories using '
+                              'dot strips, with one row per category. Design: Points plotted on a quantitative x-axis '
+                              'with nominal y-axis for group separation. Color reinforces group identity. Best for '
+                              'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
+                              'groups; identify clusters and outliers within each group. Query patterns: Is the '
+                              'distribution of <F1:q> similar for each <F2:n>?',
+               'name': 'vis_061_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1040,8 +1338,14 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'any type field.',
-               'name': 'vis_061_table_count_null_nonnull',
+ {'function': {'description': '[table] Analyzes data completeness by counting and computing the percentage of records '
+                              'with non-null values in a specified field. Design: Derives total count before '
+                              'filtering, then computes valid count and percentage. Percentage bar with 50% reference '
+                              'line provides visual context for data completeness. Tasks: Assess data completeness for '
+                              'a field; determine how many records have valid values and what proportion. Query '
+                              'patterns: How many <E> records have a non-null <F:q|o|n>?; What percentage of <E> '
+                              'records have a non-null <F:q|o|n>?',
+               'name': 'vis_062_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1049,8 +1353,13 @@ TOOL_DEFS = [{'function': {'description': 'nominal field, encodes x-axis.',
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'any type field.',
-               'name': 'vis_062_table_count_null',
+ {'function': {'description': '[table] Analyzes data quality by counting and computing the percentage of records with '
+                              'null values in a specified field. Design: Derives null count as total minus valid '
+                              'count. Percentage bar shows the null proportion with a 50% reference line. Tasks: '
+                              'Assess data quality; determine how many records are missing a value and what '
+                              'proportion. Query patterns: How many <E> records have a null <F:q|o|n>?; What '
+                              'percentage of <E> records have a null <F:q|o|n>?',
+               'name': 'vis_063_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1121,17 +1430,18 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_049_line_cdf': (49, {'entity': 'E', 'field': 'F'}),
  'vis_050_grouped_line_cdf': (50, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_051_line_sorted': (51, {'dimension': 'D', 'entity': 'E'}),
- 'vis_052_heatmap_count': (52, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_053_heatmap_avg': (53, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_054_heatmap_basic': (54, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
- 'vis_055_grouped_scatter_by_color': (55, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_056_histogram_distribution': (56, {'entity': 'E', 'field': 'F'}),
- 'vis_057_area_density': (57, {'entity': 'E', 'field': 'F'}),
- 'vis_058_dot_distribution': (58, {'entity': 'E', 'field': 'F'}),
- 'vis_059_grouped_area_density': (59, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_060_grouped_dot_distribution': (60, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_061_table_count_null_nonnull': (61, {'entity': 'E', 'field': 'F'}),
- 'vis_062_table_count_null': (62, {'entity': 'E', 'field': 'F'})}
+ 'vis_052_line_survival': (52, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_053_heatmap_count': (53, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_054_heatmap_avg': (54, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_055_heatmap_basic': (55, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_056_grouped_scatter_by_color': (56, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_057_histogram_distribution': (57, {'entity': 'E', 'field': 'F'}),
+ 'vis_058_area_density': (58, {'entity': 'E', 'field': 'F'}),
+ 'vis_059_dot_distribution': (59, {'entity': 'E', 'field': 'F'}),
+ 'vis_060_grouped_area_density': (60, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_061_grouped_dot_distribution': (61, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_062_table_count_null_nonnull': (62, {'entity': 'E', 'field': 'F'}),
+ 'vis_063_table_count_null': (63, {'entity': 'E', 'field': 'F'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -1187,14 +1497,15 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_049_line_cdf': ['line_item', 'line'],
  'vis_050_grouped_line_cdf': ['line_item', 'grouped_line'],
  'vis_051_line_sorted': ['data_cube', 'line'],
- 'vis_052_heatmap_count': ['line_item', 'heatmap'],
- 'vis_053_heatmap_avg': ['line_item', 'heatmap'],
- 'vis_054_heatmap_basic': ['data_cube', 'heatmap'],
- 'vis_055_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
- 'vis_056_histogram_distribution': ['line_item', 'histogram'],
- 'vis_057_area_density': ['line_item', 'area'],
- 'vis_058_dot_distribution': ['line_item', 'dot'],
- 'vis_059_grouped_area_density': ['line_item', 'grouped_area'],
- 'vis_060_grouped_dot_distribution': ['line_item', 'grouped_dot'],
- 'vis_061_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_062_table_count_null': ['line_item', 'table']}
+ 'vis_052_line_survival': ['line_item', 'line'],
+ 'vis_053_heatmap_count': ['line_item', 'heatmap'],
+ 'vis_054_heatmap_avg': ['line_item', 'heatmap'],
+ 'vis_055_heatmap_basic': ['data_cube', 'heatmap'],
+ 'vis_056_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
+ 'vis_057_histogram_distribution': ['line_item', 'histogram'],
+ 'vis_058_area_density': ['line_item', 'area'],
+ 'vis_059_dot_distribution': ['line_item', 'dot'],
+ 'vis_060_grouped_area_density': ['line_item', 'grouped_area'],
+ 'vis_061_grouped_dot_distribution': ['line_item', 'grouped_dot'],
+ 'vis_062_table_count_null_nonnull': ['line_item', 'table'],
+ 'vis_063_table_count_null': ['line_item', 'table']}
