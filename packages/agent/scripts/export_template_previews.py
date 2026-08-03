@@ -23,6 +23,8 @@ Usage (from packages/agent):
 from __future__ import annotations
 
 import argparse
+import collections
+import csv
 import hashlib
 import itertools
 import json
@@ -113,27 +115,137 @@ def _needs_cube(spec_template: str) -> bool:
     )
 
 
-def _field_rank(name: str, field_type: str, cardinality: int) -> tuple:
+_STATS_SAMPLE_ROWS = 20000
+_STATS_CACHE: dict[str, dict[str, dict[str, dict]]] = {}
+
+
+def _column_stats(pkg: dict) -> dict[str, dict[str, dict]]:
+    """Per-column null fraction and dominant-value share, read from the CSVs.
+
+    The schema alone cannot tell a useful field from a useless one: a column can
+    be nominal with cardinality 2 and still be 97% empty, which renders as one
+    giant "null" bar and tells a reviewer nothing. Only the data shows that, so
+    sample it. Cached per data package and capped at ``_STATS_SAMPLE_ROWS`` —
+    this runs over every resource, one of which is ~8 MB.
+    """
+    cached = _STATS_CACHE.get(pkg["id"])
+    if cached is not None:
+        return cached
+
+    stats: dict[str, dict[str, dict]] = {}
+    pkg_dir = os.path.dirname(pkg["path"])
+
+    for resource in pkg["raw"].get("resources", []):
+        name = resource.get("name")
+        path = os.path.join(pkg_dir, resource.get("path", ""))
+        if not name or not os.path.isfile(path):
+            continue
+
+        delimiter = "\t" if path.endswith((".tsv", ".tab")) else ","
+        counters: dict[str, collections.Counter] = {}
+        total = 0
+        try:
+            with open(path, newline="", encoding="utf-8", errors="replace") as f:
+                reader = csv.DictReader(f, delimiter=delimiter)
+                for row in reader:
+                    if total >= _STATS_SAMPLE_ROWS:
+                        break
+                    total += 1
+                    for column, value in row.items():
+                        if column is None:
+                            continue
+                        counters.setdefault(column, collections.Counter())[
+                            (value or "").strip()
+                        ] += 1
+        except OSError:
+            continue
+
+        if total == 0:
+            continue
+
+        entity_stats: dict[str, dict] = {}
+        for column, counter in counters.items():
+            blanks = counter.get("", 0)
+            non_blank = total - blanks
+            most_common = [(v, c) for v, c in counter.most_common() if v != ""]
+            top_share = (most_common[0][1] / non_blank) if most_common and non_blank else 1.0
+            entity_stats[column] = {
+                "null_frac": blanks / total,
+                "top_share": top_share,
+                "distinct": len(most_common),
+            }
+        stats[name] = entity_stats
+
+    _STATS_CACHE[pkg["id"]] = stats
+    return stats
+
+
+def _rotate(items: list, offset: int) -> list:
+    """Rotate a list so different templates start from a different candidate.
+
+    Deterministic: the offset is the template's index, so re-running the export
+    reproduces the same choices, but neighbouring templates don't all collapse
+    onto whichever field happens to sort first.
+    """
+    if not items:
+        return items
+    k = offset % len(items)
+    return items[k:] + items[:k]
+
+
+def _is_uninformative(stats: dict | None) -> bool:
+    """Whether a column would render as a single dominant bar.
+
+    Mostly-empty or near-constant columns are technically valid bindings but show
+    a reviewer nothing about the template — which is what made the first version
+    of this exporter pick things like a 97%-null unit column.
+    """
+    if not stats:
+        return False
+    return stats["null_frac"] > 0.4 or stats["top_share"] > 0.9 or stats["distinct"] < 2
+
+
+def _field_rank(name: str, field_type: str, cardinality: int, stats: dict | None) -> tuple:
     """Sort key preferring fields that make a legible example chart."""
+    # Strongest signal first: a column with nothing to show is always a last
+    # resort, whatever its type or cardinality.
+    uninformative = 1 if _is_uninformative(stats) else 0
     id_like = 1 if _ID_LIKE.search(name) else 0
     if field_type in ("nominal", "ordinal"):
         # A handful of categories reads well; 40 bars does not.
         legible = 0 if 2 <= cardinality <= 12 else 1
-        return (id_like, legible, cardinality, name)
+        return (uninformative, id_like, legible, cardinality, name)
     if field_type == "quantitative":
         # Prefer genuinely continuous fields over near-constant ones.
         legible = 0 if cardinality >= 10 else 1
-        return (id_like, legible, -cardinality, name)
-    return (id_like, 0, cardinality, name)
+        return (uninformative, id_like, legible, -cardinality, name)
+    return (uninformative, id_like, 0, cardinality, name)
 
 
-def _candidate_fields(entity: dict, key: str, required_type: str | None) -> list[str]:
-    """Fields on ``entity`` that could legally bind to ``key``."""
+def _candidate_fields(
+    entity: dict,
+    key: str,
+    required_type: str | None,
+    entity_stats: dict[str, dict] | None = None,
+    variation: int = 0,
+    excluded: frozenset[str] = frozenset(),
+) -> list[str]:
+    """Fields on ``entity`` that could legally bind to ``key``, best first.
+
+    ``variation`` rotates the top tier so that consecutive templates don't all
+    bind to the same column. Only the equally-good candidates are rotated, so
+    variety never costs quality.
+
+    ``excluded`` drops names that are valid on this entity but break downstream —
+    see the join-collision handling in ``_search_bindings``.
+    """
     candidates = []
     dimensions = entity.get("dimensions")
     is_dimension_key = re.fullmatch(r"D\d*", key) is not None
 
     for name, info in entity.get("fields", {}).items():
+        if name in excluded:
+            continue
         field_type = info["type"] if isinstance(info, dict) else info
         cardinality = info.get("cardinality", 0) if isinstance(info, dict) else 0
 
@@ -149,14 +261,24 @@ def _candidate_fields(entity: dict, key: str, required_type: str | None) -> list
         # validate_bindings rejects these outright; skip rather than waste attempts.
         if field_type in ("nominal", "ordinal") and cardinality > 50:
             continue
-        candidates.append((name, field_type, cardinality))
+        stats = (entity_stats or {}).get(name)
+        candidates.append((_field_rank(name, field_type, cardinality, stats), name))
 
-    candidates.sort(key=lambda f: _field_rank(*f))
-    return [name for name, _, _ in candidates]
+    candidates.sort()
+    if not candidates:
+        return []
+
+    # Rotate within the best-ranked group only. Rank[0] is the "uninformative"
+    # flag and rank[1..2] the id/legibility tiers, so grouping on that prefix
+    # keeps rotation inside a set of genuinely interchangeable columns.
+    best_tier = candidates[0][0][:3]
+    good = [name for rank, name in candidates if rank[:3] == best_tier]
+    rest = [name for rank, name in candidates if rank[:3] != best_tier]
+    return _rotate(good, variation) + rest
 
 
 def _entity_rank(name: str, entity: dict) -> tuple:
-    """Prefer entities that actually have rows, then smaller/simpler ones."""
+    """Prefer entities that actually have rows, then larger ones."""
     return (0 if entity.get("row_count", 0) > 0 else 1, -entity.get("row_count", 0), name)
 
 
@@ -181,6 +303,40 @@ def _blank_bindings(spec: dict) -> list[str]:
 
     walk(spec, "$")
     return blanks
+
+
+def _post_join_collisions(spec: dict, collisions: frozenset[str]) -> list[str]:
+    """Columns the spec uses that the join has renamed out from under it.
+
+    Arquero suffixes columns present in both joined tables (``hubmap_id`` ->
+    ``hubmap_id_1``/``_2``). Referencing the bare name *after* the join therefore
+    fails. The join step's own ``on`` keys are exempt: they are consumed by the
+    join itself, while a later ``groupby`` on the same name is not.
+
+    Some shipped templates join and then group by the join key, which is
+    unrenderable against any schema whose two tables share that column name — a
+    real limitation of the template, worth reporting rather than papering over.
+    """
+    if not collisions:
+        return []
+
+    def strings(node) -> list[str]:
+        if isinstance(node, str):
+            return [node]
+        if isinstance(node, dict):
+            return [s for v in node.values() for s in strings(v)]
+        if isinstance(node, list):
+            return [s for v in node for s in strings(v)]
+        return []
+
+    used: list[str] = []
+    for step in spec.get("transformation") or []:
+        if isinstance(step, dict) and "join" in step:
+            continue
+        used.extend(strings(step))
+    used.extend(strings(spec.get("representation")))
+
+    return sorted({name for name in used if name in collisions})
 
 
 def _grammar_error(spec: dict, grammar: dict | None) -> str:
@@ -214,11 +370,18 @@ def _search_bindings(
     spec_template: str,
     binding_keys: list[str],
     parsed_schema: dict,
+    stats: dict[str, dict[str, dict]] | None = None,
+    variation: int = 0,
 ) -> tuple[dict[str, str] | None, dict | None, list[str]]:
     """Find bindings that instantiate ``spec_template`` into a valid spec.
 
     Returns ``(bindings, spec, errors)``. On failure ``bindings``/``spec`` are
     None and ``errors`` explains the closest failure, for display in the UI.
+
+    ``variation`` (the template's index) rotates the entity and field candidate
+    order so the previews as a whole exercise a spread of the data package's
+    columns instead of binding every template to the same one. It is a rotation,
+    not randomness, so the export stays reproducible.
     """
     entities = parsed_schema.get("entities", {})
     relationships = parsed_schema.get("relationships", [])
@@ -244,8 +407,13 @@ def _search_bindings(
                     entity_assignments.append({"E1": e1, "E2": e2})
         if not entity_assignments:
             return None, None, ["Data package has no relationship between two entities, which this template joins across."]
+        entity_assignments = _rotate(entity_assignments, variation)
     elif entity_keys:
-        entity_assignments = [{entity_keys[0]: name} for name, _ in ranked_entities]
+        # Rotate so templates spread across the package's tables rather than all
+        # landing on the largest one.
+        entity_assignments = _rotate(
+            [{entity_keys[0]: name} for name, _ in ranked_entities], variation
+        )
     else:
         entity_assignments = [{}]
 
@@ -253,6 +421,17 @@ def _search_bindings(
     last_errors: list[str] = ["No valid field binding found for this data package."]
 
     for entity_binding in entity_assignments:
+        # Columns present on BOTH joined entities are unusable. Arquero's join
+        # renames collisions (`data_access_level` -> `data_access_level_1` /
+        # `_2`), so a spec that groups by the bare name finds no such column and
+        # the chart fails at render time with a confusing message. Skip them
+        # rather than emit a preview that cannot draw.
+        collisions: frozenset[str] = frozenset()
+        if "E1" in entity_binding and "E2" in entity_binding:
+            e1_fields = set(entities.get(entity_binding["E1"], {}).get("fields", {}))
+            e2_fields = set(entities.get(entity_binding["E2"], {}).get("fields", {}))
+            collisions = frozenset(e1_fields & e2_fields)
+
         # Which entity does each field key hang off?
         def owner(key: str) -> str:
             if key.startswith("E1."):
@@ -265,7 +444,16 @@ def _search_bindings(
         for key in field_keys:
             entity_name = owner(key)
             entity = entities.get(entity_name, {})
-            candidates = _candidate_fields(entity, key.split(".")[-1], required_types.get(key))
+            candidates = _candidate_fields(
+                entity,
+                key.split(".")[-1],
+                required_types.get(key),
+                (stats or {}).get(entity_name),
+                # Offset per key as well as per template, so a template binding
+                # three fields doesn't start all three from the same column.
+                variation + field_keys.index(key),
+                collisions,
+            )
             if not candidates:
                 required = required_types.get(key) or "any"
                 last_errors = [
@@ -312,6 +500,16 @@ def _search_bindings(
             blanks = _blank_bindings(spec)
             if blanks:
                 last_errors = [f"Placeholders resolved to empty strings at: {', '.join(blanks)}"]
+                continue
+
+            renamed = _post_join_collisions(spec, collisions)
+            if renamed:
+                last_errors = [
+                    f"After joining '{entity_binding.get('E1')}' and "
+                    f"'{entity_binding.get('E2')}' the column(s) {', '.join(renamed)} exist on both "
+                    f"tables, so the join renames them (e.g. {renamed[0]}_1/{renamed[0]}_2) and this "
+                    f"template's later reference to the bare name cannot resolve."
+                ]
                 continue
 
             return bindings, spec, []
@@ -419,7 +617,13 @@ def main() -> int:
                 stats[pkg["id"]]["shape_mismatch"] += 1
                 continue
 
-            bindings, spec, errors = _search_bindings(spec_template, binding_keys, pkg["parsed"])
+            bindings, spec, errors = _search_bindings(
+                spec_template,
+                binding_keys,
+                pkg["parsed"],
+                _column_stats(pkg),
+                variation=index,
+            )
             if spec is not None:
                 previews[pkg["id"]] = {
                     "status": "ok",
