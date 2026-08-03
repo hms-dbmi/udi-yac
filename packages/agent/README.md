@@ -250,10 +250,184 @@ Local dev instance: [`dev/starrocks/README.md`](../../dev/starrocks/README.md).
 
 ### Docker
 
+**Build from the repo root**, not from `packages/agent`: `uv.lock` is the uv
+workspace lockfile and lives at the root (see root `pyproject.toml`
+`[tool.uv.workspace]`). The `.dockerignore` at the root keeps the JS half of the
+monorepo out of the build context.
+
 ```bash
-docker build -t udiagent .
-docker run -p 80:80 --env-file .env udiagent
+docker build -f packages/agent/Dockerfile -t udiagent .   # from the repo root
+docker run -p 8007:80 --env-file packages/agent/.env udiagent
 ```
+
+The image installs the `server` + `langfuse` extras. Add `--extra duckdb` /
+`--extra starrocks` to both `uv sync` lines if the deployment serves
+[server-side query backends](#server-side-query-backends).
+
+## Deployment Guide
+
+Step-by-step for standing the agent up as a server on a fresh host. Assumes
+Docker and a host you can reach on a port; the same steps run under the
+`deploy-agent.yml` GitHub Actions workflow (step 8).
+
+### 1. Get the code on the host
+
+```bash
+git clone https://github.com/hms-dbmi/udi-yac.git
+cd udi-yac
+git checkout <branch>          # e.g. nickakhmetov/third-party-providers-2
+```
+
+Only the Python workspace matters for the agent image — no `pnpm install`, no
+`uv sync` on the host. The build does dependency installation inside the image.
+
+### 2. Write the production env file
+
+Copy the template and fill it in. **This file is the whole configuration
+surface** — the container reads nothing else.
+
+```bash
+cp packages/agent/.env.template /home/ec2-user/.env   # or wherever you keep it
+chmod 600 /home/ec2-user/.env
+```
+
+Minimum production values:
+
+```ini
+# Auth — REQUIRED. The server refuses to start with an empty signing key
+# unless INSECURE_DEV_MODE=1. Never set INSECURE_DEV_MODE in production.
+INSECURE_DEV_MODE=0
+JWT_SECRET_KEY=<paste output of: openssl rand -hex 32>
+
+# LLM backend — either a server-held key, or leave blank to require callers
+# to send their own via the X-OpenAI-Key header.
+OPENAI_API_KEY=sk-...
+GPT_MODEL_NAME=gpt-5.4
+```
+
+Full variable list: [Server Environment Variables](#server-environment-variables).
+
+### 3. (Optional) point at a third-party OpenAI-compatible backend
+
+To serve from Azure AI Foundry, Bedrock, OpenRouter, or a self-hosted
+Ollama/vLLM, add the backend root and its model id:
+
+```ini
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+GPT_MODEL_NAME=openai/gpt-oss-120b
+OPENAI_API_KEY=<that backend's key>      # may be blank for Ollama/vLLM
+```
+
+Two deployment consequences worth deciding on deliberately:
+
+- **`OPENAI_BASE_URL` is global.** The OpenAI SDK reads that env var for every
+  client it builds, so requests that bring their own `X-OpenAI-Key` are routed
+  to this backend too — a user's personal OpenAI key would be sent to it. If
+  you host a bring-your-own-key deployment, leave `OPENAI_BASE_URL` unset.
+- **Capability floor.** The backend must support function calling and
+  JSON-schema structured outputs (`strict: true`); the orchestrator also uses
+  `tool_choice: "required"`. Backends missing these degrade to fallback paths
+  instead of failing loudly, so run step 6's visualization request after
+  switching backends. Details: [Third-party backends](#third-party-openai-compatible-backends).
+
+### 4. Build the image
+
+```bash
+docker build -f packages/agent/Dockerfile -t udi-agent .     # from repo root
+```
+
+### 5. Run it
+
+```bash
+docker stop udi-agent 2>/dev/null; docker rm udi-agent 2>/dev/null
+docker run -d \
+  --name udi-agent \
+  --restart unless-stopped \
+  -p 80:80 \
+  --env-file /home/ec2-user/.env \
+  udi-agent
+```
+
+The container listens on port 80 as a non-root user. Map it wherever your
+reverse proxy expects it (`-p 8007:80` for a local-only port).
+
+### 6. Verify
+
+```bash
+curl -fsS http://localhost/                  # {"service":"UDIAgent API","status":"running",...}
+curl -fsS http://localhost/v1/yac/examples   # 200 — bundled data loaded
+```
+
+Then exercise the LLM path end to end, which is the only check that catches a
+bad key, wrong model id, or a backend that can't do structured outputs:
+
+```bash
+curl -fsS -X POST http://localhost/v1/yac/completions \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "messages": [{"role": "user", "content": "bar chart of penguins by species"}],
+    "dataSchema": "{\"resources\":[{\"name\":\"penguins\",\"schema\":{\"fields\":[{\"name\":\"species\",\"type\":\"string\"},{\"name\":\"body_mass_g\",\"type\":\"number\"}]}}]}",
+    "dataDomains": "[]"
+  }'
+```
+
+A healthy response is a JSON body with a non-empty `tool_calls`. `$TOKEN` is a
+JWT signed with `JWT_SECRET_KEY` (`HS256` by default) — mint one inside the
+container, which already has `python-jose`:
+
+```bash
+TOKEN=$(docker exec udi-agent uv run --frozen --no-sync python -c \
+  "import os; from jose import jwt; print(jwt.encode({'sub':'smoke-test'}, os.environ['JWT_SECRET_KEY'], algorithm='HS256'))")
+```
+
+Note the `Authorization` header is **required on `/v1/yac/completions` even
+when `INSECURE_DEV_MODE=1`** — dev mode skips verifying the token, not sending
+one. A request without the header returns `422`, not `401`.
+
+Two different failures both return `401`; tell them apart by the body —
+`{"detail":"Invalid or expired token"}` is a JWT problem, whereas
+`{"error":"No OpenAI API key..."}` means auth passed and the LLM credential is
+the thing that's missing.
+
+Logs: `docker logs udi-agent`, plus a rotating file at
+`/app/packages/agent/logs/udi_agent.log` inside the container.
+
+### 7. Terminate TLS in front of it
+
+The container speaks plain HTTP. The chat frontend is served over HTTPS (GitHub
+Pages at `/udi-yac/`), and browsers block HTTPS pages from calling an `http://`
+API — so an HTTP-only agent is unreachable from the deployed chat, not merely
+insecure. Put nginx/Caddy/an ALB in front with a certificate and proxy to the
+container.
+
+CORS is already `allow_origins=["*"]` with the `X-Usage-*` headers exposed, so
+no per-origin configuration is needed; tighten it in
+[`server/app.py`](src/udiagent/server/app.py) if you want to restrict callers.
+
+### 8. Deploy via GitHub Actions (the EC2 path)
+
+[`.github/workflows/deploy-agent.yml`](../../.github/workflows/deploy-agent.yml)
+runs steps 4–6 on a self-hosted runner: build, restart the container against
+`/home/ec2-user/.env`, health-check, prune old images. Trigger it from the
+Actions tab (`workflow_dispatch`).
+
+Prerequisites: the self-hosted runner must be registered to this repo (it was
+previously registered to `hms-dbmi/UDIAgent`), and `/home/ec2-user/.env` must
+exist on that host with step 2's contents. The workflow deploys whatever branch
+you dispatch it against.
+
+### 9. Point the chat at it
+
+In `packages/chat/.env.local` (or the Pages build environment):
+
+```ini
+VITE_UDI_API_BASE_URL=https://agent.example.org
+VITE_UDI_REQUIRE_API_KEY=false     # true = users supply their own OpenAI key
+```
+
+Set `VITE_UDI_REQUIRE_API_KEY=true` when the server has no `OPENAI_API_KEY` and
+expects per-request `X-OpenAI-Key` headers.
 
 ## Architecture
 
