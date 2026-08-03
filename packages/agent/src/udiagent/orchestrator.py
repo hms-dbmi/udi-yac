@@ -229,8 +229,10 @@ class Orchestrator:
         for message in reversed(messages):
             content = message.get("content")
             if message.get("role") == "user" and isinstance(content, str):
-                description = content
-                break
+                stripped = content.strip()
+                if stripped:
+                    description = stripped
+                    break
 
         usage = Usage()
         tool_args = {"description": description} if description else {}
