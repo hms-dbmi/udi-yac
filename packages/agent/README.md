@@ -208,20 +208,22 @@ uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 
 ### Server Environment Variables
 
-| Variable                   | Required | Default   | Description                                                                                          |
-| -------------------------- | -------- | --------- | ---------------------------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`           | No       | —         | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header.                  |
-| `OPENAI_BASE_URL`          | No       | —         | OpenAI-compatible backend root (see [Third-party backends](#third-party-openai-compatible-backends)) |
-| `GPT_MODEL_NAME`           | No       | `gpt-5.4` | Model for orchestration; with a custom base URL, that backend's model id                             |
-| `JWT_SECRET_KEY`           | Yes\*    | —         | JWT signing key; the server refuses startup when missing (\*not required if `INSECURE_DEV_MODE=1`)   |
-| `JWT_ALGORITHM`            | No       | `HS256`   | JWT algorithm                                                                                        |
-| `INSECURE_DEV_MODE`        | No       | `0`       | Set to `1` to skip JWT verification (development only)                                               |
-| `LANGFUSE_SECRET_KEY`      | No       | —         | LangFuse observability secret key (opt-in; tracing is disabled when unset)                           |
-| `LANGFUSE_PUBLIC_KEY`      | No       | —         | LangFuse observability public key (opt-in; tracing is disabled when unset)                           |
-| `LANGFUSE_HOST`            | No       | —         | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                                            |
-| `LANGFUSE_ENVIRONMENT`     | No       | —         | Tags traces with an environment label (e.g. `production`); does not enable tracing                   |
-| `UDI_QUERY_BACKENDS`       | No       | —         | Path to a JSON file configuring server-side query backends (see below)                               |
-| `UDI_METADATA_TTL_SECONDS` | No       | `3600`    | TTL for the introspected-metadata cache                                                              |
+| Variable                   | Required | Default               | Description                                                                                          |
+| -------------------------- | -------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`           | No       | —                     | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header.                  |
+| `OPENAI_BASE_URL`          | No       | —                     | OpenAI-compatible backend root (see [Third-party backends](#third-party-openai-compatible-backends)) |
+| `GPT_MODEL_NAME`           | No       | `gpt-5.4`             | Model for orchestration; with a custom base URL, that backend's model id                             |
+| `JWT_SECRET_KEY`           | Yes\*    | —                     | JWT signing key; the server refuses startup when missing (\*not required if `INSECURE_DEV_MODE=1`)   |
+| `JWT_ALGORITHM`            | No       | `HS256`               | JWT algorithm                                                                                        |
+| `INSECURE_DEV_MODE`        | No       | `0`                   | Set to `1` to skip JWT verification (development only)                                               |
+| `LANGFUSE_SECRET_KEY`      | No       | —                     | LangFuse observability secret key (opt-in; tracing is disabled when unset)                           |
+| `LANGFUSE_PUBLIC_KEY`      | No       | —                     | LangFuse observability public key (opt-in; tracing is disabled when unset)                           |
+| `LANGFUSE_HOST`            | No       | —                     | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                                            |
+| `LANGFUSE_ENVIRONMENT`     | No       | —                     | Tags traces with an environment label (e.g. `production`); does not enable tracing                   |
+| `UDI_QUERY_BACKENDS`       | No       | —                     | Path to a JSON file configuring server-side query backends (see below)                               |
+| `UDI_METADATA_TTL_SECONDS` | No       | `3600`                | TTL for the introspected-metadata cache                                                              |
+| `UDI_LOG_DIR`              | No       | `<package root>/logs` | Where the rotating log file goes; skipped (stream logs only) if unwritable                           |
+| `UDI_DATA_DIR`             | No       | `<package root>/data` | Repo-level dev data for `/v1/yac/examples`; set this when installed from a wheel                     |
 
 ### Server Endpoints
 
@@ -266,11 +268,25 @@ The image installs the `server` + `langfuse` extras. Add `--extra duckdb` /
 
 ## Deployment Guide
 
-Step-by-step for standing the agent up as a server on a fresh host. Assumes
-Docker and a host you can reach on a port; the same steps run under the
-`deploy-agent.yml` GitHub Actions workflow (step 8).
+Step-by-step for standing the agent up as a server on a fresh host. There are
+two supported ways to get the code onto the host — pick one, then follow the
+shared steps:
+
+|                     | **Path A** — container from source                                | **Path B** — `udiagent[server]` from PyPI                           |
+| ------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Use when            | deploying a branch or unreleased code; want the exact pinned deps | deploying a released version; no repo checkout; own process manager |
+| Host needs          | Docker + a clone of this repo                                     | Python ≥ 3.12 and `pip`/`uv`                                        |
+| Dependency versions | exact, from the workspace `uv.lock`                               | resolved at install time from `pyproject.toml` ranges               |
+| Process supervision | `--restart unless-stopped`                                        | yours (systemd unit below)                                          |
+| Dev-data endpoints  | work out of the box                                               | need `UDI_DATA_DIR` (step 3B)                                       |
+| CI deploy           | [`deploy-agent.yml`](../../.github/workflows/deploy-agent.yml)    | —                                                                   |
+
+Steps 1–2 and 4–5 apply to both, step 3 splits, step 6 is Path A only, step 7
+is client-side.
 
 ### 1. Get the code on the host
+
+**Path A — clone the repo:**
 
 ```bash
 git clone https://github.com/hms-dbmi/udi-yac.git
@@ -279,17 +295,35 @@ git checkout <branch>          # e.g. nickakhmetov/third-party-providers-2
 ```
 
 Only the Python workspace matters for the agent image — no `pnpm install`, no
-`uv sync` on the host. The build does dependency installation inside the image.
+`uv sync` on the host. The build installs dependencies inside the image.
+
+**Path B — install the published distribution:**
+
+```bash
+python -m venv /opt/udiagent/venv          # or: uv venv /opt/udiagent/venv
+/opt/udiagent/venv/bin/pip install "udiagent[server]"
+```
+
+The PyPI distribution is named **`udiagent`** (`udi-yac` is the npm chat
+package). Add extras as needed — `"udiagent[server,langfuse]"`, plus `duckdb` /
+`starrocks` for [server-side query backends](#server-side-query-backends).
 
 ### 2. Write the production env file
 
-Copy the template and fill it in. **This file is the whole configuration
-surface** — the container reads nothing else.
+Copy the template and fill it in. Environment variables are the server's entire
+configuration surface — there is no config file format beyond this.
 
 ```bash
-cp packages/agent/.env.template /home/ec2-user/.env   # or wherever you keep it
-chmod 600 /home/ec2-user/.env
+# Path A: on the host, anywhere the container can read it
+cp packages/agent/.env.template /home/ec2-user/.env
+# Path B: in the directory the service will run from (its CWD is searched)
+cp packages/agent/.env.template /opt/udiagent/.env
+chmod 600 /home/ec2-user/.env   # or /opt/udiagent/.env
 ```
+
+Path B has no repo checkout, so grab the template from
+[GitHub](https://github.com/hms-dbmi/udi-yac/blob/main/packages/agent/.env.template)
+or just write the values below by hand.
 
 Minimum production values:
 
@@ -307,7 +341,12 @@ GPT_MODEL_NAME=gpt-5.4
 
 Full variable list: [Server Environment Variables](#server-environment-variables).
 
-### 3. (Optional) point at a third-party OpenAI-compatible backend
+Where the values come from, in precedence order: real environment variables
+(Docker `--env-file`, systemd `EnvironmentFile`, shell exports) win, then
+`<package root>/.env` (the repo checkout), then `./.env` from the process
+working directory. On Path B the first and third are the usable ones.
+
+#### (Optional) point at a third-party OpenAI-compatible backend
 
 To serve from Azure AI Foundry, Bedrock, OpenRouter, or a self-hosted
 Ollama/vLLM, add the backend root and its model id:
@@ -327,18 +366,14 @@ Two deployment consequences worth deciding on deliberately:
 - **Capability floor.** The backend must support function calling and
   JSON-schema structured outputs (`strict: true`); the orchestrator also uses
   `tool_choice: "required"`. Backends missing these degrade to fallback paths
-  instead of failing loudly, so run step 6's visualization request after
+  instead of failing loudly, so run step 4's visualization request after
   switching backends. Details: [Third-party backends](#third-party-openai-compatible-backends).
 
-### 4. Build the image
+### 3A. Path A — build and run the container
 
 ```bash
 docker build -f packages/agent/Dockerfile -t udi-agent .     # from repo root
-```
 
-### 5. Run it
-
-```bash
 docker stop udi-agent 2>/dev/null; docker rm udi-agent 2>/dev/null
 docker run -d \
   --name udi-agent \
@@ -349,13 +384,76 @@ docker run -d \
 ```
 
 The container listens on port 80 as a non-root user. Map it wherever your
-reverse proxy expects it (`-p 8007:80` for a local-only port).
+reverse proxy expects it (`-p 8007:80` for a local-only port). Logs go to
+`docker logs udi-agent` plus a rotating file at
+`/app/packages/agent/logs/udi_agent.log` inside the container.
 
-### 6. Verify
+### 3B. Path B — run the installed distribution
+
+Serve the app module with `uvicorn` (installed by the `server` extra). The
+`fastapi run` command used for local development takes a **file path** into the
+source tree, which an installed wheel doesn't have; `uvicorn` takes the import
+path instead:
 
 ```bash
-curl -fsS http://localhost/                  # {"service":"UDIAgent API","status":"running",...}
-curl -fsS http://localhost/v1/yac/examples   # 200 — bundled data loaded
+cd /opt/udiagent                             # .env and relative paths resolve here
+UDI_LOG_DIR=/var/log/udiagent \
+  ./venv/bin/uvicorn udiagent.server.app:app --host 0.0.0.0 --port 8007
+```
+
+Two path-related settings matter only on this path, because `_PACKAGE_ROOT`
+resolves into `site-packages` when the code is installed rather than checked out.
+Both variables — and reading `.env` from the working directory — landed after
+`0.2.7`, so publish a release containing them before relying on Path B (or use
+Path A, which builds from source):
+
+- **`UDI_LOG_DIR`** — without it the rotating log file is written next to
+  `site-packages`. If that location isn't writable (a system-wide install run by
+  a non-root service user), file logging is skipped with a one-line notice on
+  stdout and the server still boots.
+- **`UDI_DATA_DIR`** — only the `udiagent` package's own data (skills, grammar
+  schema) ships in the wheel; the repo's `packages/agent/data/` does not. Without
+  this variable `/v1/yac/examples` returns `404`, which the chat UI tolerates by
+  showing no example-prompt suggestions. Point it at a copy of that directory if
+  you want them (it is ~2 MB, mostly benchmark fixtures).
+  `/v1/yac/benchmark_analysis` likewise reads `./out/` relative to the working
+  directory and is a benchmarking-only endpoint.
+
+A minimal systemd unit:
+
+```ini
+[Unit]
+Description=UDIAgent server
+After=network.target
+
+[Service]
+User=udiagent
+WorkingDirectory=/opt/udiagent
+EnvironmentFile=/opt/udiagent/.env
+Environment=UDI_LOG_DIR=/var/log/udiagent
+ExecStart=/opt/udiagent/venv/bin/uvicorn udiagent.server.app:app --host 0.0.0.0 --port 8007
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+`EnvironmentFile` does not do shell quoting or `${VAR}` expansion — keep values
+plain (`JWT_SECRET_KEY=abc123`, no surrounding quotes).
+
+To upgrade: `pip install -U "udiagent[server]"` then restart the unit. Pin the
+version (`udiagent[server]==0.2.7`) if you want reproducible redeploys, since
+this path resolves dependency ranges fresh at install time rather than using the
+repo's lockfile.
+
+### 4. Verify
+
+Substitute your port (`80` for the container as run above, `8007` for the
+systemd unit):
+
+```bash
+curl -fsS http://localhost/                          # {"service":"UDIAgent API","status":"running",...}
+curl -fsS http://localhost/v1/yac/structured_functions   # 200 — bundled package data loaded
 ```
 
 Then exercise the LLM path end to end, which is the only check that catches a
@@ -373,11 +471,16 @@ curl -fsS -X POST http://localhost/v1/yac/completions \
 ```
 
 A healthy response is a JSON body with a non-empty `tool_calls`. `$TOKEN` is a
-JWT signed with `JWT_SECRET_KEY` (`HS256` by default) — mint one inside the
-container, which already has `python-jose`:
+JWT signed with `JWT_SECRET_KEY` (`HS256` by default) — mint one with the
+`python-jose` that the `server` extra already installed:
 
 ```bash
+# Path A (inside the container)
 TOKEN=$(docker exec udi-agent uv run --frozen --no-sync python -c \
+  "import os; from jose import jwt; print(jwt.encode({'sub':'smoke-test'}, os.environ['JWT_SECRET_KEY'], algorithm='HS256'))")
+
+# Path B (in the venv, with JWT_SECRET_KEY exported)
+TOKEN=$(/opt/udiagent/venv/bin/python -c \
   "import os; from jose import jwt; print(jwt.encode({'sub':'smoke-test'}, os.environ['JWT_SECRET_KEY'], algorithm='HS256'))")
 ```
 
@@ -390,25 +493,25 @@ Two different failures both return `401`; tell them apart by the body —
 `{"error":"No OpenAI API key..."}` means auth passed and the LLM credential is
 the thing that's missing.
 
-Logs: `docker logs udi-agent`, plus a rotating file at
-`/app/packages/agent/logs/udi_agent.log` inside the container.
+Logs: `docker logs udi-agent` (Path A) or `journalctl -u udiagent` (Path B),
+plus the rotating file described in step 3.
 
-### 7. Terminate TLS in front of it
+### 5. Terminate TLS in front of it
 
-The container speaks plain HTTP. The chat frontend is served over HTTPS (GitHub
-Pages at `/udi-yac/`), and browsers block HTTPS pages from calling an `http://`
-API — so an HTTP-only agent is unreachable from the deployed chat, not merely
-insecure. Put nginx/Caddy/an ALB in front with a certificate and proxy to the
-container.
+The server speaks plain HTTP on both paths. The chat frontend is served over
+HTTPS (GitHub Pages at `/udi-yac/`), and browsers block HTTPS pages from calling
+an `http://` API — so an HTTP-only agent is unreachable from the deployed chat,
+not merely insecure. Put nginx/Caddy/an ALB in front with a certificate and
+proxy to the port from step 3.
 
 CORS is already `allow_origins=["*"]` with the `X-Usage-*` headers exposed, so
 no per-origin configuration is needed; tighten it in
 [`server/app.py`](src/udiagent/server/app.py) if you want to restrict callers.
 
-### 8. Deploy via GitHub Actions (the EC2 path)
+### 6. Deploy via GitHub Actions (Path A, the EC2 path)
 
 [`.github/workflows/deploy-agent.yml`](../../.github/workflows/deploy-agent.yml)
-runs steps 4–6 on a self-hosted runner: build, restart the container against
+runs steps 3A–4 on a self-hosted runner: build, restart the container against
 `/home/ec2-user/.env`, health-check, prune old images. Trigger it from the
 Actions tab (`workflow_dispatch`).
 
@@ -417,7 +520,7 @@ previously registered to `hms-dbmi/UDIAgent`), and `/home/ec2-user/.env` must
 exist on that host with step 2's contents. The workflow deploys whatever branch
 you dispatch it against.
 
-### 9. Point the chat at it
+### 7. Point the chat at it
 
 In `packages/chat/.env.local` (or the Pages build environment):
 

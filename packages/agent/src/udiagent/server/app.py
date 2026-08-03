@@ -52,21 +52,37 @@ _PACKAGE_ROOT = Path(__file__).resolve().parents[3]
 # load_dotenv() finds nothing — so UDI_QUERY_BACKENDS / OPENAI_API_KEY silently
 # wouldn't load. override=False keeps real env vars (Docker, shell) winning.
 load_dotenv(_PACKAGE_ROOT / ".env")
-_DATA_DIR = _PACKAGE_ROOT / "data"
+# Installed from a wheel there is no packages/agent/.env above site-packages, so
+# also read one from the working directory. Passed explicitly because bare
+# load_dotenv() searches upward from THIS file (site-packages), not the CWD.
+# override=False keeps the path above (and real env vars) winning where both exist.
+load_dotenv(Path.cwd() / ".env")
+
+# When installed from a wheel, _PACKAGE_ROOT lands inside site-packages, which
+# has no data/ (only src/udiagent/data is packaged) and is often read-only —
+# hence the overrides. See the deployment guide in the package README.
+_DATA_DIR = Path(os.getenv("UDI_DATA_DIR") or _PACKAGE_ROOT / "data")
 
 # --- Logging setup ---
-_log_dir = _PACKAGE_ROOT / "logs"
-_log_dir.mkdir(exist_ok=True)
+_log_dir = Path(os.getenv("UDI_LOG_DIR") or _PACKAGE_ROOT / "logs")
+
+_handlers: list[logging.Handler] = [logging.StreamHandler()]
+try:
+    _log_dir.mkdir(parents=True, exist_ok=True)
+    _handlers.append(
+        RotatingFileHandler(
+            _log_dir / "udi_agent.log", maxBytes=5_000_000, backupCount=3
+        )
+    )
+except OSError as exc:
+    # A read-only install must still boot — stream logs only. Set UDI_LOG_DIR
+    # to a writable path to get the rotating file back.
+    print(f"udiagent: file logging disabled ({_log_dir}: {exc})")
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    handlers=[
-        RotatingFileHandler(
-            _log_dir / "udi_agent.log", maxBytes=5_000_000, backupCount=3
-        ),
-        logging.StreamHandler(),
-    ],
+    handlers=_handlers,
 )
 
 # uvicorn's --reload watcher passes watch_filter=None, so watchfiles logs EVERY
