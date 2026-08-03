@@ -68,6 +68,11 @@ class Chart:
         self.representation().mark(mark)
         return self
 
+    def stroke_dash(self, pattern):
+        """Dash the most recently added layer's stroke."""
+        self.representation().stroke_dash(pattern)
+        return self
+
     def map(self, encoding: str, **kwargs):
         self.representation().map(encoding, **kwargs)
         return self
@@ -240,6 +245,10 @@ class Representation:
         self._current_layer.map(encoding, **kwargs)
         return self
 
+    def stroke_dash(self, pattern):
+        self._current_layer.stroke_dash(pattern)
+        return self
+
     def x(self, **kwargs):
         return self.map("x", **kwargs)
 
@@ -301,6 +310,15 @@ class Layer:
 
     def mark(self, mark: str):
         self._state["mark"] = mark
+        return self
+
+    def stroke_dash(self, pattern):
+        """Dash the mark's stroke, as alternating on/off pixel lengths.
+
+        Marks an annotation layer (a reference line, a threshold) so it reads as
+        guidance rather than as data.
+        """
+        self._state["strokeDash"] = list(pattern)
         return self
 
     def map(self, encoding: str, **kwargs):

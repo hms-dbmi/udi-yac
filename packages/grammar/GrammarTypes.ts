@@ -558,6 +558,14 @@ export interface GenericLayer<Mark, Mapping> {
    * The data selection configuration for the layer. Optional.
    */
   select?: DataSelection;
+
+  /**
+   * Dash pattern for the mark's stroke, as alternating on/off lengths in pixels
+   * (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer
+   * as an annotation — a reference line, a threshold — so it reads as guidance
+   * rather than as data.
+   */
+  strokeDash?: number[];
 }
 
 /**

@@ -1,4 +1,5 @@
 import json
+import re
 from enum import Enum
 from pathlib import Path
 
@@ -165,6 +166,171 @@ def validate_specs(df, grammar_path, strict=False):
     else:
         print(f"\nAll {len(df)} templates conform to the grammar.")
     return failures
+
+
+# Dash pattern for the reference-line annotation on the survival curves.
+_SURVIVAL_DASH = [6, 4]
+
+
+def _placeholder_base(placeholder: str) -> str:
+    """``"<F4:n>"`` -> ``"<F4>"`` — drop the type suffix but keep the brackets.
+
+    Getting this wrong is silent and destructive: a bare ``"<F4"`` leaves the
+    placeholder unterminated, so the resolver's ``<([^>]+)>`` match runs past it
+    and swallows the surrounding JSON.
+    """
+    return re.sub(r":[^>]+>", ">", placeholder)
+
+
+def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
+    """Build the shared survival pipeline.
+
+    Survival time is not a column in an event log — it is the gap between two
+    events for the same subject — so the whole pipeline exists to reconstruct it
+    before anything can be plotted. Shared by the three survival templates so
+    they cannot drift apart.
+
+    `stratum` is the placeholder to split by (None for a single curve);
+    `unnest_stratum` expands a delimited multi-value stratum first.
+    """
+    chart = Chart().source("<E>", "<E.url>")
+
+    if unnest_stratum:
+        # Must precede everything that counts rows.
+        chart = chart.unnest("<F4:n>", separator=";")
+
+    chart = chart.filter(Expr.not_null("<F3:q>")).derive(
+        {
+            "start day": Expr.cond(
+                Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
+                Expr.field("<F3>"),
+                Expr.lit(None),
+            ),
+            "end day": Expr.cond(
+                Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
+                Expr.field("<F3>"),
+                Expr.lit(None),
+            ),
+        }
+    )
+
+    # One row per subject (per stratum, when stratified, so the stratum survives
+    # the rollup). min/max ignore the nulls the conditionals leave behind.
+    subject_key = "<F1:n>"
+    group_keys = [subject_key] + ([stratum] if stratum else [])
+    chart = chart.groupby(group_keys if stratum else subject_key).rollup(
+        {"start day": Op.min("start day"), "end day": Op.max("end day")}
+    )
+
+    # The cohort is everyone with a start event, counted BEFORE anyone is dropped
+    # for lacking an end event — that is what makes the curve level off at the
+    # observed survival fraction instead of falling to zero.
+    chart = chart.filter(Expr.not_null("start day"))
+    if stratum:
+        # Re-group so each curve is a fraction of its own cohort.
+        chart = chart.groupby(_placeholder_base(stratum))
+    chart = chart.derive({"subjects": Expr.agg("count")})
+
+    # Subjects with no end event sit at day 0 and contribute no drop. That is
+    # what puts the curve's first point at (0, 100%) — the grammar cannot
+    # synthesize a leading row, but these subjects legitimately belong there.
+    chart = chart.derive(
+        {
+            "died": Expr.cond(
+                Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
+                Expr.lit(1),
+                Expr.lit(0),
+            ),
+            "survival days": Expr.cond(
+                Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
+                Expr.binop("-", Expr.field("end day"), Expr.field("start day")),
+                Expr.lit(0),
+            ),
+        }
+    )
+    chart = chart.filter(Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)))
+    chart = chart.orderby("survival days")
+
+    # Cumulative deaths over the ordered rows, as a percentage still surviving.
+    # A rolling *sum of the death indicator* rather than a row count, because the
+    # day-0 rows are subjects who have not died and must not count as events.
+    chart = chart.derive(
+        {
+            "survival percentage": rolling(
+                Expr.binop(
+                    "*",
+                    Expr.binop(
+                        "-",
+                        Expr.lit(1),
+                        Expr.binop("/", Expr.agg("sum", "died"), Expr.field("subjects")),
+                    ),
+                    Expr.lit(100),
+                )
+            )
+        }
+    )
+
+    # The curve only descends, so its minimum is its final value. `agg` respects
+    # the current grouping, giving a per-stratum final when stratified.
+    chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
+    # Anchor for the end-of-line label, nudged just past the last event so the
+    # centred text is not clipped at the plot edge. Purely an annotation anchor.
+    chart = chart.derive(
+        {
+            "label day": Expr.binop(
+                "*", Expr.agg("max", "survival days"), Expr.lit(1.02)
+            )
+        }
+    )
+    # No round() in the grammar: floor(x + 0.5) using the modulo operator, so the
+    # label reads "48" rather than "47.692307692307686".
+    chart = chart.derive(
+        {"_label_offset": Expr.binop("+", Expr.field("final percentage"), Expr.lit(0.5))}
+    )
+    chart = chart.derive(
+        {
+            "final survival": Expr.binop(
+                "-",
+                Expr.field("_label_offset"),
+                Expr.binop("%", Expr.field("_label_offset"), Expr.lit(1)),
+            )
+        }
+    )
+
+    # --- layers: the curve, a dashed reference line at the final value, and its
+    # numeric label just right of where the line ends.
+    chart = (
+        chart.mark("line")
+        .x(field="survival days", type="quantitative", title="survival days")
+        .y(
+            field="survival percentage",
+            type="quantitative",
+            domain={"min": 0, "max": 100},
+            title="survival (%)",
+        )
+    )
+    if stratum:
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal")
+
+    chart = (
+        chart.mark("line")
+        .stroke_dash(_SURVIVAL_DASH)
+        .x(field="survival days", type="quantitative", title="survival days")
+        .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
+    )
+    if stratum:
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+
+    chart = (
+        chart.mark("text")
+        .x(field="label day", type="quantitative", title="survival days")
+        .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
+        .text(field="final survival", type="quantitative")
+    )
+    if stratum:
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+
+    return chart
 
 
 def generate():
@@ -1616,68 +1782,7 @@ def generate():
             "Plot survival time from diagnosis to death for each <F1:n>.",
             "What fraction of subjects are still alive over time after diagnosis?",
         ],
-        spec=(
-            Chart()
-            .source("<E>", "<E.url>")
-            .filter(Expr.not_null("<F3:q>"))
-            # Project each subject's two anchor events onto their own columns so a
-            # single grouped rollup can pick both up; the grammar's aggregates take
-            # a column name, not an expression, so the conditional has to happen
-            # in a derive first.
-            .derive(
-                {
-                    "start day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
-                        Expr.field("<F3>"),
-                        Expr.lit(None),
-                    ),
-                    "end day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
-                        Expr.field("<F3>"),
-                        Expr.lit(None),
-                    ),
-                }
-            )
-            # One row per subject. min/max ignore the nulls left by the conditional
-            # above, so these pick the earliest start and the latest end event.
-            .groupby("<F1:n>")
-            .rollup({"start day": Op.min("start day"), "end day": Op.max("end day")})
-            # The cohort is everyone with a start event, counted *before* dropping
-            # subjects who have no end event. Using the full cohort as the
-            # denominator is what makes the curve plateau at the observed survival
-            # fraction instead of falling to zero.
-            .filter(Expr.not_null("start day"))
-            .derive({"subjects": Expr.agg("count")})
-            .derive(
-                {
-                    "survival days": Expr.binop(
-                        "-", Expr.field("end day"), Expr.field("start day")
-                    )
-                }
-            )
-            .filter(
-                Expr.binop(
-                    "&&",
-                    Expr.not_null("survival days"),
-                    Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)),
-                )
-            )
-            .orderby("survival days")
-            .derive(
-                {
-                    "survival probability": rolling(
-                        Expr.binop(
-                            "-",
-                            Expr.lit(1),
-                            Expr.binop("/", Expr.agg("count"), Expr.field("subjects")),
-                        )
-                    )
-                }
-            )
-            .mark("line")
-            .x(field="survival days", type="quantitative")
-            .y(field="survival probability", type="quantitative")
-        ),
+        spec=_survival_chart(),
         chart_type=ChartType.LINE,
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -1701,6 +1806,7 @@ def generate():
             "product and per-time at-risk counts, which the grammar cannot express today. Read "
             "the curve as an observed-survival fraction over the cohort, and do not use it where "
             "differences in follow-up length matter."
+            "The curve starts at (0, 100%) because subjects who never reach the end event sit at day 0 and contribute no drop; a group in which every subject reached the end event therefore has nobody at day 0 and its curve begins at its first event instead. The dashed rule and its number mark the final value."
         ),
         tasks=(
             "Judge how survival falls over time after a starting event; compare the observed "
@@ -1736,65 +1842,7 @@ def generate():
             "Compare survival between <F4:n> groups.",
             "Does survival differ by <F4:n>?",
         ],
-        spec=(
-            Chart()
-            .source("<E>", "<E.url>")
-            .filter(Expr.not_null("<F3:q>"))
-            .derive(
-                {
-                    "start day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
-                        Expr.field("<F3>"),
-                        Expr.lit(None),
-                    ),
-                    "end day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
-                        Expr.field("<F3>"),
-                        Expr.lit(None),
-                    ),
-                }
-            )
-            # Group by subject *and* stratum so the stratum survives the rollup.
-            # This assumes a subject's stratum is constant across their events; if
-            # it varies, that subject contributes to more than one curve.
-            .groupby(["<F1:n>", "<F4:n>"])
-            .rollup({"start day": Op.min("start day"), "end day": Op.max("end day")})
-            .filter(Expr.not_null("start day"))
-            # Per-stratum denominator: `agg` respects the grouping, so each curve
-            # is a fraction of its own cohort rather than of the whole table.
-            .groupby("<F4>")
-            .derive({"subjects": Expr.agg("count")})
-            .derive(
-                {
-                    "survival days": Expr.binop(
-                        "-", Expr.field("end day"), Expr.field("start day")
-                    )
-                }
-            )
-            .filter(
-                Expr.binop(
-                    "&&",
-                    Expr.not_null("survival days"),
-                    Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)),
-                )
-            )
-            .orderby("survival days")
-            .derive(
-                {
-                    "survival probability": rolling(
-                        Expr.binop(
-                            "-",
-                            Expr.lit(1),
-                            Expr.binop("/", Expr.agg("count"), Expr.field("subjects")),
-                        )
-                    )
-                }
-            )
-            .mark("line")
-            .x(field="survival days", type="quantitative")
-            .y(field="survival probability", type="quantitative")
-            .color(field="<F4>", type="nominal")
-        ),
+        spec=_survival_chart(stratum="<F4:n>"),
         chart_type=ChartType.LINE,
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -1820,6 +1868,7 @@ def generate():
             "and carries no significance test. Strata are also unequal in size, and a small one "
             "steps coarsely (n=4 moves in quarters), so a dramatic-looking curve may rest on a "
             "handful of subjects."
+            "The curve starts at (0, 100%) because subjects who never reach the end event sit at day 0 and contribute no drop; a group in which every subject reached the end event therefore has nobody at day 0 and its curve begins at its first event instead. The dashed rule and its number mark the final value."
         ),
         tasks=(
             "Compare survival between groups; judge whether an attribute is associated with "
@@ -1855,65 +1904,7 @@ def generate():
             "Show survival curves for <E> split by each <F4:n> value.",
             "Compare survival across <F4:n>, where a subject can have several.",
         ],
-        spec=(
-            Chart()
-            .source("<E>", "<E.url>")
-            # Must come first: everything downstream counts rows, so expanding
-            # after the per-subject rollup would multiply already-collapsed rows.
-            .unnest("<F4:n>", separator=";")
-            .filter(Expr.not_null("<F3:q>"))
-            .derive(
-                {
-                    "start day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
-                        Expr.field("<F3>"),
-                        Expr.lit(None),
-                    ),
-                    "end day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
-                        Expr.field("<F3>"),
-                        Expr.lit(None),
-                    ),
-                }
-            )
-            # One row per (subject, value). A subject with two locations is now
-            # deliberately counted once in each of those two cohorts.
-            .groupby(["<F1:n>", "<F4>"])
-            .rollup({"start day": Op.min("start day"), "end day": Op.max("end day")})
-            .filter(Expr.not_null("start day"))
-            .groupby("<F4>")
-            .derive({"subjects": Expr.agg("count")})
-            .derive(
-                {
-                    "survival days": Expr.binop(
-                        "-", Expr.field("end day"), Expr.field("start day")
-                    )
-                }
-            )
-            .filter(
-                Expr.binop(
-                    "&&",
-                    Expr.not_null("survival days"),
-                    Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)),
-                )
-            )
-            .orderby("survival days")
-            .derive(
-                {
-                    "survival probability": rolling(
-                        Expr.binop(
-                            "-",
-                            Expr.lit(1),
-                            Expr.binop("/", Expr.agg("count"), Expr.field("subjects")),
-                        )
-                    )
-                }
-            )
-            .mark("line")
-            .x(field="survival days", type="quantitative")
-            .y(field="survival probability", type="quantitative")
-            .color(field="<F4>", type="nominal")
-        ),
+        spec=_survival_chart(stratum="<F4:n>", unnest_stratum=True),
         chart_type=ChartType.LINE,
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -1942,6 +1933,7 @@ def generate():
             "value with exactly one observed death renders as a lone point rather than a line, "
             "and a value whose subjects all lack the end event is absent from the chart entirely — the "
             "data is not being dropped, there is simply nothing to plot for it."
+            "The curve starts at (0, 100%) because subjects who never reach the end event sit at day 0 and contribute no drop; a group in which every subject reached the end event therefore has nobody at day 0 and its curve begins at its first event instead. The dashed rule and its number mark the final value."
         ),
         tasks=(
             "Compare observed survival across overlapping categories; see which of a subject's "

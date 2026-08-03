@@ -674,7 +674,30 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         if (vegaEncoding[encoding].scale == null) {
           vegaEncoding[encoding].scale = {};
         }
-        vegaEncoding[encoding].scale['domain'] = map.domain;
+        // `NumberDomain` is the documented `{min, max}` form, but vega-lite reads
+        // an object domain as a *data reference* ({data, field}) and dies with
+        // "Undefined data set name: undefined". Translate it to the array (or
+        // one-sided domainMin/domainMax) form vega-lite actually wants. The table
+        // renderer consumes {min,max} itself, so leave row marks alone.
+        const domain = map.domain as unknown;
+        const isNumberDomain =
+          layer.mark !== 'row' &&
+          typeof domain === 'object' &&
+          domain !== null &&
+          !Array.isArray(domain) &&
+          ('min' in domain || 'max' in domain);
+        if (isNumberDomain) {
+          const { min, max } = domain as { min?: number; max?: number };
+          if (min != null && max != null) {
+            vegaEncoding[encoding].scale['domain'] = [min, max];
+          } else if (min != null) {
+            vegaEncoding[encoding].scale['domainMin'] = min;
+          } else if (max != null) {
+            vegaEncoding[encoding].scale['domainMax'] = max;
+          }
+        } else {
+          vegaEncoding[encoding].scale['domain'] = domain;
+        }
       }
       if ('range' in map) {
         if (vegaEncoding[encoding].scale == null) {
@@ -759,6 +782,10 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     // keeping all boundary ticks visible.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const markConfig: any = { type: layer.mark, tooltip: true };
+    // Dashed strokes distinguish annotation layers (reference lines) from data.
+    if (Array.isArray(layer.strokeDash) && layer.strokeDash.length > 0) {
+      markConfig.strokeDash = layer.strokeDash;
+    }
     if (layer.mark === 'rect') {
       const hasXPair =
         mapping.some((m) => m.encoding === 'x') &&
