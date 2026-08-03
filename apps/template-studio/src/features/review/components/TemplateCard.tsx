@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { Check, ChevronDown, ChevronUp, RotateCcw, X, AlertTriangle } from 'lucide-react';
+import { Archive, Check, ChevronDown, ChevronUp, RotateCcw, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useInViewport } from '@/lib/useInViewport';
 import type { Preview, ReviewStatus, TemplateRecord } from '@/types/previews';
@@ -68,6 +68,9 @@ export function TemplateCard({
         status === 'rejected' && 'border-rose-300',
         status === 'needs_changes' && 'border-amber-300',
         status === 'new' && 'border-slate-200',
+        // Archived templates stay reviewable but recede, so triaged output
+        // doesn't compete for attention with what still needs a decision.
+        status === 'archived' && 'border-slate-300 bg-slate-50 opacity-60 hover:opacity-100',
       )}
     >
       <header className="flex items-start justify-between gap-2 border-b border-slate-100 px-3 py-2">
@@ -157,6 +160,19 @@ export function TemplateCard({
             <X className="size-3.5" /> Reject
           </ReviewButton>
 
+          {/* Archive is not a rejection: the template is correct, we just don't
+              want the agent offering it any more. Kept visually neutral so it
+              doesn't read as a verdict on quality. */}
+          <ReviewButton
+            onClick={() => submit('archived')}
+            disabled={!onReview || saving}
+            active={status === 'archived'}
+            title="Valid, but should no longer be offered as agent output"
+            className="border-slate-300 text-slate-700 hover:bg-slate-100 aria-pressed:bg-slate-600"
+          >
+            <Archive className="size-3.5" /> Archive
+          </ReviewButton>
+
           {dirty && onReview && (
             <span className="text-[10px] text-slate-500">
               unsaved feedback — pick a status to save
@@ -194,12 +210,14 @@ function ReviewButton({
   disabled,
   active,
   className,
+  title,
   children,
 }: {
   onClick: () => void;
   disabled: boolean;
   active: boolean;
   className?: string;
+  title?: string;
   children: ReactNode;
 }) {
   return (
@@ -207,6 +225,7 @@ function ReviewButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={title}
       aria-pressed={active}
       className={cn(
         'inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',

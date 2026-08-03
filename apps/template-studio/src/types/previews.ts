@@ -6,7 +6,18 @@
  */
 import type { UDIGrammar } from 'udi-toolkit/react';
 
-export const REVIEW_STATUSES = ['new', 'approved', 'rejected', 'needs_changes'] as const;
+/**
+ * `archived` is distinct from `rejected`: a rejected template is wrong, an
+ * archived one is correct but no longer wanted as agent output — a candidate for
+ * removal from the builder rather than a bug to fix.
+ */
+export const REVIEW_STATUSES = [
+  'new',
+  'approved',
+  'rejected',
+  'needs_changes',
+  'archived',
+] as const;
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
 
 export const STATUS_LABELS: Record<ReviewStatus, string> = {
@@ -14,6 +25,7 @@ export const STATUS_LABELS: Record<ReviewStatus, string> = {
   approved: 'Approved',
   rejected: 'Rejected',
   needs_changes: 'Needs changes',
+  archived: 'Archived',
 };
 
 /** A template resolved successfully and can be rendered. */

@@ -8,7 +8,13 @@
  * attached to the exact spec that was reviewed, and deliberately orphans when
  * that spec changes — which is the signal a reviewer wants, not a bug.
  */
-import type { ReviewEntry, ReviewMap, ReviewStatus, TemplateRecord } from '@/types/previews';
+import {
+  REVIEW_STATUSES,
+  type ReviewEntry,
+  type ReviewMap,
+  type ReviewStatus,
+  type TemplateRecord,
+} from '@/types/previews';
 
 /** A stored review whose template no longer exists in the current export. */
 export interface OrphanedReview {
@@ -42,22 +48,11 @@ export function findOrphanedReviews(
     .sort((a, b) => a.key.localeCompare(b.key));
 }
 
-export interface ReviewCounts {
-  total: number;
-  new: number;
-  approved: number;
-  rejected: number;
-  needs_changes: number;
-}
+export type ReviewCounts = Record<ReviewStatus, number> & { total: number };
 
 export function countByStatus(templates: TemplateRecord[], reviews: ReviewMap): ReviewCounts {
-  const counts: ReviewCounts = {
-    total: templates.length,
-    new: 0,
-    approved: 0,
-    rejected: 0,
-    needs_changes: 0,
-  };
+  const counts = { total: templates.length } as ReviewCounts;
+  for (const status of REVIEW_STATUSES) counts[status] = 0;
   for (const template of templates) counts[statusFor(template.key, reviews)] += 1;
   return counts;
 }

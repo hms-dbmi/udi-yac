@@ -86,7 +86,36 @@ describe('countByStatus', () => {
       approved: 1,
       rejected: 0,
       needs_changes: 0,
+      archived: 0,
     });
+  });
+
+  it('counts archived separately from rejected', () => {
+    const templates = [template({ key: 'k1' }), template({ key: 'k2' })];
+    const reviews: ReviewMap = {
+      k1: { status: 'archived', feedback: '', reviewed_at: '' },
+      k2: { status: 'rejected', feedback: '', reviewed_at: '' },
+    };
+
+    const counts = countByStatus(templates, reviews);
+    expect(counts.archived).toBe(1);
+    expect(counts.rejected).toBe(1);
+    expect(counts.new).toBe(0);
+  });
+});
+
+describe('filterTemplates with archived', () => {
+  it('can show only archived templates', () => {
+    const templates = [template({ key: 'k1' }), template({ key: 'k2' })];
+    const reviews: ReviewMap = { k1: { status: 'archived', feedback: '', reviewed_at: '' } };
+
+    const result = filterTemplates(templates, reviews, {
+      statuses: new Set(['archived'] as const),
+      search: '',
+      renderableOnly: false,
+      dataPackageId: 'hubmap',
+    });
+    expect(result.map((t) => t.key)).toEqual(['k1']);
   });
 });
 

@@ -16,7 +16,15 @@ import { dirname, join } from 'node:path';
 import type { Connect, Plugin } from 'vite';
 import type { ServerResponse } from 'node:http';
 
-export const REVIEW_STATUSES = ['new', 'approved', 'rejected', 'needs_changes'] as const;
+// Mirrors src/types/previews.ts. `archived` = valid but no longer wanted as
+// agent output, as distinct from `rejected` = wrong.
+export const REVIEW_STATUSES = [
+  'new',
+  'approved',
+  'rejected',
+  'needs_changes',
+  'archived',
+] as const;
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
 
 export interface ReviewEntry {
