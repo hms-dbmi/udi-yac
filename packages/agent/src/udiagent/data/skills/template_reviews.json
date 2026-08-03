@@ -48,6 +48,20 @@
     "tool_name": "vis_032_circular_proportion",
     "chart_type": "circular"
   },
+  "2087cc703b01": {
+    "status": "needs_changes",
+    "feedback": "Update the description  and design considerations to be agnostic to the dataset, and just focus on the shape of the data.",
+    "reviewed_at": "2026-08-03T18:51:11.684Z",
+    "tool_name": "vis_053_line_survival",
+    "chart_type": "line"
+  },
+  "238cadb5d18b": {
+    "status": "needs_changes",
+    "feedback": "Update the description  and design considerations to be agnostic to the dataset, and just focus on the shape of the data.",
+    "reviewed_at": "2026-08-03T18:51:09.534Z",
+    "tool_name": "vis_052_line_survival",
+    "chart_type": "line"
+  },
   "2528d79ee7c0": {
     "status": "approved",
     "feedback": "",
@@ -88,6 +102,13 @@
     "feedback": "",
     "reviewed_at": "2026-08-03T16:18:07.677Z",
     "tool_name": "vis_051_line_sorted",
+    "chart_type": "line"
+  },
+  "42222f646516": {
+    "status": "needs_changes",
+    "feedback": "Update the description  and design considerations to be agnostic to the dataset, and just focus on the shape of the data.",
+    "reviewed_at": "2026-08-03T18:51:12.827Z",
+    "tool_name": "vis_054_line_count_survival",
     "chart_type": "line"
   },
   "447fbb079569": {
@@ -131,13 +152,6 @@
     "reviewed_at": "2026-08-03T15:48:55.652Z",
     "tool_name": "vis_024_barchart_median_vert",
     "chart_type": "barchart"
-  },
-  "510a0c890834": {
-    "status": "approved",
-    "feedback": "",
-    "reviewed_at": "2026-08-03T15:51:50.647Z",
-    "tool_name": "vis_046_table_ranked_mode",
-    "chart_type": "table"
   },
   "535e08666561": {
     "status": "approved",
@@ -306,13 +320,6 @@
     "reviewed_at": "2026-08-03T14:34:46.828Z",
     "tool_name": "vis_001_barchart_count_horiz_grouped",
     "chart_type": "barchart"
-  },
-  "b149dac8cede": {
-    "status": "needs_changes",
-    "feedback": "Show the counts here as well",
-    "reviewed_at": "2026-08-03T16:18:03.016Z",
-    "tool_name": "vis_048_table_sorted",
-    "chart_type": "table"
   },
   "b1b8d804a870": {
     "status": "archived",

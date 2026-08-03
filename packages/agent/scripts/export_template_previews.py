@@ -389,10 +389,14 @@ def _declared_binding(
             f"(has: {available}). It is written for a specific table shape."
         ]
 
+    # <V*> declares a literal data value, not a column, so it must not be checked
+    # against the entity's field list.
     missing = [
         f"{key}={value!r}"
         for key, value in declared.items()
-        if key not in ("E", "E1", "E2") and value not in entities[entity].get("fields", {})
+        if key not in ("E", "E1", "E2")
+        and not re.fullmatch(r"V\d*", key)
+        and value not in entities[entity].get("fields", {})
     ]
     if missing:
         return None, None, [

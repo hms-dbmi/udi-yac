@@ -378,6 +378,14 @@ def _resolve_placeholder(tag, bindings, schema):
     # Strip type suffix: F:n -> F, E1.F:q -> E1.F
     base = tag.split(":")[0] if ":" in tag else tag
 
+    # Literal data values (<V>, <V1>, ...) are model-supplied text rather than
+    # column names, so they can legitimately contain quotes, backslashes or
+    # newlines. Substitution happens on the raw spec JSON string, so escape them
+    # or a value like 'Grade "III"' would produce unparseable JSON.
+    if re.fullmatch(r"V\d*", base):
+        value = bindings.get(base, "")
+        return json.dumps(str(value))[1:-1]
+
     return bindings.get(base, "")
 
 
@@ -562,6 +570,18 @@ def validate_bindings(spec_template, bindings, schema):
         if key in ("E", "E1", "E2"):
             continue
 
+        # <V*> binds a literal data value (an event type, a status string), not a
+        # column, so the field-existence, type and cardinality checks below do not
+        # apply. Only require that something was supplied — an empty value would
+        # silently make a filter match nothing.
+        if re.fullmatch(r"V\d*", key):
+            if not str(field_name).strip():
+                errors.append(
+                    f"Value '{key}' is empty; supply the data value to match "
+                    f"(e.g. one of the values present in the relevant column)."
+                )
+            continue
+
         if key.startswith("E1."):
             entity_name = entity_bindings.get("E1")
         elif key.startswith("E2."):
@@ -732,6 +752,20 @@ def _execute_generate(skill, context):
             "tool and provide the correct arguments.\n\n"
             f"## Available Datasets\n\n{data_schema_simple}"
         )
+        # Some tools take a literal data value (a `value*` parameter) rather than
+        # only column names. The schema lists columns but not their contents, so
+        # without domains the model would have to guess those values. Append them
+        # when the caller supplied them.
+        data_domains = context.get("data_domains")
+        if data_domains:
+            domains_simple = simplify_data_domains(data_domains)
+            if domains_simple:
+                system_msg += (
+                    "\n\n## Column Values\n\n"
+                    "Use these when a tool asks for a literal `value` — copy one "
+                    "exactly rather than inventing it.\n\n"
+                    f"{domains_simple}"
+                )
         tool_messages = [{"role": "system", "content": system_msg}] + list(
             context["messages"]
         )
@@ -920,7 +954,14 @@ def run_skills(plan, context, registry):
 
 
 def generate_vis_spec(
-    agent, messages, data_schema, grammar, config=None, usage=None, openai_api_key=None
+    agent,
+    messages,
+    data_schema,
+    grammar,
+    config=None,
+    usage=None,
+    openai_api_key=None,
+    data_domains=None,
 ):
     """Generate a visualization spec using the skills pipeline.
 
@@ -944,6 +985,10 @@ def generate_vis_spec(
         "agent": agent,
         "messages": messages,
         "data_schema": data_schema,
+        # Optional: lets tools that take a literal data value see the candidate
+        # values instead of guessing. Keyword-only with a default so existing
+        # callers keep working.
+        "data_domains": data_domains,
         "grammar": grammar,
         "config": config,
         "spec_str": "{}",

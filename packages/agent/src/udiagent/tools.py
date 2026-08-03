@@ -221,7 +221,13 @@ ORCHESTRATOR_TOOLS = [
 
 
 def function_call_render_visualization(
-    agent, messages, data_schema, grammar, usage=None, openai_api_key=None
+    agent,
+    messages,
+    data_schema,
+    grammar,
+    usage=None,
+    openai_api_key=None,
+    data_domains=None,
 ):
     """Visualization generation via the skills pipeline."""
     from udiagent.vis_generate import generate_vis_spec
@@ -234,6 +240,7 @@ def function_call_render_visualization(
         grammar=grammar,
         usage=usage,
         openai_api_key=openai_api_key,
+        data_domains=data_domains,
     )
     return {
         "name": "RenderVisualization",

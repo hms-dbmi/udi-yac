@@ -245,13 +245,14 @@ def _generate_single_entity_tool(
     for ph in sorted(placeholders):
         if ph in ("E", "E.url"):
             continue
-        m = re.match(r'(F\d*|D\d*)', ph)
+        m = re.match(r'(F\d*|D\d*|V\d*)', ph)
         if not m:
             continue
-        base = m.group(1)  # F, F1, F2, F3 or D, D1, D2, D3
+        base = m.group(1)  # F, F1..F4 / D, D1..D3 / V, V1..V3
         param_name = {
             "F": "field", "F1": "field1", "F2": "field2", "F3": "field3", "F4": "field4",
             "D": "dimension", "D1": "dimension1", "D2": "dimension2", "D3": "dimension3",
+            "V": "value", "V1": "value1", "V2": "value2", "V3": "value3",
         }.get(base)
         if not param_name or param_name in seen:
             continue
@@ -265,6 +266,15 @@ def _generate_single_entity_tool(
         param_description = _build_field_description(field_type, encoding_info.get(base))
         if base.startswith("D"):
             param_description = "cube " + param_description.replace("field", "dimension", 1)
+        elif base.startswith("V"):
+            # <V*> is a literal data value, not a column. Say so explicitly: the
+            # obvious failure is the model passing a column name here, which would
+            # make the comparison it feeds match nothing.
+            param_description = (
+                "A literal data VALUE to match (not a column name) — one of the "
+                "values actually present in the relevant column, copied exactly, "
+                "including case and spacing."
+            )
         properties[param_name] = {
             "type": "string",
             "description": param_description,

@@ -66,11 +66,20 @@ apps/template-studio  ← renders templates, writes review decisions to
    useful than a preview that renders but means nothing. It is preview-only: the
    model still chooses its own bindings at runtime.
 
-   **Placeholders bind column names, never literal values.** A template that has
-   to compare against a specific value (an event vocabulary, a status string) must
-   hardcode it — see `SURVIVAL_START_EVENT`/`SURVIVAL_END_EVENT`. Such a template
-   only applies to datasets using that vocabulary, so say so in its description.
-   Making values bindable needs a new placeholder kind in `vis_generate`.
+   **`<V*>` binds a literal data value**, for templates that must compare against
+   one — an event type, a status string. It becomes a `value1`/`value2` tool
+   parameter, and the model fills it from the request's column domains, so the
+   template stays dataset-agnostic. Use `Expr.lit("<V1>")` where the value goes.
+
+   Two things follow. Values are **not** validated as columns (no field-existence,
+   type or cardinality check) — only that something non-empty was supplied. And
+   they are JSON-escaped on substitution, because they are spliced into the spec's
+   raw JSON string and a value like `Grade "III"` would otherwise corrupt it.
+
+   Describe such a template by the **shape** it needs ("an event log with a subject
+   id, an event-type column and a numeric time column"), not by the dataset that
+   motivated it — the values are no longer baked in. Keep concrete example values
+   in `preview_bindings` only.
 
 3. **Regenerate:**
 
@@ -106,6 +115,7 @@ apps/template-studio  ← renders templates, writes review decisions to
 | `<M>`                       | cube **measure** column (from the schema, not bound)             |
 | `<MARGINAL:D1,D2>`          | cube marginal filter: listed dims non-null, all others null      |
 | `<E1.r.E2.id.from>` / `.to` | join keys, from the schema's relationships                       |
+| `<V>`, `<V1>`…`<V3>`        | a literal data **value** the model supplies (not a column)       |
 | `:n` / `:q` / `:o` suffix   | constrains the bound field's type (nominal/quantitative/ordinal) |
 
 **Multi-value columns need `unnest`.** Some columns hold a `;`-delimited set

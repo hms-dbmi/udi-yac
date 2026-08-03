@@ -246,40 +246,39 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<D:o>", "type": "ordinal"}, {"encoding": "y", "field": "<M>", "type": "quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
  '"<F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<F2:n>"}, '
- '"right": {"literal": "Initial CNS Tumor"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}, "end day": {"if": '
- '{"op": "==", "left": {"field": "<F2>"}, "right": {"literal": "Deceased"}}, "then": {"field": "<F3>"}, "else": '
- '{"literal": null}}}}, {"groupby": "<F1:n>"}, {"rollup": {"start day": {"op": "min", "field": "start day"}, "end '
- 'day": {"op": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": '
- '{"literal": null}}}, {"derive": {"subjects": {"agg": "count"}}}, {"derive": {"survival days": {"op": "-", "left": '
+ '"right": {"literal": "<V1>"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
+ '"left": {"field": "<F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}}}, '
+ '{"groupby": "<F1:n>"}, {"rollup": {"start day": {"op": "min", "field": "start day"}, "end day": {"op": "max", '
+ '"field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": null}}}, '
+ '{"derive": {"subjects": {"agg": "count"}}}, {"derive": {"survival days": {"op": "-", "left": {"field": "end day"}, '
+ '"right": {"field": "start day"}}}}, {"filter": {"op": "&&", "left": {"op": "!=", "left": {"field": "survival days"}, '
+ '"right": {"literal": null}}, "right": {"op": ">=", "left": {"field": "survival days"}, "right": {"literal": 0}}}}, '
+ '{"orderby": {"field": "survival days", "order": "asc"}}, {"derive": {"survival probability": {"rolling": '
+ '{"expression": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "count"}, "right": {"field": '
+ '"subjects"}}}}}}}], "representation": {"mark": "line", "mapping": [{"encoding": "x", "field": "survival days", '
+ '"type": "quantitative"}, {"encoding": "y", "field": "survival probability", "type": "quantitative"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
+ '"<F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<F2:n>"}, '
+ '"right": {"literal": "<V1>"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
+ '"left": {"field": "<F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}}}, '
+ '{"groupby": ["<F1:n>", "<F4:n>"]}, {"rollup": {"start day": {"op": "min", "field": "start day"}, "end day": {"op": '
+ '"max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": null}}}, '
+ '{"groupby": "<F4>"}, {"derive": {"subjects": {"agg": "count"}}}, {"derive": {"survival days": {"op": "-", "left": '
  '{"field": "end day"}, "right": {"field": "start day"}}}}, {"filter": {"op": "&&", "left": {"op": "!=", "left": '
  '{"field": "survival days"}, "right": {"literal": null}}, "right": {"op": ">=", "left": {"field": "survival days"}, '
  '"right": {"literal": 0}}}}, {"orderby": {"field": "survival days", "order": "asc"}}, {"derive": {"survival '
  'probability": {"rolling": {"expression": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": '
  '"count"}, "right": {"field": "subjects"}}}}}}}], "representation": {"mark": "line", "mapping": [{"encoding": "x", '
  '"field": "survival days", "type": "quantitative"}, {"encoding": "y", "field": "survival probability", "type": '
- '"quantitative"}]}}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
- '"<F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<F2:n>"}, '
- '"right": {"literal": "Initial CNS Tumor"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}, "end day": {"if": '
- '{"op": "==", "left": {"field": "<F2>"}, "right": {"literal": "Deceased"}}, "then": {"field": "<F3>"}, "else": '
- '{"literal": null}}}}, {"groupby": ["<F1:n>", "<F4:n>"]}, {"rollup": {"start day": {"op": "min", "field": "start '
- 'day"}, "end day": {"op": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, '
- '"right": {"literal": null}}}, {"groupby": "<F4>"}, {"derive": {"subjects": {"agg": "count"}}}, {"derive": {"survival '
- 'days": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start day"}}}}, {"filter": {"op": "&&", "left": '
- '{"op": "!=", "left": {"field": "survival days"}, "right": {"literal": null}}, "right": {"op": ">=", "left": '
- '{"field": "survival days"}, "right": {"literal": 0}}}}, {"orderby": {"field": "survival days", "order": "asc"}}, '
- '{"derive": {"survival probability": {"rolling": {"expression": {"op": "-", "left": {"literal": 1}, "right": {"op": '
- '"/", "left": {"agg": "count"}, "right": {"field": "subjects"}}}}}}}], "representation": {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "survival days", "type": "quantitative"}, {"encoding": "y", "field": "survival '
- 'probability", "type": "quantitative"}, {"encoding": "color", "field": "<F4>", "type": "nominal"}]}}',
+ '"quantitative"}, {"encoding": "color", "field": "<F4>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"unnest": {"field": "<F4:n>", "separator": '
  '";"}}, {"filter": {"op": "!=", "left": {"field": "<F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": '
- '{"if": {"op": "==", "left": {"field": "<F2:n>"}, "right": {"literal": "Initial CNS Tumor"}}, "then": {"field": '
- '"<F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", "left": {"field": "<F2>"}, "right": {"literal": '
- '"Deceased"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}}}, {"groupby": ["<F1:n>", "<F4>"]}, {"rollup": '
- '{"start day": {"op": "min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}}}, {"filter": {"op": '
- '"!=", "left": {"field": "start day"}, "right": {"literal": null}}}, {"groupby": "<F4>"}, {"derive": {"subjects": '
- '{"agg": "count"}}}, {"derive": {"survival days": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start '
+ '{"if": {"op": "==", "left": {"field": "<F2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<F3>"}, "else": '
+ '{"literal": null}}, "end day": {"if": {"op": "==", "left": {"field": "<F2>"}, "right": {"literal": "<V2>"}}, "then": '
+ '{"field": "<F3>"}, "else": {"literal": null}}}}, {"groupby": ["<F1:n>", "<F4>"]}, {"rollup": {"start day": {"op": '
+ '"min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": '
+ '{"field": "start day"}, "right": {"literal": null}}}, {"groupby": "<F4>"}, {"derive": {"subjects": {"agg": '
+ '"count"}}}, {"derive": {"survival days": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start '
  'day"}}}}, {"filter": {"op": "&&", "left": {"op": "!=", "left": {"field": "survival days"}, "right": {"literal": '
  'null}}, "right": {"op": ">=", "left": {"field": "survival days"}, "right": {"literal": 0}}}}, {"orderby": {"field": '
  '"survival days", "order": "asc"}}, {"derive": {"survival probability": {"rolling": {"expression": {"op": "-", '
@@ -1188,42 +1187,51 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': "[line] Survival curve built from an event log: pairs each subject's 'Initial CNS Tumor' "
-                              "and 'Deceased' events to derive a survival time, then plots the falling fraction of "
-                              'subjects without the end event. Design: Survival time is not stored anywhere; it is '
-                              'reconstructed as the gap between two events for the same subject, so the template '
-                              'groups the event log by subject id and rolls it up to one row each before computing '
-                              'anything. The subject id is only a grouping key and is never encoded, so its '
-                              'cardinality does not matter. IMPORTANT: this is a crude survival curve, not a '
-                              'Kaplan-Meier estimate. Subjects with no end event are kept in the denominator but '
+ {'function': {'description': '[line] Survival curve from an event log — a table with one row per event, a subject id, '
+                              'an event-type column and a numeric time column. Given a start event type and an end '
+                              "event type, derives each subject's elapsed time between them and plots the falling "
+                              'fraction of subjects that have not yet reached the end event. Design: Survival time is '
+                              'not stored anywhere; it is reconstructed as the gap between two events for the same '
+                              'subject, so the template groups the event log by subject id and rolls it up to one row '
+                              'each before computing anything. The subject id is only a grouping key and is never '
+                              'encoded, so its cardinality does not matter. IMPORTANT: this is a crude survival curve, '
+                              'not a Kaplan-Meier estimate. Subjects with no end event are kept in the denominator but '
                               'contribute no drop, which assumes every one of them was followed for the whole window. '
                               'A true Kaplan-Meier estimator reweights by the number still at risk at each event time; '
-                              'that needs a cumulative product and per-time at-risk counts, which the grammar cannot '
-                              'express today. Read the curve as an observed-survival fraction over the cohort, and do '
-                              'not use it where ',
+                              'that needs a cumulative product and per-time at-risk counts, which the gramma',
                'name': 'vis_052_line_survival',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
                                              'field1': {'description': 'nominal field.', 'type': 'string'},
                                              'field2': {'description': 'any type field.', 'type': 'string'},
-                                             'field3': {'description': 'any type field.', 'type': 'string'}},
-                              'required': ['entity', 'field1', 'field2', 'field3'],
+                                             'field3': {'description': 'any type field.', 'type': 'string'},
+                                             'value1': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'field1', 'field2', 'field3', 'value1', 'value2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by a nominal field, built from an event log: pairs each '
-                              "subject's 'Initial CNS Tumor' and 'Deceased' events to derive a survival time, then "
-                              'plots one curve per category with its own cohort as the denominator. Design: Groups by '
-                              'subject and stratum together so the stratum survives the per-subject rollup, then '
-                              "re-groups by stratum so each curve's denominator is its own cohort — otherwise the "
-                              'curves would be fractions of the whole table and would not each start near 1. Strata '
-                              'are drawn as colours because the grammar has no facet channel. Only for single-valued '
-                              'fields: a list-valued column such as tumor_locations would make every distinct '
-                              'combination its own stratum. The same censoring caveat as the unstratified survival '
+ {'function': {'description': '[line] Survival curves split by a nominal field, from an event log — one row per event, '
+                              'with a subject id, an event-type column and a numeric time column. Given a start and an '
+                              "end event type, derives each subject's elapsed time between them and plots one curve "
+                              'per category, each against its own cohort. Design: Groups by subject and stratum '
+                              'together so the stratum survives the per-subject rollup, then re-groups by stratum so '
+                              "each curve's denominator is its own cohort — otherwise the curves would be fractions of "
+                              'the whole table and would not each start near 1. Strata are drawn as colours because '
+                              'the grammar has no facet channel. Only for single-valued fields: a delimited '
+                              'multi-value column would make every distinct combination its own stratum — use the '
+                              'multi-value variant for those. The same censoring caveat as the unstratified survival '
                               'curve applies, and it bites harder here: subjects with no end event hold their '
                               "stratum's curve up, so comparing groups whose follow-up differs is misleading. This is "
-                              'not a Kaplan-Meier estimate and carries no significance test. Strata are also unequal '
-                              'in size, and a sm',
+                              'not a Kapla',
                'name': 'vis_053_line_survival',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -1232,22 +1240,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'field2': {'description': 'any type field.', 'type': 'string'},
                                              'field3': {'description': 'any type field.', 'type': 'string'},
                                              'field4': {'description': 'nominal field, encodes color.',
+                                                        'type': 'string'},
+                                             'value1': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
                                                         'type': 'string'}},
-                              'required': ['entity', 'field1', 'field2', 'field3', 'field4'],
+                              'required': ['entity', 'field1', 'field2', 'field3', 'field4', 'value1', 'value2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': "[line] Survival curves split by each value of a multi-value (';'-delimited) field, "
-                              'built from an event log: expands the field so a subject counts toward every value it '
-                              "lists, pairs each subject's 'Initial CNS Tumor' and 'Deceased' events to derive a "
-                              'survival time, then plots one curve per value. Design: For set-valued columns such as '
-                              'tumor locations, where one subject can belong to several categories. `unnest` runs '
-                              'first, before any row counting, so the per-subject rollup sees one row per (subject, '
-                              'value) pair. The cohorts therefore overlap by design and their sizes sum to more than '
-                              'the number of subjects — that is the correct reading of a multi-value attribute, but it '
-                              'means the curves are not independent and must not be compared as if they partitioned '
-                              'the cohort. Without unnest each distinct combination would be its own stratum: on PCX '
-                              'that is 78 categories for 22 real locations, which also exceeds the 50-cardinality cap. '
-                              'Every caveat from the single-valued stratified curve still applies — no censoring, no a',
+ {'function': {'description': '[line] Survival curves split by each value of a multi-value (delimited) field, from an '
+                              'event log — one row per event, with a subject id, an event-type column and a numeric '
+                              'time column. Expands the multi-value field so a subject counts toward every value it '
+                              "lists, derives each subject's elapsed time between a start and an end event type, then "
+                              'plots one curve per value. Design: For set-valued columns such as tumor locations, '
+                              'where one subject can belong to several categories. `unnest` runs first, before any row '
+                              'counting, so the per-subject rollup sees one row per (subject, value) pair. The cohorts '
+                              'therefore overlap by design and their sizes sum to more than the number of subjects — '
+                              'that is the correct reading of a multi-value attribute, but it means the curves are not '
+                              'independent and must not be compared as if they partitioned the cohort. Without unnest '
+                              'each distinct combination would be its own stratum — a column with ~20 real values can '
+                              'easily have ~80 combinations, which also exceeds the 50-cardinality cap f',
                'name': 'vis_054_line_count_survival',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
@@ -1256,8 +1274,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'field2': {'description': 'any type field.', 'type': 'string'},
                                              'field3': {'description': 'any type field.', 'type': 'string'},
                                              'field4': {'description': 'nominal field, encodes color.',
+                                                        'type': 'string'},
+                                             'value1': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
                                                         'type': 'string'}},
-                              'required': ['entity', 'field1', 'field2', 'field3', 'field4'],
+                              'required': ['entity', 'field1', 'field2', 'field3', 'field4', 'value1', 'value2'],
                               'type': 'object'}},
   'type': 'function'},
  {'function': {'description': '[heatmap] Displays the count of entities for each combination of two nominal fields as '
@@ -1508,9 +1536,29 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_049_line_cdf': (49, {'entity': 'E', 'field': 'F'}),
  'vis_050_grouped_line_cdf': (50, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_051_line_sorted': (51, {'dimension': 'D', 'entity': 'E'}),
- 'vis_052_line_survival': (52, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_053_line_survival': (53, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3', 'field4': 'F4'}),
- 'vis_054_line_count_survival': (54, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3', 'field4': 'F4'}),
+ 'vis_052_line_survival': (52,
+                           {'entity': 'E',
+                            'field1': 'F1',
+                            'field2': 'F2',
+                            'field3': 'F3',
+                            'value1': 'V1',
+                            'value2': 'V2'}),
+ 'vis_053_line_survival': (53,
+                           {'entity': 'E',
+                            'field1': 'F1',
+                            'field2': 'F2',
+                            'field3': 'F3',
+                            'field4': 'F4',
+                            'value1': 'V1',
+                            'value2': 'V2'}),
+ 'vis_054_line_count_survival': (54,
+                                 {'entity': 'E',
+                                  'field1': 'F1',
+                                  'field2': 'F2',
+                                  'field3': 'F3',
+                                  'field4': 'F4',
+                                  'value1': 'V1',
+                                  'value2': 'V2'}),
  'vis_055_heatmap_count': (55, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_056_heatmap_avg': (56, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
  'vis_057_heatmap_basic': (57, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),

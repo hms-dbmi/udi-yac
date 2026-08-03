@@ -55,13 +55,11 @@ class TaskType(Enum):
 # Shared design note for data-cube templates: a cube is read by marginal
 # filtering, and the marginal filter (<MARGINAL:...>) is expanded at runtime
 # from the per-request schema's dimension list, so one template serves any cube.
-# The two event-log values that bracket a survival interval. These are literal
-# data *values*, not column names, and the placeholder system can only bind
-# columns — so unlike every other template these cannot be parameterised, and the
-# survival template only applies to event logs using this vocabulary (PCX's).
-# Making them bindable needs a literal-binding placeholder in vis_generate.
-SURVIVAL_START_EVENT = "Initial CNS Tumor"
-SURVIVAL_END_EVENT = "Deceased"
+# Event values used only to *preview* the survival templates in the studio. The
+# templates themselves take <V1>/<V2> literal-value placeholders, which the model
+# fills from the request's column domains, so they work with any event vocabulary.
+PREVIEW_START_EVENT = "Initial CNS Tumor"
+PREVIEW_END_EVENT = "Deceased"
 
 
 _CUBE_MARGINAL_NOTE = (
@@ -1629,12 +1627,12 @@ def generate():
             .derive(
                 {
                     "start day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit(SURVIVAL_START_EVENT)),
+                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
                         Expr.field("<F3>"),
                         Expr.lit(None),
                     ),
                     "end day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2>"), Expr.lit(SURVIVAL_END_EVENT)),
+                        Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
                         Expr.field("<F3>"),
                         Expr.lit(None),
                     ),
@@ -1686,9 +1684,10 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description=(
-            f"Survival curve built from an event log: pairs each subject's "
-            f"'{SURVIVAL_START_EVENT}' and '{SURVIVAL_END_EVENT}' events to derive a survival "
-            f"time, then plots the falling fraction of subjects without the end event."
+            "Survival curve from an event log — a table with one row per event, a subject id, "
+            "an event-type column and a numeric time column. Given a start event type and an end "
+            "event type, derives each subject's elapsed time between them and plots the falling "
+            "fraction of subjects that have not yet reached the end event."
         ),
         design_considerations=(
             "Survival time is not stored anywhere; it is reconstructed as the gap between two "
@@ -1708,10 +1707,9 @@ def generate():
             "survival fraction of a cohort at a given number of days."
         ),
         review_hint=(
-            f"Event-type values are hardcoded to PCX's vocabulary "
-            f"('{SURVIVAL_START_EVENT}', '{SURVIVAL_END_EVENT}') because placeholders can only "
-            f"bind column names, not literal values. Check the caveat about censoring in the "
-            f"design considerations before approving."
+            "The two event types are <V1>/<V2> literal-value placeholders, so the model supplies "
+            "them per request from the column's domain — nothing here is dataset-specific. Check "
+            "the censoring caveat in the design considerations before approving."
         ),
         # The studio cannot infer which column is the subject id, which is the
         # event type, or which holds the day offset — a type-directed search would
@@ -1721,14 +1719,16 @@ def generate():
             "F1": "research_id",
             "F2": "event_type",
             "F3": "event_date",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
         },
     )
 
     # Stratified: one curve per category of a single-valued nominal field
     # (organization, diagnosis category, metastasis yes/no). Each subject belongs
     # to exactly one stratum, so the cohort splits cleanly and each curve gets its
-    # own denominator. List-valued columns such as tumor_locations do NOT work
-    # here — see the note at the end of this section.
+    # own denominator. Delimited multi-value columns do NOT work here — the next
+    # template handles those.
     df = add_row(
         df,
         query_templates=[
@@ -1743,12 +1743,12 @@ def generate():
             .derive(
                 {
                     "start day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit(SURVIVAL_START_EVENT)),
+                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
                         Expr.field("<F3>"),
                         Expr.lit(None),
                     ),
                     "end day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2>"), Expr.lit(SURVIVAL_END_EVENT)),
+                        Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
                         Expr.field("<F3>"),
                         Expr.lit(None),
                     ),
@@ -1802,18 +1802,18 @@ def generate():
             TaskType.CORRELATE,
         ],
         description=(
-            f"Survival curves split by a nominal field, built from an event log: pairs each "
-            f"subject's '{SURVIVAL_START_EVENT}' and '{SURVIVAL_END_EVENT}' events to derive a "
-            f"survival time, then plots one curve per category with its own cohort as the "
-            f"denominator."
+            "Survival curves split by a nominal field, from an event log — one row per event, "
+            "with a subject id, an event-type column and a numeric time column. Given a start "
+            "and an end event type, derives each subject's elapsed time between them and plots "
+            "one curve per category, each against its own cohort."
         ),
         design_considerations=(
             "Groups by subject and stratum together so the stratum survives the per-subject "
             "rollup, then re-groups by stratum so each curve's denominator is its own cohort — "
             "otherwise the curves would be fractions of the whole table and would not each start "
             "near 1. Strata are drawn as colours because the grammar has no facet channel. "
-            "Only for single-valued fields: a list-valued column such as tumor_locations would "
-            "make every distinct combination its own stratum. "
+            "Only for single-valued fields: a delimited multi-value column would make every distinct "
+            "combination its own stratum — use the multi-value variant for those. "
             "The same censoring caveat as the unstratified survival curve applies, and it bites "
             "harder here: subjects with no end event hold their stratum's curve up, so comparing "
             "groups whose follow-up differs is misleading. This is not a Kaplan-Meier estimate "
@@ -1827,12 +1827,12 @@ def generate():
         ),
         review_hint=(
             "Each curve should start at 1 - 1/n for its own stratum, so a small group starts "
-            "visibly lower and steps coarsely — on PCX, UCSF has n=4 and so starts at 0.75 and "
-            "reaches 0. That is correct, not a denominator bug; the failure to look for is a "
-            "curve starting near 1/(total cohort) instead. A 4-patient curve hitting zero looks "
-            "dramatic and means very little, which is the main thing to be wary of here. "
-            "Event-type values are hardcoded to PCX's vocabulary, and there is no at-risk "
-            "weighting or significance test, so do not read group differences as real."
+            "visibly lower and steps coarsely: a stratum of 4 starts at 0.75 and moves in quarters. "
+            "That is correct, not a denominator bug — the failure to look for is a curve starting "
+            "near 1/(total cohort) instead. A tiny stratum reaching zero looks dramatic and means "
+            "very little, which is the main thing to be wary of. The event types are supplied per "
+            "request, and there is no at-risk weighting or significance test, so do not read group "
+            "differences as real."
         ),
         preview_bindings={
             "E": "Event",
@@ -1840,14 +1840,15 @@ def generate():
             "F2": "event_type",
             "F3": "event_date",
             "F4": "organization_name",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
         },
     )
 
-    # Stratified by a LIST-valued field (tumor_locations, metastasis_location).
-    # These hold ";"-delimited sets, so a subject belongs to several strata at
-    # once. `unnest` expands the column to one row per value before anything else
-    # runs; without it each distinct combination becomes its own stratum, which on
-    # PCX means 78 categories instead of 22 real locations.
+    # Stratified by a LIST-valued field. Such columns hold ";"-delimited sets, so a
+    # subject belongs to several strata at once. `unnest` expands the column to one
+    # row per value before anything else runs; without it each distinct combination
+    # becomes its own stratum.
     df = add_row(
         df,
         query_templates=[
@@ -1864,12 +1865,12 @@ def generate():
             .derive(
                 {
                     "start day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit(SURVIVAL_START_EVENT)),
+                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
                         Expr.field("<F3>"),
                         Expr.lit(None),
                     ),
                     "end day": Expr.cond(
-                        Expr.binop("==", Expr.field("<F2>"), Expr.lit(SURVIVAL_END_EVENT)),
+                        Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
                         Expr.field("<F3>"),
                         Expr.lit(None),
                     ),
@@ -1920,10 +1921,11 @@ def generate():
             TaskType.CORRELATE,
         ],
         description=(
-            f"Survival curves split by each value of a multi-value (';'-delimited) field, built "
-            f"from an event log: expands the field so a subject counts toward every value it "
-            f"lists, pairs each subject's '{SURVIVAL_START_EVENT}' and '{SURVIVAL_END_EVENT}' "
-            f"events to derive a survival time, then plots one curve per value."
+            "Survival curves split by each value of a multi-value (delimited) field, from an "
+            "event log — one row per event, with a subject id, an event-type column and a "
+            "numeric time column. Expands the multi-value field so a subject counts toward every "
+            "value it lists, derives each subject's elapsed time between a start and an end event "
+            "type, then plots one curve per value."
         ),
         design_considerations=(
             "For set-valued columns such as tumor locations, where one subject can belong to "
@@ -1932,14 +1934,14 @@ def generate():
             "design and their sizes sum to more than the number of subjects — that is the correct "
             "reading of a multi-value attribute, but it means the curves are not independent and "
             "must not be compared as if they partitioned the cohort. Without unnest each distinct "
-            "combination would be its own stratum: on PCX that is 78 categories for 22 real "
-            "locations, which also exceeds the 50-cardinality cap. Every caveat from the "
+            "combination would be its own stratum — a column with ~20 real values can easily have "
+            "~80 combinations, which also exceeds the 50-cardinality cap for an encoded field. "
+            "Every caveat from the "
             "single-valued stratified curve still applies — no censoring, no at-risk weighting, "
             "no significance test, and small cohorts step coarsely. Two artefacts to expect: a "
             "value with exactly one observed death renders as a lone point rather than a line, "
-            "and a value with none is absent from the chart entirely (on PCX, 'CSF' has a cohort "
-            "of 4 and no deaths, so it has no curve) — the data is not being dropped, there is "
-            "simply nothing to plot."
+            "and a value whose subjects all lack the end event is absent from the chart entirely — the "
+            "data is not being dropped, there is simply nothing to plot for it."
         ),
         tasks=(
             "Compare observed survival across overlapping categories; see which of a subject's "
@@ -1957,6 +1959,8 @@ def generate():
             "F2": "event_type",
             "F3": "event_date",
             "F4": "metastasis_location",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
         },
     )
 
