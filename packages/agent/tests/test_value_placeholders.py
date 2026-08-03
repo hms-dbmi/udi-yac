@@ -132,3 +132,33 @@ def test_no_survival_template_hardcodes_an_event_value():
             assert leaked not in spec, f"template {index} still hardcodes {leaked!r}"
             assert leaked not in (template.get("description") or "")
             assert leaked not in (template.get("design_considerations") or "")
+
+
+def test_survival_capability_is_advertised_to_the_orchestrator():
+    """The orchestrator must know survival curves are possible.
+
+    `Rebuff`'s description tells the model to use it for "requests for unsupported
+    chart types", and `CreateVisualization` advertises its capabilities by listing
+    them. A survival request was therefore being rebuffed as unsupported simply
+    because the list did not mention it. This pins both halves of the fix.
+    """
+    from udiagent.skills import load_skills, render_template
+    from udiagent.tools import ORCHESTRATOR_TOOLS
+
+    create = next(
+        tool["function"]
+        for tool in ORCHESTRATOR_TOOLS
+        if tool["function"]["name"] == "CreateVisualization"
+    )
+    description = create["description"].lower()
+    for term in ("survival", "kaplan-meier", "km"):
+        assert term in description, f"CreateVisualization should advertise {term!r}"
+
+    instructions = render_template(
+        load_skills()["orchestrate"].instructions, {"data_domains": ""}
+    ).lower()
+    assert "survival" in instructions
+    # Must route to CreateVisualization rather than Rebuff.
+    assert "rebuff" in instructions, "the prompt should say survival is not a Rebuff case"
+    # And must not let the agent claim a true Kaplan-Meier estimate.
+    assert "not" in instructions and "kaplan-meier" in instructions

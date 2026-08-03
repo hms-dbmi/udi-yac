@@ -140,9 +140,15 @@ ORCHESTRATOR_TOOLS = [
                 "Create a data visualization. Supports: bar charts (vertical/horizontal, "
                 "with count/min/max/avg/median/sum aggregations), stacked and grouped bar "
                 "charts, scatterplots, heatmaps, histograms, CDF line charts, pie/donut "
-                "charts, dot strips, density curves, and data tables. Can visualize a "
-                "single entity or join two related entities. The specific visualization "
-                "type will be automatically selected based on the data and request."
+                "charts, dot strips, density curves, and data tables. Also supports "
+                "survival curves — requests for 'survival', 'Kaplan-Meier' or 'KM' plots — "
+                "computed from an event-log table (one row per event, with a subject id, an "
+                "event-type column and a numeric time column) by pairing a start event with "
+                "an end event per subject; these can optionally be split into one curve per "
+                "category, including per value of a delimited multi-value column. Can "
+                "visualize a single entity or join two related entities. The specific "
+                "visualization type will be automatically selected based on the data and "
+                "request."
             ),
             "parameters": {
                 "type": "object",
