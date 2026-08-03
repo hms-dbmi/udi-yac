@@ -1843,15 +1843,122 @@ def generate():
         },
     )
 
-    # NOTE: a list-valued stratification (tumor_locations, metastasis_location —
-    # ";"-delimited sets, so a subject belongs to several strata at once) is NOT
-    # implemented, because it cannot be expressed in the grammar today: splitting
-    # one row into several needs a transformation that multiplies rows, and the
-    # grammar has only GroupBy/BinBy/RollUp/Join/OrderBy/Derive/Filter/KDE. Note
-    # `derive` cannot substitute — it is row-preserving by definition. Stratifying
-    # on the raw string instead is not a workaround: tumor_locations has 78
-    # distinct combinations (vs 22 individual locations), which both exceeds the
-    # 50-cardinality cap for an encoded field and would draw 78 curves.
+    # Stratified by a LIST-valued field (tumor_locations, metastasis_location).
+    # These hold ";"-delimited sets, so a subject belongs to several strata at
+    # once. `unnest` expands the column to one row per value before anything else
+    # runs; without it each distinct combination becomes its own stratum, which on
+    # PCX means 78 categories instead of 22 real locations.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E> split by each <F4:n> value.",
+            "Compare survival across <F4:n>, where a subject can have several.",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            # Must come first: everything downstream counts rows, so expanding
+            # after the per-subject rollup would multiply already-collapsed rows.
+            .unnest("<F4:n>", separator=";")
+            .filter(Expr.not_null("<F3:q>"))
+            .derive(
+                {
+                    "start day": Expr.cond(
+                        Expr.binop("==", Expr.field("<F2:n>"), Expr.lit(SURVIVAL_START_EVENT)),
+                        Expr.field("<F3>"),
+                        Expr.lit(None),
+                    ),
+                    "end day": Expr.cond(
+                        Expr.binop("==", Expr.field("<F2>"), Expr.lit(SURVIVAL_END_EVENT)),
+                        Expr.field("<F3>"),
+                        Expr.lit(None),
+                    ),
+                }
+            )
+            # One row per (subject, value). A subject with two locations is now
+            # deliberately counted once in each of those two cohorts.
+            .groupby(["<F1:n>", "<F4>"])
+            .rollup({"start day": Op.min("start day"), "end day": Op.max("end day")})
+            .filter(Expr.not_null("start day"))
+            .groupby("<F4>")
+            .derive({"subjects": Expr.agg("count")})
+            .derive(
+                {
+                    "survival days": Expr.binop(
+                        "-", Expr.field("end day"), Expr.field("start day")
+                    )
+                }
+            )
+            .filter(
+                Expr.binop(
+                    "&&",
+                    Expr.not_null("survival days"),
+                    Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)),
+                )
+            )
+            .orderby("survival days")
+            .derive(
+                {
+                    "survival probability": rolling(
+                        Expr.binop(
+                            "-",
+                            Expr.lit(1),
+                            Expr.binop("/", Expr.agg("count"), Expr.field("subjects")),
+                        )
+                    )
+                }
+            )
+            .mark("line")
+            .x(field="survival days", type="quantitative")
+            .y(field="survival probability", type="quantitative")
+            .color(field="<F4>", type="nominal")
+        ),
+        chart_type=ChartType.LINE,
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            f"Survival curves split by each value of a multi-value (';'-delimited) field, built "
+            f"from an event log: expands the field so a subject counts toward every value it "
+            f"lists, pairs each subject's '{SURVIVAL_START_EVENT}' and '{SURVIVAL_END_EVENT}' "
+            f"events to derive a survival time, then plots one curve per value."
+        ),
+        design_considerations=(
+            "For set-valued columns such as tumor locations, where one subject can belong to "
+            "several categories. `unnest` runs first, before any row counting, so the per-subject "
+            "rollup sees one row per (subject, value) pair. The cohorts therefore overlap by "
+            "design and their sizes sum to more than the number of subjects — that is the correct "
+            "reading of a multi-value attribute, but it means the curves are not independent and "
+            "must not be compared as if they partitioned the cohort. Without unnest each distinct "
+            "combination would be its own stratum: on PCX that is 78 categories for 22 real "
+            "locations, which also exceeds the 50-cardinality cap. Every caveat from the "
+            "single-valued stratified curve still applies — no censoring, no at-risk weighting, "
+            "no significance test, and small cohorts step coarsely. Two artefacts to expect: a "
+            "value with exactly one observed death renders as a lone point rather than a line, "
+            "and a value with none is absent from the chart entirely (on PCX, 'CSF' has a cohort "
+            "of 4 and no deaths, so it has no curve) — the data is not being dropped, there is "
+            "simply nothing to plot."
+        ),
+        tasks=(
+            "Compare observed survival across overlapping categories; see which of a subject's "
+            "several attributes coincide with worse survival."
+        ),
+        review_hint=(
+            "Cohort sizes overlap here, so they sum to more than the subject count — that is "
+            "intended. Check the legend shows individual values (e.g. 'Spine', 'Brain') and not "
+            "combined strings like 'Leptomeningeal;Spine'; if it shows combinations, unnest did "
+            "not run. Requires browser (interactive) mode: the SQL backend rejects unnest."
+        ),
+        preview_bindings={
+            "E": "Event",
+            "F1": "research_id",
+            "F2": "event_type",
+            "F3": "event_date",
+            "F4": "metastasis_location",
+        },
+    )
 
     # ---------------------------------------------------------------
     # Heatmaps

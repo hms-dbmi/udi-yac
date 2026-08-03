@@ -359,6 +359,9 @@
         },
         {
           "$ref": "#/definitions/KDE"
+        },
+        {
+          "$ref": "#/definitions/Unnest"
         }
       ],
       "description": "The possible data transformations. These include operations like grouping, filtering, joining, and more."
@@ -1894,6 +1897,42 @@
           "type": "boolean"
         }
       },
+      "type": "object"
+    },
+    "Unnest": {
+      "additionalProperties": false,
+      "description": "Expands a delimited multi-value field into one row per value.\n\nSome source columns hold a set rather than a scalar — `\"Spine;Brain\"` means the row belongs to both categories. Grouping on such a column treats every distinct combination as its own category, which is both wrong and unusable (a column with 22 real values can have 78 combinations). This is the only transformation that increases the row count: a row with n values becomes n rows, each carrying one value and a copy of every other column. Rows whose field is null or empty are dropped, since they belong to no category.\n\nNOTE: currently implemented by the in-browser Arquero executor only. The SQL backend rejects it rather than silently returning different results.",
+      "properties": {
+        "in": {
+          "description": "The name of the input table. If not specified, it assumes the output of the previous operation.",
+          "type": "string"
+        },
+        "out": {
+          "description": "The name of the output table. If not specified, it overwrites the name of the previous table.",
+          "type": "string"
+        },
+        "unnest": {
+          "additionalProperties": false,
+          "description": "Configuration for expanding the field.",
+          "properties": {
+            "field": {
+              "description": "The multi-value field to expand.",
+              "type": "string"
+            },
+            "out": {
+              "description": "Column to write each individual value into. Defaults to overwriting `field`, which keeps downstream references to the original name working.",
+              "type": "string"
+            },
+            "separator": {
+              "description": "The delimiter between values. Defaults to `;`. Surrounding whitespace is always trimmed, so `\"a; b\"` and `\"a;b\"` behave the same.",
+              "type": "string"
+            }
+          },
+          "required": ["field"],
+          "type": "object"
+        }
+      },
+      "required": ["unnest"],
       "type": "object"
     },
     "VisualizationLayer": {

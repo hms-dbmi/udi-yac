@@ -69,7 +69,7 @@ export interface DataSource {
  * These include operations like grouping, filtering, joining, and more.
  */
 export type DataTransformation =
-  GroupBy | BinBy | RollUp | Join | OrderBy | Derive | Filter | KDE;
+  GroupBy | BinBy | RollUp | Join | OrderBy | Derive | Filter | KDE | Unnest;
 
 /**
  * Base interface for all data transformations.
@@ -103,6 +103,50 @@ export interface GroupBy extends DataTransformationBase {
    * The field(s) to group by.
    */
   groupby: string | string[];
+}
+
+/**
+ * Expands a delimited multi-value field into one row per value.
+ *
+ * Some source columns hold a set rather than a scalar — `"Spine;Brain"` means the
+ * row belongs to both categories. Grouping on such a column treats every distinct
+ * combination as its own category, which is both wrong and unusable (a column with
+ * 22 real values can have 78 combinations). This is the only transformation that
+ * increases the row count: a row with n values becomes n rows, each carrying one
+ * value and a copy of every other column. Rows whose field is null or empty are
+ * dropped, since they belong to no category.
+ *
+ * NOTE: currently implemented by the in-browser Arquero executor only. The SQL
+ * backend rejects it rather than silently returning different results.
+ */
+export interface Unnest extends DataTransformationBase {
+  /**
+   * The name of the input table.
+   * If not specified, it assumes the output of the previous operation.
+   */
+  in?: string;
+
+  /**
+   * Configuration for expanding the field.
+   */
+  unnest: {
+    /**
+     * The multi-value field to expand.
+     */
+    field: string;
+
+    /**
+     * The delimiter between values. Defaults to `;`. Surrounding whitespace is
+     * always trimmed, so `"a; b"` and `"a;b"` behave the same.
+     */
+    separator?: string;
+
+    /**
+     * Column to write each individual value into. Defaults to overwriting
+     * `field`, which keeps downstream references to the original name working.
+     */
+    out?: string;
+  };
 }
 
 /**

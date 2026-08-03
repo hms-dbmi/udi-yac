@@ -108,6 +108,23 @@ apps/template-studio  ← renders templates, writes review decisions to
 | `<E1.r.E2.id.from>` / `.to` | join keys, from the schema's relationships                       |
 | `:n` / `:q` / `:o` suffix   | constrains the bound field's type (nominal/quantitative/ordinal) |
 
+**Multi-value columns need `unnest`.** Some columns hold a `;`-delimited set
+(`"Leptomeningeal;Spine"`), so one row belongs to several categories. Grouping such
+a column directly makes every _combination_ its own category — on PCX that is 78
+categories for 22 real locations, which also exceeds the 50-cardinality cap.
+`.unnest("<F4:n>", separator=";")` expands it to one row per value first:
+
+```python
+Chart().source("<E>", "<E.url>").unnest("<F4:n>", separator=";").groupby("<F4>")
+```
+
+Put it **first**, before anything that counts rows — expanding after a rollup
+multiplies already-collapsed rows. The resulting cohorts overlap by design and
+their sizes sum to more than the subject count, so the groups can't be compared as
+if they partitioned the data. `unnest` is the only transformation that increases
+the row count, and it is **browser-mode only**: the SQL backend rejects it rather
+than silently returning a different row count than the Arquero reference.
+
 Add a type suffix wherever the encoding needs one — it's what stops the model
 binding a 400-cardinality ID column to an x-axis. Resolution lives in
 `vis_generate._resolve_placeholder`; unresolvable placeholders silently become

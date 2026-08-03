@@ -597,6 +597,31 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         } else {
           currentTable.table = inTable.groupby(transform.groupby);
         }
+      } else if ('unnest' in transform) {
+        const inTable = getInTable(transform.in);
+        const {
+          field,
+          separator = ';',
+          out = transform.unnest.field,
+        } = transform.unnest;
+
+        // Split on the separator, trimming whitespace so "a; b" and "a;b" agree,
+        // then unroll the resulting array into one row per value. Null/empty
+        // cells become an empty array and unroll away, which is what we want:
+        // a row with no value belongs to no category.
+        const splitInto = escape((d: Record<string, unknown>) => {
+          const raw = d[field];
+          if (raw === null || raw === undefined) return [];
+          return String(raw)
+            .split(separator)
+            .map((part) => part.trim())
+            .filter((part) => part.length > 0);
+        });
+
+        currentTable.table = inTable
+          .derive({ [out]: splitInto })
+          .unroll(out)
+          .reify();
       } else if ('binby' in transform) {
         const inTable = getInTable(transform.in);
         const { field, bins = 10, nice = true } = transform.binby;

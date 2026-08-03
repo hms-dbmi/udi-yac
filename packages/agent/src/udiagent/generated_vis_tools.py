@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 65
+Tools: 66
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -272,6 +272,21 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"/", "left": {"agg": "count"}, "right": {"field": "subjects"}}}}}}}], "representation": {"mark": "line", "mapping": '
  '[{"encoding": "x", "field": "survival days", "type": "quantitative"}, {"encoding": "y", "field": "survival '
  'probability", "type": "quantitative"}, {"encoding": "color", "field": "<F4>", "type": "nominal"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"unnest": {"field": "<F4:n>", "separator": '
+ '";"}}, {"filter": {"op": "!=", "left": {"field": "<F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": '
+ '{"if": {"op": "==", "left": {"field": "<F2:n>"}, "right": {"literal": "Initial CNS Tumor"}}, "then": {"field": '
+ '"<F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", "left": {"field": "<F2>"}, "right": {"literal": '
+ '"Deceased"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}}}, {"groupby": ["<F1:n>", "<F4>"]}, {"rollup": '
+ '{"start day": {"op": "min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}}}, {"filter": {"op": '
+ '"!=", "left": {"field": "start day"}, "right": {"literal": null}}}, {"groupby": "<F4>"}, {"derive": {"subjects": '
+ '{"agg": "count"}}}, {"derive": {"survival days": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start '
+ 'day"}}}}, {"filter": {"op": "&&", "left": {"op": "!=", "left": {"field": "survival days"}, "right": {"literal": '
+ 'null}}, "right": {"op": ">=", "left": {"field": "survival days"}, "right": {"literal": 0}}}}, {"orderby": {"field": '
+ '"survival days", "order": "asc"}}, {"derive": {"survival probability": {"rolling": {"expression": {"op": "-", '
+ '"left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "count"}, "right": {"field": "subjects"}}}}}}}], '
+ '"representation": {"mark": "line", "mapping": [{"encoding": "x", "field": "survival days", "type": "quantitative"}, '
+ '{"encoding": "y", "field": "survival probability", "type": "quantitative"}, {"encoding": "color", "field": "<F4>", '
+ '"type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F2>", "<F1>"]}, {"rollup": '
  '{"count <E>": {"op": "count"}}}, {"derive": {"udi_internal_percentile": {"op": "/", "left": {"field": "count <E>"}, '
  '"right": {"agg": "max", "field": "count <E>"}}}}, {"derive": {"udi_internal_text_color_threshold": {"if": {"op": '
@@ -1221,6 +1236,30 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field1', 'field2', 'field3', 'field4'],
                               'type': 'object'}},
   'type': 'function'},
+ {'function': {'description': "[line] Survival curves split by each value of a multi-value (';'-delimited) field, "
+                              'built from an event log: expands the field so a subject counts toward every value it '
+                              "lists, pairs each subject's 'Initial CNS Tumor' and 'Deceased' events to derive a "
+                              'survival time, then plots one curve per value. Design: For set-valued columns such as '
+                              'tumor locations, where one subject can belong to several categories. `unnest` runs '
+                              'first, before any row counting, so the per-subject rollup sees one row per (subject, '
+                              'value) pair. The cohorts therefore overlap by design and their sizes sum to more than '
+                              'the number of subjects — that is the correct reading of a multi-value attribute, but it '
+                              'means the curves are not independent and must not be compared as if they partitioned '
+                              'the cohort. Without unnest each distinct combination would be its own stratum: on PCX '
+                              'that is 78 categories for 22 real locations, which also exceeds the 50-cardinality cap. '
+                              'Every caveat from the single-valued stratified curve still applies — no censoring, no a',
+               'name': 'vis_054_line_count_survival',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'field2': {'description': 'any type field.', 'type': 'string'},
+                                             'field3': {'description': 'any type field.', 'type': 'string'},
+                                             'field4': {'description': 'nominal field, encodes color.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'field1', 'field2', 'field3', 'field4'],
+                              'type': 'object'}},
+  'type': 'function'},
  {'function': {'description': '[heatmap] Displays the count of entities for each combination of two nominal fields as '
                               'a heatmap with labeled cells. Design: Rect marks with quantitative color encoding show '
                               'density. Overlaid text marks display exact counts. Text color adapts based on cell '
@@ -1229,7 +1268,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'in the co-occurrence of two fields; compare counts across combinations; find '
                               'correlations. Query patterns: Are there any clusters with respect to <E> counts of '
                               '<F1:n> and <F2:n>?; Make a heatmap of <E> <F1:n> and <F2:n>.',
-               'name': 'vis_054_heatmap_count',
+               'name': 'vis_055_heatmap_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1247,7 +1286,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'readability. Tasks: Identify patterns in the average value across two categorical '
                               'dimensions; find combinations with extreme values. Query patterns: What is the average '
                               '<F1:q> for each <F2:n> and <F3:n>?',
-               'name': 'vis_055_heatmap_avg',
+               'name': 'vis_056_heatmap_avg',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1269,7 +1308,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'across two dimensions; compare values across combinations. Query patterns: Are there '
                               'clusters in the measure across two dimensions?; Make a heatmap across two categorical '
                               'dimensions.',
-               'name': 'vis_056_heatmap_basic',
+               'name': 'vis_057_heatmap_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
                                                             'type': 'string'},
@@ -1287,7 +1326,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'assess whether the relationship between two quantitative fields differs across groups. '
                               'Query patterns: Are there clusters of <E> <F1:q> and <F2:q> values across different '
                               '<F3:n> groups?',
-               'name': 'vis_057_grouped_scatter_by_color',
+               'name': 'vis_058_grouped_scatter_by_color',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1305,7 +1344,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'span from bin start to bin end on x, with count on y. Tasks: Characterize the shape of '
                               'a distribution; identify modes, skewness, and gaps. Query patterns: What is the '
                               'distribution of <F:q>?; Make a histogram of <F:q>?',
-               'name': 'vis_058_histogram_distribution',
+               'name': 'vis_059_histogram_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1319,7 +1358,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
                               'distribution; identify modes and overall density patterns. Query patterns: What is the '
                               'distribution of <F:q>?',
-               'name': 'vis_059_area_density',
+               'name': 'vis_060_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1333,7 +1372,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'datasets (50 or fewer values) where individual observations are meaningful and '
                               'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
                               'values, clusters, and outliers. Query patterns: What is the distribution of <F:q>?',
-               'name': 'vis_060_dot_distribution',
+               'name': 'vis_061_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1349,7 +1388,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
                               'tendency or spread. Query patterns: Is the distribution of <F1:q> similar for each '
                               '<F2:n>?',
-               'name': 'vis_061_grouped_area_density',
+               'name': 'vis_062_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1366,7 +1405,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
                               'groups; identify clusters and outliers within each group. Query patterns: Is the '
                               'distribution of <F1:q> similar for each <F2:n>?',
-               'name': 'vis_062_grouped_dot_distribution',
+               'name': 'vis_063_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1384,7 +1423,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a field; determine how many records have valid values and what proportion. Query '
                               'patterns: How many <E> records have a non-null <F:q|o|n>?; What percentage of <E> '
                               'records have a non-null <F:q|o|n>?',
-               'name': 'vis_063_table_count_null_nonnull',
+               'name': 'vis_064_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1398,7 +1437,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Assess data quality; determine how many records are missing a value and what '
                               'proportion. Query patterns: How many <E> records have a null <F:q|o|n>?; What '
                               'percentage of <E> records have a null <F:q|o|n>?',
-               'name': 'vis_064_table_count_null',
+               'name': 'vis_065_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1471,17 +1510,18 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_051_line_sorted': (51, {'dimension': 'D', 'entity': 'E'}),
  'vis_052_line_survival': (52, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
  'vis_053_line_survival': (53, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3', 'field4': 'F4'}),
- 'vis_054_heatmap_count': (54, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_055_heatmap_avg': (55, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_056_heatmap_basic': (56, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
- 'vis_057_grouped_scatter_by_color': (57, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_058_histogram_distribution': (58, {'entity': 'E', 'field': 'F'}),
- 'vis_059_area_density': (59, {'entity': 'E', 'field': 'F'}),
- 'vis_060_dot_distribution': (60, {'entity': 'E', 'field': 'F'}),
- 'vis_061_grouped_area_density': (61, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_062_grouped_dot_distribution': (62, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_063_table_count_null_nonnull': (63, {'entity': 'E', 'field': 'F'}),
- 'vis_064_table_count_null': (64, {'entity': 'E', 'field': 'F'})}
+ 'vis_054_line_count_survival': (54, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3', 'field4': 'F4'}),
+ 'vis_055_heatmap_count': (55, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_056_heatmap_avg': (56, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_057_heatmap_basic': (57, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_058_grouped_scatter_by_color': (58, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_059_histogram_distribution': (59, {'entity': 'E', 'field': 'F'}),
+ 'vis_060_area_density': (60, {'entity': 'E', 'field': 'F'}),
+ 'vis_061_dot_distribution': (61, {'entity': 'E', 'field': 'F'}),
+ 'vis_062_grouped_area_density': (62, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_063_grouped_dot_distribution': (63, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_064_table_count_null_nonnull': (64, {'entity': 'E', 'field': 'F'}),
+ 'vis_065_table_count_null': (65, {'entity': 'E', 'field': 'F'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -1539,14 +1579,15 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_051_line_sorted': ['data_cube', 'line'],
  'vis_052_line_survival': ['line_item', 'line'],
  'vis_053_line_survival': ['line_item', 'line'],
- 'vis_054_heatmap_count': ['line_item', 'heatmap'],
- 'vis_055_heatmap_avg': ['line_item', 'heatmap'],
- 'vis_056_heatmap_basic': ['data_cube', 'heatmap'],
- 'vis_057_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
- 'vis_058_histogram_distribution': ['line_item', 'histogram'],
- 'vis_059_area_density': ['line_item', 'area'],
- 'vis_060_dot_distribution': ['line_item', 'dot'],
- 'vis_061_grouped_area_density': ['line_item', 'grouped_area'],
- 'vis_062_grouped_dot_distribution': ['line_item', 'grouped_dot'],
- 'vis_063_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_064_table_count_null': ['line_item', 'table']}
+ 'vis_054_line_count_survival': ['line_item', 'line'],
+ 'vis_055_heatmap_count': ['line_item', 'heatmap'],
+ 'vis_056_heatmap_avg': ['line_item', 'heatmap'],
+ 'vis_057_heatmap_basic': ['data_cube', 'heatmap'],
+ 'vis_058_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
+ 'vis_059_histogram_distribution': ['line_item', 'histogram'],
+ 'vis_060_area_density': ['line_item', 'area'],
+ 'vis_061_dot_distribution': ['line_item', 'dot'],
+ 'vis_062_grouped_area_density': ['line_item', 'grouped_area'],
+ 'vis_063_grouped_dot_distribution': ['line_item', 'grouped_dot'],
+ 'vis_064_table_count_null_nonnull': ['line_item', 'table'],
+ 'vis_065_table_count_null': ['line_item', 'table']}

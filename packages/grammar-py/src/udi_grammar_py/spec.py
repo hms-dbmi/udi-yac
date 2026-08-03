@@ -28,6 +28,10 @@ class Chart:
         self.transformation().binby(field, **kwargs)
         return self
 
+    def unnest(self, field: str, **kwargs):
+        self.transformation().unnest(field, **kwargs)
+        return self
+
     def rollup(self, rollup_options: Union[str, List[str]], **kwargs):
         self.transformation().rollup(rollup_options, **kwargs)
 
@@ -155,6 +159,25 @@ class Transformation:
         binby_options = {"field": field}
         transfer_kwargs({"bins", "nice", "output"}, binby_options, kwargs)
         transform = {"binby": binby_options}
+        transfer_kwargs({"in", "out"}, transform, kwargs)
+        self._state.append(transform)
+        return self
+
+    def unnest(self, field: str, **kwargs):
+        """Expand a delimited multi-value column into one row per value.
+
+        The only transformation that increases the row count. `separator`
+        defaults to ";" and the inner `out` defaults to overwriting `field`;
+        both are passed through as-is. Note the inner `out` (the value column)
+        is distinct from the outer `out` (the output table name).
+        """
+        unnest_options = {"field": field}
+        transfer_kwargs({"separator", "value_out"}, unnest_options, kwargs)
+        # `value_out` is the caller-facing name for the inner `out`, so the outer
+        # table-level `out` stays unambiguous.
+        if "value_out" in unnest_options:
+            unnest_options["out"] = unnest_options.pop("value_out")
+        transform = {"unnest": unnest_options}
         transfer_kwargs({"in", "out"}, transform, kwargs)
         self._state.append(transform)
         return self
