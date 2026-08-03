@@ -99,6 +99,17 @@ binding a 400-cardinality ID column to an x-axis. Resolution lives in
 `""`, which is why a template referencing a cube placeholder against a tidy
 table produces a blank-field spec rather than an error.
 
+> **Always type-constrain an aggregated field.** `validate_bindings` infers a
+> required type from only two places: a `:q`/`:n`/`:o` suffix on the placeholder,
+> or the `type` declared on an encoding whose `field` is _exactly_ that
+> placeholder. A field referenced only as a rollup's `field`, or only inside a
+> composite string like `"minimum <F1>"`, gets **neither** — so any column can
+> bind to it. That produced a batch of silently blank charts: `min`/`mean`/`sum`
+> of a nominal column like `race`, plotted on a quantitative axis. Writing
+> `Op.min("<F1:q>")` rather than `Op.min("<F1>")` is what makes the constraint
+> real; a `<F1:q>` in the `query_templates` prose is documentation only and is
+> never enforced.
+
 ## Acting on review feedback
 
 Read the sidecar — it is the reviewer's output:
@@ -174,7 +185,12 @@ Reading it is the intended direction.
   uses `shadowRoot: false`, so Vue's scoped component styles are never injected;
   the studio restates the critical ones unscoped in `src/index.css`. Without
   `udi-vis .vega-chart-container { height: 100% }` every chart renders 0×0 with
-  no console error. Check that before suspecting the template.
+  no console error, and without the `.cell-container` rules a table's in-cell
+  bar/point/line marks collapse to zero height. Check that before suspecting the
+  template.
+- **A chart that draws axes but no marks is usually a binding-type problem**, not
+  a rendering one: an aggregate over a nominal column yields a non-numeric value
+  that a quantitative axis can't place. See the type-constraint note above.
 - **Charts are virtualized.** Only cards near the viewport mount a chart, so a
   card scrolled far off-screen shows a placeholder rather than a chart. Scroll to
   a template before judging it.

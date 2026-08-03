@@ -111,6 +111,14 @@ def add_row(
     return df
 
 
+def _json_default(value):
+    """Serialize the numpy scalars pandas hands back from ``to_dict``."""
+    item = getattr(value, "item", None)
+    if callable(item):
+        return item()
+    raise TypeError(f"not JSON serializable: {type(value).__name__}")
+
+
 def get_total_key_count(nested_dict):
     if isinstance(nested_dict, dict):
         return sum(get_total_key_count(value) for value in nested_dict.values())
@@ -694,7 +702,7 @@ def generate():
                 Chart()
                 .source("<E>", "<E.url>")
                 .groupby("<F2>")
-                .rollup({named_aggregate: op("<F1>")})
+                .rollup({named_aggregate: op("<F1:q>")})
                 .mark("bar")
                 .x(field=named_aggregate, type="quantitative")
                 .y(field="<F2>", type="nominal")
@@ -718,7 +726,7 @@ def generate():
                 Chart()
                 .source("<E>", "<E.url>")
                 .groupby("<F2>")
-                .rollup({named_aggregate: op("<F1>")})
+                .rollup({named_aggregate: op("<F1:q>")})
                 .mark("bar")
                 .x(field="<F2>", type="nominal")
                 .y(field=named_aggregate, type="quantitative")
@@ -1102,7 +1110,7 @@ def generate():
                 out_name="<E1>__<E2>",
             )
             .groupby("<E1.r.E2.id.from>")
-            .rollup({"Largest <E1.F>": Op.max("<E1.F>")})
+            .rollup({"Largest <E1.F>": Op.max("<E1.F:q>")})
             .filter(Expr.not_null("Largest <E1.F>"))
             .orderby("Largest <E1.F>", ascending=False)
             .derive({"rank": Expr.rank()})
@@ -1188,7 +1196,7 @@ def generate():
                 out_name="<E1>__<E2>",
             )
             .groupby("<E1.r.E2.id.from>")
-            .rollup({"Smallest <E1.F>": Op.min("<E1.F>")})
+            .rollup({"Smallest <E1.F>": Op.min("<E1.F:q>")})
             .filter(Expr.not_null("Smallest <E1.F>"))
             .orderby("Smallest <E1.F>", ascending=True)
             .derive({"rank": Expr.rank()})
@@ -1259,7 +1267,7 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F>"))
-            .rollup({"<F> min": Op.min("<F>"), "<F> max": Op.max("<F>")})
+            .rollup({"<F> min": Op.min("<F:q>"), "<F> max": Op.max("<F:q>")})
             .mark("row")
             .text(field="<F> min", mark="text", type="nominal")
             .text(field="<F> max", mark="text", type="nominal")
@@ -1314,7 +1322,7 @@ def generate():
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F1>"))
             .groupby("<F2>")
-            .rollup({"<F1> min": Op.min("<F1>"), "<F1> max": Op.max("<F1>")})
+            .rollup({"<F1> min": Op.min("<F1:q>"), "<F1> max": Op.max("<F1:q>")})
             .derive(
                 {
                     "range": Expr.binop(
@@ -1630,7 +1638,7 @@ def generate():
                 Chart()
                 .source("<E>", "<E.url>")
                 .groupby(["<F3>", "<F2>"])
-                .rollup({named_aggregate: op("<F1>")})
+                .rollup({named_aggregate: op("<F1:q>")})
                 .mark("rect")
                 .color(field=named_aggregate, type="quantitative")
                 .y(field="<F2>", type="nominal")
@@ -2013,5 +2021,12 @@ if __name__ == "__main__":
     validate_specs(df, args.grammar, strict=args.strict)
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    df.to_json(args.output, orient="records", indent=2)
+    # Written with json.dump rather than df.to_json: pandas changed its
+    # indent/separator style between versions, so to_json rewrote all 63 records
+    # whenever the generating machine's pandas differed — burying the real change
+    # in ~2000 lines of whitespace churn. json.dump's formatting is fixed, so
+    # regenerating on any machine produces a diff containing only what changed.
+    records = df.to_dict(orient="records")
+    with open(args.output, "w") as f:
+        json.dump(records, f, indent=2, default=_json_default)
     print(f"\nExported to {args.output}")

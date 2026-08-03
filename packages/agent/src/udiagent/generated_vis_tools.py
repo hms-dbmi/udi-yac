@@ -90,35 +90,35 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<D1:n>", "type": "nominal"}, {"encoding": "y", "field": "proportion", "type": "quantitative"}, {"encoding": '
  '"color", "field": "<D2:n>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"minimum <F1>": '
- '{"op": "min", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "minimum '
- '<F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}]}}',
+ '{"op": "min", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '"minimum <F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"minimum <F1>": '
- '{"op": "min", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "<F2>", '
- '"type": "nominal"}, {"encoding": "y", "field": "minimum <F1>", "type": "quantitative"}]}}',
+ '{"op": "min", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '"<F2>", "type": "nominal"}, {"encoding": "y", "field": "minimum <F1>", "type": "quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"maximum <F1>": '
- '{"op": "max", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "maximum '
- '<F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}]}}',
+ '{"op": "max", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '"maximum <F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"maximum <F1>": '
- '{"op": "max", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "<F2>", '
- '"type": "nominal"}, {"encoding": "y", "field": "maximum <F1>", "type": "quantitative"}]}}',
+ '{"op": "max", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '"<F2>", "type": "nominal"}, {"encoding": "y", "field": "maximum <F1>", "type": "quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"average <F1>": '
- '{"op": "mean", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '{"op": "mean", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
  '"average <F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"average <F1>": '
- '{"op": "mean", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "<F2>", '
- '"type": "nominal"}, {"encoding": "y", "field": "average <F1>", "type": "quantitative"}]}}',
+ '{"op": "mean", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '"<F2>", "type": "nominal"}, {"encoding": "y", "field": "average <F1>", "type": "quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"median <F1>": '
- '{"op": "median", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '{"op": "median", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
  '"median <F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"median <F1>": '
- '{"op": "median", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '{"op": "median", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
  '"<F2>", "type": "nominal"}, {"encoding": "y", "field": "median <F1>", "type": "quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"total <F1>": '
- '{"op": "sum", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "total '
+ '{"op": "sum", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "total '
  '<F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F2>"}, {"rollup": {"total <F1>": '
- '{"op": "sum", "field": "<F1>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "<F2>", '
- '"type": "nominal"}, {"encoding": "y", "field": "total <F1>", "type": "quantitative"}]}}',
+ '{"op": "sum", "field": "<F1:q>"}}}], "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": '
+ '"<F2>", "type": "nominal"}, {"encoding": "y", "field": "total <F1>", "type": "quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "representation": {"mark": "point", "mapping": [{"encoding": "x", '
  '"field": "<F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "quantitative"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F1>", "<F2>"]}, {"rollup": '
@@ -165,7 +165,7 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"text", "type": "nominal"}]}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
  '[{"join": {"on": ["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"]}, "in": ["<E1>", "<E2>"], "out": "<E1>__<E2>"}, '
- '{"groupby": "<E1.r.E2.id.from>"}, {"rollup": {"Largest <E1.F>": {"op": "max", "field": "<E1.F>"}}}, {"filter": '
+ '{"groupby": "<E1.r.E2.id.from>"}, {"rollup": {"Largest <E1.F>": {"op": "max", "field": "<E1.F:q>"}}}, {"filter": '
  '{"op": "!=", "left": {"field": "Largest <E1.F>"}, "right": {"literal": null}}}, {"orderby": {"field": "Largest '
  '<E1.F>", "order": "desc"}}, {"derive": {"rank": {"window": "rank"}}}, {"derive": {"largest": {"if": {"op": "==", '
  '"left": {"field": "rank"}, "right": {"literal": 1}}, "then": {"literal": "yes"}, "else": {"literal": "no"}}}}], '
@@ -181,7 +181,7 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '["#ffdb9a", "white"]}, {"encoding": "text", "field": "*", "mark": "text", "type": "nominal"}]}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
  '[{"join": {"on": ["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"]}, "in": ["<E1>", "<E2>"], "out": "<E1>__<E2>"}, '
- '{"groupby": "<E1.r.E2.id.from>"}, {"rollup": {"Smallest <E1.F>": {"op": "min", "field": "<E1.F>"}}}, {"filter": '
+ '{"groupby": "<E1.r.E2.id.from>"}, {"rollup": {"Smallest <E1.F>": {"op": "min", "field": "<E1.F:q>"}}}, {"filter": '
  '{"op": "!=", "left": {"field": "Smallest <E1.F>"}, "right": {"literal": null}}}, {"orderby": {"field": "Smallest '
  '<E1.F>", "order": "asc"}}, {"derive": {"rank": {"window": "rank"}}}, {"derive": {"smallest": {"if": {"op": "==", '
  '"left": {"field": "rank"}, "right": {"literal": 1}}, "then": {"literal": "yes"}, "else": {"literal": "no"}}}}], '
@@ -193,19 +193,19 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"row", "mapping": [{"encoding": "x", "column": "<F>", "mark": "bar", "field": "<F>", "type": "quantitative", '
  '"range": {"min": 0.2, "max": 1}}, {"encoding": "text", "field": "*", "mark": "text", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
- '"<F>"}, "right": {"literal": null}}}, {"rollup": {"<F> min": {"op": "min", "field": "<F>"}, "<F> max": {"op": "max", '
- '"field": "<F>"}}}], "representation": {"mark": "row", "mapping": [{"encoding": "text", "field": "<F> min", "mark": '
- '"text", "type": "nominal"}, {"encoding": "text", "field": "<F> max", "mark": "text", "type": "nominal"}]}}',
+ '"<F>"}, "right": {"literal": null}}}, {"rollup": {"<F> min": {"op": "min", "field": "<F:q>"}, "<F> max": {"op": '
+ '"max", "field": "<F:q>"}}}], "representation": {"mark": "row", "mapping": [{"encoding": "text", "field": "<F> min", '
+ '"mark": "text", "type": "nominal"}, {"encoding": "text", "field": "<F> max", "mark": "text", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
  '"<F>"}, "right": {"literal": null}}}, {"groupby": "<F>"}, {"rollup": {"count": {"op": "count"}}}], "representation": '
  '{"mark": "row", "mapping": [{"encoding": "text", "field": "<F>", "mark": "text", "type": "nominal"}, {"encoding": '
  '"x", "field": "count", "mark": "bar", "type": "quantitative", "range": {"min": 0.1, "max": 1}}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
- '"<F1>"}, "right": {"literal": null}}}, {"groupby": "<F2>"}, {"rollup": {"<F1> min": {"op": "min", "field": "<F1>"}, '
- '"<F1> max": {"op": "max", "field": "<F1>"}}}, {"derive": {"range": {"op": "-", "left": {"field": "<F1> max"}, '
- '"right": {"field": "<F1> min"}}}}, {"orderby": {"field": "range", "order": "desc"}}], "representation": {"mark": '
- '"row", "mapping": [{"encoding": "text", "field": "<F2>", "mark": "text", "type": "nominal"}, {"encoding": "text", '
- '"field": "<F1> min", "mark": "text", "type": "nominal"}, {"encoding": "x", "column": "range", "mark": "bar", '
+ '"<F1>"}, "right": {"literal": null}}}, {"groupby": "<F2>"}, {"rollup": {"<F1> min": {"op": "min", "field": '
+ '"<F1:q>"}, "<F1> max": {"op": "max", "field": "<F1:q>"}}}, {"derive": {"range": {"op": "-", "left": {"field": "<F1> '
+ 'max"}, "right": {"field": "<F1> min"}}}}, {"orderby": {"field": "range", "order": "desc"}}], "representation": '
+ '{"mark": "row", "mapping": [{"encoding": "text", "field": "<F2>", "mark": "text", "type": "nominal"}, {"encoding": '
+ '"text", "field": "<F1> min", "mark": "text", "type": "nominal"}, {"encoding": "x", "column": "range", "mark": "bar", '
  '"field": "<F1> min", "type": "quantitative", "domain": {"numberFields": ["<F1> min", "<F1> max"]}}, {"encoding": '
  '"x2", "column": "range", "mark": "bar", "field": "<F1> max", "type": "quantitative", "domain": {"numberFields": '
  '["<F1> min", "<F1> max"]}}, {"encoding": "text", "field": "<F1> max", "mark": "text", "type": "nominal"}]}}',
@@ -251,7 +251,7 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"nominal"}, {"encoding": "color", "field": "udi_internal_text_color_threshold", "type": "nominal", "domain": '
  '["large", "small"], "range": ["white", "black"], "omitLegend": true}]}]}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F3>", "<F2>"]}, {"rollup": '
- '{"average <F1>": {"op": "mean", "field": "<F1>"}}}], "representation": {"mark": "rect", "mapping": [{"encoding": '
+ '{"average <F1>": {"op": "mean", "field": "<F1:q>"}}}], "representation": {"mark": "rect", "mapping": [{"encoding": '
  '"color", "field": "average <F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}, '
  '{"encoding": "x", "field": "<F3>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2>"}, {"derive": '
