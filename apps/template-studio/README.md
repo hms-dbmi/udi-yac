@@ -22,6 +22,12 @@ One card per template, with:
   template is correct, it just shouldn't be offered as agent output any more — a
   candidate for removal from the builder rather than a bug to fix. Archived cards
   stay reviewable but are dimmed so they don't compete with undecided ones;
+- an **Enlarge** button opening the template at near-full-screen. The grid keeps
+  cards small so many templates are comparable at a glance, which squeezes wide
+  tables, heatmaps and anything with a legend; the modal gives the same
+  visualization ~3× the width and ~2× the height, with the same review actions so
+  a decision can be made without going back. Built on `<dialog>`, so focus
+  trapping and Esc-to-close come from the platform;
 - a **details** expander with the template's metadata as the model sees it, the
   resolved spec being rendered, and the raw unresolved template;
 - a **data-package picker** — templates are tagged for either tidy tables
@@ -39,6 +45,14 @@ in `src/index.css`, that div stays `display: inline-block; height: 0`, Vega's
 SVG** — a completely blank card with no error anywhere. `packages/chat` carries
 the same rules for the same reason. Importing `udi-toolkit/style.css` is not a
 substitute: those selectors are scoped to a build-generated `[data-v-*]` hash.
+
+The same trap applies to `UDICellRenderer.vue`'s **in-cell marks** — the
+bar/rect/point/line drawn inside a table cell — and it is even easier to miss.
+The marks are emitted with correct inline `width` and `background-color` from the
+spec, but without `.pos-absolute`'s positioning and the mark's `height: 100%`
+every one collapses to zero height, so the table just looks like plain text and
+the feature looks unimplemented. `src/index.css` restates those rules too. See
+[#74](https://github.com/hms-dbmi/udi-yac/issues/74).
 
 **Charts are virtualized.** Mounting 60+ Vega views at once is far too much work,
 so each card only mounts its chart while it is near the viewport

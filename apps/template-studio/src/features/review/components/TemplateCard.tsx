@@ -1,8 +1,9 @@
-import { useRef, useState, type ReactNode } from 'react';
-import { Archive, Check, ChevronDown, ChevronUp, RotateCcw, X, AlertTriangle } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { AlertTriangle, ChevronDown, ChevronUp, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useInViewport } from '@/lib/useInViewport';
 import type { Preview, ReviewStatus, TemplateRecord } from '@/types/previews';
+import { ReviewControls } from './ReviewControls';
 import { StatusBadge } from './StatusBadge';
 import { TemplateDetails } from './TemplateDetails';
 import { TemplatePreview } from './TemplatePreview';
@@ -15,6 +16,8 @@ export interface TemplateCardProps {
   sourceResolver: Record<string, string>;
   /** Absent when the write endpoint isn't available (static build). */
   onReview: ((status: ReviewStatus, feedback: string) => Promise<void>) | null;
+  /** Open this template in the full-screen modal. */
+  onOpenLarge: () => void;
 }
 
 export function TemplateCard({
@@ -24,6 +27,7 @@ export function TemplateCard({
   feedback,
   sourceResolver,
   onReview,
+  onOpenLarge,
 }: TemplateCardProps) {
   const [expanded, setExpanded] = useState(false);
   // Only mount the chart while this card is near the viewport. Everything else
@@ -31,35 +35,6 @@ export function TemplateCard({
   // reviewer can read and act on an off-screen card without waiting for a chart.
   const previewRef = useRef<HTMLDivElement>(null);
   const previewVisible = useInViewport(previewRef);
-  const [draft, setDraft] = useState(feedback);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Reset the draft when the persisted feedback changes underneath us (e.g. a
-  // reload, or a save completing). Adjusting state during render is React's
-  // recommended way to react to a changed prop — an effect here would cause the
-  // documented cascading-render problem.
-  const [lastFeedback, setLastFeedback] = useState(feedback);
-  if (lastFeedback !== feedback) {
-    setLastFeedback(feedback);
-    setDraft(feedback);
-  }
-
-  const dirty = draft !== feedback;
-
-  async function submit(next: ReviewStatus) {
-    if (!onReview) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await onReview(next, draft);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <article
       className={cn(
@@ -114,73 +89,24 @@ export function TemplateCard({
         ))}
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
+          onClick={onOpenLarge}
+          title="Open full size — the grid squeezes wide tables and legends"
           className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900"
+        >
+          <Maximize2 className="size-3.5" /> Enlarge
+        </button>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900"
         >
           {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
           {expanded ? 'Hide details' : 'Details'}
         </button>
       </div>
 
-      <div className="space-y-2 border-t border-slate-100 px-3 py-2">
-        <textarea
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          disabled={!onReview}
-          rows={2}
-          placeholder={onReview ? 'Feedback for the template author…' : 'Read-only build'}
-          className="w-full resize-y rounded border border-slate-200 px-2 py-1 text-xs outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-200 disabled:bg-slate-50"
-        />
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          <ReviewButton
-            onClick={() => submit('approved')}
-            disabled={!onReview || saving}
-            active={status === 'approved'}
-            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 aria-pressed:bg-emerald-600"
-          >
-            <Check className="size-3.5" /> Approve
-          </ReviewButton>
-
-          <ReviewButton
-            onClick={() => submit('needs_changes')}
-            disabled={!onReview || saving}
-            active={status === 'needs_changes'}
-            className="border-amber-300 text-amber-800 hover:bg-amber-50 aria-pressed:bg-amber-600"
-          >
-            <RotateCcw className="size-3.5" /> Needs changes
-          </ReviewButton>
-
-          <ReviewButton
-            onClick={() => submit('rejected')}
-            disabled={!onReview || saving}
-            active={status === 'rejected'}
-            className="border-rose-300 text-rose-700 hover:bg-rose-50 aria-pressed:bg-rose-600"
-          >
-            <X className="size-3.5" /> Reject
-          </ReviewButton>
-
-          {/* Archive is not a rejection: the template is correct, we just don't
-              want the agent offering it any more. Kept visually neutral so it
-              doesn't read as a verdict on quality. */}
-          <ReviewButton
-            onClick={() => submit('archived')}
-            disabled={!onReview || saving}
-            active={status === 'archived'}
-            title="Valid, but should no longer be offered as agent output"
-            className="border-slate-300 text-slate-700 hover:bg-slate-100 aria-pressed:bg-slate-600"
-          >
-            <Archive className="size-3.5" /> Archive
-          </ReviewButton>
-
-          {dirty && onReview && (
-            <span className="text-[10px] text-slate-500">
-              unsaved feedback — pick a status to save
-            </span>
-          )}
-          {saving && <span className="text-[10px] text-slate-500">saving…</span>}
-          {error && <span className="text-[10px] text-rose-600">{error}</span>}
-        </div>
+      <div className="border-t border-slate-100 px-3 py-2">
+        <ReviewControls status={status} feedback={feedback} onReview={onReview} />
       </div>
 
       {expanded && <TemplateDetails template={template} preview={preview} />}
@@ -202,38 +128,5 @@ function PreviewPlaceholder() {
         chart loads when scrolled into view
       </span>
     </div>
-  );
-}
-
-function ReviewButton({
-  onClick,
-  disabled,
-  active,
-  className,
-  title,
-  children,
-}: {
-  onClick: () => void;
-  disabled: boolean;
-  active: boolean;
-  className?: string;
-  title?: string;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-pressed={active}
-      className={cn(
-        'inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-        'aria-pressed:border-transparent aria-pressed:text-white',
-        className,
-      )}
-    >
-      {children}
-    </button>
   );
 }

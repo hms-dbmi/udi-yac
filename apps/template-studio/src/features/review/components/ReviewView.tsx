@@ -15,6 +15,7 @@ import type { PreviewsPayload, ReviewMap, ReviewStatus } from '@/types/previews'
 import { OrphanedReviews } from './OrphanedReviews';
 import { ReviewToolbar } from './ReviewToolbar';
 import { TemplateCard } from './TemplateCard';
+import { TemplateModal } from './TemplateModal';
 
 const PREVIEWS_URL = '/template_previews.json';
 
@@ -37,6 +38,8 @@ export function ReviewView() {
 
   // Bumped by the retry button to re-run the data-package load effect.
   const [reloadToken, setReloadToken] = useState(0);
+  // Key of the template shown full-screen, or null for none.
+  const [enlargedKey, setEnlargedKey] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Set<ReviewStatus>>(new Set());
   const [search, setSearch] = useState('');
   const [renderableOnly, setRenderableOnly] = useState(true);
@@ -116,6 +119,9 @@ export function ReviewView() {
   const sourceResolver = dataReady ? dataState.sourceResolver : {};
 
   const templates = useMemo(() => payload?.templates ?? [], [payload]);
+  // Looked up from the live list rather than held as an object, so the modal
+  // follows a re-export instead of pinning a stale copy of the template.
+  const enlarged = enlargedKey ? templates.find((t) => t.key === enlargedKey) : undefined;
   const counts = useMemo(() => countByStatus(templates, reviews), [templates, reviews]);
   const orphans = useMemo(() => findOrphanedReviews(templates, reviews), [templates, reviews]);
   const visible = useMemo(
@@ -275,12 +281,29 @@ export function ReviewView() {
             onReview={
               onReview ? (status, feedback) => onReview(template.key, status, feedback) : null
             }
+            onOpenLarge={() => setEnlargedKey(template.key)}
           />
         ))}
       </main>
 
       {visible.length === 0 && (
         <p className="px-4 pb-8 text-sm text-slate-500">No templates match the current filters.</p>
+      )}
+
+      {enlarged && (
+        <TemplateModal
+          // Remount on a different template so <dialog> and the chart start clean.
+          key={enlarged.key}
+          template={enlarged}
+          preview={enlarged.previews[packageId]}
+          status={statusFor(enlarged.key, reviews)}
+          feedback={feedbackFor(enlarged.key, reviews)}
+          sourceResolver={sourceResolver}
+          onReview={
+            onReview ? (status, feedback) => onReview(enlarged.key, status, feedback) : null
+          }
+          onClose={() => setEnlargedKey(null)}
+        />
       )}
     </div>
   );
