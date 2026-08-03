@@ -74,9 +74,10 @@ apps/template-studio  ← renders templates, writes review decisions to
    pnpm dev:template-studio          # http://localhost:5175
    ```
 
-   Your template appears with status **New**. Pick the data package that matches
-   its `shape` (`hubmap` for `line_item`, `hubmap_cube` for `data_cube`) and
-   confirm it renders as intended.
+   Your template appears with status **New**. Pick a data package that matches
+   its `shape` — `hubmap` (three joinable tables) or `penguins` (single table, so
+   no join templates) for `line_item`, `hubmap_cube` for `data_cube` — and confirm
+   it renders as intended.
 
 ### Placeholders
 
@@ -116,6 +117,20 @@ cat packages/agent/src/udiagent/data/skills/template_reviews.json
   }
 }
 ```
+
+Statuses and what each asks of you:
+
+| status          | meaning                                           | action                                                |
+| --------------- | ------------------------------------------------- | ----------------------------------------------------- |
+| `new`           | not yet reviewed                                  | none                                                  |
+| `approved`      | good as-is                                        | none                                                  |
+| `needs_changes` | fixable problem, see `feedback`                   | revise the `add_row(...)` call                        |
+| `rejected`      | wrong / not worth keeping                         | usually delete the template                           |
+| `archived`      | **correct, but no longer wanted as agent output** | delete the `add_row(...)` call, or leave it if unsure |
+
+`archived` is deliberately not `rejected`: nothing is broken, the chart is simply
+not one we want the agent to produce any more. Treat it as a queue of removal
+candidates to confirm with the reviewer, not as a bug list.
 
 Workflow:
 

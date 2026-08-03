@@ -17,8 +17,11 @@ pnpm dev:template-studio    # http://localhost:5175
 One card per template, with:
 
 - the **live visualization**, rendered by `UDIVis` from the resolved spec;
-- **review status** (`new` / `approved` / `rejected` / `needs_changes`), filterable,
-  plus free-text feedback;
+- **review status** (`new` / `approved` / `rejected` / `needs_changes` / `archived`),
+  filterable, plus free-text feedback. **Archived** is distinct from rejected: the
+  template is correct, it just shouldn't be offered as agent output any more — a
+  candidate for removal from the builder rather than a bug to fix. Archived cards
+  stay reviewable but are dimmed so they don't compete with undecided ones;
 - a **details** expander with the template's metadata as the model sees it, the
   resolved spec being rendered, and the raw unresolved template;
 - a **data-package picker** — templates are tagged for either tidy tables
@@ -71,7 +74,26 @@ packages/agent/scripts/export_template_previews.py
 
 The exporter picks bindings by type-directed search: candidate fields are filtered
 to the type each placeholder requires, then the first combination the production
-`validate_bindings` accepts wins. It runs automatically on `dev` and `build` (via
+`validate_bindings` accepts wins. Three refinements make the previews worth
+looking at:
+
+- **Uninformative columns are demoted.** The schema alone can't tell a useful
+  field from a useless one — a column can be nominal with cardinality 2 and still
+  be 97% empty, rendering as one giant "null" bar. The exporter samples the CSVs
+  and pushes columns that are mostly null, near-constant, or single-valued to last
+  resort.
+- **Choices are varied, not repeated.** Candidates are rotated by template index
+  (and by binding slot), so the previews spread across the package's tables and
+  columns instead of every template landing on whatever sorts first. It's a
+  rotation, not randomness, so the export stays reproducible.
+- **Join collisions are avoided.** Arquero's join renames columns present in both
+  tables (`hubmap_id` → `hubmap_id_1`/`_2`), so a spec referencing the bare name
+  after the join fails to render. The exporter refuses those bindings and picks a
+  non-colliding pair instead. Some templates join and then group by the join key,
+  which is unrenderable against any schema whose two tables share that column —
+  those are reported as unsupported with the reason.
+
+It runs automatically on `dev` and `build` (via
 `scripts/sync-template-previews.mjs`, which needs `uv`), or on demand:
 
 ```bash
@@ -108,10 +130,15 @@ A template with no entry defaults to `new`.
 Repo-root `sample-data/` is synced into `public/data` on dev/build (gitignored)
 — edit `sample-data/`, never the copy. Two packages are relevant:
 
-| Package       | Shape               | Exercises                    |
-| ------------- | ------------------- | ---------------------------- |
-| `hubmap`      | tidy tables         | the 52 `line_item` templates |
-| `hubmap_cube` | pre-aggregated cube | the 11 `data_cube` templates |
+| Package       | Shape                     | Exercises                                    |
+| ------------- | ------------------------- | -------------------------------------------- |
+| `hubmap`      | tidy tables, 3 + joins    | the 52 `line_item` templates                 |
+| `hubmap_cube` | pre-aggregated cube       | the 11 `data_cube` templates                 |
+| `penguins`    | tidy table, single, no FK | `line_item` templates that don't need a join |
+
+Any `sample-data/*/datapackage.json` is picked up automatically, so adding a
+package needs no code change. Single-table packages can't satisfy join templates;
+those are reported as unsupported rather than silently omitted.
 
 `hubmap_cube` is derived from `sample-data/hubmap/donors.tsv` by
 `scripts/gen-cube-sample-data.mjs`. It emits every marginal of size 0–2 over five
