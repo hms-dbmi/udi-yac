@@ -118,6 +118,22 @@ apps/template-studio  ← renders templates, writes review decisions to
 | `<V>`, `<V1>`…`<V3>`        | a literal data **value** the model supplies (not a column)       |
 | `:n` / `:q` / `:o` suffix   | constrains the bound field's type (nominal/quantitative/ordinal) |
 
+**Annotating a chart.** Three pieces the survival curves rely on, all recent
+additions:
+
+- `Expr.concat([...])` builds a label string — a text mark draws only one field, so
+  `"Seattle 63%"` has to be assembled into a column first. Round numbers
+  beforehand; there is no formatting, so `1/3` would render every digit.
+- `.stroke_dash([6, 4])` on a layer marks it as annotation rather than data.
+- `.place(align=..., dx=..., dy=...)` anchors a text mark. Text is centred on its
+  point by default, which lays half a label across whatever it annotates —
+  `align="left"` puts it wholly to the right of its anchor.
+
+A reference line needs **two** points, and typically only one row holds the value
+being marked. Because such a layer maps y to a constant (a per-group `agg`), any
+second row will do — the survival templates borrow the `rank() == 1` row purely
+for its x. Null out every other row so vega-lite drops it.
+
 **Multi-value columns need `unnest`.** Some columns hold a `;`-delimited set
 (`"Leptomeningeal;Spine"`), so one row belongs to several categories. Grouping such
 a column directly makes every _combination_ its own category — on PCX that is 78

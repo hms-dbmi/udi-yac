@@ -73,6 +73,11 @@ class Chart:
         self.representation().stroke_dash(pattern)
         return self
 
+    def place(self, **kwargs):
+        """Anchor/nudge the most recently added layer (text placement)."""
+        self.representation().place(**kwargs)
+        return self
+
     def map(self, encoding: str, **kwargs):
         self.representation().map(encoding, **kwargs)
         return self
@@ -249,6 +254,10 @@ class Representation:
         self._current_layer.stroke_dash(pattern)
         return self
 
+    def place(self, **kwargs):
+        self._current_layer.place(**kwargs)
+        return self
+
     def x(self, **kwargs):
         return self.map("x", **kwargs)
 
@@ -319,6 +328,16 @@ class Layer:
         guidance rather than as data.
         """
         self._state["strokeDash"] = list(pattern)
+        return self
+
+    def place(self, align=None, dx=None, dy=None):
+        """Anchor and nudge a text mark, which is otherwise centred on its point."""
+        if align is not None:
+            self._state["align"] = align
+        if dx is not None:
+            self._state["dx"] = dx
+        if dy is not None:
+            self._state["dy"] = dy
         return self
 
     def map(self, encoding: str, **kwargs):

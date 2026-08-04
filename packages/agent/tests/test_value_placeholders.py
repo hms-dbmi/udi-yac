@@ -162,3 +162,23 @@ def test_survival_capability_is_advertised_to_the_orchestrator():
     assert "rebuff" in instructions, "the prompt should say survival is not a Rebuff case"
     # And must not let the agent claim a true Kaplan-Meier estimate.
     assert "not" in instructions and "kaplan-meier" in instructions
+
+
+def test_concat_compiles_to_sql():
+    """`concat` must work server-side too, or the portable survival templates
+    would silently become browser-only just because they build a label."""
+    from udiagent.query.errors import UnsupportedQueryError
+    from udiagent.query.expr import ExprContext, compile_expr
+
+    ctx = ExprContext(quote=lambda c: f'"{c}"', placeholder="?", params=[])
+    sql = compile_expr(
+        {"concat": [{"field": "org"}, {"literal": " "}, {"field": "pct"}, {"literal": "%"}]},
+        ctx,
+    )
+    assert sql.startswith("CONCAT("), sql
+    # Numbers must be cast, or a numeric column would not concatenate as text.
+    assert sql.count("CAST(") == 4, sql
+    assert ctx.params == [" ", "%"], "literals must be parameterised, not inlined"
+
+    with pytest.raises(UnsupportedQueryError):
+        compile_expr({"concat": []}, ExprContext(quote=str, placeholder="?", params=[]))

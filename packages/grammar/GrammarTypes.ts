@@ -437,7 +437,8 @@ export type Expr =
   | BinaryExpr
   | ConditionalExpr
   | AggregateExpr
-  | WindowExpr;
+  | WindowExpr
+  | ConcatExpr;
 
 /**
  * A reference to a column in the current table. Legacy form: `d['age']`.
@@ -508,6 +509,18 @@ export interface WindowExpr {
 }
 
 /**
+ * String concatenation of its parts, in order. Numbers are stringified.
+ *
+ * Exists because a text mark can only draw one field, so a label combining
+ * values — a category name next to its percentage — has to be assembled into a
+ * single column first. There is no formatting here: round or scale the numbers
+ * beforehand, since `["a", 1 / 3]` would render every digit.
+ */
+export interface ConcatExpr {
+  concat: Expr[];
+}
+
+/**
  * An aggregate function for summarizing data.
  */
 export interface AggregateFunction {
@@ -566,6 +579,20 @@ export interface GenericLayer<Mark, Mapping> {
    * rather than as data.
    */
   strokeDash?: number[];
+
+  /**
+   * Horizontal anchoring of a text mark relative to its x position. Text is
+   * centred by default, which puts half a label on the wrong side of whatever it
+   * annotates. Optional.
+   */
+  align?: 'left' | 'center' | 'right';
+
+  /**
+   * Pixel offsets applied after positioning, for nudging an annotation clear of
+   * the mark it labels. Optional.
+   */
+  dx?: number;
+  dy?: number;
 }
 
 /**

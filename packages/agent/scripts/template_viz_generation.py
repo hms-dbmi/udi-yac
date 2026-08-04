@@ -278,7 +278,33 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     chart = chart.derive(
         {
             "label day": Expr.binop(
-                "*", Expr.agg("max", "survival days"), Expr.lit(1.02)
+                "*", Expr.agg("max", "survival days"), Expr.lit(1.12)
+            )
+        }
+    )
+    # The rule is a short dashed lead-out from the end of the curve to its label,
+    # rather than a full-width line cutting back across the descending curve.
+    #
+    # Only one row ever holds the final value (the last event), and a line mark
+    # needs two points — so the second endpoint is borrowed from an arbitrary
+    # other row. That is sound because this layer maps y to `final percentage`,
+    # which is constant across the group: any two rows give the same horizontal
+    # line, and only their x matters. Every other row is nulled out and dropped
+    # by vega-lite.
+    chart = chart.derive(
+        {
+            "rule day": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.field("label day"),
+                Expr.cond(
+                    Expr.binop(
+                        "==",
+                        Expr.field("survival percentage"),
+                        Expr.field("final percentage"),
+                    ),
+                    Expr.field("survival days"),
+                    Expr.lit(None),
+                ),
             )
         }
     )
@@ -293,6 +319,19 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
                 "-",
                 Expr.field("_label_offset"),
                 Expr.binop("%", Expr.field("_label_offset"), Expr.lit(1)),
+            )
+        }
+    )
+    # One text mark can only draw one field, so the label is assembled here. When
+    # stratified it carries the category name too: the colour legend alone makes a
+    # reader trace a hue back to a key, and these curves converge at the right
+    # edge where that is hardest.
+    chart = chart.derive(
+        {
+            "final label": Expr.concat(
+                ([Expr.field(_placeholder_base(stratum))] if stratum else [])
+                + ([Expr.lit(" ")] if stratum else [])
+                + [Expr.field("final survival"), Expr.lit("%")]
             )
         }
     )
@@ -315,20 +354,23 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     chart = (
         chart.mark("line")
         .stroke_dash(_SURVIVAL_DASH)
-        .x(field="survival days", type="quantitative", title="survival days")
+        .x(field="rule day", type="quantitative", title="survival days")
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal")
 
     chart = (
         chart.mark("text")
+        # Right-aligned and lifted clear of the rule: a centred label would sit
+        # across the dashes and read as a strikethrough.
+        .place(align="left", dx=4, dy=-8)
         .x(field="label day", type="quantitative", title="survival days")
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
-        .text(field="final survival", type="quantitative")
+        .text(field="final label", type="nominal")
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal")
 
     return chart
 
@@ -1929,10 +1971,10 @@ def generate():
             "~80 combinations, which also exceeds the 50-cardinality cap for an encoded field. "
             "Every caveat from the "
             "single-valued stratified curve still applies — no censoring, no at-risk weighting, "
-            "no significance test, and small cohorts step coarsely. Two artefacts to expect: a "
-            "value with exactly one observed death renders as a lone point rather than a line, "
-            "and a value whose subjects all lack the end event is absent from the chart entirely — the "
-            "data is not being dropped, there is simply nothing to plot for it."
+            "no significance test, and small cohorts step coarsely. A value whose subjects have "
+            "no end event at all still appears, as a flat line held at 100% — that is a real "
+            "reading of the data (nobody in it reached the end event), not a rendering artefact, "
+            "though with a handful of subjects it means very little. "
             "The curve starts at (0, 100%) because subjects who never reach the end event sit at day 0 and contribute no drop; a group in which every subject reached the end event therefore has nobody at day 0 and its curve begins at its first event instead. The dashed rule and its number mark the final value."
         ),
         tasks=(
