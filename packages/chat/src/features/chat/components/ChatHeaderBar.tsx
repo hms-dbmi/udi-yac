@@ -12,7 +12,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useGlobal } from '@/app/UDIChatContext';
+import { useGlobal, useGlobalStore } from '@/app/UDIChatContext';
+import { cn } from '@/lib/utils';
 import { useExamplePrompts } from '../hooks/useExamplePrompts';
 import { useDebugExports } from '../hooks/useDebugExports';
 import { MemoryBankButton } from './MemoryBankButton';
@@ -48,7 +49,9 @@ export function ChatHeaderBar({
   onExampleClick,
   isLoading,
 }: ChatHeaderBarProps) {
+  const globalStore = useGlobalStore();
   const debugMode = useGlobal((s) => s.debugMode);
+  const overviewOpen = useGlobal((s) => s.overviewOpen);
   const { examplePrompts } = useExamplePrompts(config.apiBaseUrl);
   const {
     handleSaveConversation,
@@ -90,6 +93,27 @@ export function ChatHeaderBar({
         <h2 className="text-sm font-semibold">Chat</h2>
       </div>
       <div className="flex items-center gap-1">
+        {/*
+         * Only offered once the shell is wide enough to show chat and the data
+         * overview together — below that threshold the ViewSwitch above the
+         * panes owns this, since opening the overview replaces the chat.
+         */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden h-7 w-7 @min-[1200px]/shell:inline-flex"
+                aria-pressed={overviewOpen}
+                onClick={() => globalStore.getState().setOverview(!overviewOpen)}
+              />
+            }
+          >
+            <Database className={cn('h-3.5 w-3.5', overviewOpen && 'text-udi-primary')} />
+          </TooltipTrigger>
+          <TooltipContent>{overviewOpen ? 'Hide data overview' : 'Data overview'}</TooltipContent>
+        </Tooltip>
         {examplePrompts.length > 0 && (
           <Dialog open={examplesOpen} onOpenChange={setExamplesOpen}>
             <Tooltip>
