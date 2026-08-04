@@ -305,26 +305,44 @@ export function injectInteractivity(
   return interactiveSpec;
 }
 
-function getRepresentedFields(spec: UDIGrammar): string[] {
+/**
+ * Fields that **every** layer encodes.
+ *
+ * Used to drop rows with missing values. The filters apply to the one dataset all
+ * layers share, so a field only qualifies if no layer could draw the row anyway.
+ * A layered spec routinely nulls a field out on purpose — that is how an
+ * annotation layer picks the rows it marks — and filtering on a field encoded by
+ * only some layers would delete those rows from the layers that do want them,
+ * taking the data with it. Vega-Lite already drops invalid values per layer, so
+ * what this pass skips is still handled downstream.
+ *
+ * For a single-layer spec (the common case) this is every encoded field.
+ */
+function getFieldsInEveryLayer(spec: UDIGrammar): string[] {
   if (!spec.representation) return [];
-  const fields = new Set<string>();
   const representations = Array.isArray(spec.representation)
     ? (spec.representation as SpecRepresentationLike[])
     : [spec.representation as SpecRepresentationLike];
-  for (const representation of representations) {
+
+  const perLayer: Set<string>[] = representations.map((representation) => {
     const rawMapping = representation.mapping;
     const mappings: SpecMappingLike[] = Array.isArray(rawMapping)
       ? rawMapping
       : rawMapping
         ? [rawMapping]
         : [];
+    const fields = new Set<string>();
     for (const mapping of mappings) {
       if (mapping && 'field' in mapping && mapping.field) {
         fields.add(mapping.field);
       }
     }
-  }
-  return Array.from(fields);
+    return fields;
+  });
+
+  const [first, ...rest] = perLayer;
+  if (!first) return [];
+  return [...first].filter((field) => rest.every((layer) => layer.has(field)));
 }
 
 export function createDashboardStore() {
@@ -557,7 +575,7 @@ export function createDashboardStore() {
         // Structured expression AST, not the legacy raw string form — the
         // remote query backend rejects raw Arquero strings by design.
         const nullFilters = state.filterAllNullValues
-          ? getRepresentedFields(viz.spec).map((field) => ({
+          ? getFieldsInEveryLayer(viz.spec).map((field) => ({
               filter: { op: '!=', left: { field }, right: { literal: null } },
             }))
           : [];

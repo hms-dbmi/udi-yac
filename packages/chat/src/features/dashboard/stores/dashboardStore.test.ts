@@ -461,6 +461,58 @@ describe('dashboardStore — cross-store filter propagation', () => {
     expect(stringFilters).toHaveLength(0);
   });
 
+  it('updateSpecFilters only null-filters fields that every layer of a layered spec encodes', () => {
+    // A layered spec nulls a field out on purpose: that is how an annotation
+    // layer picks the rows it marks. The filters run on the single dataset every
+    // layer shares, so filtering on a field only *some* layers encode deletes
+    // those rows from the layers that do want them — which took the whole data
+    // layer with it, leaving a chart of labels and no line.
+    const layered = makeSpec({
+      representation: [
+        {
+          mark: 'line',
+          mapping: [
+            { encoding: 'x', field: 'age_value', type: 'quantitative' },
+            { encoding: 'y', field: 'weight_value', type: 'quantitative' },
+          ],
+        },
+        {
+          mark: 'text',
+          mapping: [
+            // Non-null on one row per series; every other row is nulled out.
+            { encoding: 'x', field: 'label_position', type: 'quantitative' },
+            { encoding: 'y', field: 'weight_value', type: 'quantitative' },
+            { encoding: 'text', field: 'label', type: 'nominal' },
+          ],
+        },
+      ],
+    });
+
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+    const dataPackage = buildDataPackageStoreWith([]);
+
+    dashboard
+      .getState()
+      .addActiveVisualization(0, 0, layered, '', { donors: ['age_value', 'weight_value'] });
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const viz = dashboard.getState().activeVisualizations.get('0-0')!;
+    const transformation = (viz.interactiveSpec as { transformation: Array<{ filter: object }> })
+      .transformation;
+    const filtered = transformation
+      .map((t) => t.filter as { left?: { field?: string } } | undefined)
+      .filter((f) => f?.left?.field)
+      .map((f) => f!.left!.field);
+
+    // Shared by both layers, so a null there is undrawable either way.
+    expect(filtered).toContain('weight_value');
+    // Encoded by one layer only — the other layer still draws these rows.
+    expect(filtered).not.toContain('label_position');
+    expect(filtered).not.toContain('label');
+    expect(filtered).not.toContain('age_value');
+  });
+
   it('updateSpecFilters injects bridged cross-entity filters between sibling entities', () => {
     const dashboard = createDashboardStore();
     const dataFilters = createDataFiltersStore();
