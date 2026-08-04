@@ -260,7 +260,12 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     chart = chart.derive(
         {"subjects": Expr.agg("count"), "deaths": Expr.agg("sum", "died")}
     )
-    chart = chart.orderby("survival days")
+    # Ordered by time, then by subject to break ties. The tiebreak is what makes
+    # `rank()` a row number: a rank is shared by tied rows, and with dozens of
+    # subjects sitting at day 0 a bare `orderby("survival days")` gives them all
+    # rank 1 — so "the rank() == 1 row", which the annotations below borrow, would
+    # be dozens of rows and rank 2 would not exist at all.
+    chart = chart.orderby(["survival days", _placeholder_base(subject_key)])
 
     # Cumulative deaths over the ordered rows, as a percentage still surviving.
     # A rolling *sum of the death indicator* rather than a row count, because the
@@ -293,11 +298,20 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     # Null for a stratum in which nobody reached the end event: its "final" value
     # is just the 100% it started at, and a label saying so, stacked against the
     # axis at day 0, is noise.
+    #
+    # Held on one row per group — the same `rank() == 1` row the rule borrows. A
+    # text mark draws once per row it receives, so leaving this on every row would
+    # stack dozens of copies of the label on the same point: opaque, heavier than
+    # the font it declares, and no way to see anything behind it.
     chart = chart.derive(
         {
             "label day": Expr.cond(
-                Expr.binop(">", Expr.field("deaths"), Expr.lit(0)),
-                Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.cond(
+                    Expr.binop(">", Expr.field("deaths"), Expr.lit(0)),
+                    Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
+                    Expr.lit(None),
+                ),
                 Expr.lit(None),
             )
         }
@@ -456,6 +470,10 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
         # another stratum's curve.
         .place(align="right", dy=-9)
         .outline(color="white", width=3, opacity=0.7)
+        # Two strata can end at the same percentage, which would stack their
+        # labels on one another. 4 of the axis's 100 clears a label's height at
+        # the sizes these are drawn at, without moving it far from its own rule.
+        .avoid_overlap(4)
         .x(field="label day", type="quantitative", title="survival days", domain={"min": 0})
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
         .text(field="final label", type="nominal")

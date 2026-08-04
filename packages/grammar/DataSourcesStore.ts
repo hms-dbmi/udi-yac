@@ -691,18 +691,15 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         } else {
           orderbyList = transform.orderby;
         }
-        const orderKeys: OrderKey[] = orderbyList.map((orderby) => {
-          let orderKey: OrderKey;
-          if (typeof orderby !== 'string') {
-            const dir = orderby.order;
-            orderKey = orderby.field;
-            if (dir === 'desc') {
-              orderKey = desc(orderKey);
-            }
-          } else {
-            orderKey = orderby;
-          }
-          return orderKey;
+        // A DirectionalOrder may name several fields at once (grammar-py's
+        // `.orderby([a, b])` emits that shape, and the SQL compiler expands it),
+        // so flatten before applying the direction to each.
+        const orderKeys: OrderKey[] = orderbyList.flatMap((orderby) => {
+          if (typeof orderby === 'string') return [orderby];
+          const fields = Array.isArray(orderby.field)
+            ? orderby.field
+            : [orderby.field];
+          return orderby.order === 'desc' ? fields.map((f) => desc(f)) : fields;
         });
         currentTable.table = inTable.orderby(orderKeys);
       } else if ('derive' in transform) {

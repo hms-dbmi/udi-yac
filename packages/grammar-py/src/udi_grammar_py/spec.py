@@ -88,6 +88,11 @@ class Chart:
         self.representation().outline(**kwargs)
         return self
 
+    def avoid_overlap(self, min_gap=True):
+        """Keep the most recently added layer's marks from overlapping."""
+        self.representation().avoid_overlap(min_gap)
+        return self
+
     def map(self, encoding: str, **kwargs):
         self.representation().map(encoding, **kwargs)
         return self
@@ -272,6 +277,10 @@ class Representation:
         self._current_layer.outline(**kwargs)
         return self
 
+    def avoid_overlap(self, min_gap=True):
+        self._current_layer.avoid_overlap(min_gap)
+        return self
+
     def x(self, **kwargs):
         return self.map("x", **kwargs)
 
@@ -355,6 +364,16 @@ class Layer:
         self._state["strokeWidth"] = width
         if opacity is not None:
             self._state["strokeOpacity"] = opacity
+        return self
+
+    def avoid_overlap(self, min_gap=True):
+        """Nudge this layer's marks apart when they would draw on the same spot.
+
+        `True` separates them by 5% of the axis; a number sets the minimum
+        separation in data units (the pixel size of the plot is not known when the
+        spec is written).
+        """
+        self._state["avoidOverlap"] = min_gap
         return self
 
     def place(self, align=None, dx=None, dy=None):

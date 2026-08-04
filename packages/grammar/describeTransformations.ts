@@ -28,8 +28,12 @@ function describeRollup(rollup: RollUp['rollup']): string {
 }
 
 function describeOrderby(orderby: OrderBy['orderby']): string {
-  const one = (o: string | DirectionalOrder): string =>
-    typeof o === 'string' ? o : `${o.field}${o.order ? ` (${o.order})` : ''}`;
+  const one = (o: string | DirectionalOrder): string => {
+    if (typeof o === 'string') return o;
+    // A DirectionalOrder can name several fields, sorted in turn.
+    const fields = Array.isArray(o.field) ? o.field.join(', ') : o.field;
+    return `${fields}${o.order ? ` (${o.order})` : ''}`;
+  };
   const list = Array.isArray(orderby) ? orderby.map(one) : [one(orderby)];
   return `Sort by ${list.join(', ')}`;
 }

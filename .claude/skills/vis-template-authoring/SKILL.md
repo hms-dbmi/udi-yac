@@ -132,6 +132,11 @@ additions:
 - `.outline(color="white", width=3, opacity=0.7)` haloes a text mark so it stays
   readable where it crosses a line. The renderer draws such a layer twice, because
   SVG paints stroke over fill and one pass would eat into the glyphs.
+- `.avoid_overlap(4)` nudges a layer's marks apart when they would land on the same
+  position — two curves ending at the same percentage, otherwise two labels in one
+  place. The separation is in **data units** (the plot's pixel size isn't known
+  when the spec is written); `True` uses 5% of the axis. Only the layer moves: the
+  reference line it annotates still points at the true value.
 - `.title("<F4>", align="right")` sets a heading; left-aligned unless told
   otherwise. Worth it when series are labelled inline and the legend is dropped —
   the grouping _variable_ still needs naming, which the legend title used to carry.
@@ -142,6 +147,15 @@ renderer computing a padded one, so a one-sided `{"min": 0}` leaves the axis end
 exactly at the largest value in the data — which is how an annotation can reach the
 plot edge. And anything a text mark draws is outside the scale, so a label cannot
 widen the axis to fit itself.
+
+> **`rank() == 1` is not "one row" unless the order has no ties.** A rank is
+> _shared_ by tied rows, so with dozens of subjects at day 0, `orderby("time")`
+> gives every one of them rank 1 — and no row at all gets rank 2. An annotation
+> hung on rank 1 then multiplies into a stack of identical copies (which reads as
+> an opaque, too-bold label, since each one paints over the last), while anything
+> expecting rank 2 silently draws nothing. Order by a unique tiebreak as well —
+> `orderby(["survival days", "<F1>"])` — and rank becomes a row number.
+> `test/orderby-rank.mjs` in the toolkit pins both halves of this.
 
 A reference line needs **two** points, and typically only one row holds the value
 being marked. Because such a layer maps y to a constant (a per-group `agg`), any

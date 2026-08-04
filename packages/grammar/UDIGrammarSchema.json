@@ -427,8 +427,18 @@
       "description": "Defines a sorting order and a field to sort by.",
       "properties": {
         "field": {
-          "description": "The name of the field to be sorted.",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "The name of the field to be sorted, or several to sort by in turn — a tiebreak matters when a window function reads the order, because tied rows share a rank."
         },
         "order": {
           "description": "The sorting order for the field, either ascending ('asc') or descending ('desc').",
@@ -917,6 +927,10 @@
           "enum": ["left", "center", "right"],
           "type": "string"
         },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
           "type": "number"
@@ -976,6 +990,10 @@
           "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
           "enum": ["left", "center", "right"],
           "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
         },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
@@ -1037,6 +1055,10 @@
           "enum": ["left", "center", "right"],
           "type": "string"
         },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
           "type": "number"
@@ -1096,6 +1118,10 @@
           "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
           "enum": ["left", "center", "right"],
           "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
         },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
@@ -1157,6 +1183,10 @@
           "enum": ["left", "center", "right"],
           "type": "string"
         },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
           "type": "number"
@@ -1216,6 +1246,10 @@
           "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
           "enum": ["left", "center", "right"],
           "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
         },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
@@ -1277,6 +1311,10 @@
           "enum": ["left", "center", "right"],
           "type": "string"
         },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
           "type": "number"
@@ -1337,6 +1375,10 @@
           "enum": ["left", "center", "right"],
           "type": "string"
         },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
           "type": "number"
@@ -1396,6 +1438,10 @@
           "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
           "enum": ["left", "center", "right"],
           "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
         },
         "dx": {
           "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",

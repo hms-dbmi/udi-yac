@@ -251,9 +251,11 @@ export interface OrderBy extends DataTransformationBase {
  */
 export interface DirectionalOrder {
   /**
-   * The name of the field to be sorted.
+   * The name of the field to be sorted, or several to sort by in turn — a
+   * tiebreak matters when a window function reads the order, because tied rows
+   * share a rank.
    */
-  field: string;
+  field: string | string[];
 
   /**
    * The sorting order for the field, either ascending ('asc') or descending ('desc').
@@ -630,6 +632,19 @@ export interface GenericLayer<Mark, Mapping> {
   stroke?: string;
   strokeWidth?: number;
   strokeOpacity?: number;
+
+  /**
+   * Keep this layer's marks from drawing on top of each other, by nudging them
+   * apart along their position axis (`y` if the layer encodes one, else `x`).
+   * Optional; for `text` marks, where two labels landing on the same value makes
+   * both unreadable.
+   *
+   * `true` uses a default separation of 5% of the axis. A number sets the minimum
+   * separation explicitly, **in data units** — at spec-build time the plot's pixel
+   * size is not known, but an author who knows the axis runs 0..100 knows what a
+   * separation of 5 looks like on it.
+   */
+  avoidOverlap?: boolean | number;
 }
 
 /**

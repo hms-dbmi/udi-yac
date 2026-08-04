@@ -26,6 +26,7 @@ import type { UDIPalette } from './Palette';
 import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
+import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
 const dataSourcesStore = useDataSourcesStore();
 import { storeToRefs } from 'pinia';
 import { debounce } from 'lodash';
@@ -458,6 +459,43 @@ function setDefaultDomains(
   }
 }
 
+// Read the numeric ends off a `Domain`, in either the `{min, max}` or the
+// `[min, max]` form. Categorical domains have no bounds to report.
+function numericDomainBounds(domain: unknown): {
+  min?: number | undefined;
+  max?: number | undefined;
+} {
+  if (Array.isArray(domain)) {
+    const [min, max] = domain;
+    return typeof min === 'number' && typeof max === 'number'
+      ? { min, max }
+      : {};
+  }
+  if (typeof domain === 'object' && domain !== null) {
+    const { min, max } = domain as { min?: unknown; max?: unknown };
+    return {
+      ...(typeof min === 'number' ? { min } : {}),
+      ...(typeof max === 'number' ? { max } : {}),
+    };
+  }
+  return {};
+}
+
+// How far a field's values span in the data — the fallback scale for a layer
+// that wants its labels separated but declares no explicit domain.
+function dataExtent(rows: unknown, field: string | undefined): number {
+  if (!Array.isArray(rows) || !field) return 0;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const row of rows) {
+    const value = (row as Record<string, unknown>)[field];
+    if (typeof value !== 'number' || !Number.isFinite(value)) continue;
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  return max > min ? max - min : 0;
+}
+
 // Pin axis tick values to the union of the two paired bin-boundary fields
 // (e.g. x=start, x2=end for a histogram) so vega-lite's default "nice" step
 // can't land ticks mid-bar. Reads from transformedDataFull so ticks reflect
@@ -621,7 +659,7 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
 
   const zeroBaselineFields = getZeroBaselineFields(spec);
 
-  const outputLayers = inputLayers.flatMap((layer) => {
+  const outputLayers = inputLayers.flatMap((layer, layerIndex) => {
     const mapping = Array.isArray(layer.mapping)
       ? layer.mapping
       : [layer.mapping];
@@ -814,6 +852,50 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         alignAxisToBinBoundaries(vegaEncoding, mapping, 'y', 'y2');
       }
     }
+    // Nudge apart marks that would land on the same spot — two labels sharing a
+    // value are both unreadable. The adjusted positions go into a column of their
+    // own on the shared dataset (rather than a per-layer copy of the data, which
+    // the runtime's changeset would not keep up to date) and this layer alone
+    // reads from it.
+    if (layer.avoidOverlap) {
+      const axis = vegaEncoding.y ? 'y' : 'x';
+      const otherAxis = axis === 'y' ? 'x' : 'y';
+      // Field names are read straight off the mapping, not off vegaEncoding,
+      // whose copies have their dots escaped for vega-lite.
+      const fieldOf = (encoding: string) => {
+        const map = mapping.find((m) => m.encoding === encoding);
+        return map && !('value' in map) ? map.field : undefined;
+      };
+      const positionField = fieldOf(axis);
+      const bounds = numericDomainBounds(
+        mapping.find((m) => m.encoding === axis)?.domain,
+      );
+      const span =
+        bounds.min !== undefined && bounds.max !== undefined
+          ? bounds.max - bounds.min
+          : dataExtent(vegaSpec.data.values, positionField);
+      const minGap =
+        typeof layer.avoidOverlap === 'number'
+          ? layer.avoidOverlap
+          : span * DEFAULT_LABEL_GAP_FRACTION;
+      // A zero span means every mark is at the same position and there is no
+      // scale to express a separation on; leave them stacked rather than
+      // inventing a distance.
+      if (positionField && minGap > 0) {
+        const spreadField = `__spread_${layerIndex}_${axis}`;
+        spreadLabels(vegaSpec.data.values, {
+          positionField,
+          outField: spreadField,
+          minGap,
+          // Only the marks the layer actually draws take part: a template
+          // suppresses one by nulling its *other* axis, not its position.
+          requiredField: fieldOf(otherAxis),
+          limit: bounds,
+        });
+        vegaEncoding[axis] = { ...vegaEncoding[axis], field: spreadField };
+      }
+    }
+
     const outputLayer: {
       mark: { type: VisualizationLayer['mark']; tooltip: boolean };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
