@@ -126,8 +126,18 @@ additions:
   beforehand; there is no formatting, so `1/3` would render every digit.
 - `.stroke_dash([6, 4])` on a layer marks it as annotation rather than data.
 - `.place(align=..., dx=..., dy=...)` anchors a text mark. Text is centred on its
-  point by default, which lays half a label across whatever it annotates —
-  `align="left"` puts it wholly to the right of its anchor.
+  point by default, which lays half a label across whatever it annotates.
+  `align="right"` is usually what you want for a label at the right-hand edge: it
+  runs inward, where `align="left"` would run off the plot for a long value.
+- `.title("<F4>")` sets a heading, rendered top-left. Worth it when series are
+  labelled inline and the legend is dropped — the grouping _variable_ still needs
+  naming, which the legend title used to carry.
+
+Two positioning facts worth knowing. An explicit `domain` on an encoding stops the
+renderer computing a padded one, so a one-sided `{"min": 0}` leaves the axis ending
+exactly at the largest value in the data — which is how an annotation can reach the
+plot edge. And anything a text mark draws is outside the scale, so a label cannot
+widen the axis to fit itself.
 
 A reference line needs **two** points, and typically only one row holds the value
 being marked. Because such a layer maps y to a constant (a per-group `agg`), any

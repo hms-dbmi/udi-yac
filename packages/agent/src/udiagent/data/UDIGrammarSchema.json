@@ -2061,6 +2061,10 @@
           ],
           "description": "The data source or data sources. This can be a single CSV file or a list of CSV files."
         },
+        "title": {
+          "description": "A heading for the whole visualization, rendered top-left.\n\nUseful when a chart labels its series inline and so has no legend: the grouping *variable* still needs naming, which a legend would otherwise have carried in its title.",
+          "type": "string"
+        },
         "transformation": {
           "description": "The data transformations applied to the source data before displaying the data.",
           "items": {

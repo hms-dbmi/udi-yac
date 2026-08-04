@@ -291,6 +291,25 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     # which is constant across the group: any two rows give the same horizontal
     # line, and only their x matters. Every other row is nulled out and dropped
     # by vega-lite.
+    # A group in which every subject reached the end event has nobody at day 0, so
+    # its curve would begin at its first event partway across the chart. Draw the
+    # missing flat segment at 100% explicitly: two borrowed rows again, using a
+    # constant column for y so it lands in data units rather than pixels.
+    chart = chart.derive({"full survival": Expr.lit(100)})
+    chart = chart.derive({"first day": Expr.agg("min", "survival days")})
+    chart = chart.derive(
+        {
+            "lead day": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.lit(0),
+                Expr.cond(
+                    Expr.binop("==", Expr.rank(), Expr.lit(2)),
+                    Expr.field("first day"),
+                    Expr.lit(None),
+                ),
+            )
+        }
+    )
     chart = chart.derive(
         {
             "rule day": Expr.cond(
@@ -338,9 +357,20 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
 
     # --- layers: the curve, a dashed reference line at the final value, and its
     # numeric label just right of where the line ends.
+    # Flat 100% lead-in, before the curve so the curve draws over it.
     chart = (
         chart.mark("line")
-        .x(field="survival days", type="quantitative", title="survival days")
+        .x(field="lead day", type="quantitative", title="survival days", domain={"min": 0})
+        .y(field="full survival", type="quantitative", domain={"min": 0, "max": 100})
+    )
+    if stratum:
+        chart = chart.color(
+            field=_placeholder_base(stratum), type="nominal", omitLegend=True
+        )
+
+    chart = (
+        chart.mark("line")
+        .x(field="survival days", type="quantitative", title="survival days", domain={"min": 0})
         .y(
             field="survival percentage",
             type="quantitative",
@@ -349,28 +379,31 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
         )
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal")
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
 
     chart = (
         chart.mark("line")
         .stroke_dash(_SURVIVAL_DASH)
-        .x(field="rule day", type="quantitative", title="survival days")
+        .x(field="rule day", type="quantitative", title="survival days", domain={"min": 0})
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal")
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
 
     chart = (
         chart.mark("text")
         # Right-aligned and lifted clear of the rule: a centred label would sit
         # across the dashes and read as a strikethrough.
-        .place(align="left", dx=4, dy=-8)
-        .x(field="label day", type="quantitative", title="survival days")
+        .place(align="right", dy=-9)
+        .x(field="label day", type="quantitative", title="survival days", domain={"min": 0})
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
         .text(field="final label", type="nominal")
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal")
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+
+    if stratum:
+        chart = chart.title(_placeholder_base(stratum))
 
     return chart
 

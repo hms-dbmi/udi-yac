@@ -68,6 +68,11 @@ class Chart:
         self.representation().mark(mark)
         return self
 
+    def title(self, text: str):
+        """Set the visualization's heading (rendered top-left)."""
+        self._spec["title"] = text
+        return self
+
     def stroke_dash(self, pattern):
         """Dash the most recently added layer's stroke."""
         self.representation().stroke_dash(pattern)

@@ -827,6 +827,11 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
   });
   vegaSpec['layer'] = outputLayers;
 
+  // anchor: 'start' puts the heading top-left rather than centred.
+  if (typeof spec.title === 'string' && spec.title.length > 0) {
+    vegaSpec['title'] = { text: spec.title, anchor: 'start' };
+  }
+
   return JSON.stringify(vegaSpec);
 }
 const signalKeys = ref<string[]>([]);

@@ -26,6 +26,15 @@ export interface UDIGrammar {
    * even when the spec author swaps marks.
    */
   config?: UDIGrammarConfig;
+
+  /**
+   * A heading for the whole visualization, rendered top-left.
+   *
+   * Useful when a chart labels its series inline and so has no legend: the
+   * grouping *variable* still needs naming, which a legend would otherwise have
+   * carried in its title.
+   */
+  title?: string;
 }
 
 /**
