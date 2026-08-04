@@ -3,13 +3,14 @@ import type {
   DataSource,
   DataTransformation,
   Representations,
+  VisualizationTitle,
 } from './GrammarTypes';
 
 export interface ParsedUDIGrammar {
   source: DataSource[];
   transformation?: DataTransformation[];
   representation: Representations;
-  title?: string;
+  title?: string | VisualizationTitle;
 }
 
 /**

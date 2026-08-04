@@ -37,9 +37,19 @@ function run(transformation) {
 
 // 1. one row per value, whitespace trimmed, empty/null dropped
 const expanded = run([{ unnest: { field: 'locations' } }]);
-assert.equal(expanded.length, 5, `expected 5 expanded rows, got ${expanded.length}`);
+assert.equal(
+  expanded.length,
+  5,
+  `expected 5 expanded rows, got ${expanded.length}`,
+);
 const pairs = expanded.map((r) => `${r.id}:${r.locations}`).sort();
-assert.deepEqual(pairs, ['a:Brain', 'a:Spine', 'b:Spine', 'c:Brain', 'c:Spine']);
+assert.deepEqual(pairs, [
+  'a:Brain',
+  'a:Spine',
+  'b:Spine',
+  'c:Brain',
+  'c:Spine',
+]);
 
 // 2. other columns are carried onto every produced row
 const a = expanded.filter((r) => r.id === 'a');
@@ -55,7 +65,9 @@ const counts = run([
   { groupby: 'locations' },
   { rollup: { subjects: { op: 'count' } } },
 ]);
-const byLocation = Object.fromEntries(counts.map((r) => [r.locations, r.subjects]));
+const byLocation = Object.fromEntries(
+  counts.map((r) => [r.locations, r.subjects]),
+);
 assert.deepEqual(byLocation, { Spine: 3, Brain: 2 });
 
 // 4. a custom separator and an explicit output column
@@ -70,6 +82,17 @@ assert.deepEqual(
   'out should write values into the named column',
 );
 // The original column survives when `out` is given elsewhere.
-assert.ok('locations' in run([{ unnest: { field: 'locations', out: 'location' } }])[0]);
+assert.ok(
+  'locations' in run([{ unnest: { field: 'locations', out: 'location' } }])[0],
+);
+
+// 5. a non-string cell is a single value, not something to split — and it keeps
+//    its type rather than coming back as a stringified copy of itself.
+const numeric = run([{ unnest: { field: 'n' } }]);
+assert.deepEqual(
+  numeric.map((r) => r.n),
+  [1, 2, 3, 4, 5],
+  'unnesting a numeric column should pass each value through unchanged',
+);
 
 console.log('unnest: all assertions passed');

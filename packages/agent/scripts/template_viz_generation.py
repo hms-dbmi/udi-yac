@@ -176,8 +176,8 @@ def _placeholder_base(placeholder: str) -> str:
     """``"<F4:n>"`` -> ``"<F4>"`` — drop the type suffix but keep the brackets.
 
     Getting this wrong is silent and destructive: a bare ``"<F4"`` leaves the
-    placeholder unterminated, so the resolver's ``<([^>]+)>`` match runs past it
-    and swallows the surrounding JSON.
+    placeholder unterminated, so it matches nothing, survives resolution and
+    leaves the spec unparseable.
     """
     return re.sub(r":[^>]+>", ">", placeholder)
 
@@ -226,14 +226,11 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     # for lacking an end event — that is what makes the curve level off at the
     # observed survival fraction instead of falling to zero.
     chart = chart.filter(Expr.not_null("start day"))
-    if stratum:
-        # Re-group so each curve is a fraction of its own cohort.
-        chart = chart.groupby(_placeholder_base(stratum))
-    chart = chart.derive({"subjects": Expr.agg("count")})
 
     # Subjects with no end event sit at day 0 and contribute no drop. That is
     # what puts the curve's first point at (0, 100%) — the grammar cannot
     # synthesize a leading row, but these subjects legitimately belong there.
+    # Row-wise, so this runs before any stratum grouping.
     chart = chart.derive(
         {
             "died": Expr.cond(
@@ -249,6 +246,20 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
         }
     )
     chart = chart.filter(Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)))
+
+    # Where the x axis ends, measured across the whole cohort rather than within
+    # one stratum: every curve's dashed lead-out has to reach the same edge, not
+    # just a little past its own last event. Taken here because a rollup leaves
+    # the table ungrouped, so this aggregate is global; once the stratum grouping
+    # below is applied, the same expression would give a per-curve maximum.
+    chart = chart.derive({"cohort end": Expr.agg("max", "survival days")})
+
+    if stratum:
+        # Re-group so each curve is a fraction of its own cohort.
+        chart = chart.groupby(_placeholder_base(stratum))
+    chart = chart.derive(
+        {"subjects": Expr.agg("count"), "deaths": Expr.agg("sum", "died")}
+    )
     chart = chart.orderby("survival days")
 
     # Cumulative deaths over the ordered rows, as a percentage still surviving.
@@ -273,12 +284,21 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     # The curve only descends, so its minimum is its final value. `agg` respects
     # the current grouping, giving a per-stratum final when stratified.
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
-    # Anchor for the end-of-line label, nudged just past the last event so the
-    # centred text is not clipped at the plot edge. Purely an annotation anchor.
+    # Anchor for the end-of-line label, and the far end of the dashed lead-out.
+    # It sits at the cohort-wide right edge — the same x for every curve — plus a
+    # margin, so that even the longest curve (whose own last event *is* the
+    # cohort end) gets a visible run of dashes. Being the largest x in the data,
+    # it also sets where the axis stops.
+    #
+    # Null for a stratum in which nobody reached the end event: its "final" value
+    # is just the 100% it started at, and a label saying so, stacked against the
+    # axis at day 0, is noise.
     chart = chart.derive(
         {
-            "label day": Expr.binop(
-                "*", Expr.agg("max", "survival days"), Expr.lit(1.12)
+            "label day": Expr.cond(
+                Expr.binop(">", Expr.field("deaths"), Expr.lit(0)),
+                Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
+                Expr.lit(None),
             )
         }
     )
@@ -297,6 +317,10 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     # constant column for y so it lands in data units rather than pixels.
     chart = chart.derive({"full survival": Expr.lit(100)})
     chart = chart.derive({"first day": Expr.agg("min", "survival days")})
+    # The curve only descends, so the group's *highest* survival percentage is
+    # its value at that first day — where the flat 100% lead-in has to drop to,
+    # or the two would be left joined by a vertical gap.
+    chart = chart.derive({"first percentage": Expr.agg("max", "survival percentage")})
     chart = chart.derive(
         {
             "lead day": Expr.cond(
@@ -307,22 +331,45 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
                     Expr.field("first day"),
                     Expr.lit(None),
                 ),
-            )
+            ),
+            # The drop itself: both points at the first event day, one at 100%
+            # and one at the curve's opening value. Where the group already has
+            # day-0 subjects the two collapse onto each other and nothing is
+            # drawn, which is correct — there is no drop to bridge.
+            "drop day": Expr.cond(
+                Expr.binop("<=", Expr.rank(), Expr.lit(2)),
+                Expr.field("first day"),
+                Expr.lit(None),
+            ),
+            "drop percentage": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.field("full survival"),
+                Expr.cond(
+                    Expr.binop("==", Expr.rank(), Expr.lit(2)),
+                    Expr.field("first percentage"),
+                    Expr.lit(None),
+                ),
+            ),
         }
     )
     chart = chart.derive(
         {
             "rule day": Expr.cond(
-                Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.field("label day"),
+                # No events, no final value to mark — see `label day`.
+                Expr.binop("==", Expr.field("deaths"), Expr.lit(0)),
+                Expr.lit(None),
                 Expr.cond(
-                    Expr.binop(
-                        "==",
-                        Expr.field("survival percentage"),
-                        Expr.field("final percentage"),
+                    Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                    Expr.field("label day"),
+                    Expr.cond(
+                        Expr.binop(
+                            "==",
+                            Expr.field("survival percentage"),
+                            Expr.field("final percentage"),
+                        ),
+                        Expr.field("survival days"),
+                        Expr.lit(None),
                     ),
-                    Expr.field("survival days"),
-                    Expr.lit(None),
                 ),
             )
         }
@@ -368,6 +415,17 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
             field=_placeholder_base(stratum), type="nominal", omitLegend=True
         )
 
+    # The vertical drop from that lead-in into the curve's first point.
+    chart = (
+        chart.mark("line")
+        .x(field="drop day", type="quantitative", title="survival days", domain={"min": 0})
+        .y(field="drop percentage", type="quantitative", domain={"min": 0, "max": 100})
+    )
+    if stratum:
+        chart = chart.color(
+            field=_placeholder_base(stratum), type="nominal", omitLegend=True
+        )
+
     chart = (
         chart.mark("line")
         .x(field="survival days", type="quantitative", title="survival days", domain={"min": 0})
@@ -393,8 +451,11 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
     chart = (
         chart.mark("text")
         # Right-aligned and lifted clear of the rule: a centred label would sit
-        # across the dashes and read as a strikethrough.
+        # across the dashes and read as a strikethrough, and a left-aligned one
+        # would run off the plot. A white halo keeps it readable where it crosses
+        # another stratum's curve.
         .place(align="right", dy=-9)
+        .outline(color="white", width=3, opacity=0.7)
         .x(field="label day", type="quantitative", title="survival days", domain={"min": 0})
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
         .text(field="final label", type="nominal")
@@ -403,7 +464,8 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
         chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
 
     if stratum:
-        chart = chart.title(_placeholder_base(stratum))
+        # Right-aligned to sit over the series labels it names.
+        chart = chart.title(_placeholder_base(stratum), align="right")
 
     return chart
 
@@ -1881,7 +1943,7 @@ def generate():
             "product and per-time at-risk counts, which the grammar cannot express today. Read "
             "the curve as an observed-survival fraction over the cohort, and do not use it where "
             "differences in follow-up length matter."
-            "The curve starts at (0, 100%) because subjects who never reach the end event sit at day 0 and contribute no drop; a group in which every subject reached the end event therefore has nobody at day 0 and its curve begins at its first event instead. The dashed rule and its number mark the final value."
+            "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 and contribute no drop, and where a group has none of those, its flat opening segment and the drop into its first event are drawn explicitly. The dashed rule carries the final value out to the right edge, where a label repeats it as a number — so a group with no end events at all gets neither, having no final value to report."
         ),
         tasks=(
             "Judge how survival falls over time after a starting event; compare the observed "
@@ -1943,7 +2005,7 @@ def generate():
             "and carries no significance test. Strata are also unequal in size, and a small one "
             "steps coarsely (n=4 moves in quarters), so a dramatic-looking curve may rest on a "
             "handful of subjects."
-            "The curve starts at (0, 100%) because subjects who never reach the end event sit at day 0 and contribute no drop; a group in which every subject reached the end event therefore has nobody at day 0 and its curve begins at its first event instead. The dashed rule and its number mark the final value."
+            "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 and contribute no drop, and where a group has none of those, its flat opening segment and the drop into its first event are drawn explicitly. The dashed rule carries the final value out to the right edge, where a label repeats it as a number — so a group with no end events at all gets neither, having no final value to report."
         ),
         tasks=(
             "Compare survival between groups; judge whether an attribute is associated with "
@@ -2005,10 +2067,9 @@ def generate():
             "Every caveat from the "
             "single-valued stratified curve still applies — no censoring, no at-risk weighting, "
             "no significance test, and small cohorts step coarsely. A value whose subjects have "
-            "no end event at all still appears, as a flat line held at 100% — that is a real "
-            "reading of the data (nobody in it reached the end event), not a rendering artefact, "
-            "though with a handful of subjects it means very little. "
-            "The curve starts at (0, 100%) because subjects who never reach the end event sit at day 0 and contribute no drop; a group in which every subject reached the end event therefore has nobody at day 0 and its curve begins at its first event instead. The dashed rule and its number mark the final value."
+            "no end event at all draws as a flat line held at 100% and is left unlabelled — "
+            "nobody in it reached the end event, so there is no final percentage to report. "
+            "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 and contribute no drop, and where a group has none of those, its flat opening segment and the drop into its first event are drawn explicitly. The dashed rule carries the final value out to the right edge, where a label repeats it as a number — so a group with no end events at all gets neither, having no final value to report."
         ),
         tasks=(
             "Compare observed survival across overlapping categories; see which of a subject's "
@@ -2016,9 +2077,10 @@ def generate():
         ),
         review_hint=(
             "Cohort sizes overlap here, so they sum to more than the subject count — that is "
-            "intended. Check the legend shows individual values (e.g. 'Spine', 'Brain') and not "
-            "combined strings like 'Leptomeningeal;Spine'; if it shows combinations, unnest did "
-            "not run. Requires browser (interactive) mode: the SQL backend rejects unnest."
+            "intended. Check the end-of-curve labels name individual values (e.g. 'Spine', "
+            "'Brain') and not combined strings like 'Leptomeningeal;Spine'; if they show "
+            "combinations, unnest did not run. Requires browser (interactive) mode: the SQL "
+            "backend rejects unnest."
         ),
         preview_bindings={
             "E": "Event",

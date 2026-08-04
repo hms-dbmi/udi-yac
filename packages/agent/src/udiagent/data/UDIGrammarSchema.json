@@ -947,12 +947,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -997,12 +1007,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1047,12 +1067,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1097,12 +1127,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1147,12 +1187,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1197,12 +1247,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1247,12 +1307,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1297,12 +1367,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1347,12 +1427,22 @@
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
         },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
         "strokeDash": {
           "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
           "items": {
             "type": "number"
           },
           "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -2062,8 +2152,15 @@
           "description": "The data source or data sources. This can be a single CSV file or a list of CSV files."
         },
         "title": {
-          "description": "A heading for the whole visualization, rendered top-left.\n\nUseful when a chart labels its series inline and so has no legend: the grouping *variable* still needs naming, which a legend would otherwise have carried in its title.",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/VisualizationTitle"
+            }
+          ],
+          "description": "A heading for the whole visualization. A bare string is left-aligned; pass an object to place it elsewhere.\n\nUseful when a chart labels its series inline and so has no legend: the grouping *variable* still needs naming, which a legend would otherwise have carried in its title."
         },
         "transformation": {
           "description": "The data transformations applied to the source data before displaying the data.",
@@ -2155,6 +2252,22 @@
         }
       ],
       "description": "A visualization layer for rendering data. This can include various types of marks such as lines, bars, points, etc."
+    },
+    "VisualizationTitle": {
+      "additionalProperties": false,
+      "description": "A visualization heading with explicit placement.",
+      "properties": {
+        "align": {
+          "description": "Where the heading sits horizontally. Defaults to `left`. Align it with whatever it is naming — a chart whose series labels run down the right edge reads better with a right-aligned heading.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": ["text"],
+      "type": "object"
     },
     "WindowExpr": {
       "additionalProperties": false,

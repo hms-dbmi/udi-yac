@@ -612,7 +612,11 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         const splitInto = escape((d: Record<string, unknown>) => {
           const raw = d[field];
           if (raw === null || raw === undefined) return [];
-          return String(raw)
+          // Only a string can hold a delimited set. Any other cell type is a
+          // single value already, so it passes through as itself rather than as
+          // a stringified copy of itself.
+          if (typeof raw !== 'string') return [raw];
+          return raw
             .split(separator)
             .map((part) => part.trim())
             .filter((part) => part.length > 0);

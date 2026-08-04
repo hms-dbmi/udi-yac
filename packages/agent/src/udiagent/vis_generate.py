@@ -18,6 +18,16 @@ from udiagent.skills import Skill, load_skills, render_template, _package_data_p
 from udiagent.grammar import load_grammar
 from udiagent.schema import simplify_data_schema, simplify_data_domains
 
+# A placeholder is `<NAME>`, where NAME is an uppercase-led token: `<E>`, `<F1:n>`,
+# `<V2>`, `<MARGINAL:D1,D2>`, `<E1.r.E2.id.from>`.
+#
+# Deliberately narrow. The obvious `<[^>]+>` also matches from a `<` comparison
+# operator in a spec (`"op": "<="`) all the way to the next `>` anywhere in the
+# JSON (`"op": ">="`), so resolving it swallows everything in between and leaves
+# unparseable output. Every scan for placeholders — resolution, validation, tool
+# parameter extraction — must use this pattern.
+PLACEHOLDER = r"<([A-Z][A-Za-z0-9_.,:]*)>"
+
 
 # ---------------------------------------------------------------------------
 # Few-shot example loading
@@ -405,7 +415,7 @@ def instantiate_template(spec_template, bindings, schema):
     # ("filter": {...}) and stays valid JSON.
     spec = re.sub(r'"(<MARGINAL[^>"]*>)"', r"\1", spec)
     while True:
-        match = re.search(r"<([^>]+)>", spec)
+        match = re.search(PLACEHOLDER, spec)
         if not match:
             break
         resolved = _resolve_placeholder(match.group(1), bindings, schema)
@@ -443,7 +453,7 @@ def _encoded_placeholders(spec_template):
             for value in (mapping.get("field"), mapping.get("column")):
                 if not isinstance(value, str):
                     continue
-                for placeholder in re.findall(r"<([^>]+)>", value):
+                for placeholder in re.findall(PLACEHOLDER, value):
                     encoded.add(placeholder.split(":")[0])
     return encoded
 
@@ -466,7 +476,7 @@ def _extract_xy_placeholders(spec_template):
             enc = m.get("encoding")
             field = m.get("field", "")
             if enc in ("x", "y") and enc not in result:
-                match = re.fullmatch(r"<([^>]+)>", field)
+                match = re.fullmatch(PLACEHOLDER, field)
                 if match:
                     result[enc] = match.group(1)
     return result
@@ -532,7 +542,7 @@ def validate_bindings(spec_template, bindings, schema):
 
     # Extract placeholder type requirements from spec_template
     placeholder_types = {}
-    for match in re.finditer(r"<([^>]+)>", spec_template):
+    for match in re.finditer(PLACEHOLDER, spec_template):
         ph = match.group(1)
         base = ph.split(":")[0] if ":" in ph else ph
         field_type = None
@@ -557,7 +567,7 @@ def validate_bindings(spec_template, bindings, schema):
             for m in mappings:
                 field = m.get("field", "")
                 declared_type = m.get("type")
-                ph_match = re.fullmatch(r"<([^>]+)>", field)
+                ph_match = re.fullmatch(PLACEHOLDER, field)
                 if ph_match and declared_type:
                     base = ph_match.group(1).split(":")[0]
                     if base not in placeholder_types:

@@ -15,6 +15,8 @@ import pprint
 import re
 from pathlib import Path
 
+from udiagent.vis_generate import PLACEHOLDER
+
 
 # ---------------------------------------------------------------------------
 # Schema parsing
@@ -40,7 +42,7 @@ def parse_schema(schema_path: str) -> dict:
 
 def _extract_placeholders(template_str: str) -> set[str]:
     """Extract all <placeholder> names from a template string."""
-    return set(re.findall(r'<([^>]+)>', template_str))
+    return set(re.findall(PLACEHOLDER, template_str))
 
 
 def _derive_tool_name(template: dict, index: int) -> str:
@@ -164,7 +166,7 @@ def _extract_encoding_info(spec_template: str) -> dict[str, dict]:
             field = m.get("field", "")
             declared_type = m.get("type")  # "nominal", "quantitative", "ordinal"
             # Match fields that are a single placeholder like "<F1>" or "<E2.F>"
-            match = re.fullmatch(r'<([^>]+)>', field)
+            match = re.fullmatch(PLACEHOLDER, field)
             if match and encoding:
                 ph = match.group(1)
                 base = ph.split(":")[0] if ":" in ph else ph

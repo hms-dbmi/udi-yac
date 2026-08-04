@@ -129,9 +129,13 @@ additions:
   point by default, which lays half a label across whatever it annotates.
   `align="right"` is usually what you want for a label at the right-hand edge: it
   runs inward, where `align="left"` would run off the plot for a long value.
-- `.title("<F4>")` sets a heading, rendered top-left. Worth it when series are
-  labelled inline and the legend is dropped — the grouping _variable_ still needs
-  naming, which the legend title used to carry.
+- `.outline(color="white", width=3, opacity=0.7)` haloes a text mark so it stays
+  readable where it crosses a line. The renderer draws such a layer twice, because
+  SVG paints stroke over fill and one pass would eat into the glyphs.
+- `.title("<F4>", align="right")` sets a heading; left-aligned unless told
+  otherwise. Worth it when series are labelled inline and the legend is dropped —
+  the grouping _variable_ still needs naming, which the legend title used to carry.
+  Align it with whatever it names.
 
 Two positioning facts worth knowing. An explicit `domain` on an encoding stops the
 renderer computing a padded one, so a one-sided `{"min": 0}` leaves the axis ending
@@ -142,7 +146,17 @@ widen the axis to fit itself.
 A reference line needs **two** points, and typically only one row holds the value
 being marked. Because such a layer maps y to a constant (a per-group `agg`), any
 second row will do — the survival templates borrow the `rank() == 1` row purely
-for its x. Null out every other row so vega-lite drops it.
+for its x. Null out every other row so vega-lite drops it. The same trick draws a
+_segment the data does not contain_: the survival curves' opening flat 100% run and
+the drop into the first event are two borrowed rows each, x and y both conditional
+on `rank()`.
+
+**Where an aggregate is taken decides its scope.** `Expr.agg` respects whatever
+grouping is in effect, so the same expression means "per stratum" after a
+`groupby` and "across the cohort" before one (a `rollup` leaves the table
+ungrouped). Annotations that must line up across strata — every curve's dashed
+lead-out reaching the same right edge — need the global form, computed before the
+stratum grouping and carried down as a column.
 
 **Multi-value columns need `unnest`.** Some columns hold a `;`-delimited set
 (`"Leptomeningeal;Spine"`), so one row belongs to several categories. Grouping such
@@ -166,6 +180,15 @@ binding a 400-cardinality ID column to an x-axis. Resolution lives in
 `vis_generate._resolve_placeholder`; unresolvable placeholders silently become
 `""`, which is why a template referencing a cube placeholder against a tidy
 table produces a blank-field spec rather than an error.
+
+Placeholders are found by scanning the spec's raw JSON _string_, matched by
+`vis_generate.PLACEHOLDER` — deliberately narrow, `<UPPERCASE_LED_TOKEN>`. Use that
+constant for any new scan rather than writing `<[^>]+>`: the loose form matches from
+the `<` of a `"op": "<="` comparison to the next `>` anywhere in the document
+(usually a later `">="`), and resolving that match deletes every key in between.
+`tests/test_placeholder_pattern.py` pins it. The same sharp edge makes a
+malformed placeholder — `"<F4"` with the bracket dropped — survive resolution
+untouched and surface much later as unparseable JSON.
 
 > **Always type-constrain a field whose type matters.** `validate_bindings` infers
 > a required type from only two places: a `:q`/`:n`/`:o` suffix on the placeholder,

@@ -68,9 +68,9 @@ class Chart:
         self.representation().mark(mark)
         return self
 
-    def title(self, text: str):
-        """Set the visualization's heading (rendered top-left)."""
-        self._spec["title"] = text
+    def title(self, text: str, align: str = None):
+        """Set the visualization's heading. Left-aligned unless `align` says otherwise."""
+        self._spec["title"] = text if align is None else {"text": text, "align": align}
         return self
 
     def stroke_dash(self, pattern):
@@ -81,6 +81,11 @@ class Chart:
     def place(self, **kwargs):
         """Anchor/nudge the most recently added layer (text placement)."""
         self.representation().place(**kwargs)
+        return self
+
+    def outline(self, **kwargs):
+        """Outline the most recently added layer (text legibility halo)."""
+        self.representation().outline(**kwargs)
         return self
 
     def map(self, encoding: str, **kwargs):
@@ -263,6 +268,10 @@ class Representation:
         self._current_layer.place(**kwargs)
         return self
 
+    def outline(self, **kwargs):
+        self._current_layer.outline(**kwargs)
+        return self
+
     def x(self, **kwargs):
         return self.map("x", **kwargs)
 
@@ -333,6 +342,19 @@ class Layer:
         guidance rather than as data.
         """
         self._state["strokeDash"] = list(pattern)
+        return self
+
+    def outline(self, color: str = "white", width: float = 3, opacity: float = None):
+        """Outline the mark — on a text mark, a legibility halo.
+
+        The renderer draws an outlined text layer twice (halo pass, then a clean
+        fill pass), because SVG paints stroke over fill and one pass would eat
+        into the glyphs.
+        """
+        self._state["stroke"] = color
+        self._state["strokeWidth"] = width
+        if opacity is not None:
+            self._state["strokeOpacity"] = opacity
         return self
 
     def place(self, align=None, dx=None, dy=None):

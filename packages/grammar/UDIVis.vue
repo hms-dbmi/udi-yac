@@ -621,7 +621,7 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
 
   const zeroBaselineFields = getZeroBaselineFields(spec);
 
-  const outputLayers = inputLayers.map((layer) => {
+  const outputLayers = inputLayers.flatMap((layer) => {
     const mapping = Array.isArray(layer.mapping)
       ? layer.mapping
       : [layer.mapping];
@@ -678,10 +678,10 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         // an object domain as a *data reference* ({data, field}) and dies with
         // "Undefined data set name: undefined". Translate it to the array (or
         // one-sided domainMin/domainMax) form vega-lite actually wants. The table
-        // renderer consumes {min,max} itself, so leave row marks alone.
+        // renderer consumes {min,max} itself — row marks never reach here, they
+        // are handled by TableComponent.
         const domain = map.domain as unknown;
         const isNumberDomain =
-          layer.mark !== 'row' &&
           typeof domain === 'object' &&
           domain !== null &&
           !Array.isArray(domain) &&
@@ -791,6 +791,11 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     if (layer.align) markConfig.align = layer.align;
     if (typeof layer.dx === 'number') markConfig.dx = layer.dx;
     if (typeof layer.dy === 'number') markConfig.dy = layer.dy;
+    if (layer.stroke) markConfig.stroke = layer.stroke;
+    if (typeof layer.strokeWidth === 'number')
+      markConfig.strokeWidth = layer.strokeWidth;
+    if (typeof layer.strokeOpacity === 'number')
+      markConfig.strokeOpacity = layer.strokeOpacity;
     if (layer.mark === 'rect') {
       const hasXPair =
         mapping.some((m) => m.encoding === 'x') &&
@@ -823,13 +828,31 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       outputLayer.params = [selectParam];
     }
 
+    // An outlined text mark has to be drawn twice. SVG paints stroke over fill,
+    // and vega emits no paint-order, so a single pass with a 3px white stroke
+    // hollows out 11px glyphs. Drawing the outline pass first and the same text
+    // again unstroked on top leaves the halo showing only outside the letters.
+    if (layer.mark === 'text' && layer.stroke) {
+      const fillOnly = { ...markConfig };
+      delete fillOnly.stroke;
+      delete fillOnly.strokeWidth;
+      delete fillOnly.strokeOpacity;
+      return [outputLayer, { ...outputLayer, mark: fillOnly }];
+    }
+
     return outputLayer;
   });
   vegaSpec['layer'] = outputLayers;
 
-  // anchor: 'start' puts the heading top-left rather than centred.
-  if (typeof spec.title === 'string' && spec.title.length > 0) {
-    vegaSpec['title'] = { text: spec.title, anchor: 'start' };
+  const titleSpec =
+    typeof spec.title === 'string' ? { text: spec.title } : spec.title;
+  if (titleSpec?.text) {
+    // Vega anchors a title across the plot width. Left is the default because a
+    // centred heading reads as a chart caption rather than as a key.
+    const anchor = { left: 'start', center: 'middle', right: 'end' }[
+      titleSpec.align ?? 'left'
+    ];
+    vegaSpec['title'] = { text: titleSpec.text, anchor };
   }
 
   return JSON.stringify(vegaSpec);

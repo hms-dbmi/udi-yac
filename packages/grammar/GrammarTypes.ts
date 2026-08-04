@@ -28,13 +28,28 @@ export interface UDIGrammar {
   config?: UDIGrammarConfig;
 
   /**
-   * A heading for the whole visualization, rendered top-left.
+   * A heading for the whole visualization. A bare string is left-aligned; pass
+   * an object to place it elsewhere.
    *
    * Useful when a chart labels its series inline and so has no legend: the
    * grouping *variable* still needs naming, which a legend would otherwise have
    * carried in its title.
    */
-  title?: string;
+  title?: string | VisualizationTitle;
+}
+
+/**
+ * A visualization heading with explicit placement.
+ */
+export interface VisualizationTitle {
+  text: string;
+
+  /**
+   * Where the heading sits horizontally. Defaults to `left`. Align it with
+   * whatever it is naming — a chart whose series labels run down the right edge
+   * reads better with a right-aligned heading.
+   */
+  align?: 'left' | 'center' | 'right';
 }
 
 /**
@@ -602,6 +617,19 @@ export interface GenericLayer<Mark, Mapping> {
    */
   dx?: number;
   dy?: number;
+
+  /**
+   * A constant outline for the mark: colour, width in pixels, and opacity.
+   * Optional.
+   *
+   * On a `text` mark this is a legibility halo — a label drawn over other marks
+   * needs to be separated from them. The renderer draws such a layer twice (the
+   * outline pass beneath a clean fill pass), because SVG paints stroke *over*
+   * fill and a single pass would eat into the glyphs.
+   */
+  stroke?: string;
+  strokeWidth?: number;
+  strokeOpacity?: number;
 }
 
 /**
