@@ -8,12 +8,15 @@ comes from the per-request ``data_schema`` (not a schema baked into
 """
 
 import json
+import re
 
 from udiagent.schema import parse_schema_from_dict
 from udiagent.vis_generate import (
+    _encoded_placeholders,
     _parse_request_schema,
     _load_generated_tools,
     instantiate_template,
+    template_tweakable_params,
     validate_bindings,
 )
 
@@ -196,3 +199,53 @@ def test_hubmap_still_resolves_from_request_schema():
             assert spec["source"]["source"].startswith(raw["udi:path"])
             return
     raise AssertionError("no HuBMAP entity produced a valid single-entity binding")
+
+
+def test_tweakable_params_only_expose_encoded_field_parameters():
+    """Every template's re-bindable parameters, swept.
+
+    Three invariants, each of which a newly authored template could break
+    silently: a descriptor must name a real parameter of its own tool (a
+    template can encode something that is not a parameter at all — a cube's
+    ``<M>`` measure comes from the schema), it must be drawn on some channel
+    (structural plumbing like a subject id is not a knob a reader can see the
+    effect of), and it must not be an entity or a literal value (re-sourcing a
+    chart or changing which values it filters on is not a "tweak").
+    """
+    generated = _load_generated_tools()
+    assert generated is not None
+    _tool_defs, tool_dispatch, templates, _tool_tags = generated
+
+    exposed = {}
+    for name, (idx, param_map) in tool_dispatch.items():
+        template = templates[idx]
+        # Bind every parameter to a stand-in: the descriptors only need the
+        # binding to exist, and this keeps the sweep schema-free.
+        bindings = {ph: f"col_{ph}" for ph in param_map.values()}
+        params = template_tweakable_params(template, param_map, bindings, {})
+        exposed[name] = [p["param"] for p in params]
+
+        encoded = _encoded_placeholders(template)
+        for p in params:
+            assert p["param"] in param_map, f"{name}: {p['param']} is not a parameter"
+            assert param_map[p["param"]] == p["placeholder"]
+            assert p["placeholder"] in encoded, f"{name}: {p['placeholder']} not encoded"
+            assert not re.fullmatch(
+                r"E\d*|V\d*", p["placeholder"]
+            ), f"{name}: exposes entity/value {p['placeholder']}"
+            assert p["encodings"], f"{name}: {p['param']} has no channel"
+            assert p["label"]
+
+    # The survival curves: the stratifier and nothing else. The unstratified one
+    # has no encoded parameter at all, so it offers nothing (correct — its axes
+    # are columns the template derives).
+    assert exposed["vis_053_line_survival"] == ["field4"]
+    assert exposed["vis_054_line_count_survival"] == ["field4"]
+    assert exposed["vis_052_line_survival"] == []
+
+    # A cube heatmap offers its dimensions but never the measure.
+    assert exposed["vis_057_heatmap_basic"] == ["dimension1", "dimension2"]
+
+    # Most templates offer something; a silent drop to zero everywhere would
+    # otherwise pass every assertion above.
+    assert sum(1 for v in exposed.values() if v) > len(exposed) // 2
