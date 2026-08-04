@@ -59,35 +59,48 @@ The project builds as both a **library** and a **standalone app**:
 import { UDIChat } from 'udi-yac';
 import 'udi-yac/style.css';
 
-<UDIChat
-  apiBaseUrl="http://localhost:8007"
-  dataPackagePath="./data/hubmap_2025-05-05/datapackage_udi.json"
-  authToken="your-jwt-token" // optional
-  requireApiKey // optional — prompts for OpenAI key
-  model="agenticx/UDI-VIS-Beta-v2" // optional
-/>;
+// UDIChat fills its parent, so that parent needs a definite height — with an
+// `auto`-height ancestor it collapses to nothing.
+<div className="h-screen">
+  <UDIChat
+    apiBaseUrl="http://localhost:8007"
+    dataPackagePath="./data/hubmap/datapackage.json"
+    authToken="your-jwt-token" // optional
+    requireApiKey // optional — prompts for OpenAI key
+  />
+</div>;
 ```
+
+Embedding in another app? Two things worth knowing up front:
+
+- **`apiBaseUrl` accepts a same-origin path** (`/api/yac`), so agent traffic can go
+  through your own reverse proxy and let your server attach auth — no CORS, no token in
+  the browser. `authToken` is then unnecessary.
+- **Every style is scoped** to the root element's `udi-yac` class, so the stylesheet
+  won't touch your app's own shadcn tokens or typography. Dark mode follows a `.dark`
+  class on any ancestor (the usual shadcn convention).
 
 ### Config Props
 
-| Prop               | Type                 | Description                                                                                                     |
-| ------------------ | -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `apiBaseUrl`       | `string`             | Base URL for the UDIAgent API                                                                                   |
-| `dataPackagePath`  | `string?`            | URL/path to `datapackage_udi.json`. Ignored when `dataPackage` is provided.                                     |
-| `dataPackage`      | `DataPackage?`       | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`. |
-| `dataFieldDomains` | `DataFieldDomain[]?` | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.          |
-| `fetchOptions`     | `RequestInit?`       | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                    |
-| `authToken`        | `string?`            | JWT bearer token for API auth                                                                                   |
-| `requireApiKey`    | `boolean?`           | Show API key input before chatting                                                                              |
-| `model`            | `string?`            | LLM model name override                                                                                         |
-| `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).    |
-| `entityIcons`      | `EntityIconMap?`     | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                         |
-| `mascot`           | `ReactNode \| null?` | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                        |
-| `splashMessages`   | `readonly string[]?` | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages). |
-| `onEvent`          | `TrackerFn?`         | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                      |
-| `palette`          | `UDIPalette?`        | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).             |
-| `className`        | `string?`            | CSS class for the root element                                                                                  |
-| `style`            | `CSSProperties?`     | Inline styles for the root element                                                                              |
+| Prop               | Type                 | Description                                                                                                                                                                                                                                      |
+| ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apiBaseUrl`       | `string`             | Base URL for the UDIAgent API. Absolute (`https://agent.example.org`) or a same-origin path (`/api/yac`).                                                                                                                                        |
+| `remotePackage`    | `string?`            | Server-side data package name. Schema/domains come from `GET /v1/yac/metadata` and queries from `POST /v1/yac/query`; no CSVs load in the browser and cross-filtering becomes commit-on-mouse-up. Takes precedence over both data-package props. |
+| `dataPackagePath`  | `string?`            | URL/path to `datapackage_udi.json`. Ignored when `dataPackage` is provided.                                                                                                                                                                      |
+| `dataPackage`      | `DataPackage?`       | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
+| `dataFieldDomains` | `DataFieldDomain[]?` | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
+| `fetchOptions`     | `RequestInit?`       | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
+| `authToken`        | `string?`            | JWT bearer token for API auth                                                                                                                                                                                                                    |
+| `requireApiKey`    | `boolean?`           | Show API key input before chatting                                                                                                                                                                                                               |
+| `model`            | `string?`            | LLM model name override                                                                                                                                                                                                                          |
+| `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |
+| `entityIcons`      | `EntityIconMap?`     | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                                                                                                                                                          |
+| `mascot`           | `ReactNode \| null?` | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                                                                                                                                                         |
+| `splashMessages`   | `readonly string[]?` | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages).                                                                                                                                  |
+| `onEvent`          | `TrackerFn?`         | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                                                                                                                                                       |
+| `palette`          | `UDIPalette?`        | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
+| `className`        | `string?`            | CSS class for the root element                                                                                                                                                                                                                   |
+| `style`            | `CSSProperties?`     | Inline styles for the root element                                                                                                                                                                                                               |
 
 ### Data Source Configuration
 

@@ -33,6 +33,28 @@ describe('validateConfig', () => {
     ).not.toThrow();
   });
 
+  // Server-side data mode: schema and domains come from GET /v1/yac/metadata,
+  // so there is no local data package to point at.
+  it('passes for a remote-only config', () => {
+    expect(() =>
+      validateConfig({
+        apiBaseUrl: 'http://localhost:8007',
+        remotePackage: 'pcx',
+      }),
+    ).not.toThrow();
+  });
+
+  // An embed behind a host app's reverse proxy has no origin to name: the host
+  // injects auth server-side and forwards /api/yac/* to the agent.
+  it('passes for a same-origin path apiBaseUrl', () => {
+    expect(() =>
+      validateConfig({
+        apiBaseUrl: '/api/yac',
+        remotePackage: 'radiant',
+      }),
+    ).not.toThrow();
+  });
+
   it('throws when apiBaseUrl is missing', () => {
     expect(() =>
       validateConfig({

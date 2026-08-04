@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   GridLayout,
   useContainerWidth,
@@ -8,6 +8,7 @@ import {
 } from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
+import { useChatRoot } from '@/lib/chatRoot';
 import {
   DRAG_HANDLE_CLASS,
   GRID_INTERACTING_CLASS,
@@ -76,33 +77,39 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   // Drag and resize go entirely through RGL + the compactor above, which
   // re-packs the ordered list on every change — so the drop matches the live
   // preview and the store never holds a gapped layout. The start/stop handlers
-  // toggle a body-level class that suppresses page-wide text selection during
-  // the interaction: RGL's react-draggable / react-resizable preventDefault the
-  // initial mousedown, but selection can still extend once the cursor crosses
-  // into other elements (e.g. resizing past an adjacent card or chat message).
-  const handleInteractStart: EventCallback = useCallback(() => {
-    document.body.classList.add(GRID_INTERACTING_CLASS);
-  }, []);
-  const handleInteractStop: EventCallback = useCallback(() => {
-    document.body.classList.remove(GRID_INTERACTING_CLASS);
-  }, []);
+  // toggle a class that suppresses text selection during the interaction: RGL's
+  // react-draggable / react-resizable preventDefault the initial mousedown, but
+  // selection can still extend once the cursor crosses into other elements
+  // (e.g. resizing past an adjacent card or chat message).
+  //
+  // The class goes on UDIChat's root, not document.body: on the body its
+  // `user-select: none` and tooltip suppression reached the whole host page,
+  // hiding a host app's shadcn tooltips (same `data-slot`) and blocking its text
+  // selection. The root still contains the portaled popups we need to suppress.
+  const chatRoot = useChatRoot();
+  const [interacting, setInteracting] = useState(false);
+  useEffect(() => {
+    const root = chatRoot?.current;
+    if (!root) return;
+    root.classList.toggle(GRID_INTERACTING_CLASS, interacting);
+    // Also on unmount, so a drag interrupted by an unmount can't leave the class
+    // (and its selection lock) behind.
+    return () => root.classList.remove(GRID_INTERACTING_CLASS);
+  }, [chatRoot, interacting]);
+
+  const handleInteractStart: EventCallback = useCallback(() => setInteracting(true), []);
+  const handleInteractStop: EventCallback = useCallback(() => setInteracting(false), []);
 
   const handleResizeStart: EventCallback = useCallback(() => {
     resizeOverrideRef.current = null;
-    document.body.classList.add(GRID_INTERACTING_CLASS);
+    setInteracting(true);
   }, []);
   const handleResize: EventCallback = useCallback((_layout, _oldItem, newItem) => {
     if (newItem) resizeOverrideRef.current = { id: newItem.i, h: newItem.h };
   }, []);
   const handleResizeStop: EventCallback = useCallback(() => {
     resizeOverrideRef.current = null;
-    document.body.classList.remove(GRID_INTERACTING_CLASS);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      document.body.classList.remove(GRID_INTERACTING_CLASS);
-    };
+    setInteracting(false);
   }, []);
 
   // Swim-lane backdrop: paint faint grid lines on the wrapper so the
