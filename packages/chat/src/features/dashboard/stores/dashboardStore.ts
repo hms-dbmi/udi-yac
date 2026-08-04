@@ -1,7 +1,7 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import type { Layout, LayoutItem } from 'react-grid-layout';
-import type { Message } from '@/types/messages';
+import type { Message, TemplateParamDescriptor, ToolCallMeta } from '@/types/messages';
 import type { DataFiltersState } from './dataFiltersStore';
 import type { DataPackageState } from '@/features/data-package';
 import type { MemoryBankState } from './memoryBankStore';
@@ -34,12 +34,31 @@ export interface ActiveVisualization {
   userPrompt: string;
   title?: string;
   uuid: string;
+  /** Present when the agent built this spec from a template (see below). */
+  template?: TemplateProvenance;
+}
+
+/**
+ * How a generated spec came to be: the template and the bindings it was resolved
+ * with, plus the parameters the agent will accept a re-binding for.
+ *
+ * Carrying this is what lets a tweak re-resolve the template instead of rewriting
+ * the finished spec — the only approach that stays correct when a binding is
+ * referenced from transformations as well as encodings. `toolArgs` is kept
+ * current as the user tweaks, so successive changes compose from the last
+ * accepted set rather than from the original render.
+ */
+export interface TemplateProvenance {
+  tool: string;
+  toolArgs: Record<string, string>;
+  params: TemplateParamDescriptor[];
 }
 
 export interface ExtractedSpec {
   spec: object;
   toolCallIndex: number;
   title?: string;
+  template?: TemplateProvenance;
 }
 
 export interface DashboardLayout {
@@ -63,6 +82,8 @@ export interface DashboardExportVisualization {
   userPrompt: string;
   title?: string;
   spec: UDIGrammar;
+  /** Kept so a restored dashboard is as tweakable as a live one. */
+  template?: TemplateProvenance;
 }
 
 export interface DashboardExport {
@@ -94,6 +115,7 @@ export interface DashboardState {
     userPrompt: string,
     sourceFields: Record<string, string[]> | null,
     title?: string,
+    template?: TemplateProvenance,
   ) => void;
   addActiveVisualizationBatch: (
     items: Array<{
@@ -103,6 +125,7 @@ export interface DashboardState {
       userPrompt: string;
       sourceFields: Record<string, string[]> | null;
       title?: string;
+      template?: TemplateProvenance;
     }>,
     dataPackageStore?: StoreApi<DataPackageState>,
   ) => void;
@@ -136,6 +159,14 @@ export interface DashboardState {
     newSpec: UDIGrammar,
     sourceFields: Record<string, string[]> | null,
   ) => void;
+  applyTemplateRebind: (
+    key: string,
+    newSpec: UDIGrammar,
+    toolArgs: Record<string, string>,
+    params: TemplateParamDescriptor[] | undefined,
+    sourceFields: Record<string, string[]> | null,
+  ) => void;
+  clearTemplateProvenance: (key: string) => void;
   setLayoutItems: (items: Layout) => void;
   setGridCols: (cols: number) => void;
   setGridRowHeight: (px: number) => void;
@@ -359,13 +390,30 @@ export function createDashboardStore() {
 
     vizKey: (messageIndex, toolCallIndex) => `${messageIndex}-${toolCallIndex}`,
 
-    addActiveVisualization: (index, toolCallIndex, spec, userPrompt, sourceFields, title) => {
+    addActiveVisualization: (
+      index,
+      toolCallIndex,
+      spec,
+      userPrompt,
+      sourceFields,
+      title,
+      template,
+    ) => {
       const uuid = generateId();
       const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
       const key = get().vizKey(index, toolCallIndex);
       set((state) => {
         const next = new Map(state.activeVisualizations);
-        next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+        next.set(key, {
+          index,
+          toolCallIndex,
+          spec,
+          interactiveSpec,
+          userPrompt,
+          title,
+          uuid,
+          template,
+        });
         return {
           activeVisualizations: next,
           layout: insertItemRowMajor(state.layout, newDefaultItem(key), state.gridCols),
@@ -385,12 +433,29 @@ export function createDashboardStore() {
         // "donors by race" chart lands tall enough to show every category
         // instead of cramped at the default height.
         const getDomainForField = dataPackageStore?.getState().getDomainForField;
-        for (const { index, toolCallIndex, spec, userPrompt, sourceFields, title } of items) {
+        for (const {
+          index,
+          toolCallIndex,
+          spec,
+          userPrompt,
+          sourceFields,
+          title,
+          template,
+        } of items) {
           const uuid = generateId();
           const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
           const key = `${index}-${toolCallIndex}`;
           if (state.activeVisualizations.has(key)) continue;
-          next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+          next.set(key, {
+            index,
+            toolCallIndex,
+            spec,
+            interactiveSpec,
+            userPrompt,
+            title,
+            uuid,
+            template,
+          });
           const h = getDomainForField
             ? computeInitialCardHeight(spec, getDomainForField, state.gridRowHeight)
             : DEFAULT_CARD_H;
@@ -612,6 +677,50 @@ export function createDashboardStore() {
       });
     },
 
+    /**
+     * Replace a chart with a freshly instantiated one from the same template.
+     *
+     * Keeps the viz's uuid, so a live brush and every cross-filter keyed on it
+     * survive the swap, and merges the accepted bindings so the next tweak builds
+     * on this one. `params` comes back from the server and replaces the stored
+     * descriptors, which is what makes a template whose parameter set has changed
+     * self-correct on first use.
+     */
+    applyTemplateRebind: (key, newSpec, toolArgs, params, sourceFields) => {
+      const viz = get().activeVisualizations.get(key);
+      if (!viz || !viz.template) return;
+      const interactiveSpec = injectInteractivity(newSpec, viz.uuid, sourceFields);
+      set((state) => {
+        const next = new Map(state.activeVisualizations);
+        next.set(key, {
+          ...viz,
+          spec: newSpec,
+          interactiveSpec,
+          template: {
+            tool: viz.template!.tool,
+            toolArgs: { ...viz.template!.toolArgs, ...toolArgs },
+            params: params ?? viz.template!.params,
+          },
+        });
+        return { activeVisualizations: next };
+      });
+    },
+
+    /**
+     * Forget that a chart came from a template — used when the agent no longer
+     * recognises it, so the panel stops offering a control that cannot work.
+     */
+    clearTemplateProvenance: (key) => {
+      const viz = get().activeVisualizations.get(key);
+      if (!viz || !viz.template) return;
+      set((state) => {
+        const next = new Map(state.activeVisualizations);
+        const { template: _dropped, ...rest } = viz;
+        next.set(key, rest);
+        return { activeVisualizations: next };
+      });
+    },
+
     setLayoutItems: (items) => {
       const state = get();
       const knownKeys = new Set(state.activeVisualizations.keys());
@@ -729,6 +838,7 @@ export function createDashboardStore() {
           userPrompt: viz.userPrompt,
           title: viz.title,
           spec: structuredClone(viz.spec),
+          template: viz.template ? structuredClone(viz.template) : undefined,
         });
       }
       return {
@@ -750,6 +860,7 @@ export function createDashboardStore() {
           userPrompt: v.userPrompt,
           title: v.title,
           uuid,
+          template: v.template,
         });
       }
       const knownKeys = new Set(next.keys());
@@ -783,9 +894,15 @@ export function createDashboardStore() {
 export function normalizeToolCalls(message: Message) {
   if (!message.tool_calls) return [];
   return message.tool_calls.map((call, index) => {
+    // `meta` rides along: it is the only record of which template produced a
+    // spec, and the tweak panel needs it to re-bind rather than rewrite.
     const normalized = call.function
-      ? { name: call.function.name, arguments: call.function.arguments }
-      : { name: call.name!, arguments: call.arguments! };
+      ? {
+          name: call.function.name,
+          arguments: call.function.arguments,
+          meta: call.function.meta,
+        }
+      : { name: call.name!, arguments: call.arguments!, meta: call.meta };
     return { ...normalized, originalIndex: index };
   });
 }
@@ -806,6 +923,35 @@ export function parseSpecFromToolCall(toolCall: {
   return null;
 }
 
+/**
+ * Read template provenance off a tool call's `meta`, or nothing if it isn't
+ * trustworthy.
+ *
+ * The agent already withholds `tweakable_params` when the spec it delivered is no
+ * longer exactly its template's instantiation (a correction pass replaces it), so
+ * this is a shape check on top of that decision — older agents send no `meta` at
+ * all, and an imported session can carry anything.
+ */
+export function parseTemplateProvenance(
+  meta: ToolCallMeta | undefined,
+): TemplateProvenance | undefined {
+  if (!meta) return undefined;
+  const { tool_used: tool, tool_args: toolArgs, tweakable_params: params } = meta;
+  if (typeof tool !== 'string' || tool.length === 0) return undefined;
+  if (!toolArgs || typeof toolArgs !== 'object') return undefined;
+  if (!Array.isArray(params) || params.length === 0) return undefined;
+  const wellFormed = params.every(
+    (p): p is TemplateParamDescriptor =>
+      !!p &&
+      typeof p === 'object' &&
+      typeof p.param === 'string' &&
+      typeof p.value === 'string' &&
+      typeof p.label === 'string',
+  );
+  if (!wellFormed) return undefined;
+  return { tool, toolArgs: toolArgs as Record<string, string>, params };
+}
+
 export function extractAllUdiSpecsFromMessage(message: Message): ExtractedSpec[] {
   if (message.role !== 'assistant' || !message.tool_calls?.length) return [];
   const results: ExtractedSpec[] = [];
@@ -818,6 +964,7 @@ export function extractAllUdiSpecsFromMessage(message: Message): ExtractedSpec[]
         spec,
         toolCallIndex: call.originalIndex,
         title: typeof title === 'string' ? title : undefined,
+        template: parseTemplateProvenance(call.meta),
       });
     }
   }

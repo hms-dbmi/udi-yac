@@ -19,7 +19,10 @@ import {
   useGlobal,
   useTracker,
 } from '@/app/UDIChatContext';
-import { extractAllUdiSpecsFromMessage } from '@/features/dashboard/stores/dashboardStore';
+import {
+  extractAllUdiSpecsFromMessage,
+  type TemplateProvenance,
+} from '@/features/dashboard/stores/dashboardStore';
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
@@ -91,12 +94,13 @@ function UDIChatInner({
       userPrompt: string;
       sourceFields: Record<string, string[]> | null;
       title?: string;
+      template?: TemplateProvenance;
     }> = [];
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       if (message.role !== 'assistant') continue;
       const specs = extractAllUdiSpecsFromMessage(message);
-      for (const { spec, toolCallIndex, title } of specs) {
+      for (const { spec, toolCallIndex, title, template } of specs) {
         const key = state.vizKey(i, toolCallIndex);
         if (state.activeVisualizations.has(key)) continue;
         if (mbState.closedVisualizations.has(key)) continue;
@@ -112,6 +116,7 @@ function UDIChatInner({
           userPrompt,
           sourceFields,
           title,
+          template,
         });
       }
     }
