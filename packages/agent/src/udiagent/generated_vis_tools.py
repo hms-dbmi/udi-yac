@@ -290,7 +290,7 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"quantitative", "title": "survival days", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
  '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
  '"nominal"}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": '
- '4}]}',
+ '8}]}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
  '"<F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<F2:n>"}, '
  '"right": {"literal": "<V1>"}}, "then": {"field": "<F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
@@ -340,7 +340,7 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"title": "survival days", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, '
  '{"encoding": "color", "field": "<F4>", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, '
- '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 4}], "title": {"text": "<F4>", "align": '
+ '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<F4>", "align": '
  '"right"}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"unnest": {"field": "<F4:n>", "separator": '
  '";"}}, {"filter": {"op": "!=", "left": {"field": "<F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": '
@@ -392,7 +392,7 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, '
  '"max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": '
  '"<F4>", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, '
- '"strokeOpacity": 0.7, "avoidOverlap": 4}], "title": {"text": "<F4>", "align": "right"}}',
+ '"strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<F4>", "align": "right"}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F2>", "<F1>"]}, {"rollup": '
  '{"count <E>": {"op": "count"}}}, {"derive": {"udi_internal_percentile": {"op": "/", "left": {"field": "count <E>"}, '
  '"right": {"agg": "max", "field": "count <E>"}}}}, {"derive": {"udi_internal_text_color_threshold": {"if": {"op": '

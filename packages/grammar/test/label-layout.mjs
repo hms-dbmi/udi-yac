@@ -25,14 +25,16 @@ assert.deepEqual(
 );
 
 // 2. An exact tie — the case that motivated this — is separated by the gap, and
-//    the lower of the two keeps its true position.
-assert.deepEqual(spread([{ y: 84 }, { y: 84 }]), [84, 88]);
+//    the pair straddles the value they share rather than both sitting above it.
+assert.deepEqual(spread([{ y: 84 }, { y: 84 }]), [82, 86]);
 
-// 3. A cluster is spread cumulatively, not just pairwise.
-assert.deepEqual(spread([{ y: 50 }, { y: 51 }, { y: 52 }]), [50, 54, 58]);
+// 3. A cluster is spread cumulatively, not just pairwise, and the spread is
+//    centred on where it started: pushing in one direction only would carry the
+//    whole cluster upward, away from the values being named.
+assert.deepEqual(spread([{ y: 50 }, { y: 51 }, { y: 52 }]), [47, 51, 55]);
 
 // 4. Input order does not matter: rows are placed by value, in place.
-assert.deepEqual(spread([{ y: 52 }, { y: 50 }, { y: 51 }]), [58, 50, 54]);
+assert.deepEqual(spread([{ y: 52 }, { y: 50 }, { y: 51 }]), [55, 47, 51]);
 
 // 5. Rows the layer would not draw are excluded and marked null rather than being
 //    given a position. A template suppresses a label by nulling its *other* axis
@@ -62,7 +64,7 @@ const crowded = spread([{ y: 5 }, { y: 5 }, { y: 5 }, { y: 5 }], {
   minGap: 4,
   limit: { min: 4, max: 10 },
 });
-assert.deepEqual(crowded, [4, 8, 10, 10], 'the unresolvable excess should pile up at the end');
+assert.deepEqual(crowded, [4, 4, 6, 10], 'the unresolvable excess should pile up inside the plot');
 
 // 9. The position field itself is never rewritten — the rule a label annotates
 //    still points at the real value.

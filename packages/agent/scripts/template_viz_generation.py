@@ -471,9 +471,9 @@ def _survival_chart(stratum: str | None = None, unnest_stratum: bool = False):
         .place(align="right", dy=-9)
         .outline(color="white", width=3, opacity=0.7)
         # Two strata can end at the same percentage, which would stack their
-        # labels on one another. 4 of the axis's 100 clears a label's height at
-        # the sizes these are drawn at, without moving it far from its own rule.
-        .avoid_overlap(4)
+        # labels on one another. 8 of the axis's 100 keeps them clearly apart at
+        # the sizes these are drawn at, including in a small review card.
+        .avoid_overlap(8)
         .x(field="label day", type="quantitative", title="survival days", domain={"min": 0})
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
         .text(field="final label", type="nominal")

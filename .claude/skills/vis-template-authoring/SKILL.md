@@ -132,7 +132,7 @@ additions:
 - `.outline(color="white", width=3, opacity=0.7)` haloes a text mark so it stays
   readable where it crosses a line. The renderer draws such a layer twice, because
   SVG paints stroke over fill and one pass would eat into the glyphs.
-- `.avoid_overlap(4)` nudges a layer's marks apart when they would land on the same
+- `.avoid_overlap(8)` nudges a layer's marks apart when they would land on the same
   position — two curves ending at the same percentage, otherwise two labels in one
   place. The separation is in **data units** (the plot's pixel size isn't known
   when the spec is written); `True` uses 5% of the axis. Only the layer moves: the

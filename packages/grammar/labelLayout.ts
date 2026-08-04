@@ -23,11 +23,12 @@ export type LabelRow = Record<string, unknown>;
  * height is not known (it may be `container`-sized), and a caller who knows the
  * axis runs 0..100 does know what separation means on it.
  *
- * Positions are nudged in one ascending pass and then, if the cluster has been
- * pushed past `limit.max`, shifted back down as a whole. When there is genuinely
- * not enough room for every label the excess stays overlapped rather than being
- * pushed off the axis — a squashed label is recoverable, one drawn outside the
- * plot is not.
+ * Positions are nudged apart in one ascending pass, then the whole cluster is
+ * shifted back down so the spread is centred on where the labels started — a
+ * one-directional pass would otherwise leave the topmost label far above the value
+ * it names. When there is genuinely not enough room for every label the excess
+ * stays overlapped rather than being pushed off the axis: a squashed label is
+ * recoverable, one drawn outside the plot is not.
  */
 export function spreadLabels(
   rows: LabelRow[],
@@ -45,7 +46,7 @@ export function spreadLabels(
     limit?: { min?: number | undefined; max?: number | undefined } | undefined;
   },
 ): void {
-  const drawable: { row: LabelRow; position: number }[] = [];
+  const drawable: { row: LabelRow; position: number; original: number }[] = [];
 
   for (const row of rows) {
     row[outField] = null;
@@ -53,7 +54,7 @@ export function spreadLabels(
     const required = requiredField === undefined ? 0 : row[requiredField];
     if (typeof position !== 'number' || !Number.isFinite(position)) continue;
     if (required === null || required === undefined) continue;
-    drawable.push({ row, position });
+    drawable.push({ row, position, original: position });
   }
 
   if (drawable.length === 0) return;
@@ -68,18 +69,24 @@ export function spreadLabels(
     previous = adjusted;
   }
 
-  // The pass above can push the topmost label past the end of the axis. Move the
-  // whole cluster down by the overflow rather than clamping, which would just
-  // re-stack them at the top.
+  // That pass pushes in one direction only, so a cascade of them carries the whole
+  // cluster upwards and leaves the topmost label far above the value it names.
+  // Shifting everything back down by the mean displacement centres the spread on
+  // where the labels started, which keeps each one as close to its own value as
+  // the gap allows. It also resolves the pass having run off the end of the axis.
   const max = limit?.max;
   const min = limit?.min;
-  if (max !== undefined) {
-    const overflow = previous - max;
-    if (overflow > 0) {
-      const room = min === undefined ? overflow : drawable[0].position - min;
-      const shift = Math.min(overflow, Math.max(room, 0));
-      for (const entry of drawable) entry.position -= shift;
-    }
+  const drift =
+    drawable.reduce((sum, e) => sum + (e.position - e.original), 0) /
+    drawable.length;
+  // What the axis demands takes precedence over what centring would prefer: a
+  // label pushed past the end is not drawn at all.
+  const requiredDown = max === undefined ? 0 : Math.max(0, previous - max);
+  const availableDown =
+    min === undefined ? Infinity : Math.max(0, drawable[0].position - min);
+  const shift = Math.max(requiredDown, Math.min(drift, availableDown));
+  if (shift > 0) {
+    for (const entry of drawable) entry.position -= shift;
   }
 
   for (const entry of drawable) {
