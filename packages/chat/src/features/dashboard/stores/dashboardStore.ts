@@ -715,7 +715,8 @@ export function createDashboardStore() {
       if (!viz || !viz.template) return;
       set((state) => {
         const next = new Map(state.activeVisualizations);
-        const { template: _dropped, ...rest } = viz;
+        const rest = { ...viz };
+        delete rest.template;
         next.set(key, rest);
         return { activeVisualizations: next };
       });

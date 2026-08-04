@@ -7,7 +7,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  useApiConfig,
   useDataPackage,
+  useDashboard,
   useDashboardStore,
   useDataFiltersStore,
   useDataPackageStore,
@@ -16,6 +18,7 @@ import {
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { swapPlainField, swapDimensionField, swapMeasureField } from '@/utils/specMutations';
 import { computeTweakableParams } from '../utils/tweakability';
+import { useTemplateRebind } from '../hooks/useTemplateRebind';
 import type { TweakableParam } from './VizTweakComponent.types';
 
 interface VizTweakComponentProps {
@@ -32,16 +35,43 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   const dataFiltersStore = useDataFiltersStore();
   const dataPackageStore = useDataPackageStore();
   const trackEvent = useTracker();
+  const apiConfig = useApiConfig();
+
+  const vizKey = `${messageIndex}-${toolCallIndex}`;
+  // Subscribed rather than passed in, so the panel reflects the bindings a
+  // re-bind just accepted.
+  const viz = useDashboard((s) => s.activeVisualizations.get(vizKey));
+  const template = viz?.template;
+
+  const { rebind, pendingParam, error } = useTemplateRebind(vizKey, template);
 
   const tweakableParams = useMemo<TweakableParam[]>(
     () =>
-      computeTweakableParams(spec, sourceFields, quantitativeSourceFields, categoricalSourceFields),
-    [spec, sourceFields, quantitativeSourceFields, categoricalSourceFields],
+      computeTweakableParams(
+        spec,
+        sourceFields,
+        quantitativeSourceFields,
+        categoricalSourceFields,
+        // Without a reachable agent a re-bind cannot happen, so don't offer one.
+        apiConfig.apiBaseUrl ? template : undefined,
+      ),
+    [
+      spec,
+      sourceFields,
+      quantitativeSourceFields,
+      categoricalSourceFields,
+      template,
+      apiConfig.apiBaseUrl,
+    ],
   );
 
   const handleFieldChange = useCallback(
     (param: TweakableParam, newField: string | null) => {
       if (!newField) return;
+      if (param.kind === 'binding') {
+        void rebind(param.param, newField);
+        return;
+      }
       let updatedSpec: UDIGrammar;
       switch (param.kind) {
         case 'dimension':
@@ -65,7 +95,6 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       // not found, etc.). Skip the store update in that case.
       if (updatedSpec === spec) return;
 
-      const vizKey = dashboardStore.getState().vizKey(messageIndex, toolCallIndex);
       dashboardStore.getState().updateActiveVisualizationSpec(vizKey, updatedSpec, sourceFields);
       // Reapply filter transformations to the updated spec (null filters, named filters)
       dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
@@ -76,36 +105,49 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       dashboardStore,
       dataFiltersStore,
       dataPackageStore,
-      messageIndex,
-      toolCallIndex,
+      rebind,
+      vizKey,
       sourceFields,
       trackEvent,
     ],
   );
 
+  // A chart that isn't on the dashboard has nothing to update: the store keys
+  // tweaks by viz, so offering controls here would be offering dead ones.
+  if (!viz) return null;
   if (tweakableParams.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {tweakableParams.map((param) => (
-        <Select
-          key={param.encoding}
-          value={param.field}
-          onValueChange={(val) => handleFieldChange(param, val)}
-        >
-          <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
-            <span className="text-muted-foreground mr-1">{param.encoding}:</span>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {param.options.map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {opt}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ))}
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        {tweakableParams.map((param) => (
+          <Select
+            key={param.kind === 'binding' ? param.param : param.encoding}
+            value={param.field}
+            // A re-bind replaces the whole spec, so a second concurrent edit
+            // would be applied to a chart that is about to be replaced.
+            disabled={pendingParam !== null}
+            onValueChange={(val) => handleFieldChange(param, val)}
+          >
+            <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
+              <span className="text-muted-foreground mr-1">{param.label}:</span>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {param.options.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ))}
+      </div>
+      {error && (
+        <p role="status" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

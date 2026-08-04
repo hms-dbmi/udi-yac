@@ -81,8 +81,8 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // panel would just render `null`. Disable the button + swap the
   // tooltip in that case so the affordance matches reality.
   const tweakable = useMemo(
-    () => hasTweakableFields(viz.spec, sourceFields),
-    [viz.spec, sourceFields],
+    () => hasTweakableFields(viz.spec, sourceFields, viz.template),
+    [viz.spec, sourceFields, viz.template],
   );
 
   const plainSpec = useMemo(
