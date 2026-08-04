@@ -232,6 +232,23 @@ untouched and surface much later as unparseable JSON.
 > still looks correct. That is easy to do when switching a text mapping to
 > `field="*"`; the test above is what catches it.
 
+**Encoded placeholders become user-facing controls.** In chat, a placeholder that
+is drawn on some channel is offered as a dropdown on the rendered chart, and
+picking a value re-instantiates the template server-side
+(`POST /v1/yac/vis_instantiate`) rather than rewriting the finished spec — which
+is the only thing that stays correct when a binding is referenced from
+transformations too. Two consequences for authoring:
+
+- The type suffix decides that dropdown's contents, so it is now visible to a
+  reader and not only to the validator.
+- Structural placeholders — a subject id, a time column — are _not_ offered,
+  because they aren't drawn. That is by design: a template's re-bindable surface
+  is whatever a reader can see the effect of changing.
+
+`template_tweakable_params` in `vis_generate.py` is the rule, and the sweep in
+`tests/test_schema_agnostic_generation.py` runs it over every template, so a new
+one that accidentally exposes an entity or a `<V*>` value fails there.
+
 ## Acting on review feedback
 
 Read the sidecar — it is the reviewer's output:
