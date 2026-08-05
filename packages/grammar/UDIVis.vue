@@ -4,7 +4,15 @@
 // conflicts with local declaration of 'defineEmits'" because Vue's
 // generated types ALSO declare it ambient. Drop the import; the macro is
 // in scope automatically.
-import { ref, computed, watch, onMounted, useSlots, inject } from 'vue';
+import {
+  ref,
+  shallowRef,
+  computed,
+  watch,
+  onMounted,
+  useSlots,
+  inject,
+} from 'vue';
 import VegaLite from './VegaLite.vue';
 import TableComponent from './TableComponent.vue';
 import { UDI_PALETTE_KEY } from './paletteInjectKey';
@@ -27,6 +35,10 @@ import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
 const dataSourcesStore = useDataSourcesStore();
+// Declared up here rather than beside the template: performDataTransformation
+// reads it to decide whether allData is needed, and a later declaration would
+// sit in the temporal dead zone if a watcher ever gained `immediate: true`.
+const slots = useSlots();
 import { storeToRefs } from 'pinia';
 import { debounce } from 'lodash';
 
@@ -518,8 +530,15 @@ function isVegaLiteCompatible(spec: ParsedUDIGrammar): boolean {
 
 const transformError = ref();
 
-const transformedData = ref<object[] | null>(null);
-const transformedDataFull = ref<object[] | null>(null);
+// shallowRef, not ref: these hold query results — up to 9474 x 258 for HuBMAP
+// `datasets` — and a deep ref would lazily wrap every row in a reactive Proxy.
+// TableComponent's fieldDomains scans a whole column per mapping, so those
+// reads went through millions of get traps plus dependency tracking: measured
+// 7223ms for a 258-field table, 742ms with shallowRef. Safe because both are
+// only ever *replaced* (performDataTransformation, the remote branch, and
+// loadMoreRows all assign a fresh array) — never mutated in place.
+const transformedData = shallowRef<object[] | null>(null);
+const transformedDataFull = shallowRef<object[] | null>(null);
 const isTransformedDataSubset = ref<boolean>(false);
 // Set when a remote row-level result was capped server-side (the browser
 // only has the first `cap` rows). Always null in local mode.
@@ -565,6 +584,15 @@ function performDataTransformation(spec: ParsedUDIGrammar) {
     const dataObjects = dataSourcesStore.getDataObject(
       spec.source.map((x) => x.name),
       spec.transformation,
+      // TableComponent takes `data` only — it never reads allData, so for a
+      // row/table spec the second, unfiltered pipeline pass is another full
+      // materialization of the source (259ms for HuBMAP's 9474 x 258
+      // `datasets`) computed and thrown away. Skip it, unless a default slot
+      // is present: that branch renders instead of TableComponent and does
+      // expose allData to the consumer.
+      isVegaLiteCompatible(spec) || slots.default
+        ? undefined
+        : { displayDataOnly: true },
     );
     // Keep previous data visible while loading/null — avoids "Loading..." flash
     if (dataObjects == null) return;
@@ -802,8 +830,6 @@ const signalFieldMap = ref<Record<string, Record<string, string>>>({});
 const pointSelect = ref<DataSelection>();
 
 const debugVegaData = ref();
-
-const slots = useSlots();
 </script>
 
 <template>

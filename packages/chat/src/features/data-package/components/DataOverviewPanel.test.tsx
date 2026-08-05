@@ -12,7 +12,7 @@
  */
 import { useEffect, type ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('udi-toolkit/react', () => ({
@@ -162,6 +162,20 @@ describe('DataOverviewPanel', () => {
     renderPanel('samples');
     expect(screen.getByText(/donor\.hubmap_id = hubmap_id/)).toBeTruthy();
     expect(screen.getByText(/many-to-one/)).toBeTruthy();
+  });
+
+  it('does not mount the row table until it is asked for', async () => {
+    renderPanel('donors');
+    // Mounting UDIVis costs ~1s for a wide entity (ag-grid RowNodes + a Vue
+    // render root per cell + a full column scan per mapping), which blocked the
+    // whole panel. Expanding must stay metadata-only.
+    expect(screen.queryByTestId('udi-vis')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /Show 499 rows/ }));
+    await waitFor(() => expect(screen.getByTestId('udi-vis')).toBeTruthy());
+
+    await userEvent.click(screen.getByRole('button', { name: /Hide/ }));
+    expect(screen.queryByTestId('udi-vis')).toBeNull();
   });
 
   it('collapsing the expanded item leaves the panel open', async () => {

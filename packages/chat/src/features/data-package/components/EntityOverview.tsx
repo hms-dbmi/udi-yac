@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UDIVis, usePalette } from 'udi-toolkit/react';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import type { DataTransformation } from 'udi-toolkit';
@@ -43,20 +43,21 @@ function FieldList({ rows }: { rows: FieldRow[] }) {
                 aria-label="key field"
               />
             )}
-            {row.description ? (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span className="truncate font-medium underline decoration-dotted decoration-muted-foreground/50 underline-offset-2" />
-                  }
-                >
-                  {row.name}
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">{row.description}</TooltipContent>
-              </Tooltip>
-            ) : (
-              <span className="truncate font-medium">{row.name}</span>
-            )}
+            {/*
+             * Native `title` rather than <Tooltip>: a wide entity has 258
+             * fields, and one Base UI tooltip tree per row is React work paid
+             * on every expansion for something only ever read on hover.
+             */}
+            <span
+              className={cn(
+                'truncate font-medium',
+                row.description &&
+                  'underline decoration-dotted decoration-muted-foreground/50 underline-offset-2',
+              )}
+              title={row.description}
+            >
+              {row.name}
+            </span>
           </span>
           <span className="min-w-0 flex-1 truncate text-muted-foreground" title={row.summary}>
             {row.summary}
@@ -90,6 +91,29 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
   const [query, setQuery] = useState('');
   const [showAllFields, setShowAllFields] = useState(false);
 
+  // Opt-in, because mounting the table is by far the most expensive thing on
+  // this panel: ag-grid builds a RowNode per source row (9474 for HuBMAP
+  // `datasets`) plus a Vue render root per visible cell, and TableComponent
+  // scans a full column per mapping to derive scale domains. Rendering it
+  // eagerly made expanding an entity block the main thread for ~1s — long
+  // enough that hovering another accordion item showed no hover state. The
+  // metadata above is what most expansions are actually for.
+  const [showRows, setShowRows] = useState(false);
+
+  // Once asked for, still mount a frame late so the button's pressed state and
+  // the skeleton paint before the grid takes the thread.
+  const [tableReady, setTableReady] = useState(false);
+  useEffect(() => {
+    if (!showRows) return;
+    const id = requestAnimationFrame(() => setTableReady(true));
+    return () => cancelAnimationFrame(id);
+  }, [showRows]);
+
+  const toggleRows = useCallback(() => {
+    setShowRows((v) => !v);
+    setTableReady(false);
+  }, []);
+
   const goToEntity = useCallback(
     (name: string) => globalStore.getState().setOverview(true, name),
     [globalStore],
@@ -103,6 +127,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
     () => describeRelationships(dataPackage, entity),
     [dataPackage, entity],
   );
+  const rowCount = resource?.['udi:row_count'] ?? 0;
   const keyFields = useMemo(() => getKeyFields(entity), [getKeyFields, entity]);
 
   const domainsByField = useMemo(() => {
@@ -279,40 +304,58 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
             <h4 className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
               Rows
             </h4>
-            {keyFields.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-pressed={showAllFields}
-                      onClick={() => setShowAllFields((v) => !v)}
-                    />
-                  }
-                >
-                  <Columns3 className={cn('size-3.5', showAllFields && 'text-udi-primary')} />
-                </TooltipTrigger>
-                <TooltipContent>
-                  {showAllFields ? 'Show key fields only' : 'Show all fields'}
-                </TooltipContent>
-              </Tooltip>
-            )}
+            <div className="flex items-center gap-1">
+              {showRows && keyFields.length > 0 && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-pressed={showAllFields}
+                        onClick={() => setShowAllFields((v) => !v)}
+                      />
+                    }
+                  >
+                    <Columns3 className={cn('size-3.5', showAllFields && 'text-udi-primary')} />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {showAllFields ? 'Show key fields only' : 'Show all fields'}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <Button
+                variant="ghost"
+                size="xs"
+                className="text-xs"
+                aria-expanded={showRows}
+                onClick={toggleRows}
+              >
+                {showRows ? 'Hide' : `Show ${rowCount.toLocaleString()} rows`}
+              </Button>
+            </div>
           </div>
-          {/* fillContainer needs a definite height from the parent. The key
+          {/* Nothing is mounted until asked for — see the showRows comment.
+              fillContainer needs a definite height from the parent. The key
               deliberately excludes the transformation so filter changes update
               the table in place instead of remounting the custom element. */}
-          <div className="h-64">
-            <UDIVis
-              key={`${entity}|${showAllFields}`}
-              className="block h-full w-full"
-              spec={tableSpec}
-              selections={dataSelections}
-              sourceResolver={sourceResolver}
-              palette={palette}
-              fillContainer
-            />
-          </div>
+          {showRows && (
+            <div className="h-64">
+              {tableReady ? (
+                <UDIVis
+                  key={`${entity}|${showAllFields}`}
+                  className="block h-full w-full"
+                  spec={tableSpec}
+                  selections={dataSelections}
+                  sourceResolver={sourceResolver}
+                  palette={palette}
+                  fillContainer
+                />
+              ) : (
+                <div className="h-full animate-pulse rounded bg-muted" />
+              )}
+            </div>
+          )}
         </section>
       )}
     </div>
