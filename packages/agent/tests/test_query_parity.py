@@ -79,10 +79,38 @@ def _canon_value(value):
     return value
 
 
+def _sort_key(row):
+    """Total order over canonicalized rows, tolerating mixed and null values.
+
+    Sorting the raw tuples raises as soon as a column is nullable — `None < "a"`
+    is a TypeError — so compare on the type name first and the repr second. Only
+    used to make the comparison order-independent; the equality check itself is
+    still on the values.
+    """
+    return tuple((type(v).__name__, repr(v)) for _, v in row)
+
+
 def _canon_rows(rows):
-    """Order-independent, tolerance-normalized canonical form."""
+    """Order-independent, tolerance-normalized canonical form.
+
+    Null-valued keys are dropped rather than compared. The two executors represent
+    "no value" differently at the edges — an all-null Arquero aggregate yields
+    `undefined`, which JSON omits, where SQL emits an explicit NULL — and
+    everything downstream (scales, filters, marks) treats absent and null alike.
+    Comparing them would fail on a distinction no chart can observe.
+    """
     return sorted(
-        tuple(sorted((k, _canon_value(v)) for k, v in row.items())) for row in rows
+        (
+            tuple(
+                sorted(
+                    (k, _canon_value(v))
+                    for k, v in row.items()
+                    if _canon_value(v) is not None
+                )
+            )
+            for row in rows
+        ),
+        key=_sort_key,
     )
 
 
