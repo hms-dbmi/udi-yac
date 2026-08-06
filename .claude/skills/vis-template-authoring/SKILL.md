@@ -148,6 +148,41 @@ exactly at the largest value in the data — which is how an annotation can reac
 plot edge. And anything a text mark draws is outside the scale, so a label cannot
 widen the axis to fit itself.
 
+> **An event-level column is not a subject attribute.** This is the subtlest class
+> of bug this pipeline invites, and it produces charts that look right. Grouping by
+> `[subject, event_level_column]` makes each (subject, value) pair its own row, so a
+> per-subject span computed inside that group covers only _those_ events: a pair with
+> a start and no end reads as censored, and a pair with an end and no start is dropped
+> by the null filter. A subject whose value changed between the two events is counted
+> as neither and its event disappears — on the pcx event log that silently lost 24 of
+> 34 deaths, and the stratified survival curves ended _above_ the pooled curve, which
+> no weighted average can do.
+>
+> The symptom to recognise: **every stratum sitting on the same side of the pooled
+> value**. The fix is to decide what the column means for a subject and say so — the
+> value at one chosen event (a baseline covariate, which partitions the cohort) or any
+> value ever recorded (membership, which overlaps). Both are defensible, they answer
+> different questions, so ship them as separate templates rather than picking one
+> silently. And beware of testing such a template with a column that happens to be
+> constant per subject: `organization_name` is, which is exactly why this survived
+> review.
+
+**Aggregating a nominal column.** `min`/`max` over a string are safe and behave
+identically in both executors — they return the string, skip nulls, and order by
+codepoint. `mean`/`median`/`sum` over a string are a hard parity break (Arquero
+yields null, DuckDB raises a binder error), and the grammar has no
+`mode`/`any`/`first`. So `max` is the way to carry a per-subject text value through a
+rollup.
+
+Route it through a derived conditional column rather than aggregating the placeholder
+directly — that is the only way to say _which_ row's value you mean, and it keeps
+`tests/test_template_type_constraints.py`'s numeric-aggregation guard green. Know that
+it also puts the aggregation out of that guard's sight, so pin it positively
+elsewhere (see `test_survival_stratification.py`). Give the derived column a name of
+its own: a `derive` that reuses an existing column's name replaces it in Arquero but
+appends a duplicate in SQL, so an aggregate over the shadowed name reads the original
+(`packages/grammar/test/derive-shadowing.mjs`).
+
 > **`rank() == 1` is not "one row" unless the order has no ties.** A rank is
 > _shared_ by tied rows, so with dozens of subjects at day 0, `orderby("time")`
 > gives every one of them rank 1 — and no row at all gets rank 2. An annotation
@@ -182,12 +217,24 @@ categories for 22 real locations, which also exceeds the 50-cardinality cap.
 Chart().source("<E>", "<E.url>").unnest("<F4:n>", separator=";").groupby("<F4>")
 ```
 
-Put it **first**, before anything that counts rows — expanding after a rollup
-multiplies already-collapsed rows. The resulting cohorts overlap by design and
-their sizes sum to more than the subject count, so the groups can't be compared as
-if they partitioned the data. `unnest` is the only transformation that increases
-the row count, and it is **browser-mode only**: the SQL backend rejects it rather
-than silently returning a different row count than the Arquero reference.
+Put it before whatever is being **counted** — not necessarily first. Expanding
+after a rollup that has already aggregated the rows you're expanding does multiply
+them, which is the failure the rule guards against; but expanding a rollup's _own
+output_, before anything has been counted, is fine and is sometimes the only
+correct place.
+
+That choice is not cosmetic — **it changes what the chart means**. Unnest an
+event-level column before a per-subject rollup and membership is read from every
+event the subject has; unnest the rollup's output and membership is read from
+whichever single event the rollup selected. The two stratified survival templates
+differ by exactly that and give materially different numbers, which is why they are
+separate templates.
+
+The resulting cohorts overlap by design and their sizes sum to more than the subject
+count, so the groups can't be compared as if they partitioned the data. `unnest` is
+the only transformation that increases the row count, and it is **browser-mode
+only**: the SQL backend rejects it rather than silently returning a different row
+count than the Arquero reference.
 
 Add a type suffix wherever the encoding needs one — it's what stops the model
 binding a 400-cardinality ID column to an x-axis. Resolution lives in

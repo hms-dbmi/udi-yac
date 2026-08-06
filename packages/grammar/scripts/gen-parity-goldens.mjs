@@ -34,7 +34,11 @@ for (const [name, file] of Object.entries(SOURCES)) {
 }
 
 const src = (name) => ({ name, source: SOURCES[name] });
-const notNull = (f) => ({ op: '!=', left: { field: f }, right: { literal: null } });
+const notNull = (f) => ({
+  op: '!=',
+  left: { field: f },
+  right: { literal: null },
+});
 
 // [name, {source, transformation}, selections?, displayDataOnly?]
 const CASES = [
@@ -67,7 +71,11 @@ const CASES = [
         {
           derive: {
             'adelie island': {
-              if: { op: '==', left: { field: 'species' }, right: { literal: 'Adelie' } },
+              if: {
+                op: '==',
+                left: { field: 'species' },
+                right: { literal: 'Adelie' },
+              },
               then: { field: 'island' },
               else: { literal: null },
             },
@@ -89,7 +97,12 @@ const CASES = [
         { groupby: 'species' },
         { derive: { 'species max': { agg: 'max', field: 'body_mass_g' } } },
         { groupby: ['species', 'island'] },
-        { rollup: { hi: { op: 'max', field: 'species max' }, n: { op: 'count' } } },
+        {
+          rollup: {
+            hi: { op: 'max', field: 'species max' },
+            n: { op: 'count' },
+          },
+        },
       ],
     },
   ],
@@ -131,8 +144,16 @@ const CASES = [
         {
           filter: {
             op: '&&',
-            left: { op: '>', left: { field: 'bill_length_mm' }, right: { literal: 45 } },
-            right: { op: '==', left: { field: 'sex' }, right: { literal: 'MALE' } },
+            left: {
+              op: '>',
+              left: { field: 'bill_length_mm' },
+              right: { literal: 45 },
+            },
+            right: {
+              op: '==',
+              left: { field: 'sex' },
+              right: { literal: 'MALE' },
+            },
           },
         },
         { groupby: 'species' },
@@ -156,9 +177,17 @@ const CASES = [
         },
         {
           derive: {
-            ratio: { op: '/', left: { field: 'mass' }, right: { field: 'flipper' } },
+            ratio: {
+              op: '/',
+              left: { field: 'mass' },
+              right: { field: 'flipper' },
+            },
             size: {
-              if: { op: '>', left: { field: 'mass' }, right: { literal: 1_000_000 } },
+              if: {
+                op: '>',
+                left: { field: 'mass' },
+                right: { literal: 1_000_000 },
+              },
               then: { literal: 'big' },
               else: { literal: 'small' },
             },

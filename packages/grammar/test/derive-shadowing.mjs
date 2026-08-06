@@ -32,7 +32,8 @@ const store = useDataSourcesStore();
 const aq = await import('arquero');
 store.seedDataSource('birds', 'birds', aq.from(ROWS));
 
-const run = (transformation) => store.getDataObject(['birds'], transformation).displayData;
+const run = (transformation) =>
+  store.getDataObject(['birds'], transformation).displayData;
 
 // Keep the value for one species, null it for the rest — writing back to the same
 // column name.
@@ -40,7 +41,11 @@ const shadowing = [
   {
     derive: {
       island: {
-        if: { op: '==', left: { field: 'species' }, right: { literal: 'Adelie' } },
+        if: {
+          op: '==',
+          left: { field: 'species' },
+          right: { literal: 'Adelie' },
+        },
         then: { field: 'island' },
         else: { literal: null },
       },
