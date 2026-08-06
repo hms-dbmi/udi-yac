@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import type { DataFieldDomain, DataPackage, DataPackageResource } from '@/types/dataPackage';
 import {
+  buildJoinGroups,
   buildSchemaGraph,
+  buildSchemaTree,
   categoricalValues,
+  countCrossEdges,
   describeRelationships,
   formatIntervalDomain,
   relationshipKeyFields,
@@ -154,6 +157,121 @@ describe('buildSchemaGraph', () => {
   it('handles an empty or missing package', () => {
     expect(buildSchemaGraph(null)).toEqual({ nodes: [], edges: [], rankCount: 0, maxCols: 0 });
     expect(buildSchemaGraph(pkg([])).nodes).toEqual([]);
+  });
+});
+
+describe('buildSchemaTree', () => {
+  it('nests a star schema under its hub', () => {
+    // The case that broke the old SVG: four siblings needed 452px of a 376px panel.
+    const star = pkg([
+      resource('Patient', { rows: 37 }),
+      ...['Event', 'Medical Therapy', 'Radiation', 'Surgery'].map((n) =>
+        resource(n, {
+          foreignKeys: [fk('research_id', 'Patient', 'research_id', { from: 'many', to: 'one' })],
+        }),
+      ),
+    ]);
+    const roots = buildSchemaTree(star);
+    expect(roots).toHaveLength(1);
+    expect(roots[0].name).toBe('Patient');
+    expect(roots[0].rowCount).toBe(37);
+    // Siblings keep resource order.
+    expect(roots[0].children.map((c) => c.name)).toEqual([
+      'Event',
+      'Medical Therapy',
+      'Radiation',
+      'Surgery',
+    ]);
+    expect(roots[0].children.every((c) => c.cardinality === 'many-to-one')).toBe(true);
+    expect(roots[0].children.every((c) => c.otherEdges.length === 0)).toBe(true);
+  });
+
+  it('parents a multi-referencing entity to its deepest target and annotates the rest', () => {
+    const roots = buildSchemaTree(hubmap);
+    expect(roots.map((r) => r.name)).toEqual(['donors']);
+    const samples = roots[0].children[0];
+    expect(samples.name).toBe('samples');
+    // datasets references BOTH donors (rank 0) and samples (rank 1); the deeper
+    // one wins, so it nests one level further rather than beside samples.
+    const datasets = samples.children[0];
+    expect(datasets.name).toBe('datasets');
+    expect(datasets.cardinality).toBe('many-to-many');
+    expect(datasets.otherEdges.map((e) => e.to)).toEqual(['donors']);
+    expect(roots[0].children).toHaveLength(1);
+  });
+
+  it('keeps a cyclic package a forest, with the back edge annotated', () => {
+    const cyclic = pkg([
+      resource('a', { foreignKeys: [fk('b_id', 'b', 'id')] }),
+      resource('b', { foreignKeys: [fk('a_id', 'a', 'id')] }),
+    ]);
+    const roots = buildSchemaTree(cyclic);
+    // Both entities appear exactly once — no parent cycle, no infinite nesting.
+    const seen: string[] = [];
+    const walk = (n: (typeof roots)[number]) => {
+      seen.push(n.name);
+      n.children.forEach(walk);
+    };
+    roots.forEach(walk);
+    expect(seen.sort()).toEqual(['a', 'b']);
+    expect(roots.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('returns every entity as a root when nothing joins', () => {
+    const flat = pkg([resource('a'), resource('b')]);
+    const roots = buildSchemaTree(flat);
+    expect(roots.map((r) => r.name)).toEqual(['a', 'b']);
+    expect(roots.every((r) => r.children.length === 0)).toBe(true);
+    expect(buildSchemaTree(null)).toEqual([]);
+  });
+});
+
+describe('countCrossEdges / buildJoinGroups', () => {
+  const star = pkg([
+    resource('Patient', { rows: 37 }),
+    ...['Event', 'Surgery'].map((n) =>
+      resource(n, { foreignKeys: [fk('research_id', 'Patient', 'research_id')] }),
+    ),
+  ]);
+
+  it('reports a pure hierarchy as having nothing demoted', () => {
+    expect(countCrossEdges(buildSchemaTree(star))).toBe(0);
+  });
+
+  it('counts the foreign keys a tree cannot express', () => {
+    // HuBMAP: datasets references both samples and donors, so one is demoted —
+    // which is what makes the panel fall back to the join list.
+    expect(countCrossEdges(buildSchemaTree(hubmap))).toBe(1);
+  });
+
+  it('lists every entity in resource order, joins attached', () => {
+    const groups = buildJoinGroups(hubmap);
+    // Including donors, which declares no keys — it would otherwise appear only
+    // as an arrow head, with its row count nowhere in the map.
+    expect(groups.map((g) => g.entity)).toEqual(['donors', 'samples', 'datasets']);
+    expect(groups[0]).toMatchObject({ entity: 'donors', rowCount: 499, edges: [] });
+    expect(groups[1].edges.map((e) => e.to)).toEqual(['donors']);
+    expect(groups[2].edges.map((e) => e.to)).toEqual(['donors', 'samples']);
+  });
+
+  it('demotes nothing for a junction table — every parent is listed equally', () => {
+    const junction = pkg([
+      resource('patient'),
+      resource('drug'),
+      resource('prescription', {
+        foreignKeys: [fk('patient_id', 'patient', 'id'), fk('drug_id', 'drug', 'id')],
+      }),
+    ]);
+    const groups = buildJoinGroups(junction);
+    expect(groups.map((g) => g.entity)).toEqual(['patient', 'drug', 'prescription']);
+    expect(groups[2].edges.map((e) => e.to)).toEqual(['patient', 'drug']);
+    // The tree would have picked one of those two arbitrarily.
+    expect(countCrossEdges(buildSchemaTree(junction))).toBe(1);
+  });
+
+  it('returns no groups when nothing joins', () => {
+    expect(buildJoinGroups(pkg([resource('a'), resource('b')]))).toEqual([]);
+    expect(buildJoinGroups(null)).toEqual([]);
   });
 });
 

@@ -1,6 +1,6 @@
 /**
- * Pure derivations backing the Data Overview panel: entity relationships,
- * a ranked schema graph for the diagram, and human-readable field domains.
+ * Pure derivations backing the Data Overview panel: entity relationships, the
+ * schema graph and the tree the panel renders it as, and readable field domains.
  *
  * Everything here reads the already-loaded `DataPackage` / `DataFieldDomain[]`
  * — no fetching, no queries — so it works identically for CSV-backed packages
@@ -49,6 +49,27 @@ export interface SchemaGraph {
   rankCount: number;
   /** Widest rank, in nodes. */
   maxCols: number;
+}
+
+export interface SchemaTreeNode {
+  name: string;
+  rowCount: number;
+  /** Cardinality of the edge to this node's parent, read outward. */
+  cardinality?: string;
+  /**
+   * Edges nesting cannot express. Non-empty means this package is a graph, not
+   * a hierarchy — see {@link countCrossEdges}, which is what makes the panel
+   * render {@link buildJoinGroups} instead of the tree.
+   */
+  otherEdges: SchemaEdge[];
+  children: SchemaTreeNode[];
+}
+
+export interface JoinGroup {
+  entity: string;
+  rowCount: number;
+  /** This entity's outgoing foreign keys, in declaration order. Often empty. */
+  edges: SchemaEdge[];
 }
 
 type ForeignKey = NonNullable<DataPackageResource['schema']['foreignKeys']>[number];
@@ -171,6 +192,119 @@ export function buildSchemaGraph(dataPackage: DataPackage | null): SchemaGraph {
     rankCount: Math.max(...nodes.map((n) => n.rank)) + 1,
     maxCols: Math.max(...usedCols.values()),
   };
+}
+
+/**
+ * Reshapes the schema graph into a forest for the overview panel.
+ *
+ * The panel is a ~376px column, so a box-and-line diagram laid out in ranked rows
+ * grows past it as soon as one rank is wide — pcx's four children of `Patient`
+ * needed 452px. Nesting turns breadth into rows instead, making the rendered
+ * width independent of how many entities the package has.
+ *
+ * Only used when the package really is a hierarchy: each node is parented to the
+ * referenced entity with the greatest rank strictly below its own, and any edge
+ * left over lands in `otherEdges` — one of those is enough for the panel to show
+ * the join list instead. That `<` is what keeps this a forest: parent ranks
+ * strictly decrease, so a cyclic package — which `buildSchemaGraph` already
+ * terminates on by treating a back edge as rank 0 — drops the back edge into
+ * `otherEdges` instead of forming a parent cycle.
+ *
+ * ponytail: composite keys stay unsupported, matching `describeRelationships`.
+ */
+export function buildSchemaTree(dataPackage: DataPackage | null): SchemaTreeNode[] {
+  const graph = buildSchemaGraph(dataPackage);
+  if (graph.nodes.length === 0) return [];
+
+  const rankOf = new Map(graph.nodes.map((n) => [n.name, n.rank]));
+  const outgoing = new Map<string, SchemaEdge[]>();
+  for (const edge of graph.edges) {
+    const list = outgoing.get(edge.from);
+    if (list) list.push(edge);
+    else outgoing.set(edge.from, [edge]);
+  }
+
+  // Resource order, so siblings list the way the package declares them.
+  const byName = new Map<string, SchemaTreeNode>(
+    graph.nodes.map((n) => [
+      n.name,
+      { name: n.name, rowCount: n.rowCount, otherEdges: [], children: [] },
+    ]),
+  );
+
+  const roots: SchemaTreeNode[] = [];
+  for (const node of graph.nodes) {
+    const self = byName.get(node.name);
+    if (!self) continue;
+
+    let parentEdge: SchemaEdge | undefined;
+    for (const edge of outgoing.get(node.name) ?? []) {
+      const targetRank = rankOf.get(edge.to);
+      if (targetRank === undefined || targetRank >= node.rank) continue;
+      const bestRank = parentEdge ? rankOf.get(parentEdge.to) : undefined;
+      if (bestRank === undefined || targetRank > bestRank) parentEdge = edge;
+    }
+
+    for (const edge of outgoing.get(node.name) ?? []) {
+      if (edge !== parentEdge) self.otherEdges.push(edge);
+    }
+
+    const parent = parentEdge ? byName.get(parentEdge.to) : undefined;
+    if (parentEdge && parent) {
+      if (parentEdge.cardinality) self.cardinality = parentEdge.cardinality;
+      parent.children.push(self);
+    } else {
+      roots.push(self);
+    }
+  }
+
+  return roots;
+}
+
+/**
+ * How many foreign keys the tree had to demote to `otherEdges` — i.e. how far
+ * the package is from being a clean hierarchy. Zero means every relationship is
+ * expressible as nesting; anything else means the tree is telling a partial
+ * story and the panel should show the join list instead.
+ */
+export function countCrossEdges(nodes: SchemaTreeNode[]): number {
+  let total = 0;
+  for (const node of nodes) {
+    total += node.otherEdges.length + countCrossEdges(node.children);
+  }
+  return total;
+}
+
+/**
+ * One entry per entity, each carrying the foreign keys it declares. This is the
+ * view for packages that are graphs rather than hierarchies: unlike the tree it
+ * demotes nothing, so a junction table's four parents all read equally instead
+ * of one becoming an arbitrary parent and the rest becoming footnotes.
+ *
+ * Every entity gets an entry even when it declares no keys — a pure reference
+ * target like HuBMAP's `donors` would otherwise appear only as an arrow head,
+ * with no row count anywhere in the map. Resource order, so the list runs
+ * parallel to the accordion beneath it.
+ *
+ * Returns nothing when the package declares no relationships at all: with no
+ * edges to add, this would just be a second copy of that accordion.
+ */
+export function buildJoinGroups(dataPackage: DataPackage | null): JoinGroup[] {
+  const graph = buildSchemaGraph(dataPackage);
+  if (graph.edges.length === 0) return [];
+
+  const grouped = new Map<string, SchemaEdge[]>();
+  for (const edge of graph.edges) {
+    const list = grouped.get(edge.from);
+    if (list) list.push(edge);
+    else grouped.set(edge.from, [edge]);
+  }
+
+  return graph.nodes.map((node) => ({
+    entity: node.name,
+    rowCount: node.rowCount,
+    edges: grouped.get(node.name) ?? [],
+  }));
 }
 
 function formatNumber(n: number): string {

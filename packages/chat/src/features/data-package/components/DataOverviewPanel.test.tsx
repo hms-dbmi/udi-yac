@@ -136,7 +136,15 @@ const domains: DataFieldDomain[] = [
 let dashboard: StoreApi<DashboardState>;
 
 /** Seeds both stores, then gates children on a store value so the panel mounts after. */
-function Harness({ entity, children }: { entity: string | null; children: ReactNode }) {
+function Harness({
+  entity,
+  children,
+  dataPackage = pkg,
+}: {
+  entity: string | null;
+  children: ReactNode;
+  dataPackage?: DataPackage;
+}) {
   const dataPackageStore = useDataPackageStore();
   const globalStore = useGlobalStore();
   const dashboardStore = useDashboardStore();
@@ -144,20 +152,20 @@ function Harness({ entity, children }: { entity: string | null; children: ReactN
   useEffect(() => {
     dashboard = dashboardStore;
     dataPackageStore.setState({
-      dataPackage: pkg,
+      dataPackage,
       dataFieldDomains: domains,
-      entityNames: ['donors', 'samples'],
+      entityNames: dataPackage.resources.map((r) => r.name),
       loadingPhase: 'ready',
     });
     globalStore.getState().setOverview(true, entity);
-  }, [dataPackageStore, globalStore, dashboardStore, entity]);
+  }, [dataPackageStore, globalStore, dashboardStore, entity, dataPackage]);
   return loadingPhase === 'ready' ? <>{children}</> : null;
 }
 
-function renderPanel(entity: string | null) {
+function renderPanel(entity: string | null, dataPackage?: DataPackage) {
   return render(
     <UDIChatProvider>
-      <Harness entity={entity}>
+      <Harness entity={entity} dataPackage={dataPackage}>
         <DataOverviewPanel />
       </Harness>
     </UDIChatProvider>,
@@ -207,6 +215,64 @@ describe('DataOverviewPanel', () => {
     renderPanel('samples');
     expect(screen.getByText(/donor\.hubmap_id = hubmap_id/)).toBeTruthy();
     expect(screen.getByText(/many-to-one/)).toBeTruthy();
+  });
+
+  it('nests the schema tree and jumps to an entity from it', async () => {
+    renderPanel('donors');
+    const donorsRow = screen.getByLabelText('donors, 499 rows');
+    const samplesRow = screen.getByLabelText('samples, 5,044 rows');
+    // samples is a child of donors, not a sibling — breadth is vertical now, so the
+    // rendered width no longer grows with the number of entities.
+    expect(donorsRow.closest('li')?.contains(samplesRow)).toBe(true);
+
+    expect(accordionTrigger('samples')).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(samplesRow);
+    expect(accordionTrigger('samples')).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('falls back to a flat join list once the package stops being a hierarchy', () => {
+    // datasets references donors AND samples, so nesting could only show one of
+    // them. Real HuBMAP is shaped exactly like this.
+    const graphPkg = {
+      ...pkg,
+      resources: [
+        ...pkg.resources,
+        {
+          name: 'datasets',
+          path: 'datasets.tsv',
+          'udi:row_count': 9474,
+          schema: {
+            foreignKeys: [
+              {
+                fields: ['donor.hubmap_id'],
+                reference: { resource: 'donors', fields: ['hubmap_id'] },
+                'udi:cardinality': { from: 'many', to: 'one' },
+              },
+              {
+                fields: ['sample_id'],
+                reference: { resource: 'samples', fields: ['hubmap_id'] },
+                'udi:cardinality': { from: 'many', to: 'many' },
+              },
+            ],
+            fields: [],
+          },
+        },
+      ],
+    } as unknown as DataPackage;
+
+    renderPanel('donors', graphPkg);
+    expect(screen.getByText('Joins')).toBeTruthy();
+    expect(screen.queryByText('Schema')).toBeNull();
+    // Both of datasets' parents are listed as peers — neither is demoted to a
+    // footnote the way the tree had to.
+    const group = screen.getByLabelText('datasets, 9,474 rows').closest('li');
+    expect(group?.textContent).toContain('donors');
+    expect(group?.textContent).toContain('samples');
+    // donors declares no foreign keys, but still gets a top-level row so the map
+    // is a complete roll-call and its row count appears somewhere.
+    expect(screen.getByLabelText('donors, 499 rows')).toBeTruthy();
+    expect(screen.getByLabelText('datasets joins donors')).toBeTruthy();
+    expect(screen.getByLabelText('samples joins donors')).toBeTruthy();
   });
 
   it('labels both columns of the field table', () => {

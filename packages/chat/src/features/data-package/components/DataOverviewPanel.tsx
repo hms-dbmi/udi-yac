@@ -12,118 +12,204 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDataPackage, useEntityIcons, useGlobal, useGlobalStore } from '@/app/UDIChatContext';
 import { cn } from '@/lib/utils';
-import { buildSchemaGraph, type SchemaGraph } from '../utils/entityOverview';
+import type { DataPackage } from '@/types/dataPackage';
+import {
+  buildJoinGroups,
+  buildSchemaTree,
+  countCrossEdges,
+  type JoinGroup,
+  type SchemaTreeNode,
+} from '../utils/entityOverview';
 import { EntityOverview } from './EntityOverview';
 
-// ponytail: fixed node boxes laid out in ranked rows. Tune these four numbers
-// if packages get denser; reach for a graph-layout library only if edges start
-// crossing badly.
-const NODE_W = 104;
-const NODE_H = 38;
-const GAP_X = 12;
-const GAP_Y = 28;
-
-/** `many-to-one` → `N:1`, short enough to sit on an edge without colliding. */
+/** `many-to-one` → `N:1`; always three characters, which keeps the counts aligned. */
 function shortCardinality(cardinality: string): string {
   const [from, to] = cardinality.split('-to-');
   const abbr = (side?: string) => (side === 'many' ? 'N' : '1');
   return `${abbr(from)}:${abbr(to)}`;
 }
 
-interface SchemaDiagramProps {
-  graph: SchemaGraph;
+interface SchemaTreeRowsProps {
+  nodes: SchemaTreeNode[];
+  icons: EntityIconMap;
+  selected: string | null;
+  onSelect: (entity: string) => void;
+  depth: number;
+}
+
+function SchemaTreeRows({ nodes, icons, selected, onSelect, depth }: SchemaTreeRowsProps) {
+  return (
+    <ul className={cn('flex flex-col', depth > 0 && 'pl-3')}>
+      {nodes.map((node, i) => {
+        const Icon = icons[node.name] ?? FALLBACK_ENTITY_ICON;
+        const isLast = i === nodes.length - 1;
+        return (
+          <li key={node.name}>
+            <button
+              type="button"
+              onClick={() => onSelect(node.name)}
+              aria-label={`${node.name}, ${node.rowCount.toLocaleString()} rows`}
+              className={cn(
+                'flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-xs hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+                selected === node.name && 'bg-accent font-medium text-udi-primary',
+              )}
+            >
+              {depth > 0 && (
+                <span aria-hidden className="shrink-0 font-mono text-muted-foreground/60">
+                  {isLast ? '└─' : '├─'}
+                </span>
+              )}
+              <Icon className="size-3 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate">{node.name}</span>
+              {/* Fixed-width cardinality keeps the counts in a column of their own. */}
+              <span className="w-7 shrink-0 text-right text-[10px] text-muted-foreground">
+                {node.cardinality ? shortCardinality(node.cardinality) : ''}
+              </span>
+              <span className="shrink-0 tabular-nums text-muted-foreground">
+                {node.rowCount.toLocaleString()}
+              </span>
+            </button>
+            {/* No `otherEdges` branch: this renderer only runs when there are
+                none — one demoted foreign key is what hands over to JoinList. */}
+            {node.children.length > 0 && (
+              <SchemaTreeRows
+                nodes={node.children}
+                icons={icons}
+                selected={selected}
+                onSelect={onSelect}
+                depth={depth + 1}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+interface JoinListProps {
+  groups: JoinGroup[];
   icons: EntityIconMap;
   selected: string | null;
   onSelect: (entity: string) => void;
 }
 
 /**
- * Package-level entity map. Edges are drawn in one absolutely positioned SVG;
- * the nodes on top are real `<button>`s so they get focus, hover and keyboard
- * activation for free rather than re-implementing them on `<g>` elements.
+ * Flat entity list with each entity's joins, used when the package is a graph
+ * rather than a hierarchy.
+ *
+ * Nesting can only show one parent per entity. A junction table with four
+ * parents would pick one arbitrarily and demote the other three to footnotes,
+ * while those parents floated up as childless roots that read as disconnected.
+ * Listing them instead demotes nothing and stays O(edges) rather than
+ * degenerating as interconnection grows.
+ *
+ * Every entity gets a top-level row even when it declares no foreign keys, so
+ * the map is a complete roll-call rather than only the entities that happen to
+ * point at something.
  */
-function SchemaDiagram({ graph, icons, selected, onSelect }: SchemaDiagramProps) {
-  const layout = useMemo(() => {
-    const perRank = new Map<number, number>();
-    for (const node of graph.nodes) perRank.set(node.rank, (perRank.get(node.rank) ?? 0) + 1);
-    const width = Math.max(0, graph.maxCols * NODE_W + (graph.maxCols - 1) * GAP_X);
-    const height = Math.max(0, graph.rankCount * NODE_H + (graph.rankCount - 1) * GAP_Y);
-    const pos = new Map<string, { x: number; y: number }>();
-    for (const node of graph.nodes) {
-      const count = perRank.get(node.rank) ?? 1;
-      const rowWidth = count * NODE_W + (count - 1) * GAP_X;
-      pos.set(node.name, {
-        x: (width - rowWidth) / 2 + node.col * (NODE_W + GAP_X),
-        y: node.rank * (NODE_H + GAP_Y),
-      });
-    }
-    return { pos, width, height };
-  }, [graph]);
-
-  // Nothing to map with a single table or no declared foreign keys.
-  if (graph.nodes.length < 2 || graph.edges.length === 0) return null;
-
+function JoinList({ groups, icons, selected, onSelect }: JoinListProps) {
   return (
-    <div className="overflow-x-auto px-3 py-2">
-      <div className="relative mx-auto" style={{ width: layout.width, height: layout.height }}>
-        <svg
-          className="pointer-events-none absolute inset-0"
-          width={layout.width}
-          height={layout.height}
-          aria-hidden="true"
-        >
-          {graph.edges.map((edge) => {
-            const a = layout.pos.get(edge.from);
-            const b = layout.pos.get(edge.to);
-            if (!a || !b) return null;
-            const x1 = a.x + NODE_W / 2;
-            const y1 = a.y + NODE_H / 2;
-            const x2 = b.x + NODE_W / 2;
-            const y2 = b.y + NODE_H / 2;
-            return (
-              <g key={`${edge.from}|${edge.to}`}>
-                <line x1={x1} y1={y1} x2={x2} y2={y2} className="stroke-border" strokeWidth={1} />
-                {edge.cardinality && (
-                  <text
-                    x={(x1 + x2) / 2}
-                    y={(y1 + y2) / 2 - 2}
-                    textAnchor="middle"
-                    className="fill-muted-foreground text-[8px]"
-                  >
-                    {shortCardinality(edge.cardinality)}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-        {graph.nodes.map((node) => {
-          const p = layout.pos.get(node.name);
-          if (!p) return null;
-          const Icon = icons[node.name] ?? FALLBACK_ENTITY_ICON;
-          return (
+    <ul className="flex flex-col gap-1">
+      {groups.map((group) => {
+        const Icon = icons[group.entity] ?? FALLBACK_ENTITY_ICON;
+        return (
+          <li key={group.entity}>
             <button
-              key={node.name}
               type="button"
-              onClick={() => onSelect(node.name)}
-              style={{ left: p.x, top: p.y, width: NODE_W, height: NODE_H }}
-              aria-label={`${node.name}, ${node.rowCount.toLocaleString()} rows`}
+              onClick={() => onSelect(group.entity)}
+              aria-label={`${group.entity}, ${group.rowCount.toLocaleString()} rows`}
               className={cn(
-                'absolute flex flex-col items-center justify-center rounded-md border bg-background text-[10px] leading-tight hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
-                selected === node.name && 'border-udi-primary ring-2 ring-udi-primary/40',
+                'flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-xs hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+                selected === group.entity && 'bg-accent font-medium text-udi-primary',
               )}
             >
-              <span className="flex w-full items-center justify-center gap-1 px-1 font-medium">
-                <Icon className="size-3 shrink-0" />
-                <span className="truncate">{node.name}</span>
-              </span>
-              <span className="tabular-nums text-muted-foreground">
-                {node.rowCount.toLocaleString()}
+              <Icon className="size-3 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate">{group.entity}</span>
+              <span className="shrink-0 tabular-nums text-muted-foreground">
+                {group.rowCount.toLocaleString()}
               </span>
             </button>
-          );
-        })}
-      </div>
+            <ul className="flex flex-col">
+              {group.edges.map((edge) => (
+                <li key={`${edge.from}|${edge.to}`}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(edge.to)}
+                    // The arrow is decorative, so without this the button would
+                    // announce as just the target name — indistinguishable from
+                    // that entity's accordion trigger.
+                    aria-label={`${edge.from} joins ${edge.to}`}
+                    className={cn(
+                      'flex w-full items-center gap-1 rounded py-0.5 pl-4 text-left text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+                      selected === edge.to && 'text-udi-primary',
+                    )}
+                  >
+                    <span aria-hidden>→</span>
+                    <span className="min-w-0 flex-1 truncate">{edge.to}</span>
+                    <span className="w-7 shrink-0 text-right text-[10px]">
+                      {edge.cardinality ? shortCardinality(edge.cardinality) : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+interface SchemaMapProps {
+  dataPackage: DataPackage | null;
+  icons: EntityIconMap;
+  selected: string | null;
+  onSelect: (entity: string) => void;
+}
+
+/**
+ * Package-level entity map, in whichever of two shapes fits the package.
+ *
+ * Neither is a box-and-line diagram: that encoded breadth as width, so a star
+ * schema (pcx: four children of `Patient`) wanted 452px in a ~376px panel and got
+ * clipped. Both renderers here are width-independent.
+ *
+ * A tree reads better when the package really is a hierarchy, but it can only
+ * express one parent per entity. The moment any foreign key has to be demoted to
+ * a footnote the nesting is telling a partial story, so the flat join list takes
+ * over — which is the common case: HuBMAP's `datasets` references both `donors`
+ * and `samples`.
+ */
+function SchemaMap({ dataPackage, icons, selected, onSelect }: SchemaMapProps) {
+  const { roots, groups, isHierarchy } = useMemo(() => {
+    const tree = buildSchemaTree(dataPackage);
+    return {
+      roots: tree,
+      groups: buildJoinGroups(dataPackage),
+      isHierarchy: countCrossEdges(tree) === 0,
+    };
+  }, [dataPackage]);
+
+  // No declared relationships: the map would just repeat the accordion below it.
+  if (groups.length === 0) return null;
+
+  return (
+    <div className="px-3 py-2">
+      <h3 className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+        {isHierarchy ? 'Schema' : 'Joins'}
+      </h3>
+      {isHierarchy ? (
+        <SchemaTreeRows
+          nodes={roots}
+          icons={icons}
+          selected={selected}
+          onSelect={onSelect}
+          depth={0}
+        />
+      ) : (
+        <JoinList groups={groups} icons={icons} selected={selected} onSelect={onSelect} />
+      )}
     </div>
   );
 }
@@ -132,7 +218,7 @@ function SchemaDiagram({ graph, icons, selected, onSelect }: SchemaDiagramProps)
  * Data Overview: what is actually in the loaded data package. One accordion
  * item per entity (ranges for numeric fields, leading categories for
  * categorical ones, relationships, and the rows left after active filters),
- * above a diagram of how the entities join.
+ * below a tree of how the entities join.
  *
  * Everything comes from `dataPackageStore`, so it renders the same for
  * CSV-backed and server-side (remote) packages.
@@ -150,7 +236,6 @@ export function DataOverviewPanel() {
     () => ({ ...DEFAULT_ENTITY_ICONS, ...consumerIcons }),
     [consumerIcons],
   );
-  const graph = useMemo(() => buildSchemaGraph(dataPackage), [dataPackage]);
   const rowCounts = useMemo(() => {
     const map = new Map<string, number>();
     for (const resource of dataPackage?.resources ?? []) {
@@ -166,8 +251,8 @@ export function DataOverviewPanel() {
   const close = useCallback(() => globalStore.getState().setOverview(false), [globalStore]);
 
   // Expansion is local so collapsing an item does not close the panel, and
-  // re-syncs whenever something else names an entity (a count chip, a diagram
-  // node, a relationship link). React's adjust-state-during-render pattern,
+  // re-syncs whenever something else names an entity (a count chip, a schema
+  // tree row, a relationship link). React's adjust-state-during-render pattern,
   // as used for the brush reset in DashboardCard.
   const [expanded, setExpanded] = useState<string[]>(overviewEntity ? [overviewEntity] : []);
   const [lastEntity, setLastEntity] = useState(overviewEntity);
@@ -204,7 +289,12 @@ export function DataOverviewPanel() {
         </div>
       ) : (
         <ScrollArea className="min-h-0 flex-1">
-          <SchemaDiagram graph={graph} icons={icons} selected={overviewEntity} onSelect={select} />
+          <SchemaMap
+            dataPackage={dataPackage}
+            icons={icons}
+            selected={overviewEntity}
+            onSelect={select}
+          />
           <Accordion
             className="gap-3 border-t px-3 pb-3"
             value={expanded}
