@@ -185,24 +185,49 @@ function formatNumber(n: number): string {
 }
 
 /**
- * One-line summary of a field's domain: `"1.2K – 4.1G"` for a numeric range,
- * `"Lung, Kidney, Spleen +9 more"` for a categorical vocabulary.
+ * Numeric range for an interval domain: `"1.2K – 4.1G"`.
  *
  * All-null columns reach us as `{ min: Infinity, max: -Infinity }` from the
  * toolkit's domain worker, so non-finite bounds must degrade, not render.
  */
-export function formatFieldDomain(domain: DataFieldDomain, maxCategories = 5): string {
-  if (domain.type === 'interval') {
-    const { min, max } = domain.domain as IntervalDomain;
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return 'no values';
-    if (min === max) return formatNumber(min);
-    return `${formatNumber(min)} – ${formatNumber(max)}`;
-  }
+export function formatIntervalDomain(domain: DataFieldDomain): string {
+  const { min, max } = domain.domain as IntervalDomain;
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return 'no values';
+  if (min === max) return formatNumber(min);
+  return `${formatNumber(min)} – ${formatNumber(max)}`;
+}
 
+/**
+ * The distinct values of a categorical (point) domain, cleaned for display.
+ *
+ * The toolkit's domain worker builds these with `Array.from(new Set(values))`
+ * and casts to `string[]` without filtering, so nulls and blanks come through
+ * and the count is uncapped — an id-like column can carry one value per row.
+ */
+export function categoricalValues(domain: DataFieldDomain): string[] {
   const { values } = domain.domain as CategoricalDomain;
-  const present = (values ?? []).filter((v) => v != null && v !== '');
-  if (present.length === 0) return 'no values';
-  const head = present.slice(0, maxCategories).map(String);
-  const rest = present.length - head.length;
-  return rest > 0 ? `${head.join(', ')} +${rest} more` : head.join(', ');
+  return (values ?? []).filter((v) => v != null && v !== '').map(String);
+}
+
+/**
+ * Fields that actually act as keys in this entity's relationships: its declared
+ * primary key, the columns of its own foreign keys, and the columns other
+ * entities point at.
+ *
+ * Deliberately narrower than `dataPackageStore.getKeyFields`, which also counts
+ * any field flagged `udi:unique`. That flag means "no repeated values", which a
+ * timestamp column satisfies by accident — marking it a key field is misleading.
+ * The store's broader notion still drives the row table's column projection,
+ * where an incidentally-unique column is a useful identifier.
+ */
+export function relationshipKeyFields(
+  dataPackage: DataPackage | null,
+  entity: string,
+): Set<string> {
+  const resource = dataPackage?.resources.find((r) => r.name === entity);
+  const keys = new Set<string>(resource?.schema?.primaryKey ?? []);
+  for (const rel of describeRelationships(dataPackage, entity)) {
+    if (rel.fromField) keys.add(rel.fromField);
+  }
+  return keys;
 }

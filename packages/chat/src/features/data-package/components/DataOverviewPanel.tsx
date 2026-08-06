@@ -206,7 +206,7 @@ export function DataOverviewPanel() {
         <ScrollArea className="min-h-0 flex-1">
           <SchemaDiagram graph={graph} icons={icons} selected={overviewEntity} onSelect={select} />
           <Accordion
-            className="border-t px-3"
+            className="gap-3 border-t px-3 pb-3"
             value={expanded}
             onValueChange={(value) => setExpanded(value as string[])}
           >
@@ -214,7 +214,16 @@ export function DataOverviewPanel() {
               const Icon = icons[name] ?? FALLBACK_ENTITY_ICON;
               return (
                 <AccordionItem key={name} value={name}>
-                  <AccordionTrigger>
+                  {/*
+                   * Sticky so the open entity's header — and its collapse
+                   * control — stay reachable while scrolling a long field list.
+                   * `h-9` fixes the offset that EntityOverview's own sticky
+                   * Fields bar keys off (`top-9`).
+                   */}
+                  <AccordionTrigger
+                    className="h-9"
+                    headerClassName="sticky top-0 z-20 bg-background"
+                  >
                     <span className="flex min-w-0 flex-1 items-center gap-1.5">
                       <Icon className="size-4 shrink-0 text-muted-foreground" />
                       <span className="truncate">{name}</span>
@@ -223,7 +232,13 @@ export function DataOverviewPanel() {
                       </span>
                     </span>
                   </AccordionTrigger>
-                  <AccordionContent>
+                  {/*
+                   * overflow-visible (tailwind-merge drops the primitive's
+                   * overflow-hidden): an overflow-hidden ancestor becomes the
+                   * containing block for `position: sticky`, which would pin the
+                   * Fields bar to the panel instead of the scroll viewport.
+                   */}
+                  <AccordionContent className="overflow-visible">
                     <EntityOverview entity={name} />
                   </AccordionContent>
                 </AccordionItem>

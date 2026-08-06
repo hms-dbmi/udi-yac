@@ -1,18 +1,28 @@
 import { describe, it, expect } from 'vitest';
 import type { DataFieldDomain, DataPackage, DataPackageResource } from '@/types/dataPackage';
-import { buildSchemaGraph, describeRelationships, formatFieldDomain } from './entityOverview';
+import {
+  buildSchemaGraph,
+  categoricalValues,
+  describeRelationships,
+  formatIntervalDomain,
+  relationshipKeyFields,
+} from './entityOverview';
 
 type FK = NonNullable<DataPackageResource['schema']['foreignKeys']>[number];
 
 function resource(
   name: string,
-  opts: { rows?: number; foreignKeys?: FK[] } = {},
+  opts: { rows?: number; foreignKeys?: FK[]; primaryKey?: string[] } = {},
 ): DataPackageResource {
   return {
     name,
     path: `${name}.tsv`,
     'udi:row_count': opts.rows ?? 10,
-    schema: { fields: [], foreignKeys: opts.foreignKeys ?? [] },
+    schema: {
+      fields: [],
+      foreignKeys: opts.foreignKeys ?? [],
+      ...(opts.primaryKey ? { primaryKey: opts.primaryKey } : {}),
+    },
   };
 }
 
@@ -34,14 +44,17 @@ function pkg(resources: DataPackageResource[]): DataPackage {
 }
 
 // donors ← samples ← datasets, plus a sibling many-to-many datasets ↔ samples.
+// Every resource declares `primaryKey: ["hubmap_id"]`, as the real package does.
 const hubmap = pkg([
-  resource('donors', { rows: 499 }),
+  resource('donors', { rows: 499, primaryKey: ['hubmap_id'] }),
   resource('samples', {
     rows: 5044,
+    primaryKey: ['hubmap_id'],
     foreignKeys: [fk('donor.hubmap_id', 'donors', 'hubmap_id', { from: 'many', to: 'one' })],
   }),
   resource('datasets', {
     rows: 9474,
+    primaryKey: ['hubmap_id'],
     foreignKeys: [
       fk('donor.hubmap_id', 'donors', 'hubmap_id', { from: 'many', to: 'one' }),
       fk('donor.hubmap_id', 'samples', 'donor.hubmap_id', { from: 'many', to: 'many' }),
@@ -152,38 +165,88 @@ function point(values: string[]): DataFieldDomain {
   return { entity: 'e', field: 'f', type: 'point', domain: { values }, fieldDescription: '' };
 }
 
-describe('formatFieldDomain', () => {
+describe('formatIntervalDomain', () => {
   it('renders a numeric range', () => {
-    expect(formatFieldDomain(interval(1, 5))).toBe('1 – 5');
+    expect(formatIntervalDomain(interval(1, 5))).toBe('1 – 5');
   });
 
   it('collapses a single-value range', () => {
-    expect(formatFieldDomain(interval(42, 42))).toBe('42');
+    expect(formatIntervalDomain(interval(42, 42))).toBe('42');
   });
 
   it('degrades non-finite bounds from all-null columns', () => {
     // domainCompute.ts leaves these when every value in the column is null.
-    expect(formatFieldDomain(interval(Infinity, -Infinity))).toBe('no values');
-    expect(formatFieldDomain(interval(NaN, NaN))).toBe('no values');
+    expect(formatIntervalDomain(interval(Infinity, -Infinity))).toBe('no values');
+    expect(formatIntervalDomain(interval(NaN, NaN))).toBe('no values');
   });
 
   it('uses compact notation above a million', () => {
-    const s = formatFieldDomain(interval(1_200_000, 4_100_000_000));
+    const s = formatIntervalDomain(interval(1_200_000, 4_100_000_000));
     expect(s).toContain('–');
     // Locale-independent proof that compact notation engaged.
     expect(s.length).toBeLessThan('1,200,000 – 4,100,000,000'.length);
   });
+});
 
-  it('lists leading categories and counts the remainder', () => {
-    expect(formatFieldDomain(point(['Lung', 'Kidney', 'Spleen']))).toBe('Lung, Kidney, Spleen');
-    const many = point(Array.from({ length: 12 }, (_, i) => `v${i}`));
-    expect(formatFieldDomain(many)).toBe('v0, v1, v2, v3, v4 +7 more');
-    expect(formatFieldDomain(many, 2)).toBe('v0, v1 +10 more');
+describe('categoricalValues', () => {
+  it('returns every distinct value, uncapped', () => {
+    expect(categoricalValues(point(['Lung', 'Kidney', 'Spleen']))).toEqual([
+      'Lung',
+      'Kidney',
+      'Spleen',
+    ]);
+    // The UI decides what to show; this must not truncate, or the "N values"
+    // count on the inline disclosure would lie.
+    expect(categoricalValues(point(Array.from({ length: 500 }, (_, i) => `v${i}`)))).toHaveLength(
+      500,
+    );
   });
 
   it('drops nulls and blanks that the domain worker lets through', () => {
     const d = point(['a', null, '', 'b'] as unknown as string[]);
-    expect(formatFieldDomain(d)).toBe('a, b');
-    expect(formatFieldDomain(point([]))).toBe('no values');
+    expect(categoricalValues(d)).toEqual(['a', 'b']);
+    expect(categoricalValues(point([]))).toEqual([]);
+  });
+});
+
+describe('relationshipKeyFields', () => {
+  it('marks the primary key and both sides of a foreign key', () => {
+    // samples: own PK plus the column it points at donors with.
+    expect(relationshipKeyFields(hubmap, 'samples')).toEqual(
+      new Set(['hubmap_id', 'donor.hubmap_id']),
+    );
+    // donors: its PK, which is also what samples and datasets reference.
+    expect(relationshipKeyFields(hubmap, 'donors')).toEqual(new Set(['hubmap_id']));
+  });
+
+  it('excludes fields that are merely unique, which is the point', () => {
+    // A timestamp has one distinct value per row, so the manifest flags it
+    // `udi:unique` and dataPackageStore.getKeyFields counts it as a key. It is
+    // not one — nothing references it — so it must not be badged as such.
+    const p = pkg([
+      {
+        name: 'events',
+        path: 'events.csv',
+        'udi:row_count': 10,
+        schema: {
+          primaryKey: ['event_id'],
+          foreignKeys: [fk('patient_id', 'Patient', 'research_id')],
+          fields: [
+            { name: 'event_id', 'udi:unique': true },
+            { name: 'patient_id' },
+            { name: 'recorded_at', 'udi:unique': true },
+          ],
+        },
+      } as unknown as DataPackageResource,
+      resource('Patient'),
+    ]);
+    const keys = relationshipKeyFields(p, 'events');
+    expect(keys).toEqual(new Set(['event_id', 'patient_id']));
+    expect(keys.has('recorded_at')).toBe(false);
+  });
+
+  it('returns nothing for a package with no keys at all', () => {
+    expect(relationshipKeyFields(pkg([resource('penguins')]), 'penguins')).toEqual(new Set());
+    expect(relationshipKeyFields(null, 'donors')).toEqual(new Set());
   });
 });
