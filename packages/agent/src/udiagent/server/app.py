@@ -36,6 +36,8 @@ from udiagent.server.models import (
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
     YACQueryRequest,
+    YACVisInstantiateRequest,
+    YACVisInstantiateResponse,
 )
 
 # ---------------------------------------------------------------------------
@@ -359,6 +361,117 @@ def yac_query(
         request.selections,
     )
     return {"results": results}
+
+
+@app.post("/v1/yac/vis_instantiate", response_model=YACVisInstantiateResponse)
+def yac_vis_instantiate(
+    request: YACVisInstantiateRequest,
+    token_payload: dict = Depends(verify_jwt),
+):
+    """Re-instantiate a template-generated visualization with new bindings.
+
+    This is what lets a client change *which field* a generated chart splits by
+    without rewriting the finished spec. Rewriting is the tempting approach and
+    it does not hold: a template's bindings can appear in transformations the
+    renamer has to know about one by one (a groupby entry, a derive expression,
+    a heading), so every new grammar feature silently falls outside it. Resolving
+    the template again is exact by construction, and placeholder resolution lives
+    in exactly one place (``udiagent.vis_generate``).
+
+    No LLM call, so — unlike /v1/yac/completions — no OpenAI key is required and
+    nothing is metered.
+    """
+    from udiagent.vis_generate import (
+        _load_generated_tools,
+        _parse_request_schema,
+        instantiate_template,
+        template_tweakable_params,
+        unbound_placeholders,
+        validate_bindings,
+    )
+
+    generated = _load_generated_tools()
+    if generated is None:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "code": "templates_unavailable",
+                "error": "This agent has no generated visualization templates.",
+            },
+        )
+    _tool_defs, tool_dispatch, templates, _tool_tags = generated
+
+    entry = tool_dispatch.get(request.tool)
+    if entry is None:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "code": "unknown_template",
+                "error": (
+                    f"Unknown visualization template '{request.tool}'. The agent's "
+                    "templates may have changed since this chart was created."
+                ),
+            },
+        )
+    template_idx, param_map = entry
+    spec_template = templates[template_idx]
+
+    schema = _parse_request_schema(request.dataSchema)
+    if not schema.get("entities"):
+        # _parse_request_schema degrades to an empty schema by design, which
+        # would validate nothing and instantiate an unusable spec.
+        return JSONResponse(
+            status_code=400,
+            content={
+                "code": "bad_schema",
+                "error": "dataSchema has no entities; send the data package descriptor.",
+            },
+        )
+
+    bindings = {
+        param_map[k]: v for k, v in request.toolArgs.items() if k in param_map
+    }
+
+    missing = unbound_placeholders(spec_template, param_map, bindings)
+    if missing:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "code": "missing_bindings",
+                "error": (
+                    "Missing bindings for this template: " + ", ".join(missing)
+                ),
+                "errors": missing,
+            },
+        )
+
+    errors = validate_bindings(spec_template, bindings, schema)
+    if errors:
+        # errors[0] is already reader-grade prose naming the valid alternatives.
+        return JSONResponse(
+            status_code=422,
+            content={"code": "invalid_bindings", "error": errors[0], "errors": errors},
+        )
+
+    try:
+        spec = instantiate_template(spec_template, bindings, schema)
+    except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+        logger.warning("vis_instantiate failed for %s: %s", request.tool, exc)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "code": "instantiate_failed",
+                "error": f"Could not build a spec from template '{request.tool}'.",
+            },
+        )
+
+    return {
+        "spec": spec,
+        "toolArgs": {k: v for k, v in request.toolArgs.items() if k in param_map},
+        "params": template_tweakable_params(
+            spec_template, param_map, bindings, schema
+        ),
+    }
 
 
 @app.post("/v1/yac/benchmark")

@@ -34,7 +34,11 @@ for (const [name, file] of Object.entries(SOURCES)) {
 }
 
 const src = (name) => ({ name, source: SOURCES[name] });
-const notNull = (f) => ({ op: '!=', left: { field: f }, right: { literal: null } });
+const notNull = (f) => ({
+  op: '!=',
+  left: { field: f },
+  right: { literal: null },
+});
 
 // [name, {source, transformation}, selections?, displayDataOnly?]
 const CASES = [
@@ -45,6 +49,60 @@ const CASES = [
       transformation: [
         { groupby: 'species' },
         { rollup: { count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // Carrying a *nominal* value through a rollup, which the stratified survival
+    // templates rest on: the aggregate has to return the string itself, and one
+    // group is deliberately all-null so the empty case is covered too. The rollup
+    // output is named after an existing column, as those templates do, which is
+    // safe because a rollup emits a fresh relation of group keys plus outputs.
+    //
+    // The derived input has a name of its own rather than overwriting `island`.
+    // That is not incidental: `derive` REPLACES a column in Arquero but APPENDS a
+    // duplicate in SQL (`SELECT *, ... AS "island"`), so aggregating a shadowed
+    // name reads the original and the two executors disagree. No template does
+    // that today; `test/derive-shadowing.mjs` pins the hazard.
+    'rollup-max-nominal-conditional',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            'adelie island': {
+              if: {
+                op: '==',
+                left: { field: 'species' },
+                right: { literal: 'Adelie' },
+              },
+              then: { field: 'island' },
+              else: { literal: null },
+            },
+          },
+        },
+        { groupby: 'species' },
+        { rollup: { island: { op: 'max', field: 'adelie island' } } },
+      ],
+    },
+  ],
+  [
+    // Broadcast an aggregate onto every row, then re-group by a finer key — the
+    // shape that lets one subject's span reach several groups.
+    'regroup-after-broadcast-derive',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        { groupby: 'species' },
+        { derive: { 'species max': { agg: 'max', field: 'body_mass_g' } } },
+        { groupby: ['species', 'island'] },
+        {
+          rollup: {
+            hi: { op: 'max', field: 'species max' },
+            n: { op: 'count' },
+          },
+        },
       ],
     },
   ],
@@ -86,8 +144,16 @@ const CASES = [
         {
           filter: {
             op: '&&',
-            left: { op: '>', left: { field: 'bill_length_mm' }, right: { literal: 45 } },
-            right: { op: '==', left: { field: 'sex' }, right: { literal: 'MALE' } },
+            left: {
+              op: '>',
+              left: { field: 'bill_length_mm' },
+              right: { literal: 45 },
+            },
+            right: {
+              op: '==',
+              left: { field: 'sex' },
+              right: { literal: 'MALE' },
+            },
           },
         },
         { groupby: 'species' },
@@ -111,9 +177,17 @@ const CASES = [
         },
         {
           derive: {
-            ratio: { op: '/', left: { field: 'mass' }, right: { field: 'flipper' } },
+            ratio: {
+              op: '/',
+              left: { field: 'mass' },
+              right: { field: 'flipper' },
+            },
             size: {
-              if: { op: '>', left: { field: 'mass' }, right: { literal: 1_000_000 } },
+              if: {
+                op: '>',
+                left: { field: 'mass' },
+                right: { literal: 1_000_000 },
+              },
               then: { literal: 'big' },
               else: { literal: 'small' },
             },

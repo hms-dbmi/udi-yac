@@ -6,6 +6,7 @@ import {
   DownloadButtonLabelProvider,
   EntityIconsProvider,
   MascotProvider,
+  ApiConfigProvider,
   SplashMessagesProvider,
   TrackerProvider,
   useConversation,
@@ -19,7 +20,7 @@ import {
   useGlobal,
   useTracker,
 } from '@/app/UDIChatContext';
-import { extractAllUdiSpecsFromMessage } from '@/features/dashboard/stores/dashboardStore';
+import { extractAllUdiSpecsFromMessage, type TemplateProvenance } from '@/features/dashboard';
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
@@ -91,12 +92,13 @@ function UDIChatInner({
       userPrompt: string;
       sourceFields: Record<string, string[]> | null;
       title?: string;
+      template?: TemplateProvenance;
     }> = [];
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       if (message.role !== 'assistant') continue;
       const specs = extractAllUdiSpecsFromMessage(message);
-      for (const { spec, toolCallIndex, title } of specs) {
+      for (const { spec, toolCallIndex, title, template } of specs) {
         const key = state.vizKey(i, toolCallIndex);
         if (state.activeVisualizations.has(key)) continue;
         if (mbState.closedVisualizations.has(key)) continue;
@@ -112,6 +114,7 @@ function UDIChatInner({
           userPrompt,
           sourceFields,
           title,
+          template,
         });
       }
     }
@@ -195,32 +198,34 @@ function UDIChatValidated(props: UDIChatConfig) {
   return (
     <TooltipProvider>
       <UDIChatProvider>
-        <TrackerProvider onEvent={props.onEvent}>
-          <DownloadActionsProvider actions={props.downloadActions}>
-            <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
-              <EntityIconsProvider icons={props.entityIcons}>
-                {/*
-                 * UDIToolkitProvider supersedes the previous local PaletteProvider:
-                 * it ships in udi-toolkit/react, sets palette on the React
-                 * Context that <UDIVis> already reads, and (optionally) auto-
-                 * loads a data package. We only use the palette half here —
-                 * the data package is still owned by dataPackageStore so the
-                 * existing rich state (loadingPhase, sourceFields, etc.) keeps
-                 * working unchanged.
-                 */}
-                <UDIToolkitProvider palette={props.palette}>
-                  <MascotProvider mascot={props.mascot}>
-                    <SplashMessagesProvider messages={props.splashMessages}>
-                      <div className={cn('h-full w-full', props.className)} style={props.style}>
-                        <UDIChatInner {...props} />
-                      </div>
-                    </SplashMessagesProvider>
-                  </MascotProvider>
-                </UDIToolkitProvider>
-              </EntityIconsProvider>
-            </DownloadButtonLabelProvider>
-          </DownloadActionsProvider>
-        </TrackerProvider>
+        <ApiConfigProvider apiBaseUrl={props.apiBaseUrl} authToken={props.authToken}>
+          <TrackerProvider onEvent={props.onEvent}>
+            <DownloadActionsProvider actions={props.downloadActions}>
+              <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
+                <EntityIconsProvider icons={props.entityIcons}>
+                  {/*
+                   * UDIToolkitProvider supersedes the previous local PaletteProvider:
+                   * it ships in udi-toolkit/react, sets palette on the React
+                   * Context that <UDIVis> already reads, and (optionally) auto-
+                   * loads a data package. We only use the palette half here —
+                   * the data package is still owned by dataPackageStore so the
+                   * existing rich state (loadingPhase, sourceFields, etc.) keeps
+                   * working unchanged.
+                   */}
+                  <UDIToolkitProvider palette={props.palette}>
+                    <MascotProvider mascot={props.mascot}>
+                      <SplashMessagesProvider messages={props.splashMessages}>
+                        <div className={cn('h-full w-full', props.className)} style={props.style}>
+                          <UDIChatInner {...props} />
+                        </div>
+                      </SplashMessagesProvider>
+                    </MascotProvider>
+                  </UDIToolkitProvider>
+                </EntityIconsProvider>
+              </DownloadButtonLabelProvider>
+            </DownloadActionsProvider>
+          </TrackerProvider>
+        </ApiConfigProvider>
       </UDIChatProvider>
     </TooltipProvider>
   );

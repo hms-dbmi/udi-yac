@@ -275,7 +275,13 @@ def test_selection_scopes_tools_by_tag():
     line_only = _select_tools(tool_defs, tool_tags, {"line_item"})
     lnames = {d["function"]["name"] for d in line_only}
     assert all("line_item" in tool_tags[n] for n in lnames)
-    assert len(cube_only) == 11 and len(line_only) == 52
+
+    # The invariant is that the two shapes partition the tools, not that either
+    # has a particular size — asserting exact counts here just broke every time a
+    # template was added, without testing anything the checks above miss.
+    assert not (names & lnames), "a tool cannot serve both shapes"
+    assert names | lnames == {d["function"]["name"] for d in tool_defs}
+    assert len(cube_only) == 11, "the cube template set is fixed; update if intentionally changed"
 
 
 def test_no_active_template_set_switch():

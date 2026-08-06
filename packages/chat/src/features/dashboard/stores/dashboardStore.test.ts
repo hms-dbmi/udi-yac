@@ -4,6 +4,7 @@ import {
   injectInteractivity,
   normalizeToolCalls,
   parseSpecFromToolCall,
+  parseTemplateProvenance,
   extractAllUdiSpecsFromMessage,
 } from './dashboardStore';
 import { createMemoryBankStore } from './memoryBankStore';
@@ -355,6 +356,144 @@ describe('dashboardStore — updateActiveVisualizationSpec', () => {
   });
 });
 
+describe('template provenance', () => {
+  const META = {
+    tool_used: 'vis_053_line_survival',
+    tool_args: { entity: 'Event', field4: 'organization_name' },
+    tweakable_params: [
+      {
+        param: 'field4',
+        placeholder: 'F4',
+        entity: 'Event',
+        type: 'nominal' as const,
+        encodings: ['color'],
+        label: 'color',
+        value: 'organization_name',
+      },
+    ],
+  };
+
+  const messageWithMeta = (): Message => ({
+    role: 'assistant',
+    content: '',
+    tool_calls: [
+      {
+        function: {
+          name: 'RenderVisualization',
+          arguments: { spec: JSON.stringify(makeSpec()) } as unknown as Record<string, string>,
+          meta: META,
+        },
+      },
+    ],
+  });
+
+  it('survives tool-call normalization in both shapes', () => {
+    expect(normalizeToolCalls(messageWithMeta())[0].meta).toEqual(META);
+
+    const legacy: Message = {
+      role: 'assistant',
+      content: '',
+      tool_calls: [
+        {
+          name: 'RenderVisualization',
+          arguments: {} as unknown as Record<string, string>,
+          meta: META,
+        } as unknown as ToolCall,
+      ],
+    };
+    expect(normalizeToolCalls(legacy)[0].meta).toEqual(META);
+  });
+
+  it('is read off a rendered visualization', () => {
+    const [extracted] = extractAllUdiSpecsFromMessage(messageWithMeta());
+    expect(extracted.template).toEqual({
+      tool: 'vis_053_line_survival',
+      toolArgs: META.tool_args,
+      params: META.tweakable_params,
+    });
+  });
+
+  it.each([
+    ['no meta at all (an older agent)', undefined],
+    ['no template behind the spec', { tool_used: null, tool_args: null }],
+    // The agent withholds params when the spec it delivered is no longer exactly
+    // its template's instantiation, and an empty list means nothing is offerable.
+    ['no offerable parameters', { ...META, tweakable_params: [] }],
+    ['malformed descriptors', { ...META, tweakable_params: [{ param: 'field4' }] }],
+    ['bindings that are not an object', { ...META, tool_args: 'nope' }],
+  ])('is refused for %s', (_label, meta) => {
+    expect(parseTemplateProvenance(meta as never)).toBeUndefined();
+  });
+
+  it('applyTemplateRebind swaps the spec, keeps the uuid and merges the bindings', () => {
+    const store = createDashboardStore();
+    store
+      .getState()
+      .addActiveVisualization(0, 0, makeSpec(), '', { donors: ['age_value'] }, undefined, {
+        tool: 'vis_053_line_survival',
+        toolArgs: { entity: 'Event', field4: 'organization_name' },
+        params: META.tweakable_params,
+      });
+    const before = store.getState().activeVisualizations.get('0-0')!;
+
+    const rebound = makeSpec({
+      representation: {
+        mark: 'bar',
+        mapping: [{ encoding: 'x', field: 'organ', type: 'nominal' }],
+      },
+    });
+    store
+      .getState()
+      .applyTemplateRebind('0-0', rebound, { field4: 'organ' }, undefined, { donors: ['organ'] });
+
+    const after = store.getState().activeVisualizations.get('0-0')!;
+    expect(after.spec).toBe(rebound);
+    // Same uuid — a live brush and every cross-filter keyed on it must survive.
+    expect(after.uuid).toBe(before.uuid);
+    // Merged, not replaced: the next tweak builds on this one.
+    expect(after.template!.toolArgs).toEqual({ entity: 'Event', field4: 'organ' });
+    // Descriptors are kept when the server doesn't send fresh ones.
+    expect(after.template!.params).toEqual(META.tweakable_params);
+  });
+
+  it('applyTemplateRebind is a no-op without provenance or an active key', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null);
+    const before = store.getState().activeVisualizations;
+    store.getState().applyTemplateRebind('0-0', makeSpec(), {}, undefined, null);
+    expect(store.getState().activeVisualizations).toBe(before);
+    store.getState().applyTemplateRebind('9-9', makeSpec(), {}, undefined, null);
+    expect(store.getState().activeVisualizations).toBe(before);
+  });
+
+  it('clearTemplateProvenance stops offering a control the agent no longer knows', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null, undefined, {
+      tool: 'vis_053_line_survival',
+      toolArgs: {},
+      params: META.tweakable_params,
+    });
+    store.getState().clearTemplateProvenance('0-0');
+    expect(store.getState().activeVisualizations.get('0-0')!.template).toBeUndefined();
+  });
+
+  it('round-trips through dashboard export and import', () => {
+    const store = createDashboardStore();
+    const template = {
+      tool: 'vis_053_line_survival',
+      toolArgs: { field4: 'organization_name' },
+      params: META.tweakable_params,
+    };
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null, undefined, template);
+    const exported = store.getState().exportDashboard();
+    expect(exported.visualizations[0].template).toEqual(template);
+
+    const restored = createDashboardStore();
+    restored.getState().importDashboard(exported, null);
+    expect(restored.getState().activeVisualizations.get('0-0')!.template).toEqual(template);
+  });
+});
+
 describe('dashboardStore — cross-store filter propagation', () => {
   function buildDataPackageStoreWith(domains: DataFieldDomain[]) {
     const dp = createDataPackageStore();
@@ -459,6 +598,58 @@ describe('dashboardStore — cross-store filter propagation', () => {
     // The null-filter transformations use `filter: string`. None should remain.
     const stringFilters = transformation.filter((t) => typeof t.filter === 'string');
     expect(stringFilters).toHaveLength(0);
+  });
+
+  it('updateSpecFilters only null-filters fields that every layer of a layered spec encodes', () => {
+    // A layered spec nulls a field out on purpose: that is how an annotation
+    // layer picks the rows it marks. The filters run on the single dataset every
+    // layer shares, so filtering on a field only *some* layers encode deletes
+    // those rows from the layers that do want them — which took the whole data
+    // layer with it, leaving a chart of labels and no line.
+    const layered = makeSpec({
+      representation: [
+        {
+          mark: 'line',
+          mapping: [
+            { encoding: 'x', field: 'age_value', type: 'quantitative' },
+            { encoding: 'y', field: 'weight_value', type: 'quantitative' },
+          ],
+        },
+        {
+          mark: 'text',
+          mapping: [
+            // Non-null on one row per series; every other row is nulled out.
+            { encoding: 'x', field: 'label_position', type: 'quantitative' },
+            { encoding: 'y', field: 'weight_value', type: 'quantitative' },
+            { encoding: 'text', field: 'label', type: 'nominal' },
+          ],
+        },
+      ],
+    });
+
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+    const dataPackage = buildDataPackageStoreWith([]);
+
+    dashboard
+      .getState()
+      .addActiveVisualization(0, 0, layered, '', { donors: ['age_value', 'weight_value'] });
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const viz = dashboard.getState().activeVisualizations.get('0-0')!;
+    const transformation = (viz.interactiveSpec as { transformation: Array<{ filter: object }> })
+      .transformation;
+    const filtered = transformation
+      .map((t) => t.filter as { left?: { field?: string } } | undefined)
+      .filter((f) => f?.left?.field)
+      .map((f) => f!.left!.field);
+
+    // Shared by both layers, so a null there is undrawable either way.
+    expect(filtered).toContain('weight_value');
+    // Encoded by one layer only — the other layer still draws these rows.
+    expect(filtered).not.toContain('label_position');
+    expect(filtered).not.toContain('label');
+    expect(filtered).not.toContain('age_value');
   });
 
   it('updateSpecFilters injects bridged cross-entity filters between sibling entities', () => {

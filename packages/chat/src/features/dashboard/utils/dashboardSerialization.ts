@@ -111,6 +111,20 @@ function parseLayout(raw: unknown): ParseResult<DashboardLayout> {
   return { ok: false, error: 'layout must contain an `items` array or v1 `columns` array' };
 }
 
+/**
+ * Template provenance is optional and additive: a chart without it is simply not
+ * re-bindable, so a malformed one degrades to `undefined` rather than failing the
+ * whole import. Kept lenient on purpose — the authority on what a binding means
+ * is the agent, which re-validates on every re-bind.
+ */
+function parseTemplateProvenanceField(raw: unknown): DashboardExportVisualization['template'] {
+  if (!isObject(raw)) return undefined;
+  if (typeof raw.tool !== 'string' || !raw.tool) return undefined;
+  if (!isObject(raw.toolArgs)) return undefined;
+  if (!Array.isArray(raw.params) || raw.params.length === 0) return undefined;
+  return raw as unknown as DashboardExportVisualization['template'];
+}
+
 function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExportVisualization> {
   if (!isObject(raw)) return { ok: false, error: `visualizations[${idx}] must be an object` };
   if (typeof raw.key !== 'string')
@@ -136,6 +150,7 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
       userPrompt: raw.userPrompt,
       title,
       spec: raw.spec as unknown as DashboardExportVisualization['spec'],
+      template: parseTemplateProvenanceField(raw.template),
     },
   };
 }

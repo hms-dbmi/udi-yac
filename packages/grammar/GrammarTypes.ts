@@ -26,6 +26,30 @@ export interface UDIGrammar {
    * even when the spec author swaps marks.
    */
   config?: UDIGrammarConfig;
+
+  /**
+   * A heading for the whole visualization. A bare string is left-aligned; pass
+   * an object to place it elsewhere.
+   *
+   * Useful when a chart labels its series inline and so has no legend: the
+   * grouping *variable* still needs naming, which a legend would otherwise have
+   * carried in its title.
+   */
+  title?: string | VisualizationTitle;
+}
+
+/**
+ * A visualization heading with explicit placement.
+ */
+export interface VisualizationTitle {
+  text: string;
+
+  /**
+   * Where the heading sits horizontally. Defaults to `left`. Align it with
+   * whatever it is naming — a chart whose series labels run down the right edge
+   * reads better with a right-aligned heading.
+   */
+  align?: 'left' | 'center' | 'right';
 }
 
 /**
@@ -69,7 +93,7 @@ export interface DataSource {
  * These include operations like grouping, filtering, joining, and more.
  */
 export type DataTransformation =
-  GroupBy | BinBy | RollUp | Join | OrderBy | Derive | Filter | KDE;
+  GroupBy | BinBy | RollUp | Join | OrderBy | Derive | Filter | KDE | Unnest;
 
 /**
  * Base interface for all data transformations.
@@ -103,6 +127,50 @@ export interface GroupBy extends DataTransformationBase {
    * The field(s) to group by.
    */
   groupby: string | string[];
+}
+
+/**
+ * Expands a delimited multi-value field into one row per value.
+ *
+ * Some source columns hold a set rather than a scalar — `"Spine;Brain"` means the
+ * row belongs to both categories. Grouping on such a column treats every distinct
+ * combination as its own category, which is both wrong and unusable (a column with
+ * 22 real values can have 78 combinations). This is the only transformation that
+ * increases the row count: a row with n values becomes n rows, each carrying one
+ * value and a copy of every other column. Rows whose field is null or empty are
+ * dropped, since they belong to no category.
+ *
+ * NOTE: currently implemented by the in-browser Arquero executor only. The SQL
+ * backend rejects it rather than silently returning different results.
+ */
+export interface Unnest extends DataTransformationBase {
+  /**
+   * The name of the input table.
+   * If not specified, it assumes the output of the previous operation.
+   */
+  in?: string;
+
+  /**
+   * Configuration for expanding the field.
+   */
+  unnest: {
+    /**
+     * The multi-value field to expand.
+     */
+    field: string;
+
+    /**
+     * The delimiter between values. Defaults to `;`. Surrounding whitespace is
+     * always trimmed, so `"a; b"` and `"a;b"` behave the same.
+     */
+    separator?: string;
+
+    /**
+     * Column to write each individual value into. Defaults to overwriting
+     * `field`, which keeps downstream references to the original name working.
+     */
+    out?: string;
+  };
 }
 
 /**
@@ -183,9 +251,11 @@ export interface OrderBy extends DataTransformationBase {
  */
 export interface DirectionalOrder {
   /**
-   * The name of the field to be sorted.
+   * The name of the field to be sorted, or several to sort by in turn — a
+   * tiebreak matters when a window function reads the order, because tied rows
+   * share a rank.
    */
-  field: string;
+  field: string | string[];
 
   /**
    * The sorting order for the field, either ascending ('asc') or descending ('desc').
@@ -393,7 +463,8 @@ export type Expr =
   | BinaryExpr
   | ConditionalExpr
   | AggregateExpr
-  | WindowExpr;
+  | WindowExpr
+  | ConcatExpr;
 
 /**
  * A reference to a column in the current table. Legacy form: `d['age']`.
@@ -464,6 +535,18 @@ export interface WindowExpr {
 }
 
 /**
+ * String concatenation of its parts, in order. Numbers are stringified.
+ *
+ * Exists because a text mark can only draw one field, so a label combining
+ * values — a category name next to its percentage — has to be assembled into a
+ * single column first. There is no formatting here: round or scale the numbers
+ * beforehand, since `["a", 1 / 3]` would render every digit.
+ */
+export interface ConcatExpr {
+  concat: Expr[];
+}
+
+/**
  * An aggregate function for summarizing data.
  */
 export interface AggregateFunction {
@@ -514,6 +597,54 @@ export interface GenericLayer<Mark, Mapping> {
    * The data selection configuration for the layer. Optional.
    */
   select?: DataSelection;
+
+  /**
+   * Dash pattern for the mark's stroke, as alternating on/off lengths in pixels
+   * (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer
+   * as an annotation — a reference line, a threshold — so it reads as guidance
+   * rather than as data.
+   */
+  strokeDash?: number[];
+
+  /**
+   * Horizontal anchoring of a text mark relative to its x position. Text is
+   * centred by default, which puts half a label on the wrong side of whatever it
+   * annotates. Optional.
+   */
+  align?: 'left' | 'center' | 'right';
+
+  /**
+   * Pixel offsets applied after positioning, for nudging an annotation clear of
+   * the mark it labels. Optional.
+   */
+  dx?: number;
+  dy?: number;
+
+  /**
+   * A constant outline for the mark: colour, width in pixels, and opacity.
+   * Optional.
+   *
+   * On a `text` mark this is a legibility halo — a label drawn over other marks
+   * needs to be separated from them. The renderer draws such a layer twice (the
+   * outline pass beneath a clean fill pass), because SVG paints stroke *over*
+   * fill and a single pass would eat into the glyphs.
+   */
+  stroke?: string;
+  strokeWidth?: number;
+  strokeOpacity?: number;
+
+  /**
+   * Keep this layer's marks from drawing on top of each other, by nudging them
+   * apart along their position axis (`y` if the layer encodes one, else `x`).
+   * Optional; for `text` marks, where two labels landing on the same value makes
+   * both unreadable.
+   *
+   * `true` uses a default separation of 5% of the axis. A number sets the minimum
+   * separation explicitly, **in data units** — at spec-build time the plot's pixel
+   * size is not known, but an author who knows the axis runs 0..100 knows what a
+   * separation of 5 looks like on it.
+   */
+  avoidOverlap?: boolean | number;
 }
 
 /**

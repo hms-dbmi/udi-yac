@@ -71,6 +71,15 @@ class Expr:
         return {"window": "rank"}
 
     @staticmethod
+    def concat(parts):
+        """String-concatenate the parts, in order; numbers are stringified.
+
+        For labels that combine values, since a text mark draws a single field.
+        Round or scale numbers beforehand — there is no formatting here.
+        """
+        return {"concat": list(parts)}
+
+    @staticmethod
     def not_null(field):
         """Common filter: ``d['field'] != null``."""
         return {"op": "!=", "left": {"field": field}, "right": {"literal": None}}

@@ -597,6 +597,35 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         } else {
           currentTable.table = inTable.groupby(transform.groupby);
         }
+      } else if ('unnest' in transform) {
+        const inTable = getInTable(transform.in);
+        const {
+          field,
+          separator = ';',
+          out = transform.unnest.field,
+        } = transform.unnest;
+
+        // Split on the separator, trimming whitespace so "a; b" and "a;b" agree,
+        // then unroll the resulting array into one row per value. Null/empty
+        // cells become an empty array and unroll away, which is what we want:
+        // a row with no value belongs to no category.
+        const splitInto = escape((d: Record<string, unknown>) => {
+          const raw = d[field];
+          if (raw === null || raw === undefined) return [];
+          // Only a string can hold a delimited set. Any other cell type is a
+          // single value already, so it passes through as itself rather than as
+          // a stringified copy of itself.
+          if (typeof raw !== 'string') return [raw];
+          return raw
+            .split(separator)
+            .map((part) => part.trim())
+            .filter((part) => part.length > 0);
+        });
+
+        currentTable.table = inTable
+          .derive({ [out]: splitInto })
+          .unroll(out)
+          .reify();
       } else if ('binby' in transform) {
         const inTable = getInTable(transform.in);
         const { field, bins = 10, nice = true } = transform.binby;
@@ -662,18 +691,15 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         } else {
           orderbyList = transform.orderby;
         }
-        const orderKeys: OrderKey[] = orderbyList.map((orderby) => {
-          let orderKey: OrderKey;
-          if (typeof orderby !== 'string') {
-            const dir = orderby.order;
-            orderKey = orderby.field;
-            if (dir === 'desc') {
-              orderKey = desc(orderKey);
-            }
-          } else {
-            orderKey = orderby;
-          }
-          return orderKey;
+        // A DirectionalOrder may name several fields at once (grammar-py's
+        // `.orderby([a, b])` emits that shape, and the SQL compiler expands it),
+        // so flatten before applying the direction to each.
+        const orderKeys: OrderKey[] = orderbyList.flatMap((orderby) => {
+          if (typeof orderby === 'string') return [orderby];
+          const fields = Array.isArray(orderby.field)
+            ? orderby.field
+            : [orderby.field];
+          return orderby.order === 'desc' ? fields.map((f) => desc(f)) : fields;
         });
         currentTable.table = inTable.orderby(orderKeys);
       } else if ('derive' in transform) {

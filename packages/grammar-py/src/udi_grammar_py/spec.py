@@ -28,6 +28,10 @@ class Chart:
         self.transformation().binby(field, **kwargs)
         return self
 
+    def unnest(self, field: str, **kwargs):
+        self.transformation().unnest(field, **kwargs)
+        return self
+
     def rollup(self, rollup_options: Union[str, List[str]], **kwargs):
         self.transformation().rollup(rollup_options, **kwargs)
 
@@ -62,6 +66,31 @@ class Chart:
 
     def mark(self, mark: str):
         self.representation().mark(mark)
+        return self
+
+    def title(self, text: str, align: str = None):
+        """Set the visualization's heading. Left-aligned unless `align` says otherwise."""
+        self._spec["title"] = text if align is None else {"text": text, "align": align}
+        return self
+
+    def stroke_dash(self, pattern):
+        """Dash the most recently added layer's stroke."""
+        self.representation().stroke_dash(pattern)
+        return self
+
+    def place(self, **kwargs):
+        """Anchor/nudge the most recently added layer (text placement)."""
+        self.representation().place(**kwargs)
+        return self
+
+    def outline(self, **kwargs):
+        """Outline the most recently added layer (text legibility halo)."""
+        self.representation().outline(**kwargs)
+        return self
+
+    def avoid_overlap(self, min_gap=True):
+        """Keep the most recently added layer's marks from overlapping."""
+        self.representation().avoid_overlap(min_gap)
         return self
 
     def map(self, encoding: str, **kwargs):
@@ -159,6 +188,25 @@ class Transformation:
         self._state.append(transform)
         return self
 
+    def unnest(self, field: str, **kwargs):
+        """Expand a delimited multi-value column into one row per value.
+
+        The only transformation that increases the row count. `separator`
+        defaults to ";" and the inner `out` defaults to overwriting `field`;
+        both are passed through as-is. Note the inner `out` (the value column)
+        is distinct from the outer `out` (the output table name).
+        """
+        unnest_options = {"field": field}
+        transfer_kwargs({"separator", "value_out"}, unnest_options, kwargs)
+        # `value_out` is the caller-facing name for the inner `out`, so the outer
+        # table-level `out` stays unambiguous.
+        if "value_out" in unnest_options:
+            unnest_options["out"] = unnest_options.pop("value_out")
+        transform = {"unnest": unnest_options}
+        transfer_kwargs({"in", "out"}, transform, kwargs)
+        self._state.append(transform)
+        return self
+
     def rollup(self, rollup_options: Union[str, List[str]], **kwargs):
         transform = {"rollup": rollup_options}
         transfer_kwargs({"in", "out"}, transform, kwargs)
@@ -215,6 +263,22 @@ class Representation:
 
     def map(self, encoding: str, **kwargs):
         self._current_layer.map(encoding, **kwargs)
+        return self
+
+    def stroke_dash(self, pattern):
+        self._current_layer.stroke_dash(pattern)
+        return self
+
+    def place(self, **kwargs):
+        self._current_layer.place(**kwargs)
+        return self
+
+    def outline(self, **kwargs):
+        self._current_layer.outline(**kwargs)
+        return self
+
+    def avoid_overlap(self, min_gap=True):
+        self._current_layer.avoid_overlap(min_gap)
         return self
 
     def x(self, **kwargs):
@@ -278,6 +342,48 @@ class Layer:
 
     def mark(self, mark: str):
         self._state["mark"] = mark
+        return self
+
+    def stroke_dash(self, pattern):
+        """Dash the mark's stroke, as alternating on/off pixel lengths.
+
+        Marks an annotation layer (a reference line, a threshold) so it reads as
+        guidance rather than as data.
+        """
+        self._state["strokeDash"] = list(pattern)
+        return self
+
+    def outline(self, color: str = "white", width: float = 3, opacity: float = None):
+        """Outline the mark — on a text mark, a legibility halo.
+
+        The renderer draws an outlined text layer twice (halo pass, then a clean
+        fill pass), because SVG paints stroke over fill and one pass would eat
+        into the glyphs.
+        """
+        self._state["stroke"] = color
+        self._state["strokeWidth"] = width
+        if opacity is not None:
+            self._state["strokeOpacity"] = opacity
+        return self
+
+    def avoid_overlap(self, min_gap=True):
+        """Nudge this layer's marks apart when they would draw on the same spot.
+
+        `True` separates them by 5% of the axis; a number sets the minimum
+        separation in data units (the pixel size of the plot is not known when the
+        spec is written).
+        """
+        self._state["avoidOverlap"] = min_gap
+        return self
+
+    def place(self, align=None, dx=None, dy=None):
+        """Anchor and nudge a text mark, which is otherwise centred on its point."""
+        if align is not None:
+            self._state["align"] = align
+        if dx is not None:
+            self._state["dx"] = dx
+        if dy is not None:
+            self._state["dy"] = dy
         return self
 
     def map(self, encoding: str, **kwargs):

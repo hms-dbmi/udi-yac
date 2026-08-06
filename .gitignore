@@ -22,3 +22,8 @@ packages/agent/starrocks-backends.json
 # Written by packages/agent/scripts/seed_duckdb.py (local backend config + seeded DB file)
 packages/agent/duckdb-backends.json
 packages/agent/*.duckdb
+
+# Claude Code: repo-local skills under .claude/skills/ are tracked; local
+# scratch state is not.
+.claude/worktrees/
+.claude/settings.local.json

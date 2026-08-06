@@ -1,4 +1,5 @@
 import json
+import re
 from enum import Enum
 from pathlib import Path
 
@@ -52,9 +53,35 @@ class TaskType(Enum):
     CORRELATE = "Correlate"
 
 
+class StratumReading(Enum):
+    """How a stratifier that varies across a subject's events becomes one stratum.
+
+    An event-level column is not a per-subject attribute: a subject's recorded
+    value can differ between the event that starts the clock and the event that
+    stops it. Two readings are defensible, they answer different questions, and
+    they give different numbers — so they are separate templates rather than a
+    flag on one, and each says which question it answers.
+    """
+
+    #: The value on the start event — a baseline covariate ("metastatic at
+    #: diagnosis"). Each subject falls in exactly one group, so the groups
+    #: partition the cohort and add back up to the unstratified curve.
+    AT_START = "at_start"
+    #: Any value recorded anywhere on the subject's timeline — membership ("ever
+    #: metastatic"). Cohorts overlap and do not add up.
+    EVER = "ever"
+
+
 # Shared design note for data-cube templates: a cube is read by marginal
 # filtering, and the marginal filter (<MARGINAL:...>) is expanded at runtime
 # from the per-request schema's dimension list, so one template serves any cube.
+# Event values used only to *preview* the survival templates in the studio. The
+# templates themselves take <V1>/<V2> literal-value placeholders, which the model
+# fills from the request's column domains, so they work with any event vocabulary.
+PREVIEW_START_EVENT = "Initial CNS Tumor"
+PREVIEW_END_EVENT = "Deceased"
+
+
 _CUBE_MARGINAL_NOTE = (
     "Reads the cube marginal by filtering to rows where the chosen dimension(s) "
     "are present and every other dimension is empty; the measure is mapped "
@@ -73,6 +100,9 @@ def add_row(
     design_considerations: str = "",
     tasks: str = "",
     shape: str = "line_item",
+    review_hint: str = "",
+    preview_bindings: dict | None = None,
+    name_hint: str = "",
 ):
     spec_key_count = get_total_key_count(spec.to_dict())
     if spec_key_count <= 12:
@@ -100,8 +130,35 @@ def add_row(
         "description": description,
         "design_considerations": design_considerations,
         "tasks": tasks,
+        # Static note from the template's author to a human reviewer (what to
+        # look at, why it was written this way). Distinct from the mutable review
+        # state in template_reviews.json, which the studio owns; this travels with
+        # the template and is never rewritten by the review UI. Not sent to the
+        # LLM — it exists only for the review loop.
+        "review_hint": review_hint,
+        # Optional binding the template studio should preview with. Only needed
+        # when a template's meaning depends on particular *values* (an event
+        # vocabulary, say), which the studio's type-directed field search cannot
+        # infer. Ignored at runtime — the LLM still chooses its own bindings.
+        "preview_bindings": preview_bindings,
+        # Optional explicit tool-name suffix. The generator otherwise derives the
+        # name from keywords found in `description`, which makes the name a side
+        # effect of prose: two templates that differ in what they mean but not in
+        # their vocabulary collide, and a description that has to mention the
+        # other variant ("prefer the baseline template when...") picks up that
+        # variant's keyword. Set this where the name has to be stable and
+        # meaningful; leave it empty to keep the derived name.
+        "name_hint": name_hint,
     }
     return df
+
+
+def _json_default(value):
+    """Serialize the numpy scalars pandas hands back from ``to_dict``."""
+    item = getattr(value, "item", None)
+    if callable(item):
+        return item()
+    raise TypeError(f"not JSON serializable: {type(value).__name__}")
 
 
 def get_total_key_count(nested_dict):
@@ -139,6 +196,458 @@ def validate_specs(df, grammar_path, strict=False):
     return failures
 
 
+# Dash pattern for the reference-line annotation on the survival curves.
+_SURVIVAL_DASH = [6, 4]
+
+# Prose shared by the stratified survival templates. Kept as constants because
+# these caveats must read identically across all four variants — a reader
+# comparing two cards should see the same wording for the same limitation, and a
+# fix to one should not leave three copies stale.
+_SURVIVAL_TIME_VARYING = (
+    "An event-level column has no single value per subject: a subject's recorded value can "
+    "differ between the event that starts the clock and the event that stops it. "
+)
+_SURVIVAL_CENSORING = (
+    "The same censoring caveat as the unstratified survival curve applies, and it bites "
+    "harder here: subjects with no end event hold their stratum's curve up, so comparing "
+    "groups whose follow-up differs is misleading. This is not a Kaplan-Meier estimate "
+    "and carries no significance test. Strata are also unequal in size, and a small one "
+    "steps coarsely (n=4 moves in quarters), so a dramatic-looking curve may rest on a "
+    "handful of subjects. "
+)
+_SURVIVAL_ANCHORING = (
+    "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 "
+    "and contribute no drop, and where a group has none of those, its flat opening segment "
+    "and the drop into its first event are drawn explicitly. The dashed rule carries the "
+    "final value out to the right edge, where a label repeats it as a number — so a group "
+    "with no end events at all gets neither, having no final value to report."
+)
+
+
+def _placeholder_base(placeholder: str) -> str:
+    """``"<F4:n>"`` -> ``"<F4>"`` — drop the type suffix but keep the brackets.
+
+    Getting this wrong is silent and destructive: a bare ``"<F4"`` leaves the
+    placeholder unterminated, so it matches nothing, survives resolution and
+    leaves the spec unparseable.
+    """
+    return re.sub(r":[^>]+>", ">", placeholder)
+
+
+#: The subject-id placeholder. Named once because both the pipeline head (which
+#: groups by it) and the tail (which orders by it to break rank ties) must use the
+#: same binding.
+_SUBJECT_KEY = "<F1:n>"
+
+#: Intermediate column holding the stratifier's value on the start event only.
+#: Aggregated away by the rollup, so it never reaches the chart.
+_BASELINE_STRATUM = "baseline stratum"
+
+
+def _survival_subject_rows(
+    stratum: str | None,
+    reading: StratumReading | None,
+    multi_value: bool,
+):
+    """Event log -> one row per cohort member, carrying `start day` / `end day`.
+
+    This is where the three readings of a stratifier differ; everything after it
+    is identical. Unstratified gives one row per subject. `AT_START` gives one row
+    per subject plus the value on its start event. `EVER` gives one row per
+    (subject, value) the subject was ever recorded under, each carrying the
+    subject's whole span.
+
+    The distinction matters because an event-level column is not a per-subject
+    attribute. Grouping by `[subject, column]` makes each (subject, value) pair
+    its own row, so a span computed inside that group covers only *those* events:
+    a pair with a start and no end reads as censored, and a pair with an end and
+    no start is dropped by the null filter below. A subject whose value changed
+    between the two events is then counted as neither, which loses its death
+    entirely — the symptom is every stratum sitting above the unstratified curve.
+    """
+    chart = Chart().source("<E>", "<E.url>")
+
+    # `EVER` reads membership off every event, so a delimited column has to be
+    # expanded on the event rows, before the per-subject rollup sees them.
+    if multi_value and reading is StratumReading.EVER:
+        chart = chart.unnest(stratum, separator=";")
+
+    derives = {
+        "start day": Expr.cond(
+            Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
+            Expr.field("<F3>"),
+            Expr.lit(None),
+        ),
+        "end day": Expr.cond(
+            Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
+            Expr.field("<F3>"),
+            Expr.lit(None),
+        ),
+    }
+    if reading is StratumReading.AT_START:
+        # Null everywhere but the start event, so the rollup's `max` below has
+        # exactly one candidate per subject. This is also the only place in this
+        # branch that type-constrains the binding, hence the `:n` suffix.
+        derives[_BASELINE_STRATUM] = Expr.cond(
+            Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V1>")),
+            Expr.field(stratum),
+            Expr.lit(None),
+        )
+    chart = chart.filter(Expr.not_null("<F3:q>")).derive(derives)
+
+    if reading is StratumReading.AT_START:
+        chart = chart.groupby(_SUBJECT_KEY).rollup(
+            {
+                "start day": Op.min("start day"),
+                "end day": Op.max("end day"),
+                # Named after the stratifier itself, so every downstream
+                # reference — the colour mappings, the label, the heading, the
+                # stratum groupby — needs no change. `max` over a nominal column
+                # returns the string and skips nulls, identically in both the
+                # Arquero and SQL executors; it sees one non-null value per
+                # subject unless a subject has two start events carrying
+                # different values, in which case it takes the later by codepoint
+                # order.
+                _placeholder_base(stratum): Op.max(_BASELINE_STRATUM),
+            }
+        )
+        # The cohort is everyone with a start event, counted BEFORE anyone is
+        # dropped for lacking an end event — that is what makes the curve level
+        # off at the observed survival fraction instead of falling to zero.
+        chart = chart.filter(Expr.not_null("start day"))
+        # A subject with no value on its start event cannot be placed in any
+        # group and leaves the cohort here, which is why these group sizes can
+        # add to less than the unstratified curve's.
+        chart = chart.filter(Expr.not_null(_placeholder_base(stratum)))
+        if multi_value:
+            # After the rollup, deliberately. The row being expanded is already
+            # one-per-subject and nothing has been counted yet, so this
+            # multiplies nothing; expanding first would instead read the
+            # stratifier off every event, which is the other reading.
+            chart = chart.unnest(_placeholder_base(stratum), separator=";")
+        return chart
+
+    if reading is StratumReading.EVER:
+        chart = chart.groupby(_SUBJECT_KEY)
+        # Broadcast the subject's whole span onto each of its event rows, so
+        # every group the subject joins inherits the same timeline.
+        chart = chart.derive(
+            {
+                "subject start": Expr.agg("min", "start day"),
+                "subject end": Expr.agg("max", "end day"),
+            }
+        )
+        # A null is not a value anyone "ever recorded", so it must not become a
+        # group of its own. This has to sit *after* the broadcast above and before
+        # the grouping below: filtering earlier would take the subject's start
+        # event with it whenever that event carried no value, silently dropping
+        # the subject from every group instead of just this one.
+        chart = chart.filter(Expr.not_null(stratum))
+        chart = chart.groupby(["<F1>", stratum])
+        # min/max over columns already constant within the group: the rollup
+        # needs an aggregate, not a reduction.
+        chart = chart.rollup(
+            {"start day": Op.min("subject start"), "end day": Op.max("subject end")}
+        )
+        return chart.filter(Expr.not_null("start day"))
+
+    # One row per subject. min/max ignore the nulls the conditionals leave behind.
+    chart = chart.groupby(_SUBJECT_KEY).rollup(
+        {"start day": Op.min("start day"), "end day": Op.max("end day")}
+    )
+    return chart.filter(Expr.not_null("start day"))
+
+
+def _survival_chart(
+    stratum: str | None = None,
+    *,
+    reading: StratumReading | None = None,
+    multi_value: bool = False,
+):
+    """Build the shared survival pipeline.
+
+    Survival time is not a column in an event log — it is the gap between two
+    events for the same subject — so the whole pipeline exists to reconstruct it
+    before anything can be plotted. Shared by the survival templates so they
+    cannot drift apart.
+
+    `stratum` is the placeholder to split by (None for a single curve). A
+    stratified curve must say how it reads that stratifier (`reading`), because an
+    event-level column has no single value per subject — see
+    `_survival_subject_rows`. `multi_value` expands a delimited stratifier, and
+    *where* it expands depends on the reading.
+    """
+    if stratum is None:
+        assert reading is None and not multi_value, "reading/multi_value need a stratum"
+    else:
+        assert reading is not None, (
+            "a stratified curve must state how it reads the stratifier; "
+            "the two readings give different numbers"
+        )
+
+    chart = _survival_subject_rows(stratum, reading, multi_value)
+
+    # Subjects with no end event sit at day 0 and contribute no drop. That is
+    # what puts the curve's first point at (0, 100%) — the grammar cannot
+    # synthesize a leading row, but these subjects legitimately belong there.
+    # Row-wise, so this runs before any stratum grouping.
+    chart = chart.derive(
+        {
+            "died": Expr.cond(
+                Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
+                Expr.lit(1),
+                Expr.lit(0),
+            ),
+            "survival days": Expr.cond(
+                Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
+                Expr.binop("-", Expr.field("end day"), Expr.field("start day")),
+                Expr.lit(0),
+            ),
+        }
+    )
+    chart = chart.filter(Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)))
+
+    # Where the x axis ends, measured across the whole cohort rather than within
+    # one stratum: every curve's dashed lead-out has to reach the same edge, not
+    # just a little past its own last event. Taken here because a rollup leaves
+    # the table ungrouped, so this aggregate is global; once the stratum grouping
+    # below is applied, the same expression would give a per-curve maximum.
+    chart = chart.derive({"cohort end": Expr.agg("max", "survival days")})
+
+    if stratum:
+        # Re-group so each curve is a fraction of its own cohort.
+        chart = chart.groupby(_placeholder_base(stratum))
+    chart = chart.derive(
+        {"subjects": Expr.agg("count"), "deaths": Expr.agg("sum", "died")}
+    )
+    # Ordered by time, then by subject to break ties. The tiebreak is what makes
+    # `rank()` a row number: a rank is shared by tied rows, and with dozens of
+    # subjects sitting at day 0 a bare `orderby("survival days")` gives them all
+    # rank 1 — so "the rank() == 1 row", which the annotations below borrow, would
+    # be dozens of rows and rank 2 would not exist at all.
+    chart = chart.orderby(["survival days", _placeholder_base(_SUBJECT_KEY)])
+
+    # Cumulative deaths over the ordered rows, as a percentage still surviving.
+    # A rolling *sum of the death indicator* rather than a row count, because the
+    # day-0 rows are subjects who have not died and must not count as events.
+    chart = chart.derive(
+        {
+            "survival percentage": rolling(
+                Expr.binop(
+                    "*",
+                    Expr.binop(
+                        "-",
+                        Expr.lit(1),
+                        Expr.binop("/", Expr.agg("sum", "died"), Expr.field("subjects")),
+                    ),
+                    Expr.lit(100),
+                )
+            )
+        }
+    )
+
+    # The curve only descends, so its minimum is its final value. `agg` respects
+    # the current grouping, giving a per-stratum final when stratified.
+    chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
+    # Anchor for the end-of-line label, and the far end of the dashed lead-out.
+    # It sits at the cohort-wide right edge — the same x for every curve — plus a
+    # margin, so that even the longest curve (whose own last event *is* the
+    # cohort end) gets a visible run of dashes. Being the largest x in the data,
+    # it also sets where the axis stops.
+    #
+    # Null for a stratum in which nobody reached the end event: its "final" value
+    # is just the 100% it started at, and a label saying so, stacked against the
+    # axis at day 0, is noise.
+    #
+    # Held on one row per group — the same `rank() == 1` row the rule borrows. A
+    # text mark draws once per row it receives, so leaving this on every row would
+    # stack dozens of copies of the label on the same point: opaque, heavier than
+    # the font it declares, and no way to see anything behind it.
+    chart = chart.derive(
+        {
+            "label day": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.cond(
+                    Expr.binop(">", Expr.field("deaths"), Expr.lit(0)),
+                    Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
+                    Expr.lit(None),
+                ),
+                Expr.lit(None),
+            )
+        }
+    )
+    # The rule is a short dashed lead-out from the end of the curve to its label,
+    # rather than a full-width line cutting back across the descending curve.
+    #
+    # Only one row ever holds the final value (the last event), and a line mark
+    # needs two points — so the second endpoint is borrowed from an arbitrary
+    # other row. That is sound because this layer maps y to `final percentage`,
+    # which is constant across the group: any two rows give the same horizontal
+    # line, and only their x matters. Every other row is nulled out and dropped
+    # by vega-lite.
+    # A group in which every subject reached the end event has nobody at day 0, so
+    # its curve would begin at its first event partway across the chart. Draw the
+    # missing flat segment at 100% explicitly: two borrowed rows again, using a
+    # constant column for y so it lands in data units rather than pixels.
+    chart = chart.derive({"full survival": Expr.lit(100)})
+    chart = chart.derive({"first day": Expr.agg("min", "survival days")})
+    # The curve only descends, so the group's *highest* survival percentage is
+    # its value at that first day — where the flat 100% lead-in has to drop to,
+    # or the two would be left joined by a vertical gap.
+    chart = chart.derive({"first percentage": Expr.agg("max", "survival percentage")})
+    chart = chart.derive(
+        {
+            "lead day": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.lit(0),
+                Expr.cond(
+                    Expr.binop("==", Expr.rank(), Expr.lit(2)),
+                    Expr.field("first day"),
+                    Expr.lit(None),
+                ),
+            ),
+            # The drop itself: both points at the first event day, one at 100%
+            # and one at the curve's opening value. Where the group already has
+            # day-0 subjects the two collapse onto each other and nothing is
+            # drawn, which is correct — there is no drop to bridge.
+            "drop day": Expr.cond(
+                Expr.binop("<=", Expr.rank(), Expr.lit(2)),
+                Expr.field("first day"),
+                Expr.lit(None),
+            ),
+            "drop percentage": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.field("full survival"),
+                Expr.cond(
+                    Expr.binop("==", Expr.rank(), Expr.lit(2)),
+                    Expr.field("first percentage"),
+                    Expr.lit(None),
+                ),
+            ),
+        }
+    )
+    chart = chart.derive(
+        {
+            "rule day": Expr.cond(
+                # No events, no final value to mark — see `label day`.
+                Expr.binop("==", Expr.field("deaths"), Expr.lit(0)),
+                Expr.lit(None),
+                Expr.cond(
+                    Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                    Expr.field("label day"),
+                    Expr.cond(
+                        Expr.binop(
+                            "==",
+                            Expr.field("survival percentage"),
+                            Expr.field("final percentage"),
+                        ),
+                        Expr.field("survival days"),
+                        Expr.lit(None),
+                    ),
+                ),
+            )
+        }
+    )
+    # No round() in the grammar: floor(x + 0.5) using the modulo operator, so the
+    # label reads "48" rather than "47.692307692307686".
+    chart = chart.derive(
+        {"_label_offset": Expr.binop("+", Expr.field("final percentage"), Expr.lit(0.5))}
+    )
+    chart = chart.derive(
+        {
+            "final survival": Expr.binop(
+                "-",
+                Expr.field("_label_offset"),
+                Expr.binop("%", Expr.field("_label_offset"), Expr.lit(1)),
+            )
+        }
+    )
+    # One text mark can only draw one field, so the label is assembled here. When
+    # stratified it carries the category name too: the colour legend alone makes a
+    # reader trace a hue back to a key, and these curves converge at the right
+    # edge where that is hardest.
+    chart = chart.derive(
+        {
+            "final label": Expr.concat(
+                ([Expr.field(_placeholder_base(stratum))] if stratum else [])
+                + ([Expr.lit(" ")] if stratum else [])
+                + [Expr.field("final survival"), Expr.lit("%")]
+            )
+        }
+    )
+
+    # --- layers: the curve, a dashed reference line at the final value, and its
+    # numeric label just right of where the line ends.
+    # Flat 100% lead-in, before the curve so the curve draws over it.
+    chart = (
+        chart.mark("line")
+        .x(field="lead day", type="quantitative", title="survival days", domain={"min": 0})
+        .y(field="full survival", type="quantitative", domain={"min": 0, "max": 100})
+    )
+    if stratum:
+        chart = chart.color(
+            field=_placeholder_base(stratum), type="nominal", omitLegend=True
+        )
+
+    # The vertical drop from that lead-in into the curve's first point.
+    chart = (
+        chart.mark("line")
+        .x(field="drop day", type="quantitative", title="survival days", domain={"min": 0})
+        .y(field="drop percentage", type="quantitative", domain={"min": 0, "max": 100})
+    )
+    if stratum:
+        chart = chart.color(
+            field=_placeholder_base(stratum), type="nominal", omitLegend=True
+        )
+
+    chart = (
+        chart.mark("line")
+        .x(field="survival days", type="quantitative", title="survival days", domain={"min": 0})
+        .y(
+            field="survival percentage",
+            type="quantitative",
+            domain={"min": 0, "max": 100},
+            title="survival (%)",
+        )
+    )
+    if stratum:
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+
+    chart = (
+        chart.mark("line")
+        .stroke_dash(_SURVIVAL_DASH)
+        .x(field="rule day", type="quantitative", title="survival days", domain={"min": 0})
+        .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
+    )
+    if stratum:
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+
+    chart = (
+        chart.mark("text")
+        # Right-aligned and lifted clear of the rule: a centred label would sit
+        # across the dashes and read as a strikethrough, and a left-aligned one
+        # would run off the plot. A white halo keeps it readable where it crosses
+        # another stratum's curve.
+        .place(align="right", dy=-9)
+        .outline(color="white", width=3, opacity=0.7)
+        # Two strata can end at the same percentage, which would stack their
+        # labels on one another. 8 of the axis's 100 keeps them clearly apart at
+        # the sizes these are drawn at, including in a small review card.
+        .avoid_overlap(8)
+        .x(field="label day", type="quantitative", title="survival days", domain={"min": 0})
+        .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
+        .text(field="final label", type="nominal")
+    )
+    if stratum:
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+
+    if stratum:
+        # Right-aligned to sit over the series labels it names.
+        chart = chart.title(_placeholder_base(stratum), align="right")
+
+    return chart
+
+
 def generate():
     df = pd.DataFrame(
         columns=[
@@ -153,6 +662,9 @@ def generate():
             "description",
             "design_considerations",
             "tasks",
+            "review_hint",
+            "preview_bindings",
+            "name_hint",
         ]
     )
 
@@ -686,7 +1198,7 @@ def generate():
                 Chart()
                 .source("<E>", "<E.url>")
                 .groupby("<F2>")
-                .rollup({named_aggregate: op("<F1>")})
+                .rollup({named_aggregate: op("<F1:q>")})
                 .mark("bar")
                 .x(field=named_aggregate, type="quantitative")
                 .y(field="<F2>", type="nominal")
@@ -710,7 +1222,7 @@ def generate():
                 Chart()
                 .source("<E>", "<E.url>")
                 .groupby("<F2>")
-                .rollup({named_aggregate: op("<F1>")})
+                .rollup({named_aggregate: op("<F1:q>")})
                 .mark("bar")
                 .x(field="<F2>", type="nominal")
                 .y(field=named_aggregate, type="quantitative")
@@ -1094,7 +1606,7 @@ def generate():
                 out_name="<E1>__<E2>",
             )
             .groupby("<E1.r.E2.id.from>")
-            .rollup({"Largest <E1.F>": Op.max("<E1.F>")})
+            .rollup({"Largest <E1.F>": Op.max("<E1.F:q>")})
             .filter(Expr.not_null("Largest <E1.F>"))
             .orderby("Largest <E1.F>", ascending=False)
             .derive({"rank": Expr.rank()})
@@ -1132,7 +1644,7 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F>"))
-            .orderby("<F>")
+            .orderby("<F:q>")
             .derive(
                 {
                     "smallest": Expr.cond(
@@ -1180,7 +1692,7 @@ def generate():
                 out_name="<E1>__<E2>",
             )
             .groupby("<E1.r.E2.id.from>")
-            .rollup({"Smallest <E1.F>": Op.min("<E1.F>")})
+            .rollup({"Smallest <E1.F>": Op.min("<E1.F:q>")})
             .filter(Expr.not_null("Smallest <E1.F>"))
             .orderby("Smallest <E1.F>", ascending=True)
             .derive({"rank": Expr.rank()})
@@ -1251,7 +1763,7 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F>"))
-            .rollup({"<F> min": Op.min("<F>"), "<F> max": Op.max("<F>")})
+            .rollup({"<F> min": Op.min("<F:q>"), "<F> max": Op.max("<F:q>")})
             .mark("row")
             .text(field="<F> min", mark="text", type="nominal")
             .text(field="<F> max", mark="text", type="nominal")
@@ -1275,23 +1787,33 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F>"))
-            .groupby("<F>")
+            # `:n` is required here: the text mapping below uses field="*", so
+            # this groupby is the only place left that can constrain <F>'s type.
+            .groupby("<F:n>")
             .rollup({"count": Op.count()})
+            .orderby("count", ascending=False)
             .mark("row")
             .text(field="<F>", mark="text", type="nominal")
+            # The bar and the number share one column (`column="count"`, the same
+            # idiom the range table uses), so the count reads as a value and not
+            # just a length. Text comes after the bar deliberately: in-cell marks
+            # are absolutely positioned siblings, so the later mapping paints on
+            # top — with the text first the bar hid the number.
             .x(
+                column="count",
                 field="count",
                 mark="bar",
                 type="quantitative",
                 range={"min": 0.1, "max": 1},
             )
+            .text(column="count", field="count", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
             TaskType.DETERMINE_RANGE,
         ],
-        description="Lists all distinct values of a nominal field with their counts, displayed as a table with in-cell bar marks.",
-        design_considerations="Groups by the nominal field and counts occurrences. In-cell bars provide visual frequency comparison.",
+        description="Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks.",
+        design_considerations="Groups by the nominal field and counts occurrences, sorted descending so the bars are comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows relative frequency but not the value.",
         tasks="Determine the range (distinct values) of a nominal field; compare category frequencies.",
     )
 
@@ -1306,7 +1828,7 @@ def generate():
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F1>"))
             .groupby("<F2>")
-            .rollup({"<F1> min": Op.min("<F1>"), "<F1> max": Op.max("<F1>")})
+            .rollup({"<F1> min": Op.min("<F1:q>"), "<F1> max": Op.max("<F1:q>")})
             .derive(
                 {
                     "range": Expr.binop(
@@ -1369,7 +1891,7 @@ def generate():
                 range=["#ffdb9a", "white"],
             )
             .text(field="<F>", mark="text", type="nominal")
-            .x(field="count", mark="bar", type="quantitative", domain={"min": 0})
+            .x(column="count", field="count", mark="bar", type="quantitative", domain={"min": 0})
             .color(
                 column="count",
                 mark="bar",
@@ -1378,6 +1900,8 @@ def generate():
                 domain=["yes", "no"],
                 range=["#FFA500", "#c6cfd8"],
             )
+            # Last, so the count reads as a number on top of its bar.
+            .text(column="count", field="count", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[
@@ -1426,14 +1950,24 @@ def generate():
             .orderby("<M>", ascending=False)
             .mark("row")
             .text(field="<D:n>", mark="text", type="nominal")
-            .x(field="<M>", mark="bar", type="quantitative", range={"min": 0.1, "max": 1})
+            # Bar and number share the measure's column. Text goes last: in-cell
+            # marks are absolutely positioned siblings, so the later mapping
+            # paints on top — text first and the bar would hide the value.
+            .x(
+                column="<M>",
+                field="<M>",
+                mark="bar",
+                type="quantitative",
+                range={"min": 0.1, "max": 1},
+            )
+            .text(column="<M>", field="<M>", mark="text", type="nominal")
         ),
         chart_type=ChartType.TABLE,
         task_types=[TaskType.DETERMINE_RANGE, TaskType.SORT, TaskType.RETRIEVE_VALUE],
         description="Lists each category of a nominal dimension with its pre-aggregated measure as a sorted table with in-cell bars.",
         design_considerations=(
-            _CUBE_MARGINAL_NOTE + " Ordered by the measure descending with in-cell bars for "
-            "visual comparison."
+            _CUBE_MARGINAL_NOTE + " Ordered by the measure descending, with the measure drawn "
+            "as both an in-cell bar and a number so the value is readable and not just its length."
         ),
         tasks="Determine the distinct values of a dimension; compare category counts.",
         shape="data_cube",
@@ -1550,6 +2084,343 @@ def generate():
     )
 
     # ---------------------------------------------------------------
+    # Survival curves (event-log tables)
+    # ---------------------------------------------------------------
+
+    # An event log records one row per event per subject, so survival time is not
+    # a column — it has to be reconstructed by pairing two events for the same
+    # subject. This is the only template that derives its x-axis from the gap
+    # between two rows, which is why the pipeline is longer than the others.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show a survival curve for <E>.",
+            "Plot survival time from diagnosis to death for each <F1:n>.",
+            "What fraction of subjects are still alive over time after diagnosis?",
+        ],
+        spec=_survival_chart(),
+        chart_type=ChartType.LINE,
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+        ],
+        description=(
+            "Survival curve from an event log — a table with one row per event, a subject id, "
+            "an event-type column and a numeric time column. Given a start event type and an end "
+            "event type, derives each subject's elapsed time between them and plots the falling "
+            "fraction of subjects that have not yet reached the end event."
+        ),
+        design_considerations=(
+            "Survival time is not stored anywhere; it is reconstructed as the gap between two "
+            "events for the same subject, so the template groups the event log by subject id and "
+            "rolls it up to one row each before computing anything. The subject id is only a "
+            "grouping key and is never encoded, so its cardinality does not matter. "
+            "IMPORTANT: this is a crude survival curve, not a Kaplan-Meier estimate. Subjects "
+            "with no end event are kept in the denominator but contribute no drop, which assumes "
+            "every one of them was followed for the whole window. A true Kaplan-Meier estimator "
+            "reweights by the number still at risk at each event time; that needs a cumulative "
+            "product and per-time at-risk counts, which the grammar cannot express today. Read "
+            "the curve as an observed-survival fraction over the cohort, and do not use it where "
+            "differences in follow-up length matter."
+            "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 and contribute no drop, and where a group has none of those, its flat opening segment and the drop into its first event are drawn explicitly. The dashed rule carries the final value out to the right edge, where a label repeats it as a number — so a group with no end events at all gets neither, having no final value to report."
+        ),
+        tasks=(
+            "Judge how survival falls over time after a starting event; compare the observed "
+            "survival fraction of a cohort at a given number of days."
+        ),
+        review_hint=(
+            "The two event types are <V1>/<V2> literal-value placeholders, so the model supplies "
+            "them per request from the column's domain — nothing here is dataset-specific. Check "
+            "the censoring caveat in the design considerations before approving."
+        ),
+        # The studio cannot infer which column is the subject id, which is the
+        # event type, or which holds the day offset — a type-directed search would
+        # pick three plausible-looking columns and draw an empty curve. Name them.
+        preview_bindings={
+            "E": "Event",
+            "F1": "research_id",
+            "F2": "event_type",
+            "F3": "event_date",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # Stratified, reading the stratifier at the START event: a baseline covariate.
+    # Each subject is placed once, from the value it had when the clock started, so
+    # the groups partition the cohort and add back up to the unstratified curve.
+    # This is the safe default; the "ever recorded" variant below answers a
+    # different question and does not reconcile.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E> split by <F4:n>.",
+            "Compare survival between <F4:n> groups.",
+            "Does survival differ by <F4:n>?",
+        ],
+        spec=_survival_chart(stratum="<F4:n>", reading=StratumReading.AT_START),
+        chart_type=ChartType.LINE,
+        name_hint="survival_baseline",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by a nominal field as recorded at the start event, from an "
+            "event log — one row per event, with a subject id, an event-type column and a numeric "
+            "time column. Given a start and an end event type, derives each subject's elapsed time "
+            "between them and plots one curve per category. The stratifier is read once, from the "
+            "subject's start event, so each subject falls in exactly one group and the groups add "
+            "back up to the whole cohort. This is the default way to split a survival curve."
+        ),
+        design_considerations=(
+            _SURVIVAL_TIME_VARYING +
+            "This template reads it once, at the start event, which is what makes the groups a "
+            "partition: reading it per event would split a subject whose value changed into two "
+            "rows, one with a start and no end (read as censored) and one with an end and no start "
+            "(dropped), losing the death from both. The value is nulled everywhere but the start "
+            "event and carried through the per-subject rollup by `max`, which sees exactly one "
+            "candidate. "
+            "A subject with no value on its start event cannot be placed and leaves the cohort, so "
+            "group sizes can add to less than the unstratified curve's; a subject with two start "
+            "events carrying different values takes the later by codepoint order. "
+            "Strata are drawn as colours because the grammar has no facet channel. "
+            "Only for single-valued fields: a delimited multi-value column would make every "
+            "distinct combination its own stratum — use the multi-value variant for those. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare survival between groups defined at baseline; judge whether an attribute "
+            "present when the clock started is associated with worse or better observed survival."
+        ),
+        review_hint=(
+            "For a two-value stratifier the curves must BRACKET the unstratified curve — one "
+            "above it, one below — because a weighted average has to sit between them. Two curves "
+            "both above it means the stratifier is being read per event again, which silently "
+            "drops the deaths of subjects whose value changed. Previews with `metastasis`, whose "
+            "value differs between the start and death events for 24 of 34 pcx deaths, so that "
+            "failure would be visible. Also check the group sizes add to the unstratified card's "
+            "cohort. Each curve should start at 1 - 1/n for its own stratum, so a small group "
+            "starts visibly lower and steps coarsely; that is correct, not a denominator bug. "
+            "There is no at-risk weighting or significance test, so do not read group differences "
+            "as real."
+        ),
+        preview_bindings={
+            "E": "Event",
+            "F1": "research_id",
+            "F2": "event_type",
+            "F3": "event_date",
+            "F4": "metastasis",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # Stratified at the START event by a LIST-valued field. The delimited value is
+    # expanded AFTER the per-subject rollup — the row is already one-per-subject and
+    # nothing has been counted, so this multiplies nothing. Expanding first would
+    # instead read the stratifier off every event, which is the "ever" variant.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E> split by each <F4:n> value.",
+            "Compare survival across <F4:n>, where a subject can have several.",
+        ],
+        spec=_survival_chart(
+            stratum="<F4:n>", reading=StratumReading.AT_START, multi_value=True
+        ),
+        chart_type=ChartType.LINE,
+        name_hint="survival_baseline_multivalue",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by each value of a multi-value (delimited) field as recorded at "
+            "the start event, from an event log — one row per event, with a subject id, an "
+            "event-type column and a numeric time column. Expands the start event's list so a "
+            "subject counts toward every value it listed then, derives each subject's elapsed time "
+            "between a start and an end event type, and plots one curve per value."
+        ),
+        design_considerations=(
+            "For set-valued columns such as tumor locations, where one subject can belong to "
+            "several categories at once. "
+            + _SURVIVAL_TIME_VARYING +
+            "The list is taken from the start event only, so a category first recorded later is "
+            "absent by design — that is what keeps each subject's whole timeline attributable to "
+            "the categories it started with. `unnest` runs after the per-subject rollup, on a row "
+            "that is already one-per-subject, so it multiplies nothing that has been counted. "
+            "The cohorts overlap and their sizes sum to more than the number of subjects, which is "
+            "the correct reading of a multi-value attribute but means the curves are not "
+            "independent and must not be compared as if they partitioned the cohort. Without "
+            "unnest each distinct combination would be its own stratum — a column with ~20 real "
+            "values can easily have ~80 combinations, which also exceeds the 50-cardinality cap "
+            "for an encoded field. A subject whose start-event list is present but empty expands "
+            "to no rows and appears in no group, so this cohort can be smaller than the "
+            "single-valued variant's. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare observed survival across overlapping categories recorded at baseline; see "
+            "which of a subject's several starting attributes coincide with worse survival."
+        ),
+        review_hint=(
+            "Cohort sizes overlap here, so they sum to more than the subject count — that is "
+            "intended. Check the end-of-curve labels name individual values (e.g. 'Spine', "
+            "'Brain') and not combined strings like 'Leptomeningeal;Spine'; if they show "
+            "combinations, unnest did not run. Requires browser (interactive) mode: the SQL "
+            "backend rejects unnest."
+        ),
+        preview_bindings={
+            "E": "Event",
+            "F1": "research_id",
+            "F2": "event_type",
+            "F3": "event_date",
+            "F4": "metastasis_location",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # Stratified by EVER having recorded a value: membership rather than baseline.
+    # A subject joins every group whose value appears anywhere on its timeline and
+    # carries its whole span into each, so cohorts overlap and do NOT add up. Prefer
+    # the baseline variant unless the request is explicitly about "ever having" a
+    # value.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for each <F4:n> value ever recorded for a subject.",
+            "Compare survival across every <F4:n> a subject has ever had.",
+        ],
+        spec=_survival_chart(stratum="<F4:n>", reading=StratumReading.EVER),
+        chart_type=ChartType.LINE,
+        name_hint="survival_ever",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by every value a subject ever recorded, from an event log — one "
+            "row per event, with a subject id, an event-type column and a numeric time column. A "
+            "subject joins every group whose value appears anywhere on its timeline and carries "
+            "its whole elapsed time into each, so the cohorts OVERLAP and the groups do not add up "
+            "to the whole. Use this only when the request is explicitly about ever having a value; "
+            "otherwise prefer the variant that reads the field at the start event, which "
+            "partitions the cohort."
+        ),
+        design_considerations=(
+            _SURVIVAL_TIME_VARYING +
+            "This template treats it as membership: the subject's span is broadcast onto each of "
+            "its event rows, then re-grouped per (subject, value), so one subject can appear in "
+            "several curves and a single death is attributed to each group the subject belongs to. "
+            "The groups therefore cannot be reconciled with the unstratified curve — if a reader "
+            "would interpret them as a partition, the baseline variant is the right template. "
+            "IMPORTANT: membership is defined using events that may occur AFTER the clock starts, "
+            "which is immortal-time bias by construction, not a caveat. A value recorded only at "
+            "the end event produces a group in which every member is dead by definition, drawing "
+            "flat at 0% — on the pcx event log, `metastasis` = 'Unavailable' is exactly that: 9 "
+            "subjects, 9 deaths. Membership is also read only from events that carry a time value, "
+            "since rows with no time are filtered first. "
+            "Strata are drawn as colours because the grammar has no facet channel. "
+            "Only for single-valued fields — use the multi-value variant for delimited columns. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare observed survival between subjects who ever recorded a value and those who "
+            "did not; see whether ever having an attribute coincides with worse survival."
+        ),
+        review_hint=(
+            "Expect overlap: on pcx `metastasis` this is 100 cohort rows from 65 subjects, 26 "
+            "subjects in both 'No' and 'Yes', and 65 death attributions from 34 deaths. Those "
+            "numbers are correct for this reading and must NOT be 'fixed' to reconcile. A curve "
+            "pinned flat at 0% is the immortal-time artefact — a value that only ever appears on "
+            "the end event — and should be named in the design considerations. Judge this template "
+            "on whether a reader could mistake the curves for a partition; if so, the baseline "
+            "variant is strictly better and this one should be rejected."
+        ),
+        preview_bindings={
+            "E": "Event",
+            "F1": "research_id",
+            "F2": "event_type",
+            "F3": "event_date",
+            "F4": "metastasis",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # Ever-recorded membership for a LIST-valued field: `unnest` runs FIRST, on the
+    # event rows, so a subject joins every value it listed at any point.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for each <F4:n> value a subject ever recorded.",
+            "Compare survival across every <F4:n> ever listed for a subject.",
+        ],
+        spec=_survival_chart(
+            stratum="<F4:n>", reading=StratumReading.EVER, multi_value=True
+        ),
+        chart_type=ChartType.LINE,
+        name_hint="survival_ever_multivalue",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by every value of a multi-value (delimited) field a subject "
+            "ever recorded, from an event log — one row per event, with a subject id, an "
+            "event-type column and a numeric time column. Expands the delimited column on every "
+            "event, so a subject joins each value listed at any point and carries its whole "
+            "elapsed time into all of them. Cohorts OVERLAP twice over — across values of one "
+            "event and across events — and do not add up."
+        ),
+        design_considerations=(
+            "For set-valued columns where membership at any point is the question. "
+            + _SURVIVAL_TIME_VARYING +
+            "`unnest` runs first, on the event rows, so the per-subject rollup sees one row per "
+            "(subject, value) pair and a subject joins every value it ever listed. "
+            "Overlap compounds: a subject contributes to one group per distinct value across its "
+            "whole timeline, so cohort sizes sum to well above the subject count and a single "
+            "death is attributed many times. Prefer the baseline multi-value variant unless the "
+            "request is explicitly about values recorded at any point. "
+            "The same immortal-time property as the single-valued 'ever' variant applies: "
+            "membership is defined by events that may happen after the clock starts, and a value "
+            "appearing only on end events draws flat at 0% by construction. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare observed survival across overlapping categories a subject recorded at any "
+            "point; see which attributes ever present coincide with worse survival."
+        ),
+        review_hint=(
+            "Cohorts overlap heavily by design — expect the sizes to sum to well over the subject "
+            "count. Check the labels name individual values and not combined strings like "
+            "'Leptomeningeal;Spine'; if they show combinations, unnest did not run. Requires "
+            "browser (interactive) mode: the SQL backend rejects unnest. As with the single-valued "
+            "'ever' variant, judge whether a reader could mistake these overlapping curves for a "
+            "partition."
+        ),
+        preview_bindings={
+            "E": "Event",
+            "F1": "research_id",
+            "F2": "event_type",
+            "F3": "event_date",
+            "F4": "metastasis_location",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # ---------------------------------------------------------------
     # Heatmaps
     # ---------------------------------------------------------------
 
@@ -1622,7 +2493,7 @@ def generate():
                 Chart()
                 .source("<E>", "<E.url>")
                 .groupby(["<F3>", "<F2>"])
-                .rollup({named_aggregate: op("<F1>")})
+                .rollup({named_aggregate: op("<F1:q>")})
                 .mark("rect")
                 .color(field=named_aggregate, type="quantitative")
                 .y(field="<F2>", type="nominal")
@@ -1736,7 +2607,7 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter(Expr.not_null("<F>"))
-            .binby(field="<F>", output={"bin_start": "start", "bin_end": "end"})
+            .binby(field="<F:q>", output={"bin_start": "start", "bin_end": "end"})
             .rollup({"count": Op.count()})
             .mark("rect")
             .x(field="start", type="quantitative", title="<F>")
@@ -2005,5 +2876,18 @@ if __name__ == "__main__":
     validate_specs(df, args.grammar, strict=args.strict)
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    df.to_json(args.output, orient="records", indent=2)
+    # Written with json.dump rather than df.to_json: pandas changed its
+    # indent/separator style between versions, so to_json rewrote all 63 records
+    # whenever the generating machine's pandas differed — burying the real change
+    # in ~2000 lines of whitespace churn. json.dump's formatting is fixed, so
+    # regenerating on any machine produces a diff containing only what changed.
+    records = df.to_dict(orient="records")
+    # Drop empty optional keys rather than writing `"name_hint": ""` onto every
+    # record — 60-odd templates don't set one, and the churn would bury the
+    # handful that do.
+    records = [
+        {k: v for k, v in record.items() if k != "name_hint" or v} for record in records
+    ]
+    with open(args.output, "w") as f:
+        json.dump(records, f, indent=2, default=_json_default)
     print(f"\nExported to {args.output}")

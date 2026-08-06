@@ -55,6 +55,7 @@ def is_expr(value: Any) -> bool:
         or ("op" in value and "left" in value and "right" in value)
         or "if" in value
         or "agg" in value
+        or "concat" in value
         or "window" in value
     )
 
@@ -116,6 +117,15 @@ def compile_expr(node: Any, ctx: ExprContext) -> str:
                 inner = compile_expr(a, ctx)
                 return f"({inner} IS {'NOT ' if op == '!=' else ''}NULL)"
         return f"({compile_expr(left, ctx)} {sql_op} {compile_expr(right, ctx)})"
+
+    if "concat" in node:
+        parts = node["concat"]
+        if not isinstance(parts, list) or not parts:
+            raise UnsupportedQueryError("concat requires a non-empty list of parts")
+        # CAST each part so numeric columns concatenate as text; CONCAT + CAST AS
+        # VARCHAR are available in both StarRocks and DuckDB.
+        compiled = [f"CAST({compile_expr(part, ctx)} AS VARCHAR)" for part in parts]
+        return f"CONCAT({', '.join(compiled)})"
 
     if "if" in node:
         cond = compile_expr(node["if"], ctx)

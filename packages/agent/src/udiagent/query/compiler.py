@@ -207,6 +207,19 @@ class PipelineCompiler:
                     output_density=output.get("density", "density"),
                     groupby=list(st.pending_groupby or []),
                 )
+            elif "unnest" in transform:
+                # Deliberately rejected rather than approximated. Expanding a
+                # delimited column means multiplying rows, which SQL can do
+                # (UNNEST / a split-table join) but not identically across
+                # StarRocks and DuckDB without care — and a silently different
+                # row count would break parity with the Arquero executor, which
+                # is the reference semantics. Templates using unnest are
+                # browser-mode only until this is implemented properly.
+                raise UnsupportedQueryError(
+                    "'unnest' is not supported by the SQL backend yet; it is "
+                    "implemented only by the in-browser executor. Use interactive "
+                    "(browser) mode for templates that expand multi-value columns."
+                )
             else:
                 raise UnsupportedQueryError(
                     f"unsupported transformation: {sorted(transform.keys())}"

@@ -18,6 +18,16 @@ from udiagent.skills import Skill, load_skills, render_template, _package_data_p
 from udiagent.grammar import load_grammar
 from udiagent.schema import simplify_data_schema, simplify_data_domains
 
+# A placeholder is `<NAME>`, where NAME is an uppercase-led token: `<E>`, `<F1:n>`,
+# `<V2>`, `<MARGINAL:D1,D2>`, `<E1.r.E2.id.from>`.
+#
+# Deliberately narrow. The obvious `<[^>]+>` also matches from a `<` comparison
+# operator in a spec (`"op": "<="`) all the way to the next `>` anywhere in the
+# JSON (`"op": ">="`), so resolving it swallows everything in between and leaves
+# unparseable output. Every scan for placeholders — resolution, validation, tool
+# parameter extraction — must use this pattern.
+PLACEHOLDER = r"<([A-Z][A-Za-z0-9_.,:]*)>"
+
 
 # ---------------------------------------------------------------------------
 # Few-shot example loading
@@ -378,6 +388,14 @@ def _resolve_placeholder(tag, bindings, schema):
     # Strip type suffix: F:n -> F, E1.F:q -> E1.F
     base = tag.split(":")[0] if ":" in tag else tag
 
+    # Literal data values (<V>, <V1>, ...) are model-supplied text rather than
+    # column names, so they can legitimately contain quotes, backslashes or
+    # newlines. Substitution happens on the raw spec JSON string, so escape them
+    # or a value like 'Grade "III"' would produce unparseable JSON.
+    if re.fullmatch(r"V\d*", base):
+        value = bindings.get(base, "")
+        return json.dumps(str(value))[1:-1]
+
     return bindings.get(base, "")
 
 
@@ -397,12 +415,61 @@ def instantiate_template(spec_template, bindings, schema):
     # ("filter": {...}) and stays valid JSON.
     spec = re.sub(r'"(<MARGINAL[^>"]*>)"', r"\1", spec)
     while True:
-        match = re.search(r"<([^>]+)>", spec)
+        match = re.search(PLACEHOLDER, spec)
         if not match:
             break
         resolved = _resolve_placeholder(match.group(1), bindings, schema)
         spec = spec.replace(match.group(0), resolved, 1)
     return json.loads(spec)
+
+
+def _encoded_placeholders(spec_template):
+    """Placeholder names that end up drawn on some visual channel.
+
+    The >50 cardinality cap below exists because a chart cannot legibly show
+    hundreds of categories on an axis or in a legend. That reasoning only applies
+    to fields that are actually *encoded*. A placeholder used solely as a grouping
+    key — e.g. grouping an event log per patient id before rolling it up to one row
+    each — is collapsed by the rollup and never rendered, so capping it would
+    block a legitimate aggregation for a readability problem that cannot occur.
+    """
+    return set(_placeholder_encodings(spec_template))
+
+
+def _placeholder_encodings(spec_template):
+    """Which visual channels each placeholder is drawn on.
+
+    Same walk as `_encoded_placeholders` (which is a view over this), but keeps
+    the channel names, so a tweakable parameter can be labelled by what it
+    actually drives — "color" rather than "field4".
+    """
+    encodings = {}
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return encodings
+
+    reps = spec.get("representation", {})
+    reps = reps if isinstance(reps, list) else [reps]
+    for rep in reps:
+        if not isinstance(rep, dict):
+            continue
+        mappings = rep.get("mapping", [])
+        mappings = mappings if isinstance(mappings, list) else [mappings]
+        for mapping in mappings:
+            if not isinstance(mapping, dict):
+                continue
+            channel = mapping.get("encoding")
+            # `field` is what gets drawn; `column` only places a table column.
+            for value in (mapping.get("field"), mapping.get("column")):
+                if not isinstance(value, str):
+                    continue
+                for placeholder in re.findall(PLACEHOLDER, value):
+                    base = placeholder.split(":")[0]
+                    seen = encodings.setdefault(base, [])
+                    if isinstance(channel, str) and channel not in seen:
+                        seen.append(channel)
+    return encodings
 
 
 def _extract_xy_placeholders(spec_template):
@@ -423,10 +490,68 @@ def _extract_xy_placeholders(spec_template):
             enc = m.get("encoding")
             field = m.get("field", "")
             if enc in ("x", "y") and enc not in result:
-                match = re.fullmatch(r"<([^>]+)>", field)
+                match = re.fullmatch(PLACEHOLDER, field)
                 if match:
                     result[enc] = match.group(1)
     return result
+
+
+def _entity_for_binding_key(key, bindings):
+    """The entity a field binding resolves against.
+
+    `E1.`/`E2.`-prefixed keys name a side of a join; everything else resolves
+    against the single entity `E`.
+    """
+    if key.startswith("E1."):
+        return bindings.get("E1")
+    if key.startswith("E2."):
+        return bindings.get("E2")
+    return bindings.get("E")
+
+
+def _placeholder_type_requirements(spec_template):
+    """The field type each placeholder requires, `{placeholder: type}`.
+
+    Two sources, in precedence order: a `:n`/`:q`/`:o` suffix on the placeholder,
+    then the `type` declared on an encoding whose `field` is *exactly* that
+    placeholder. A placeholder with neither is unconstrained, which is why
+    templates spell the suffix out wherever the type matters (see the
+    type-constraint notes in the template-authoring skill).
+    """
+    placeholder_types = {}
+    for match in re.finditer(PLACEHOLDER, spec_template):
+        ph = match.group(1)
+        base = ph.split(":")[0] if ":" in ph else ph
+        field_type = None
+        if ":n" in ph:
+            field_type = "nominal"
+        elif ":q" in ph and ":q|o|n" not in ph:
+            field_type = "quantitative"
+        elif ":o" in ph:
+            field_type = "ordinal"
+        if field_type and base not in placeholder_types:
+            placeholder_types[base] = field_type
+
+    try:
+        spec_parsed = json.loads(spec_template)
+        rep = spec_parsed.get("representation", {})
+        reps = rep if isinstance(rep, list) else [rep]
+        for r in reps:
+            mappings = r.get("mapping", [])
+            if isinstance(mappings, dict):
+                mappings = [mappings]
+            for m in mappings:
+                field = m.get("field", "")
+                declared_type = m.get("type")
+                ph_match = re.fullmatch(PLACEHOLDER, field)
+                if ph_match and declared_type:
+                    base = ph_match.group(1).split(":")[0]
+                    if base not in placeholder_types:
+                        placeholder_types[base] = declared_type
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    return placeholder_types
 
 
 def validate_bindings(spec_template, bindings, schema):
@@ -472,6 +597,8 @@ def validate_bindings(spec_template, bindings, schema):
         if not has_rel:
             errors.append(f"No relationship between '{e1}' and '{e2}'")
 
+    encoded_placeholders = _encoded_placeholders(spec_template)
+
     # Check that x and y encodings don't resolve to the same field
     xy_placeholders = _extract_xy_placeholders(spec_template)
     if xy_placeholders.get("x") and xy_placeholders.get("y"):
@@ -485,52 +612,26 @@ def validate_bindings(spec_template, bindings, schema):
                 f"both '{x_binding}' and '{y_binding}' are set to '{x_val}'"
             )
 
-    # Extract placeholder type requirements from spec_template
-    placeholder_types = {}
-    for match in re.finditer(r"<([^>]+)>", spec_template):
-        ph = match.group(1)
-        base = ph.split(":")[0] if ":" in ph else ph
-        field_type = None
-        if ":n" in ph:
-            field_type = "nominal"
-        elif ":q" in ph and ":q|o|n" not in ph:
-            field_type = "quantitative"
-        elif ":o" in ph:
-            field_type = "ordinal"
-        if field_type and base not in placeholder_types:
-            placeholder_types[base] = field_type
-
-    # Source 2: declared "type" in encoding mappings
-    try:
-        spec_parsed = json.loads(spec_template)
-        rep = spec_parsed.get("representation", {})
-        reps = rep if isinstance(rep, list) else [rep]
-        for r in reps:
-            mappings = r.get("mapping", [])
-            if isinstance(mappings, dict):
-                mappings = [mappings]
-            for m in mappings:
-                field = m.get("field", "")
-                declared_type = m.get("type")
-                ph_match = re.fullmatch(r"<([^>]+)>", field)
-                if ph_match and declared_type:
-                    base = ph_match.group(1).split(":")[0]
-                    if base not in placeholder_types:
-                        placeholder_types[base] = declared_type
-    except (json.JSONDecodeError, TypeError):
-        pass
+    placeholder_types = _placeholder_type_requirements(spec_template)
 
     # Check fields exist on entities and types match
     for key, field_name in bindings.items():
         if key in ("E", "E1", "E2"):
             continue
 
-        if key.startswith("E1."):
-            entity_name = entity_bindings.get("E1")
-        elif key.startswith("E2."):
-            entity_name = entity_bindings.get("E2")
-        else:
-            entity_name = entity_bindings.get("E")
+        # <V*> binds a literal data value (an event type, a status string), not a
+        # column, so the field-existence, type and cardinality checks below do not
+        # apply. Only require that something was supplied — an empty value would
+        # silently make a filter match nothing.
+        if re.fullmatch(r"V\d*", key):
+            if not str(field_name).strip():
+                errors.append(
+                    f"Value '{key}' is empty; supply the data value to match "
+                    f"(e.g. one of the values present in the relevant column)."
+                )
+            continue
+
+        entity_name = _entity_for_binding_key(key, entity_bindings)
 
         if not entity_name or entity_name not in entities:
             continue
@@ -586,13 +687,86 @@ def validate_bindings(spec_template, bindings, schema):
                     f"Available {expected_type} fields: {', '.join(matching)}"
                 )
 
-        if (actual_type == "nominal" or actual_type == "ordinal") and cardinality > 50:
+        # Only cap fields that are actually drawn; a grouping key the pipeline
+        # rolls up never reaches a visual channel. See _encoded_placeholders.
+        if (
+            (actual_type == "nominal" or actual_type == "ordinal")
+            and cardinality > 50
+            and key in encoded_placeholders
+        ):
             errors.append(
                 f"Field '{field_name}' has {cardinality} unique values, which is too many "
                 f"for a visualization (max 50). Choose a different encoding or visualization."
             )
 
     return errors
+
+
+def unbound_placeholders(spec_template, param_map, bindings):
+    """Tool parameters the template needs that `bindings` does not supply.
+
+    `validate_bindings` only inspects the bindings it is given, and
+    `_resolve_placeholder` substitutes `""` for one it cannot find — so an
+    incomplete binding set instantiates to a spec with empty field names rather
+    than to an error. That is fine when the caller is the LLM (every tool
+    parameter is required in the tool schema) and not fine when it is a client
+    re-binding a stored visualization against a newer set of templates.
+
+    Returns the missing *parameter* names (what a caller sends), sorted.
+    """
+    required = set()
+    for match in re.finditer(PLACEHOLDER, spec_template):
+        required.add(match.group(1).split(":")[0])
+
+    missing = []
+    for param, placeholder in param_map.items():
+        if placeholder in required and placeholder not in bindings:
+            missing.append(param)
+    return sorted(missing)
+
+
+def template_tweakable_params(spec_template, param_map, bindings, schema):
+    """The tool parameters a user may re-bind on an already-rendered spec.
+
+    A parameter is offered when its placeholder is *encoded* — it reaches a
+    visual channel, so a reader can see what changing it would change — and it
+    is a real parameter of the tool. Both conditions are needed: a template can
+    encode something that is not a parameter at all (a cube's `<M>` measure
+    comes from the schema), and most parameters are structural plumbing that is
+    never drawn (a subject id used only as a grouping key).
+
+    Deliberately excluded: entity bindings (`<E*>`), because re-sourcing a chart
+    is not a tweak, and literal values (`<V*>`), because changing which values a
+    template filters on changes what the chart *means* rather than how it is cut.
+
+    Each descriptor carries what a UI needs to render one control and send back a
+    complete request: `{param, placeholder, entity, type, encodings, label,
+    value}`. `type` is the required field type, or None when unconstrained.
+    """
+    encodings_by_placeholder = _placeholder_encodings(spec_template)
+    placeholder_types = _placeholder_type_requirements(spec_template)
+
+    params = []
+    for param, placeholder in param_map.items():
+        if placeholder not in encodings_by_placeholder:
+            continue
+        if re.fullmatch(r"E\d*|V\d*", placeholder):
+            continue
+        if placeholder not in bindings:
+            continue
+        channels = encodings_by_placeholder[placeholder]
+        params.append(
+            {
+                "param": param,
+                "placeholder": placeholder,
+                "entity": _entity_for_binding_key(placeholder, bindings),
+                "type": placeholder_types.get(placeholder),
+                "encodings": channels,
+                "label": "/".join(channels) or param,
+                "value": bindings[placeholder],
+            }
+        )
+    return sorted(params, key=lambda d: d["param"])
 
 
 def _load_generated_tools():
@@ -689,6 +863,20 @@ def _execute_generate(skill, context):
             "tool and provide the correct arguments.\n\n"
             f"## Available Datasets\n\n{data_schema_simple}"
         )
+        # Some tools take a literal data value (a `value*` parameter) rather than
+        # only column names. The schema lists columns but not their contents, so
+        # without domains the model would have to guess those values. Append them
+        # when the caller supplied them.
+        data_domains = context.get("data_domains")
+        if data_domains:
+            domains_simple = simplify_data_domains(data_domains)
+            if domains_simple:
+                system_msg += (
+                    "\n\n## Column Values\n\n"
+                    "Use these when a tool asks for a literal `value` — copy one "
+                    "exactly rather than inventing it.\n\n"
+                    f"{domains_simple}"
+                )
         tool_messages = [{"role": "system", "content": system_msg}] + list(
             context["messages"]
         )
@@ -746,6 +934,9 @@ def _execute_generate(skill, context):
                 context["gen_messages"] = tool_messages
                 context["tool_used"] = tool_name
                 context["tool_args"] = tool_args
+                context["tweakable_params"] = template_tweakable_params(
+                    templates[template_idx], param_map, bindings, request_schema
+                )
                 context["validation_retries"] = _attempt
                 return context
             except Exception:
@@ -775,6 +966,7 @@ def _execute_generate(skill, context):
     context["gen_messages"] = gen_messages
     context["tool_used"] = None
     context["tool_args"] = None
+    context["tweakable_params"] = []
     return context
 
 
@@ -877,7 +1069,14 @@ def run_skills(plan, context, registry):
 
 
 def generate_vis_spec(
-    agent, messages, data_schema, grammar, config=None, usage=None, openai_api_key=None
+    agent,
+    messages,
+    data_schema,
+    grammar,
+    config=None,
+    usage=None,
+    openai_api_key=None,
+    data_domains=None,
 ):
     """Generate a visualization spec using the skills pipeline.
 
@@ -901,6 +1100,10 @@ def generate_vis_spec(
         "agent": agent,
         "messages": messages,
         "data_schema": data_schema,
+        # Optional: lets tools that take a literal data value see the candidate
+        # values instead of guessing. Keyword-only with a default so existing
+        # callers keep working.
+        "data_domains": data_domains,
         "grammar": grammar,
         "config": config,
         "spec_str": "{}",
@@ -931,6 +1134,16 @@ def generate_vis_spec(
         "meta": {
             "tool_used": context.get("tool_used"),
             "tool_args": context.get("tool_args"),
+            # Only advertise re-bindable parameters while the delivered spec is
+            # still exactly `instantiate_template(template, bindings)`. A
+            # correction pass replaces it with an LLM-repaired spec that the
+            # bindings no longer describe, so re-instantiating from them would
+            # quietly throw the repair away.
+            "tweakable_params": (
+                context.get("tweakable_params") or []
+                if context["valid"] and not context["corrections"]
+                else []
+            ),
             "validation_retries": context.get("validation_retries", 0),
             "valid": context["valid"],
             "validation_errors": context["errors"],

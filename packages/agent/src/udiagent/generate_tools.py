@@ -15,6 +15,8 @@ import pprint
 import re
 from pathlib import Path
 
+from udiagent.vis_generate import PLACEHOLDER
+
 
 # ---------------------------------------------------------------------------
 # Schema parsing
@@ -40,7 +42,7 @@ def parse_schema(schema_path: str) -> dict:
 
 def _extract_placeholders(template_str: str) -> set[str]:
     """Extract all <placeholder> names from a template string."""
-    return set(re.findall(r'<([^>]+)>', template_str))
+    return set(re.findall(PLACEHOLDER, template_str))
 
 
 def _derive_tool_name(template: dict, index: int) -> str:
@@ -49,6 +51,14 @@ def _derive_tool_name(template: dict, index: int) -> str:
     desc = template.get("description", "").lower()
 
     suffixes = []
+
+    # An explicit name from the template author wins. The derivation below is a
+    # convenience, not a contract: it reads keywords out of prose written for the
+    # model, so a description that has to name a sibling template ("prefer the
+    # baseline variant when...") would otherwise inherit that sibling's suffix.
+    hint = (template.get("name_hint") or "").strip()
+    if hint:
+        return re.sub(r"[^a-z0-9_]", "", f"vis_{index:03d}_{chart_type}_{hint}".lower())
 
     # Detect join/cross-entity
     if "join" in desc or "related entity" in desc:
@@ -77,6 +87,8 @@ def _derive_tool_name(template: dict, index: int) -> str:
         suffixes.append("normalized")
     if "color" in desc or "colored" in desc:
         suffixes.append("by_color")
+    if "survival" in desc:
+        suffixes.append("survival")
     if "cumulative" in desc or "cdf" in desc:
         suffixes.append("cdf")
     if "density" in desc or "kde" in desc:
@@ -162,7 +174,7 @@ def _extract_encoding_info(spec_template: str) -> dict[str, dict]:
             field = m.get("field", "")
             declared_type = m.get("type")  # "nominal", "quantitative", "ordinal"
             # Match fields that are a single placeholder like "<F1>" or "<E2.F>"
-            match = re.fullmatch(r'<([^>]+)>', field)
+            match = re.fullmatch(PLACEHOLDER, field)
             if match and encoding:
                 ph = match.group(1)
                 base = ph.split(":")[0] if ":" in ph else ph
@@ -243,25 +255,39 @@ def _generate_single_entity_tool(
     for ph in sorted(placeholders):
         if ph in ("E", "E.url"):
             continue
-        m = re.match(r'(F\d*|D\d*)', ph)
+        m = re.match(r'(F\d*|D\d*|V\d*)', ph)
         if not m:
             continue
-        base = m.group(1)  # F, F1, F2, F3 or D, D1, D2, D3
+        base = m.group(1)  # F, F1..F4 / D, D1..D3 / V, V1..V3
         param_name = {
-            "F": "field", "F1": "field1", "F2": "field2", "F3": "field3",
+            "F": "field", "F1": "field1", "F2": "field2", "F3": "field3", "F4": "field4",
             "D": "dimension", "D1": "dimension1", "D2": "dimension2", "D3": "dimension3",
+            "V": "value", "V1": "value1", "V2": "value2", "V3": "value3",
         }.get(base)
         if not param_name or param_name in seen:
             continue
         seen.add(param_name)
 
         field_type = _get_field_type_for_placeholder(ph)
-        description = _build_field_description(field_type, encoding_info.get(base))
+        # Deliberately NOT named `description`: that holds the *tool* description
+        # built above, and shadowing it here used to leak the last parameter's
+        # blurb ("any type field.") out as the tool's own description — leaving
+        # every single-entity tool with nothing for the model to select on.
+        param_description = _build_field_description(field_type, encoding_info.get(base))
         if base.startswith("D"):
-            description = "cube " + description.replace("field", "dimension", 1)
+            param_description = "cube " + param_description.replace("field", "dimension", 1)
+        elif base.startswith("V"):
+            # <V*> is a literal data value, not a column. Say so explicitly: the
+            # obvious failure is the model passing a column name here, which would
+            # make the comparison it feeds match nothing.
+            param_description = (
+                "A literal data VALUE to match (not a column name) — one of the "
+                "values actually present in the relevant column, copied exactly, "
+                "including case and spacing."
+            )
         properties[param_name] = {
             "type": "string",
-            "description": description,
+            "description": param_description,
         }
         required.append(param_name)
         param_map[param_name] = base
