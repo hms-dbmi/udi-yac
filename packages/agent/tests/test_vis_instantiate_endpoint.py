@@ -21,9 +21,19 @@ from udiagent.agent import UDIAgent
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _PCX_PACKAGE = _REPO_ROOT / "sample-data" / "pcx" / "datapackage.json"
 
-# The stratified survival curve: its axes are columns the template derives, and
-# its one re-bindable parameter (the stratifier) is referenced from nine places.
-_SURVIVAL_TOOL = "vis_053_line_survival"
+def _survival_tool():
+    """The baseline-stratified survival curve, looked up rather than hard-coded.
+
+    Its axes are columns the template derives, and its one re-bindable parameter —
+    the stratifier — is referenced from ten places, including a rollup output name. Inserting any template ahead of
+    it renumbers it, so the name is resolved by suffix.
+    """
+    from udiagent.generated_vis_tools import TOOL_DISPATCH
+
+    return next(n for n in TOOL_DISPATCH if n.endswith("_line_survival_baseline"))
+
+
+_SURVIVAL_TOOL = _survival_tool()
 _ARGS = {
     "entity": "Event",
     "field1": "research_id",
@@ -77,11 +87,16 @@ def test_rebinding_the_stratifier_moves_every_reference(client, data_schema):
     # Nothing anywhere still points at the old column — the check a rename can't pass.
     assert "organization_name" not in json.dumps(spec)
 
+    # Grouped by subject alone, then by the stratum: the stratifier is read once
+    # from the start event rather than joined into the per-subject key.
     groupbys = [t["groupby"] for t in spec["transformation"] if "groupby" in t]
-    assert groupbys == [
-        ["research_id", "cns_diagnosis_category"],
-        "cns_diagnosis_category",
-    ]
+    assert groupbys == ["research_id", "cns_diagnosis_category"]
+
+    # A tenth site, and the one that makes the rewrite approach hopeless: the
+    # stratifier is also the *name of a rollup output column*. Rename the colour
+    # field alone and the rollup keeps emitting the old name.
+    rollup = next(t["rollup"] for t in spec["transformation"] if "rollup" in t)
+    assert "cns_diagnosis_category" in rollup
 
     # The derive a client-side rename cannot see: it neither walks `derive` blocks
     # nor the `concat` list inside one. Left stale, it references a column the

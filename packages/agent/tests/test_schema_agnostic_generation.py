@@ -214,7 +214,7 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
     """
     generated = _load_generated_tools()
     assert generated is not None
-    _tool_defs, tool_dispatch, templates, _tool_tags = generated
+    _tool_defs, tool_dispatch, templates, tool_tags = generated
 
     exposed = {}
     for name, (idx, param_map) in tool_dispatch.items():
@@ -236,15 +236,30 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
             assert p["encodings"], f"{name}: {p['param']} has no channel"
             assert p["label"]
 
-    # The survival curves: the stratifier and nothing else. The unstratified one
-    # has no encoded parameter at all, so it offers nothing (correct — its axes
-    # are columns the template derives).
-    assert exposed["vis_053_line_survival"] == ["field4"]
-    assert exposed["vis_054_line_count_survival"] == ["field4"]
-    assert exposed["vis_052_line_survival"] == []
+    # The survival curves: every stratified variant offers the stratifier and
+    # nothing else, and the unstratified one offers nothing at all (correct — its
+    # axes are columns the template derives). Keyed by suffix rather than by index,
+    # because inserting a template renumbers every later one.
+    survival = {
+        name.split("_line_", 1)[1]: params
+        for name, params in exposed.items()
+        if "survival" in name
+    }
+    assert survival == {
+        "survival": [],
+        "survival_baseline": ["field4"],
+        "survival_baseline_multivalue": ["field4"],
+        "survival_ever": ["field4"],
+        "survival_ever_multivalue": ["field4"],
+    }
 
     # A cube heatmap offers its dimensions but never the measure.
-    assert exposed["vis_057_heatmap_basic"] == ["dimension1", "dimension2"]
+    heatmap = next(
+        params
+        for name, params in exposed.items()
+        if name.endswith("_heatmap_basic") and "data_cube" in tool_tags.get(name, [])
+    )
+    assert heatmap == ["dimension1", "dimension2"]
 
     # Most templates offer something; a silent drop to zero everywhere would
     # otherwise pass every assertion above.

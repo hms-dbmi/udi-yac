@@ -52,6 +52,14 @@ def _derive_tool_name(template: dict, index: int) -> str:
 
     suffixes = []
 
+    # An explicit name from the template author wins. The derivation below is a
+    # convenience, not a contract: it reads keywords out of prose written for the
+    # model, so a description that has to name a sibling template ("prefer the
+    # baseline variant when...") would otherwise inherit that sibling's suffix.
+    hint = (template.get("name_hint") or "").strip()
+    if hint:
+        return re.sub(r"[^a-z0-9_]", "", f"vis_{index:03d}_{chart_type}_{hint}".lower())
+
     # Detect join/cross-entity
     if "join" in desc or "related entity" in desc:
         suffixes.append("join")
