@@ -261,7 +261,7 @@ describe('DataOverviewPanel', () => {
     } as unknown as DataPackage;
 
     renderPanel('donors', graphPkg);
-    expect(screen.getByText('Joins')).toBeTruthy();
+    expect(screen.getByText('Relationships')).toBeTruthy();
     expect(screen.queryByText('Schema')).toBeNull();
     // Both of datasets' parents are listed as peers — neither is demoted to a
     // footnote the way the tree had to.
