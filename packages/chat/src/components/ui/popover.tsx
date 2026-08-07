@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 
 import { cn } from '@/lib/utils';
+import { useChatRoot } from '@/lib/chatRoot';
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
@@ -26,8 +27,9 @@ function PopoverContent({
   align?: PopoverPrimitive.Positioner.Props['align'];
   sideOffset?: PopoverPrimitive.Positioner.Props['sideOffset'];
 }) {
+  const container = useChatRoot();
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Positioner
         // Positioner needs its own high z-index (matching dropdown-menu)
         // because the inner Popup's `z-1500` only orders things WITHIN the

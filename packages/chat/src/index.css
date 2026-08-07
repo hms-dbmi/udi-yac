@@ -4,6 +4,11 @@
 @import '@fontsource-variable/geist';
 @import 'react-grid-layout/css/styles.css';
 @import 'react-resizable/css/styles.css';
+/* udi-toolkit keeps its Vue SFC styles in a sidecar stylesheet that none of its
+   own dist entries import, so without this the <udi-vis> internals ship
+   unstyled: every in-cell table mark (bar/point/line/text), the table's
+   load-more / error / truncation rows, and #vg-tooltip-element's z-index. */
+@import 'udi-toolkit/style.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -14,13 +19,20 @@
   --color-udi-gray-800: #384853;
 }
 
-body {
-  margin: 0;
-}
-
+/*
+ * Tailwind always emits `@theme` variables to `:root`, which we cannot scope —
+ * so anything declared here leaks into a host app that embeds us. Only two
+ * kinds of name are safe to put here:
+ *   - names nobody else defines (`--color-udi-*`, `--font-heading`);
+ *   - `var()` remaps of our own tokens (`--color-primary: var(--primary)`),
+ *     which at a host's `:root` resolve to the *host's* token — exactly what
+ *     the host's own identical remap already does.
+ * Concrete values that would collide with a Tailwind/shadcn default
+ * (`--font-sans`, the `--radius-*` scale) are set on `.udi-yac` below instead,
+ * where they only affect us.
+ */
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -52,16 +64,20 @@ body {
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
+/*
+ * Design tokens live on `.udi-yac` — the class UDIChat puts on its root element
+ * — not on `:root`. A host shadcn app uses these same token names, and these
+ * declarations are unlayered (so they outrank anything in a host `@layer`
+ * regardless of load order); on `:root` whichever stylesheet loaded last would
+ * silently retheme the other app's entire UI. Scoping costs us nothing, because
+ * utilities resolve `var()` per element: the whole chat subtree inherits these,
+ * popups included — they portal into this element rather than document.body
+ * (see lib/chatRoot.tsx).
+ */
+.udi-yac {
+  --font-sans: 'Geist Variable', sans-serif;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -85,7 +101,17 @@ body {
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  /* Overriding Tailwind's own radius scale rather than redefining it in
+     `@theme` keeps the override inside our subtree; `rounded-*` utilities exist
+     from Tailwind's defaults either way. */
   --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -96,7 +122,11 @@ body {
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-.dark {
+/* Dark values apply when the root itself carries `.dark` or any ancestor does —
+   a host app toggles the class on <html>. The two-class selector also keeps
+   these ahead of the `.udi-yac` defaults above on specificity. */
+.dark .udi-yac,
+.udi-yac.dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -130,31 +160,24 @@ body {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Scoped to our root: these were on `*`, `body` and `html`, which restyled a
+   host app's every page (background, text color, border color, typeface). */
 @layer base {
-  * {
+  .udi-yac,
+  .udi-yac * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
+  .udi-yac {
+    @apply bg-background font-sans text-foreground;
   }
 }
 
-/* The <udi-vis> custom element uses shadowRoot:false, so Vue's scoped
-   component styles are not injected into the document. We must provide
-   the critical layout styles the CE internals expect. */
-udi-vis {
+/* The <udi-vis> custom element uses shadowRoot:false, so Vue's scoped component
+   styles apply from the sidecar stylesheet imported at the top of this file
+   rather than from a shadow root. This display rule isn't in that sheet. */
+.udi-yac udi-vis {
   display: block;
   width: 100%;
-}
-
-/* VegaLite.vue .vega-chart-container (scoped style not injected without shadow DOM) */
-udi-vis .vega-chart-container {
-  width: 100%;
-  height: 100%;
-  overflow-x: auto;
 }
 
 /* RGL placeholder — the ghost rectangle shown at the drop / resize target.
@@ -353,22 +376,24 @@ udi-vis .vega-chart-container {
   border-color: var(--primary);
 }
 
-/* While the user is dragging or resizing a card, suppress text selection
-   across the page. Without this, sliding the cursor past adjacent cards
-   or chat messages mid-drag selects their text — visually noisy and
-   triggers an unintended copy on mouseup. Toggled by DashboardGrid via
-   GRID_INTERACTING_CLASS on the body. */
-body.udi-grid-interacting,
-body.udi-grid-interacting * {
+/* While the user is dragging or resizing a card, suppress text selection across
+   the chat. Without this, sliding the cursor past adjacent cards or chat
+   messages mid-drag selects their text — visually noisy, and triggers an
+   unintended copy on mouseup. Toggled by DashboardGrid via
+   GRID_INTERACTING_CLASS on our root (it used to go on <body>, where it
+   disabled selection across a host app's whole page). */
+.udi-yac.udi-grid-interacting,
+.udi-yac.udi-grid-interacting * {
   user-select: none;
 }
 
 /* Suppress tooltips while dragging or resizing. Mid-interaction the pointer
    sweeps across card drag handles and controls, flickering their Base UI
-   tooltips open and closed. The tooltip popup is portaled to <body> with
-   data-slot="tooltip-content", so hiding it while GRID_INTERACTING_CLASS is on
-   the body kills the flicker for every tooltip at once. */
-body.udi-grid-interacting [data-slot='tooltip-content'] {
+   tooltips open and closed. Tooltip popups are portaled into our root with
+   data-slot="tooltip-content", so this kills the flicker for every tooltip at
+   once — and, being scoped to the root, no longer hides the identically
+   attributed tooltips of a host shadcn app. */
+.udi-yac.udi-grid-interacting [data-slot='tooltip-content'] {
   display: none !important;
 }
 
@@ -380,7 +405,7 @@ body.udi-grid-interacting [data-slot='tooltip-content'] {
      `max(h)` of its items per the row-aligned compactor — so they're
      rendered as absolutely-positioned `<div>`s (see
      `.dashboard-grid-row-divider` below) and not part of this rule.
-   When the user is mid-drag/resize, the body gets `udi-grid-interacting`
+   When the user is mid-drag/resize, our root gets `udi-grid-interacting`
    and we bump the colour to make the destination cell easier to read at
    a glance. */
 .dashboard-grid-lanes {
@@ -405,6 +430,6 @@ body.udi-grid-interacting [data-slot='tooltip-content'] {
   background: var(--swim-color);
   pointer-events: none;
 }
-body.udi-grid-interacting .dashboard-grid-lanes {
+.udi-yac.udi-grid-interacting .dashboard-grid-lanes {
   --swim-color: color-mix(in oklab, var(--primary) 40%, transparent);
 }

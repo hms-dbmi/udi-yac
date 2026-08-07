@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
 import {
   UDIChatProvider,
@@ -29,6 +29,7 @@ import { useApiKey } from '@/features/chat/hooks/useApiKey';
 import { ErrorBoundary } from './ErrorBoundary';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { ChatRootProvider } from '@/lib/chatRoot';
 import type { QueryConfig } from '@/features/chat/api/completions';
 import { validateConfig } from '@/app/validateConfig';
 import type { UDIChatConfig } from './UDIChatConfig';
@@ -192,36 +193,52 @@ function UDIChatValidated(props: UDIChatConfig) {
   // consumer sees a structured error instead of an opaque crash deep in
   // Arquero or fetch.
   validateConfig(props);
+  // Published via ChatRootProvider so popups portal inside our root (where our
+  // scoped design tokens live) instead of to document.body, and so the
+  // dashboard's drag state can be scoped to us rather than the host page.
+  const rootRef = useRef<HTMLDivElement>(null);
   return (
     <TooltipProvider>
-      <UDIChatProvider>
-        <TrackerProvider onEvent={props.onEvent}>
-          <DownloadActionsProvider actions={props.downloadActions}>
-            <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
-              <EntityIconsProvider icons={props.entityIcons}>
-                {/*
-                 * UDIToolkitProvider supersedes the previous local PaletteProvider:
-                 * it ships in udi-toolkit/react, sets palette on the React
-                 * Context that <UDIVis> already reads, and (optionally) auto-
-                 * loads a data package. We only use the palette half here —
-                 * the data package is still owned by dataPackageStore so the
-                 * existing rich state (loadingPhase, sourceFields, etc.) keeps
-                 * working unchanged.
-                 */}
-                <UDIToolkitProvider palette={props.palette}>
-                  <MascotProvider mascot={props.mascot}>
-                    <SplashMessagesProvider messages={props.splashMessages}>
-                      <div className={cn('h-full w-full', props.className)} style={props.style}>
-                        <UDIChatInner {...props} />
-                      </div>
-                    </SplashMessagesProvider>
-                  </MascotProvider>
-                </UDIToolkitProvider>
-              </EntityIconsProvider>
-            </DownloadButtonLabelProvider>
-          </DownloadActionsProvider>
-        </TrackerProvider>
-      </UDIChatProvider>
+      <ChatRootProvider value={rootRef}>
+        <UDIChatProvider>
+          <TrackerProvider onEvent={props.onEvent}>
+            <DownloadActionsProvider actions={props.downloadActions}>
+              <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
+                <EntityIconsProvider icons={props.entityIcons}>
+                  {/*
+                   * UDIToolkitProvider supersedes the previous local PaletteProvider:
+                   * it ships in udi-toolkit/react, sets palette on the React
+                   * Context that <UDIVis> already reads, and (optionally) auto-
+                   * loads a data package. We only use the palette half here —
+                   * the data package is still owned by dataPackageStore so the
+                   * existing rich state (loadingPhase, sourceFields, etc.) keeps
+                   * working unchanged.
+                   */}
+                  <UDIToolkitProvider palette={props.palette}>
+                    <MascotProvider mascot={props.mascot}>
+                      <SplashMessagesProvider messages={props.splashMessages}>
+                        {/*
+                         * The `udi-yac` class is the scope for every design token
+                         * and element reset in index.css. Without it nothing is
+                         * styled — and with the tokens on :root instead, mounting
+                         * us inside a shadcn host would retheme that host's pages.
+                         */}
+                        <div
+                          ref={rootRef}
+                          className={cn('udi-yac h-full w-full', props.className)}
+                          style={props.style}
+                        >
+                          <UDIChatInner {...props} />
+                        </div>
+                      </SplashMessagesProvider>
+                    </MascotProvider>
+                  </UDIToolkitProvider>
+                </EntityIconsProvider>
+              </DownloadButtonLabelProvider>
+            </DownloadActionsProvider>
+          </TrackerProvider>
+        </UDIChatProvider>
+      </ChatRootProvider>
     </TooltipProvider>
   );
 }

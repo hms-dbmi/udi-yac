@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useChatRoot } from '@/lib/chatRoot';
 import { XIcon } from 'lucide-react';
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
@@ -21,7 +22,8 @@ const DialogTrigger = React.forwardRef<HTMLButtonElement, DialogPrimitive.Trigge
 );
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
+  const container = useChatRoot();
+  return <DialogPrimitive.Portal data-slot="dialog-portal" container={container} {...props} />;
 }
 
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
