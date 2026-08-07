@@ -146,6 +146,14 @@ additions:
   the grouping _variable_ still needs naming, which the legend title used to carry.
   Align it with whatever it names.
 
+**A spec change that isn't just data forces a re-embed.** The renderer swaps rows
+into a running Vega view with a changeset, which is fast and right for a brush. It
+cannot change anything else: scale domains, encodings, mark config and the layer list
+are compiled in. `VegaLite` compares the spec minus its rows and recompiles when that
+differs — worth knowing if you add a spec property, because a property the comparison
+can't see would render stale (the symptom is a chart that corrects itself when the
+card is toggled to table view and back).
+
 Two positioning facts worth knowing. An explicit `domain` on an encoding stops the
 renderer computing a padded one, so a one-sided `{"min": 0}` leaves the axis ending
 exactly at the largest value in the data — which is how an annotation can reach the

@@ -625,12 +625,27 @@ def _survival_chart(
     # stratified it carries the category name too: the colour legend alone makes a
     # reader trace a hue back to a key, and these curves converge at the right
     # edge where that is hardest.
+    # Survivors over cohort size — the numerator and denominator of the percentage
+    # beside it, so a reader can see what the number is a fraction *of*. That is
+    # what separates "36%" resting on 22 subjects from the same figure resting on
+    # 400, and these strata differ by an order of magnitude in size.
+    chart = chart.derive(
+        {"survivors": Expr.binop("-", Expr.field("subjects"), Expr.field("deaths"))}
+    )
     chart = chart.derive(
         {
             "final label": Expr.concat(
                 ([Expr.field(_placeholder_base(stratum))] if stratum else [])
                 + ([Expr.lit(" ")] if stratum else [])
-                + [Expr.field("final survival"), Expr.lit("%")]
+                + [
+                    Expr.lit("("),
+                    Expr.field("survivors"),
+                    Expr.lit("/"),
+                    Expr.field("subjects"),
+                    Expr.lit(") "),
+                    Expr.field("final survival"),
+                    Expr.lit("%"),
+                ]
             )
         }
     )
