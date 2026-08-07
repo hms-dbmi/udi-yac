@@ -19,6 +19,17 @@ def _make_openai_client(api_key: str, openai_class):
 class UDIAgent:
     """UDIAgent for requesting UDI grammar via OpenAI.
 
+    Any OpenAI-compatible backend works: point ``openai_base_url`` at its
+    chat-completions root (Azure AI Foundry, Amazon Bedrock, OpenRouter,
+    vLLM, Ollama, LiteLLM, …) and set ``gpt_model_name`` to that backend's
+    model id. The backend must support function calling and JSON-schema
+    structured outputs — both are load-bearing for spec generation.
+
+    ``openai_base_url`` applies to the default (server-configured) client
+    only; per-request keys still resolve the SDK default, unless the
+    ``OPENAI_BASE_URL`` environment variable is set, which the OpenAI SDK
+    applies to every client it builds.
+
     LangFuse observability is opt-in: pass any of ``langfuse_public_key``,
     ``langfuse_secret_key``, or ``langfuse_host`` to route requests through
     ``langfuse.openai.OpenAI``. When none are provided, the plain ``openai``
@@ -31,12 +42,14 @@ class UDIAgent:
         gpt_model_name: str,
         openai_api_key: str | None = None,
         *,
+        openai_base_url: str | None = None,
         langfuse_public_key: str | None = None,
         langfuse_secret_key: str | None = None,
         langfuse_host: str | None = None,
         langfuse_environment: str | None = None,
     ):
         self.gpt_model_name = gpt_model_name
+        self.openai_base_url = openai_base_url
         use_langfuse = any(
             [langfuse_public_key, langfuse_secret_key, langfuse_host]
         )
@@ -82,6 +95,11 @@ class UDIAgent:
 
         Uses the explicitly provided *openai_api_key* if given.
         """
+        if openai_api_key is None and self.openai_base_url:
+            # ponytail: self-hosted backends (Ollama, vLLM, …) take no key, but
+            # the SDK refuses to build a client without one. Placeholder beats a
+            # second "this backend needs no auth" flag.
+            openai_api_key = "unused"
         if openai_api_key is None:
             logger.info(
                 "No OpenAI API key provided; GPT-based features will require per-request keys."
@@ -89,9 +107,12 @@ class UDIAgent:
             self.gpt_model = None
         else:
             logger.info(
-                "OpenAI API key provided; GPT-based features will use this key by default."
+                "API key provided; GPT-based features will use this key by default (base_url=%s).",
+                self.openai_base_url or "default",
             )
-            self.gpt_model = self._openai_class(api_key=openai_api_key)
+            self.gpt_model = self._openai_class(
+                api_key=openai_api_key, base_url=self.openai_base_url
+            )
 
     def _get_gpt_client(self, openai_api_key: str | None = None):
         """Return a per-request OpenAI client if a custom key is provided, otherwise the default."""

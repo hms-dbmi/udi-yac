@@ -12,8 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Context is the repo root: uv.lock is the workspace lockfile (see
+      # root pyproject.toml [tool.uv.workspace]), not packages/agent/uv.lock.
       - name: Build Docker image
-        run: docker build -t udi-agent packages/agent
+        run: docker build -f packages/agent/Dockerfile -t udi-agent .
 
       - name: Restart container
         run: |
@@ -25,6 +27,11 @@ jobs:
             -p 80:80 \
             --env-file /home/ec2-user/.env \
             udi-agent
+
+      # A misconfigured .env (e.g. no JWT_SECRET_KEY) makes the container exit
+      # at startup; without this the deploy would report success anyway.
+      - name: Health check
+        run: curl -fsS --retry 15 --retry-delay 2 --retry-all-errors http://localhost/ > /dev/null
 
       - name: Cleanup old images
         run: docker image prune -f

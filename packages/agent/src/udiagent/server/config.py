@@ -17,6 +17,7 @@ class ServerConfig:
     insecure_dev_mode: bool = False
     gpt_model_name: str = "gpt-5.4"
     openai_api_key: str | None = None
+    openai_base_url: str | None = None
     langfuse_public_key: str | None = None
     langfuse_secret_key: str | None = None
     langfuse_host: str | None = None
@@ -34,6 +35,9 @@ class ServerConfig:
             # dev .env doesn't build an OpenAI(api_key="") client that crashes
             # at startup — the per-request X-OpenAI-Key path is used instead.
             openai_api_key=(os.getenv("OPENAI_API_KEY") or "").strip() or None,
+            # Any OpenAI-compatible backend (Foundry, Bedrock, OpenRouter,
+            # Ollama, …). Blank/whitespace treated as absent, as above.
+            openai_base_url=(os.getenv("OPENAI_BASE_URL") or "").strip() or None,
             langfuse_public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
             langfuse_secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
             langfuse_host=os.getenv("LANGFUSE_HOST"),
