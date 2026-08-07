@@ -43,7 +43,18 @@ function setEnv(text, key, value) {
   const line = `${key}=${value}`;
   const active = new RegExp(`^${key}=.*$`, 'm');
   if (active.test(text)) return text.replace(active, line);
+  // Otherwise revive a commented-out line that already has this exact value —
+  // almost always the one a previous switch left behind. Without this, toggling
+  // between two packages appends a line every time and the file grows forever.
+  // Matching on the value (not just the key) keeps the commented examples that
+  // .env.example ships as documentation intact.
+  const sameValue = new RegExp(`^#\\s*${escapeRegExp(line)}$`, 'm');
+  if (sameValue.test(text)) return text.replace(sameValue, line);
   return text.replace(/\n*$/, '') + `\n${line}\n`;
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** Comment out any active KEY= line so it stops taking effect. */

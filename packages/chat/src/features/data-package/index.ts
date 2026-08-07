@@ -9,6 +9,8 @@ export {
   type LoadingPhase,
 } from './stores/dataPackageStore';
 
+export { DataOverviewPanel } from './components/DataOverviewPanel';
+
 export { joinDataPath } from './utils/joinDataPath';
 
 export {

@@ -415,6 +415,29 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
   // because the dominant access pattern is "user toggles between a
   // handful of filter combinations," not "user explores 100s of unique
   // filter states per second."
+  // `from(dest.reify())` is a full column-wise copy of a source table —
+  // measured at 265ms for HuBMAP's 9474 x 258 `datasets`. It used to run on
+  // every getDataObject call, so any query that missed the result cache
+  // (each new brush value makes a new selectionHash, hence a new key) paid it
+  // again for an identical result. Cache the copy per source instead, keyed on
+  // tablesVersion — the only thing that ever replaces `dest`.
+  const reifiedTables = new Map<string, ColumnTable>();
+  let reifiedTablesVersion = -1;
+
+  function getReifiedTable(key: string): ColumnTable | null {
+    if (reifiedTablesVersion !== tablesVersion.value) {
+      reifiedTables.clear();
+      reifiedTablesVersion = tablesVersion.value;
+    }
+    const cached = reifiedTables.get(key);
+    if (cached) return cached;
+    const dataInterface = getDataSource(key);
+    if (!dataInterface) return null;
+    const table = from(dataInterface.dest.reify());
+    reifiedTables.set(key, table);
+    return table;
+  }
+
   const MAX_CACHE_ENTRIES = 64;
   type GetDataObjectResult = {
     displayData: object[];
@@ -457,16 +480,20 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       return cached;
     }
 
-    // make copy of tables from data sources
+    // The Map itself must be fresh per call — PerformDataTransformations
+    // writes intermediate results back into it via setOutTable. The tables
+    // inside it need not be: `dest` is written once when a source is seeded
+    // and every Arquero operator returns a new table rather than mutating in
+    // place, so getReifiedTable's cached copy is safe to share.
     const getNamedTables = () => {
       const namedTables = new Map<string, ColumnTable>();
       for (const key of keys) {
-        const dataInterface = getDataSource(key);
-        if (!dataInterface) {
+        const table = getReifiedTable(key);
+        if (!table) {
           console.warn(`Skipping missing data source for key: ${key}`);
           continue;
         }
-        namedTables.set(key, from(dataInterface.dest.reify()));
+        namedTables.set(key, table);
       }
       return namedTables;
     };
