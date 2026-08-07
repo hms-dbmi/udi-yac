@@ -40,7 +40,7 @@
   "scripts": {
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
-    "test": "npm run build:all && node test/smoke-vue.mjs && node test/smoke-ce.mjs && node test/smoke-react.mjs && node test/smoke-exports.mjs && node test/expr-to-arquero.mjs && node test/describe-transformations.mjs && node test/query-backend.mjs && node test/brush-render.mjs && node test/unnest.mjs && node test/domain-form.mjs && node test/text-outline.mjs && node test/label-layout.mjs && node test/orderby-rank.mjs && node test/survival-strata.mjs && node test/derive-shadowing.mjs && node test/step-interpolate.mjs && node test/spec-shape-reembed.mjs",
+    "test": "npm run build:all && node test/smoke-vue.mjs && node test/smoke-ce.mjs && node test/smoke-react.mjs && node test/smoke-exports.mjs && node test/expr-to-arquero.mjs && node test/describe-transformations.mjs && node test/query-backend.mjs && node test/brush-render.mjs && node test/unnest.mjs && node test/domain-form.mjs && node test/text-outline.mjs && node test/label-layout.mjs && node test/orderby-rank.mjs && node test/survival-strata.mjs && node test/derive-shadowing.mjs && node test/step-interpolate.mjs && node test/spec-shape-reembed.mjs && node test/changeset-identity.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "build-schema": "ts-json-schema-generator --path './GrammarTypes.ts' --type 'UDIGrammar' --tsconfig ./tsconfig.json > UDIGrammarSchema.json",

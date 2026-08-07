@@ -647,7 +647,22 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
   // add data. Don't reset transformError here — performDataTransformation
   // owns it, and resetting would swallow an error set earlier in this
   // same buildVisualization cycle.
-  vegaSpec.data!.values = transformedData.value;
+  // Shallow-copied, for two independent reasons.
+  //
+  // Vega tags every datum it ingests with an internal id. A changeset that
+  // removes all rows and re-inserts the SAME object identities — which the
+  // store's memoized `getDataObject` hands back on a repeat query — cancels out
+  // in its dataflow, so the encoding is never recomputed and marks keep their
+  // previous positions while `view.data()` reports the new values. That is the
+  // "chart is wrong until I toggle table view and back" failure: a re-embed
+  // ingests fresh tuples and the picture corrects itself.
+  //
+  // And the rows below are about to be written to (label layout adds a column),
+  // which must not reach into the store's cache: that data is shared with every
+  // other consumer of the same query.
+  vegaSpec.data!.values = (transformedData.value ?? []).map((row) => ({
+    ...row,
+  }));
 
   debugVegaData.value = vegaSpec.data.values;
 

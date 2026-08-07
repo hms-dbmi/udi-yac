@@ -710,6 +710,112 @@ describe('dashboardStore — cross-store filter propagation', () => {
       source: 'Event',
       entityRelationship: { originKey: 'research_id', targetKey: 'research_id' },
     });
+    // `in`/`out` sit on the transform, not inside the filter — named explicitly so
+    // one filter's position in the pipeline cannot change which table the next
+    // one lands on.
+    const surgeryTransforms = (
+      surgeryViz.interactiveSpec as unknown as {
+        transformation: Array<Record<string, unknown>>;
+      }
+    ).transformation.filter((t) => t.filter);
+    expect(surgeryTransforms).toContainEqual(
+      expect.objectContaining({ in: 'Surgery', out: 'Surgery' }),
+    );
+  });
+
+  it('filters a spec’s own second source directly rather than bridging onto the first', () => {
+    // A survival curve stratified by a field in a joined table reads two
+    // entities. A selection on the second one has to filter *that* table:
+    // bridging it onto the primary entity would keep the subjects it matched and
+    // then re-admit all their other rows from the second table through the join —
+    // so filtering to one therapy protocol left seven protocols on the chart.
+    const dataPackage = createDataPackageStore();
+    const child = (name: string) => ({
+      name,
+      path: `${name}.csv`,
+      'udi:row_count': 10,
+      schema: {
+        fields: [
+          { name: 'research_id', 'udi:data_type': 'nominal' },
+          { name: 'protocol', 'udi:data_type': 'nominal' },
+        ],
+      },
+      'udi:foreign_keys': [
+        { fields: 'research_id', reference: { resource: 'Patient', fields: 'research_id' } },
+      ],
+    });
+    dataPackage.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          {
+            name: 'Patient',
+            path: 'patient.csv',
+            'udi:row_count': 5,
+            schema: { fields: [{ name: 'research_id', 'udi:data_type': 'nominal' }] },
+          },
+          child('Event'),
+          child('Therapy'),
+        ],
+      } as unknown as DataPackage,
+      loadingPhase: 'ready',
+    });
+
+    const joined = {
+      source: [
+        { name: 'Event', source: 'Event.csv' },
+        { name: 'Therapy', source: 'Therapy.csv' },
+      ],
+      transformation: [{ join: { on: ['research_id', 'research_id'] } }],
+      representation: {
+        mark: 'line',
+        mapping: [{ encoding: 'color', field: 'protocol', type: 'nominal' }],
+      },
+    } as unknown as UDIGrammar;
+
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+    // A selection living on the joined-in table.
+    const sourced = (entity: string) =>
+      makeSpec({ source: { name: entity, source: `${entity}.csv` } });
+    dashboard.getState().addActiveVisualization(0, 0, sourced('Therapy'), '', {
+      Therapy: ['protocol'],
+    });
+    dashboard.getState().addActiveVisualization(0, 1, joined, '', {
+      Event: ['research_id'],
+      Therapy: ['protocol'],
+    });
+    dashboard.getState().setFilterAllNullValues(false);
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const therapyUuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
+    const filters = (
+      dashboard.getState().activeVisualizations.get('0-1')!.interactiveSpec as {
+        transformation: Array<{ filter?: unknown }>;
+      }
+    ).transformation
+      .map((t) => t.filter)
+      .filter(Boolean);
+
+    // Applied to Therapy itself — no bridge, no entityRelationship.
+    expect(filters).toContainEqual({ name: therapyUuid });
+    expect(filters).not.toContainEqual(
+      expect.objectContaining({ name: therapyUuid, source: 'Therapy' }),
+    );
+    // And targeted at that table via the transform's own in/out, which is where
+    // the grammar reads them from — inside the filter object they are ignored.
+    const transforms = (
+      dashboard.getState().activeVisualizations.get('0-1')!.interactiveSpec as unknown as {
+        transformation: Array<Record<string, unknown>>;
+      }
+    ).transformation;
+    expect(transforms).toContainEqual(
+      expect.objectContaining({
+        filter: { name: therapyUuid },
+        in: 'Therapy',
+        out: 'Therapy',
+      }),
+    );
   });
 });
 

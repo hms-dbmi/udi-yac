@@ -586,9 +586,15 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
               : {}),
           });
 
-          if (mappedFilter) {
-            currentTable.table = inTable.filter(mappedFilter).reify();
-          }
+          // A named filter with no active selection is a pass-through, and it has
+          // to forward its INPUT table explicitly. Leaving `currentTable.table`
+          // alone only looked right while every filter was implicitly operating on
+          // it; with an explicit `in`, the untouched table then gets published
+          // under this transform's `out` — handing the next step an unrelated
+          // table under the name it asked for.
+          currentTable.table = mappedFilter
+            ? inTable.filter(mappedFilter).reify()
+            : inTable;
         }
       } else if ('groupby' in transform) {
         const inTable = getInTable(transform.in);

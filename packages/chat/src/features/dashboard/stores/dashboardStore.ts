@@ -152,6 +152,8 @@ export interface DashboardState {
     currentSourceName: string,
     dataFiltersStore: StoreApi<DataFiltersState>,
     dataPackageStore: StoreApi<DataPackageState>,
+    /** Every entity the spec reads; defaults to just `currentSourceName`. */
+    specSourceNames?: string[],
   ) => object[];
   getFilterIds: (dataFiltersStore: StoreApi<DataFiltersState>) => string[];
   updateActiveVisualizationSpec: (
@@ -232,6 +234,14 @@ function getSpecSourceName(spec: UDIGrammar): string | undefined {
   const src = spec.source as SpecSourceLike | SpecSourceLike[] | undefined;
   if (!src) return undefined;
   return Array.isArray(src) ? src[0]?.name : src.name;
+}
+
+/** Every entity a spec reads, not just the one it is nominally "about". */
+function getSpecSourceNames(spec: UDIGrammar): string[] {
+  const src = spec.source as SpecSourceLike | SpecSourceLike[] | undefined;
+  if (!src) return [];
+  const list = Array.isArray(src) ? src : [src];
+  return list.map((s) => s?.name).filter((n): n is string => typeof n === 'string');
 }
 
 // Minimal shapes the spec-walking code relies on. The canonical UDIGrammar
@@ -560,7 +570,13 @@ export function createDashboardStore() {
       return ids;
     },
 
-    getNamedFilters: (filterIdList, currentSourceName, dataFiltersStore, dataPackageStore) => {
+    getNamedFilters: (
+      filterIdList,
+      currentSourceName,
+      dataFiltersStore,
+      dataPackageStore,
+      specSourceNames = [currentSourceName],
+    ) => {
       const state = get();
       const uuidToSource = new Map<string, string>();
       for (const v of state.activeVisualizations.values()) {
@@ -583,21 +599,35 @@ export function createDashboardStore() {
         .map((id: string): object | null => {
           const originSourceName = getSourceName(id);
           if (!originSourceName) return null;
-          if (originSourceName !== currentSourceName) {
-            const er: EntityRelationship | null = dpState.getEntityRelationship(
-              originSourceName,
-              currentSourceName,
-            );
-            if (!er) return null;
+          // A spec can read several entities. When the selection is on one of
+          // them, filter THAT table — bridging it onto the primary entity instead
+          // would keep every row the surviving subjects have in the other table.
+          // Filtering a therapy protocol, say, would keep the subjects on it and
+          // then re-admit all their *other* protocols through the join.
+          //
+          // `in`/`out` are explicit on every filter so the pipeline position of
+          // one cannot change which table the next one lands on.
+          if (specSourceNames.includes(originSourceName)) {
             return {
-              filter: {
-                name: id,
-                source: originSourceName,
-                entityRelationship: er,
-              },
+              filter: { name: id },
+              in: originSourceName,
+              out: originSourceName,
             };
           }
-          return { filter: { name: id } };
+          const er: EntityRelationship | null = dpState.getEntityRelationship(
+            originSourceName,
+            currentSourceName,
+          );
+          if (!er) return null;
+          return {
+            filter: {
+              name: id,
+              source: originSourceName,
+              entityRelationship: er,
+            },
+            in: currentSourceName,
+            out: currentSourceName,
+          };
         })
         .filter((f): f is object => f !== null);
     },
@@ -635,6 +665,7 @@ export function createDashboardStore() {
           currentSourceName ?? 'unknown_source',
           dataFiltersStore,
           dataPackageStore,
+          getSpecSourceNames(viz.interactiveSpec),
         );
         const baseTrans = structuredClone(viz.spec.transformation ?? []) as object[];
         // Structured expression AST, not the legacy raw string form — the

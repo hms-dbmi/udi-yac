@@ -146,6 +146,14 @@ additions:
   the grouping _variable_ still needs naming, which the legend title used to carry.
   Align it with whatever it names.
 
+**Row objects handed to the renderer must be fresh.** Vega tags each datum it
+ingests, so a changeset that removes all rows and re-inserts the _same object
+identities_ cancels out in its dataflow: the encoders never re-run and marks keep
+their old positions while `view.data()` reports the new values. `getDataObject`
+memoizes, so a repeat query returns the same objects — `UDIVis` copies them before
+handing them over. Never mutate rows that came from the store either; that data is
+shared with every other consumer of the same query.
+
 **A spec change that isn't just data forces a re-embed.** The renderer swaps rows
 into a running Vega view with a changeset, which is fast and right for a brush. It
 cannot change anything else: scale domains, encodings, mark config and the layer list
