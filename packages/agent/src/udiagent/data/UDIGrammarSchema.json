@@ -938,6 +938,20 @@
         "dy": {
           "type": "number"
         },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1001,6 +1015,20 @@
         },
         "dy": {
           "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
         },
         "mapping": {
           "anyOf": [
@@ -1066,6 +1094,20 @@
         "dy": {
           "type": "number"
         },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1129,6 +1171,20 @@
         },
         "dy": {
           "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
         },
         "mapping": {
           "anyOf": [
@@ -1194,6 +1250,20 @@
         "dy": {
           "type": "number"
         },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1257,6 +1327,20 @@
         },
         "dy": {
           "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
         },
         "mapping": {
           "anyOf": [
@@ -1322,6 +1406,20 @@
         "dy": {
           "type": "number"
         },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1386,6 +1484,20 @@
         "dy": {
           "type": "number"
         },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1449,6 +1561,20 @@
         },
         "dy": {
           "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
         },
         "mapping": {
           "anyOf": [

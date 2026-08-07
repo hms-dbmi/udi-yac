@@ -251,6 +251,8 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         "survival_baseline_multivalue": ["field4"],
         "survival_ever": ["field4"],
         "survival_ever_multivalue": ["field4"],
+        # The cross-table variant's stratifier lives on the joined entity.
+        "survival_related": ["entity2_field"],
     }
 
     # A cube heatmap offers its dimensions but never the measure.

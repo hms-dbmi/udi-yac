@@ -607,6 +607,25 @@ export interface GenericLayer<Mark, Mapping> {
   strokeDash?: number[];
 
   /**
+   * How a `line` or `area` mark connects consecutive points. Optional; the default
+   * `linear` draws a straight segment between them.
+   *
+   * `step-after` holds each value until the next point and then jumps, which is the
+   * correct reading whenever the quantity is constant between observations rather
+   * than changing gradually — a survival curve, a running total, any step function.
+   * Drawing those sloped implies measurements nobody took.
+   */
+  interpolate?:
+    | 'linear'
+    | 'step'
+    | 'step-before'
+    | 'step-after'
+    | 'basis'
+    | 'cardinal'
+    | 'monotone'
+    | 'natural';
+
+  /**
    * Horizontal anchoring of a text mark relative to its x position. Text is
    * centred by default, which puts half a label on the wrong side of whatever it
    * annotates. Optional.

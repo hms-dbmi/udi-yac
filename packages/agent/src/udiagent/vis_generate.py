@@ -587,15 +587,20 @@ def validate_bindings(spec_template, bindings, schema):
             )
             return errors
 
-        # Check relationship exists
-        e1, e2 = entity_bindings["E1"], entity_bindings["E2"]
-        has_rel = any(
-            (r["from_entity"] == e1 and r["to_entity"] == e2)
-            or (r["from_entity"] == e2 and r["to_entity"] == e1)
-            for r in schema.get("relationships", [])
-        )
-        if not has_rel:
-            errors.append(f"No relationship between '{e1}' and '{e2}'")
+        # A declared relationship is only required when the template joins *on*
+        # one. A template that binds its own join keys — two tables that share a
+        # subject id without either referencing the other, as sibling tables of a
+        # star schema do — supplies everything the join needs, and demanding a
+        # relationship there would reject a perfectly well-defined join.
+        if "E1.r.E2.id.from" in spec_template or "E1.r.E2.id.to" in spec_template:
+            e1, e2 = entity_bindings["E1"], entity_bindings["E2"]
+            has_rel = any(
+                (r["from_entity"] == e1 and r["to_entity"] == e2)
+                or (r["from_entity"] == e2 and r["to_entity"] == e1)
+                for r in schema.get("relationships", [])
+            )
+            if not has_rel:
+                errors.append(f"No relationship between '{e1}' and '{e2}'")
 
     encoded_placeholders = _encoded_placeholders(spec_template)
 

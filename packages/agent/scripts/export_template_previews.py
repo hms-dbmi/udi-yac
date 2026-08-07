@@ -381,26 +381,38 @@ def _declared_binding(
     useful than a preview that renders but means nothing.
     """
     entities = parsed_schema.get("entities", {})
-    entity = declared.get("E")
-    if entity not in entities:
-        available = ", ".join(sorted(entities)) or "none"
-        return None, None, [
-            f"Template previews against entity '{entity}', which this data package does not have "
-            f"(has: {available}). It is written for a specific table shape."
-        ]
+    # A two-entity template declares E1/E2; a single-entity one declares E. Each
+    # field binding is checked against the entity its own key names, so a join
+    # template is reported against the right table rather than an arbitrary one.
+    entity_keys = [k for k in ("E", "E1", "E2") if k in declared]
+    for key in entity_keys:
+        if declared[key] not in entities:
+            available = ", ".join(sorted(entities)) or "none"
+            return None, None, [
+                f"Template previews against entity '{declared[key]}', which this data "
+                f"package does not have (has: {available}). It is written for a "
+                f"specific table shape."
+            ]
+
+    def _entity_for(key: str) -> str | None:
+        if key.startswith("E1."):
+            return declared.get("E1")
+        if key.startswith("E2."):
+            return declared.get("E2")
+        return declared.get("E")
 
     # <V*> declares a literal data value, not a column, so it must not be checked
     # against the entity's field list.
-    missing = [
-        f"{key}={value!r}"
-        for key, value in declared.items()
-        if key not in ("E", "E1", "E2")
-        and not re.fullmatch(r"V\d*", key)
-        and value not in entities[entity].get("fields", {})
-    ]
+    missing = []
+    for key, value in declared.items():
+        if key in ("E", "E1", "E2") or re.fullmatch(r"V\d*", key):
+            continue
+        owner = _entity_for(key)
+        if owner is None or value not in entities.get(owner, {}).get("fields", {}):
+            missing.append(f"{key}={value!r} (on {owner})")
     if missing:
         return None, None, [
-            f"Entity '{entity}' is missing the column(s) this template previews with: "
+            "The data package is missing the column(s) this template previews with: "
             f"{', '.join(missing)}."
         ]
 

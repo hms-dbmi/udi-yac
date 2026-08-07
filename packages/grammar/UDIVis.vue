@@ -824,6 +824,8 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     if (Array.isArray(layer.strokeDash) && layer.strokeDash.length > 0) {
       markConfig.strokeDash = layer.strokeDash;
     }
+    // Step interpolation for quantities that hold between observations.
+    if (layer.interpolate) markConfig.interpolate = layer.interpolate;
     // Text placement. Without these a label is centred on its anchor, so half of
     // it lands on top of whatever it is annotating.
     if (layer.align) markConfig.align = layer.align;

@@ -132,6 +132,10 @@ additions:
 - `.outline(color="white", width=3, opacity=0.7)` haloes a text mark so it stays
   readable where it crosses a line. The renderer draws such a layer twice, because
   SVG paints stroke over fill and one pass would eat into the glyphs.
+- `.interpolate("step-after")` draws a line as a staircase. Use it whenever the
+  quantity holds between observations and jumps at each one — a survival curve, a
+  running total. The default straight segment draws a change nobody measured, and
+  lets a reader take a value off the axis between two observations.
 - `.avoid_overlap(8)` nudges a layer's marks apart when they would land on the same
   position — two curves ending at the same percentage, otherwise two labels in one
   place. The separation is in **data units** (the plot's pixel size isn't known
@@ -147,6 +151,21 @@ renderer computing a padded one, so a one-sided `{"min": 0}` leaves the axis end
 exactly at the largest value in the data — which is how an annotation can reach the
 plot edge. And anything a text mark draws is outside the scale, so a label cannot
 widen the axis to fit itself.
+
+**Joining in a stratifier from another table.** The attribute a chart splits by often
+lives somewhere else — a treatment protocol, an enrolling site. Two things about that
+join are easy to get wrong:
+
+- **There is usually no declared relationship to follow.** The table holding the
+  stratifier is typically a _sibling_ of the one being measured — both hang off a
+  patient table — so `<E1.r.E2.id.*>` resolves to nothing. What they do share is a
+  subject identifier, so take one from each side (`<E1.F1>`, `<E2.F1>`) and join on
+  those. `validate_bindings` only demands a declared relationship when the template
+  actually references one.
+- **The join multiplies rows.** One event row becomes one per related record. That
+  is safe only if everything downstream reduces by min/max over a (subject, value)
+  group, as the survival pipeline does — both idempotent under duplication. A
+  template that _counts_ rows after such a join silently over-counts.
 
 > **An event-level column is not a subject attribute.** This is the subtlest class
 > of bug this pipeline invites, and it produces charts that look right. Grouping by

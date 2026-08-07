@@ -340,14 +340,20 @@ def _generate_join_entity_tool(
         if ph in ("E1", "E1.url", "E2", "E2.url", "E1.r.E2.id.from", "E1.r.E2.id.to"):
             continue
 
-        if ph.startswith("E1.F"):
-            param_name = "entity1_field"
-            m = re.match(r'E1\.(F\d*)', ph)
-            base = "E1." + m.group(1) if m else "E1.F"
-        elif ph.startswith("E2.F"):
-            param_name = "entity2_field"
-            m = re.match(r'E2\.(F\d*)', ph)
-            base = "E2." + m.group(1) if m else "E2.F"
+        # One parameter per *numbered* field, so a template can take several from
+        # the same side of a join. Collapsing every `E1.F*` onto one name would
+        # keep only the first and leave the rest unbound — which resolves to an
+        # empty field name rather than an error.
+        m = re.match(r'(E[12])\.(F\d*)', ph)
+        if m:
+            side = "entity1" if m.group(1) == "E1" else "entity2"
+            param_name = f"{side}_field{m.group(2)[1:]}"
+            base = f"{m.group(1)}.{m.group(2)}"
+        elif re.match(r'V\d*$', ph.split(":")[0]):
+            # A join template can need literal values too — a survival curve
+            # stratified across tables still has to name its start and end events.
+            base = ph.split(":")[0]
+            param_name = "value" + base[1:]
         else:
             continue
 
@@ -355,11 +361,18 @@ def _generate_join_entity_tool(
             continue
         seen.add(param_name)
 
-        field_type = _get_field_type_for_placeholder(ph)
-        properties[param_name] = {
-            "type": "string",
-            "description": _build_field_description(field_type, encoding_info.get(base)),
-        }
+        if base.startswith("V"):
+            param_description = (
+                "A literal data VALUE to match (not a column name) — one of the "
+                "values actually present in the relevant column, copied exactly, "
+                "including case and spacing."
+            )
+        else:
+            field_type = _get_field_type_for_placeholder(ph)
+            param_description = _build_field_description(
+                field_type, encoding_info.get(base)
+            )
+        properties[param_name] = {"type": "string", "description": param_description}
         required.append(param_name)
         param_map[param_name] = base
 

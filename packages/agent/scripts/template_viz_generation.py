@@ -70,6 +70,10 @@ class StratumReading(Enum):
     #: Any value recorded anywhere on the subject's timeline — membership ("ever
     #: metastatic"). Cohorts overlap and do not add up.
     EVER = "ever"
+    #: A value from a *related* table, joined in on the subject key — "which
+    #: protocol was this subject on". Membership like EVER, since a subject can
+    #: have several related records, but the values live in another table.
+    RELATED = "related"
 
 
 # Shared design note for data-cube templates: a cube is read by marginal
@@ -239,6 +243,19 @@ def _placeholder_base(placeholder: str) -> str:
 #: same binding.
 _SUBJECT_KEY = "<F1:n>"
 
+
+def _survival_event_fields(reading):
+    """The event-log placeholders, which move under a join.
+
+    A cross-table stratifier makes the event log the *first* side of a join, so its
+    columns are addressed as `<E1.F1>` rather than `<F1>`. Everything else about the
+    pipeline is identical, so the names are computed once here rather than branched
+    on at every use.
+    """
+    if reading is StratumReading.RELATED:
+        return {"subject": "<E1.F1:n>", "event_type": "<E1.F2:n>", "time": "<E1.F3:q>"}
+    return {"subject": _SUBJECT_KEY, "event_type": "<F2:n>", "time": "<F3:q>"}
+
 #: Intermediate column holding the stratifier's value on the start event only.
 #: Aggregated away by the rollup, so it never reaches the chart.
 _BASELINE_STRATUM = "baseline stratum"
@@ -265,22 +282,48 @@ def _survival_subject_rows(
     between the two events is then counted as neither, which loses its death
     entirely — the symptom is every stratum sitting above the unstratified curve.
     """
-    chart = Chart().source("<E>", "<E.url>")
+    if reading is StratumReading.RELATED:
+        # The event log and the table the stratifier lives in, joined on the
+        # relationship the schema already declares. The join multiplies event rows
+        # by the subject's related records, which is harmless here precisely
+        # because everything downstream reduces by min/max over a (subject,
+        # stratum) group — both idempotent under duplication. Any template that
+        # *counted* rows after this join would be wrong.
+        chart = (
+            Chart()
+            .source("<E1>", "<E1.url>")
+            .source("<E2>", "<E2.url>")
+            .join(
+                in_name=["<E1>", "<E2>"],
+                # Joined on the subject id each side names, not on a declared
+                # relationship. The tables that carry a stratifier are usually
+                # *siblings* of the event log — both hang off a patient table —
+                # so there is no direct relationship to follow, but they do share
+                # the subject identifier, which is the only key this needs.
+                on=["<E1.F1>", "<E2.F1:n>"],
+                out_name="<E1>__<E2>",
+            )
+        )
+    else:
+        chart = Chart().source("<E>", "<E.url>")
 
     # `EVER` reads membership off every event, so a delimited column has to be
     # expanded on the event rows, before the per-subject rollup sees them.
     if multi_value and reading is StratumReading.EVER:
         chart = chart.unnest(stratum, separator=";")
 
+    fields = _survival_event_fields(reading)
+    event_type, time_field = fields["event_type"], fields["time"]
+    subject_key = fields["subject"]
     derives = {
         "start day": Expr.cond(
-            Expr.binop("==", Expr.field("<F2:n>"), Expr.lit("<V1>")),
-            Expr.field("<F3>"),
+            Expr.binop("==", Expr.field(event_type), Expr.lit("<V1>")),
+            Expr.field(_placeholder_base(time_field)),
             Expr.lit(None),
         ),
         "end day": Expr.cond(
-            Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V2>")),
-            Expr.field("<F3>"),
+            Expr.binop("==", Expr.field(_placeholder_base(event_type)), Expr.lit("<V2>")),
+            Expr.field(_placeholder_base(time_field)),
             Expr.lit(None),
         ),
     }
@@ -289,14 +332,14 @@ def _survival_subject_rows(
         # exactly one candidate per subject. This is also the only place in this
         # branch that type-constrains the binding, hence the `:n` suffix.
         derives[_BASELINE_STRATUM] = Expr.cond(
-            Expr.binop("==", Expr.field("<F2>"), Expr.lit("<V1>")),
+            Expr.binop("==", Expr.field(_placeholder_base(event_type)), Expr.lit("<V1>")),
             Expr.field(stratum),
             Expr.lit(None),
         )
-    chart = chart.filter(Expr.not_null("<F3:q>")).derive(derives)
+    chart = chart.filter(Expr.not_null(time_field)).derive(derives)
 
     if reading is StratumReading.AT_START:
-        chart = chart.groupby(_SUBJECT_KEY).rollup(
+        chart = chart.groupby(subject_key).rollup(
             {
                 "start day": Op.min("start day"),
                 "end day": Op.max("end day"),
@@ -327,8 +370,8 @@ def _survival_subject_rows(
             chart = chart.unnest(_placeholder_base(stratum), separator=";")
         return chart
 
-    if reading is StratumReading.EVER:
-        chart = chart.groupby(_SUBJECT_KEY)
+    if reading in (StratumReading.EVER, StratumReading.RELATED):
+        chart = chart.groupby(subject_key)
         # Broadcast the subject's whole span onto each of its event rows, so
         # every group the subject joins inherits the same timeline.
         chart = chart.derive(
@@ -343,7 +386,7 @@ def _survival_subject_rows(
         # event with it whenever that event carried no value, silently dropping
         # the subject from every group instead of just this one.
         chart = chart.filter(Expr.not_null(stratum))
-        chart = chart.groupby(["<F1>", stratum])
+        chart = chart.groupby([_placeholder_base(subject_key), stratum])
         # min/max over columns already constant within the group: the rollup
         # needs an aggregate, not a reduction.
         chart = chart.rollup(
@@ -352,7 +395,7 @@ def _survival_subject_rows(
         return chart.filter(Expr.not_null("start day"))
 
     # One row per subject. min/max ignore the nulls the conditionals leave behind.
-    chart = chart.groupby(_SUBJECT_KEY).rollup(
+    chart = chart.groupby(subject_key).rollup(
         {"start day": Op.min("start day"), "end day": Op.max("end day")}
     )
     return chart.filter(Expr.not_null("start day"))
@@ -407,12 +450,26 @@ def _survival_chart(
     )
     chart = chart.filter(Expr.binop(">=", Expr.field("survival days"), Expr.lit(0)))
 
+    # Plot years, not days. An event log records a day offset, but a survival curve
+    # is read in years — "median survival 1.5 years", not "548 days" — and a day
+    # axis on a multi-year cohort labels every 200th day, which no reader converts
+    # in their head. Derived rather than relabelled so the tooltip, the axis and the
+    # end-of-curve label all agree, and so both executors compute it the same way.
+    # 365.25 rather than 365: over a 7-year cohort the leap days are a whole week.
+    chart = chart.derive(
+        {
+            "survival years": Expr.binop(
+                "/", Expr.field("survival days"), Expr.lit(365.25)
+            )
+        }
+    )
+
     # Where the x axis ends, measured across the whole cohort rather than within
     # one stratum: every curve's dashed lead-out has to reach the same edge, not
     # just a little past its own last event. Taken here because a rollup leaves
     # the table ungrouped, so this aggregate is global; once the stratum grouping
     # below is applied, the same expression would give a per-curve maximum.
-    chart = chart.derive({"cohort end": Expr.agg("max", "survival days")})
+    chart = chart.derive({"cohort end": Expr.agg("max", "survival years")})
 
     if stratum:
         # Re-group so each curve is a fraction of its own cohort.
@@ -422,10 +479,12 @@ def _survival_chart(
     )
     # Ordered by time, then by subject to break ties. The tiebreak is what makes
     # `rank()` a row number: a rank is shared by tied rows, and with dozens of
-    # subjects sitting at day 0 a bare `orderby("survival days")` gives them all
+    # subjects sitting at year 0 a bare `orderby("survival years")` gives them all
     # rank 1 — so "the rank() == 1 row", which the annotations below borrow, would
     # be dozens of rows and rank 2 would not exist at all.
-    chart = chart.orderby(["survival days", _placeholder_base(_SUBJECT_KEY)])
+    chart = chart.orderby(
+        ["survival years", _placeholder_base(_survival_event_fields(reading)["subject"])]
+    )
 
     # Cumulative deaths over the ordered rows, as a percentage still surviving.
     # A rolling *sum of the death indicator* rather than a row count, because the
@@ -465,7 +524,7 @@ def _survival_chart(
     # the font it declares, and no way to see anything behind it.
     chart = chart.derive(
         {
-            "label day": Expr.cond(
+            "label year": Expr.cond(
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
                 Expr.cond(
                     Expr.binop(">", Expr.field("deaths"), Expr.lit(0)),
@@ -490,19 +549,19 @@ def _survival_chart(
     # missing flat segment at 100% explicitly: two borrowed rows again, using a
     # constant column for y so it lands in data units rather than pixels.
     chart = chart.derive({"full survival": Expr.lit(100)})
-    chart = chart.derive({"first day": Expr.agg("min", "survival days")})
+    chart = chart.derive({"first year": Expr.agg("min", "survival years")})
     # The curve only descends, so the group's *highest* survival percentage is
     # its value at that first day — where the flat 100% lead-in has to drop to,
     # or the two would be left joined by a vertical gap.
     chart = chart.derive({"first percentage": Expr.agg("max", "survival percentage")})
     chart = chart.derive(
         {
-            "lead day": Expr.cond(
+            "lead year": Expr.cond(
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
                 Expr.lit(0),
                 Expr.cond(
                     Expr.binop("==", Expr.rank(), Expr.lit(2)),
-                    Expr.field("first day"),
+                    Expr.field("first year"),
                     Expr.lit(None),
                 ),
             ),
@@ -510,9 +569,9 @@ def _survival_chart(
             # and one at the curve's opening value. Where the group already has
             # day-0 subjects the two collapse onto each other and nothing is
             # drawn, which is correct — there is no drop to bridge.
-            "drop day": Expr.cond(
+            "drop year": Expr.cond(
                 Expr.binop("<=", Expr.rank(), Expr.lit(2)),
-                Expr.field("first day"),
+                Expr.field("first year"),
                 Expr.lit(None),
             ),
             "drop percentage": Expr.cond(
@@ -528,20 +587,20 @@ def _survival_chart(
     )
     chart = chart.derive(
         {
-            "rule day": Expr.cond(
+            "rule year": Expr.cond(
                 # No events, no final value to mark — see `label day`.
                 Expr.binop("==", Expr.field("deaths"), Expr.lit(0)),
                 Expr.lit(None),
                 Expr.cond(
                     Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                    Expr.field("label day"),
+                    Expr.field("label year"),
                     Expr.cond(
                         Expr.binop(
                             "==",
                             Expr.field("survival percentage"),
                             Expr.field("final percentage"),
                         ),
-                        Expr.field("survival days"),
+                        Expr.field("survival years"),
                         Expr.lit(None),
                     ),
                 ),
@@ -581,7 +640,7 @@ def _survival_chart(
     # Flat 100% lead-in, before the curve so the curve draws over it.
     chart = (
         chart.mark("line")
-        .x(field="lead day", type="quantitative", title="survival days", domain={"min": 0})
+        .x(field="lead year", type="quantitative", title="survival years", domain={"min": 0})
         .y(field="full survival", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
@@ -592,7 +651,7 @@ def _survival_chart(
     # The vertical drop from that lead-in into the curve's first point.
     chart = (
         chart.mark("line")
-        .x(field="drop day", type="quantitative", title="survival days", domain={"min": 0})
+        .x(field="drop year", type="quantitative", title="survival years", domain={"min": 0})
         .y(field="drop percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
@@ -602,7 +661,13 @@ def _survival_chart(
 
     chart = (
         chart.mark("line")
-        .x(field="survival days", type="quantitative", title="survival days", domain={"min": 0})
+        # A survival curve is a step function: the fraction alive holds constant
+        # between deaths and drops at each one. A sloped segment would draw a
+        # gradual decline nobody observed — and, read left to right, invites the
+        # eye to interpolate a survival value at times where none was measured.
+        # Steps also make the curve unambiguously non-increasing by construction.
+        .interpolate("step-after")
+        .x(field="survival years", type="quantitative", title="survival years", domain={"min": 0})
         .y(
             field="survival percentage",
             type="quantitative",
@@ -616,7 +681,7 @@ def _survival_chart(
     chart = (
         chart.mark("line")
         .stroke_dash(_SURVIVAL_DASH)
-        .x(field="rule day", type="quantitative", title="survival days", domain={"min": 0})
+        .x(field="rule year", type="quantitative", title="survival years", domain={"min": 0})
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
@@ -634,7 +699,7 @@ def _survival_chart(
         # labels on one another. 8 of the axis's 100 keeps them clearly apart at
         # the sizes these are drawn at, including in a small review card.
         .avoid_overlap(8)
-        .x(field="label day", type="quantitative", title="survival days", domain={"min": 0})
+        .x(field="label year", type="quantitative", title="survival years", domain={"min": 0})
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
         .text(field="final label", type="nominal")
     )
@@ -2415,6 +2480,89 @@ def generate():
             "F2": "event_type",
             "F3": "event_date",
             "F4": "metastasis_location",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # Stratified by a field in a RELATED table — the protocol a subject was on, the
+    # site that enrolled them — joined in on the relationship the schema declares.
+    # Membership, like the "ever" reading: a subject with several related records
+    # joins a group for each, so cohorts overlap.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E1> split by <E2.F:n>.",
+            "Compare survival across <E2.F:n> from the related <E2> table.",
+            "Does survival differ by <E2.F:n>?",
+        ],
+        spec=_survival_chart(
+            stratum="<E2.F:n>", reading=StratumReading.RELATED
+        ),
+        chart_type=ChartType.LINE,
+        name_hint="survival_related",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by a field in a RELATED table, from an event log — one row "
+            "per event, with a subject id, an event-type column and a numeric time column. Joins "
+            "the event log to a second entity on the relationship between them, derives each "
+            "subject's elapsed time between a start and an end event type, and plots one curve "
+            "per value of the related field. Both tables must name the subject-id column they "
+            "share, which is what the join runs on. Use this when the attribute to split by does not "
+            "live on the event log itself — a treatment protocol, an enrolling site, a cohort "
+            "assignment recorded elsewhere. A subject with several related records joins a group "
+            "for each, so the cohorts OVERLAP and the groups do not add up to the whole."
+        ),
+        design_considerations=(
+            "The stratifier is not a column of the event log, so the two entities are joined "
+            "first, on the subject-id column each side names. A declared relationship is not "
+            "required and usually does not exist: the tables carrying a stratifier are typically "
+            "*siblings* of the event log — both hang off a patient table — and what they share is "
+            "the subject identifier, which is all the join needs. That join multiplies event rows by the "
+            "subject's related records, which is harmless here only because everything after it "
+            "reduces by min/max over a (subject, stratum) group — both idempotent under "
+            "duplication. A template that counted rows after such a join would silently "
+            "over-count, so do not copy this shape into one that aggregates. "
+            "Membership is read the same way as the 'ever' variant: a subject's whole span is "
+            "carried into every group it belongs to, so one death is attributed to each. The "
+            "groups therefore cannot be reconciled with the unstratified curve, and if a reader "
+            "would take them for a partition this is the wrong chart. Subjects with no related "
+            "record at all drop out of the join and disappear from the cohort entirely, which is "
+            "the one way this can show FEWER subjects than the unstratified curve. "
+            "IMPORTANT: the related record may itself post-date the start event — a "
+            "protocol begun after diagnosis, a site a subject transferred to — so "
+            "membership can be defined by something that happened after the clock "
+            "started. That is immortal-time bias by construction, and it means a group "
+            "whose records only ever appear late will look artificially good; a value "
+            "that only ever accompanies an end event produces a group in which everyone "
+            "is dead, drawing flat at 0%. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare observed survival across groups defined in another table; see whether a "
+            "treatment, protocol or site recorded separately coincides with worse survival."
+        ),
+        review_hint=(
+            "Check the curves are labelled with values from the related table, not the event "
+            "log. Cohort sizes overlap and can also be SMALLER in total than the unstratified "
+            "curve, since a subject with no related record leaves the join — both are expected "
+            "and worth confirming against the data. As with the other overlapping variants, "
+            "judge whether a reader could mistake these curves for a partition. Previews with "
+            "the therapy table's protocol, where most subjects have several records."
+        ),
+        preview_bindings={
+            "E1": "Event",
+            "E2": "Medical Therapy",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E2.F1": "research_id",
+            "E2.F": "protocol_name_and_arm",
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
         },

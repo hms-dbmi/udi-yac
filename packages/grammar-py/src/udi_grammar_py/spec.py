@@ -88,6 +88,11 @@ class Chart:
         self.representation().outline(**kwargs)
         return self
 
+    def interpolate(self, method: str):
+        """Set how the most recently added line layer connects its points."""
+        self.representation().interpolate(method)
+        return self
+
     def avoid_overlap(self, min_gap=True):
         """Keep the most recently added layer's marks from overlapping."""
         self.representation().avoid_overlap(min_gap)
@@ -277,6 +282,10 @@ class Representation:
         self._current_layer.outline(**kwargs)
         return self
 
+    def interpolate(self, method: str):
+        self._current_layer.interpolate(method)
+        return self
+
     def avoid_overlap(self, min_gap=True):
         self._current_layer.avoid_overlap(min_gap)
         return self
@@ -351,6 +360,15 @@ class Layer:
         guidance rather than as data.
         """
         self._state["strokeDash"] = list(pattern)
+        return self
+
+    def interpolate(self, method: str):
+        """How this line connects its points — e.g. "step-after" for a step function.
+
+        A quantity that holds between observations and then jumps is misdrawn by the
+        default straight segment, which implies intermediate values nobody measured.
+        """
+        self._state["interpolate"] = method
         return self
 
     def outline(self, color: str = "white", width: float = 3, opacity: float = None):
