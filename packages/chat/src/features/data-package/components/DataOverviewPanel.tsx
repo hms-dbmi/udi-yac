@@ -197,7 +197,7 @@ function SchemaMap({ dataPackage, icons, selected, onSelect }: SchemaMapProps) {
   return (
     <div className="px-3 py-2">
       <h3 className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
-        {isHierarchy ? 'Schema' : 'Joins'}
+        Relationships
       </h3>
       {isHierarchy ? (
         <SchemaTreeRows
