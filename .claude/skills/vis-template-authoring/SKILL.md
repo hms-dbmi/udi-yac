@@ -202,6 +202,40 @@ join are easy to get wrong:
 > constant per subject: `organization_name` is, which is exactly why this survived
 > review.
 
+**Stratifying by presence in another table.** Sometimes the stratifier is not a
+column anywhere: "did this patient receive radiation" is answered by the _existence_
+of a row. That needs three things, and each one is load-bearing:
+
+- **`kind: "left"` on the join.** An inner join cannot express absence — it drops
+  exactly the rows that would have answered "no". Both executors support `left`
+  (`join_left` in Arquero, `LEFT JOIN` in SQL); anything else raises
+  `UnsupportedQueryError` rather than degrading quietly.
+- **Reduce the other table to one row per subject first**, with a `count` as the
+  marker. That is what makes the answer boolean rather than once-per-record, and it
+  stops the join multiplying event rows. The marker's _value_ is never read — only
+  whether the left join left it null.
+- **Turn the null into a label**, `<E2>` / `No <E2>`, so a legend names the table
+  instead of saying yes/no. Placeholders resolve on the whole spec string, so an
+  entity name works inside a `derive` literal or a `title`.
+
+Crossing two tables this way gives a 2×2 (`<E2> only` / `<E3> only` / `<E2> + <E3>` /
+`Neither`) and needs an `E3` binding — the entity-key handling in `vis_generate`,
+`generate_tools` and `export_template_previews` is numbered open-endedly for exactly
+this, so a third table needs no new plumbing.
+
+Unlike a related _field_, presence **partitions** the cohort: every subject is in one
+group, so the counts add back to the unstratified curve (on pcx: 49 + 16 = 65
+subjects, 22 + 12 = 34 deaths, curves at 55% and 25% bracketing the pooled 48%). It
+is still immortal-time biased — a subject has to survive long enough to be treated —
+so the "yes" group is flattered by construction, and the template says so.
+
+> **A `groupby`'s own `out` is a no-op in the SQL compiler.** It records the grouping
+> and carries it to whatever the next `rollup` names as its input; only the rollup's
+> `in`/`out` create named tables. So reduce a side table as
+> `groupby(field, in_name="<E2>")` then `rollup({...}, in_name="<E2>",
+out_name="<E2>__by_subject")`. Naming the groupby's output instead runs fine in the
+> browser and dies with `unknown entity` in SQL — a divergence no schema check catches.
+
 **Aggregating a nominal column.** `min`/`max` over a string are safe and behave
 identically in both executors — they return the string, skip nulls, and order by
 codepoint. `mean`/`median`/`sum` over a string are a hard parity break (Arquero

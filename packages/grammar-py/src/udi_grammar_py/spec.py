@@ -41,8 +41,8 @@ class Chart:
         self.transformation().orderby(field, ascending, **kwargs)
         return self
 
-    def join(self, on: Union[str, List[str]], **kwargs):
-        self.transformation().join(on, **kwargs)
+    def join(self, on: Union[str, List[str]], kind: str = None, **kwargs):
+        self.transformation().join(on, kind=kind, **kwargs)
         return self
 
     def kde(self, field: Union[str, List[str]], **kwargs):
@@ -226,8 +226,16 @@ class Transformation:
         self._state.append(transform)
         return self
 
-    def join(self, on: Union[str, List[str]], **kwargs):
-        transform = {"join": {"on": on}}
+    def join(self, on: Union[str, List[str]], kind: str = None, **kwargs):
+        """Join two tables. `kind="left"` keeps unmatched rows of the first.
+
+        Absence is only expressible with a left join: an inner join drops exactly
+        the rows that would answer "this subject is not in that table".
+        """
+        join_options = {"on": on}
+        if kind is not None:
+            join_options["kind"] = kind
+        transform = {"join": join_options}
         transfer_kwargs({"in", "out"}, transform, kwargs)
         self._state.append(transform)
         return self

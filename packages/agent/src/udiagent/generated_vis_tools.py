@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 69
+Tools: 71
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -577,6 +577,129 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"encoding": "color", "field": "<E2.F>", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, '
  '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2.F>", "align": '
  '"right"}}',
+ '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
+ '[{"groupby": "<E2.F1:n>", "in": "<E2>"}, {"rollup": {"in second table": {"op": "count"}}, "in": "<E2>", "out": '
+ '"<E2>__by_subject"}, {"join": {"on": ["<E1.F1>", "<E2.F1>"], "kind": "left"}, "in": ["<E1>", "<E2>__by_subject"], '
+ '"out": "<E1>__p"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": {"literal": null}}}, {"derive": '
+ '{"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": '
+ '"<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": '
+ '{"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "group": {"if": {"op": "!=", "left": '
+ '{"field": "in second table"}, "right": {"literal": null}}, "then": {"literal": "<E2>"}, "else": {"literal": "No '
+ '<E2>"}}}}, {"groupby": "<E1.F1:n>"}, {"rollup": {"start day": {"op": "min", "field": "start day"}, "end day": {"op": '
+ '"max", "field": "end day"}, "group": {"op": "max", "field": "group"}}}, {"filter": {"op": "!=", "left": {"field": '
+ '"start day"}, "right": {"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, '
+ '"right": {"literal": null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", '
+ '"left": {"field": "end day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, '
+ '"right": {"field": "start day"}}, "else": {"literal": 0}}}}, {"filter": {"op": ">=", "left": {"field": "survival '
+ 'days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "survival days"}, '
+ '"right": {"literal": 365.25}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": '
+ '"group"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": "sum", "field": "died"}}}, {"orderby": '
+ '{"field": ["survival years", "<E1.F1>"], "order": "asc"}}, {"derive": {"survival percentage": {"rolling": '
+ '{"expression": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "sum", '
+ '"field": "died"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": {"final percentage": '
+ '{"agg": "min", "field": "survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", "left": {"field": "deaths"}, "right": {"literal": 0}}, '
+ '"then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}, '
+ '"else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": '
+ '"min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival '
+ 'percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": '
+ '{"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, '
+ '"right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": '
+ '{"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": '
+ '{"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, '
+ '"else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"field": "deaths"}, "right": '
+ '{"literal": 0}}, "then": {"literal": null}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival '
+ 'percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": '
+ 'null}}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": '
+ '0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": '
+ '{"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"survivors": {"op": "-", "left": {"field": '
+ '"subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"field": "group"}, {"literal": '
+ '" "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, {"field": "subjects"}, {"literal": ") "}, '
+ '{"field": "final survival"}, {"literal": "%"}]}}}], "representation": [{"mark": "line", "mapping": [{"encoding": '
+ '"x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
+ '"field": "group", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": '
+ '"drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": '
+ '"group", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival '
+ 'years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, '
+ '{"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, '
+ '{"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true}], '
+ '"strokeDash": [6, 4]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, '
+ '{"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, '
+ '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2>", "align": '
+ '"right"}}',
+ '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
+ '"source": "<E3.url>"}], "transformation": [{"groupby": "<E2.F1:n>", "in": "<E2>"}, {"rollup": {"in second table": '
+ '{"op": "count"}}, "in": "<E2>", "out": "<E2>__by_subject"}, {"join": {"on": ["<E1.F1>", "<E2.F1>"], "kind": "left"}, '
+ '"in": ["<E1>", "<E2>__by_subject"], "out": "<E1>__p"}, {"groupby": "<E3.F1:n>", "in": "<E3>"}, {"rollup": {"in third '
+ 'table": {"op": "count"}}, "in": "<E3>", "out": "<E3>__by_subject"}, {"join": {"on": ["<E1.F1>", "<E3.F1>"], "kind": '
+ '"left"}, "in": ["<E1>__p", "<E3>__by_subject"], "out": "<E1>__p"}, {"filter": {"op": "!=", "left": {"field": '
+ '"<E1.F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": '
+ '"<E1.F2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": '
+ '{"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, '
+ '"else": {"literal": null}}, "group": {"if": {"op": "!=", "left": {"field": "in second table"}, "right": {"literal": '
+ 'null}}, "then": {"if": {"op": "!=", "left": {"field": "in third table"}, "right": {"literal": null}}, "then": '
+ '{"literal": "<E2> + <E3>"}, "else": {"literal": "<E2> only"}}, "else": {"if": {"op": "!=", "left": {"field": "in '
+ 'third table"}, "right": {"literal": null}}, "then": {"literal": "<E3> only"}, "else": {"literal": "Neither"}}}}}, '
+ '{"groupby": "<E1.F1:n>"}, {"rollup": {"start day": {"op": "min", "field": "start day"}, "end day": {"op": "max", '
+ '"field": "end day"}, "group": {"op": "max", "field": "group"}}}, {"filter": {"op": "!=", "left": {"field": "start '
+ 'day"}, "right": {"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, "right": '
+ '{"literal": null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", "left": '
+ '{"field": "end day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, "right": '
+ '{"field": "start day"}}, "else": {"literal": 0}}}}, {"filter": {"op": ">=", "left": {"field": "survival days"}, '
+ '"right": {"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "survival days"}, "right": '
+ '{"literal": 365.25}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": "group"}, '
+ '{"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": "sum", "field": "died"}}}, {"orderby": {"field": '
+ '["survival years", "<E1.F1>"], "order": "asc"}}, {"derive": {"survival percentage": {"rolling": {"expression": '
+ '{"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "sum", "field": '
+ '"died"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": {"final percentage": {"agg": '
+ '"min", "field": "survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, '
+ '"right": {"literal": 1}}, "then": {"if": {"op": ">", "left": {"field": "deaths"}, "right": {"literal": 0}}, "then": '
+ '{"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}, "else": '
+ '{"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": "min", '
+ '"field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, '
+ '{"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", '
+ '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": '
+ '"==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": '
+ '{"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"field": "deaths"}, "right": '
+ '{"literal": 0}}, "then": {"literal": null}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival '
+ 'percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": '
+ 'null}}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": '
+ '0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": '
+ '{"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"survivors": {"op": "-", "left": {"field": '
+ '"subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"field": "group"}, {"literal": '
+ '" "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, {"field": "subjects"}, {"literal": ") "}, '
+ '{"field": "final survival"}, {"literal": "%"}]}}}], "representation": [{"mark": "line", "mapping": [{"encoding": '
+ '"x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
+ '"field": "group", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": '
+ '"drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": '
+ '"group", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival '
+ 'years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, '
+ '{"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, '
+ '{"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true}], '
+ '"strokeDash": [6, 4]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, '
+ '{"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, '
+ '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2> / <E3>", '
+ '"align": "right"}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F2>", "<F1>"]}, {"rollup": '
  '{"count <E>": {"op": "count"}}}, {"derive": {"udi_internal_percentile": {"op": "/", "left": {"field": "count <E>"}, '
  '"right": {"agg": "max", "field": "count <E>"}}}}, {"derive": {"udi_internal_text_color_threshold": {"if": {"op": '
@@ -1695,6 +1818,100 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value2'],
                               'type': 'object'}},
   'type': 'function'},
+ {'function': {'description': '[line] Survival curves split by PRESENCE OR ABSENCE of the subject in a second table, '
+                              'from an event log — one row per event, with a subject id, an event-type column and a '
+                              "numeric time column. Answers 'did this subject receive/undergo/enrol in the thing that "
+                              "table records' — radiation, surgery, a protocol — where the fact is the existence of a "
+                              'row, not the value of any column. No field from the second table is named or plotted; '
+                              'only the shared subject-id column on each side. Exactly two curves, and they PARTITION '
+                              'the cohort: every subject is in one or the other, so the two groups add back to the '
+                              'whole and reconcile with the unstratified curve. Design: Use this, not the '
+                              'related-field variant, when the question is whether a subject has any record in a table '
+                              'rather than which value it holds. Absence is unanswerable from an ordinary join, which '
+                              "drops exactly the rows that would have answered 'no', so the second table is first "
+                              'reduced to one row per subject and LEFT joined; a subject with no match keeps a null '
+                              'mark',
+               'name': 'vis_058_line_survival_presence',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                                                         'type': 'string'},
+                                             'entity1_field1': {'description': 'any type field.', 'type': 'string'},
+                                             'entity1_field2': {'description': 'any type field.', 'type': 'string'},
+                                             'entity1_field3': {'description': 'any type field.', 'type': 'string'},
+                                             'entity2': {'description': 'The secondary data entity (table) to join '
+                                                                        'with.',
+                                                         'type': 'string'},
+                                             'entity2_field1': {'description': 'any type field.', 'type': 'string'},
+                                             'value1': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'}},
+                              'required': ['entity1',
+                                           'entity2',
+                                           'entity1_field1',
+                                           'entity1_field2',
+                                           'entity1_field3',
+                                           'entity2_field1',
+                                           'value1',
+                                           'value2'],
+                              'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[line] Survival curves for the 2x2 CROSS of presence in two other tables, from an event '
+                              'log — one row per event, with a subject id, an event-type column and a numeric time '
+                              'column. Produces up to four curves — second table only, third table only, both, neither '
+                              '— for questions about combinations of treatments or procedures recorded in separate '
+                              'tables. No field from either extra table is named or plotted; only the shared '
+                              'subject-id column on each side. The four groups PARTITION the cohort: every subject '
+                              'falls in exactly one cell, so they add back to the whole. Use the single-table presence '
+                              'variant when only one table is in question — four curves for a two-way question is '
+                              'harder to read for no gain. Design: Two LEFT joins, each against the other table '
+                              'reduced to one row per subject, so absence stays visible and neither join multiplies '
+                              "event rows. Each cell is labelled with the tables it names — '<E2> + <E3>', '<E2> "
+                              "only', '<E3> only', 'Neither' — rather than a pair of flags, so no decoding is "
+                              'required. Presence i',
+               'name': 'vis_059_line_survival_presence_2x2',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                                                         'type': 'string'},
+                                             'entity1_field1': {'description': 'any type field.', 'type': 'string'},
+                                             'entity1_field2': {'description': 'any type field.', 'type': 'string'},
+                                             'entity1_field3': {'description': 'any type field.', 'type': 'string'},
+                                             'entity2': {'description': 'The secondary data entity (table) to join '
+                                                                        'with.',
+                                                         'type': 'string'},
+                                             'entity2_field1': {'description': 'any type field.', 'type': 'string'},
+                                             'entity3': {'description': 'An additional data entity (table) to join '
+                                                                        'with (entity3).',
+                                                         'type': 'string'},
+                                             'entity3_field1': {'description': 'any type field.', 'type': 'string'},
+                                             'value1': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'}},
+                              'required': ['entity1',
+                                           'entity2',
+                                           'entity3',
+                                           'entity1_field1',
+                                           'entity1_field2',
+                                           'entity1_field3',
+                                           'entity2_field1',
+                                           'entity3_field1',
+                                           'value1',
+                                           'value2'],
+                              'type': 'object'}},
+  'type': 'function'},
  {'function': {'description': '[heatmap] Displays the count of entities for each combination of two nominal fields as '
                               'a heatmap with labeled cells. Design: Rect marks with quantitative color encoding show '
                               'density. Overlaid text marks display exact counts. Text color adapts based on cell '
@@ -1703,7 +1920,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'in the co-occurrence of two fields; compare counts across combinations; find '
                               'correlations. Query patterns: Are there any clusters with respect to <E> counts of '
                               '<F1:n> and <F2:n>?; Make a heatmap of <E> <F1:n> and <F2:n>.',
-               'name': 'vis_058_heatmap_count',
+               'name': 'vis_060_heatmap_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1721,7 +1938,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'readability. Tasks: Identify patterns in the average value across two categorical '
                               'dimensions; find combinations with extreme values. Query patterns: What is the average '
                               '<F1:q> for each <F2:n> and <F3:n>?',
-               'name': 'vis_059_heatmap_avg',
+               'name': 'vis_061_heatmap_avg',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1743,7 +1960,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'across two dimensions; compare values across combinations. Query patterns: Are there '
                               'clusters in the measure across two dimensions?; Make a heatmap across two categorical '
                               'dimensions.',
-               'name': 'vis_060_heatmap_basic',
+               'name': 'vis_062_heatmap_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
                                                             'type': 'string'},
@@ -1761,7 +1978,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'assess whether the relationship between two quantitative fields differs across groups. '
                               'Query patterns: Are there clusters of <E> <F1:q> and <F2:q> values across different '
                               '<F3:n> groups?',
-               'name': 'vis_061_grouped_scatter_by_color',
+               'name': 'vis_063_grouped_scatter_by_color',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1779,7 +1996,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'span from bin start to bin end on x, with count on y. Tasks: Characterize the shape of '
                               'a distribution; identify modes, skewness, and gaps. Query patterns: What is the '
                               'distribution of <F:q>?; Make a histogram of <F:q>?',
-               'name': 'vis_062_histogram_distribution',
+               'name': 'vis_064_histogram_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1793,7 +2010,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
                               'distribution; identify modes and overall density patterns. Query patterns: What is the '
                               'distribution of <F:q>?',
-               'name': 'vis_063_area_density',
+               'name': 'vis_065_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1807,7 +2024,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'datasets (50 or fewer values) where individual observations are meaningful and '
                               'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
                               'values, clusters, and outliers. Query patterns: What is the distribution of <F:q>?',
-               'name': 'vis_064_dot_distribution',
+               'name': 'vis_066_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1823,7 +2040,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
                               'tendency or spread. Query patterns: Is the distribution of <F1:q> similar for each '
                               '<F2:n>?',
-               'name': 'vis_065_grouped_area_density',
+               'name': 'vis_067_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1840,7 +2057,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
                               'groups; identify clusters and outliers within each group. Query patterns: Is the '
                               'distribution of <F1:q> similar for each <F2:n>?',
-               'name': 'vis_066_grouped_dot_distribution',
+               'name': 'vis_068_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1858,7 +2075,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a field; determine how many records have valid values and what proportion. Query '
                               'patterns: How many <E> records have a non-null <F:q|o|n>?; What percentage of <E> '
                               'records have a non-null <F:q|o|n>?',
-               'name': 'vis_067_table_count_null_nonnull',
+               'name': 'vis_069_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1872,7 +2089,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Assess data quality; determine how many records are missing a value and what '
                               'proportion. Query patterns: How many <E> records have a null <F:q|o|n>?; What '
                               'percentage of <E> records have a null <F:q|o|n>?',
-               'name': 'vis_068_table_count_null',
+               'name': 'vis_070_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -1992,17 +2209,37 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                     'entity2_field1': 'E2.F1',
                                     'value1': 'V1',
                                     'value2': 'V2'}),
- 'vis_058_heatmap_count': (58, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_059_heatmap_avg': (59, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_060_heatmap_basic': (60, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
- 'vis_061_grouped_scatter_by_color': (61, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_062_histogram_distribution': (62, {'entity': 'E', 'field': 'F'}),
- 'vis_063_area_density': (63, {'entity': 'E', 'field': 'F'}),
- 'vis_064_dot_distribution': (64, {'entity': 'E', 'field': 'F'}),
- 'vis_065_grouped_area_density': (65, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_066_grouped_dot_distribution': (66, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_067_table_count_null_nonnull': (67, {'entity': 'E', 'field': 'F'}),
- 'vis_068_table_count_null': (68, {'entity': 'E', 'field': 'F'})}
+ 'vis_058_line_survival_presence': (58,
+                                    {'entity1': 'E1',
+                                     'entity1_field1': 'E1.F1',
+                                     'entity1_field2': 'E1.F2',
+                                     'entity1_field3': 'E1.F3',
+                                     'entity2': 'E2',
+                                     'entity2_field1': 'E2.F1',
+                                     'value1': 'V1',
+                                     'value2': 'V2'}),
+ 'vis_059_line_survival_presence_2x2': (59,
+                                        {'entity1': 'E1',
+                                         'entity1_field1': 'E1.F1',
+                                         'entity1_field2': 'E1.F2',
+                                         'entity1_field3': 'E1.F3',
+                                         'entity2': 'E2',
+                                         'entity2_field1': 'E2.F1',
+                                         'entity3': 'E3',
+                                         'entity3_field1': 'E3.F1',
+                                         'value1': 'V1',
+                                         'value2': 'V2'}),
+ 'vis_060_heatmap_count': (60, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_061_heatmap_avg': (61, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_062_heatmap_basic': (62, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_063_grouped_scatter_by_color': (63, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_064_histogram_distribution': (64, {'entity': 'E', 'field': 'F'}),
+ 'vis_065_area_density': (65, {'entity': 'E', 'field': 'F'}),
+ 'vis_066_dot_distribution': (66, {'entity': 'E', 'field': 'F'}),
+ 'vis_067_grouped_area_density': (67, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_068_grouped_dot_distribution': (68, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_069_table_count_null_nonnull': (69, {'entity': 'E', 'field': 'F'}),
+ 'vis_070_table_count_null': (70, {'entity': 'E', 'field': 'F'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -2064,14 +2301,16 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_055_line_survival_ever': ['line_item', 'line'],
  'vis_056_line_survival_ever_multivalue': ['line_item', 'line'],
  'vis_057_line_survival_related': ['line_item', 'line'],
- 'vis_058_heatmap_count': ['line_item', 'heatmap'],
- 'vis_059_heatmap_avg': ['line_item', 'heatmap'],
- 'vis_060_heatmap_basic': ['data_cube', 'heatmap'],
- 'vis_061_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
- 'vis_062_histogram_distribution': ['line_item', 'histogram'],
- 'vis_063_area_density': ['line_item', 'area'],
- 'vis_064_dot_distribution': ['line_item', 'dot'],
- 'vis_065_grouped_area_density': ['line_item', 'grouped_area'],
- 'vis_066_grouped_dot_distribution': ['line_item', 'grouped_dot'],
- 'vis_067_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_068_table_count_null': ['line_item', 'table']}
+ 'vis_058_line_survival_presence': ['line_item', 'line'],
+ 'vis_059_line_survival_presence_2x2': ['line_item', 'line'],
+ 'vis_060_heatmap_count': ['line_item', 'heatmap'],
+ 'vis_061_heatmap_avg': ['line_item', 'heatmap'],
+ 'vis_062_heatmap_basic': ['data_cube', 'heatmap'],
+ 'vis_063_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
+ 'vis_064_histogram_distribution': ['line_item', 'histogram'],
+ 'vis_065_area_density': ['line_item', 'area'],
+ 'vis_066_dot_distribution': ['line_item', 'dot'],
+ 'vis_067_grouped_area_density': ['line_item', 'grouped_area'],
+ 'vis_068_grouped_dot_distribution': ['line_item', 'grouped_dot'],
+ 'vis_069_table_count_null_nonnull': ['line_item', 'table'],
+ 'vis_070_table_count_null': ['line_item', 'table']}

@@ -328,26 +328,47 @@ def _generate_join_entity_tool(
     description = _build_tool_description(template)
     encoding_info = _extract_encoding_info(spec_template)
 
-    properties = {
-        "entity1": {"type": "string", "description": "The primary data entity (table)."},
-        "entity2": {"type": "string", "description": "The secondary data entity (table) to join with."},
+    # One entity parameter per numbered entity the template actually mentions,
+    # rather than a fixed pair: a template can bring in a third table (crossing
+    # membership of two of them), and a `<E3>` with no parameter behind it would
+    # resolve to an empty table name instead of failing.
+    entity_keys = sorted(
+        {ph.split(".")[0] for ph in placeholders if re.fullmatch(r"E\d+(\..*)?", ph)}
+    )
+    entity_descriptions = {
+        "E1": "The primary data entity (table).",
+        "E2": "The secondary data entity (table) to join with.",
     }
-    required = ["entity1", "entity2"]
-    param_map = {"entity1": "E1", "entity2": "E2"}
+    properties = {}
+    required = []
+    param_map = {}
+    for key in entity_keys:
+        param = f"entity{key[1:]}"
+        properties[param] = {
+            "type": "string",
+            "description": entity_descriptions.get(
+                key, f"An additional data entity (table) to join with ({param})."
+            ),
+        }
+        required.append(param)
+        param_map[param] = key
+
+    skip = {"E1.r.E2.id.from", "E1.r.E2.id.to"}
+    skip.update(entity_keys)
+    skip.update(f"{key}.url" for key in entity_keys)
 
     seen = set()
     for ph in sorted(placeholders):
-        if ph in ("E1", "E1.url", "E2", "E2.url", "E1.r.E2.id.from", "E1.r.E2.id.to"):
+        if ph in skip:
             continue
 
         # One parameter per *numbered* field, so a template can take several from
         # the same side of a join. Collapsing every `E1.F*` onto one name would
         # keep only the first and leave the rest unbound — which resolves to an
         # empty field name rather than an error.
-        m = re.match(r'(E[12])\.(F\d*)', ph)
+        m = re.match(r'(E\d+)\.(F\d*)', ph)
         if m:
-            side = "entity1" if m.group(1) == "E1" else "entity2"
-            param_name = f"{side}_field{m.group(2)[1:]}"
+            param_name = f"entity{m.group(1)[1:]}_field{m.group(2)[1:]}"
             base = f"{m.group(1)}.{m.group(2)}"
         elif re.match(r'V\d*$', ph.split(":")[0]):
             # A join template can need literal values too — a survival curve
@@ -435,7 +456,8 @@ def generate(template_sources, output_path: str):
         for template in templates:
             spec_template = template.get("spec_template", "")
             placeholders = _extract_placeholders(spec_template)
-            is_join = "E1" in placeholders or "E2" in placeholders
+            # Any numbered entity means more than one table, whatever the count.
+            is_join = any(re.fullmatch(r"E\d+", ph) for ph in placeholders)
 
             if is_join:
                 tool_def, param_map = _generate_join_entity_tool(template, counter)

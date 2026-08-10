@@ -28,6 +28,12 @@ from udiagent.schema import simplify_data_schema, simplify_data_domains
 # parameter extraction — must use this pattern.
 PLACEHOLDER = r"<([A-Z][A-Za-z0-9_.,:]*)>"
 
+# A binding key naming an entity rather than a field: `E`, `E1`, `E2`, `E3`, ...
+# Open-ended because the number of tables a template joins is a property of the
+# template, not of this module; a field key always carries a dot, so it can never
+# match this.
+_ENTITY_KEY = re.compile(r"E\d*")
+
 
 # ---------------------------------------------------------------------------
 # Few-shot example loading
@@ -499,13 +505,12 @@ def _extract_xy_placeholders(spec_template):
 def _entity_for_binding_key(key, bindings):
     """The entity a field binding resolves against.
 
-    `E1.`/`E2.`-prefixed keys name a side of a join; everything else resolves
-    against the single entity `E`.
+    A numbered `E1.`/`E2.`/`E3.` prefix names one table of a multi-table
+    template; everything else resolves against the single entity `E`.
     """
-    if key.startswith("E1."):
-        return bindings.get("E1")
-    if key.startswith("E2."):
-        return bindings.get("E2")
+    prefix, dot, _ = key.partition(".")
+    if dot and _ENTITY_KEY.fullmatch(prefix) and prefix != "E":
+        return bindings.get(prefix)
     return bindings.get("E")
 
 
@@ -563,10 +568,13 @@ def validate_bindings(spec_template, bindings, schema):
     entities = schema.get("entities", {})
     entity_names = list(entities.keys())
 
-    # Collect entity bindings (E, E1, E2)
+    # Collect entity bindings (E, E1, E2, E3, ...). Numbered arbitrarily rather
+    # than to a fixed pair: a template can bring in a third table (e.g. crossing
+    # membership of two of them), and an unrecognised entity key would otherwise
+    # fall through to the field checks below and be reported as a missing column.
     entity_bindings = {}
     for key, val in bindings.items():
-        if key in ("E", "E1", "E2"):
+        if _ENTITY_KEY.fullmatch(key):
             entity_bindings[key] = val
 
     # Check entities exist
@@ -579,14 +587,21 @@ def validate_bindings(spec_template, bindings, schema):
     if errors:
         return errors
 
-    # Check join entities are different
-    if "E1" in entity_bindings and "E2" in entity_bindings:
-        if entity_bindings["E1"] == entity_bindings["E2"]:
-            errors.append(
-                f"entity1 and entity2 cannot be the same ('{entity_bindings['E1']}')"
-            )
-            return errors
+    # Check join entities are different — every pair, so a three-table template
+    # cannot quietly cross a table with itself and report every subject as
+    # belonging to both groups.
+    numbered = sorted(k for k in entity_bindings if k != "E")
+    for i, key_a in enumerate(numbered):
+        for key_b in numbered[i + 1 :]:
+            if entity_bindings[key_a] == entity_bindings[key_b]:
+                errors.append(
+                    f"entity{key_a[1:]} and entity{key_b[1:]} cannot be the same "
+                    f"('{entity_bindings[key_a]}')"
+                )
+    if errors:
+        return errors
 
+    if "E1" in entity_bindings and "E2" in entity_bindings:
         # A declared relationship is only required when the template joins *on*
         # one. A template that binds its own join keys — two tables that share a
         # subject id without either referencing the other, as sibling tables of a
@@ -621,7 +636,7 @@ def validate_bindings(spec_template, bindings, schema):
 
     # Check fields exist on entities and types match
     for key, field_name in bindings.items():
-        if key in ("E", "E1", "E2"):
+        if _ENTITY_KEY.fullmatch(key):
             continue
 
         # <V*> binds a literal data value (an event type, a status string), not a

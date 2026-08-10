@@ -292,9 +292,9 @@ def test_the_baseline_stratifier_is_aggregated_but_only_ever_drawn_as_a_category
 def test_survival_tool_names_distinguish_the_two_readings():
     """Names come from an explicit hint, not from keywords in the description.
 
-    Derived names would collide here — all five descriptions share the same
-    vocabulary — and a description that mentions its sibling ("prefer the baseline
-    variant when...") would inherit that sibling's suffix.
+    Derived names would collide here — every one of these descriptions shares the
+    same vocabulary — and a description that mentions its sibling ("prefer the
+    baseline variant when...") would inherit that sibling's suffix.
     """
     generated = _load_generated_tools()
     assert generated is not None
@@ -307,6 +307,8 @@ def test_survival_tool_names_distinguish_the_two_readings():
         "survival_ever",
         "survival_ever_multivalue",
         "survival_related",
+        "survival_presence",
+        "survival_presence_2x2",
     }
 
 
@@ -341,6 +343,16 @@ def test_every_stratified_survival_template_names_its_reading():
     for hint in ("survival_ever", "survival_ever_multivalue", "survival_related"):
         template = by_hint[hint]
         assert "overlap" in template["description"].lower()
+        assert "immortal-time" in template["design_considerations"].lower()
+
+    # The presence readings share that bias — treatment follows diagnosis, so a
+    # subject had to survive to be treated at all — but not the overlap: they
+    # partition the cohort, and saying otherwise would send the model to the wrong
+    # variant for a question that wants groups adding up.
+    for hint in ("survival_presence", "survival_presence_2x2"):
+        template = by_hint[hint]
+        assert "partition" in template["description"].lower()
+        assert "overlap" not in template["description"].lower()
         assert "immortal-time" in template["design_considerations"].lower()
 
 
@@ -626,6 +638,210 @@ def test_a_survival_curve_never_rises_however_the_data_is_filtered(tmp_path, sub
         for row in rows:
             key = row.get("arm")
             by_group.setdefault(key, []).append(
+                (row["survival years"], row["survival percentage"])
+            )
+        for key, points in by_group.items():
+            ordered = sorted(set(points))
+            for (_, before), (_, after) in zip(ordered, ordered[1:]):
+                assert after <= before + 1e-9, (
+                    f"{suffix} group {key!r} rises: {before} -> {after}"
+                )
+
+
+# ---------------------------------------------------------------------------
+# Stratifying by PRESENCE in another table
+# ---------------------------------------------------------------------------
+
+# Presence has no column to read, so the fixtures are table memberships instead.
+#   p1  radiation only, dies at day 365.
+#   p2  surgery only, dies at day 730.
+#   p3  both, censored.
+#   p4  a death with no start event: dropped, as in the other readings.
+#   p9  radiation but no events at all: never reaches the curve.
+# p1 has TWO radiation rows, which is the case that separates "did this subject
+# appear" from "how many times" — a join that did not reduce first would count it
+# twice and inflate its group.
+_PRESENCE_EVENTS = (
+    "subject,event,day\n"
+    "p1,start,0\np1,death,365\n"
+    "p2,start,0\np2,death,730\n"
+    "p3,start,0\np3,visit,30\n"
+    "p4,death,15\n"
+)
+_RADIATION = "subject,site\np1,head\np1,spine\np3,head\np9,head\n"
+_SURGERY = "subject,extent\np2,gross\np3,partial\n"
+
+
+@pytest.fixture()
+def presence(tmp_path):
+    """Run a presence survival template against three tiny tables, in DuckDB."""
+    files = {
+        "events": _PRESENCE_EVENTS,
+        "radiation": _RADIATION,
+        "surgery": _SURGERY,
+    }
+    paths = {}
+    for name, text in files.items():
+        path = tmp_path / f"{name}.csv"
+        path.write_text(text)
+        paths[name] = str(path)
+
+    def resource(name, fields):
+        return {
+            "name": name,
+            "path": paths[name],
+            "udi:row_count": files[name].count("\n") - 1,
+            "schema": {
+                "fields": [{"name": f, "udi:data_type": t} for f, t in fields]
+            },
+        }
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                resource(
+                    "events",
+                    [
+                        ("subject", "nominal"),
+                        ("event", "nominal"),
+                        ("day", "quantitative"),
+                    ],
+                ),
+                resource("radiation", [("subject", "nominal"), ("site", "nominal")]),
+                resource("surgery", [("subject", "nominal"), ("extent", "nominal")]),
+            ],
+        }
+    )
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    engine = QueryEngine(DuckDBConnector(views=paths), table_map={n: n for n in paths})
+
+    def run(suffix, cross=False, rows=True):
+        tool = next(n for n in dispatch if n.endswith(suffix))
+        idx, param_map = dispatch[tool]
+        args = {
+            "entity1": "events",
+            "entity2": "radiation",
+            "entity1_field1": "subject",
+            "entity1_field2": "event",
+            "entity1_field3": "day",
+            "entity2_field1": "subject",
+            "value1": "start",
+            "value2": "death",
+        }
+        if cross:
+            args["entity3"] = "surgery"
+            args["entity3_field1"] = "subject"
+        bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+        assert validate_bindings(templates[idx], bindings, schema) == []
+        spec = instantiate_template(templates[idx], bindings, schema)
+        if not rows:
+            return spec
+        return engine.run_query(
+            source=spec["source"], transformation=spec["transformation"]
+        )["displayData"]
+
+    return run
+
+
+def test_presence_stratification_names_no_field_from_the_second_table(presence):
+    """The whole point: the stratifier is membership, not a column.
+
+    A template that needed a column would be unusable on the tables this is for —
+    "did the patient get radiation" is answered by the existence of a row, and any
+    column picked to stand in for it could be null on exactly the rows that matter.
+    """
+    spec = presence("_line_survival_presence", rows=False)
+    assert [src["name"] for src in spec["source"]] == ["events", "radiation"]
+
+    # `site` is the only other column radiation has, and it must appear nowhere.
+    assert "site" not in json.dumps(spec)
+
+    join = next(t for t in spec["transformation"] if "join" in t)
+    # LEFT, or the subjects answering "no" are the ones dropped.
+    assert join["join"]["kind"] == "left"
+    assert join["join"]["on"] == ["subject", "subject"]
+
+    # The reduction must precede the join: it is what makes the answer boolean
+    # rather than once per record, and what stops the join multiplying events.
+    assert _transform_index(spec, "rollup") < _transform_index(spec, "join")
+
+    # Membership is drawn as a category and nothing else.
+    channels = {
+        m["encoding"]
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m.get("field") == "group"
+    }
+    assert channels == {"color"}
+
+
+def test_presence_stratification_partitions_the_cohort(presence):
+    """Two curves, and unlike the other cross-table reading they add up.
+
+    p1 and p3 are in radiation, p2 is not, p4 has no start event and p9 no events.
+    p1's two radiation rows must count once — an unreduced join would put it in the
+    group twice and break the reconciliation this reading is chosen for.
+    """
+    rows = presence("_line_survival_presence")
+    cohorts = _cohorts(rows, "group")
+    assert cohorts == {"radiation": (2, 1), "No radiation": (1, 1)}
+
+    # Three subjects reach the curve (p4 has no start, p9 no events), and both
+    # deaths are attributed exactly once — the reconciliation this reading exists
+    # for, and what separates it from the related-field variant.
+    assert sum(n for n, _ in cohorts.values()) == 3
+    assert sum(d for _, d in cohorts.values()) == 2
+
+    # Labelled by the table, not by yes/no, so a legend reads on its own.
+    assert {row["group"] for row in rows} == {"radiation", "No radiation"}
+
+
+def test_presence_2x2_crosses_two_tables_into_one_group_each(presence):
+    """Four cells, each subject in exactly one — still a partition.
+
+    An absent cell is legitimate: nobody here has neither, so 'Neither' does not
+    render. That is pinned because the alternative failure — a subject silently
+    landing in two cells — looks the same from a distance.
+    """
+    cohorts = _cohorts(presence("_line_survival_presence_2x2", cross=True), "group")
+    assert cohorts == {
+        "radiation only": (1, 1),
+        "surgery only": (1, 1),
+        "radiation + surgery": (1, 0),
+    }
+    assert "Neither" not in cohorts
+    assert sum(n for n, _ in cohorts.values()) == 3
+    assert sum(d for _, d in cohorts.values()) == 2
+
+
+def test_presence_2x2_left_joins_both_tables(presence):
+    """Two LEFT joins, or a cell is unreachable.
+
+    With an inner join on either side the 'only' cells collapse: a subject absent
+    from one table would be dropped rather than labelled, and the chart would show
+    just the 'both' cell while looking perfectly plausible.
+    """
+    spec = presence("_line_survival_presence_2x2", cross=True, rows=False)
+    assert [src["name"] for src in spec["source"]] == ["events", "radiation", "surgery"]
+    joins = [t for t in spec["transformation"] if "join" in t]
+    assert len(joins) == 2
+    assert all(j["join"]["kind"] == "left" for j in joins)
+    # Neither extra table contributes a column.
+    assert "site" not in json.dumps(spec) and "extent" not in json.dumps(spec)
+
+
+def test_presence_survival_curves_never_rise(presence):
+    """The monotonicity property, on the readings added after it was pinned."""
+    for suffix, cross in (
+        ("_line_survival_presence", False),
+        ("_line_survival_presence_2x2", True),
+    ):
+        by_group = {}
+        for row in presence(suffix, cross=cross):
+            by_group.setdefault(row["group"], []).append(
                 (row["survival years"], row["survival percentage"])
             )
         for key, points in by_group.items():

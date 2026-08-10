@@ -295,6 +295,59 @@ const CASES = [
     },
   ],
   [
+    // The shape the presence-stratified survival templates rest on: reduce the
+    // second table to one row per key, LEFT join so the unmatched keep a null
+    // marker, and turn that null into a label. An inner join cannot express this
+    // — it drops exactly the rows whose answer is "no" — so the executors have to
+    // agree on both the left join and on `in`/`out` naming a reduction of a table
+    // that is not the pipeline's current one.
+    'left-join-presence-marker',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        // Narrowed to a category only 18 of the 266 donors have, so the
+        // unmatched majority actually exercises the null-marker branch. Every
+        // donor has *some* sample, which would leave the "no" group empty and
+        // pin nothing.
+        {
+          filter: {
+            op: '==',
+            left: { field: 'sample_category' },
+            right: { literal: 'suspension' },
+          },
+          in: 'samples',
+          out: 'samples',
+        },
+        { groupby: 'donor.hubmap_id', in: 'samples' },
+        {
+          rollup: { marker: { op: 'count' } },
+          in: 'samples',
+          out: 'samples_by_donor',
+        },
+        {
+          join: { on: ['hubmap_id', 'donor.hubmap_id'], kind: 'left' },
+          in: ['donors', 'samples_by_donor'],
+          out: 'donors_p',
+        },
+        {
+          derive: {
+            group: {
+              if: {
+                op: '!=',
+                left: { field: 'marker' },
+                right: { literal: null },
+              },
+              then: { literal: 'has samples' },
+              else: { literal: 'no samples' },
+            },
+          },
+        },
+        { groupby: ['group', 'sex'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
     'join-rollup',
     {
       source: [src('donors'), src('samples')],

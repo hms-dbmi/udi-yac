@@ -42,6 +42,7 @@ from udiagent.generate_tools import (  # noqa: E402
 )
 from udiagent.schema import parse_schema_from_dict  # noqa: E402
 from udiagent.vis_generate import (  # noqa: E402
+    _ENTITY_KEY,
     _active_template_tags,
     _load_generated_tools,
     instantiate_template,
@@ -381,10 +382,13 @@ def _declared_binding(
     useful than a preview that renders but means nothing.
     """
     entities = parsed_schema.get("entities", {})
-    # A two-entity template declares E1/E2; a single-entity one declares E. Each
-    # field binding is checked against the entity its own key names, so a join
+    # A multi-table template declares E1/E2/E3...; a single-entity one declares E.
+    # Each field binding is checked against the entity its own key names, so a join
     # template is reported against the right table rather than an arbitrary one.
-    entity_keys = [k for k in ("E", "E1", "E2") if k in declared]
+    # Numbered open-endedly: a template that crosses membership of two other tables
+    # brings a third, and an unrecognised entity key would be reported as a missing
+    # *column* on entity `None` rather than as the table it is.
+    entity_keys = [k for k in declared if _ENTITY_KEY.fullmatch(k)]
     for key in entity_keys:
         if declared[key] not in entities:
             available = ", ".join(sorted(entities)) or "none"
@@ -395,17 +399,16 @@ def _declared_binding(
             ]
 
     def _entity_for(key: str) -> str | None:
-        if key.startswith("E1."):
-            return declared.get("E1")
-        if key.startswith("E2."):
-            return declared.get("E2")
+        prefix, dot, _ = key.partition(".")
+        if dot and prefix != "E" and _ENTITY_KEY.fullmatch(prefix):
+            return declared.get(prefix)
         return declared.get("E")
 
     # <V*> declares a literal data value, not a column, so it must not be checked
     # against the entity's field list.
     missing = []
     for key, value in declared.items():
-        if key in ("E", "E1", "E2") or re.fullmatch(r"V\d*", key):
+        if _ENTITY_KEY.fullmatch(key) or re.fullmatch(r"V\d*", key):
             continue
         owner = _entity_for(key)
         if owner is None or value not in entities.get(owner, {}).get("fields", {}):

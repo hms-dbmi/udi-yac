@@ -734,11 +734,14 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         if (!leftTable || !rightTable) {
           throw new Error('join table not found');
         }
+        // `left` keeps unmatched rows of the first table, nulling the second's
+        // columns — which is what a question about absence needs.
+        const joinFn = transform.join.kind === 'left' ? 'join_left' : 'join';
         if (
           typeof transform.join.on === 'string' ||
           transform.join.on.every((x) => typeof x === 'string')
         ) {
-          currentTable.table = leftTable.join(rightTable, transform.join.on);
+          currentTable.table = leftTable[joinFn](rightTable, transform.join.on);
         } else {
           const [leftMultiKeys, rightMultiKeys] = transform.join.on;
           if (leftMultiKeys.length !== rightMultiKeys.length) {
@@ -760,7 +763,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
                   $.leftMultiKeys.map((k) => d[k]).join('¶'),
               ),
             })
-            .join(
+            [joinFn](
               rightTable
                 .params({
                   rightMultiKeys: transform.join.on[1],

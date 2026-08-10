@@ -1,12 +1,12 @@
 /**
- * Two grammar primitives the stratified survival templates rest on.
+ * The grammar primitives the stratified survival templates rest on.
  *
  * Run with: node test/survival-strata.mjs   (after pnpm build:toolkit)
  *
  * The SQL backend rejects `unnest`, so the two multi-value survival templates can
  * only be exercised here. Rather than reimplementing those templates in JS — which
- * would drift from the Python source of truth — this pins the two behaviours they
- * depend on, either of which an Arquero upgrade could change silently:
+ * would drift from the Python source of truth — this pins the behaviours they
+ * depend on, any of which an Arquero upgrade could change silently:
  *
  *   1. `unnest` applied to a *rollup's output* expands the collapsed rows without
  *      multiplying anything already counted. That is what lets a template read a
@@ -14,6 +14,9 @@
  *      the subject's whole timeline.
  *   2. `max` over a *nominal* column returns the string and skips nulls — which is
  *      how a per-subject attribute survives an aggregation at all.
+ *   3. A `left` join keeps the rows with no match, which is the only way to say a
+ *      subject is *absent* from another table — the stratifier the presence
+ *      templates split by. The inner-join contrast is asserted alongside it.
  */
 import assert from 'node:assert/strict';
 import { createPinia, setActivePinia } from 'pinia';
@@ -130,6 +133,83 @@ assert.deepEqual(
   Object.fromEntries(everCohorts.map((r) => [r.sites, r.subjects])),
   { Brain: 2, Spine: 2, Liver: 1 },
   'unnesting the event rows should read membership from the whole timeline',
+);
+
+// 5. Presence in another table as a stratifier. Absence is only expressible with a
+//    LEFT join — an inner one drops exactly the subjects whose answer is "no" — and
+//    the side table has to be reduced to one row per subject first, or a subject
+//    with two records joins its group twice.
+store.seedDataSource(
+  'radiation',
+  'radiation',
+  aq.from([
+    { subject: 's1', site: 'head' },
+    { subject: 's1', site: 'spine' },
+    // Present here but absent from the event log: must not invent a cohort member.
+    { subject: 's9', site: 'head' },
+  ]),
+);
+
+const presence = store.getDataObject(
+  ['events', 'radiation'],
+  [
+    { groupby: 'subject', in: 'radiation' },
+    {
+      rollup: { marker: { op: 'count' } },
+      in: 'radiation',
+      out: 'rad_by_subject',
+    },
+    {
+      join: { on: ['subject', 'subject'], kind: 'left' },
+      in: ['events', 'rad_by_subject'],
+      out: 'events_p',
+    },
+    {
+      derive: {
+        group: {
+          if: { op: '!=', left: { field: 'marker' }, right: { literal: null } },
+          then: { literal: 'Radiation' },
+          else: { literal: 'No Radiation' },
+        },
+      },
+    },
+    { groupby: 'subject' },
+    { rollup: { group: { op: 'max', field: 'group' } } },
+    { groupby: 'group' },
+    { rollup: { subjects: { op: 'count' } } },
+  ],
+).displayData;
+assert.deepEqual(
+  Object.fromEntries(presence.map((r) => [r.group, r.subjects])),
+  // s1 once despite two radiation rows; s2 and s3 in the "no" group; s9 nowhere.
+  { Radiation: 1, 'No Radiation': 2 },
+  'a left join must keep the unmatched subjects and count each subject once',
+);
+
+// The same pipeline with an inner join loses the "no" group entirely — the failure
+// this shape exists to avoid, pinned so `kind` cannot be dropped unnoticed.
+const inner = store.getDataObject(
+  ['events', 'radiation'],
+  [
+    { groupby: 'subject', in: 'radiation' },
+    {
+      rollup: { marker: { op: 'count' } },
+      in: 'radiation',
+      out: 'rad_by_subject',
+    },
+    {
+      join: { on: ['subject', 'subject'] },
+      in: ['events', 'rad_by_subject'],
+      out: 'events_p',
+    },
+    { groupby: 'subject' },
+    { rollup: { events: { op: 'count' } } },
+  ],
+).displayData;
+assert.deepEqual(
+  inner.map((r) => r.subject),
+  ['s1'],
+  'an inner join drops the subjects that answer "no" — hence kind: left',
 );
 
 console.log('survival-strata: all assertions passed');

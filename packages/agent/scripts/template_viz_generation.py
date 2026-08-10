@@ -74,6 +74,14 @@ class StratumReading(Enum):
     #: protocol was this subject on". Membership like EVER, since a subject can
     #: have several related records, but the values live in another table.
     RELATED = "related"
+    #: Whether the subject appears in another table at all — "did this patient
+    #: receive radiation". The stratifier is not a column anywhere; it is
+    #: membership of a table, so it is derived from a left join and always has
+    #: exactly two values. Partitions the cohort.
+    PRESENCE = "presence"
+    #: Presence in *two* other tables, crossed: neither, one, the other, both.
+    #: Also a partition, with up to four groups.
+    PRESENCE_2X2 = "presence_2x2"
 
 
 # Shared design note for data-cube templates: a cube is read by marginal
@@ -211,6 +219,15 @@ _SURVIVAL_TIME_VARYING = (
     "An event-level column has no single value per subject: a subject's recorded value can "
     "differ between the event that starts the clock and the event that stops it. "
 )
+#: The presence readings' counterpart to `_SURVIVAL_TIME_VARYING`: there is no
+#: event-level column to disagree with itself, but there is still a question of
+#: *when* the fact was established, and the answer is "at any point".
+_SURVIVAL_PRESENCE_WINDOW = (
+    "Presence is read over the subject's whole history, not as of the start event: a single "
+    "record at any time puts the subject in the 'yes' group, and no record at any time puts "
+    "it in the 'no' group. There is no partial membership and no missing value — every "
+    "subject in the event log gets an answer. "
+)
 _SURVIVAL_CENSORING = (
     "The same censoring caveat as the unstratified survival curve applies, and it bites "
     "harder here: subjects with no end event hold their stratum's curve up, so comparing "
@@ -252,13 +269,80 @@ def _survival_event_fields(reading):
     pipeline is identical, so the names are computed once here rather than branched
     on at every use.
     """
-    if reading is StratumReading.RELATED:
+    if reading in _JOINED_READINGS:
         return {"subject": "<E1.F1:n>", "event_type": "<E1.F2:n>", "time": "<E1.F3:q>"}
     return {"subject": _SUBJECT_KEY, "event_type": "<F2:n>", "time": "<F3:q>"}
+
+
+#: Readings that stratify by membership of another table rather than by a field.
+_PRESENCE_READINGS = (
+    StratumReading.PRESENCE,
+    StratumReading.PRESENCE_2X2,
+)
+
+#: Readings whose event log is the first side of a join, so its columns are
+#: addressed as `<E1.*>`.
+_JOINED_READINGS = (StratumReading.RELATED,) + _PRESENCE_READINGS
+
+#: Column the presence readings stratify by. Derived, so it is named rather than
+#: bound: "is this subject in that table" is not a column anywhere.
+_PRESENCE_STRATUM = "group"
 
 #: Intermediate column holding the stratifier's value on the start event only.
 #: Aggregated away by the rollup, so it never reaches the chart.
 _BASELINE_STRATUM = "baseline stratum"
+
+
+#: Non-null markers left behind by the presence joins. A count is used because it
+#: survives a left join as null when there was no match, which is what makes
+#: absence detectable; the value itself is never read.
+_MARKER_2 = "in second table"
+_MARKER_3 = "in third table"
+
+
+def _presence_join(reading: StratumReading):
+    """Left-join the event log to one or two membership markers.
+
+    "Did this subject receive radiation" is not a column anywhere: it is
+    membership of a table. An inner join cannot answer it — it drops exactly the
+    subjects whose answer is "no" — so each side is reduced to one row per subject
+    and LEFT joined, leaving a null marker for the absent.
+    """
+    chart = Chart().source("<E1>", "<E1.url>").source("<E2>", "<E2.url>")
+    if reading is StratumReading.PRESENCE_2X2:
+        chart = chart.source("<E3>", "<E3.url>")
+
+    # One row per subject in the second table, so the join cannot multiply events.
+    # The grouping is named only on the rollup — a `groupby`'s own `out` is a
+    # no-op in the SQL compiler, which carries the grouping forward to whatever
+    # the next rollup names as its input, so putting `in`/`out` on the rollup is
+    # the one shape both executors read the same way.
+    chart = (
+        chart.groupby("<E2.F1:n>", in_name="<E2>")
+        .rollup({_MARKER_2: Op.count()}, in_name="<E2>", out_name="<E2>__by_subject")
+        .join(
+            in_name=["<E1>", "<E2>__by_subject"],
+            on=["<E1.F1>", "<E2.F1>"],
+            kind="left",
+            out_name="<E1>__p",
+        )
+    )
+    if reading is StratumReading.PRESENCE_2X2:
+        chart = (
+            chart.groupby("<E3.F1:n>", in_name="<E3>")
+            .rollup(
+                {_MARKER_3: Op.count()},
+                in_name="<E3>",
+                out_name="<E3>__by_subject",
+            )
+            .join(
+                in_name=["<E1>__p", "<E3>__by_subject"],
+                on=["<E1.F1>", "<E3.F1>"],
+                kind="left",
+                out_name="<E1>__p",
+            )
+        )
+    return chart
 
 
 def _survival_subject_rows(
@@ -304,6 +388,8 @@ def _survival_subject_rows(
                 out_name="<E1>__<E2>",
             )
         )
+    elif reading in _PRESENCE_READINGS:
+        chart = _presence_join(reading)
     else:
         chart = Chart().source("<E>", "<E.url>")
 
@@ -336,7 +422,50 @@ def _survival_subject_rows(
             Expr.field(stratum),
             Expr.lit(None),
         )
+    if reading in _PRESENCE_READINGS:
+        # Turn "the marker survived the left join" into a readable label. Named
+        # after the tables rather than yes/no, so a legend reads "Radiation" /
+        # "No Radiation" instead of requiring the reader to remember which is
+        # which. `<E2>` resolves to the table name, so this stays generic.
+        present_2 = Expr.not_null(_MARKER_2)
+        if reading is StratumReading.PRESENCE:
+            derives[_PRESENCE_STRATUM] = Expr.cond(
+                present_2, Expr.lit("<E2>"), Expr.lit("No <E2>")
+            )
+        else:
+            # The 2x2: one label per cell, so the four groups are self-describing
+            # and a reader never has to decode a pair of flags.
+            present_3 = Expr.not_null(_MARKER_3)
+            derives[_PRESENCE_STRATUM] = Expr.cond(
+                present_2,
+                Expr.cond(
+                    present_3,
+                    Expr.lit("<E2> + <E3>"),
+                    Expr.lit("<E2> only"),
+                ),
+                Expr.cond(
+                    present_3,
+                    Expr.lit("<E3> only"),
+                    Expr.lit("Neither"),
+                ),
+            )
+
     chart = chart.filter(Expr.not_null(time_field)).derive(derives)
+
+    if reading in _PRESENCE_READINGS:
+        # Presence is a per-subject fact, so this partitions: one row per subject
+        # carrying its group, exactly like the baseline reading.
+        return (
+            chart.groupby(subject_key)
+            .rollup(
+                {
+                    "start day": Op.min("start day"),
+                    "end day": Op.max("end day"),
+                    _PRESENCE_STRATUM: Op.max(_PRESENCE_STRATUM),
+                }
+            )
+            .filter(Expr.not_null("start day"))
+        )
 
     if reading is StratumReading.AT_START:
         chart = chart.groupby(subject_key).rollup(
@@ -420,7 +549,14 @@ def _survival_chart(
     `_survival_subject_rows`. `multi_value` expands a delimited stratifier, and
     *where* it expands depends on the reading.
     """
-    if stratum is None:
+    if reading in _PRESENCE_READINGS:
+        # The stratifier is not a field the caller can name — it is membership of
+        # a table, derived in the pipeline — so this fills it in rather than
+        # asking for it.
+        assert stratum is None, "a presence reading derives its own stratum column"
+        assert not multi_value, "presence is boolean; there is nothing to expand"
+        stratum = _PRESENCE_STRATUM
+    elif stratum is None:
         assert reading is None and not multi_value, "reading/multi_value need a stratum"
     else:
         assert reading is not None, (
@@ -722,8 +858,16 @@ def _survival_chart(
         chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
 
     if stratum:
-        # Right-aligned to sit over the series labels it names.
-        chart = chart.title(_placeholder_base(stratum), align="right")
+        # Right-aligned to sit over the series labels it names. The presence
+        # readings name the tables instead of the derived column, since "group"
+        # tells a reader nothing about what separates the curves.
+        if reading is StratumReading.PRESENCE:
+            heading = "<E2>"
+        elif reading is StratumReading.PRESENCE_2X2:
+            heading = "<E2> / <E3>"
+        else:
+            heading = _placeholder_base(stratum)
+        chart = chart.title(heading, align="right")
 
     return chart
 
@@ -2578,6 +2722,157 @@ def generate():
             "E1.F3": "event_date",
             "E2.F1": "research_id",
             "E2.F": "protocol_name_and_arm",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # Stratified by whether the subject appears in another table at all — did this
+    # patient receive radiation, have surgery, enrol on any protocol. The
+    # stratifier is not a column anywhere, so it is derived from a LEFT join;
+    # unlike the other cross-table variant this one PARTITIONS the cohort.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E1> split by whether the subject appears in <E2>.",
+            "Compare survival between subjects with and without a <E2> record.",
+            "Does survival differ for subjects who have <E2> records?",
+            "Survival by whether the patient received <E2>.",
+        ],
+        spec=_survival_chart(reading=StratumReading.PRESENCE),
+        chart_type=ChartType.LINE,
+        name_hint="survival_presence",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by PRESENCE OR ABSENCE of the subject in a second table, from "
+            "an event log — one row per event, with a subject id, an event-type column and a "
+            "numeric time column. Answers 'did this subject receive/undergo/enrol in the thing "
+            "that table records' — radiation, surgery, a protocol — where the fact is the "
+            "existence of a row, not the value of any column. No field from the second table is "
+            "named or plotted; only the shared subject-id column on each side. Exactly two "
+            "curves, and they PARTITION the cohort: every subject is in one or the other, so the "
+            "two groups add back to the whole and reconcile with the unstratified curve."
+        ),
+        design_considerations=(
+            "Use this, not the related-field variant, when the question is whether a subject has "
+            "any record in a table rather than which value it holds. Absence is unanswerable from "
+            "an ordinary join, which drops exactly the rows that would have answered 'no', so the "
+            "second table is first reduced to one row per subject and LEFT joined; a subject with "
+            "no match keeps a null marker and lands in the 'No' group. Reducing before the join "
+            "matters twice over: it makes the answer boolean rather than once-per-record, and it "
+            "stops the join from multiplying event rows. The two groups are labelled with the "
+            "table's own name, so a legend reads e.g. 'Radiation' / 'No Radiation'. "
+            + _SURVIVAL_PRESENCE_WINDOW +
+            "IMPORTANT: the record establishing presence may post-date the start event — "
+            "treatment usually follows diagnosis — so membership can be defined by something "
+            "that happened after the clock started. That is immortal-time bias by construction, "
+            "and it biases the 'yes' group upward: a subject must survive long enough to be "
+            "treated at all, while a subject who died immediately can only ever be a 'no'. Say "
+            "so when reporting a difference; a treated-vs-untreated gap read from this chart is "
+            "not a treatment effect. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare observed survival between subjects who do and do not appear in another "
+            "table — treated vs untreated, operated vs not, enrolled vs not."
+        ),
+        review_hint=(
+            "Expect exactly two curves, named after the second table ('Radiation' / 'No "
+            "Radiation'), and expect them to BRACKET the unstratified curve: this reading "
+            "partitions the cohort, so two curves on the same side of the pooled one is a bug. "
+            "The counts in the labels must add to the unstratified subject count. Previews with "
+            "the radiation table, where roughly half the subjects have a record. Judge whether "
+            "the immortal-time caveat in the description is visible enough to a reader who sees "
+            "only the chart."
+        ),
+        preview_bindings={
+            "E1": "Event",
+            "E2": "Radiation",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E2.F1": "research_id",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # The same idea crossed over TWO tables: radiation only, surgery only, both,
+    # neither. Still a partition, now with up to four groups.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E1> split by presence in <E2> and <E3>.",
+            "Compare survival across subjects with only <E2>, only <E3>, both or neither.",
+            "Does survival differ between subjects who had <E2>, <E3>, both or neither?",
+        ],
+        spec=_survival_chart(reading=StratumReading.PRESENCE_2X2),
+        chart_type=ChartType.LINE,
+        name_hint="survival_presence_2x2",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves for the 2x2 CROSS of presence in two other tables, from an event log "
+            "— one row per event, with a subject id, an event-type column and a numeric time "
+            "column. Produces up to four curves — second table only, third table only, both, "
+            "neither — for questions about combinations of treatments or procedures recorded in "
+            "separate tables. No field from either extra table is named or plotted; only the "
+            "shared subject-id column on each side. The four groups PARTITION the cohort: every "
+            "subject falls in exactly one cell, so they add back to the whole. Use the "
+            "single-table presence variant when only one table is in question — four curves for a "
+            "two-way question is harder to read for no gain."
+        ),
+        design_considerations=(
+            "Two LEFT joins, each against the other table reduced to one row per subject, so "
+            "absence stays visible and neither join multiplies event rows. Each cell is labelled "
+            "with the tables it names — '<E2> + <E3>', '<E2> only', '<E3> only', 'Neither' — "
+            "rather than a pair of flags, so no decoding is required. "
+            + _SURVIVAL_PRESENCE_WINDOW +
+            "Cells can be small: with four groups from a modest cohort, a curve may rest on a "
+            "handful of subjects, where one death moves it by tens of percent. Read the counts in "
+            "the labels before reading the gaps, and prefer the single-table variant when one is "
+            "nearly empty. A cell with no subjects simply does not appear, which is easy to "
+            "misread as 'nobody had only radiation' when it may mean the tables do not overlap "
+            "the way the reader assumes. "
+            "IMPORTANT: as with the single-table variant, presence may be established after the "
+            "clock started, so every 'had it' cell is immortal-time biased upward relative to "
+            "'Neither' — a subject had to survive to be treated. This chart describes groups, it "
+            "does not compare treatments. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare observed survival across combinations of two things recorded in separate "
+            "tables — radiation only, surgery only, both, neither."
+        ),
+        review_hint=(
+            "Expect up to four curves, labelled by the tables rather than yes/no, and the counts "
+            "to add to the unstratified subject count — this is a partition. A missing cell is "
+            "legitimate (nobody in that combination) but worth checking against the data rather "
+            "than assumed. A cell with no deaths draws flat at 100% and, having no final value "
+            "to report, gets no label — with no legend that reads as an unexplained line, and it "
+            "is likeliest here, where a cell can hold one subject. On pcx that is 'Neither', and "
+            "'Radiation only' is empty: every irradiated patient also had surgery. Judge whether four "
+            "curves plus their end labels are still legible at review-card size, and whether the "
+            "smallest cell is large enough to be worth drawing."
+        ),
+        preview_bindings={
+            "E1": "Event",
+            "E2": "Radiation",
+            "E3": "Surgery",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E2.F1": "research_id",
+            "E3.F1": "research_id",
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
         },

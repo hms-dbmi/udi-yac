@@ -253,6 +253,13 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         "survival_ever_multivalue": ["field4"],
         # The cross-table variant's stratifier lives on the joined entity.
         "survival_related": ["entity2_field"],
+        # The presence variants offer nothing, and that is the honest answer: what
+        # separates their curves is which *table* the subject appears in, and the
+        # tweak dropdowns re-bind fields only. Offering the joined subject-id key
+        # would be worse than offering nothing — changing it does not change what
+        # the chart asks, it just breaks the join.
+        "survival_presence": [],
+        "survival_presence_2x2": [],
     }
 
     # A cube heatmap offers its dimensions but never the measure.

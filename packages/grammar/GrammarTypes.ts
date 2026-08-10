@@ -281,6 +281,18 @@ export interface Join extends DataTransformationBase {
      * If two fields are specified, the first field is from the first table and the second field is from the second table.
      */
     on: string | [string, string] | [string[], string[]];
+
+    /**
+     * Which rows survive. Optional; defaults to `inner` — only rows matched on
+     * both sides.
+     *
+     * `left` keeps every row of the first table, filling the second table's
+     * columns with null where there was no match. That is the only way to ask
+     * about **absence**: whether a subject appears in another table at all is
+     * unanswerable from an inner join, which drops exactly the rows that would
+     * have answered "no".
+     */
+    kind?: 'inner' | 'left';
   };
 }
 

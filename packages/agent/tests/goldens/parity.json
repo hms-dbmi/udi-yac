@@ -1103,6 +1103,137 @@
       }
     },
     {
+      "name": "left-join-presence-marker",
+      "spec": {
+        "source": [
+          {
+            "name": "donors",
+            "source": "donors.csv"
+          },
+          {
+            "name": "samples",
+            "source": "samples.csv"
+          }
+        ],
+        "transformation": [
+          {
+            "filter": {
+              "op": "==",
+              "left": {
+                "field": "sample_category"
+              },
+              "right": {
+                "literal": "suspension"
+              }
+            },
+            "in": "samples",
+            "out": "samples"
+          },
+          {
+            "groupby": "donor.hubmap_id",
+            "in": "samples"
+          },
+          {
+            "rollup": {
+              "marker": {
+                "op": "count"
+              }
+            },
+            "in": "samples",
+            "out": "samples_by_donor"
+          },
+          {
+            "join": {
+              "on": ["hubmap_id", "donor.hubmap_id"],
+              "kind": "left"
+            },
+            "in": ["donors", "samples_by_donor"],
+            "out": "donors_p"
+          },
+          {
+            "derive": {
+              "group": {
+                "if": {
+                  "op": "!=",
+                  "left": {
+                    "field": "marker"
+                  },
+                  "right": {
+                    "literal": null
+                  }
+                },
+                "then": {
+                  "literal": "has samples"
+                },
+                "else": {
+                  "literal": "no samples"
+                }
+              }
+            }
+          },
+          {
+            "groupby": ["group", "sex"]
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "group": "has samples",
+            "sex": "Female",
+            "n": 8
+          },
+          {
+            "group": "has samples",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "group": "no samples",
+            "sex": "Male",
+            "n": 92
+          },
+          {
+            "group": "no samples",
+            "sex": "Female",
+            "n": 156
+          }
+        ],
+        "allData": [
+          {
+            "group": "has samples",
+            "sex": "Female",
+            "n": 8
+          },
+          {
+            "group": "has samples",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "group": "no samples",
+            "sex": "Male",
+            "n": 92
+          },
+          {
+            "group": "no samples",
+            "sex": "Female",
+            "n": 156
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "join-rollup",
       "spec": {
         "source": [

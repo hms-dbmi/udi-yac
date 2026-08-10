@@ -558,17 +558,25 @@ class PipelineCompiler:
         else:
             pairs = list(zip(on[0], on[1]))
 
+        # `left` keeps every row of the first table, nulling the second's columns
+        # where there was no match — the only way to express absence, which an
+        # inner join drops by construction.
+        kind = transform["join"].get("kind", "inner")
+        if kind not in ("inner", "left"):
+            raise UnsupportedQueryError(f"unsupported join kind '{kind}'")
+        join_kw = "LEFT JOIN" if kind == "left" else "JOIN"
+
         if all(a == b for a, b in pairs):
             # Same-name keys: USING merges and dedups the join columns —
             # matches Arquero, works on both DuckDB and StarRocks/MySQL.
             using = ", ".join(self._q(a) for a, _ in pairs)
-            sql = f"SELECT * FROM {left} l JOIN {right} r USING ({using})"
+            sql = f"SELECT * FROM {left} l {join_kw} {right} r USING ({using})"
         else:
             # ponytail: differently-named keys keep both columns; non-key
             # column collisions error in SQL instead of Arquero's _1/_2
             # suffixing. Add introspected column lists if that ever bites.
             cond = " AND ".join(f"l.{self._q(a)} = r.{self._q(b)}" for a, b in pairs)
-            sql = f"SELECT * FROM {left} l JOIN {right} r ON {cond}"
+            sql = f"SELECT * FROM {left} l {join_kw} {right} r ON {cond}"
         self._push(st, sql, out_name)
         st.pending_groupby = None
         st.order_by = None
