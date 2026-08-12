@@ -5,12 +5,14 @@ import type { DataTransformation } from 'udi-toolkit';
 import {
   useDataPackage,
   useDashboard,
+  useDashboardStore,
   useDataFilters,
   useDataFiltersStore,
   useDataPackageStore,
   useEntityIcons,
   useGlobalStore,
 } from '@/app/UDIChatContext';
+import { buildCubeCountTransformation } from '../utils/cubeFilters';
 import { joinDataPath } from '@/features/data-package';
 import { DEFAULT_ENTITY_ICONS, FALLBACK_ENTITY_ICON } from '@/utils/entityIcons';
 import type { EntityIconMap } from '../types';
@@ -31,9 +33,13 @@ export function DataCounts() {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataFiltersStore = useDataFiltersStore();
   const dataPackageStore = useDataPackageStore();
+  const dashboardStore = useDashboardStore();
   const globalStore = useGlobalStore();
 
   const [filteredCounts, setFilteredCounts] = useState<Record<string, number>>({});
+  // Cube entities have no meaningful row count — their total is the measure
+  // on the grand-total marginal, which has to be queried for.
+  const [cubeTotals, setCubeTotals] = useState<Record<string, number>>({});
 
   const consumerIcons = useEntityIcons();
   const mergedIcons = useMemo<EntityIconMap>(
@@ -43,11 +49,17 @@ export function DataCounts() {
 
   const chips = useMemo<EntityChip[]>(() => {
     if (!dataPackage?.resources) return [];
+    const dpState = dataPackageStore.getState();
     return entityNames
       .map((name) => {
         const resource = dataPackage.resources.find((r) => r.name === name);
-        const totalCount = resource?.['udi:row_count'] ?? 0;
-        if (totalCount <= 1) return null;
+        // A cube's row count is the number of pre-aggregated cells, not a
+        // count of anything a user asked about — the real total is the
+        // grand-total marginal's measure, which `cubeTotals` queries for.
+        const isCube = dpState.isCube(name);
+        const totalCount = isCube ? (cubeTotals[name] ?? 0) : (resource?.['udi:row_count'] ?? 0);
+        if (!isCube && totalCount <= 1) return null;
+        if (isCube && !resource) return null;
         return {
           id: name,
           label: name,
@@ -56,7 +68,7 @@ export function DataCounts() {
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
-  }, [dataPackage, entityNames, mergedIcons]);
+  }, [dataPackage, entityNames, mergedIcons, dataPackageStore, cubeTotals]);
 
   // Build filter IDs (same logic as dashboardStore.getFilterIds)
   const filterIds = useMemo(() => {
@@ -73,6 +85,7 @@ export function DataCounts() {
   // Build a count spec per entity (with named filters + rollup)
   const countSpecs = useMemo(() => {
     if (!dataPackage) return {};
+    const dpState = dataPackageStore.getState();
     const dashState = {
       getNamedFilters: (ids: string[], source: string) => {
         const uuidToSource = new Map<string, string>();
@@ -81,7 +94,6 @@ export function DataCounts() {
           const sn = Array.isArray(src) ? src[0]?.name : src?.name;
           if (v.uuid && sn) uuidToSource.set(v.uuid, sn);
         }
-        const dpState = dataPackageStore.getState();
         const dfState = dataFiltersStore.getState();
         const valid = dfState.getValidDataSelections({
           isValidIntervalFilter: dpState.isValidIntervalFilter,
@@ -104,21 +116,72 @@ export function DataCounts() {
       },
     };
 
+    const activeFilters = dashboardStore.getState().getActiveFilters(filterIds, dataFiltersStore);
+
     const specs: Record<string, QueryDataSpec> = {};
     for (const chip of chips) {
       const resource = dataPackage.resources.find((r) => r.name === chip.id);
       if (!resource) continue;
+      const source = {
+        name: chip.id,
+        source: joinDataPath(dataPackage['udi:path'], resource.path),
+      };
+      const cube = dpState.getCubeInfo(chip.id);
+      if (cube) {
+        // Same expand -> filter -> contract pipeline the charts use, with no
+        // visualization dimensions, so it contracts to a single total.
+        const { transformation } = buildCubeCountTransformation({
+          cube,
+          sourceName: chip.id,
+          filters: activeFilters,
+          measureOp: (measure) => dpState.getCubeMeasureOp(chip.id, measure),
+          as: 'count',
+        });
+        specs[chip.id] = { source, transformation };
+        continue;
+      }
       const namedFilters = dashState.getNamedFilters(filterIds, chip.id);
       specs[chip.id] = {
-        source: {
-          name: chip.id,
-          source: joinDataPath(dataPackage['udi:path'], resource.path),
-        },
+        source,
         transformation: [...namedFilters, { rollup: { count: { op: 'count' } } }],
       };
     }
     return specs;
-  }, [chips, filterIds, dataPackage, activeVisualizations, dataFiltersStore, dataPackageStore]);
+  }, [
+    chips,
+    filterIds,
+    dataPackage,
+    activeVisualizations,
+    dataFiltersStore,
+    dataPackageStore,
+    dashboardStore,
+  ]);
+
+  // Unfiltered grand total per cube entity — the denominator in the chip's
+  // "filtered / total". Row-level entities read it from udi:row_count.
+  const cubeTotalSpecs = useMemo(() => {
+    if (!dataPackage) return {};
+    const dpState = dataPackageStore.getState();
+    const specs: Record<string, QueryDataSpec> = {};
+    for (const name of entityNames) {
+      const cube = dpState.getCubeInfo(name);
+      if (!cube) continue;
+      const resource = dataPackage.resources.find((r) => r.name === name);
+      if (!resource) continue;
+      const { transformation } = buildCubeCountTransformation({
+        cube,
+        sourceName: name,
+        filters: [],
+        measureOp: (measure) => dpState.getCubeMeasureOp(name, measure),
+        as: 'count',
+      });
+      specs[name] = {
+        source: { name, source: joinDataPath(dataPackage['udi:path'], resource.path) },
+        transformation,
+      };
+    }
+    return specs;
+  }, [dataPackage, entityNames, dataPackageStore]);
 
   // Build a filtered-data spec per entity (same filters, no rollup) for download export
   const exportSpecs = useMemo(() => {
@@ -166,6 +229,17 @@ export function DataCounts() {
           return { ...prev, [entityName]: count };
         });
       }
+    },
+  });
+
+  useQueryData(cubeTotalSpecs, {
+    enabled: domainsReady,
+    onResult: (entityName, result) => {
+      const total = (result?.displayData?.[0] as Record<string, unknown> | undefined)?.count;
+      if (typeof total !== 'number') return;
+      setCubeTotals((prev) =>
+        prev[entityName] === total ? prev : { ...prev, [entityName]: total },
+      );
     },
   });
 

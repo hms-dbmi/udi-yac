@@ -7,6 +7,7 @@ export {
   createDataPackageStore,
   type DataPackageState,
   type LoadingPhase,
+  type ContractOp,
 } from './stores/dataPackageStore';
 
 export { DataOverviewPanel } from './components/DataOverviewPanel';
