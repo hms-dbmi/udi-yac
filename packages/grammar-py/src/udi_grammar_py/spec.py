@@ -427,6 +427,7 @@ class Layer:
                 "orderby",
                 "title",
                 "domainWhenFiltered",
+                "stack",
             },
             new_mapping,
             kwargs,

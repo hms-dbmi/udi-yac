@@ -145,6 +145,30 @@ additions:
   otherwise. Worth it when series are labelled inline and the legend is dropped —
   the grouping _variable_ still needs naming, which the legend title used to carry.
   Align it with whatever it names.
+- `stack=True` on a quantitative encoding, for a layer that must line up with a
+  sibling that stacks implicitly. See the arc-labelling trap below.
+
+**Labelling a pie or donut is three separate requirements**, and each one alone
+produces a chart that renders. Getting two of the three gives you a _convincingly
+wrong_ chart, which is worse than a broken one.
+
+1. `stack=True` on the label layer's `theta`. An `arc` mark stacks theta on its
+   own, so each slice spans the angles its predecessors did not; a `text` mark does
+   not, so without this every label sits at the angle its raw value maps to.
+2. **The same `color` encoding on the label layer.** Stack order is decided _per
+   layer_ from that layer's own encodings. The ring orders its slices by the colour
+   category; a text layer with no colour orders by its own text — which came out
+   _reversed_, so every label landed on somebody else's slice. All the numbers were
+   right, all of them were over a wedge, and nothing looked wrong. Sharing the
+   colour encoding is the idiom vega-lite documents, and it ties each number to its
+   slice by hue as a bonus.
+3. **Do not `omitLegend` on that colour.** The two layers share one colour scale,
+   so vega-lite merges them into a single legend by itself; suppressing this one
+   suppresses the shared legend, taking the category names off the chart.
+
+`test/arc-label-stack.mjs` pins all three by measuring rendered angles against
+slice bounds — including that the wrong version still puts every label _on_ a
+slice, which is why eyeballing a screenshot does not catch it.
 
 **Row objects handed to the renderer must be fresh.** Vega tags each datum it
 ingests, so a changeset that removes all rows and re-inserts the _same object

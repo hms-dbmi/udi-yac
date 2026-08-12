@@ -700,7 +700,11 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         // A DirectionalOrder may name several fields at once (grammar-py's
         // `.orderby([a, b])` emits that shape, and the SQL compiler expands it),
         // so flatten before applying the direction to each.
-        const orderKeys: OrderKey[] = orderbyList.flatMap((orderby) => {
+        // The type argument goes on `flatMap`, not on the result: annotating the
+        // result makes TS resolve the callback's return against `OrderKey`'s
+        // first member (a plain column name), which rejects the `desc(...)`
+        // wrapper objects the descending branch returns.
+        const orderKeys = orderbyList.flatMap<OrderKey>((orderby) => {
           if (typeof orderby === 'string') return [orderby];
           const fields = Array.isArray(orderby.field)
             ? orderby.field
