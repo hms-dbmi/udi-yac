@@ -29,6 +29,13 @@
  * isn't one of its dimensions, a cross-source join a pre-aggregated table
  * has no keys for, a non-contractible measure — are reported back as
  * skipped rather than silently producing wrong numbers.
+ *
+ * ponytail: this assumes a FULL powerset cube — that the `V ∪ F` marginal
+ * exists. A truncated cube (only some dimension combinations materialized)
+ * would expand to a marginal with no rows and render empty. It can't be
+ * detected from `udi:dimensions` alone, which says which columns are
+ * dimensions, not which combinations were computed; catching it needs either
+ * a declared marginal list in the datapackage or a probe query.
  */
 
 import type { DataTransformation, UDIGrammar } from 'udi-toolkit';

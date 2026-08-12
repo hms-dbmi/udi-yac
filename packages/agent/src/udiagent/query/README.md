@@ -116,9 +116,11 @@ visualization rather than render a plausible wrong number.
 
 - `table_map`: entity name → physical table/view name (entity names may
   contain spaces; table names are SQL-safe).
-- `entity_schemas`: per-entity `primaryKey`/`foreignKeys` that **can't be
-  introspected from the database** — merged into the schema by `introspect()`
-  (see §4); the chat's cross-entity filtering depends on them.
+- `entity_schemas`: per-entity metadata that **can't be introspected from the
+  database** — merged in by `introspect()` (see §4). `primaryKey`/`foreignKeys`
+  land in the schema and drive the chat's cross-entity filtering; the cube
+  roles (`udi:cube`, `udi:dimensions`, `udi:measures`,
+  `udi:measure_aggregations`) land on the resource and drive `only`.
 
 `run_query(source, transformation?, selections?, display_data_only?, offset?)`
 returns the client-facing result:
