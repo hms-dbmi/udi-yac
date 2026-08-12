@@ -51,8 +51,9 @@ export type {
   RemoteVizResult,
   RemoteBackendConfig,
 } from '../queryBackend';
-export { loadDataPackage } from './loadDataPackage';
+export { loadDataPackage, getCubeMetadata } from './loadDataPackage';
 export type { SourceSpec, LoadDataPackageOptions } from '../loadDataPackage';
+export type { CubeMetadata } from '../DataSourcesStore';
 export {
   subscribeToSelections,
   clearAllSelections,

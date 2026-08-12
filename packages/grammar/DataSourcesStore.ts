@@ -38,6 +38,23 @@ export interface DataSourcesState {
   [key: string]: DataInterface;
 }
 
+/**
+ * Pre-aggregated "powerset cube" metadata for a source, mirroring the
+ * resource-level `udi:dimensions` / `udi:measures` keys a UDI datapackage
+ * declares alongside `udi:cube`.
+ *
+ * A cube stores one row per dimension-subset combination: the dimensions
+ * participating in that row are populated, every other dimension is null,
+ * and the measure holds the value pre-aggregated over the matching
+ * line-level rows. Reading a cube therefore means *marginal selection* —
+ * picking the rows whose populated-dimension set is exactly the one you
+ * want — which is what the `only` transformation expresses.
+ */
+export interface CubeMetadata {
+  dimensions: string[];
+  measures: string[];
+}
+
 export interface ActiveDataSelection {
   dataSourceKey: string;
   selection: null | RangeSelection | PointSelection;
@@ -61,6 +78,32 @@ export interface PointSelection {
 export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
   const dataSources = ref<DataSourcesState>({});
   const dataSelections = ref<DataSelections>({});
+  // Kept beside `dataSources` rather than on the DataSource itself: a spec's
+  // `source` entries never carry cube metadata, and initDataSource compares
+  // the incoming DataSource against the cached one to decide whether to
+  // re-fetch — folding metadata in there would invalidate that cache on
+  // every render.
+  const cubeMetadata = ref<Record<string, CubeMetadata>>({});
+
+  /** Register (or clear, with null) a source's cube metadata. */
+  function setCubeMetadata(name: string, metadata: CubeMetadata | null): void {
+    if (metadata === null) {
+      delete cubeMetadata.value[name];
+      return;
+    }
+    cubeMetadata.value[name] = {
+      dimensions: [...metadata.dimensions],
+      measures: [...metadata.measures],
+    };
+  }
+
+  function getCubeMetadata(name: string): CubeMetadata | null {
+    return cubeMetadata.value[name] ?? null;
+  }
+
+  function isCubeSource(name: string): boolean {
+    return name in cubeMetadata.value;
+  }
 
   function bindExternalDataSelections(
     externalSelections: DataSelections,
@@ -617,6 +660,44 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
             currentTable.table = inTable.filter(mappedFilter).reify();
           }
         }
+      } else if ('only' in transform) {
+        const inTable = getInTable(transform.in);
+        const sourceKey = transform.in ?? currentTable.key;
+        const active = Array.isArray(transform.only)
+          ? transform.only
+          : [transform.only];
+        const dimensions =
+          transform.dimensions ?? getCubeMetadata(sourceKey)?.dimensions;
+        if (!dimensions) {
+          throw new Error(
+            `'only' transformation on source '${sourceKey}' requires cube ` +
+              `metadata: register the source's udi:dimensions via ` +
+              `loadDataPackage, or list them inline with 'dimensions'.`,
+          );
+        }
+        const unknown = active.filter((d) => !dimensions.includes(d));
+        if (unknown.length > 0) {
+          throw new Error(
+            `'only' transformation names non-dimension field(s) ` +
+              `${JSON.stringify(unknown)} on source '${sourceKey}'; its ` +
+              `dimensions are ${JSON.stringify(dimensions)}.`,
+          );
+        }
+        // A marginal is "these populated, all others null" — the same rule
+        // the agent's <MARGINAL:…> placeholder expands to, kept in one place
+        // so specs state the intent instead of enumerating the complement.
+        // `escape` keeps this a plain JS closure over `dimensions`/`activeSet`
+        // rather than an expression Arquero has to parse and re-scope.
+        const activeSet = new Set(active);
+        currentTable.table = inTable
+          .filter(
+            escape((d: Record<string, unknown>) =>
+              dimensions.every((dim) =>
+                activeSet.has(dim) ? d[dim] != null : d[dim] == null,
+              ),
+            ),
+          )
+          .reify();
       } else if ('groupby' in transform) {
         const inTable = getInTable(transform.in);
         if (Array.isArray(transform.groupby)) {
@@ -919,6 +1000,9 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     selectionHash,
     initDataSources,
     seedDataSource,
+    setCubeMetadata,
+    getCubeMetadata,
+    isCubeSource,
     getDataObject,
     watchDataSelection,
     getDataSelection,

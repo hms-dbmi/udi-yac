@@ -6,7 +6,11 @@ import type {
   DataSource,
   DataTransformation,
 } from './GrammarTypes';
-import { useDataSourcesStore, type DataSelections } from './DataSourcesStore';
+import {
+  useDataSourcesStore,
+  type DataSelections,
+  type CubeMetadata,
+} from './DataSourcesStore';
 import {
   loadDataPackage as loadDataPackageImpl,
   type SourceSpec,
@@ -155,6 +159,17 @@ export function loadDataPackage(
 }
 
 /**
+ * Cube metadata registered for `sourceName` by `loadDataPackage`, or null
+ * when the source is a plain row-level table. Callers use this to decide
+ * whether a source must be read by marginal selection (see `only`) rather
+ * than filtered row-wise.
+ */
+export function getCubeMetadata(sourceName: string): CubeMetadata | null {
+  const store = useDataSourcesStore(pinia);
+  return store.getCubeMetadata(sourceName);
+}
+
+/**
  * Fire `callback` whenever any selection in the shared DataSourcesStore
  * changes — brushes from `<udi-vis>` signals, programmatic updates from
  * queryData's `selections` binding, or `clearAllSelections()`.
@@ -210,4 +225,5 @@ export type {
   DataFieldDomain,
   IntervalDomain,
   CategoricalDomain,
+  CubeMetadata,
 };

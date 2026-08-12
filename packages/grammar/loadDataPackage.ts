@@ -16,7 +16,7 @@
 import type { Pinia } from 'pinia';
 import { fromCSV } from 'arquero';
 import DomainWorker from './domain-worker?worker&inline';
-import { useDataSourcesStore } from './DataSourcesStore';
+import { useDataSourcesStore, type CubeMetadata } from './DataSourcesStore';
 import { computeEntityDomains } from './domainCompute';
 import type {
   DataFieldDomain,
@@ -33,6 +33,13 @@ export interface SourceSpec {
   delimiter?: string;
   /** Optional per-field human descriptions, passed through into domains. */
   fieldDescriptions?: Record<string, string>;
+  /**
+   * Pre-aggregated cube metadata, from the resource's `udi:dimensions` /
+   * `udi:measures` keys. Present only when the resource declares itself a
+   * cube (`udi:cube`); registering it is what lets the `only` transformation
+   * resolve a marginal's null-dimension complement for this source.
+   */
+  cube?: CubeMetadata | undefined;
 }
 
 export interface LoadDataPackageOptions {
@@ -44,7 +51,8 @@ export interface LoadDataPackageOptions {
   /** Forwarded to fetch() for each CSV request. */
   fetchOptions?: RequestInit | undefined;
   /** Called once per entity when its domains have been computed. */
-  onEntityDomains?: ((entityName: string, domains: DataFieldDomain[]) => void) | undefined;
+  onEntityDomains?:
+    ((entityName: string, domains: DataFieldDomain[]) => void) | undefined;
   /** Called when an individual source fails (others continue). */
   onError?: ((entityName: string, message: string) => void) | undefined;
 }
@@ -67,6 +75,10 @@ export async function loadDataPackage(
   const inputs: EntityComputeInput[] = [];
 
   for (const spec of sources) {
+    // Registered before the fetch so a cube's marginal semantics are known
+    // even if its CSV fails to load — `only` then reports missing metadata
+    // only when the metadata is genuinely absent, not merely late.
+    store.setCubeMetadata(spec.name, spec.cube ?? null);
     try {
       const response = await fetch(spec.url, options?.fetchOptions);
       if (!response.ok) {
@@ -86,10 +98,7 @@ export async function loadDataPackage(
           .map((name) => ({ name, values: table.array(name) as unknown[] })),
       });
     } catch (e) {
-      options?.onError?.(
-        spec.name,
-        e instanceof Error ? e.message : String(e),
-      );
+      options?.onError?.(spec.name, e instanceof Error ? e.message : String(e));
     }
   }
 
