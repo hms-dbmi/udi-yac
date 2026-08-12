@@ -136,7 +136,37 @@ def _infer_foreign_keys(resources: list[dict]) -> None:
             )
 
 
-def build_package(csv_dir: Path, name: str, udi_path: str, strips: list[str]) -> dict:
+def _mark_cube(resource: dict, measures: list[str]) -> None:
+    """Tag a resource as a pre-aggregated powerset cube.
+
+    A cube stores one row per dimension-subset combination: the dimensions in
+    that subset populated, every other dimension null, and the measure
+    pre-aggregated over the matching line-item rows. `udi:cube` marks the
+    resource; `udi:dimensions` / `udi:measures` name the two column roles, so
+    consumers can select a marginal (the `only` transformation) instead of
+    filtering row-wise. Every column that isn't named a measure is a
+    dimension.
+    """
+    columns = [f["name"] for f in resource["schema"]["fields"]]
+    unknown = [m for m in measures if m not in columns]
+    if unknown:
+        sys.exit(f"--cube measure(s) not in {resource['name']}: {unknown}")
+    resource["udi:cube"] = True
+    resource["udi:dimensions"] = [c for c in columns if c not in measures]
+    resource["udi:measures"] = list(measures)
+    # A cube's dimensions are null in every marginal that excludes them, so
+    # the inferred primary key (a column unique across all rows) is
+    # meaningless here — and a foreign key to it would be worse.
+    resource["schema"].pop("primaryKey", None)
+
+
+def build_package(
+    csv_dir: Path,
+    name: str,
+    udi_path: str,
+    strips: list[str],
+    cube_measures: list[str] | None = None,
+) -> dict:
     resources = []
     for path in sorted(csv_dir.glob("*.csv")):
         with path.open(newline="", encoding="utf-8") as fh:
@@ -146,6 +176,8 @@ def build_package(csv_dir: Path, name: str, udi_path: str, strips: list[str]) ->
         # name is the entity key (FK refs, source resolver, agent specs) — must be unique
         res = _profile_table(humanize(path.stem, strips), header, rows)
         res["path"] = path.name
+        if cube_measures:
+            _mark_cube(res, cube_measures)
         resources.append(res)
 
     if not resources:
@@ -155,7 +187,10 @@ def build_package(csv_dir: Path, name: str, udi_path: str, strips: list[str]) ->
     if len(set(names)) != len(names):
         sys.exit(f"table names collide after humanizing: {names} — adjust --strip")
 
-    _infer_foreign_keys(resources)
+    # Cubes have no line-level keys to join on — skip FK inference entirely
+    # rather than let a coincidentally-unique dimension become a key.
+    if not cube_measures:
+        _infer_foreign_keys(resources)
     return {
         "name": name,
         "resources": resources,
@@ -216,6 +251,15 @@ def main() -> None:
         help="substring to remove from file names before humanizing table names "
         "(repeatable), e.g. --strip pcx_30_ --strip _level_deid",
     )
+    ap.add_argument(
+        "--cube",
+        action="append",
+        default=[],
+        metavar="MEASURE",
+        help="treat every CSV in the directory as a pre-aggregated powerset "
+        "cube whose measure column is MEASURE (repeatable). Every other "
+        "column becomes a udi:dimension. e.g. --cube cnt",
+    )
     ap.add_argument("-o", "--out", help="output path (default: <dir>/datapackage.json)")
     ap.add_argument("--selftest", action="store_true", help="run inference self-check and exit")
     args = ap.parse_args()
@@ -231,7 +275,7 @@ def main() -> None:
     udi_path = args.udi_path or f"./data/{csv_dir.name}/"
     out = Path(args.out) if args.out else csv_dir / "datapackage.json"
 
-    pkg = build_package(csv_dir, name, udi_path, args.strip)
+    pkg = build_package(csv_dir, name, udi_path, args.strip, args.cube)
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])
