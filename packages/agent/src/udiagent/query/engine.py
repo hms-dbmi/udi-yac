@@ -95,6 +95,7 @@ class QueryEngine:
             selections=selections,
             probe=self.connector.execute,
             columns_of=self._columns_of,
+            dimensions_of=self._dimensions_of,
         )
 
         # Same default as getDataObject: a trailing rollup yields a small
@@ -133,6 +134,16 @@ class QueryEngine:
                 name for name, _ in _describe(self.connector, table)
             }
         return self._columns_cache[entity]
+
+    def _dimensions_of(self, entity: str) -> list | None:
+        """Declared cube dimensions for an entity, or None if it isn't a cube.
+
+        Cube roles can't be introspected from the database — a marginal row
+        looks like any other row with nulls in it — so they come from the
+        configured schemas, same as primaryKey/foreignKeys.
+        """
+        dimensions = self.entity_schemas.get(entity, {}).get("udi:dimensions")
+        return list(dimensions) if dimensions else None
 
     def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], bool]:
         # Aggregated/kde results are small by construction; only cap raw rows.

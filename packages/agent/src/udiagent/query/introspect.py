@@ -160,6 +160,15 @@ def introspect_table(
     return resource, domains
 
 
+# Configured-schema keys that live on the resource rather than in its schema.
+_RESOURCE_LEVEL_EXTRAS = (
+    "udi:cube",
+    "udi:dimensions",
+    "udi:measures",
+    "udi:measure_aggregations",
+)
+
+
 def introspect(
     engine, package_name: str, distinct_cap: int = DEFAULT_DISTINCT_CAP
 ) -> dict:
@@ -179,7 +188,15 @@ def introspect(
         # the chat's cross-entity filtering can resolve entity relationships.
         extras = entity_schemas.get(entity)
         if extras:
-            resource["schema"].update(extras)
+            # Cube roles are resource-level keys in a datapackage descriptor,
+            # not schema-level ones — the chat reads them off the resource.
+            # Everything else (primaryKey/foreignKeys) belongs in the schema.
+            for key in _RESOURCE_LEVEL_EXTRAS:
+                if key in extras:
+                    resource[key] = extras[key]
+            resource["schema"].update(
+                {k: v for k, v in extras.items() if k not in _RESOURCE_LEVEL_EXTRAS}
+            )
         resources.append(resource)
         all_domains.extend(domains)
     return {
