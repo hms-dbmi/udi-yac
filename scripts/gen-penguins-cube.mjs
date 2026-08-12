@@ -90,6 +90,10 @@ const measureCardinality = (field) =>
 
 const datapackage = {
   name: 'penguins_cube',
+  // Consumers resolve each resource's `path` against `udi:path`; without it
+  // joinDataPath builds an undefined URL and CSV domain loading is skipped.
+  'udi:name': 'penguins_cube',
+  'udi:path': './data/penguins_cube/',
   resources: [
     {
       name: 'penguin_counts',

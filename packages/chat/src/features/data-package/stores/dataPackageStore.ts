@@ -437,6 +437,17 @@ export function createDataPackageStore() {
 /** Set derived state from a parsed data package (shared by fetch and set paths).
  *  Does NOT set loading — the caller manages the loading lifecycle. */
 function applyDataPackage(set: (partial: Partial<DataPackageState>) => void, json: DataPackage) {
+  // Every resource URL is built by resolving `path` against `udi:path`. A
+  // package missing it used to half-load and then throw from inside a render
+  // ("Cannot read properties of undefined (reading 'endsWith')"), which says
+  // nothing about the actual problem. Note remote packages legitimately carry
+  // an EMPTY udi:path, so this checks the type, not truthiness.
+  if (typeof json['udi:path'] !== 'string') {
+    throw new Error(
+      "data package is missing 'udi:path' — resource paths are resolved " +
+        'against it, so no data can be loaded',
+    );
+  }
   set({
     dataPackage: json,
     sourceFields: computeSourceFields(json),

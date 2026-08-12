@@ -410,6 +410,37 @@ function readCubeRows(): CubeRow[] {
   });
 }
 
+describe('the committed penguins_cube data package', () => {
+  const descriptor = JSON.parse(
+    readFileSync(
+      resolve(process.cwd(), '../../sample-data/penguins_cube/datapackage.json'),
+      'utf8',
+    ),
+  );
+
+  it('declares udi:path, which every resource URL is resolved against', () => {
+    // Omitting it half-loads the package and then throws from inside a render
+    // ("Cannot read properties of undefined (reading 'endsWith')"), and CSV
+    // domain loading is skipped outright.
+    expect(typeof descriptor['udi:path']).toBe('string');
+    expect(descriptor['udi:path']).not.toBe('');
+  });
+
+  it('declares the cube roles the dashboard reads off the resource', () => {
+    const resource = descriptor.resources[0];
+    expect(resource['udi:cube']).toBe(true);
+    expect(resource['udi:dimensions']).toEqual(CUBE.dimensions);
+    expect(resource['udi:measures']).toEqual(CUBE.measures);
+    // The non-additive measure must stay declared — it is what the
+    // refuse-to-contract path is exercised against.
+    expect(resource['udi:measure_aggregations']).toMatchObject({ mean_body_mass_g: 'mean' });
+  });
+
+  it('matches the CSV it describes', () => {
+    expect(descriptor.resources[0]['udi:row_count']).toBe(readCubeRows().length);
+  });
+});
+
 describe('expand/filter/contract against the penguins cube', () => {
   let rows: CubeRow[];
   let store: ReturnType<typeof useDataSourcesStore>;

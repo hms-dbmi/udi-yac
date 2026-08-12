@@ -1,5 +1,7 @@
 {
   "name": "penguins_cube",
+  "udi:name": "penguins_cube",
+  "udi:path": "./data/penguins_cube/",
   "resources": [
     {
       "name": "penguin_counts",
