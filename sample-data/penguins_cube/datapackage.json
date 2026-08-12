@@ -11,7 +11,7 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "udi:row_count": 36,
+      "udi:row_count": 45,
       "udi:column_count": 5,
       "udi:cube": true,
       "udi:dimensions": ["species", "island", "sex"],
@@ -42,7 +42,7 @@
             "name": "sex",
             "type": "string",
             "description": "Cube dimension: sex (null in marginals that do not include it).",
-            "udi:cardinality": 2,
+            "udi:cardinality": 3,
             "udi:unique": false,
             "udi:data_type": "nominal"
           },
@@ -50,7 +50,7 @@
             "name": "cnt",
             "type": "integer",
             "description": "Number of penguins in this cell.",
-            "udi:cardinality": 23,
+            "udi:cardinality": 25,
             "udi:unique": false,
             "udi:data_type": "quantitative"
           },
@@ -58,7 +58,7 @@
             "name": "mean_body_mass_g",
             "type": "integer",
             "description": "Mean body mass (g) in this cell. Non-additive: cannot be re-aggregated across a contracted dimension.",
-            "udi:cardinality": 26,
+            "udi:cardinality": 31,
             "udi:unique": false,
             "udi:data_type": "quantitative"
           }

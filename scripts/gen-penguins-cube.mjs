@@ -12,9 +12,20 @@
  * subset populated, the rest null — with `cnt` the number of penguins in
  * that cell and `mean_body_mass_g` a deliberately NON-additive companion
  * measure (so the "refuse to contract" path has something to refuse).
- * 3 dimensions -> 8 subsets -> 36 rows.
  *
- * Usage: node scripts/gen-penguins-cube.mjs
+ * MISSING VALUES. 11 of the 344 penguins have no recorded sex. A cube writes
+ * an empty cell to mean "this dimension does not participate in this
+ * marginal", so a genuinely-missing value cannot also be written as empty —
+ * the two would be indistinguishable, and marginal selection would silently
+ * mix them. They get an explicit label instead (`--null-label`, default
+ * "(missing)"), which keeps them countable: every marginal then totals 344,
+ * matching the penguins table. `--drop-nulls` excludes those rows instead,
+ * at the cost of totals that no longer reconcile with the source.
+ *
+ * Usage:
+ *   node scripts/gen-penguins-cube.mjs
+ *   node scripts/gen-penguins-cube.mjs --drop-nulls
+ *   node scripts/gen-penguins-cube.mjs --null-label Unknown
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -48,32 +59,51 @@ function powerset(items) {
   return subsets.sort((a, b) => a.length - b.length);
 }
 
-// A handful of penguins have no recorded sex. They would land in a cell keyed
-// by an empty string, which is indistinguishable from "this dimension does not
-// participate in this marginal" once written to CSV — exactly the ambiguity a
-// cube cannot represent. Drop them so the fixture's totals stay internally
-// consistent.
-const rows = readRows(SOURCE_CSV).filter((r) =>
-  DIMENSIONS.every((d) => r[d] !== '' && r[d] != null && r[d] !== 'NA'),
-);
+const argv = process.argv.slice(2);
+const dropNulls = argv.includes('--drop-nulls');
+const nullLabelIndex = argv.indexOf('--null-label');
+const NULL_LABEL = nullLabelIndex >= 0 ? argv[nullLabelIndex + 1] : '(missing)';
+
+const isMissing = (value) => value === '' || value == null || value === 'NA';
+
+const sourceRows = readRows(SOURCE_CSV);
+const rows = dropNulls
+  ? sourceRows.filter((r) => DIMENSIONS.every((d) => !isMissing(r[d])))
+  : sourceRows.map((r) => ({
+      ...r,
+      // An explicit label, not an empty cell: empty already means "not part
+      // of this marginal". Labelling keeps these penguins countable, so the
+      // cube's totals reconcile with the source table.
+      ...Object.fromEntries(
+        DIMENSIONS.map((d) => [d, isMissing(r[d]) ? NULL_LABEL : r[d]]),
+      ),
+    }));
 
 const cubeRows = [];
 for (const subset of powerset(DIMENSIONS)) {
-  /** @type {Map<string, {key: Record<string,string>, n: number, mass: number}>} */
+  /** @type {Map<string, {key: Record<string,string>, n: number, massTotal: number, massCount: number}>} */
   const cells = new Map();
   for (const row of rows) {
     const key = Object.fromEntries(subset.map((d) => [d, row[d]]));
     const id = subset.map((d) => row[d]).join('¶');
-    const cell = cells.get(id) ?? { key, n: 0, mass: 0 };
+    const cell = cells.get(id) ?? { key, n: 0, massTotal: 0, massCount: 0 };
     cell.n += 1;
-    cell.mass += Number(row.body_mass_g);
+    // Two penguins have no recorded body mass. A mean ignores them rather
+    // than counting them as zero, so its denominator can differ from `cnt`
+    // — which is one more reason it cannot be re-aggregated from cells.
+    const mass = Number(row.body_mass_g);
+    if (Number.isFinite(mass)) {
+      cell.massTotal += mass;
+      cell.massCount += 1;
+    }
     cells.set(id, cell);
   }
   for (const cell of cells.values()) {
     cubeRows.push({
       ...Object.fromEntries(DIMENSIONS.map((d) => [d, cell.key[d] ?? ''])),
       [MEASURE]: cell.n,
-      [MEAN_MEASURE]: Math.round(cell.mass / cell.n),
+      [MEAN_MEASURE]:
+        cell.massCount > 0 ? Math.round(cell.massTotal / cell.massCount) : '',
     });
   }
 }

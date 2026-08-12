@@ -104,6 +104,7 @@ export interface DashboardState {
     userPrompt: string,
     sourceFields: Record<string, string[]> | null,
     title?: string,
+    cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
   addActiveVisualizationBatch: (
     items: Array<{
@@ -152,6 +153,7 @@ export interface DashboardState {
     key: string,
     newSpec: UDIGrammar,
     sourceFields: Record<string, string[]> | null,
+    cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
   setLayoutItems: (items: Layout) => void;
   setGridCols: (cols: number) => void;
@@ -163,6 +165,7 @@ export interface DashboardState {
   importDashboard: (
     payload: DashboardExport,
     sourceFields: Record<string, string[]> | null,
+    cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
 }
 
@@ -250,6 +253,8 @@ export function injectInteractivity(
   spec: UDIGrammar,
   id: string,
   sourceFields: Record<string, string[]> | null,
+  /** Entity → pre-aggregated measure columns, for cube sources. */
+  cubeMeasureFields?: Record<string, string[]> | null,
 ): InteractiveSpec {
   const sourceData = Array.isArray(spec.source)
     ? (spec.source as SpecSourceLike[])
@@ -271,7 +276,20 @@ export function injectInteractivity(
       ? [rawMapping]
       : [];
 
+  // A pre-aggregated measure is a computed value, not something a user can
+  // select on — brushing "count between 40 and 60" filters nothing meaningful,
+  // and the cube pipeline would skip it as a non-dimension anyway.
+  //
+  // Row-level charts never hit this because their count column is created by
+  // the rollup and so isn't in `sourceFields` — resolveField already returns
+  // null for it, which is why a row-level bar chart falls through to
+  // click-to-filter. A cube's measure IS a real source column, so without
+  // this it would resolve, claim the y encoding as an interval brush, and
+  // leave the chart with nothing to click.
+  const measures = cubeMeasureFields?.[sourceName] ?? [];
+
   const resolveField = (mapping: SpecMappingLike): string | null => {
+    if (measures.includes(mapping.field)) return null;
     const fields = sourceFields?.[sourceName];
     if (!fields) return mapping.field;
     if (fields.includes(mapping.field)) return mapping.field;
@@ -336,9 +354,17 @@ export function createDashboardStore() {
 
     vizKey: (messageIndex, toolCallIndex) => `${messageIndex}-${toolCallIndex}`,
 
-    addActiveVisualization: (index, toolCallIndex, spec, userPrompt, sourceFields, title) => {
+    addActiveVisualization: (
+      index,
+      toolCallIndex,
+      spec,
+      userPrompt,
+      sourceFields,
+      title,
+      cubeMeasureFields,
+    ) => {
       const uuid = generateId();
-      const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
+      const interactiveSpec = injectInteractivity(spec, uuid, sourceFields, cubeMeasureFields);
       const key = get().vizKey(index, toolCallIndex);
       set((state) => {
         const next = new Map(state.activeVisualizations);
@@ -362,9 +388,10 @@ export function createDashboardStore() {
         // "donors by race" chart lands tall enough to show every category
         // instead of cramped at the default height.
         const getDomainForField = dataPackageStore?.getState().getDomainForField;
+        const cubeMeasureFields = dataPackageStore?.getState().cubeMeasureFields;
         for (const { index, toolCallIndex, spec, userPrompt, sourceFields, title } of items) {
           const uuid = generateId();
-          const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
+          const interactiveSpec = injectInteractivity(spec, uuid, sourceFields, cubeMeasureFields);
           const key = `${index}-${toolCallIndex}`;
           if (state.activeVisualizations.has(key)) continue;
           next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
@@ -638,10 +665,15 @@ export function createDashboardStore() {
       if (changed) set({ activeVisualizations: next });
     },
 
-    updateActiveVisualizationSpec: (key, newSpec, sourceFields) => {
+    updateActiveVisualizationSpec: (key, newSpec, sourceFields, cubeMeasureFields) => {
       const viz = get().activeVisualizations.get(key);
       if (!viz) return;
-      const interactiveSpec = injectInteractivity(newSpec, viz.uuid, sourceFields);
+      const interactiveSpec = injectInteractivity(
+        newSpec,
+        viz.uuid,
+        sourceFields,
+        cubeMeasureFields,
+      );
       set((state) => {
         const next = new Map(state.activeVisualizations);
         next.set(key, { ...viz, spec: newSpec, interactiveSpec });
@@ -774,11 +806,11 @@ export function createDashboardStore() {
       };
     },
 
-    importDashboard: (payload, sourceFields) => {
+    importDashboard: (payload, sourceFields, cubeMeasureFields) => {
       const next = new Map<string, ActiveVisualization>();
       for (const v of payload.visualizations) {
         const uuid = v.uuid || generateId();
-        const interactiveSpec = injectInteractivity(v.spec, uuid, sourceFields);
+        const interactiveSpec = injectInteractivity(v.spec, uuid, sourceFields, cubeMeasureFields);
         next.set(v.key, {
           index: v.index,
           toolCallIndex: v.toolCallIndex,

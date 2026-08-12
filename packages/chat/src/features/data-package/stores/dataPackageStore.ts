@@ -55,6 +55,9 @@ export interface DataPackageState {
   sourceFields: Record<string, string[]> | null;
   quantitativeSourceFields: Record<string, string[]> | null;
   categoricalSourceFields: Record<string, string[]> | null;
+  /** Entity → pre-aggregated measure columns, for cube resources only. A
+   *  measure is a computed value, so it must not become a brush target. */
+  cubeMeasureFields: Record<string, string[]>;
   entityNames: string[];
   dataPackageString: string;
   dataDomainsString: string;
@@ -172,6 +175,15 @@ function computeCategoricalSourceFields(dp: DataPackage | null): Record<string, 
   return fieldsMap;
 }
 
+function computeCubeMeasureFields(dp: DataPackage | null): Record<string, string[]> {
+  const fieldsMap: Record<string, string[]> = {};
+  for (const resource of dp?.resources ?? []) {
+    const cube = resourceCubeInfo(resource);
+    if (cube && resource.name) fieldsMap[resource.name] = cube.measures;
+  }
+  return fieldsMap;
+}
+
 function computeEntityNames(dp: DataPackage | null): string[] {
   if (!dp?.resources) return [];
   return dp.resources.map((r) => r.name);
@@ -208,6 +220,7 @@ export function createDataPackageStore() {
     sourceFields: null,
     quantitativeSourceFields: null,
     categoricalSourceFields: null,
+    cubeMeasureFields: {},
     entityNames: [],
     dataPackageString: '',
     dataDomainsString: '',
@@ -453,6 +466,7 @@ function applyDataPackage(set: (partial: Partial<DataPackageState>) => void, jso
     sourceFields: computeSourceFields(json),
     quantitativeSourceFields: computeQuantitativeSourceFields(json),
     categoricalSourceFields: computeCategoricalSourceFields(json),
+    cubeMeasureFields: computeCubeMeasureFields(json),
     entityNames: computeEntityNames(json),
     dataPackageString: computeDataPackageString(json),
     sourceResolver: computeSourceResolver(json),

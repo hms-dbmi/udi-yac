@@ -15,6 +15,7 @@ import {
   marginalDimensions,
   type ActiveFilter,
 } from './cubeFilters';
+import { injectInteractivity } from '../stores/dashboardStore';
 
 // The committed penguins cube (scripts/gen-penguins-cube.mjs): one row per
 // subset of {species, island, sex}, `cnt` additive, `mean_body_mass_g` not.
@@ -409,6 +410,68 @@ function readCubeRows(): CubeRow[] {
     return row;
   });
 }
+
+describe('injectInteractivity on a cube visualization', () => {
+  const CUBE_COLUMNS = { [SOURCE]: [...CUBE.dimensions, ...CUBE.measures] };
+  const CUBE_MEASURES = { [SOURCE]: CUBE.measures };
+
+  const selectOf = (spec: UDIGrammar) =>
+    (spec.representation as unknown as { select?: Record<string, unknown> }).select;
+
+  it('makes a bar chart click-to-filter on its dimension, not brush its measure', () => {
+    // Regression: a cube measure IS a real source column, so the quantitative
+    // y encoding used to resolve and claim an interval brush — leaving the
+    // chart with nothing to click. Row-level bar charts never hit this: their
+    // count column is created by the rollup, so it isn't a source field.
+    const select = selectOf(
+      injectInteractivity(barSpec(['species']), 'id', CUBE_COLUMNS, CUBE_MEASURES),
+    );
+    expect(select).toMatchObject({
+      how: { type: 'point' },
+      fields: ['species'],
+    });
+  });
+
+  it('still brushes a genuinely quantitative DIMENSION', () => {
+    // Not every quantitative encoding is a measure — a cube can have a
+    // numeric dimension (pcx has age_at_visit), which stays brushable.
+    const spec = {
+      source: { name: SOURCE, source: './penguins_cube.csv' },
+      transformation: [marginalFilter(['species'])],
+      representation: {
+        mark: 'point',
+        mapping: [
+          { encoding: 'x', field: 'body_mass_mm', type: 'quantitative' },
+          { encoding: 'y', field: 'species', type: 'nominal' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+    const select = selectOf(
+      injectInteractivity(
+        spec,
+        'id',
+        { [SOURCE]: [...CUBE.dimensions, ...CUBE.measures, 'body_mass_mm'] },
+        CUBE_MEASURES,
+      ),
+    );
+    expect(select).toMatchObject({ how: { type: 'interval', field: ['body_mass_mm'] } });
+  });
+
+  it('leaves row-level charts alone when no cube measures are given', () => {
+    const spec = {
+      source: { name: 'donors', source: './donors.csv' },
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'sex', type: 'nominal' },
+          { encoding: 'y', field: 'donors count', type: 'quantitative' },
+        ],
+      },
+    } as unknown as UDIGrammar;
+    const select = selectOf(injectInteractivity(spec, 'id', { donors: ['sex', 'race'] }));
+    expect(select).toMatchObject({ how: { type: 'point' }, fields: ['sex'] });
+  });
+});
 
 describe('the committed penguins_cube data package', () => {
   const descriptor = JSON.parse(
