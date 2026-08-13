@@ -275,11 +275,30 @@ def _engine_from_config(spec: dict):
 
 
 def _load_query_engines() -> dict:
-    path = os.getenv("UDI_QUERY_BACKENDS")
-    if not path:
+    raw = os.getenv("UDI_QUERY_BACKENDS")
+    if not raw:
         return {}
+    # A relative value also gets tried against the package root, for the same
+    # reason load_dotenv above takes an explicit path: `pnpm dev:agent` and the
+    # VS Code tasks launch from the REPO ROOT, while the seed scripts write their
+    # config next to themselves in packages/agent — so the documented
+    # `UDI_QUERY_BACKENDS=starrocks-backends.json` resolved to nothing and the
+    # server died on a bare FileNotFoundError. CWD is still tried first, so a
+    # path that already worked keeps working.
+    path = Path(raw)
+    if not path.is_absolute() and not path.exists():
+        from_package = _PACKAGE_ROOT / path
+        if from_package.exists():
+            path = from_package
+    if not path.exists():
+        raise FileNotFoundError(
+            f"UDI_QUERY_BACKENDS={raw!r} not found. Looked in {Path(raw).resolve()}"
+            + (f" and {_PACKAGE_ROOT / raw}" if not Path(raw).is_absolute() else "")
+            + ". Seed a backend first: packages/agent/scripts/seed_starrocks.py "
+            "(or seed_duckdb.py) writes this file into packages/agent/."
+        )
     engines = {}
-    for package, spec in json.loads(Path(path).read_text()).items():
+    for package, spec in json.loads(path.read_text()).items():
         try:
             engines[package] = _engine_from_config(spec)
         except Exception as exc:
