@@ -133,18 +133,10 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"op": "frequency"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "proportion", '
  '"type": "quantitative", "domainWhenFiltered": "filtered"}, {"encoding": "color", "field": "<F>", "type": '
  '"nominal"}]}}',
- '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"<E> count": '
- '{"op": "count"}, "proportion": {"op": "frequency"}}}, {"derive": {"_percent_offset": {"op": "+", "left": {"op": "*", '
- '"left": {"field": "proportion"}, "right": {"literal": 100}}, "right": {"literal": 0.5}}}}, {"derive": {"percent": '
- '{"op": "-", "left": {"field": "_percent_offset"}, "right": {"op": "%", "left": {"field": "_percent_offset"}, '
- '"right": {"literal": 1}}}}}, {"derive": {"slice label": {"concat": [{"field": "<E> count"}, {"literal": " ("}, '
- '{"field": "percent"}, {"literal": "%)"}]}}}], "representation": [{"mark": "arc", "mapping": [{"encoding": "theta", '
- '"field": "proportion", "type": "quantitative", "domainWhenFiltered": "filtered"}, {"encoding": "color", "field": '
- '"<F>", "type": "nominal"}, {"encoding": "radius", "value": 60}, {"encoding": "radius2", "value": 80}]}, {"mark": '
- '"text", "mapping": [{"encoding": "theta", "field": "proportion", "type": "quantitative", "domainWhenFiltered": '
- '"filtered", "stack": true}, {"encoding": "color", "field": "<F>", "type": "nominal"}, {"encoding": "radius", '
- '"value": 100}, {"encoding": "text", "field": "slice label", "type": "nominal"}], "stroke": "white", "strokeWidth": '
- '3, "strokeOpacity": 0.7}]}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": "<F>"}, {"rollup": {"proportion": '
+ '{"op": "frequency"}}}], "representation": {"mark": "arc", "mapping": [{"encoding": "theta", "field": "proportion", '
+ '"type": "quantitative", "domainWhenFiltered": "filtered"}, {"encoding": "color", "field": "<F>", "type": "nominal"}, '
+ '{"encoding": "radius", "value": 60}, {"encoding": "radius2", "value": 80}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}], "representation": '
  '{"mark": "arc", "mapping": [{"encoding": "theta", "field": "<M>", "type": "quantitative"}, {"encoding": "color", '
  '"field": "<D:n>", "type": "nominal"}]}}',
@@ -1294,19 +1286,11 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'type': 'object'}},
   'type': 'function'},
  {'function': {'description': '[circular] Creates a donut chart showing the proportional distribution of a nominal '
-                              'field, with each slice labelled by its record count and rounded percentage. Design: '
-                              'Donut variant with inner/outer radius creates a hollow center that can improve label '
-                              "readability. Suitable for few categories (<8). Each slice carries a 'count "
-                              "(percentage%)' label outside the ring: an angle is not readable as a number, and a "
-                              'percentage on its own hides its denominator — 50% of 4 and 50% of 400 draw the '
-                              'identical slice. Percentages are rounded to whole numbers and so may not sum to exactly '
-                              "100. Each label is drawn in its slice's colour and haloed in white, so it stays "
-                              "readable where a long one reaches back over the ring. Labels are placed at each slice's "
-                              'midpoint and are not collision-avoided, so several thin adjacent slices will overlap; '
-                              'prefer a bar chart past about eight categories, where the labels crowd and the angles '
-                              'stop being comparable anyway. Tasks: Assess part-to-whole proportions; identify the '
-                              'dominant category; rea',
-               'name': 'vis_031_circular_proportion_donut',
+                              'field. Design: Donut variant with inner/outer radius creates a hollow center that can '
+                              'improve label readability. Suitable for few categories (<8). Tasks: Assess '
+                              'part-to-whole proportions; identify the dominant category. Query patterns: Make a donut '
+                              'chart of <F:n>?',
+               'name': 'vis_031_circular_proportion_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2155,7 +2139,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_028_stacked_bar_count_vert_stacked_grouped': (28, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_029_stacked_bar_count_horiz_stacked_grouped': (29, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_030_circular_proportion_distribution': (30, {'entity': 'E', 'field': 'F'}),
- 'vis_031_circular_proportion_donut': (31, {'entity': 'E', 'field': 'F'}),
+ 'vis_031_circular_proportion_distribution': (31, {'entity': 'E', 'field': 'F'}),
  'vis_032_circular_proportion': (32, {'dimension': 'D', 'entity': 'E'}),
  'vis_033_circular_proportion': (33, {'dimension': 'D', 'entity': 'E'}),
  'vis_034_table_count': (34, {'entity': 'E'}),
@@ -2290,7 +2274,7 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_028_stacked_bar_count_vert_stacked_grouped': ['line_item', 'stacked_bar'],
  'vis_029_stacked_bar_count_horiz_stacked_grouped': ['line_item', 'stacked_bar'],
  'vis_030_circular_proportion_distribution': ['line_item', 'circular'],
- 'vis_031_circular_proportion_donut': ['line_item', 'circular'],
+ 'vis_031_circular_proportion_distribution': ['line_item', 'circular'],
  'vis_032_circular_proportion': ['data_cube', 'circular'],
  'vis_033_circular_proportion': ['data_cube', 'circular'],
  'vis_034_table_count': ['line_item', 'table'],

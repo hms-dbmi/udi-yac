@@ -722,13 +722,6 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       if (layer.mark === 'area' && encoding === 'y') {
         vegaEncoding[encoding].stack = false;
       }
-      // Explicit stacking, for a layer that must agree with a sibling that
-      // stacks implicitly. Vega-lite stacks `theta` for an arc mark but not for
-      // the text mark labelling it, so without this a slice label sits at the
-      // angle of its raw value rather than at its slice.
-      if ('stack' in map && map.stack != null) {
-        vegaEncoding[encoding].stack = map.stack;
-      }
       // TODO: map our domain/range to vega format domain/range
       if ('domain' in map) {
         if (vegaEncoding[encoding].scale == null) {

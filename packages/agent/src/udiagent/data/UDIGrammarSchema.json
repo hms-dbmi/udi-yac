@@ -619,10 +619,6 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
-        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -663,10 +659,6 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
-        },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -709,10 +701,6 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
-        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -753,10 +741,6 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
-        },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -799,10 +783,6 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
-        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -843,10 +823,6 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
-        },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -889,10 +865,6 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
-        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -933,10 +905,6 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
-        },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -2274,10 +2242,6 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
-        },
-        "stack": {
-          "description": "Whether this quantitative encoding accumulates across the marks that share a position, rather than being read from zero.\n\nOnly needed to make a *sibling layer* agree with one that stacks implicitly. An arc mark stacks `theta` on its own, so a pie slice spans the angles its predecessors did not; a text layer labelling those slices does not, and would place every label at the raw value's angle instead of at its slice's midpoint. Setting `stack: true` there puts the label on its own slice.",
-          "type": "boolean"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",

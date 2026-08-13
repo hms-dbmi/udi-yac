@@ -726,18 +726,6 @@ export interface GenericFieldMapping<Encoding> {
    * Overrides the default field name displayed on the axis.
    */
   title?: string;
-
-  /**
-   * Whether this quantitative encoding accumulates across the marks that share
-   * a position, rather than being read from zero.
-   *
-   * Only needed to make a *sibling layer* agree with one that stacks implicitly.
-   * An arc mark stacks `theta` on its own, so a pie slice spans the angles its
-   * predecessors did not; a text layer labelling those slices does not, and
-   * would place every label at the raw value's angle instead of at its slice's
-   * midpoint. Setting `stack: true` there puts the label on its own slice.
-   */
-  stack?: boolean;
 }
 
 /**

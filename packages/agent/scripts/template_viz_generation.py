@@ -1578,10 +1578,7 @@ def generate():
         tasks="Assess part-to-whole proportions; identify the dominant category.",
     )
 
-    # Donut chart, with each slice labelled by its count and percentage. A ring
-    # answers "which is biggest" but no reader takes a number off an angle, and
-    # the percentage alone hides what it is a fraction of — 50% of 4 and 50% of
-    # 400 draw the same slice.
+    # Donut chart
     df = add_row(
         df,
         query_templates=[
@@ -1591,40 +1588,7 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .groupby("<F>")
-            .rollup({"<E> count": Op.count(), "proportion": Op.frequency()})
-            # No round() in the grammar: floor(x + 0.5) via the modulo operator,
-            # or the label reads "33.33333333333333%".
-            .derive(
-                {
-                    "_percent_offset": Expr.binop(
-                        "+",
-                        Expr.binop("*", Expr.field("proportion"), Expr.lit(100)),
-                        Expr.lit(0.5),
-                    )
-                }
-            )
-            .derive(
-                {
-                    "percent": Expr.binop(
-                        "-",
-                        Expr.field("_percent_offset"),
-                        Expr.binop("%", Expr.field("_percent_offset"), Expr.lit(1)),
-                    )
-                }
-            )
-            # One text mark draws one field, so the label is assembled here.
-            .derive(
-                {
-                    "slice label": Expr.concat(
-                        [
-                            Expr.field("<E> count"),
-                            Expr.lit(" ("),
-                            Expr.field("percent"),
-                            Expr.lit("%)"),
-                        ]
-                    )
-                }
-            )
+            .rollup({"proportion": Op.frequency()})
             .mark("arc")
             .theta(
                 field="proportion", type="quantitative", domainWhenFiltered="filtered"
@@ -1632,77 +1596,15 @@ def generate():
             .color(field="<F>", type="nominal")
             .radius(value=60)
             .radius2(value=80)
-            .mark("text")
-            # `stack=True` is what puts each label on its own slice. An arc mark
-            # stacks theta implicitly; a text mark does not, so without this every
-            # label lands at the angle of its raw proportion instead of at the
-            # midpoint of the wedge it names.
-            .theta(
-                field="proportion",
-                type="quantitative",
-                domainWhenFiltered="filtered",
-                stack=True,
-            )
-            # And this is what makes the two stacks agree. Stack order is decided
-            # per layer from that layer's own encodings: the ring orders its
-            # slices by the colour category, and a text layer without one orders
-            # by its own text — the reverse, as it happens, so every label lands
-            # on somebody else's slice while looking entirely plausible. Sharing
-            # the colour encoding is the idiom vega-lite documents for this, and
-            # it also ties each number to its slice by hue.
-            #
-            # Deliberately NOT omitLegend: the two layers share one colour scale,
-            # so vega-lite merges them into a single legend on its own, and
-            # suppressing this one suppresses that shared legend — taking the
-            # category names off the chart entirely.
-            .color(field="<F>", type="nominal")
-            # Outside the ring (which ends at 80). A polar label is centred on
-            # its anchor, so a long one still reaches back over the band it
-            # names — hence the halo, which keeps it readable where it does.
-            .radius(value=100)
-            .text(field="slice label", type="nominal")
-            .outline(color="white", width=3, opacity=0.7)
         ),
         chart_type=ChartType.CIRCULAR,
-        # Pinned, because the derived name is built from description keywords and
-        # the word "count" in the label sentence outranks "proportion" — leaving
-        # this template called `..._count_distribution`, which describes a
-        # different chart. It encodes proportion; it merely annotates counts.
-        name_hint="proportion_donut",
         task_types=[
             TaskType.COMPUTE_DERIVED_VALUE,
             TaskType.DETERMINE_RANGE,
         ],
-        description=(
-            "Creates a donut chart showing the proportional distribution of a nominal field, "
-            "with each slice labelled by its record count and rounded percentage."
-        ),
-        design_considerations=(
-            "Donut variant with inner/outer radius creates a hollow center that can improve "
-            "label readability. Suitable for few categories (<8). Each slice carries a "
-            "'count (percentage%)' label outside the ring: an angle is not readable as a "
-            "number, and a percentage on its own hides its denominator — 50% of 4 and 50% of "
-            "400 draw the identical slice. Percentages are rounded to whole numbers and so may "
-            "not sum to exactly 100. Each label is drawn in its slice's colour and haloed in "
-            "white, so it stays readable where a long one reaches back over the ring. Labels "
-            "are placed at each slice's midpoint and are not collision-avoided, so several "
-            "thin adjacent slices will overlap; prefer a bar chart past about eight categories, "
-            "where the labels crowd and the angles stop being comparable anyway."
-        ),
-        tasks=(
-            "Assess part-to-whole proportions; identify the dominant category; read the exact "
-            "count behind each share."
-        ),
-        review_hint=(
-            "The check that matters: each label is drawn in its slice's colour, so a label "
-            "whose colour does not match the wedge it sits on is on the wrong slice. That is "
-            "the failure mode here — the ring and the label layer stack independently, and a "
-            "mislabelled donut looks entirely convincing, so verify one large and one small "
-            "slice against the legend rather than trusting the picture. The counts must sum to "
-            "the record total; the percentages need not sum to 100, since they are rounded. "
-            "Judge whether the labels overlap at this category count, and whether a pale "
-            "category's label is legible against the white background."
-        ),
+        description="Creates a donut chart showing the proportional distribution of a nominal field.",
+        design_considerations="Donut variant with inner/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
+        tasks="Assess part-to-whole proportions; identify the dominant category.",
     )
 
     # DATA CUBE: pie of the measure by a single nominal dimension (its marginal)

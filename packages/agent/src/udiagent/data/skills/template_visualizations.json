@@ -502,19 +502,18 @@
   },
   {
     "query_templates": ["Make a donut chart of <F:n>?"],
-    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"<E> count\": {\"op\": \"count\"}, \"proportion\": {\"op\": \"frequency\"}}}, {\"derive\": {\"_percent_offset\": {\"op\": \"+\", \"left\": {\"op\": \"*\", \"left\": {\"field\": \"proportion\"}, \"right\": {\"literal\": 100}}, \"right\": {\"literal\": 0.5}}}}, {\"derive\": {\"percent\": {\"op\": \"-\", \"left\": {\"field\": \"_percent_offset\"}, \"right\": {\"op\": \"%\", \"left\": {\"field\": \"_percent_offset\"}, \"right\": {\"literal\": 1}}}}}, {\"derive\": {\"slice label\": {\"concat\": [{\"field\": \"<E> count\"}, {\"literal\": \" (\"}, {\"field\": \"percent\"}, {\"literal\": \"%)\"}]}}}], \"representation\": [{\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\", \"stack\": true}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 100}, {\"encoding\": \"text\", \"field\": \"slice label\", \"type\": \"nominal\"}], \"stroke\": \"white\", \"strokeWidth\": 3, \"strokeOpacity\": 0.7}]}",
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"proportion\": {\"op\": \"frequency\"}}}], \"representation\": {\"mark\": \"arc\", \"mapping\": [{\"encoding\": \"theta\", \"field\": \"proportion\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}, {\"encoding\": \"color\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"radius\", \"value\": 60}, {\"encoding\": \"radius2\", \"value\": 80}]}}",
     "creation_method": "template",
     "chart_type": "circular",
-    "chart_complexity": "extra complex",
-    "spec_key_count": 48,
+    "chart_complexity": "medium",
+    "spec_key_count": 16,
     "task_types": ["Compute_Derived_Value", "Determine_Range"],
     "tags": ["line_item", "circular"],
-    "description": "Creates a donut chart showing the proportional distribution of a nominal field, with each slice labelled by its record count and rounded percentage.",
-    "design_considerations": "Donut variant with inner/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8). Each slice carries a 'count (percentage%)' label outside the ring: an angle is not readable as a number, and a percentage on its own hides its denominator \u2014 50% of 4 and 50% of 400 draw the identical slice. Percentages are rounded to whole numbers and so may not sum to exactly 100. Each label is drawn in its slice's colour and haloed in white, so it stays readable where a long one reaches back over the ring. Labels are placed at each slice's midpoint and are not collision-avoided, so several thin adjacent slices will overlap; prefer a bar chart past about eight categories, where the labels crowd and the angles stop being comparable anyway.",
-    "tasks": "Assess part-to-whole proportions; identify the dominant category; read the exact count behind each share.",
-    "review_hint": "The check that matters: each label is drawn in its slice's colour, so a label whose colour does not match the wedge it sits on is on the wrong slice. That is the failure mode here \u2014 the ring and the label layer stack independently, and a mislabelled donut looks entirely convincing, so verify one large and one small slice against the legend rather than trusting the picture. The counts must sum to the record total; the percentages need not sum to 100, since they are rounded. Judge whether the labels overlap at this category count, and whether a pale category's label is legible against the white background.",
-    "preview_bindings": null,
-    "name_hint": "proportion_donut"
+    "description": "Creates a donut chart showing the proportional distribution of a nominal field.",
+    "design_considerations": "Donut variant with inner/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
+    "tasks": "Assess part-to-whole proportions; identify the dominant category.",
+    "review_hint": "",
+    "preview_bindings": null
   },
   {
     "query_templates": [
