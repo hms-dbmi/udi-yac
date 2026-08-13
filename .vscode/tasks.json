@@ -110,6 +110,14 @@
       "presentation": { "group": "data", "panel": "dedicated" }
     },
     {
+      "label": "Data: Prune pcx demographics",
+      "detail": "Drop demographics rows for patients absent from the patient table (the source export ships a whole registry: 2571 rows for 69 patients). Idempotent. Must run BEFORE generating the datapackage so cardinalities and domains describe the cohort.",
+      "type": "shell",
+      "command": "python3 scripts/prune_orphan_rows.py sample-data/pcx/pcx_30_demographics_deid.csv sample-data/pcx/pcx_30_patient_level_deid.csv --key research_id",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
+    },
+    {
       "label": "Data: Generate pcx datapackage",
       "detail": "Regenerate sample-data/pcx/datapackage.json from the CSVs (stdlib only). For another dataset, run scripts/gen_datapackage.py directly.",
       "type": "shell",
@@ -134,6 +142,7 @@
       "detail": "Start StarRocks, regenerate the pcx datapackage, then seed the database — one-click refresh after editing sample-data/pcx",
       "dependsOn": [
         "Data: Start StarRocks",
+        "Data: Prune pcx demographics",
         "Data: Generate pcx datapackage",
         "Data: Seed StarRocks (pcx)"
       ],
@@ -153,6 +162,7 @@
       "label": "Data: Regenerate + seed pcx (DuckDB)",
       "detail": "Regenerate the pcx datapackage, then seed a local DuckDB file — zero-infrastructure alternative to StarRocks (no Docker)",
       "dependsOn": [
+        "Data: Prune pcx demographics",
         "Data: Generate pcx datapackage",
         "Data: Seed DuckDB (pcx)"
       ],

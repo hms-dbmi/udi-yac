@@ -105,25 +105,40 @@ def _profile_table(name: str, header: list[str], rows: list[list[str]]) -> dict:
 
 
 def _infer_foreign_keys(resources: list[dict]) -> None:
-    """Link tables on shared columns that are unique in exactly one table.
+    """Link tables on shared columns that are unique in at least one table.
 
-    single-column keys only; the lone table where a shared column is
-    unique is treated as the parent (many->one). Ambiguous (0 or >1 unique)
-    columns are left unlinked — declare those FKs by hand in the JSON.
+    Single-column keys only; a table where the shared column is unique can serve
+    as the parent (many->one). A column unique in NO table is left unlinked —
+    declare those by hand.
+
+    When the column is unique in SEVERAL tables the widest key space wins (most
+    distinct values, then name order to stay deterministic). Two one-row-per-key
+    tables are genuinely ambiguous in direction, but the covering side is the
+    safer parent, and refusing to choose is worse than choosing: it used to drop
+    the column entirely, taking with it the unambiguous links from every *other*
+    table. Pruning pcx's demographics table to its cohort did exactly that —
+    `research_id` became unique in Demographics as well as Patient, and all five
+    of the package's foreign keys silently disappeared.
     """
     cols_by_table = {r["name"]: {f["name"] for f in r["schema"]["fields"]} for r in resources}
     unique_cols = {
         r["name"]: {f["name"] for f in r["schema"]["fields"] if f["udi:unique"]}
         for r in resources
     }
+    # Distinct-value counts per (table, column), for the tiebreak below.
+    cardinality = {
+        (r["name"], f["name"]): f["udi:cardinality"]
+        for r in resources
+        for f in r["schema"]["fields"]
+    }
     shared = {c for a in cols_by_table.values() for c in a}
     shared = {c for c in shared if sum(c in cols for cols in cols_by_table.values()) >= 2}
 
     for col in sorted(shared):
         parents = [name for name, u in unique_cols.items() if col in u]
-        if len(parents) != 1:
+        if not parents:
             continue
-        parent = parents[0]
+        parent = max(parents, key=lambda name: (cardinality[(name, col)], name))
         for r in resources:
             if r["name"] == parent or col not in cols_by_table[r["name"]]:
                 continue
@@ -197,6 +212,26 @@ def _selftest() -> None:
             "udi:cardinality": {"from": "many", "to": "one"},
         }
     ], child["schema"]["foreignKeys"]
+
+    # Two tables in which the key is unique, plus a third where it is not: the
+    # wider key space is the parent, and the narrow unique table becomes a child
+    # of it rather than the whole column being abandoned. This is the pcx shape —
+    # Patient (69 ids) / Demographics (65) / Event (many rows per id) — and it
+    # regressed to zero foreign keys when the ambiguity was treated as fatal.
+    wide = prof("id,x\n1,a\n2,b\n3,c\n", "wide")
+    narrow = prof("id,y\n1,q\n2,r\n", "narrow")
+    many = prof("id,z\n1,m\n1,n\n2,o\n", "many")
+    _infer_foreign_keys([narrow, wide, many])
+    assert wide["schema"]["foreignKeys"] == [], wide["schema"]["foreignKeys"]
+    for table in (narrow, many):
+        assert table["schema"]["foreignKeys"] == [
+            {
+                "fields": ["id"],
+                "reference": {"fields": ["id"], "resource": "wide"},
+                "udi:cardinality": {"from": "many", "to": "one"},
+            }
+        ], (table["name"], table["schema"]["foreignKeys"])
+
     print("selftest OK")
 
 
