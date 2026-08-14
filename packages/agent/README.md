@@ -208,22 +208,59 @@ uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 
 ### Server Environment Variables
 
-| Variable                   | Required | Default               | Description                                                                                          |
-| -------------------------- | -------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`           | No       | —                     | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header.                  |
-| `OPENAI_BASE_URL`          | No       | —                     | OpenAI-compatible backend root (see [Third-party backends](#third-party-openai-compatible-backends)) |
-| `GPT_MODEL_NAME`           | No       | `gpt-5.4`             | Model for orchestration; with a custom base URL, that backend's model id                             |
-| `JWT_SECRET_KEY`           | Yes\*    | —                     | JWT signing key; the server refuses startup when missing (\*not required if `INSECURE_DEV_MODE=1`)   |
-| `JWT_ALGORITHM`            | No       | `HS256`               | JWT algorithm                                                                                        |
-| `INSECURE_DEV_MODE`        | No       | `0`                   | Set to `1` to skip JWT verification (development only)                                               |
-| `LANGFUSE_SECRET_KEY`      | No       | —                     | LangFuse observability secret key (opt-in; tracing is disabled when unset)                           |
-| `LANGFUSE_PUBLIC_KEY`      | No       | —                     | LangFuse observability public key (opt-in; tracing is disabled when unset)                           |
-| `LANGFUSE_HOST`            | No       | —                     | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                                            |
-| `LANGFUSE_ENVIRONMENT`     | No       | —                     | Tags traces with an environment label (e.g. `production`); does not enable tracing                   |
-| `UDI_QUERY_BACKENDS`       | No       | —                     | Path to a JSON file configuring server-side query backends (see below)                               |
-| `UDI_METADATA_TTL_SECONDS` | No       | `3600`                | TTL for the introspected-metadata cache                                                              |
-| `UDI_LOG_DIR`              | No       | `<package root>/logs` | Where the rotating log file goes; skipped (stream logs only) if unwritable                           |
-| `UDI_DATA_DIR`             | No       | `<package root>/data` | Repo-level dev data for `/v1/yac/examples`; set this when installed from a wheel                     |
+| Variable                   | Required | Default               | Description                                                                                                                                                                 |
+| -------------------------- | -------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`           | No       | —                     | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header.                                                                                         |
+| `OPENAI_BASE_URL`          | No       | —                     | OpenAI-compatible backend root (see [Third-party backends](#third-party-openai-compatible-backends))                                                                        |
+| `GPT_MODEL_NAME`           | No       | `gpt-5.4`             | Model for orchestration; with a custom base URL, that backend's model id                                                                                                    |
+| `JWT_SECRET_KEY`           | Yes\*    | —                     | JWT signing key; the server refuses startup when missing (\*unless `INSECURE_DEV_MODE=1` or `JWT_JWKS_URL` is set)                                                          |
+| `JWT_ALGORITHM`            | No       | `HS256`               | JWT algorithm; set to the identity provider's (e.g. `RS256`) when using `JWT_JWKS_URL`                                                                                      |
+| `JWT_JWKS_URL`             | No       | —                     | Verify externally issued tokens against an identity provider's JWKS endpoint, instead of `JWT_SECRET_KEY` (see [External identity providers](#external-identity-providers)) |
+| `JWT_AUDIENCE`             | Yes\*    | —                     | Expected `aud` claim (\*required with `JWT_JWKS_URL`)                                                                                                                       |
+| `JWT_ISSUER`               | No       | —                     | Expected `iss` claim; validated only when set                                                                                                                               |
+| `INSECURE_DEV_MODE`        | No       | `0`                   | Set to `1` to skip JWT verification (development only)                                                                                                                      |
+| `LANGFUSE_SECRET_KEY`      | No       | —                     | LangFuse observability secret key (opt-in; tracing is disabled when unset)                                                                                                  |
+| `LANGFUSE_PUBLIC_KEY`      | No       | —                     | LangFuse observability public key (opt-in; tracing is disabled when unset)                                                                                                  |
+| `LANGFUSE_HOST`            | No       | —                     | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                                                                                                                   |
+| `LANGFUSE_ENVIRONMENT`     | No       | —                     | Tags traces with an environment label (e.g. `production`); does not enable tracing                                                                                          |
+| `UDI_QUERY_BACKENDS`       | No       | —                     | Path to a JSON file configuring server-side query backends (see below)                                                                                                      |
+| `UDI_METADATA_TTL_SECONDS` | No       | `3600`                | TTL for the introspected-metadata cache                                                                                                                                     |
+| `UDI_LOG_DIR`              | No       | `<package root>/logs` | Where the rotating log file goes; skipped (stream logs only) if unwritable                                                                                                  |
+| `UDI_DATA_DIR`             | No       | `<package root>/data` | Repo-level dev data for `/v1/yac/examples`; set this when installed from a wheel                                                                                            |
+
+### External identity providers
+
+When the chat is embedded in a portal that already authenticates its users, the
+server can verify the portal's own tokens instead of issuing its own. Point
+`JWT_JWKS_URL` at the identity provider's JWKS endpoint (Keycloak, Globus,
+Auth0, Entra — anything publishing JWKS) and set `JWT_ALGORITHM` to the
+algorithm it signs with:
+
+```ini
+JWT_JWKS_URL=https://idp.example/realms/udi/protocol/openid-connect/certs
+JWT_ALGORITHM=RS256
+JWT_AUDIENCE=udi-yac
+JWT_ISSUER=https://idp.example/realms/udi   # optional
+```
+
+`JWT_AUDIENCE` is required in this mode: without it, any token the provider
+minted for _any_ of its clients would be accepted here. `JWT_ISSUER` is checked
+only when set.
+
+`JWT_JWKS_URL` and `JWT_SECRET_KEY` are mutually exclusive — setting both
+refuses startup, as does a JWKS URL with a symmetric `JWT_ALGORITHM` or without
+`JWT_AUDIENCE`.
+
+Keys are fetched on the first authenticated request and cached for 5 minutes. A
+token whose `kid` isn't in the cached set triggers an early refresh, so a
+provider that rotates without pre-publishing its new key doesn't cause an outage
+until the cache expires; those early refreshes are throttled to one every 10
+seconds. While the provider is unreachable, requests return `503`.
+
+On the frontend nothing changes: the host portal passes its token to the chat
+as `authToken` (see `UDIChatConfig`), which forwards it as `Authorization:
+Bearer`. Note that udi-yac does not run an identity provider of its own — for a
+standalone deployment with no portal in front, use `JWT_SECRET_KEY`.
 
 ### Server Endpoints
 

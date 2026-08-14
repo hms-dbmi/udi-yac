@@ -18,7 +18,7 @@ langfuse = [
 ]
 server = [
     "fastapi[standard]>=0.128.0",
-    "python-jose>=3.5.0",
+    "python-jose[cryptography]>=3.5.0",
     "python-dotenv>=1.0.0",
 ]
 benchmark = [
@@ -39,6 +39,7 @@ starrocks = [
 test = [
     "pytest>=8.0.0",
     "duckdb>=1.0.0",
+    "cryptography>=42.0.0",
 ]
 all = [
     "udiagent[langfuse,server,benchmark,codegen,starrocks,duckdb]",
