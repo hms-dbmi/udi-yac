@@ -32,7 +32,8 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_DATA_DIR = _REPO_ROOT / "sample-data" / "penguins"
-_DEFAULT_CONFIG_OUT = Path(__file__).resolve().parents[1] / "starrocks-backends.json"
+_AGENT_ROOT = Path(__file__).resolve().parents[1]
+_DEFAULT_CONFIG_OUT = _AGENT_ROOT / "starrocks-backends.json"
 
 BATCH_SIZE = 1000
 
@@ -236,6 +237,37 @@ def create_and_load(
         return int(cur.fetchone()[0])
 
 
+def set_env_var(env_path: Path, key: str, value: str) -> None:
+    """Point `packages/agent/.env` at a freshly written backends config.
+
+    Seeding a backend and telling the agent about it are the same intention, so
+    the seed scripts do both — that's what lets one `Dev: agent` task serve
+    every mode instead of one task per backend with an inlined env var.
+
+    Mirrors the three-tier behaviour of `setEnv` in
+    `scripts/set-chat-data-source.mjs`: replace an active line, else revive a
+    commented one, else append.
+    """
+    line = f"{key}={value}"
+    if not env_path.exists():
+        env_path.write_text(line + "\n")
+        print(f"wrote {key} to {env_path}")
+        return
+
+    lines = env_path.read_text().splitlines()
+    for i, existing in enumerate(lines):
+        if existing.startswith(f"{key}="):
+            lines[i] = line
+            break
+        if existing.lstrip("# ").startswith(f"{key}="):
+            lines[i] = line
+            break
+    else:
+        lines.append(line)
+    env_path.write_text("\n".join(lines) + "\n")
+    print(f"set {key} in {env_path}")
+
+
 def write_backends_config(
     out_path: Path, database: str, entries: list[dict],
     host: str, port: int, user: str, password: str,
@@ -338,11 +370,19 @@ def main() -> None:
         config_out=Path(args.config_out),
         null_sentinels=null_sentinels,
     )
+    # Seeding a backend and telling the agent about it are one intention, so
+    # the CLI does both — that's what lets a single `Dev: agent` task serve
+    # every mode. Done here, not in seed(), so importing callers (tests) never
+    # touch a developer's .env.
+    set_env_var(_AGENT_ROOT / ".env", "UDI_QUERY_BACKENDS",
+                str(Path(args.config_out).resolve()))
     print(
         "\nNext steps:\n"
-        f"  agent:  UDI_QUERY_BACKENDS={args.config_out} INSECURE_DEV_MODE=1 "
-        "uv run fastapi dev src/udiagent/server/app.py --port 8007\n"
-        f"  chat:   add VITE_UDI_REMOTE_PACKAGE={database} to packages/chat/.env.local"
+        f"  chat:   node scripts/set-chat-data-source.mjs {database} --remote\n"
+        "  stack:  run the 'Dev: chat + agent' task (or pnpm dev:agent + "
+        "dev:chat)\n"
+        "UDI_QUERY_BACKENDS is already set in packages/agent/.env — no command "
+        "prefix needed. Restart the agent and the chat dev server to pick both up."
     )
 
 

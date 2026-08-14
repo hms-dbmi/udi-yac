@@ -38,6 +38,7 @@ from seed_starrocks import (  # noqa: E402
     _column_type,
     load_package,
     read_csv,
+    set_env_var,
     table_name_for,
 )
 
@@ -144,12 +145,19 @@ def main() -> None:
 
     print(f"seeding {data_dir} -> DuckDB {db_path} (package `{package}`)")
     seed(data_dir, package, db_path, config_out=Path(args.config_out), null_sentinels=null_sentinels)
+    # Seeding a backend and telling the agent about it are one intention, so
+    # the CLI does both — that's what lets a single `Dev: agent` task serve
+    # every mode. Done here, not in seed(), so importing callers (tests) never
+    # touch a developer's .env.
+    set_env_var(_AGENT_ROOT / ".env", "UDI_QUERY_BACKENDS",
+                str(Path(args.config_out).resolve()))
     print(
         "\nNext steps (no container needed):\n"
-        f"  agent:  UDI_QUERY_BACKENDS={args.config_out} INSECURE_DEV_MODE=1 "
-        "uv run --project packages/agent --extra server --extra duckdb "
-        "fastapi dev packages/agent/src/udiagent/server/app.py --port 8007\n"
-        f"  chat:   add VITE_UDI_REMOTE_PACKAGE={package} to packages/chat/.env.local"
+        f"  chat:   node scripts/set-chat-data-source.mjs {package} --remote\n"
+        "  stack:  run the 'Dev: chat + agent' task (or pnpm dev:agent + "
+        "dev:chat)\n"
+        "UDI_QUERY_BACKENDS is already set in packages/agent/.env — no command "
+        "prefix needed. Restart the agent and the chat dev server to pick both up."
     )
 
 

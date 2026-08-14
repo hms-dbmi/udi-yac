@@ -19,14 +19,12 @@ docker compose -f dev/starrocks/docker-compose.yml up -d
 # 2. Seed it (waits for readiness automatically). From packages/agent:
 uv run --extra starrocks python scripts/seed_starrocks.py   # seeds sample-data/penguins -> database `penguins`
 
-# 3. Point the agent + chat at it. Include BOTH extras: `server` provides the
-#    fastapi CLI, `starrocks` the pymysql driver — `uv run` prunes any extra
-#    you don't name, so a bare `uv run fastapi` errors with "Failed to spawn:
-#    fastapi". (Run from packages/agent, or add `--project packages/agent`.)
-UDI_QUERY_BACKENDS=$(pwd)/starrocks-backends.json INSECURE_DEV_MODE=1 \
-  uv run --extra server --extra starrocks fastapi dev src/udiagent/server/app.py --port 8007
-# and in packages/chat/.env.local:
-#   VITE_UDI_REMOTE_PACKAGE=penguins
+# 3. Point the chat at it. Seeding already wrote UDI_QUERY_BACKENDS into
+#    packages/agent/.env, so the agent needs no env prefix.
+node scripts/set-chat-data-source.mjs penguins --remote   # VITE_UDI_REMOTE_PACKAGE=penguins
+
+# 4. Start the stack (or the "Dev: chat + agent" VS Code task).
+pnpm dev:agent
 pnpm dev:chat
 ```
 
