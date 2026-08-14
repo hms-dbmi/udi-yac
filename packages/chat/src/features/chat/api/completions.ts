@@ -32,7 +32,7 @@ function toYaml(obj: unknown, indent = 0): string {
 
 function constructQueryBody(
   messages: Message[],
-  model: string,
+  model: string | undefined,
   dataSchema: string,
   dataDomains: string,
 ) {
@@ -52,7 +52,7 @@ function constructQueryBody(
     return msg;
   });
 
-  return { model, messages: processed, dataSchema, dataDomains };
+  return { ...(model ? { model } : {}), messages: processed, dataSchema, dataDomains };
 }
 
 export interface ToolCallResponse {
@@ -96,7 +96,10 @@ export async function queryLLM(
   dataDomains: string,
   conversationId?: string,
 ): Promise<QueryResult> {
-  const model = config.model ?? 'agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B';
+  // The server honors a requested model only alongside a caller-supplied key —
+  // whoever pays for the tokens picks the model. Sending it without a key would
+  // just be ignored, so don't. Otherwise the server's GPT_MODEL_NAME applies.
+  const model = config.openAiKey ? config.model : undefined;
   const body = constructQueryBody(messages, model, dataSchema, dataDomains);
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
