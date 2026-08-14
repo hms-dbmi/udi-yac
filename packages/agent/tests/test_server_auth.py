@@ -184,6 +184,26 @@ def test_insecure_dev_mode_accepts_common_spellings(monkeypatch, raw, expected):
     assert ServerConfig().insecure_dev_mode is expected
 
 
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("*", ["*"]),
+        ("https://a.example", ["https://a.example"]),
+        ("https://a.example,https://b.example", ["https://a.example", "https://b.example"]),
+        (" https://a.example , https://b.example ", ["https://a.example", "https://b.example"]),
+        ("https://a.example,,", ["https://a.example"]),
+    ],
+)
+def test_cors_origins_parsing(raw, expected):
+    """Declared as a string, not list[str] — pydantic-settings would try to
+    JSON-decode a complex type and choke on the `*` default."""
+    assert _config(insecure_dev_mode=True, udi_cors_origins=raw).cors_origins == expected
+
+
+def test_cors_defaults_to_any_origin():
+    assert _config(insecure_dev_mode=True).cors_origins == ["*"]
+
+
 def test_blank_env_value_falls_back_to_the_default(monkeypatch):
     """CI templates interpolate "" for an unset variable."""
     monkeypatch.setenv("GPT_MODEL_NAME", "")

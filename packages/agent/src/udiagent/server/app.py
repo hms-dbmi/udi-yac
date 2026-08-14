@@ -173,7 +173,11 @@ async def _openai_auth_error_handler(request, exc: AuthenticationError):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # Defaults to ["*"] — any origin. Set UDI_CORS_ORIGINS to name the hosts
+    # that embed the chat once you know them; with the wildcard, Starlette
+    # echoes back whatever Origin asked, so any site can call this server with
+    # a user's credentials.
+    allow_origins=config.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

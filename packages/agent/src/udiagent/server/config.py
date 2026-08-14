@@ -95,6 +95,23 @@ class ServerConfig(BaseSettings):
         ),
     )
 
+    # --- CORS ---
+    # Declared as a plain comma-separated string, not list[str]: pydantic
+    # -settings JSON-decodes complex types from the environment, so the `*`
+    # default would fail to parse. `cors_origins` below does the splitting.
+    udi_cors_origins: str = Field(
+        default="*",
+        json_schema_extra={"group": "CORS"},
+        examples=['https://portal.example.org,https://staging.example.org'],
+        description=(
+            "Comma-separated list of browser origins allowed to call this "
+            "server. Defaults to `*` (any origin). Note that credentialed "
+            "requests are always permitted, so with `*` any site can call "
+            "this server with a user's cookies — name your origins "
+            "explicitly in production."
+        ),
+    )
+
     # --- Model backend ---
     gpt_model_name: str = Field(
         default="gpt-5.4",
@@ -183,6 +200,15 @@ class ServerConfig(BaseSettings):
             "`<package root>/data`; set this when installed from a wheel."
         ),
     )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """`UDI_CORS_ORIGINS` as the list Starlette's CORSMiddleware wants."""
+        return [
+            origin.strip()
+            for origin in self.udi_cors_origins.split(",")
+            if origin.strip()
+        ]
 
     @field_validator("jwt_algorithm", mode="after")
     @classmethod
