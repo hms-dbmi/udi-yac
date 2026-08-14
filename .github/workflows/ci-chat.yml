@@ -49,6 +49,12 @@ jobs:
       - name: Typecheck
         run: pnpm --filter udi-yac typecheck
 
+      # .env.example, the README table, and env.d.ts are generated from
+      # src/app/envVars.ts; this also fails if a VITE_* is read in the source
+      # without being documented there.
+      - name: Check generated env docs are current
+        run: node scripts/gen-chat-env-docs.mjs --check
+
       - name: Test
         run: pnpm --filter udi-yac test
 

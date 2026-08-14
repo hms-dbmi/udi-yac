@@ -289,7 +289,8 @@ Set **`VITE_UDI_REMOTE_PACKAGE=<name>`** (standalone: env; embedded:
 including brush cross-filtering (committed on mouse-up, with a loading
 indicator) — runs on the server via `POST /v1/yac/query`. No CSVs enter the
 browser. Takes precedence over `dataPackage`/`dataPackagePath`. `apiBaseUrl`
-points at this server.
+points at this server. (Canonical description of every chat variable:
+`packages/chat/.env.example`, generated from `packages/chat/src/app/envVars.ts`.)
 
 ### 3.4 Using the engine directly (library)
 
