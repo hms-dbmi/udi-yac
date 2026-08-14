@@ -17,6 +17,15 @@ jobs:
       - name: Build Docker image
         run: docker build -f packages/agent/Dockerfile -t udi-agent .
 
+      # Validate before stopping the running container: a bad .env otherwise
+      # costs downtime plus a `docker logs` dig, since the new container just
+      # exits at import. ServerConfig reports every problem at once.
+      - name: Validate env file against the config model
+        run: |
+          docker run --rm --env-file /home/ec2-user/.env udi-agent \
+            uv run --frozen --no-sync python -c \
+            "from udiagent.server.config import ServerConfig; ServerConfig()"
+
       - name: Restart container
         run: |
           docker stop udi-agent || true

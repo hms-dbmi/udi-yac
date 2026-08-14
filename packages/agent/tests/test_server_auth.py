@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import HTTPException
 from jose import jwt
+from pydantic import ValidationError
 
 from udiagent.server import auth
 from udiagent.server.auth import make_verify_jwt
@@ -34,36 +35,44 @@ OTHER_KEY = _generate_key()
 
 # ---------------------------------------------------------------------------
 # Startup safeguards
+#
+# These now live in ServerConfig rather than make_verify_jwt, so that every
+# misconfiguration is reported at once at startup. `_config` passes each field
+# explicitly so the ambient environment (conftest, a developer's shell) can't
+# influence the result.
 # ---------------------------------------------------------------------------
+
+
+def _config(**overrides):
+    base = dict(
+        jwt_secret_key="",
+        jwt_algorithm="HS256",
+        jwt_jwks_url="",
+        jwt_audience="",
+        jwt_issuer="",
+        insecure_dev_mode=False,
+    )
+    return ServerConfig(**{**base, **overrides})
 
 
 @pytest.mark.parametrize("secret_key", ["", " \t\n "])
 def test_missing_jwt_secret_is_rejected_outside_insecure_dev_mode(secret_key):
-    with pytest.raises(RuntimeError, match="JWT_SECRET_KEY"):
-        make_verify_jwt(
-            secret_key=secret_key,
-            algorithm="HS256",
-            insecure_dev_mode=False,
-        )
+    with pytest.raises(ValidationError, match="JWT_SECRET_KEY"):
+        _config(jwt_secret_key=secret_key)
 
 
 @pytest.mark.parametrize("secret_key", ["", " \t\n "])
 def test_missing_jwt_secret_is_allowed_in_insecure_dev_mode(secret_key):
-    make_verify_jwt(
-        secret_key=secret_key,
-        algorithm="HS256",
-        insecure_dev_mode=True,
-    )
+    _config(jwt_secret_key=secret_key, insecure_dev_mode=True)
 
 
 def test_secret_and_jwks_url_are_mutually_exclusive():
-    with pytest.raises(RuntimeError, match="mutually exclusive"):
-        make_verify_jwt(
-            secret_key="a-secret",
-            algorithm="RS256",
-            insecure_dev_mode=False,
-            jwks_url=JWKS_URL,
-            audience=AUDIENCE,
+    with pytest.raises(ValidationError, match="mutually exclusive"):
+        _config(
+            jwt_secret_key="a-secret",
+            jwt_algorithm="RS256",
+            jwt_jwks_url=JWKS_URL,
+            jwt_audience=AUDIENCE,
         )
 
 
@@ -82,60 +91,106 @@ def test_secret_and_jwks_url_are_mutually_exclusive():
     ],
 )
 def test_jwks_url_rejects_algorithms_outside_the_allowlist(algorithm):
-    with pytest.raises(RuntimeError):
-        make_verify_jwt(
-            secret_key="",
-            algorithm=algorithm,
-            insecure_dev_mode=False,
-            jwks_url=JWKS_URL,
-            audience=AUDIENCE,
+    with pytest.raises(ValidationError):
+        _config(
+            jwt_algorithm=algorithm, jwt_jwks_url=JWKS_URL, jwt_audience=AUDIENCE
         )
 
 
 @pytest.mark.parametrize("algorithm", ["none", "None", "NONE", "  none  "])
 def test_none_algorithm_is_rejected_in_shared_secret_mode(algorithm):
     """`none` must never reach jose, in either mode."""
-    with pytest.raises(RuntimeError, match="must not be 'none'"):
-        make_verify_jwt(
-            secret_key="a-secret",
-            algorithm=algorithm,
-            insecure_dev_mode=False,
-        )
+    with pytest.raises(ValidationError, match="must not be 'none'"):
+        _config(jwt_secret_key="a-secret", jwt_algorithm=algorithm)
 
 
 @pytest.mark.parametrize("algorithm", ["RS256", " RS256 ", "rs256", "\trs256\n"])
 def test_jwks_algorithm_is_stripped_and_normalized(algorithm, idp):
     """A padded or lowercased env value still verifies a real RS256 token."""
+    config = _config(
+        jwt_algorithm=algorithm,
+        jwt_jwks_url=JWKS_URL,
+        jwt_issuer=ISSUER,
+        jwt_audience=AUDIENCE,
+    )
+    assert config.jwt_algorithm == "RS256"
     verify = make_verify_jwt(
-        secret_key="",
-        algorithm=algorithm,
-        insecure_dev_mode=False,
-        jwks_url=JWKS_URL,
-        issuer=ISSUER,
-        audience=AUDIENCE,
+        config.jwt_secret_key,
+        config.jwt_algorithm,
+        config.insecure_dev_mode,
+        jwks_url=config.jwt_jwks_url,
+        issuer=config.jwt_issuer,
+        audience=config.jwt_audience,
     )
     assert verify(f"Bearer {_sign(IDP_KEY)}")["sub"] == "test-user"
 
 
 @pytest.mark.parametrize("audience", ["", " \t\n "])
 def test_jwks_url_requires_an_audience(audience):
-    with pytest.raises(RuntimeError, match="JWT_AUDIENCE"):
-        make_verify_jwt(
-            secret_key="",
-            algorithm="RS256",
-            insecure_dev_mode=False,
-            jwks_url=JWKS_URL,
-            audience=audience,
-        )
+    with pytest.raises(ValidationError, match="JWT_AUDIENCE"):
+        _config(jwt_algorithm="RS256", jwt_jwks_url=JWKS_URL, jwt_audience=audience)
 
 
 def test_jwks_config_is_allowed_in_insecure_dev_mode():
-    make_verify_jwt(
-        secret_key="",
-        algorithm="HS256",
+    _config(jwt_jwks_url=JWKS_URL, insecure_dev_mode=True)
+
+
+def test_every_problem_is_reported_at_once():
+    """One boot, one error list — not one problem per restart."""
+    with pytest.raises(ValidationError) as excinfo:
+        _config(
+            jwt_secret_key="a-secret",
+            jwt_jwks_url=JWKS_URL,
+            jwt_algorithm="HS256",
+            langfuse_host="https://langfuse.example",
+        )
+    message = str(excinfo.value)
+    assert "mutually exclusive" in message
+    assert "asymmetric algorithm" in message
+    assert "JWT_AUDIENCE" in message
+    assert "LANGFUSE_PUBLIC_KEY" in message
+
+
+def test_partial_langfuse_config_is_rejected():
+    with pytest.raises(ValidationError, match="LangFuse is configured but incomplete"):
+        _config(insecure_dev_mode=True, langfuse_host="https://langfuse.example")
+
+
+def test_complete_langfuse_config_is_accepted():
+    _config(
         insecure_dev_mode=True,
-        jwks_url=JWKS_URL,
+        langfuse_host="https://langfuse.example",
+        langfuse_public_key="pk-test",
+        langfuse_secret_key="sk-test",
     )
+
+
+def test_missing_query_backends_file_is_rejected(tmp_path):
+    with pytest.raises(ValidationError, match="not a readable file"):
+        _config(
+            insecure_dev_mode=True,
+            udi_query_backends=str(tmp_path / "nope.json"),
+        )
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [("1", True), ("true", True), ("yes", True), ("0", False), ("", False)],
+)
+def test_insecure_dev_mode_accepts_common_spellings(monkeypatch, raw, expected):
+    """`INSECURE_DEV_MODE=true` used to crash the server with a ValueError."""
+    monkeypatch.setenv("INSECURE_DEV_MODE", raw)
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-secret")
+    assert ServerConfig().insecure_dev_mode is expected
+
+
+def test_blank_env_value_falls_back_to_the_default(monkeypatch):
+    """CI templates interpolate "" for an unset variable."""
+    monkeypatch.setenv("GPT_MODEL_NAME", "")
+    monkeypatch.setenv("UDI_METADATA_TTL_SECONDS", "  ")
+    config = ServerConfig(insecure_dev_mode=True)
+    assert config.gpt_model_name == "gpt-5.4"
+    assert config.udi_metadata_ttl_seconds == 3600.0
 
 
 # ---------------------------------------------------------------------------

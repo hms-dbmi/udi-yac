@@ -208,25 +208,29 @@ uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 
 ### Server Environment Variables
 
-| Variable                   | Required | Default               | Description                                                                                                                                                                 |
-| -------------------------- | -------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`           | No       | —                     | OpenAI API key. If not set, must be provided per-request via `X-OpenAI-Key` header.                                                                                         |
-| `OPENAI_BASE_URL`          | No       | —                     | OpenAI-compatible backend root (see [Third-party backends](#third-party-openai-compatible-backends))                                                                        |
-| `GPT_MODEL_NAME`           | No       | `gpt-5.4`             | Model for orchestration; with a custom base URL, that backend's model id                                                                                                    |
-| `JWT_SECRET_KEY`           | Yes\*    | —                     | JWT signing key; the server refuses startup when missing (\*unless `INSECURE_DEV_MODE=1` or `JWT_JWKS_URL` is set)                                                          |
-| `JWT_ALGORITHM`            | No       | `HS256`               | JWT algorithm; set to the identity provider's (e.g. `RS256`) when using `JWT_JWKS_URL`                                                                                      |
-| `JWT_JWKS_URL`             | No       | —                     | Verify externally issued tokens against an identity provider's JWKS endpoint, instead of `JWT_SECRET_KEY` (see [External identity providers](#external-identity-providers)) |
-| `JWT_AUDIENCE`             | Yes\*    | —                     | Expected `aud` claim (\*required with `JWT_JWKS_URL`)                                                                                                                       |
-| `JWT_ISSUER`               | No       | —                     | Expected `iss` claim; validated only when set                                                                                                                               |
-| `INSECURE_DEV_MODE`        | No       | `0`                   | Set to `1` to skip JWT verification (development only)                                                                                                                      |
-| `LANGFUSE_SECRET_KEY`      | No       | —                     | LangFuse observability secret key (opt-in; tracing is disabled when unset)                                                                                                  |
-| `LANGFUSE_PUBLIC_KEY`      | No       | —                     | LangFuse observability public key (opt-in; tracing is disabled when unset)                                                                                                  |
-| `LANGFUSE_HOST`            | No       | —                     | LangFuse instance URL (e.g. `https://cloud.langfuse.com`)                                                                                                                   |
-| `LANGFUSE_ENVIRONMENT`     | No       | —                     | Tags traces with an environment label (e.g. `production`); does not enable tracing                                                                                          |
-| `UDI_QUERY_BACKENDS`       | No       | —                     | Path to a JSON file configuring server-side query backends (see below)                                                                                                      |
-| `UDI_METADATA_TTL_SECONDS` | No       | `3600`                | TTL for the introspected-metadata cache                                                                                                                                     |
-| `UDI_LOG_DIR`              | No       | `<package root>/logs` | Where the rotating log file goes; skipped (stream logs only) if unwritable                                                                                                  |
-| `UDI_DATA_DIR`             | No       | `<package root>/data` | Repo-level dev data for `/v1/yac/examples`; set this when installed from a wheel                                                                                            |
+<!-- BEGIN generated: env vars (scripts/gen_env_docs.py) -->
+
+| Variable                   | Default   | Description                                                                                                                                                                             |
+| -------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JWT_SECRET_KEY`           | —         | JWT signing key for self-issued tokens. Required unless `INSECURE_DEV_MODE=1` or `JWT_JWKS_URL` is set.                                                                                 |
+| `JWT_ALGORITHM`            | `HS256`   | JWT algorithm. Set to the identity provider's (e.g. `RS256`) when using `JWT_JWKS_URL`.                                                                                                 |
+| `JWT_JWKS_URL`             | —         | Verify externally issued tokens against an identity provider's JWKS endpoint instead of `JWT_SECRET_KEY`. Mutually exclusive with it.                                                   |
+| `JWT_ISSUER`               | —         | Expected `iss` claim; validated only when set.                                                                                                                                          |
+| `JWT_AUDIENCE`             | —         | Expected `aud` claim. Required with `JWT_JWKS_URL`.                                                                                                                                     |
+| `INSECURE_DEV_MODE`        | `0`       | Skip JWT verification entirely. Development only — never set this in production.                                                                                                        |
+| `GPT_MODEL_NAME`           | `gpt-5.4` | Model for orchestration; with a custom base URL, that backend's model id. Callers may override it per-request only by supplying their own `X-OpenAI-Key`.                               |
+| `OPENAI_API_KEY`           | —         | OpenAI API key. If unset, callers must supply one per-request via the `X-OpenAI-Key` header.                                                                                            |
+| `OPENAI_BASE_URL`          | —         | Root of any OpenAI-compatible backend (Azure AI Foundry, Bedrock, OpenRouter, Ollama, vLLM). Must support function calling and JSON-schema structured outputs.                          |
+| `LANGFUSE_PUBLIC_KEY`      | —         | LangFuse public key. Tracing is off unless all three are set.                                                                                                                           |
+| `LANGFUSE_SECRET_KEY`      | —         | LangFuse secret key. Tracing is off unless all three are set.                                                                                                                           |
+| `LANGFUSE_HOST`            | —         | LangFuse instance URL, e.g. `https://cloud.langfuse.com`.                                                                                                                               |
+| `LANGFUSE_ENVIRONMENT`     | —         | Tags traces with an environment label (e.g. `production`). Does not by itself enable tracing.                                                                                           |
+| `UDI_QUERY_BACKENDS`       | —         | Path to a JSON file mapping package names to StarRocks/DuckDB connections, served via `/v1/yac/query` and `/v1/yac/metadata`. Written by the seed scripts — see `dev/duckdb/README.md`. |
+| `UDI_METADATA_TTL_SECONDS` | `3600`    | TTL for the introspected-metadata cache.                                                                                                                                                |
+| `UDI_LOG_DIR`              | —         | Where the rotating log file goes. Defaults to `<package root>/logs`; file logging is skipped if unwritable.                                                                             |
+| `UDI_DATA_DIR`             | —         | Repo-level dev data for `/v1/yac/examples`. Defaults to `<package root>/data`; set this when installed from a wheel.                                                                    |
+
+<!-- END generated: env vars -->
 
 ### External identity providers
 
@@ -261,6 +265,22 @@ On the frontend nothing changes: the host portal passes its token to the chat
 as `authToken` (see `UDIChatConfig`), which forwards it as `Authorization:
 Bearer`. Note that udi-yac does not run an identity provider of its own — for a
 standalone deployment with no portal in front, use `JWT_SECRET_KEY`.
+
+#### Future: role-based model permissions
+
+Today, permission to choose a model is tied to who pays for it: `/v1/yac/completions`
+honors a request's `model` only when the caller also supplies an `X-OpenAI-Key`.
+Otherwise the server's `GPT_MODEL_NAME` applies and the requested model is
+ignored (and logged).
+
+That's a proxy for the real question, which is whether _this user_ is allowed to
+pick a model. Deployments that already authenticate users through an identity
+provider have a better signal available: `verify_jwt` returns the decoded token,
+so a claim on it (`realm_access.roles`, a group, a scope) could authorize model
+selection independently of key ownership — letting a trusted role pick a model on
+the server's key, while everyone else stays on the default. That would replace
+the `if x_openai_key` gate in `yac_completions`; nothing else in the request path
+would change.
 
 ### Server Endpoints
 
@@ -567,7 +587,9 @@ VITE_UDI_REQUIRE_API_KEY=false     # true = users supply their own OpenAI key
 ```
 
 Set `VITE_UDI_REQUIRE_API_KEY=true` when the server has no `OPENAI_API_KEY` and
-expects per-request `X-OpenAI-Key` headers.
+expects per-request `X-OpenAI-Key` headers. The chat's full variable list lives
+in [`packages/chat/.env.example`](../chat/.env.example) (generated from
+`packages/chat/src/app/envVars.ts`).
 
 ## Architecture
 

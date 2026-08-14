@@ -58,13 +58,18 @@ load_dotenv(_PACKAGE_ROOT / ".env")
 # override=False keeps the path above (and real env vars) winning where both exist.
 load_dotenv(Path.cwd() / ".env")
 
+# --- Config ---
+# Built before logging so a misconfiguration is reported immediately, and so
+# every env var in the process flows through one validated model.
+config = ServerConfig.from_env()
+
 # When installed from a wheel, _PACKAGE_ROOT lands inside site-packages, which
 # has no data/ (only src/udiagent/data is packaged) and is often read-only —
 # hence the overrides. See the deployment guide in the package README.
-_DATA_DIR = Path(os.getenv("UDI_DATA_DIR") or _PACKAGE_ROOT / "data")
+_DATA_DIR = Path(config.udi_data_dir or _PACKAGE_ROOT / "data")
 
 # --- Logging setup ---
-_log_dir = Path(os.getenv("UDI_LOG_DIR") or _PACKAGE_ROOT / "logs")
+_log_dir = Path(config.udi_log_dir or _PACKAGE_ROOT / "logs")
 
 _handlers: list[logging.Handler] = [logging.StreamHandler()]
 try:
@@ -92,9 +97,6 @@ logging.basicConfig(
 logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
-
-# --- Config ---
-config = ServerConfig.from_env()
 
 # --- Agent & Orchestrator ---
 agent = UDIAgent(
@@ -312,7 +314,7 @@ def _engine_from_config(spec: dict):
 
 
 def _load_query_engines() -> dict:
-    path = os.getenv("UDI_QUERY_BACKENDS")
+    path = config.udi_query_backends
     if not path:
         return {}
     engines = {}
@@ -371,8 +373,9 @@ def yac_metadata(
     if key not in caches:
         from udiagent.query import MetadataCache
 
-        ttl = float(os.getenv("UDI_METADATA_TTL_SECONDS", "3600"))
-        caches[key] = MetadataCache(engine, package or key, ttl_seconds=ttl)
+        caches[key] = MetadataCache(
+            engine, package or key, ttl_seconds=config.udi_metadata_ttl_seconds
+        )
     metadata = caches[key].refresh() if refresh else caches[key].get()
     return {
         "package": package or key,
