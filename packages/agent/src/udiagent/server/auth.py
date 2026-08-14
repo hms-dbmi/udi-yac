@@ -1,20 +1,108 @@
-"""JWT authentication for the UDIAgent server."""
+"""JWT authentication for the UDIAgent server.
+
+Two mutually exclusive modes:
+
+* **Shared secret** (`JWT_SECRET_KEY`) — the server signs and verifies its own
+  tokens. Standalone deployments.
+* **External JWKS** (`JWT_JWKS_URL` + `JWT_AUDIENCE`) — tokens are issued by a
+  host portal's identity provider (Keycloak, Globus, Auth0, Entra) and verified
+  against its published keys. The embedded chat forwards the portal's token via
+  its ``authToken`` config; nothing else in the request path changes.
+"""
+
+import time
 
 from fastapi import Header, HTTPException
 
+# How long a fetched key set is reused before being refreshed.
+_JWKS_TTL_SECONDS = 300
+# A token whose `kid` isn't in the cached key set triggers an early refresh —
+# an identity provider may rotate without pre-publishing the new key. This is
+# the floor between such refreshes, so a stream of unrecognized tokens can't be
+# used to hammer the provider.
+_JWKS_MIN_REFRESH_SECONDS = 10
 
-def make_verify_jwt(secret_key: str, algorithm: str, insecure_dev_mode: bool):
+
+def make_verify_jwt(
+    secret_key: str,
+    algorithm: str,
+    insecure_dev_mode: bool,
+    *,
+    jwks_url: str = "",
+    issuer: str = "",
+    audience: str = "",
+):
     """Return a FastAPI dependency that verifies JWT tokens.
 
     In insecure dev mode, verification is skipped entirely.
     """
-    if not insecure_dev_mode and not secret_key.strip():
-        raise RuntimeError(
-            "JWT_SECRET_KEY must be set unless INSECURE_DEV_MODE=1. "
-            "Refusing to start with an empty JWT signing key."
-        )
+    secret_key = secret_key.strip()
+    jwks_url = jwks_url.strip()
+    issuer = issuer.strip()
+    audience = audience.strip()
 
+    if not insecure_dev_mode:
+        if secret_key and jwks_url:
+            raise RuntimeError(
+                "JWT_SECRET_KEY and JWT_JWKS_URL are mutually exclusive. "
+                "Set the secret for self-issued tokens, or the JWKS URL for "
+                "tokens issued by an external identity provider."
+            )
+        if not secret_key and not jwks_url:
+            raise RuntimeError(
+                "JWT_SECRET_KEY or JWT_JWKS_URL must be set unless "
+                "INSECURE_DEV_MODE=1. Refusing to start without a way to "
+                "verify JWTs."
+            )
+        if jwks_url:
+            if algorithm.upper().startswith("HS"):
+                raise RuntimeError(
+                    f"JWT_JWKS_URL requires an asymmetric algorithm, got "
+                    f"{algorithm!r}. Set JWT_ALGORITHM to the one your identity "
+                    f"provider signs with (e.g. RS256)."
+                )
+            if not audience:
+                # Without an audience, any token the IdP minted for any of its
+                # clients would be accepted here.
+                raise RuntimeError(
+                    "JWT_AUDIENCE must be set when using JWT_JWKS_URL, so that "
+                    "tokens issued for other clients of the same identity "
+                    "provider are rejected."
+                )
+
+    import requests
     from jose import jwt, JWTError
+
+    cache: dict = {"keys": None, "fetched": 0.0}
+
+    def _knows_kid(kid) -> bool:
+        keys = cache["keys"].get("keys") if isinstance(cache["keys"], dict) else None
+        if kid is None or not keys:
+            # Nothing to match on — let jose try every key in the set.
+            return True
+        return any(key.get("kid") == kid for key in keys)
+
+    def _jwks(kid=None):
+        now = time.monotonic()
+        age = now - cache["fetched"]
+        stale = (
+            cache["keys"] is None
+            or age > _JWKS_TTL_SECONDS
+            or (not _knows_kid(kid) and age > _JWKS_MIN_REFRESH_SECONDS)
+        )
+        if stale:
+            try:
+                response = requests.get(jwks_url, timeout=10)
+                response.raise_for_status()
+                keys = response.json()
+            except requests.RequestException:
+                # Don't surface the IdP URL in a traceback.
+                raise HTTPException(
+                    status_code=503, detail="Identity provider unavailable"
+                )
+            cache["keys"] = keys
+            cache["fetched"] = now
+        return cache["keys"]
 
     def verify_jwt(authorization: str = Header(...)):
         if insecure_dev_mode:
@@ -25,7 +113,19 @@ def make_verify_jwt(secret_key: str, algorithm: str, insecure_dev_mode: bool):
         token = authorization[len("Bearer "):]
 
         try:
-            payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+            if jwks_url:
+                # Unverified only to pick the key; the signature is still
+                # checked against it below.
+                key = _jwks(jwt.get_unverified_header(token).get("kid"))
+            else:
+                key = secret_key
+            payload = jwt.decode(
+                token,
+                key,
+                algorithms=[algorithm],
+                audience=audience or None,
+                issuer=issuer or None,
+            )
             return payload
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid or expired token")

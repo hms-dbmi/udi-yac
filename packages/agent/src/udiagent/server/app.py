@@ -188,6 +188,9 @@ verify_jwt = make_verify_jwt(
     config.jwt_secret_key,
     config.jwt_algorithm,
     config.insecure_dev_mode,
+    jwks_url=config.jwt_jwks_url,
+    issuer=config.jwt_issuer,
+    audience=config.jwt_audience,
 )
 
 # ---------------------------------------------------------------------------
