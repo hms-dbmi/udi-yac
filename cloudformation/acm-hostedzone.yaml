@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Provisions SSL certificate for udi-agent.hidivelab.org with a new hosted zone and DNS validation.'
+
+Parameters:
+  Domain:
+    Type: String
+    Default: udi-agent.hidivelab.org
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [prod, dev]
+
+Resources:
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref Domain
+      Tags:
+        - Key: Name
+          Value: !Sub "${Domain} Hosted Zone"
+        - Key: "environment"
+          Value: !Ref Environment
+
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref Domain
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref Domain
+          HostedZoneId: !Ref HostedZone
+      Tags:
+        - Key: Name
+          Value: !Sub "${Domain} SSL Certificate"
+        - Key: "environment"
+          Value: !Ref Environment
