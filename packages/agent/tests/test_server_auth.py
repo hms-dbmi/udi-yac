@@ -67,15 +67,54 @@ def test_secret_and_jwks_url_are_mutually_exclusive():
         )
 
 
-def test_jwks_url_rejects_symmetric_algorithm():
-    with pytest.raises(RuntimeError, match="asymmetric algorithm"):
+@pytest.mark.parametrize(
+    "algorithm",
+    [
+        pytest.param("HS256", id="symmetric"),
+        pytest.param("none", id="none"),
+        pytest.param("NONE", id="none-uppercased"),
+        pytest.param("PS256", id="unsupported-by-jose"),
+        pytest.param("EdDSA", id="eddsa-unsupported-by-jose"),
+        pytest.param("", id="empty"),
+        pytest.param("   ", id="whitespace-only"),
+        pytest.param("RS256; DROP", id="garbage"),
+        pytest.param("HS 256", id="inner-whitespace"),
+    ],
+)
+def test_jwks_url_rejects_algorithms_outside_the_allowlist(algorithm):
+    with pytest.raises(RuntimeError):
         make_verify_jwt(
             secret_key="",
-            algorithm="HS256",
+            algorithm=algorithm,
             insecure_dev_mode=False,
             jwks_url=JWKS_URL,
             audience=AUDIENCE,
         )
+
+
+@pytest.mark.parametrize("algorithm", ["none", "None", "NONE", "  none  "])
+def test_none_algorithm_is_rejected_in_shared_secret_mode(algorithm):
+    """`none` must never reach jose, in either mode."""
+    with pytest.raises(RuntimeError, match="must not be 'none'"):
+        make_verify_jwt(
+            secret_key="a-secret",
+            algorithm=algorithm,
+            insecure_dev_mode=False,
+        )
+
+
+@pytest.mark.parametrize("algorithm", ["RS256", " RS256 ", "rs256", "\trs256\n"])
+def test_jwks_algorithm_is_stripped_and_normalized(algorithm, idp):
+    """A padded or lowercased env value still verifies a real RS256 token."""
+    verify = make_verify_jwt(
+        secret_key="",
+        algorithm=algorithm,
+        insecure_dev_mode=False,
+        jwks_url=JWKS_URL,
+        issuer=ISSUER,
+        audience=AUDIENCE,
+    )
+    assert verify(f"Bearer {_sign(IDP_KEY)}")["sub"] == "test-user"
 
 
 @pytest.mark.parametrize("audience", ["", " \t\n "])

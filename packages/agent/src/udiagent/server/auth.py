@@ -21,6 +21,15 @@ _JWKS_TTL_SECONDS = 300
 # the floor between such refreshes, so a stream of unrecognized tokens can't be
 # used to hammer the provider.
 _JWKS_MIN_REFRESH_SECONDS = 10
+# Asymmetric signature algorithms accepted against an external key set, keyed
+# by uppercase form so a lowercased env value still resolves to the spelling
+# jose expects. python-jose verifies no others — it has no PS* or EdDSA
+# backend — so anything outside this set would fail per-request anyway; being
+# explicit turns that into one clear error at startup instead.
+_JWKS_ALGORITHMS = {
+    alg.upper(): alg
+    for alg in ("RS256", "RS384", "RS512", "ES256", "ES384", "ES512")
+}
 
 
 def make_verify_jwt(
@@ -37,6 +46,7 @@ def make_verify_jwt(
     In insecure dev mode, verification is skipped entirely.
     """
     secret_key = secret_key.strip()
+    algorithm = algorithm.strip()
     jwks_url = jwks_url.strip()
     issuer = issuer.strip()
     audience = audience.strip()
@@ -54,13 +64,26 @@ def make_verify_jwt(
                 "INSECURE_DEV_MODE=1. Refusing to start without a way to "
                 "verify JWTs."
             )
+        if algorithm.lower() == "none":
+            # jose already refuses `none`, but a signature-less algorithm is
+            # worth turning away at startup rather than per-request.
+            raise RuntimeError(
+                "JWT_ALGORITHM must not be 'none' — that would accept "
+                "unsigned tokens. Set it to the algorithm your tokens are "
+                "actually signed with."
+            )
         if jwks_url:
-            if algorithm.upper().startswith("HS"):
+            canonical = _JWKS_ALGORITHMS.get(algorithm.upper())
+            if canonical is None:
                 raise RuntimeError(
-                    f"JWT_JWKS_URL requires an asymmetric algorithm, got "
+                    f"JWT_JWKS_URL requires one of "
+                    f"{', '.join(sorted(_JWKS_ALGORITHMS.values()))}, got "
                     f"{algorithm!r}. Set JWT_ALGORITHM to the one your identity "
                     f"provider signs with (e.g. RS256)."
                 )
+            # Accept a lowercased env value, but hand jose the exact spelling
+            # it matches the token header against.
+            algorithm = canonical
             if not audience:
                 # Without an audience, any token the IdP minted for any of its
                 # clients would be accepted here.
