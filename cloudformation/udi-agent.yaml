@@ -1,0 +1,317 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Application Load Balancer with associated EC2 instances using existing ACM certificate'
+
+Parameters:
+  VPCId:
+    Type: AWS::EC2::VPC::Id
+    Description: ID of the VPC where the ALB and instances will be created
+
+  PublicSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of public subnet IDs for the ALB
+
+  CertificateArn:
+    Type: String
+    Description: ARN of the existing ACM certificate
+
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.small, t3.medium, t3.large]
+    Description: EC2 instance type for the application instances
+
+  AmiId:
+    Description: Custom AMI ID for the EC2 instances. 
+    Type: String
+    Default: 'ami-0a03606be38c2bb1b'
+
+  HostedZoneName:
+    Description: Hosted Zone Name
+    Type: String
+    Default: udi-agent.hidivelab.org
+
+  ServiceDomainName:
+    Description: Domain name for the website (udi-agent.hidivelab.org)
+    Default: udi-agent.hidivelab.org
+    Type: String
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [prod, dev, staging]
+    Description: Environment name
+
+  Project:
+    Type: String
+    Default: udi-agent
+    Description: Project name
+
+  DockerImage:
+    Type: String
+    Default: udi-agent:latest
+    Description: Docker image to run on each EC2 instance (e.g. udi-agent:latest or 123456789.dkr.ecr.us-east-1.amazonaws.com/udi-agent:latest)
+
+Resources:
+  # Security Group for ALB
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub '${AWS::StackName} ALB SG'
+      VpcId: !Ref VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 80
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 443
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ALB-SG'
+        - Key: environment
+          Value: !Ref Environment
+        - Key: project
+          Value: !Ref Project
+
+  # Security Group for EC2 instances
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ALB EC2 instances
+      VpcId: !Ref VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !GetAtt ALBSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !GetAtt ALBSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-Instance-SG'
+        - Key: environment
+          Value: !Ref Environment
+        - Key: project
+          Value: !Ref Project
+
+# Target Group for HTTP traffic
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${AWS::StackName}-TG'
+      Protocol: HTTP
+      Port: 80
+      VpcId: !Ref VPCId
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 300
+      HealthCheckTimeoutSeconds: 120
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-TG'
+        - Key: environment
+          Value: !Ref Environment
+        - Key: project
+          Value: !Ref Project
+
+  Route53RecordSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+        # keep the . suffix
+        HostedZoneName: !Sub '${HostedZoneName}.'
+        # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-route53-aliastarget.html#cfn-route53-aliastarget-hostedzoneid
+        Comment: Subdomain alias record for ALB.
+        RecordSets:
+            - Name: !Ref ServiceDomainName
+              Type: A
+              AliasTarget:
+                  DNSName: !GetAtt ApplicationLoadBalancer.DNSName
+                  EvaluateTargetHealth: false
+                  HostedZoneId: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+            
+
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${AWS::StackName}-ALB'
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets: !Ref PublicSubnetIds
+      SecurityGroups:
+        - !GetAtt ALBSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ALB'
+        - Key: environment
+          Value: !Ref Environment
+        - Key: project
+          Value: !Ref Project
+
+  
+
+  # HTTPS Listener
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Protocol: HTTPS
+      Port: 443
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+    DependsOn:
+      - ApplicationLoadBalancer
+
+
+  # IAM Role for EC2 instances
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-EC2Role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-EC2Role'
+        - Key: environment
+          Value: !Ref Environment
+        - Key: project
+          Value: !Ref Project
+
+  
+  # Instance Profile
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  # Launch Template
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          services:
+            systemd:
+              docker:
+                enabled: true
+                ensureRunning: true
+          commands:
+            01_run_container:
+              command: !Sub >-
+                docker run -d
+                --name udi-agent
+                --restart unless-stopped
+                -p 80:80
+                ${DockerImage}
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}'
+      LaunchTemplateData:
+        ImageId: !Ref AmiId
+        InstanceType: !Ref InstanceType
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -e
+            /opt/aws/bin/cfn-init -v \
+              --stack ${AWS::StackName} \
+              --resource LaunchTemplate \
+              --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? \
+              --stack ${AWS::StackName} \
+              --resource UDIAgentASGroup \
+              --region ${AWS::Region}
+        IamInstanceProfile:
+          Arn: !GetAtt EC2InstanceProfile.Arn
+
+
+  # Auto Scaling Group
+  UDIAgentASGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1          # Setting to 1 to allow verification of instance creation and container startup, but can be increased for larger deployments
+        Timeout: PT10M
+    Properties:
+      AutoScalingGroupName: !Sub '${AWS::StackName}-ASG'
+      DefaultInstanceWarmup: 300
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: 2
+      MaxSize: 2
+      DesiredCapacity: 2
+      VPCZoneIdentifier: !Ref PublicSubnetIds
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}'
+          PropagateAtLaunch: true
+        - Key: environment
+          Value: !Ref Environment
+          PropagateAtLaunch: true
+        - Key: project
+          Value: !Ref Project
+          PropagateAtLaunch: true
+
+Outputs:
+  LoadBalancerDNSName:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-ALB-DNS'
+
+  LoadBalancerArn:
+    Description: ARN of the Application Load Balancer
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub '${AWS::StackName}-ALB-ARN'
+
+  TargetGroupArn:
+    Description: ARN of the Target Group
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-TG-ARN'
+
+  AutoScalingGroupName:
+    Description: Name of the Auto Scaling Group
+    Value: !Ref UDIAgentASGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ASG-Name'
+
+  ALBSecurityGroupId:
+    Description: ID of the ALB Security Group
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ALB-SG'
+
+  InstanceSecurityGroupId:
+    Description: ID of the Instance Security Group
+    Value: !Ref InstanceSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-Instance-SG'
