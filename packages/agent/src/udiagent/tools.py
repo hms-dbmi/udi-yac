@@ -151,12 +151,11 @@ ORCHESTRATOR_TOOLS = [
                         "type": "string",
                         "description": "A brief natural-language description of what visualization to create.",
                     },
-                    "title": {
-                        "type": "string",
-                        "description": "A short, informative title for the chart (e.g. 'Donor Count by Sex', 'Height vs Weight'). Do NOT include the value of the filter since that can change dynamically later.",
-                    },
                 },
-                "required": ["description", "title"],
+                # No `title`: chart names are built programmatically from the
+                # generated spec on the frontend, which is free, deterministic,
+                # and cannot drift from what is actually plotted.
+                "required": ["description"],
                 "additionalProperties": False,
             },
         },

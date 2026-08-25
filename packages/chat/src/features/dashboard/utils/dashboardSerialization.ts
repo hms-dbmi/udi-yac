@@ -125,10 +125,9 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
     return { ok: false, error: `visualizations[${idx}].userPrompt must be a string` };
   if (!isObject(raw.spec))
     return { ok: false, error: `visualizations[${idx}].spec must be an object` };
-  // The three title fields are all optional: `title` is the agent's original,
-  // `baseAutoTitle` the drift baseline, `userTitle` an explicit rename. Exports
-  // predating the rename feature carry only `title`; the store backfills the
-  // baseline on import.
+  // Both title fields are optional: `title` is an assistant-written title from
+  // an older session, `userTitle` an explicit rename. Exports predating the
+  // rename feature carry only `title`.
   const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
   return {
     ok: true,
@@ -139,7 +138,6 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
       toolCallIndex: raw.toolCallIndex,
       userPrompt: raw.userPrompt,
       title: str(raw.title),
-      baseAutoTitle: str(raw.baseAutoTitle),
       userTitle: str(raw.userTitle),
       spec: raw.spec as unknown as DashboardExportVisualization['spec'],
     },

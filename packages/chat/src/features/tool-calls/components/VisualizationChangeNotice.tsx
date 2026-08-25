@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { vizTitleProvenance } from '@/features/dashboard';
+import { buildVizTitle, useVizTitleLabels, vizTitleProvenance } from '@/features/dashboard';
 import {
   useDashboard,
   useDashboardStore,
@@ -51,7 +51,19 @@ export function VisualizationChangeNotice({
   const dataPackageStore = useDataPackageStore();
   const trackEvent = useTracker();
 
-  const provenance = useMemo(() => (viz ? vizTitleProvenance(viz) : null), [viz]);
+  const titleLabels = useVizTitleLabels();
+  const provenance = useMemo(
+    () => (viz ? vizTitleProvenance(viz, titleLabels) : null),
+    [viz, titleLabels],
+  );
+
+  // The transcript header names the assistant's spec; this names the card as it
+  // stands now. Only worth saying when a tweak actually moved it.
+  const retitled = useMemo(() => {
+    if (!viz) return null;
+    const current = buildVizTitle(viz.spec, titleLabels);
+    return current && current !== buildVizTitle(originalSpec, titleLabels) ? current : null;
+  }, [viz, originalSpec, titleLabels]);
 
   // Compared by value, not reference: the card's spec is re-created by every
   // field swap, and an import rebuilds it from JSON. Both specs are small.
@@ -84,7 +96,7 @@ export function VisualizationChangeNotice({
   ]);
 
   if (!viz || !provenance) return null;
-  const { display, auto, isRenamed, isDrifted } = provenance;
+  const { display, isRenamed } = provenance;
   if (!isRenamed && !tweaked) return null;
 
   return (
@@ -96,9 +108,9 @@ export function VisualizationChangeNotice({
           <span className="truncate">
             {/* A custom name already tells the user what the chart is called,
                 so naming the generated title too would just be noise. */}
-            {isDrifted && !isRenamed ? (
+            {retitled && !isRenamed ? (
               <>
-                Fields changed — now titled <span className="italic">{auto}</span>
+                Fields changed — now titled <span className="italic">{retitled}</span>
               </>
             ) : (
               'Fields changed'

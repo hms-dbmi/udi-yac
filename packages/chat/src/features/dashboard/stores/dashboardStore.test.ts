@@ -799,24 +799,24 @@ describe('dashboardStore — titles', () => {
     });
   }
 
-  it('records the derived title as a drift baseline on add', () => {
+  it('builds the displayed title from the spec, keeping any assistant title as provenance', () => {
     const store = createDashboardStore();
     store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
     const viz = store.getState().activeVisualizations.get('0-0')!;
     expect(viz.title).toBe('Donors by Sex');
-    expect(viz.baseAutoTitle).toBe('Count of Donors by Sex');
     expect(viz.userTitle).toBeUndefined();
+    expect(resolveVizTitle(viz)).toBe('Bar chart of Count of Donors by Sex');
   });
 
-  it('records the baseline on the batch path too', () => {
+  it('titles a card added through the batch path the same way', () => {
     const store = createDashboardStore();
     store
       .getState()
       .addActiveVisualizationBatch([
         { index: 0, toolCallIndex: 0, spec: countBy('sex'), userPrompt: 'p', sourceFields: null },
       ]);
-    expect(store.getState().activeVisualizations.get('0-0')!.baseAutoTitle).toBe(
-      'Count of Donors by Sex',
+    expect(resolveVizTitle(store.getState().activeVisualizations.get('0-0')!)).toBe(
+      'Bar chart of Count of Donors by Sex',
     );
   });
 
@@ -837,7 +837,7 @@ describe('dashboardStore — titles', () => {
     store.getState().setVisualizationTitle('0-0', '   ');
     const viz = store.getState().activeVisualizations.get('0-0')!;
     expect(viz.userTitle).toBeUndefined();
-    expect(resolveVizTitle(viz)).toBe('Donors by Sex');
+    expect(resolveVizTitle(viz)).toBe('Bar chart of Count of Donors by Sex');
   });
 
   it('setVisualizationTitle is a no-op for unknown keys and unchanged values', () => {
@@ -857,7 +857,7 @@ describe('dashboardStore — titles', () => {
     store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
     store.getState().updateActiveVisualizationSpec('0-0', countBy('race'), null);
     expect(resolveVizTitle(store.getState().activeVisualizations.get('0-0')!)).toBe(
-      'Count of Donors by Race',
+      'Bar chart of Count of Donors by Race',
     );
   });
 
@@ -871,14 +871,13 @@ describe('dashboardStore — titles', () => {
     );
   });
 
-  it('round-trips all three title fields through export/import', () => {
+  it('round-trips both stored title fields through export/import', () => {
     const store = createDashboardStore();
     store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
     store.getState().setVisualizationTitle('0-0', 'Cohort breakdown');
     const payload = store.getState().exportDashboard();
     expect(payload.visualizations[0]).toMatchObject({
       title: 'Donors by Sex',
-      baseAutoTitle: 'Count of Donors by Sex',
       userTitle: 'Cohort breakdown',
     });
 
@@ -887,10 +886,9 @@ describe('dashboardStore — titles', () => {
     const viz = fresh.getState().activeVisualizations.get('0-0')!;
     expect(viz.userTitle).toBe('Cohort breakdown');
     expect(viz.title).toBe('Donors by Sex');
-    expect(viz.baseAutoTitle).toBe('Count of Donors by Sex');
   });
 
-  it('backfills a missing baseline on import so an older export never auto-renames', () => {
+  it('titles an imported card from its spec, not its assistant title', () => {
     const store = createDashboardStore();
     store.getState().importDashboard(
       {
@@ -910,8 +908,7 @@ describe('dashboardStore — titles', () => {
       null,
     );
     const viz = store.getState().activeVisualizations.get('0-0')!;
-    expect(viz.baseAutoTitle).toBe('Count of Donors by Race');
-    // Baselined as-imported: the title only starts tracking tweaks made from here.
-    expect(resolveVizTitle(viz)).toBe('Donors by Sex');
+    expect(viz.title).toBe('Donors by Sex');
+    expect(resolveVizTitle(viz)).toBe('Bar chart of Count of Donors by Race');
   });
 });

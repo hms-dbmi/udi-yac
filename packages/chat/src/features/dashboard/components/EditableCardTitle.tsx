@@ -5,6 +5,7 @@ import { useDashboardStore, useTracker } from '@/app/UDIChatContext';
 import { cn } from '@/lib/utils';
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import { vizTitleProvenance } from '../utils/vizTitle';
+import { useVizTitleLabels } from '../hooks/useVizTitleLabels';
 
 interface EditableCardTitleProps {
   vizKey: string;
@@ -32,7 +33,11 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
   const dashboardStore = useDashboardStore();
   const trackEvent = useTracker();
 
-  const { display, original, isRenamed, isDrifted } = useMemo(() => vizTitleProvenance(viz), [viz]);
+  const labels = useVizTitleLabels();
+  const { display, original, isRenamed } = useMemo(
+    () => vizTitleProvenance(viz, labels),
+    [viz, labels],
+  );
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -65,13 +70,9 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
       const next = draft.trim();
       if (next === initialRef.current.trim()) return;
       dashboardStore.getState().setVisualizationTitle(vizKey, next);
-      trackEvent('visualization_renamed', {
-        cleared: next.length === 0,
-        wasDrifted: isDrifted,
-        source: 'card',
-      });
+      trackEvent('visualization_renamed', { cleared: next.length === 0, source: 'card' });
     },
-    [draft, dashboardStore, vizKey, trackEvent, isDrifted, onEditingChange],
+    [draft, dashboardStore, vizKey, trackEvent, onEditingChange],
   );
 
   const focusOnMount = useCallback((el: HTMLInputElement | null) => {

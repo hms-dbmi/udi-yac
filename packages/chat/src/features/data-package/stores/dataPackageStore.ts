@@ -8,6 +8,7 @@ import type {
   ExportRowSet,
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
+import { humanizeFieldName } from '@/utils/humanize';
 import { httpError } from '@/utils/httpError';
 import {
   loadDataPackage,
@@ -61,6 +62,20 @@ export interface DataPackageState {
    *  fields, in schema field order. Used by the table view's "relevant
    *  fields" mode so rows stay identifiable. */
   getKeyFields: (entity: string) => string[];
+  /**
+   * Friendly display label for a column: the schema's `title` when the package
+   * author supplied one, else a humanized `name`. Display only — every spec,
+   * filter and query still keys on the raw field name.
+   */
+  getFieldLabel: (entity: string, field: string) => string;
+  /** Friendly display label for an entity: the resource's `title`, else humanized. */
+  getEntityLabel: (entity: string) => string;
+  /** Friendly display label for a categorical value, via the package-level
+   *  `udi:labels` map. Unmapped values pass through untouched. */
+  getValueLabel: (value: string) => string;
+  /** A field's declared `udi:data_type` (quantitative / ordinal / nominal).
+   *  Available straight from the schema, unlike domains, which load from CSVs. */
+  getFieldDataType: (entity: string, field: string) => string | undefined;
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
@@ -259,6 +274,26 @@ export function createDataPackageStore() {
         ...fieldOrder.filter((name) => keys.has(name)),
         ...[...keys].filter((name) => !fieldOrder.includes(name)),
       ];
+    },
+
+    getFieldLabel: (entity: string, field: string): string => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      const title = resource?.schema?.fields?.find((f) => f.name === field)?.title;
+      return title?.trim() || humanizeFieldName(field);
+    },
+
+    getEntityLabel: (entity: string): string => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return resource?.title?.trim() || humanizeFieldName(entity);
+    },
+
+    getValueLabel: (value: string): string => {
+      return get().dataPackage?.['udi:labels']?.[value] ?? value;
+    },
+
+    getFieldDataType: (entity: string, field: string): string | undefined => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:data_type'];
     },
 
     setFilteredData: (entity: string, data: ExportRowSet) => {

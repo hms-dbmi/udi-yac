@@ -42,7 +42,6 @@ export function ToolCallRenderer({
         <VisualizationCard
           spec={spec}
           isActive={isActive ?? false}
-          title={typeof args.title === 'string' ? args.title : undefined}
           messageIndex={messageIndex}
           toolCallIndex={toolCallIndex}
         />

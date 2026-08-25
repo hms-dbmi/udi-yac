@@ -98,19 +98,14 @@ describe('parseSessionExport — title fields', () => {
     layout: { items: [{ i: '0-0', x: 0, y: 0, w: 1, h: 9 }] },
   });
 
-  it('round-trips the rename and its drift baseline', () => {
+  it('round-trips a rename alongside the assistant title', () => {
     const result = parseSessionExport(
-      payloadWith({
-        ...sampleViz('0-0'),
-        baseAutoTitle: 'Count of donors by sex',
-        userTitle: 'Cohort breakdown',
-      }),
+      payloadWith({ ...sampleViz('0-0'), userTitle: 'Cohort breakdown' }),
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.visualizations[0]).toMatchObject({
       title: 'title 0-0',
-      baseAutoTitle: 'Count of donors by sex',
       userTitle: 'Cohort breakdown',
     });
   });
@@ -119,7 +114,6 @@ describe('parseSessionExport — title fields', () => {
     const result = parseSessionExport(payloadWith(sampleViz('0-0')));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.visualizations[0].baseAutoTitle).toBeUndefined();
     expect(result.value.visualizations[0].userTitle).toBeUndefined();
   });
 

@@ -26,12 +26,15 @@ export {
 export { createMemoryBankStore, type MemoryBankState } from './stores/memoryBankStore';
 
 export {
-  deriveTitleFromSpec,
+  buildVizTitle,
   resolveVizTitle,
   vizTitleProvenance,
+  type VizTitleLabels,
   type VizTitleSource,
   type VizTitleProvenance,
 } from './utils/vizTitle';
+
+export { useVizTitleLabels } from './hooks/useVizTitleLabels';
 
 export {
   useBrushFilters,

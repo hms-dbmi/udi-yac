@@ -1,18 +1,19 @@
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { collectRollupOutputs, type RollupOutput } from '@/utils/specMutations';
+import { humanizeFieldName } from '@/utils/humanize';
 
 /**
- * Card titles have three layers, resolved by `vizTitleProvenance`:
+ * Chart titles are built from the spec, not written by the LLM: free,
+ * deterministic, and incapable of drifting from what is actually plotted.
+ * A card's displayed title is therefore just:
  *
- *   - `title`         the agent's original title from the RenderVisualization
- *                     tool call. Never mutated — it is the provenance record.
- *   - `baseAutoTitle` what `deriveTitleFromSpec` returned for the spec at the
- *                     moment the card was created. Only a drift baseline.
- *   - `userTitle`     an explicit rename. Wins over everything until cleared.
+ *   userTitle ?? buildVizTitle(spec) ?? title ?? userPrompt
  *
- * The *current* auto title is deliberately not stored: it is recomputed from
- * `spec` on read, so a field swap in VizTweakComponent needs no store
- * bookkeeping and swapping back (A→B→A) restores the original prose title.
+ * `title` is the assistant-written title that older sessions carry; nothing
+ * produces one any more, but imported dashboards still display theirs.
+ *
+ * The built title is deliberately not stored: it is recomputed from `spec` on
+ * read, so a field swap in VizTweakComponent needs no store bookkeeping.
  */
 
 interface MappingLike {
@@ -28,6 +29,19 @@ interface LayerLike {
   mapping?: MappingLike | MappingLike[];
 }
 
+/**
+ * Display labels the builder needs from the data package. Structural rather
+ * than a store import so this module stays pure and testable; the dashboard
+ * passes `dataPackageStore`'s `getFieldLabel` / `getEntityLabel` straight in.
+ * Omitted entirely, every name falls back to `humanizeFieldName`.
+ */
+export interface VizTitleLabels {
+  getFieldLabel?: (entity: string, field: string) => string;
+  getEntityLabel?: (entity: string) => string;
+  /** `udi:data_type` of a field, used to pick "categorized by" vs "colored by". */
+  getFieldDataType?: (entity: string, field: string) => string | undefined;
+}
+
 /** Sentence-style labels for aggregation ops, mirroring the toolkit's
  *  `describeTransformations` OP_LABELS but phrased as a noun. */
 const OP_LABELS: Record<string, string> = {
@@ -40,23 +54,21 @@ const OP_LABELS: Record<string, string> = {
   frequency: 'Frequency',
 };
 
-/**
- * Turn a column name into title-case prose: `body_mass_index_value` →
- * `Body Mass Index`. The trailing `_value` that the HuBMAP schema puts on its
- * measurement columns carries no meaning in a title, so it is dropped.
- *
- * Tokens that already contain an uppercase letter are left alone, so a schema
- * that names a column `hubmapID` or `mRNA_count` keeps its own casing rather
- * than being flattened to `Hubmapid`.
- */
-export function humanizeFieldName(name: string): string {
-  const stripped = name.replace(/_value$/i, '');
-  const words = (stripped || name)
-    .split(/[_\-\s]+/)
-    .filter(Boolean)
-    .map((w) => (/[A-Z]/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)));
-  return words.length > 0 ? words.join(' ') : name;
-}
+/** Chart-type names by mark. Refined below by transformations that change what
+ *  the chart *is* (a binned bar chart is a histogram, not a bar chart). */
+const MARK_LABELS: Record<string, string> = {
+  bar: 'Bar chart',
+  point: 'Scatter plot',
+  line: 'Line chart',
+  area: 'Area chart',
+  arc: 'Pie chart',
+  rect: 'Heatmap',
+  geometry: 'Map',
+  text: 'Text chart',
+};
+
+/** Encodings that carry a trailing clause instead of joining the field list. */
+const CLAUSE_ENCODINGS = ['color', 'size'] as const;
 
 function resolveSourceName(spec: UDIGrammar): string | null {
   const src = Array.isArray(spec.source)
@@ -75,70 +87,125 @@ function toMappings(mapping: LayerLike['mapping']): MappingLike[] {
   return Array.isArray(mapping) ? mapping : [mapping];
 }
 
-/**
- * Label one encoding. An explicit `mapping.title` is already prose and is used
- * as-is; anything derived from a column name goes through `humanizeFieldName`.
- */
-function labelFor(
-  m: MappingLike,
-  rollupOutputs: Record<string, RollupOutput>,
-  sourceName: string | null,
-): string | null {
-  if (!m.field || m.field === '*') return null;
-  if (m.title) return m.title;
-
-  const rollup = rollupOutputs[m.field];
-  if (!rollup) return humanizeFieldName(m.field);
-
-  const op = rollup.op ? (OP_LABELS[rollup.op] ?? rollup.op) : null;
-  if (!op) return humanizeFieldName(m.field);
-  // count / frequency aggregate rows rather than a column, so they read as
-  // "Count of Donors"; the rest name their input: "Average Age".
-  if (!rollup.field) return sourceName ? `${op} of ${humanizeFieldName(sourceName)}` : op;
-  return `${op} ${humanizeFieldName(rollup.field)}`;
+function hasTransform(spec: UDIGrammar, key: string): boolean {
+  const transformation = (spec as { transformation?: Array<Record<string, unknown>> })
+    .transformation;
+  return Array.isArray(transformation) && transformation.some((t) => t && key in t);
 }
 
-/**
- * A short title describing what the spec currently plots, or `undefined` when
- * nothing usable can be derived (the caller then falls back to the original
- * title or the user prompt).
- *
- * Shapes produced:
- *   aggregated chart  "Count of Donors by Sex" / "… by Sex and Race"
- *   two plain axes    "Weight vs Body Mass Index"
- *   single encoding   "Age"
- *   table / row layer "Donors rows"
- */
-export function deriveTitleFromSpec(spec: UDIGrammar): string | undefined {
-  const sourceName = resolveSourceName(spec);
-  const rowsTitle = sourceName ? `${humanizeFieldName(sourceName)} rows` : undefined;
+/** "Bar chart", "Histogram", "Density plot", … from the mark plus the
+ *  transformations that redefine what kind of chart it is. */
+function chartTypeLabel(
+  mark: string | undefined,
+  spec: UDIGrammar,
+  mappings: MappingLike[],
+): string {
+  if (mark === 'bar' && hasTransform(spec, 'binby')) return 'Histogram';
+  if (mark === 'area' && hasTransform(spec, 'kde')) return 'Density plot';
+  if (mark === 'point') {
+    // A scatter needs two quantitative axes; a categorical one makes it a strip
+    // of dots against categories instead.
+    const axes = mappings.filter((m) => m.encoding === 'x' || m.encoding === 'y');
+    const allQuantitative =
+      axes.length >= 2 && axes.every((m) => !m.type || m.type === 'quantitative');
+    return allQuantitative ? 'Scatter plot' : 'Dot plot';
+  }
+  return (mark && MARK_LABELS[mark]) || 'Chart';
+}
 
-  // No representation at all means the toolkit's parser defaults to a row
-  // layer over every column — same as an explicit `mark: 'row'` table.
+export function buildVizTitle(spec: UDIGrammar, labels: VizTitleLabels = {}): string | undefined {
+  const sourceName = resolveSourceName(spec);
+  const entityLabel = sourceName
+    ? (labels.getEntityLabel?.(sourceName) ?? humanizeFieldName(sourceName))
+    : null;
+  const tableTitle = entityLabel ? `Table of ${entityLabel}` : undefined;
+
+  // No representation at all means the toolkit's parser defaults to a row layer
+  // over every column — same as an explicit `mark: 'row'` table.
   const chart = toLayers(spec.representation).find((l) => l && l.mark !== 'row');
-  if (!chart) return rowsTitle;
+  if (!chart) return tableTitle;
 
   const rollupOutputs = collectRollupOutputs(spec);
   const mappings = toMappings(chart.mapping).filter((m) => m?.field && m.field !== '*');
-  if (mappings.length === 0) return rowsTitle;
+  if (mappings.length === 0) return tableTitle;
 
-  const label = (m: MappingLike) => labelFor(m, rollupOutputs, sourceName);
+  const fieldLabel = (field: string) =>
+    sourceName
+      ? (labels.getFieldLabel?.(sourceName, field) ?? humanizeFieldName(field))
+      : humanizeFieldName(field);
+
+  /**
+   * Label one encoding. An explicit `mapping.title` is already prose and wins;
+   * a rollup output reads as its aggregation ("Count of Donors", "Average BMI");
+   * anything else is the field's friendly label.
+   */
+  const label = (m: MappingLike): string | null => {
+    if (!m.field || m.field === '*') return null;
+    if (m.title) return m.title;
+    const rollup: RollupOutput | undefined = rollupOutputs[m.field];
+    if (!rollup) return fieldLabel(m.field);
+    const op = rollup.op ? (OP_LABELS[rollup.op] ?? rollup.op) : null;
+    if (!op) return fieldLabel(m.field);
+    // count / frequency aggregate rows rather than a column, so they name the
+    // entity; the rest name their input field.
+    if (!rollup.field) return entityLabel ? `${op} of ${entityLabel}` : op;
+    return `${op} ${fieldLabel(rollup.field)}`;
+  };
+
   const isMeasure = (m: MappingLike) => !!m.field && m.field in rollupOutputs;
+  const isClause = (m: MappingLike) =>
+    !!m.encoding && (CLAUSE_ENCODINGS as readonly string[]).includes(m.encoding);
 
+  // `color` / `size` become trailing clauses; everything else is an axis that
+  // joins the main field list.
+  const axisMappings = mappings.filter((m) => !isClause(m));
+  const clauseMappings = CLAUSE_ENCODINGS.map((encoding) =>
+    mappings.find((m) => m.encoding === encoding),
+  ).filter((m): m is MappingLike => !!m);
+
+  const chartType = chartTypeLabel(chart.mark, spec, mappings);
+  const subject = buildSubject(axisMappings.length > 0 ? axisMappings : mappings, label, isMeasure);
+  if (!subject) return tableTitle;
+
+  const clauses = clauseMappings
+    .map((m) => {
+      const l = label(m);
+      if (!l || subject.includes(l)) return null;
+      if (m.encoding === 'size') return `sized by ${l}`;
+      // A categorical colour really is a grouping; a continuous one is a ramp.
+      const dataType =
+        m.type ??
+        (sourceName && m.field ? labels.getFieldDataType?.(sourceName, m.field) : undefined);
+      return dataType === 'quantitative' ? `colored by ${l}` : `categorized by ${l}`;
+    })
+    .filter((c): c is string => !!c);
+
+  return [`${chartType} of ${subject}`, ...clauses].join(', ');
+}
+
+/**
+ * The field list between "of" and the first clause. An aggregation reads as
+ * "{Measure} by {Dimension}" because that is the relationship being plotted;
+ * two peer fields read as "{Y} and {X}".
+ */
+function buildSubject(
+  mappings: MappingLike[],
+  label: (m: MappingLike) => string | null,
+  isMeasure: (m: MappingLike) => boolean,
+): string | null {
   const measure = mappings.find(isMeasure);
   if (measure) {
-    const dimLabels: string[] = [];
+    const measureLabel = label(measure);
+    if (!measureLabel) return null;
+    const dimensions: string[] = [];
     for (const m of mappings) {
       if (m === measure || isMeasure(m)) continue;
       const l = label(m);
-      // Two encodings on one field (e.g. x and color both on `sex`) must not
-      // produce "by sex and sex".
-      if (l && !dimLabels.includes(l)) dimLabels.push(l);
-      if (dimLabels.length === 2) break;
+      // Two encodings on one field must not produce "by Sex and Sex".
+      if (l && l !== measureLabel && !dimensions.includes(l)) dimensions.push(l);
+      if (dimensions.length === 2) break;
     }
-    const measureLabel = label(measure);
-    if (!measureLabel) return rowsTitle;
-    return dimLabels.length > 0 ? `${measureLabel} by ${dimLabels.join(' and ')}` : measureLabel;
+    return dimensions.length > 0 ? `${measureLabel} by ${dimensions.join(' and ')}` : measureLabel;
   }
 
   const byEncoding = new Map<string, MappingLike>();
@@ -150,9 +217,9 @@ export function deriveTitleFromSpec(spec: UDIGrammar): string | undefined {
   if (x && y) {
     const xl = label(x);
     const yl = label(y);
-    if (xl && yl) return xl === yl ? yl : `${yl} vs ${xl}`;
+    if (xl && yl) return xl === yl ? yl : `${yl} and ${xl}`;
   }
-  return label(y ?? x ?? mappings[0]) ?? rowsTitle;
+  return label(y ?? x ?? mappings[0]);
 }
 
 /** The title-bearing fields of an ActiveVisualization, structurally typed so
@@ -160,37 +227,29 @@ export function deriveTitleFromSpec(spec: UDIGrammar): string | undefined {
 export interface VizTitleSource {
   spec: UDIGrammar;
   userPrompt: string;
+  /** Assistant-written title from an older session. Nothing produces one now. */
   title?: string;
-  baseAutoTitle?: string;
   userTitle?: string;
 }
 
 export interface VizTitleProvenance {
   /** What to show in the UI. */
   display: string;
-  /** The agent's original title, if it had one. */
+  /** The assistant's title, if this card came from a session that had one. */
   original?: string;
-  /** What the current spec derives to, if anything. */
-  auto?: string;
   /** The user renamed this card. */
   isRenamed: boolean;
-  /** The spec has been tweaked away from what `original` described. */
-  isDrifted: boolean;
 }
 
-export function vizTitleProvenance(viz: VizTitleSource): VizTitleProvenance {
+export function vizTitleProvenance(
+  viz: VizTitleSource,
+  labels: VizTitleLabels = {},
+): VizTitleProvenance {
   const userTitle = viz.userTitle?.trim();
-  const auto = deriveTitleFromSpec(viz.spec);
-  const isDrifted = !!auto && !!viz.baseAutoTitle && auto !== viz.baseAutoTitle;
-
-  let display: string;
-  if (userTitle) display = userTitle;
-  else if (isDrifted) display = auto!;
-  else display = viz.title ?? auto ?? viz.userPrompt;
-
-  return { display, original: viz.title, auto, isRenamed: !!userTitle, isDrifted };
+  const display = userTitle || buildVizTitle(viz.spec, labels) || viz.title || viz.userPrompt;
+  return { display, original: viz.title, isRenamed: !!userTitle };
 }
 
-export function resolveVizTitle(viz: VizTitleSource): string {
-  return vizTitleProvenance(viz).display;
+export function resolveVizTitle(viz: VizTitleSource, labels: VizTitleLabels = {}): string {
+  return vizTitleProvenance(viz, labels).display;
 }

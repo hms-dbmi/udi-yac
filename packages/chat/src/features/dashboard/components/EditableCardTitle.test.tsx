@@ -38,7 +38,7 @@ function Harness({ children }: { children?: ReactNode }) {
   const store = useDashboardStore();
   useEffect(() => {
     dashboard = store;
-    store.getState().addActiveVisualization(0, 0, countBySex, 'prompt', null, 'Donor Count by Sex');
+    store.getState().addActiveVisualization(0, 0, countBySex, 'prompt', null);
   }, [store]);
   const viz = useDashboard((s) => s.activeVisualizations.get('0-0'));
   if (!viz) return null;
@@ -71,9 +71,9 @@ describe('EditableCardTitle', () => {
     editingStates = [];
   });
 
-  it('shows the agent title until the card is renamed', async () => {
+  it('shows the title built from the spec until the card is renamed', async () => {
     renderTitle();
-    expect(await screen.findByText('Donor Count by Sex')).toBeTruthy();
+    expect(await screen.findByText('Bar chart of Count of Donors by Sex')).toBeTruthy();
   });
 
   it('commits a rename on Enter', async () => {
@@ -87,8 +87,9 @@ describe('EditableCardTitle', () => {
     expect(dashboard.getState().activeVisualizations.get('0-0')!.userTitle).toBe(
       'Cohort breakdown',
     );
-    // The original is kept for provenance.
-    expect(dashboard.getState().activeVisualizations.get('0-0')!.title).toBe('Donor Count by Sex');
+    // Nothing writes an assistant title any more — the rename overrode the built
+    // title, which comes back the moment the rename is cleared.
+    expect(dashboard.getState().activeVisualizations.get('0-0')!.title).toBeUndefined();
   });
 
   it('commits a rename on blur', async () => {
@@ -122,7 +123,7 @@ describe('EditableCardTitle', () => {
     await user.type(titleInput(), 'Never saved');
     await user.click(cancelButton());
 
-    expect(screen.getByText('Donor Count by Sex')).toBeTruthy();
+    expect(screen.getByText('Bar chart of Count of Donors by Sex')).toBeTruthy();
     expect(dashboard.getState().activeVisualizations.get('0-0')!.userTitle).toBeUndefined();
   });
 
@@ -143,7 +144,7 @@ describe('EditableCardTitle', () => {
     await user.clear(titleInput());
     await user.type(titleInput(), 'Never saved{Escape}');
 
-    expect(screen.getByText('Donor Count by Sex')).toBeTruthy();
+    expect(screen.getByText('Bar chart of Count of Donors by Sex')).toBeTruthy();
     expect(dashboard.getState().activeVisualizations.get('0-0')!.userTitle).toBeUndefined();
   });
 
@@ -156,7 +157,7 @@ describe('EditableCardTitle', () => {
     expect(dashboard.getState().activeVisualizations.get('0-0')!.userTitle).toBeUndefined();
   });
 
-  it('clearing the field reverts to the original title', async () => {
+  it('clearing the field reverts to the built title', async () => {
     const user = userEvent.setup();
     renderTitle();
     await user.click(await titleButton());
@@ -170,7 +171,7 @@ describe('EditableCardTitle', () => {
     await user.clear(titleInput());
     await user.keyboard('{Enter}');
 
-    expect(screen.getByText('Donor Count by Sex')).toBeTruthy();
+    expect(screen.getByText('Bar chart of Count of Donors by Sex')).toBeTruthy();
     expect(dashboard.getState().activeVisualizations.get('0-0')!.userTitle).toBeUndefined();
   });
 });

@@ -49,7 +49,7 @@ function Harness({ children }: { children?: ReactNode }) {
       sourceFields: { donors: ['sex', 'race'] },
       categoricalSourceFields: { donors: ['sex', 'race'] },
     });
-    store.getState().addActiveVisualization(0, 0, countBySex, 'prompt', null, 'Donor Count by Sex');
+    store.getState().addActiveVisualization(0, 0, countBySex, 'prompt', null);
   }, [store, dataPackageStore]);
   const viz = useDashboard((s) => s.activeVisualizations.get('0-0'));
   if (!viz) return null;

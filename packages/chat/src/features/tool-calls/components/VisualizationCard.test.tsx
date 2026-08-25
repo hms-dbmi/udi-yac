@@ -36,6 +36,10 @@ const countBy = (dimension: string) =>
 const countBySex = countBy('sex');
 const countByRace = countBy('race');
 
+/* The transcript builds its title from the message's own spec, so this is what
+   the assistant's chart is called however the dashboard card is later tweaked. */
+const ASSISTANT_TITLE = 'Bar chart of Count of Donors by Sex';
+
 let dashboard: StoreApi<DashboardState>;
 
 function Harness() {
@@ -46,15 +50,7 @@ function Harness() {
   }, [store]);
   const active = useDashboard((s) => s.activeVisualizations.get('0-0'));
   if (!active) return null;
-  return (
-    <VisualizationCard
-      spec={countBySex}
-      isActive
-      title="Donor Count by Sex"
-      messageIndex={0}
-      toolCallIndex={0}
-    />
-  );
+  return <VisualizationCard spec={countBySex} isActive messageIndex={0} toolCallIndex={0} />;
 }
 
 function renderCard() {
@@ -83,28 +79,28 @@ describe('VisualizationCard — rename indicator', () => {
     dashboard = undefined as unknown as StoreApi<DashboardState>;
   });
 
-  it('shows only the assistant title until the card is renamed', async () => {
+  it('shows only the built title until the card is renamed', async () => {
     renderCard();
-    expect(await screen.findByText('Donor Count by Sex')).toBeTruthy();
+    expect(await screen.findByText(ASSISTANT_TITLE)).toBeTruthy();
     expect(screen.queryByText(/Renamed to/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Remove custom name' })).toBeNull();
   });
 
   it('names the rename alongside the original once one is set', async () => {
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await rename('Cohort breakdown');
 
     expect(await screen.findByText(/Renamed to/)).toBeTruthy();
     expect(screen.getByText('Cohort breakdown')).toBeTruthy();
-    // The assistant's own title stays put — the transcript is a record.
-    expect(screen.getByText('Donor Count by Sex')).toBeTruthy();
+    // The transcript keeps naming the assistant's own spec — it is a record.
+    expect(screen.getByText(ASSISTANT_TITLE)).toBeTruthy();
   });
 
   it('dismisses the custom name from the transcript', async () => {
     const user = userEvent.setup();
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await rename('Cohort breakdown');
     await screen.findByText(/Renamed to/);
 
@@ -117,10 +113,10 @@ describe('VisualizationCard — rename indicator', () => {
   it('does not offer the indicator for a message with no dashboard card', async () => {
     render(
       <UDIChatProvider>
-        <VisualizationCard spec={countBySex} isActive title="Orphan" />
+        <VisualizationCard spec={countBySex} isActive />
       </UDIChatProvider>,
     );
-    expect(await screen.findByText('Orphan')).toBeTruthy();
+    expect(await screen.findByText(ASSISTANT_TITLE)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Remove custom name' })).toBeNull();
   });
 });
@@ -132,25 +128,25 @@ describe('VisualizationCard — tweaked-fields notice', () => {
 
   it('says nothing while the card still plots what the assistant asked for', async () => {
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     expect(screen.queryByText(/Fields changed/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Reset visualization' })).toBeNull();
   });
 
-  it('names the auto-generated title once a field swap drifts it', async () => {
+  it('names the newly built title once a field swap changes it', async () => {
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await tweak(countByRace);
 
     expect(await screen.findByText(/Fields changed/)).toBeTruthy();
-    expect(screen.getByText('Count of Donors by Race')).toBeTruthy();
+    expect(screen.getByText('Bar chart of Count of Donors by Race')).toBeTruthy();
     // A swap is not a rename — that row stays out of the way.
     expect(screen.queryByText(/Renamed to/)).toBeNull();
   });
 
   it('reports a rename and a field swap as separate, separately-undoable changes', async () => {
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await rename('Cohort breakdown');
     await tweak(countByRace);
 
@@ -162,7 +158,7 @@ describe('VisualizationCard — tweaked-fields notice', () => {
 
   it('lists the field change ahead of the rename', async () => {
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await rename('Cohort breakdown');
     await tweak(countByRace);
     await screen.findByText(/Fields changed/);
@@ -176,21 +172,21 @@ describe('VisualizationCard — tweaked-fields notice', () => {
 
   it('drops the generated title from the notice when a custom name is set', async () => {
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await tweak(countByRace);
     // Drifted and unnamed: the generated title is worth showing.
-    expect(await screen.findByText('Count of Donors by Race')).toBeTruthy();
+    expect(await screen.findByText('Bar chart of Count of Donors by Race')).toBeTruthy();
 
     await rename('Cohort breakdown');
     // Named: the custom name already says what the chart is called.
-    expect(screen.queryByText('Count of Donors by Race')).toBeNull();
+    expect(screen.queryByText('Bar chart of Count of Donors by Race')).toBeNull();
     expect(screen.getByText(/Fields changed/).textContent).toBe('Fields changed');
   });
 
   it('confirms before resetting, and cancelling changes nothing', async () => {
     const user = userEvent.setup();
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await tweak(countByRace);
     await screen.findByText(/Fields changed/);
 
@@ -205,7 +201,7 @@ describe('VisualizationCard — tweaked-fields notice', () => {
   it("restores the assistant's original fields once confirmed", async () => {
     const user = userEvent.setup();
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await tweak(countByRace);
     await screen.findByText(/Fields changed/);
 
@@ -215,13 +211,13 @@ describe('VisualizationCard — tweaked-fields notice', () => {
     expect(storedSpec()).toEqual(countBySex);
     expect(screen.queryByText(/Fields changed/)).toBeNull();
     // Back on the baseline, so the assistant's own title governs again.
-    expect(screen.getByText('Donor Count by Sex')).toBeTruthy();
+    expect(screen.getByText(ASSISTANT_TITLE)).toBeTruthy();
   });
 
   it('leaves a custom name alone when the fields are reset', async () => {
     const user = userEvent.setup();
     renderCard();
-    await screen.findByText('Donor Count by Sex');
+    await screen.findByText(ASSISTANT_TITLE);
     await rename('Cohort breakdown');
     await tweak(countByRace);
     await screen.findByText(/Fields changed/);
