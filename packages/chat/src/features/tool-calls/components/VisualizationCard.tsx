@@ -4,6 +4,7 @@ import type { UDIGrammar } from 'udi-toolkit/react';
 import { Badge } from '@/components/ui/badge';
 import { VizTweakComponent } from '@/features/dashboard';
 import { useDashboard, useDataPackage, useMemoryBank } from '@/app/UDIChatContext';
+import { VisualizationChangeNotice } from './VisualizationChangeNotice';
 
 interface VisualizationCardProps {
   spec: UDIGrammar;
@@ -25,6 +26,8 @@ export function VisualizationCard({
   const palette = usePalette();
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const closedVisualizations = useMemoryBank((s) => s.closedVisualizations);
+  const vizKey =
+    messageIndex != null && toolCallIndex != null ? `${messageIndex}-${toolCallIndex}` : null;
 
   const isClosed = useMemo(() => {
     if (messageIndex == null || toolCallIndex == null) return false;
@@ -71,6 +74,8 @@ export function VisualizationCard({
             />
           </div>
         )}
+        {/* Below the field pickers: the notice reports the result of using them. */}
+        {vizKey && <VisualizationChangeNotice vizKey={vizKey} originalSpec={spec} />}
       </div>
     );
   }

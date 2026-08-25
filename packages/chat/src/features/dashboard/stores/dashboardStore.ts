@@ -25,6 +25,7 @@ import {
   repackRowMajor,
 } from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
+import { deriveTitleFromSpec } from '../utils/vizTitle';
 
 export interface ActiveVisualization {
   index: number;
@@ -32,7 +33,13 @@ export interface ActiveVisualization {
   spec: UDIGrammar;
   interactiveSpec: UDIGrammar;
   userPrompt: string;
+  /** The agent's original title. Never mutated — this is the provenance record. */
   title?: string;
+  /** What the spec derived to when the card was created; the drift baseline for
+   *  `vizTitleProvenance`. See utils/vizTitle.ts for the full title model. */
+  baseAutoTitle?: string;
+  /** An explicit user rename. Wins over the original and derived titles. */
+  userTitle?: string;
   uuid: string;
 }
 
@@ -62,6 +69,8 @@ export interface DashboardExportVisualization {
   toolCallIndex: number;
   userPrompt: string;
   title?: string;
+  baseAutoTitle?: string;
+  userTitle?: string;
   spec: UDIGrammar;
 }
 
@@ -136,6 +145,9 @@ export interface DashboardState {
     newSpec: UDIGrammar,
     sourceFields: Record<string, string[]> | null,
   ) => void;
+  /** Rename a card. An empty/whitespace title clears the rename, handing the
+   *  displayed title back to the derived / original title. */
+  setVisualizationTitle: (key: string, title: string) => void;
   setLayoutItems: (items: Layout) => void;
   setGridCols: (cols: number) => void;
   setGridRowHeight: (px: number) => void;
@@ -347,7 +359,16 @@ export function createDashboardStore() {
       const key = get().vizKey(index, toolCallIndex);
       set((state) => {
         const next = new Map(state.activeVisualizations);
-        next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+        next.set(key, {
+          index,
+          toolCallIndex,
+          spec,
+          interactiveSpec,
+          userPrompt,
+          title,
+          baseAutoTitle: deriveTitleFromSpec(spec),
+          uuid,
+        });
         return {
           activeVisualizations: next,
           layout: insertItemRowMajor(state.layout, newDefaultItem(key), state.gridCols),
@@ -372,7 +393,16 @@ export function createDashboardStore() {
           const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
           const key = `${index}-${toolCallIndex}`;
           if (state.activeVisualizations.has(key)) continue;
-          next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+          next.set(key, {
+            index,
+            toolCallIndex,
+            spec,
+            interactiveSpec,
+            userPrompt,
+            title,
+            baseAutoTitle: deriveTitleFromSpec(spec),
+            uuid,
+          });
           const h = getDomainForField
             ? computeInitialCardHeight(spec, getDomainForField, state.gridRowHeight)
             : DEFAULT_CARD_H;
@@ -594,6 +624,19 @@ export function createDashboardStore() {
       });
     },
 
+    setVisualizationTitle: (key, title) => {
+      const viz = get().activeVisualizations.get(key);
+      if (!viz) return;
+      const trimmed = title.trim();
+      const userTitle = trimmed.length > 0 ? trimmed : undefined;
+      if (userTitle === viz.userTitle) return;
+      set((state) => {
+        const next = new Map(state.activeVisualizations);
+        next.set(key, { ...viz, userTitle });
+        return { activeVisualizations: next };
+      });
+    },
+
     setLayoutItems: (items) => {
       const state = get();
       const knownKeys = new Set(state.activeVisualizations.keys());
@@ -710,6 +753,8 @@ export function createDashboardStore() {
           toolCallIndex: viz.toolCallIndex,
           userPrompt: viz.userPrompt,
           title: viz.title,
+          baseAutoTitle: viz.baseAutoTitle,
+          userTitle: viz.userTitle,
           spec: structuredClone(viz.spec),
         });
       }
@@ -731,6 +776,11 @@ export function createDashboardStore() {
           interactiveSpec,
           userPrompt: v.userPrompt,
           title: v.title,
+          // Exports predating the rename feature carry no baseline. Deriving it
+          // from the imported spec baselines the card as-imported, so its title
+          // only starts auto-updating once the user tweaks it from here.
+          baseAutoTitle: v.baseAutoTitle ?? deriveTitleFromSpec(v.spec),
+          userTitle: v.userTitle,
           uuid,
         });
       }

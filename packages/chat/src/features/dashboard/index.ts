@@ -26,6 +26,14 @@ export {
 export { createMemoryBankStore, type MemoryBankState } from './stores/memoryBankStore';
 
 export {
+  deriveTitleFromSpec,
+  resolveVizTitle,
+  vizTitleProvenance,
+  type VizTitleSource,
+  type VizTitleProvenance,
+} from './utils/vizTitle';
+
+export {
   useBrushFilters,
   selectBrushFilters,
   brushHasValue,

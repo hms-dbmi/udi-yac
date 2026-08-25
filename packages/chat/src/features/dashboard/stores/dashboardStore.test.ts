@@ -9,6 +9,7 @@ import {
 import { createMemoryBankStore } from './memoryBankStore';
 import { createDataFiltersStore } from './dataFiltersStore';
 import { createDataPackageStore } from '@/features/data-package';
+import { resolveVizTitle } from '../utils/vizTitle';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import type { Message, ToolCall } from '@/types/messages';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
@@ -780,5 +781,137 @@ describe('dashboardStore — setGridCols clamping', () => {
     expect(store.getState().gridCols).toBeGreaterThanOrEqual(1);
     store.getState().setGridCols(99); // above max
     expect(store.getState().gridCols).toBeLessThanOrEqual(8);
+  });
+});
+
+describe('dashboardStore — titles', () => {
+  /** count-of-donors-by-<dimension>, the shape a title actually describes. */
+  function countBy(dimension: string): UDIGrammar {
+    return makeSpec({
+      transformation: [{ groupby: dimension }, { rollup: { donor_count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: dimension, type: 'nominal' },
+          { encoding: 'y', field: 'donor_count', type: 'quantitative' },
+        ],
+      },
+    });
+  }
+
+  it('records the derived title as a drift baseline on add', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    const viz = store.getState().activeVisualizations.get('0-0')!;
+    expect(viz.title).toBe('Donors by Sex');
+    expect(viz.baseAutoTitle).toBe('Count of Donors by Sex');
+    expect(viz.userTitle).toBeUndefined();
+  });
+
+  it('records the baseline on the batch path too', () => {
+    const store = createDashboardStore();
+    store
+      .getState()
+      .addActiveVisualizationBatch([
+        { index: 0, toolCallIndex: 0, spec: countBy('sex'), userPrompt: 'p', sourceFields: null },
+      ]);
+    expect(store.getState().activeVisualizations.get('0-0')!.baseAutoTitle).toBe(
+      'Count of Donors by Sex',
+    );
+  });
+
+  it('setVisualizationTitle stores a trimmed rename that outranks the original', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().setVisualizationTitle('0-0', '  Cohort breakdown  ');
+    const viz = store.getState().activeVisualizations.get('0-0')!;
+    expect(viz.userTitle).toBe('Cohort breakdown');
+    expect(viz.title).toBe('Donors by Sex'); // provenance intact
+    expect(resolveVizTitle(viz)).toBe('Cohort breakdown');
+  });
+
+  it('setVisualizationTitle clears the rename on an empty value', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().setVisualizationTitle('0-0', 'Cohort breakdown');
+    store.getState().setVisualizationTitle('0-0', '   ');
+    const viz = store.getState().activeVisualizations.get('0-0')!;
+    expect(viz.userTitle).toBeUndefined();
+    expect(resolveVizTitle(viz)).toBe('Donors by Sex');
+  });
+
+  it('setVisualizationTitle is a no-op for unknown keys and unchanged values', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    const before = store.getState().activeVisualizations;
+    store.getState().setVisualizationTitle('9-9', 'nope');
+    expect(store.getState().activeVisualizations).toBe(before);
+    store.getState().setVisualizationTitle('0-0', 'Renamed');
+    const after = store.getState().activeVisualizations;
+    store.getState().setVisualizationTitle('0-0', 'Renamed');
+    expect(store.getState().activeVisualizations).toBe(after);
+  });
+
+  it('a field swap moves the displayed title off the stale original', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().updateActiveVisualizationSpec('0-0', countBy('race'), null);
+    expect(resolveVizTitle(store.getState().activeVisualizations.get('0-0')!)).toBe(
+      'Count of Donors by Race',
+    );
+  });
+
+  it('a rename survives a later field swap', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().setVisualizationTitle('0-0', 'Cohort breakdown');
+    store.getState().updateActiveVisualizationSpec('0-0', countBy('race'), null);
+    expect(resolveVizTitle(store.getState().activeVisualizations.get('0-0')!)).toBe(
+      'Cohort breakdown',
+    );
+  });
+
+  it('round-trips all three title fields through export/import', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().setVisualizationTitle('0-0', 'Cohort breakdown');
+    const payload = store.getState().exportDashboard();
+    expect(payload.visualizations[0]).toMatchObject({
+      title: 'Donors by Sex',
+      baseAutoTitle: 'Count of Donors by Sex',
+      userTitle: 'Cohort breakdown',
+    });
+
+    const fresh = createDashboardStore();
+    fresh.getState().importDashboard(payload, null);
+    const viz = fresh.getState().activeVisualizations.get('0-0')!;
+    expect(viz.userTitle).toBe('Cohort breakdown');
+    expect(viz.title).toBe('Donors by Sex');
+    expect(viz.baseAutoTitle).toBe('Count of Donors by Sex');
+  });
+
+  it('backfills a missing baseline on import so an older export never auto-renames', () => {
+    const store = createDashboardStore();
+    store.getState().importDashboard(
+      {
+        visualizations: [
+          {
+            key: '0-0',
+            uuid: 'u1',
+            index: 0,
+            toolCallIndex: 0,
+            userPrompt: 'prompt',
+            title: 'Donors by Sex',
+            spec: countBy('race'),
+          },
+        ],
+        layout: { items: [] },
+      },
+      null,
+    );
+    const viz = store.getState().activeVisualizations.get('0-0')!;
+    expect(viz.baseAutoTitle).toBe('Count of Donors by Race');
+    // Baselined as-imported: the title only starts tracking tweaks made from here.
+    expect(resolveVizTitle(viz)).toBe('Donors by Sex');
   });
 });
