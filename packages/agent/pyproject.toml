@@ -1,6 +1,6 @@
 [project]
 name = "udiagent"
-version = "0.2.7"
+version = "0.3.0"
 description = "UDI Agent: LLM-powered data visualization orchestration library"
 readme = "README.md"
 requires-python = ">=3.12"

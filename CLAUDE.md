@@ -52,7 +52,16 @@ Local query backends (server-side data dev/testing): **DuckDB** (`dev/duckdb/REA
 
 ## CI / Releases (.github/workflows/)
 
-Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml`, `ci-python.yml`. Combined GitHub Pages deploy (`pages.yml`): chat SPA at `/udi-yac/`, grammar demo at `/udi-yac/grammar/`. Releases are tagged per package — `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z` (`release-*.yml`; udiagent publishes on release-published events guarded by tag prefix). **Release ordering**: `udi-yac`'s `workspace:*` dep on udi-toolkit is rewritten to the exact in-tree version at publish time, so publish udi-toolkit first whenever its version moved. `deploy-agent.yml` needs the self-hosted EC2 runner registered to this repo.
+Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml`, `ci-python.yml`. Combined GitHub Pages deploy (`pages.yml`): chat SPA at `/udi-yac/`, grammar demo at `/udi-yac/grammar/`. Releases are tagged per package — `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z` (`release-*.yml`). The `Main Branch Protection` ruleset requires a PR for every change to `main`, so **no release workflow bumps versions or pushes to `main`** — bump the version in a PR, merge it, then trigger the publish:
+
+| Package          | Publish trigger                                                        |
+| ---------------- | ---------------------------------------------------------------------- |
+| `udi-toolkit`    | push tag `udi-toolkit-vX.Y.Z`                                          |
+| `udi-yac`        | push tag `udi-yac-vX.Y.Z`                                              |
+| `udiagent`       | publish a GitHub Release tagged `udiagent-vX.Y.Z`                      |
+| `udi-grammar-py` | `workflow_dispatch` (publishes whatever version `pyproject.toml` says) |
+
+Both npm workflows verify the tag matches the in-tree `package.json` version and fail if it doesn't. Their **filenames are load-bearing** — npm trusted publishing (OIDC) is bound to the repo _and_ workflow filename, so renaming them breaks publishing. **Release ordering**: `udi-yac`'s `workspace:*` dep on udi-toolkit is rewritten to the exact in-tree version at publish time, so publish udi-toolkit first whenever its version moved and let it finish before pushing the `udi-yac` tag (`release-chat.yml` pre-flights this and fails fast). `deploy-agent.yml` needs the self-hosted EC2 runner registered to this repo.
 
 ## Architecture
 
