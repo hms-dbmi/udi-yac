@@ -113,21 +113,16 @@ function chartTypeLabel(
   return (mark && MARK_LABELS[mark]) || 'Chart';
 }
 
-export function buildVizTitle(spec: UDIGrammar, labels: VizTitleLabels = {}): string | undefined {
+/**
+ * How this spec's fields are named, in one place, so a card's title and its
+ * chart's axis labels can never disagree.
+ */
+function makeLabeler(spec: UDIGrammar, labels: VizTitleLabels) {
   const sourceName = resolveSourceName(spec);
   const entityLabel = sourceName
     ? (labels.getEntityLabel?.(sourceName) ?? humanizeFieldName(sourceName))
     : null;
-  const tableTitle = entityLabel ? `Table of ${entityLabel}` : undefined;
-
-  // No representation at all means the toolkit's parser defaults to a row layer
-  // over every column — same as an explicit `mark: 'row'` table.
-  const chart = toLayers(spec.representation).find((l) => l && l.mark !== 'row');
-  if (!chart) return tableTitle;
-
   const rollupOutputs = collectRollupOutputs(spec);
-  const mappings = toMappings(chart.mapping).filter((m) => m?.field && m.field !== '*');
-  if (mappings.length === 0) return tableTitle;
 
   const fieldLabel = (field: string) =>
     sourceName
@@ -153,6 +148,61 @@ export function buildVizTitle(spec: UDIGrammar, labels: VizTitleLabels = {}): st
   };
 
   const isMeasure = (m: MappingLike) => !!m.field && m.field in rollupOutputs;
+
+  return { sourceName, entityLabel, label, isMeasure };
+}
+
+/**
+ * A copy of the spec with every unlabelled encoding given a `title`, which the
+ * toolkit passes through to the Vega encoding — so axis labels, legends and
+ * tooltip keys read "Weight" rather than "weight_value".
+ *
+ * Render-time only. The stored spec keeps raw field names, because that is what
+ * export, the reset-to-original comparison, and the query compiler all read.
+ */
+export function applyFieldLabels(spec: UDIGrammar, labels: VizTitleLabels = {}): UDIGrammar {
+  if (!spec?.representation) return spec;
+  const { label } = makeLabeler(spec, labels);
+
+  let changed = false;
+  const labelMapping = (m: MappingLike): MappingLike => {
+    // An explicit title from the spec author always wins, and a row layer's
+    // `*` wildcard has no single field to name.
+    if (m.title || !m.field || m.field === '*') return m;
+    const l = label(m);
+    if (!l || l === m.field) return m;
+    changed = true;
+    return { ...m, title: l };
+  };
+
+  const layers = toLayers(spec.representation).map((layer) => {
+    if (!layer?.mapping) return layer;
+    return {
+      ...layer,
+      mapping: Array.isArray(layer.mapping)
+        ? layer.mapping.map(labelMapping)
+        : labelMapping(layer.mapping),
+    };
+  });
+  if (!changed) return spec;
+
+  return {
+    ...spec,
+    representation: Array.isArray(spec.representation) ? layers : layers[0],
+  } as UDIGrammar;
+}
+
+export function buildVizTitle(spec: UDIGrammar, labels: VizTitleLabels = {}): string | undefined {
+  const { entityLabel, label, isMeasure } = makeLabeler(spec, labels);
+  const tableTitle = entityLabel ? `Table of ${entityLabel}` : undefined;
+
+  // No representation at all means the toolkit's parser defaults to a row layer
+  // over every column — same as an explicit `mark: 'row'` table.
+  const chart = toLayers(spec.representation).find((l) => l && l.mark !== 'row');
+  if (!chart) return tableTitle;
+
+  const mappings = toMappings(chart.mapping).filter((m) => m?.field && m.field !== '*');
+  if (mappings.length === 0) return tableTitle;
   const isClause = (m: MappingLike) =>
     !!m.encoding && (CLAUSE_ENCODINGS as readonly string[]).includes(m.encoding);
 
@@ -163,6 +213,7 @@ export function buildVizTitle(spec: UDIGrammar, labels: VizTitleLabels = {}): st
     mappings.find((m) => m.encoding === encoding),
   ).filter((m): m is MappingLike => !!m);
 
+  const sourceName = resolveSourceName(spec);
   const chartType = chartTypeLabel(chart.mark, spec, mappings);
   const subject = buildSubject(axisMappings.length > 0 ? axisMappings : mappings, label, isMeasure);
   if (!subject) return tableTitle;

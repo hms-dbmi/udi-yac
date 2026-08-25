@@ -26,6 +26,7 @@ export {
 export { createMemoryBankStore, type MemoryBankState } from './stores/memoryBankStore';
 
 export {
+  applyFieldLabels,
   buildVizTitle,
   resolveVizTitle,
   vizTitleProvenance,

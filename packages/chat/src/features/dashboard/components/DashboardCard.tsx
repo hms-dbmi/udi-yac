@@ -39,6 +39,8 @@ import {
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
 import { EditableCardTitle } from './EditableCardTitle';
+import { applyFieldLabels } from '../utils/vizTitle';
+import { useVizTitleLabels } from '../hooks/useVizTitleLabels';
 import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
 import { hasTweakableFields } from '../utils/tweakability';
@@ -86,20 +88,26 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     [viz.spec, sourceFields],
   );
 
+  // Field labels go on at render time, not in the store: the toolkit turns each
+  // mapping's `title` into the Vega encoding title, so axes, legends and tooltips
+  // read "Weight" while the stored spec keeps `weight_value` for export, the
+  // reset comparison and the query compiler.
+  const titleLabels = useVizTitleLabels();
   const plainSpec = useMemo(
-    () => JSON.parse(JSON.stringify(viz.interactiveSpec)),
-    [viz.interactiveSpec],
+    () => applyFieldLabels(JSON.parse(JSON.stringify(viz.interactiveSpec)), titleLabels),
+    [viz.interactiveSpec, titleLabels],
   );
 
   // Fingerprint the spec so we can force UDIVis to remount when the spec
   // content changes — the Vue CE may not reliably re-render on prop updates
-  // alone despite the useLayoutEffect fix in the wrapper.
+  // alone despite the useLayoutEffect fix in the wrapper. Fingerprinting the
+  // *labelled* spec means labels arriving late (the package loads after the
+  // card mounts) also force the remount that picks them up.
   const specKey = useMemo(() => {
-    const s = viz.interactiveSpec;
-    const repr = JSON.stringify(s.representation);
-    const src = JSON.stringify(s.source);
+    const repr = JSON.stringify(plainSpec.representation);
+    const src = JSON.stringify(plainSpec.source);
     return `${src}|${repr}`;
-  }, [viz.interactiveSpec]);
+  }, [plainSpec]);
 
   // Pass the full selection set — including this viz's OWN brush (keyed by its
   // uuid) — back to UDIVis. Feeding the own selection back lets an edit made

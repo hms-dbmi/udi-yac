@@ -18,6 +18,7 @@ import {
   useDataPackageStore,
 } from '@/app/UDIChatContext';
 import { usePalette } from 'udi-toolkit/react';
+import { applyFieldLabels, resolveVizTitle, useVizTitleLabels } from '@/features/dashboard';
 
 /**
  * Opens a modal listing every visualization in the memory bank with a per-item
@@ -28,6 +29,7 @@ export function MemoryBankButton() {
   const closedVisualizations = useMemoryBank((s) => s.closedVisualizations);
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const palette = usePalette();
+  const titleLabels = useVizTitleLabels();
   const dashboardStore = useDashboardStore();
   const memoryBankStore = useMemoryBankStore();
   const dataPackageStore = useDataPackageStore();
@@ -76,7 +78,7 @@ export function MemoryBankButton() {
             <div key={key} className="flex flex-col gap-1 rounded border border-border p-2">
               <div className="flex items-center gap-2">
                 <span className="flex-1 truncate text-sm text-foreground" title={viz.userPrompt}>
-                  {viz.title ?? viz.userPrompt}
+                  {resolveVizTitle(viz, titleLabels)}
                 </span>
                 <Button
                   variant="outline"
@@ -91,7 +93,7 @@ export function MemoryBankButton() {
               <div className="h-48 w-full overflow-hidden">
                 <UDIVis
                   className="block h-full w-full"
-                  spec={viz.interactiveSpec}
+                  spec={applyFieldLabels(viz.interactiveSpec, titleLabels)}
                   sourceResolver={sourceResolver}
                   palette={palette}
                   fillContainer

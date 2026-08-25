@@ -2,7 +2,12 @@ import { useMemo } from 'react';
 import { UDIVis, usePalette } from 'udi-toolkit/react';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { Badge } from '@/components/ui/badge';
-import { VizTweakComponent, buildVizTitle, useVizTitleLabels } from '@/features/dashboard';
+import {
+  VizTweakComponent,
+  applyFieldLabels,
+  buildVizTitle,
+  useVizTitleLabels,
+} from '@/features/dashboard';
 import { useDashboard, useDataPackage, useMemoryBank } from '@/app/UDIChatContext';
 import { VisualizationChangeNotice } from './VisualizationChangeNotice';
 
@@ -19,8 +24,8 @@ export function VisualizationCard({
   messageIndex,
   toolCallIndex,
 }: VisualizationCardProps) {
-  const displaySpec = useMemo(() => spec, [spec]);
   const titleLabels = useVizTitleLabels();
+  const displaySpec = useMemo(() => applyFieldLabels(spec, titleLabels), [spec, titleLabels]);
   // Built from the message's own spec, so the transcript keeps naming the chart
   // the assistant produced even after the dashboard card is tweaked.
   const title = useMemo(() => buildVizTitle(spec, titleLabels), [spec, titleLabels]);

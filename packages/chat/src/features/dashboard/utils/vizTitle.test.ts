@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { UDIGrammar } from 'udi-toolkit/react';
-import { buildVizTitle, resolveVizTitle, vizTitleProvenance } from './vizTitle';
+import { humanizeFieldName } from '@/utils/humanize';
+import { applyFieldLabels, buildVizTitle, resolveVizTitle, vizTitleProvenance } from './vizTitle';
 
 function spec(overrides: Record<string, unknown> = {}): UDIGrammar {
   return {
@@ -283,5 +284,98 @@ describe('vizTitleProvenance', () => {
     const bare = { userPrompt: 'show me something', spec: {} as UDIGrammar };
     expect(resolveVizTitle({ ...bare, title: 'Donor Count by Sex' })).toBe('Donor Count by Sex');
     expect(resolveVizTitle(bare)).toBe('show me something');
+  });
+});
+
+describe('applyFieldLabels', () => {
+  // Mirrors the store's getFieldLabel: a package `title` when there is one,
+  // the humanized column name otherwise.
+  const labels = {
+    getFieldLabel: (_entity: string, field: string) =>
+      ({ body_mass_index_value: 'BMI' })[field] ?? humanizeFieldName(field),
+  };
+
+  /** The toolkit copies a mapping's `title` onto the Vega encoding, which is
+   *  what Vega uses for the axis label, the legend and the tooltip key. */
+  const titles = (s: UDIGrammar) => {
+    const layer = (Array.isArray(s.representation) ? s.representation[0] : s.representation) as {
+      mapping: Array<{ field?: string; title?: string }>;
+    };
+    return Object.fromEntries(layer.mapping.map((m) => [m.field, m.title]));
+  };
+
+  it('names every encoding the way the card title names it', () => {
+    const labelled = applyFieldLabels(scatter());
+    expect(titles(labelled)).toEqual({ age_value: 'Age', weight_value: 'Weight' });
+  });
+
+  it('uses the package label when there is one', () => {
+    const s = spec({
+      representation: {
+        mark: 'point',
+        mapping: [
+          { encoding: 'x', field: 'age_value', type: 'quantitative' },
+          { encoding: 'y', field: 'body_mass_index_value', type: 'quantitative' },
+        ],
+      },
+    });
+    expect(titles(applyFieldLabels(s, labels))).toEqual({
+      age_value: 'Age',
+      body_mass_index_value: 'BMI',
+    });
+  });
+
+  it('names an aggregated axis after its aggregation', () => {
+    expect(titles(applyFieldLabels(countBy('sex')))).toEqual({
+      sex: 'Sex',
+      donor_count: 'Count of Donors',
+    });
+  });
+
+  it('leaves an explicit title from the spec author alone', () => {
+    const s = spec({
+      representation: {
+        mark: 'point',
+        mapping: [
+          { encoding: 'x', field: 'age_value', type: 'quantitative', title: 'Age (years)' },
+          { encoding: 'y', field: 'weight_value', type: 'quantitative' },
+        ],
+      },
+    });
+    expect(titles(applyFieldLabels(s))).toEqual({
+      age_value: 'Age (years)',
+      weight_value: 'Weight',
+    });
+  });
+
+  it('does not mutate the spec it was given', () => {
+    const original = scatter();
+    const before = JSON.stringify(original);
+    applyFieldLabels(original, labels);
+    expect(JSON.stringify(original)).toBe(before);
+  });
+
+  it('returns the same object when there is nothing to label', () => {
+    // A row layer's `*` wildcard covers every column, so no single name fits.
+    const rows = spec({
+      representation: { mark: 'row', mapping: [{ encoding: 'text', field: '*' }] },
+    });
+    expect(applyFieldLabels(rows)).toBe(rows);
+    const bare = spec();
+    expect(applyFieldLabels(bare)).toBe(bare);
+  });
+
+  it('labels every layer of a multi-layer spec', () => {
+    const s = spec({
+      representation: [
+        { mark: 'bar', mapping: [{ encoding: 'x', field: 'age_value', type: 'quantitative' }] },
+        { mark: 'line', mapping: { encoding: 'y', field: 'weight_value', type: 'quantitative' } },
+      ],
+    });
+    const layers = applyFieldLabels(s).representation as Array<{
+      mapping: { title?: string } | Array<{ title?: string }>;
+    }>;
+    expect((layers[0].mapping as Array<{ title?: string }>)[0].title).toBe('Age');
+    expect((layers[1].mapping as { title?: string }).title).toBe('Weight');
   });
 });
