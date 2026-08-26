@@ -191,6 +191,40 @@ class TestBudgetCheck:
 
 
 # ---------------------------------------------------------------------------
+# Direct visualization path
+# ---------------------------------------------------------------------------
+
+
+class TestDirectVisualization:
+    def test_uses_latest_user_message_without_routing(self):
+        orch, _ = _make_orchestrator()
+        tool_call = {"name": "RenderVisualization", "arguments": {"spec": "{}"}}
+
+        with (
+            patch.object(
+                orch, "_handle_create_visualization", return_value=tool_call
+            ) as create_visualization,
+            patch.object(orch, "_orchestrate_tool_calls") as route,
+        ):
+            result = orch.run_visualization(
+                messages=[
+                    {"role": "user", "content": "old request"},
+                    {"role": "assistant", "content": "previous response"},
+                    {"role": "user", "content": "show a bar chart"},
+                ],
+                data_schema="{}",
+                data_domains="[]",
+            )
+
+        route.assert_not_called()
+        assert create_visualization.call_args.args[0] == {
+            "description": "show a bar chart"
+        }
+        assert result.tool_calls == [tool_call]
+        assert result.orchestrator_choice == "render-visualization"
+
+
+# ---------------------------------------------------------------------------
 # Rate-limit → BudgetExceededError
 # ---------------------------------------------------------------------------
 
@@ -457,3 +491,60 @@ class TestServerUsage:
         body = resp.json()
         assert body["usage"]["total_tokens"] == 3
         assert body["usage"]["operations"][0]["op"] == "orchestrate"
+
+    def test_benchmark_bypasses_routing_for_visualization_only_case(self):
+        from udiagent.orchestrator import OrchestratorResult
+
+        direct_result = OrchestratorResult(
+            tool_calls=[{"name": "RenderVisualization", "arguments": {"spec": "{}"}}],
+            orchestrator_choice="render-visualization",
+            usage=Usage(total_tokens=7),
+        )
+        body = self._body() | {"orchestrator_choice": "render-visualization"}
+
+        with (
+            patch.object(self.server_app.orchestrator, "run") as mock_run,
+            patch.object(
+                self.server_app.orchestrator,
+                "run_visualization",
+                return_value=direct_result,
+            ) as mock_run_visualization,
+        ):
+            resp = self.client.post(
+                "/v1/yac/benchmark",
+                json=body,
+                headers={"Authorization": "Bearer test"},
+            )
+
+        assert resp.status_code == 200
+        mock_run.assert_not_called()
+        mock_run_visualization.assert_called_once_with(
+            messages=body["messages"],
+            data_schema=body["dataSchema"],
+            data_domains=body["dataDomains"],
+            openai_api_key=None,
+        )
+        assert resp.json()["usage"]["total_tokens"] == 7
+
+    def test_benchmark_rejects_unsupported_routing_bypass(self):
+        body = self._body() | {"orchestrator_choice": "get-subset-of-data"}
+
+        with (
+            patch.object(self.server_app.orchestrator, "run") as mock_run,
+            patch.object(
+                self.server_app.orchestrator, "run_visualization"
+            ) as mock_run_visualization,
+        ):
+            resp = self.client.post(
+                "/v1/yac/benchmark",
+                json=body,
+                headers={"Authorization": "Bearer test"},
+            )
+
+        assert resp.status_code == 422
+        assert resp.json() == {
+            "error": "Benchmark orchestrator bypass only supports "
+            "'render-visualization'."
+        }
+        mock_run.assert_not_called()
+        mock_run_visualization.assert_not_called()

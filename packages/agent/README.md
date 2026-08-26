@@ -637,6 +637,11 @@ uv run python -m udiagent.benchmark.runner --no-orchestrator --path ./data/bench
 uv run python -m udiagent.benchmark.runner --no-orchestrator --path ./data/benchmark_dqvis/small.jsonl --workers 5
 ```
 
+`--no-orchestrator` is for visualization-only datasets such as the bundled DQVis
+fixtures. It bypasses the routing completion when the expected choice is
+`render-visualization`; unsupported choices are rejected rather than silently
+running the full orchestrator.
+
 Resume a failed run:
 
 ```bash
