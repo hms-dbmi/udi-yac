@@ -108,11 +108,27 @@ def load_package(data_dir: Path) -> list[dict]:
             # (StarRocks stores no FK constraints), yet the chat's
             # cross-entity filtering depends on it — carry it through to the
             # backends config so /v1/yac/metadata can serve it.
-            relationship_schema = {
+            schema_extras = {
                 key: schema[key]
                 for key in ("primaryKey", "foreignKeys")
                 if key in schema
             }
+            # Cube roles are resource-level and equally un-introspectable: a
+            # marginal row is just a row with nulls in it as far as the
+            # database is concerned. Carry them through so `only` can resolve
+            # a marginal's null complement server-side.
+            schema_extras.update(
+                {
+                    key: resource[key]
+                    for key in (
+                        "udi:cube",
+                        "udi:dimensions",
+                        "udi:measures",
+                        "udi:measure_aggregations",
+                    )
+                    if key in resource
+                }
+            )
             entries.append(
                 {
                     "entity": resource["name"],
@@ -124,7 +140,7 @@ def load_package(data_dir: Path) -> list[dict]:
                         if f.get("udi:data_type") == "quantitative"
                     },
                     "row_count": resource.get("udi:row_count"),
-                    "schema_extras": relationship_schema or None,
+                    "schema_extras": schema_extras or None,
                 }
             )
     else:

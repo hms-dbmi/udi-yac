@@ -149,6 +149,58 @@ These data transformations can get more complex. For instance to create a relati
 
 ![Stacked relative bar chart.](./docs/stacked_relative_bar_chart.png)
 
+### Pre-aggregated data cubes and the `only` transformation
+
+Some sources are not line-item tables but pre-aggregated **powerset cubes**:
+one row per dimension-subset combination, with the dimensions participating
+in that row populated, every other dimension null, and the measure
+pre-aggregated over the matching line-item rows. A datapackage resource
+declares this with three resource-level keys:
+
+```json
+{
+  "name": "encounter_cube",
+  "path": "encounter_cube.csv",
+  "udi:cube": true,
+  "udi:dimensions": ["sex", "race", "age_group"],
+  "udi:measures": ["cnt"]
+}
+```
+
+Reading a cube means picking a **marginal** — the rows whose populated
+dimension set is exactly the one you want. `only` expresses that:
+
+```json
+{ "only": ["sex"] }
+```
+
+On the cube above this selects the rows where `sex` is populated and both
+`race` and `age_group` are null — i.e. the per-sex totals. `{"only": []}`
+selects the grand-total row. The null complement is resolved from the
+source's `udi:dimensions` (registered by `loadDataPackage`), so a spec never
+enumerates it; pass `dimensions` inline to use `only` against a source whose
+metadata isn't registered.
+
+**Filtering a cube** is not a matter of adding a predicate. A per-sex chart
+reads the `sex` marginal, in which `race` is null by construction, so
+intersecting it with `race == 'White'` is provably empty. The correct
+operation is _expand → filter → contract_: read the wider marginal, filter
+it, then roll the measure back up to the marginal the chart wants.
+
+```json
+"transformation": [
+  { "only": ["sex", "race"] },
+  { "filter": { "op": "==", "left": { "field": "race" }, "right": { "literal": "White" } } },
+  { "groupby": ["sex"] },
+  { "rollup": { "cnt": { "op": "sum", "field": "cnt" } } }
+]
+```
+
+Contraction is exact for additive measures (counts, sums) and for
+`min`/`max`. It is **not** possible for medians or distinct counts, and
+means are only correct when count-weighted — so a cube whose measure is
+non-additive cannot be filtered this way at all.
+
 ## Using udi-toolkit
 
 `udi-toolkit` renders UDI grammar specs as interactive visualizations. It supports three consumption modes:

@@ -26,6 +26,17 @@ export {
 export { createMemoryBankStore, type MemoryBankState } from './stores/memoryBankStore';
 
 export {
+  buildCubeTransformation,
+  buildCubeCountTransformation,
+  getRepresentedFields,
+  collectFieldReferences,
+  marginalDimensions,
+  type ActiveFilter,
+  type SkippedFilter,
+  type SkipReason,
+} from './utils/cubeFilters';
+
+export {
   useBrushFilters,
   selectBrushFilters,
   brushHasValue,

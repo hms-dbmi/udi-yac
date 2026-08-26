@@ -191,6 +191,9 @@ importers:
       "@vitejs/plugin-react":
         specifier: ^6.0.1
         version: 6.0.3(vite@8.1.0(@types/node@24.13.2)(esbuild@0.27.7)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.48.0)(yaml@2.9.0))
+      arquero:
+        specifier: ^8.0.1
+        version: 8.0.3
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.7.0)
@@ -215,6 +218,9 @@ importers:
       lint-staged:
         specifier: ^16.4.0
         version: 16.4.0
+      pinia:
+        specifier: ^3.0.1
+        version: 3.0.4(typescript@6.0.3)(vue@3.5.39(typescript@6.0.3))
       prettier:
         specifier: ^3.4.2
         version: 3.9.4
@@ -9911,10 +9917,10 @@ packages:
         integrity: sha512-YbGqHZ5/eW4SnkPNR44mKVc6ZKQoRs/Rux1sxC6rdwXb4qpbOSYfDr9DsTHolOTGmIKgM9j141mZbBeg05R1pw==,
       }
 
-  vue-component-type-helpers@3.3.7:
+  vue-component-type-helpers@3.3.9:
     resolution:
       {
-        integrity: sha512-Skkhw9agYSgsWqv7bxSOGJZa9SaiJbZVGdXuFWnrzKaQYHnw9qbjD630rw6RyMqDbp54nfLCLw5SZA55if7JLg==,
+        integrity: sha512-3c/UfMe0SqyEfcGTyH7mfshHagJ9QTCbppCb0/uGpHZpFug7+If3GeGZN7I0YheKEExemx3xldQPoO7PQSOLQg==,
       }
 
   vue-demi@0.14.10:
@@ -11820,7 +11826,7 @@ snapshots:
       ts-dedent: 2.3.0
       type-fest: 2.19.0
       vue: 3.5.39(typescript@6.0.3)
-      vue-component-type-helpers: 3.3.7
+      vue-component-type-helpers: 3.3.9
 
   "@tailwindcss/node@4.3.2":
     dependencies:
@@ -16372,7 +16378,7 @@ snapshots:
 
   vue-component-type-helpers@2.2.12: {}
 
-  vue-component-type-helpers@3.3.7: {}
+  vue-component-type-helpers@3.3.9: {}
 
   vue-demi@0.14.10(vue@3.5.39(typescript@6.0.3)):
     dependencies:

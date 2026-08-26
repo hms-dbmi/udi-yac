@@ -1,0 +1,69 @@
+{
+  "name": "penguins_cube",
+  "udi:name": "penguins_cube",
+  "udi:path": "./data/penguins_cube/",
+  "resources": [
+    {
+      "name": "penguin_counts",
+      "type": "table",
+      "path": "penguins_cube.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 45,
+      "udi:column_count": 5,
+      "udi:cube": true,
+      "udi:dimensions": ["species", "island", "sex"],
+      "udi:measures": ["cnt", "mean_body_mass_g"],
+      "udi:measure_aggregations": {
+        "cnt": "sum",
+        "mean_body_mass_g": "mean"
+      },
+      "schema": {
+        "fields": [
+          {
+            "name": "species",
+            "type": "string",
+            "description": "Cube dimension: species (null in marginals that do not include it).",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "island",
+            "type": "string",
+            "description": "Cube dimension: island (null in marginals that do not include it).",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "Cube dimension: sex (null in marginals that do not include it).",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal"
+          },
+          {
+            "name": "cnt",
+            "type": "integer",
+            "description": "Number of penguins in this cell.",
+            "udi:cardinality": 25,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          },
+          {
+            "name": "mean_body_mass_g",
+            "type": "integer",
+            "description": "Mean body mass (g) in this cell. Non-additive: cannot be re-aggregated across a contracted dimension.",
+            "udi:cardinality": 31,
+            "udi:unique": false,
+            "udi:data_type": "quantitative"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -145,14 +145,26 @@ function UDIChatInner({
   }, [messages, dataFiltersStore, dataPackageStore]);
 
   // Update spec filter structure when LLM FilterData selections change or when
-  // the set of active visualizations changes. Brush selections don't need to
-  // trigger this — each viz's own UUID is already in the filter list (from
-  // activeVisualizations), so the filter structure is stable once set up.
+  // the set of active visualizations changes. For row-level sources a brush
+  // needs no re-run — each viz's own UUID is already in the filter list (from
+  // activeVisualizations), so the structure is stable once set up. Cube
+  // sources are different: which marginal a visualization must expand to
+  // depends on WHICH FIELDS are currently selected, so the brush mirror
+  // (internalDataSelections) has to be a dependency too. It updates on brush
+  // commit, not per tick, so this stays cheap.
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   useEffect(() => {
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
-  }, [dataSelections, activeVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
+  }, [
+    dataSelections,
+    internalDataSelections,
+    activeVisualizations,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
 
   const queryConfig: QueryConfig = {
     apiBaseUrl,

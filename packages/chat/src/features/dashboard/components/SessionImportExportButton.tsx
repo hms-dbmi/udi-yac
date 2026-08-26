@@ -48,6 +48,7 @@ export function SessionImportExportButton() {
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const cubeMeasureFields = useDataPackage((s) => s.cubeMeasureFields);
   const trackEvent = useTracker();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -105,6 +106,7 @@ export function SessionImportExportButton() {
             layout: parsed.value.layout,
           },
           sourceFields,
+          cubeMeasureFields,
         );
         trackEvent('session_imported', {
           messageCount: parsed.value.conversation.messages.length,
@@ -115,7 +117,7 @@ export function SessionImportExportButton() {
         setErrorMessage(err instanceof Error ? err.message : 'Failed to read file');
       }
     },
-    [conversationStore, dashboardStore, sourceFields, trackEvent],
+    [conversationStore, dashboardStore, sourceFields, cubeMeasureFields, trackEvent],
   );
 
   return (

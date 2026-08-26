@@ -89,6 +89,13 @@ export function describeTransformations(spec: UDIGrammar): string[] {
       lines.push(describeJoin(t));
     } else if ('kde' in t && t.kde?.field) {
       lines.push(`Density estimate of ${t.kde.field}`);
+    } else if ('only' in t && t.only != null) {
+      const fields = Array.isArray(t.only) ? t.only : [t.only];
+      lines.push(
+        fields.length === 0
+          ? 'Select the cube grand total'
+          : `Select the pre-aggregated totals by ${fields.join(', ')}`,
+      );
     }
   }
   return lines;

@@ -69,7 +69,7 @@ export interface DataSource {
  * These include operations like grouping, filtering, joining, and more.
  */
 export type DataTransformation =
-  GroupBy | BinBy | RollUp | Join | OrderBy | Derive | Filter | KDE;
+  GroupBy | BinBy | RollUp | Join | OrderBy | Derive | Filter | KDE | Only;
 
 /**
  * Base interface for all data transformations.
@@ -285,6 +285,47 @@ export interface Filter extends DataTransformationBase {
    * The filter condition or selection.
    */
   filter: FilterExpression;
+}
+
+/**
+ * Selects one marginal of a pre-aggregated data cube: the rows in which
+ * **only** the named dimensions are populated and every other dimension of
+ * that cube is null.
+ *
+ * A powerset cube stores one row per dimension-subset combination, with the
+ * non-participating dimensions null and the measure pre-aggregated over the
+ * matching line-item rows. Reading such a source means picking a marginal,
+ * so `{ only: ['sex'] }` on a cube whose dimensions are `[sex, race, age]`
+ * is equivalent to the predicate
+ * `sex != null && race == null && age == null`.
+ *
+ * Writing that predicate by hand requires the caller to know the cube's
+ * entire dimension list, which pushes cube metadata into every call site and
+ * makes specs brittle to schema changes. `only` names just the dimensions it
+ * wants and resolves the null complement from the source's registered
+ * `udi:dimensions`.
+ */
+export interface Only extends DataTransformationBase {
+  /**
+   * The name of the input table.
+   * If not specified, it assumes the output of the previous operation.
+   */
+  in?: string;
+
+  /**
+   * The dimension(s) that must be populated. Every other dimension of the
+   * cube must be null. An empty list selects the grand-total row (every
+   * dimension null).
+   */
+  only: string | string[];
+
+  /**
+   * The cube's full dimension list. Optional escape hatch for sources whose
+   * cube metadata isn't registered with the toolkit — a spec loaded outside
+   * a data package, a Storybook story, a test fixture. When omitted (the
+   * normal case) the list is resolved from the source's `udi:dimensions`.
+   */
+  dimensions?: string[];
 }
 
 /**

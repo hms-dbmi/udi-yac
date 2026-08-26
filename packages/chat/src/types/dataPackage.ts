@@ -33,6 +33,24 @@ export interface DataPackageResource {
   type?: string;
   'udi:column_count'?: number;
   'udi:row_count'?: number;
+  /** True when this resource is a pre-aggregated powerset cube: one row per
+   *  dimension-subset combination, non-participating dimensions null, the
+   *  measure pre-aggregated over the matching line-item rows. */
+  'udi:cube'?: boolean;
+  /** The cube's dimension columns. */
+  'udi:dimensions'?: string[];
+  /** The cube's measure columns. */
+  'udi:measures'?: string[];
+  /** How each measure re-aggregates when a marginal is contracted (rolled up
+   *  across a dimension). Omitted measures are assumed additive; see
+   *  `getCubeMeasureOp` for the fallback. */
+  'udi:measure_aggregations'?: Record<string, string>;
+}
+
+/** Cube roles for one resource, as the dashboard needs them. */
+export interface CubeInfo {
+  dimensions: string[];
+  measures: string[];
 }
 
 export interface DataPackage {

@@ -77,6 +77,7 @@ export type {
   DataSelections,
   RangeSelection,
   PointSelection,
+  CubeMetadata,
 } from './DataSourcesStore';
 
 // The shared store factory. Exposed for headless/tooling use — e.g. the

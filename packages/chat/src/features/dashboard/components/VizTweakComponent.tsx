@@ -26,6 +26,7 @@ interface VizTweakComponentProps {
 
 export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTweakComponentProps) {
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const cubeMeasureFields = useDataPackage((s) => s.cubeMeasureFields);
   const quantitativeSourceFields = useDataPackage((s) => s.quantitativeSourceFields);
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
   const dashboardStore = useDashboardStore();
@@ -66,7 +67,9 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       if (updatedSpec === spec) return;
 
       const vizKey = dashboardStore.getState().vizKey(messageIndex, toolCallIndex);
-      dashboardStore.getState().updateActiveVisualizationSpec(vizKey, updatedSpec, sourceFields);
+      dashboardStore
+        .getState()
+        .updateActiveVisualizationSpec(vizKey, updatedSpec, sourceFields, cubeMeasureFields);
       // Reapply filter transformations to the updated spec (null filters, named filters)
       dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
       trackEvent('visualization_tweaked', { encoding: param.encoding, kind: param.kind });
@@ -79,6 +82,7 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       messageIndex,
       toolCallIndex,
       sourceFields,
+      cubeMeasureFields,
       trackEvent,
     ],
   );
