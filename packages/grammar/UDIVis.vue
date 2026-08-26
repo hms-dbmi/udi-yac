@@ -470,6 +470,29 @@ function setDefaultDomains(
   }
 }
 
+/**
+ * Compile a raw→label map into a Vega `labelExpr`: a chain of equality tests
+ * ending in the raw label, so an unmapped value renders unchanged.
+ *
+ *   { "Children's Hospital of Philadelphia": "CHOP" }
+ *   → datum.label === 'Children\'s Hospital of Philadelphia' ? 'CHOP' : datum.label
+ *
+ * Returns '' for an empty map so the caller can skip the axis override entirely.
+ */
+function buildLabelExpr(labels: Record<string, string>): string {
+  const quote = (v: string) =>
+    `'${v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+  const entries = Object.entries(labels).filter(
+    ([raw, label]) => raw !== label,
+  );
+  if (entries.length === 0) return '';
+  return entries.reduce(
+    (fallback, [raw, label]) =>
+      `datum.label === ${quote(raw)} ? ${quote(label)} : ${fallback}`,
+    'datum.label',
+  );
+}
+
 // Pin axis tick values to the union of the two paired bin-boundary fields
 // (e.g. x=start, x2=end for a histogram) so vega-lite's default "nice" step
 // can't land ticks mid-bar. Reads from transformedDataFull so ticks reflect
@@ -715,6 +738,22 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       }
       if ('title' in map && map.title != null) {
         vegaEncoding[encoding].title = map.title;
+      }
+      if ('labels' in map && map.labels != null) {
+        const labelExpr = buildLabelExpr(map.labels as Record<string, string>);
+        if (labelExpr) {
+          // Relabel the axis/legend text only. Vega evaluates labelExpr against
+          // `datum.label` at render time, so the data keeps its raw values and
+          // selections, filters and tooltips are untouched.
+          const target =
+            encoding === 'color' || encoding === 'size' ? 'legend' : 'axis';
+          if (vegaEncoding[encoding][target] == null) {
+            vegaEncoding[encoding][target] = {};
+          }
+          if (vegaEncoding[encoding][target] !== null) {
+            vegaEncoding[encoding][target].labelExpr = labelExpr;
+          }
+        }
       }
     }
 

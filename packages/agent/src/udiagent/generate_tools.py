@@ -161,18 +161,79 @@ def _extract_encoding_info(spec_template: str) -> dict[str, dict]:
             encoding = m.get("encoding", "")
             field = m.get("field", "")
             declared_type = m.get("type")  # "nominal", "quantitative", "ordinal"
-            # Match fields that are a single placeholder like "<F1>" or "<E2.F>"
-            match = re.fullmatch(r'<([^>]+)>', field)
-            if match and encoding:
-                ph = match.group(1)
+            if not encoding:
+                continue
+            # A field is usually a single placeholder ("<F1>"), but an
+            # aggregated one embeds it in the rollup's output name
+            # ("average <F1>", "<E> count"). Both bind that placeholder to
+            # this encoding; `aggregated` records which kind it was, because
+            # the encoding's own display label already carries the operator.
+            bare = re.fullmatch(r'<([^>]+)>', field)
+            found = [bare.group(1)] if bare else re.findall(r'<([^>]+)>', field)
+            for ph in found:
                 base = ph.split(":")[0] if ":" in ph else ph
                 if base not in info:
-                    info[base] = {"encodings": [], "declared_type": None}
+                    info[base] = {
+                        "encodings": [],
+                        "declared_type": None,
+                        "aggregated": False,
+                    }
                 if encoding not in info[base]["encodings"]:
                     info[base]["encodings"].append(encoding)
                 if declared_type and info[base]["declared_type"] is None:
                     info[base]["declared_type"] = declared_type
+                if not bare:
+                    info[base]["aggregated"] = True
     return info
+
+
+_ENTITY_TOKENS = {"E": "{entity}", "E1": "{entity1}", "E2": "{entity2}"}
+
+
+def _tokenize_text_template(text: str, encoding_info: dict, kind: str) -> str:
+    """Rewrite a title/summary template's <placeholders> into frontend tokens.
+
+    The frontend resolves each token against the spec it is actually rendering,
+    so the text follows a field swapped in the tweak panel:
+
+        "{entity}"   the source entity's display label ("{entity:one}" for
+                     its singular, written "<E:one>" in the template)
+        "{enc:x}"    what encoding x plots  — "Average Age" for an aggregate
+        "{field:x}"  the column behind it   — "Age" for that same aggregate
+        "{bind:F1}"  no encoding to hang it on; the runtime substitutes the
+                     literal field the model chose, and it stays static
+
+    `kind` is "title" or "summary": a title names the plotted value, a summary
+    spells the operation out in prose and wants the bare column (see add_row in
+    scripts/template_viz_generation.py).
+    """
+    if not text:
+        return text
+
+    def replace(match: re.Match) -> str:
+        ph = match.group(1)
+        base = ph.split(":")[0] if ":" in ph else ph
+        # Entities are never encodings — "<E> count" would otherwise bind <E>
+        # to the count axis.
+        if base in _ENTITY_TOKENS:
+            token = _ENTITY_TOKENS[base]
+            # `<E:one>` asks for the singular: an entity label names a table and
+            # so reads as a plural, which is wrong in "a point for each <E:one>".
+            if ph.endswith(":one"):
+                token = token[:-1] + ":one}"
+            return token
+        info = encoding_info.get(base)
+        encodings = info.get("encodings", []) if info else []
+        if not encodings:
+            return "{bind:" + base + "}"
+        encoding = encodings[0]
+        # A non-aggregated encoding plots the column directly, so both kinds
+        # resolve the same way.
+        if kind == "summary" and info.get("aggregated"):
+            return "{field:" + encoding + "}"
+        return "{enc:" + encoding + "}"
+
+    return re.sub(r'<([^>]+)>', replace, text)
 
 
 _ENCODING_LABELS = {
@@ -384,6 +445,7 @@ def generate(template_sources, output_path: str):
     spec_templates = []
     tool_dispatch = {}
     tool_tags = {}
+    tool_text = {}
     tool_name_set = {}
     sources_used = []
     counter = 0
@@ -416,6 +478,15 @@ def generate(template_sources, output_path: str):
             tool_defs.append(tool_def)
             tool_dispatch[tool_name] = (template_idx, param_map)
             tool_tags[tool_name] = list(template.get("tags") or default_tags)
+            encoding_info = _extract_encoding_info(spec_template)
+            tool_text[tool_name] = (
+                _tokenize_text_template(
+                    template.get("title_template", ""), encoding_info, "title"
+                ),
+                _tokenize_text_template(
+                    template.get("summary_template", ""), encoding_info, "summary"
+                ),
+            )
             counter += 1
 
     output = [
@@ -428,6 +499,7 @@ def generate(template_sources, output_path: str):
         'Schema-independent: tool params are free-form strings resolved against the',
         'per-request data schema at runtime (see vis_generate._execute_generate).',
         'TOOL_TAGS maps each tool to its template tags for per-request selection.',
+        'TOOL_TEXT carries the user-facing title/summary templates.',
         '',
         'DO NOT EDIT — regenerate with: python scripts/regenerate_vis_tools.py',
         '"""',
@@ -447,6 +519,12 @@ def generate(template_sources, output_path: str):
         '',
         '# Tags per tool name (drives per-request template selection)',
         f'TOOL_TAGS = {pprint.pformat(tool_tags, width=120)}',
+        '',
+        '',
+        '# User-facing text per tool name: (title_template, summary_template),',
+        '# with placeholders rewritten to tokens the frontend resolves against',
+        '# the live spec so both survive a field swap.',
+        f'TOOL_TEXT = {pprint.pformat(tool_text, width=120)}',
         '',
     ]
 

@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { humanizeFieldName } from '@/utils/humanize';
-import { applyFieldLabels, buildVizTitle, resolveVizTitle, vizTitleProvenance } from './vizTitle';
+import {
+  applyFieldLabels,
+  buildVizTitle,
+  renderTextTemplate,
+  resolveVizSummary,
+  resolveVizTitle,
+  vizTitleProvenance,
+} from './vizTitle';
 
 function spec(overrides: Record<string, unknown> = {}): UDIGrammar {
   return {
@@ -377,5 +384,182 @@ describe('applyFieldLabels', () => {
     }>;
     expect((layers[0].mapping as Array<{ title?: string }>)[0].title).toBe('Age');
     expect((layers[1].mapping as { title?: string }).title).toBe('Weight');
+  });
+});
+
+describe('renderTextTemplate', () => {
+  /** Aggregated bar chart: y plots `donor_count`, a count rollup over <E>. */
+  const agg = spec({
+    transformation: [
+      { groupby: 'sex' },
+      { rollup: { avg_age: { op: 'mean', field: 'age_value' } } },
+    ],
+    representation: {
+      mark: 'bar',
+      mapping: [
+        { encoding: 'x', field: 'sex', type: 'nominal' },
+        { encoding: 'y', field: 'avg_age', type: 'quantitative' },
+      ],
+    },
+  });
+
+  it('resolves encodings against the spec it is given', () => {
+    expect(renderTextTemplate('Scatterplot of {enc:x} and {enc:y}', scatter())).toBe(
+      'Scatterplot of Age and Weight',
+    );
+  });
+
+  it('follows a field swap, which is the whole point of the tokens', () => {
+    const tmpl = 'Bar chart of the number of {entity} by {enc:x}';
+    expect(renderTextTemplate(tmpl, countBy('sex'))).toBe(
+      'Bar chart of the number of Donors by Sex',
+    );
+    expect(renderTextTemplate(tmpl, countBy('race'))).toBe(
+      'Bar chart of the number of Donors by Race',
+    );
+  });
+
+  it('names an aggregated encoding for a title and its input column for prose', () => {
+    // A title says what is plotted...
+    expect(renderTextTemplate('Bar chart of {enc:y} by {enc:x}', agg)).toBe(
+      'Bar chart of Average Age by Sex',
+    );
+    // ...while a summary spells the operation out and wants the bare column.
+    expect(renderTextTemplate('Displays the mean {field:y} in each {enc:x} category', agg)).toBe(
+      'Displays the mean Age in each Sex category',
+    );
+  });
+
+  it('singularizes an entity for prose that counts one row at a time', () => {
+    // Entity labels name a table, so they read as plurals.
+    expect(
+      renderTextTemplate(
+        'Displays a point for each {entity:one}, positioned by {enc:x}',
+        scatter(),
+      ),
+    ).toBe('Displays a point for each Donor, positioned by Age');
+    // The plural token is untouched.
+    expect(renderTextTemplate('Table of {entity}', scatter())).toBe('Table of Donors');
+  });
+
+  it('singularizes a package-supplied entity label too', () => {
+    const labels = { getEntityLabel: () => 'Tissue Samples' };
+    expect(renderTextTemplate('each {entity:one}', scatter(), labels)).toBe('each Tissue Sample');
+  });
+
+  it('resolves each source of a join separately', () => {
+    const joined = {
+      source: [
+        { name: 'donors', source: 'donors.csv' },
+        { name: 'samples', source: 'samples.csv' },
+      ],
+      representation: {
+        mark: 'bar',
+        mapping: [{ encoding: 'x', field: 'organ', type: 'nominal' }],
+      },
+    } as unknown as UDIGrammar;
+    expect(renderTextTemplate('Table of {entity1} and {entity2}', joined)).toBe(
+      'Table of Donors and Samples',
+    );
+  });
+
+  it('applies package labels', () => {
+    const labels = {
+      getFieldLabel: (_e: string, f: string) =>
+        ({ age_value: 'Age at death' })[f] ?? humanizeFieldName(f),
+      getEntityLabel: () => 'Donor',
+    };
+    expect(
+      renderTextTemplate(
+        'Bar chart of the number of {entity} by {enc:x}',
+        countBy('age_value'),
+        labels,
+      ),
+    ).toBe('Bar chart of the number of Donor by Age at death');
+  });
+
+  it('gives up rather than showing a half-filled sentence', () => {
+    // No `color` encoding on this spec, so the token cannot be resolved.
+    expect(renderTextTemplate('Scatterplot of {enc:x} by {enc:color}', scatter())).toBeUndefined();
+    expect(renderTextTemplate('', scatter())).toBeUndefined();
+  });
+
+  it('leaves unrecognised tokens alone', () => {
+    expect(renderTextTemplate('Chart of {enc:x} {mystery}', scatter())).toBe(
+      'Chart of Age {mystery}',
+    );
+  });
+});
+
+describe('template-driven titles and summaries', () => {
+  const base = { userPrompt: 'donors by sex', spec: countBy('sex') };
+
+  it('prefers the template wording over the generic builder', () => {
+    const p = vizTitleProvenance({
+      ...base,
+      titleTemplate: 'Bar chart of the number of {entity} by {enc:x}',
+    });
+    expect(p.display).toBe('Bar chart of the number of Donors by Sex');
+    // Without a template, the builder still covers it.
+    expect(vizTitleProvenance(base).display).toBe('Bar chart of Count of Donors by Sex');
+  });
+
+  it('falls back to the builder when a template no longer resolves', () => {
+    const p = vizTitleProvenance({ ...base, titleTemplate: 'Chart of {enc:color}' });
+    expect(p.display).toBe('Bar chart of Count of Donors by Sex');
+  });
+
+  it('still lets a rename win', () => {
+    const p = vizTitleProvenance({
+      ...base,
+      titleTemplate: 'Bar chart of the number of {entity} by {enc:x}',
+      userTitle: 'Cohort breakdown',
+    });
+    expect(p.display).toBe('Cohort breakdown');
+  });
+
+  it('resolves the summary, and has none without a template', () => {
+    expect(
+      resolveVizSummary({
+        ...base,
+        summaryTemplate: 'Displays the number of {entity} in each {enc:x} category.',
+      }),
+    ).toBe('Displays the number of Donors in each Sex category.');
+    expect(resolveVizSummary(base)).toBeUndefined();
+  });
+});
+
+describe('applyFieldLabels — categorical value labels', () => {
+  const valueLabels = { "Children's Hospital of Philadelphia": 'CHOP' };
+  const mappingFor = (s: UDIGrammar, encoding: string) => {
+    const layer = (Array.isArray(s.representation) ? s.representation[0] : s.representation) as {
+      mapping: Array<{ encoding?: string; labels?: Record<string, string> }>;
+    };
+    return layer.mapping.find((m) => m.encoding === encoding);
+  };
+
+  it('attaches the map to categorical encodings only', () => {
+    const s = countBy('group_name');
+    const labelled = applyFieldLabels(s, { valueLabels });
+    // x is nominal — its ticks are the values being relabelled.
+    expect(mappingFor(labelled, 'x')?.labels).toEqual(valueLabels);
+    // y is the quantitative count axis — no discrete ticks to rename.
+    expect(mappingFor(labelled, 'y')?.labels).toBeUndefined();
+  });
+
+  it('is a no-op when the package declares no value labels', () => {
+    const s = countBy('group_name');
+    expect(mappingFor(applyFieldLabels(s, {}), 'x')?.labels).toBeUndefined();
+    expect(mappingFor(applyFieldLabels(s, { valueLabels: {} }), 'x')?.labels).toBeUndefined();
+  });
+
+  it('leaves an explicit map from the spec author alone', () => {
+    const s = spec({
+      representation: {
+        mark: 'bar',
+        mapping: [{ encoding: 'x', field: 'group_name', type: 'nominal', labels: { a: 'b' } }],
+      },
+    });
+    expect(mappingFor(applyFieldLabels(s, { valueLabels }), 'x')?.labels).toEqual({ a: 'b' });
   });
 });

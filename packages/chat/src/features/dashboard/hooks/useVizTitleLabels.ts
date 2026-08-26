@@ -15,8 +15,14 @@ export function useVizTitleLabels(): VizTitleLabels {
   const getEntityLabel = useDataPackage((s) => s.getEntityLabel);
   const getFieldDataType = useDataPackage((s) => s.getFieldDataType);
   return useMemo(
-    () => ({ getFieldLabel, getEntityLabel, getFieldDataType }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => ({
+      getFieldLabel,
+      getEntityLabel,
+      getFieldDataType,
+      // The whole map, not a lookup: it is attached to categorical encodings so
+      // the toolkit can compile it into one Vega labelExpr.
+      valueLabels: dataPackage?.['udi:labels'],
+    }),
     [dataPackage, getFieldLabel, getEntityLabel, getFieldDataType],
   );
 }

@@ -1,6 +1,6 @@
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { collectRollupOutputs, type RollupOutput } from '@/utils/specMutations';
-import { humanizeFieldName } from '@/utils/humanize';
+import { humanizeFieldName, singularizeLabel } from '@/utils/humanize';
 
 /**
  * Chart titles are built from the spec, not written by the LLM: free,
@@ -22,6 +22,8 @@ interface MappingLike {
   type?: string;
   /** The grammar's per-encoding axis/legend label; preferred over `field`. */
   title?: string;
+  /** The grammar's per-encoding categorical value labels. */
+  labels?: Record<string, string>;
 }
 
 interface LayerLike {
@@ -40,6 +42,9 @@ export interface VizTitleLabels {
   getEntityLabel?: (entity: string) => string;
   /** `udi:data_type` of a field, used to pick "categorized by" vs "colored by". */
   getFieldDataType?: (entity: string, field: string) => string | undefined;
+  /** The package's categorical value labels, raw → label. Used to relabel axis
+   *  and legend text; see `applyFieldLabels`. */
+  valueLabels?: Record<string, string>;
 }
 
 /** Sentence-style labels for aggregation ops, mirroring the toolkit's
@@ -149,30 +154,115 @@ function makeLabeler(spec: UDIGrammar, labels: VizTitleLabels) {
 
   const isMeasure = (m: MappingLike) => !!m.field && m.field in rollupOutputs;
 
-  return { sourceName, entityLabel, label, isMeasure };
+  return { sourceName, entityLabel, label, isMeasure, fieldLabel, rollupOutputs };
 }
 
 /**
- * A copy of the spec with every unlabelled encoding given a `title`, which the
- * toolkit passes through to the Vega encoding — so axis labels, legends and
- * tooltip keys read "Weight" rather than "weight_value".
+ * Resolve a template's tokens against the spec being rendered.
  *
- * Render-time only. The stored spec keeps raw field names, because that is what
- * export, the reset-to-original comparison, and the query compiler all read.
+ * The agent picks the wording from the visualization template it used and sends
+ * it tokenized rather than filled in, so the text follows the chart: swap the x
+ * field in the tweak panel and `{enc:x}` re-resolves on the next render.
+ *
+ *   {entity} {entity1} {entity2}   the source's display label
+ *   {entity:one}                   its singular, for "a point for each Donor"
+ *   {enc:x}                        what encoding x plots — "Average Age"
+ *   {field:x}                      the column behind it  — "Age"
+ *
+ * Returns undefined if any token cannot be resolved, so the caller falls back
+ * to the generic builder rather than showing a half-filled sentence.
+ */
+export function renderTextTemplate(
+  template: string,
+  spec: UDIGrammar,
+  labels: VizTitleLabels = {},
+): string | undefined {
+  if (!template) return undefined;
+  const { entityLabel, label, fieldLabel, rollupOutputs } = makeLabeler(spec, labels);
+
+  const sources = (Array.isArray(spec.source) ? spec.source : [spec.source]) as Array<{
+    name?: string;
+  }>;
+  const entityAt = (index: number, singular = false) => {
+    const name = sources[index]?.name;
+    if (!name) return undefined;
+    const label = labels.getEntityLabel?.(name) ?? humanizeFieldName(name);
+    // Entity labels name a table and so read as plurals ("Donors"); prose that
+    // counts one row at a time needs the singular.
+    return singular ? singularizeLabel(label) : label;
+  };
+
+  const byEncoding = new Map<string, MappingLike>();
+  for (const layer of toLayers(spec.representation)) {
+    for (const m of toMappings(layer?.mapping)) {
+      if (m?.encoding && !byEncoding.has(m.encoding)) byEncoding.set(m.encoding, m);
+    }
+  }
+
+  let unresolved = false;
+  const rendered = template.replace(/\{([a-zA-Z]+[0-9]*)(?::([^}]+))?\}/g, (whole, kind, arg) => {
+    let value: string | undefined;
+    const one = arg === 'one';
+    if (kind === 'entity')
+      value =
+        entityAt(0, one) ?? (one ? singularizeLabel(entityLabel ?? '') : entityLabel) ?? undefined;
+    else if (kind === 'entity1') value = entityAt(0, one);
+    else if (kind === 'entity2') value = entityAt(1, one);
+    else if (kind === 'enc' && arg) value = label(byEncoding.get(arg) ?? {}) ?? undefined;
+    else if (kind === 'field' && arg) {
+      const m = byEncoding.get(arg);
+      // The column behind an aggregated encoding, so prose can name it while
+      // spelling the operation out itself — "the mean Age", not "the mean
+      // Average Age".
+      const rollup = m?.field ? rollupOutputs[m.field] : undefined;
+      const field = rollup?.field ?? m?.field;
+      value = field ? fieldLabel(field) : undefined;
+    } else return whole;
+    if (!value) unresolved = true;
+    return value ?? whole;
+  });
+
+  return unresolved ? undefined : rendered;
+}
+
+/**
+ * A copy of the spec with the package's display labels attached to each
+ * encoding, both of which the toolkit passes through to Vega:
+ *
+ *   `title`   the field's label — axis, legend and tooltip key read "Weight"
+ *             rather than "weight_value"
+ *   `labels`  the categorical value labels, compiled to Vega's `labelExpr`, so
+ *             an axis tick reads "CHOP" while the data keeps the full name
+ *
+ * Render-time only. The stored spec keeps raw field names and values, because
+ * that is what export, the reset-to-original comparison, selections and the
+ * query compiler all read.
  */
 export function applyFieldLabels(spec: UDIGrammar, labels: VizTitleLabels = {}): UDIGrammar {
   if (!spec?.representation) return spec;
   const { label } = makeLabeler(spec, labels);
 
+  const valueLabels = labels.valueLabels;
+  const hasValueLabels = !!valueLabels && Object.keys(valueLabels).length > 0;
+
   let changed = false;
   const labelMapping = (m: MappingLike): MappingLike => {
-    // An explicit title from the spec author always wins, and a row layer's
-    // `*` wildcard has no single field to name.
-    if (m.title || !m.field || m.field === '*') return m;
-    const l = label(m);
-    if (!l || l === m.field) return m;
+    // A row layer's `*` wildcard covers every column, so no single name fits.
+    if (!m.field || m.field === '*') return m;
+    let next = m;
+    // An explicit title from the spec author always wins.
+    if (!m.title) {
+      const l = label(m);
+      if (l && l !== m.field) next = { ...next, title: l };
+    }
+    // Value labels only make sense on a categorical encoding — a quantitative
+    // axis has no discrete ticks to rename.
+    if (hasValueLabels && !m.labels && m.type !== 'quantitative') {
+      next = { ...next, labels: valueLabels };
+    }
+    if (next === m) return m;
     changed = true;
-    return { ...m, title: l };
+    return next;
   };
 
   const layers = toLayers(spec.representation).map((layer) => {
@@ -281,6 +371,9 @@ export interface VizTitleSource {
   /** Assistant-written title from an older session. Nothing produces one now. */
   title?: string;
   userTitle?: string;
+  /** Tokenized wording from the visualization template the agent used. */
+  titleTemplate?: string;
+  summaryTemplate?: string;
 }
 
 export interface VizTitleProvenance {
@@ -292,13 +385,31 @@ export interface VizTitleProvenance {
   isRenamed: boolean;
 }
 
+/**
+ * The card's title. The wording from the visualization template the agent chose
+ * leads, because it is friendlier than anything derivable from the spec alone;
+ * `buildVizTitle` covers specs that came from no template — data-overview
+ * pop-outs, imported sessions, and the LLM's free-form fallback.
+ */
 export function vizTitleProvenance(
   viz: VizTitleSource,
   labels: VizTitleLabels = {},
 ): VizTitleProvenance {
   const userTitle = viz.userTitle?.trim();
-  const display = userTitle || buildVizTitle(viz.spec, labels) || viz.title || viz.userPrompt;
+  const built =
+    (viz.titleTemplate && renderTextTemplate(viz.titleTemplate, viz.spec, labels)) ||
+    buildVizTitle(viz.spec, labels);
+  const display = userTitle || built || viz.title || viz.userPrompt;
   return { display, original: viz.title, isRenamed: !!userTitle };
+}
+
+/** The template's one-line explanation of what the chart shows, if it had one. */
+export function resolveVizSummary(
+  viz: VizTitleSource,
+  labels: VizTitleLabels = {},
+): string | undefined {
+  if (!viz.summaryTemplate) return undefined;
+  return renderTextTemplate(viz.summaryTemplate, viz.spec, labels);
 }
 
 export function resolveVizTitle(viz: VizTitleSource, labels: VizTitleLabels = {}): string {

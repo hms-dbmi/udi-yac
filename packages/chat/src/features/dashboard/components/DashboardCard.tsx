@@ -39,7 +39,7 @@ import {
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
 import { EditableCardTitle } from './EditableCardTitle';
-import { applyFieldLabels } from '../utils/vizTitle';
+import { applyFieldLabels, resolveVizSummary } from '../utils/vizTitle';
 import { useVizTitleLabels } from '../hooks/useVizTitleLabels';
 import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
@@ -187,6 +187,11 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // displayed data was derived (grouped, aggregated, sorted, …).
   const transformSteps = useMemo(() => describeTransformations(viz.spec), [viz.spec]);
 
+  // The visualization template's own one-line explanation, resolved against the
+  // live spec. Leads the info tooltip because it says what the chart shows;
+  // the step list stays underneath for anyone who wants the mechanics.
+  const summary = useMemo(() => resolveVizSummary(viz, titleLabels), [viz, titleLabels]);
+
   const specJson = useMemo(() => JSON.stringify(viz.spec, null, 2), [viz.spec]);
 
   const specEditorUrl = useMemo(() => {
@@ -288,7 +293,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                   </TooltipContent>
                 </Tooltip>
               )}
-              {transformSteps.length > 0 && (
+              {(summary || transformSteps.length > 0) && (
                 <Tooltip>
                   <TooltipTrigger
                     render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
@@ -297,12 +302,18 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                   </TooltipTrigger>
                   <TooltipContent>
                     <div className="max-w-xs">
-                      <p className="font-medium mb-1">Transformations</p>
-                      <ol className="list-decimal pl-4 space-y-0.5">
-                        {transformSteps.map((step, i) => (
-                          <li key={i}>{step}</li>
-                        ))}
-                      </ol>
+                      {summary && <p className="mb-1">{summary}</p>}
+                      {transformSteps.length > 0 && (
+                        <>
+                          {summary && <div className="my-1.5 border-t border-current/20" />}
+                          <p className="font-medium mb-1">Transformations</p>
+                          <ol className="list-decimal pl-4 space-y-0.5">
+                            {transformSteps.map((step, i) => (
+                              <li key={i}>{step}</li>
+                            ))}
+                          </ol>
+                        </>
+                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>

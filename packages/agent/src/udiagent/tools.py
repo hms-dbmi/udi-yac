@@ -236,8 +236,18 @@ def function_call_render_visualization(
         openai_api_key=openai_api_key,
         model=model,
     )
+    arguments = {"spec": result["spec"]}
+    # The chosen template's user-facing title and one-line summary, with tokens
+    # the frontend resolves against the live spec. Costs no output tokens: the
+    # text comes from the template registry, not the model.
+    text = result.get("text_templates")
+    if text:
+        if text.get("title"):
+            arguments["titleTemplate"] = text["title"]
+        if text.get("summary"):
+            arguments["summaryTemplate"] = text["summary"]
     return {
         "name": "RenderVisualization",
-        "arguments": {"spec": result["spec"]},
+        "arguments": arguments,
         "meta": result.get("meta"),
     }

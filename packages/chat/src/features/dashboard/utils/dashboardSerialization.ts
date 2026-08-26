@@ -125,9 +125,9 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
     return { ok: false, error: `visualizations[${idx}].userPrompt must be a string` };
   if (!isObject(raw.spec))
     return { ok: false, error: `visualizations[${idx}].spec must be an object` };
-  // Both title fields are optional: `title` is an assistant-written title from
-  // an older session, `userTitle` an explicit rename. Exports predating the
-  // rename feature carry only `title`.
+  // All four are optional: `title` is an assistant-written title from an older
+  // session, `userTitle` an explicit rename, and the two templates the wording
+  // from the visualization template the agent used. Older exports carry fewer.
   const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
   return {
     ok: true,
@@ -139,6 +139,8 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
       userPrompt: raw.userPrompt,
       title: str(raw.title),
       userTitle: str(raw.userTitle),
+      titleTemplate: str(raw.titleTemplate),
+      summaryTemplate: str(raw.summaryTemplate),
       spec: raw.spec as unknown as DashboardExportVisualization['spec'],
     },
   };
