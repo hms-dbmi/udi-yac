@@ -15,16 +15,22 @@
       "command": "pnpm --filter udi-yac dev",
       "isBackground": true,
       "problemMatcher": [],
-      "presentation": { "group": "dev", "panel": "dedicated" }
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Dev: agent",
-      "detail": "UDIAgent FastAPI server (http://localhost:8007). Includes the duckdb/starrocks drivers so it serves whatever UDI_QUERY_BACKENDS in packages/agent/.env configures (or nothing → browser mode).",
+      "detail": "UDIAgent FastAPI server (http://localhost:8007). Includes the duckdb/starrocks drivers and reads UDI_QUERY_BACKENDS from packages/agent/.env, which the seed scripts set \u2014 so this one task serves both browser mode and server-side (remote) mode.",
       "type": "shell",
       "command": "uv run --project packages/agent --extra server --extra duckdb --extra starrocks fastapi dev packages/agent/src/udiagent/server/app.py --port 8007 --reload-dir packages/agent/src --reload-dir packages/grammar-py/src",
       "isBackground": true,
       "problemMatcher": [],
-      "presentation": { "group": "dev", "panel": "dedicated" }
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Dev: grammar app",
@@ -33,7 +39,10 @@
       "command": "pnpm --filter udi-grammar-app dev",
       "isBackground": true,
       "problemMatcher": [],
-      "presentation": { "group": "dev", "panel": "dedicated" }
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Dev: storybook",
@@ -42,7 +51,10 @@
       "command": "pnpm --filter udi-toolkit storybook",
       "isBackground": true,
       "problemMatcher": [],
-      "presentation": { "group": "dev", "panel": "dedicated" }
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Dev: chat + agent",
@@ -50,49 +62,10 @@
       "dependsOn": ["Dev: agent", "Dev: chat"],
       "dependsOrder": "parallel",
       "problemMatcher": [],
-      "group": { "kind": "build", "isDefault": true }
-    },
-    {
-      "label": "Dev: agent (remote/DuckDB)",
-      "detail": "UDIAgent server in server-side data mode — loads packages/agent/duckdb-backends.json so /v1/yac query + metadata serve the seeded packages. Run a Data: seed task first. http://localhost:8007",
-      "type": "shell",
-      "command": "uv run --project packages/agent --extra server --extra duckdb fastapi dev packages/agent/src/udiagent/server/app.py --port 8007 --reload-dir packages/agent/src --reload-dir packages/grammar-py/src",
-      "options": {
-        "env": {
-          "UDI_QUERY_BACKENDS": "${workspaceFolder}/packages/agent/duckdb-backends.json"
-        }
-      },
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": { "group": "dev", "panel": "dedicated" }
-    },
-    {
-      "label": "Dev: chat + agent (remote/DuckDB)",
-      "detail": "Server-side data stack: chat SPA + agent with the DuckDB backend. Run 'Data: Use penguins (remote/DuckDB)' first to seed + point the chat at it.",
-      "dependsOn": ["Dev: agent (remote/DuckDB)", "Dev: chat"],
-      "dependsOrder": "parallel",
-      "problemMatcher": []
-    },
-    {
-      "label": "Dev: agent (remote/StarRocks)",
-      "detail": "UDIAgent server in server-side data mode against StarRocks — loads packages/agent/starrocks-backends.json. Start the container and seed it first ('Data: Use pcx (remote/StarRocks)'). http://localhost:8007",
-      "type": "shell",
-      "command": "uv run --project packages/agent --extra server --extra starrocks fastapi dev packages/agent/src/udiagent/server/app.py --port 8007 --reload-dir packages/agent/src --reload-dir packages/grammar-py/src",
-      "options": {
-        "env": {
-          "UDI_QUERY_BACKENDS": "${workspaceFolder}/packages/agent/starrocks-backends.json"
-        }
-      },
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": { "group": "dev", "panel": "dedicated" }
-    },
-    {
-      "label": "Dev: chat + agent (remote/StarRocks)",
-      "detail": "Server-side data stack: chat SPA + agent with the StarRocks backend. Run 'Data: Use pcx (remote/StarRocks)' first to seed + point the chat at it.",
-      "dependsOn": ["Dev: agent (remote/StarRocks)", "Dev: chat"],
-      "dependsOrder": "parallel",
-      "problemMatcher": []
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     },
     {
       "label": "Data: Start StarRocks",
@@ -100,7 +73,10 @@
       "type": "shell",
       "command": "docker compose -f dev/starrocks/docker-compose.yml up -d",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Data: Generate pcx datapackage",
@@ -108,7 +84,10 @@
       "type": "shell",
       "command": "python3 scripts/gen_datapackage.py sample-data/pcx --strip pcx_30_ --strip _level_deid",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Data: Seed StarRocks (pcx)",
@@ -116,11 +95,14 @@
       "type": "shell",
       "command": "uv run --project packages/agent --extra starrocks python packages/agent/scripts/seed_starrocks.py sample-data/pcx",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Data: Regenerate + seed pcx",
-      "detail": "Start StarRocks, regenerate the pcx datapackage, then seed the database — one-click refresh after editing sample-data/pcx",
+      "detail": "Start StarRocks, regenerate the pcx datapackage, then seed the database \u2014 one-click refresh after editing sample-data/pcx",
       "dependsOn": [
         "Data: Start StarRocks",
         "Data: Generate pcx datapackage",
@@ -131,15 +113,18 @@
     },
     {
       "label": "Data: Seed DuckDB (pcx)",
-      "detail": "Seed sample-data/pcx into a local packages/agent/pcx.duckdb file as package `pcx` + merge into duckdb-backends.json — no container needed. Stop the agent before re-seeding.",
+      "detail": "Seed sample-data/pcx into a local packages/agent/pcx.duckdb file as package `pcx` + merge into duckdb-backends.json \u2014 no container needed. Stop the agent before re-seeding.",
       "type": "shell",
       "command": "uv run --project packages/agent --extra duckdb python packages/agent/scripts/seed_duckdb.py sample-data/pcx",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Data: Regenerate + seed pcx (DuckDB)",
-      "detail": "Regenerate the pcx datapackage, then seed a local DuckDB file — zero-infrastructure alternative to StarRocks (no Docker)",
+      "detail": "Regenerate the pcx datapackage, then seed a local DuckDB file \u2014 zero-infrastructure alternative to StarRocks (no Docker)",
       "dependsOn": [
         "Data: Generate pcx datapackage",
         "Data: Seed DuckDB (pcx)"
@@ -149,21 +134,27 @@
     },
     {
       "label": "Data: Use penguins (remote/DuckDB)",
-      "detail": "One-click server-side (remote) setup with the bundled penguins package: seed it into a local packages/agent/penguins.duckdb (+ duckdb-backends.json) and point the chat at it (VITE_UDI_REMOTE_PACKAGE=penguins). Then run 'Dev: chat + agent (remote/DuckDB)'. Stop the agent before re-seeding.",
+      "detail": "One-click server-side (remote) setup with the bundled penguins package: seed it into a local packages/agent/penguins.duckdb (+ duckdb-backends.json) and point the chat at it (VITE_UDI_REMOTE_PACKAGE=penguins). Then run 'Dev: chat + agent'. Stop the agent before re-seeding.",
       "type": "shell",
       "command": "uv run --project packages/agent --extra duckdb python packages/agent/scripts/seed_duckdb.py && node scripts/set-chat-data-source.mjs penguins --remote",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Data: Use pcx (remote/DuckDB)",
-      "detail": "Switch the chat to pcx in server-side mode on DuckDB: seed sample-data/pcx into packages/agent/pcx.duckdb (+ duckdb-backends.json), then set VITE_UDI_REMOTE_PACKAGE=pcx. Then run 'Dev: chat + agent (remote/DuckDB)'. Stop the agent before re-seeding.",
+      "detail": "Switch the chat to pcx in server-side mode on DuckDB: seed sample-data/pcx into packages/agent/pcx.duckdb (+ duckdb-backends.json), then set VITE_UDI_REMOTE_PACKAGE=pcx. Then run 'Dev: chat + agent'. Stop the agent before re-seeding.",
       "dependsOn": ["Data: Seed DuckDB (pcx)"],
       "dependsOrder": "sequence",
       "type": "shell",
       "command": "node scripts/set-chat-data-source.mjs pcx --remote",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Data: Use pcx (remote/StarRocks)",
@@ -173,23 +164,32 @@
       "type": "shell",
       "command": "node scripts/set-chat-data-source.mjs pcx --remote",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Data: Point chat at pcx (remote, no re-seed)",
-      "detail": "Just flip packages/chat/.env.local to VITE_UDI_REMOTE_PACKAGE=pcx, without touching the database — for switching back to an already-seeded pcx. Restart the chat dev server after.",
+      "detail": "Just flip packages/chat/.env.local to VITE_UDI_REMOTE_PACKAGE=pcx, without touching the database \u2014 for switching back to an already-seeded pcx. Restart the agent and chat dev servers after.",
       "type": "shell",
       "command": "node scripts/set-chat-data-source.mjs pcx --remote",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Data: Use HuBMAP (CSV, browser mode)",
-      "detail": "Reset the chat to the bundled HuBMAP CSV dumps in interactive (browser) mode — points VITE_UDI_DATA_PACKAGE at /data/hubmap and disables VITE_UDI_REMOTE_PACKAGE in packages/chat/.env.local. Restart the chat dev server after. (The underlying script takes a package arg, e.g. `pcx`, for other bundled sources.)",
+      "detail": "Reset the chat to the bundled HuBMAP CSV dumps in interactive (browser) mode \u2014 points VITE_UDI_DATA_PACKAGE at /data/hubmap and disables VITE_UDI_REMOTE_PACKAGE in packages/chat/.env.local. Restart the agent and chat dev servers after. (The underlying script takes a package arg, e.g. `pcx`, for other bundled sources.)",
       "type": "shell",
       "command": "node scripts/set-chat-data-source.mjs hubmap",
       "problemMatcher": [],
-      "presentation": { "group": "data", "panel": "dedicated" }
+      "presentation": {
+        "group": "data",
+        "panel": "dedicated"
+      }
     }
   ]
 }

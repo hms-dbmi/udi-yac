@@ -2082,6 +2082,7 @@ all = [
     { name = "ijson" },
     { name = "langfuse" },
     { name = "pandas" },
+    { name = "pydantic-settings" },
     { name = "pymysql" },
     { name = "python-dotenv" },
     { name = "python-jose", extra = ["cryptography"] },
@@ -2104,6 +2105,7 @@ langfuse = [
 ]
 server = [
     { name = "fastapi", extra = ["standard"] },
+    { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "python-jose", extra = ["cryptography"] },
 ]
@@ -2129,6 +2131,7 @@ requires-dist = [
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = ">=4" },
     { name = "openai", specifier = ">=2.15.0" },
     { name = "pandas", marker = "extra == 'codegen'", specifier = ">=2.0.0" },
+    { name = "pydantic-settings", marker = "extra == 'server'", specifier = ">=2.0" },
     { name = "pymysql", marker = "extra == 'starrocks'", specifier = ">=1.1.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },

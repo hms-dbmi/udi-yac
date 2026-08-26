@@ -90,7 +90,7 @@ def _load_examples(
 
 
 def _call_llm_with_tools(
-    agent, messages, tools, config, usage=None, openai_api_key=None
+    agent, messages, tools, config, usage=None, openai_api_key=None, model=None
 ):
     """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None.
 
@@ -104,7 +104,7 @@ def _call_llm_with_tools(
         resp = _call_with_budget_guard(
             client.chat.completions.create,
             usage,
-            model=agent.gpt_model_name,
+            model=model or agent.gpt_model_name,
             messages=messages,
             tools=tools,
             tool_choice="auto",
@@ -131,6 +131,7 @@ def _call_llm(
     config,
     usage=None,
     openai_api_key=None,
+    model=None,
     op="create_visualization",
 ):
     """Call the LLM and return the raw spec string."""
@@ -143,6 +144,7 @@ def _call_llm(
         json_schema=grammar["schema_string"],
         n=config.get("n", 1),
         openai_api_key=openai_api_key,
+        model=model,
     )
     if usage is not None:
         usage.add(op, resp_usage)
@@ -694,10 +696,11 @@ def _execute_generate(skill, context):
         )
 
         openai_api_key = context.get("openai_api_key")
+        model = context.get("model")
         usage = context.get("usage")
         result = _call_llm_with_tools(
             agent, tool_messages, selected_defs, config,
-            usage=usage, openai_api_key=openai_api_key,
+            usage=usage, openai_api_key=openai_api_key, model=model,
         )
         for _attempt in range(2):
             if result is None:
@@ -731,7 +734,7 @@ def _execute_generate(skill, context):
                     ]
                     result = _call_llm_with_tools(
                         agent, retry_messages, selected_defs, config,
-                        usage=usage, openai_api_key=openai_api_key,
+                        usage=usage, openai_api_key=openai_api_key, model=model,
                     )
                     continue
                 else:
@@ -769,6 +772,7 @@ def _execute_generate(skill, context):
         agent, gen_messages, grammar, config,
         usage=context.get("usage"),
         openai_api_key=context.get("openai_api_key"),
+        model=context.get("model"),
         op="create_visualization",
     )
     context["spec_str"] = spec_str
@@ -820,6 +824,7 @@ def _execute_validate(skill, context):
             agent, gen_messages, grammar, config,
             usage=context.get("usage"),
             openai_api_key=context.get("openai_api_key"),
+            model=context.get("model"),
             op="create_visualization.validate",
         )
         spec_dict, errors = _parse_and_validate(
@@ -864,6 +869,7 @@ def run_skills(plan, context, registry):
                 context["config"],
                 usage=context.get("usage"),
                 openai_api_key=context.get("openai_api_key"),
+                model=context.get("model"),
                 op=f"create_visualization.{skill_name}",
             )
             context["spec_str"] = spec_str
@@ -877,7 +883,8 @@ def run_skills(plan, context, registry):
 
 
 def generate_vis_spec(
-    agent, messages, data_schema, grammar, config=None, usage=None, openai_api_key=None
+    agent, messages, data_schema, grammar, config=None, usage=None,
+    openai_api_key=None, model=None,
 ):
     """Generate a visualization spec using the skills pipeline.
 
@@ -909,6 +916,7 @@ def generate_vis_spec(
         "errors": [],
         "corrections": 0,
         "openai_api_key": openai_api_key,
+        "model": model,
         "usage": usage,
     }
 

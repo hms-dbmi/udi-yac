@@ -7,6 +7,9 @@ class YACCompletionRequest(BaseModel):
     messages: list[dict]
     dataSchema: str
     dataDomains: str
+    #: Optional model override. Honored only alongside an ``X-OpenAI-Key``
+    #: header — on the server's own key, model choice stays the operator's.
+    model: str | None = None
 
 
 class YACBenchmarkCompletionRequest(BaseModel):
@@ -14,6 +17,7 @@ class YACBenchmarkCompletionRequest(BaseModel):
     dataSchema: str
     dataDomains: str
     orchestrator_choice: str | None = None
+    model: str | None = None
 
 
 class YACQueryItem(BaseModel):
