@@ -16,6 +16,9 @@ pip install udiagent[server]
 # With LangFuse observability
 pip install udiagent[langfuse]
 
+# With Amazon Bedrock IAM-role (SigV4) authentication
+pip install udiagent[bedrock]
+
 # With benchmarking tools
 pip install udiagent[benchmark]
 
@@ -26,7 +29,7 @@ pip install udiagent[all]
 For local development with `uv`:
 
 ```bash
-uv sync --extra server --extra langfuse --extra test   # server + dev
+uv sync --extra server --extra langfuse --extra test --extra bedrock   # server + dev
 ```
 
 ## Library Usage
@@ -125,12 +128,12 @@ agent = UDIAgent(
 )
 ```
 
-| Backend             | `openai_base_url`                                   | Notes                                              |
-| ------------------- | --------------------------------------------------- | -------------------------------------------------- |
-| Azure AI Foundry    | `https://<resource>.openai.azure.com/openai/v1`     | Key is the Foundry API key                         |
-| Amazon Bedrock      | `https://bedrock-mantle.<region>.api.aws/openai/v1` | Key is a Bedrock API key (see below for IAM roles) |
-| OpenRouter          | `https://openrouter.ai/api/v1`                      | Model ids are `vendor/model`                       |
-| Ollama / vLLM / LMS | `http://localhost:11434/v1`                         | No key needed — a placeholder is supplied          |
+| Backend             | `openai_base_url`                                   | Notes                                             |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------- |
+| Azure AI Foundry    | `https://<resource>.openai.azure.com/openai/v1`     | Key is the Foundry API key                        |
+| Amazon Bedrock      | `https://bedrock-mantle.<region>.api.aws/openai/v1` | Static Bedrock API key; for an IAM role see below |
+| OpenRouter          | `https://openrouter.ai/api/v1`                      | Model ids are `vendor/model`                      |
+| Ollama / vLLM / LMS | `http://localhost:11434/v1`                         | No key needed — a placeholder is supplied         |
 
 The backend must support **function calling** and **JSON-schema structured
 outputs** (`response_format: {type: "json_schema", strict: true}`); the
@@ -144,10 +147,57 @@ the `OPENAI_BASE_URL` environment variable instead (as the server does) routes
 **every** client there, including per-request keys, because the OpenAI SDK
 applies that variable itself.
 
-Amazon Bedrock with an instance/task role rather than a static key is not
-wired up: it needs SigV4, i.e. `OpenAI(provider=openai.providers.bedrock(...))`
-plus the `openai[bedrock]` extra, which is mutually exclusive with
-`api_key`/`base_url`.
+#### Amazon Bedrock with an IAM role (SigV4)
+
+To authenticate with an EC2 instance profile or ECS task role instead of a
+static key, install `udiagent[bedrock]` and pass `bedrock=True`:
+
+```python
+agent = UDIAgent(
+    gpt_model_name="openai.gpt-oss-120b-1:0",
+    bedrock=True,
+    bedrock_region="us-east-1",   # or set AWS_REGION
+)
+```
+
+Requests are signed with SigV4 using the **default AWS credential chain** —
+instance profile, task role, `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`,
+`~/.aws/credentials`, SSO — so no key is held by the process. Either parameter
+opts in; `bedrock_region` alone is enough.
+
+- **Mutually exclusive with `openai_api_key` and `openai_base_url`** (the
+  OpenAI SDK refuses `provider=` alongside either). Passing both raises
+  `ValueError`; on the server, the equivalent env combination refuses startup.
+  For a static Bedrock API key, use `openai_base_url` as in the table above.
+- **A region is required** and determines the endpoint. It resolves from
+  `bedrock_region`, then `AWS_REGION`, `AWS_DEFAULT_REGION`, `~/.aws/config` —
+  there is **no instance-metadata fallback**. Missing it raises `OpenAIError`
+  at construction, so the server fails to start rather than failing the first
+  request.
+- **To reach a PrivateLink/VPC endpoint**, set `AWS_BEDROCK_BASE_URL` — not
+  `OPENAI_BASE_URL`.
+- **`AWS_BEARER_TOKEN_BEDROCK` is deliberately ignored.** `bedrock=True` always
+  means SigV4; a stray bearer token in the environment cannot silently change
+  the auth mode.
+- **Per-request `X-OpenAI-Key` keys are refused with a 403.** Serving one would
+  build a client against api.openai.com and send the prompt — including the
+  data schema and domains — to a third party, which defeats the reason for
+  routing inference through Bedrock in the first place. The guard runs before
+  orchestration on every endpoint that accepts the header
+  (`/v1/yac/completions`, `/v1/yac/benchmark`), and `_get_gpt_client` enforces
+  the same rule as a backstop for direct library use. Set
+  `VITE_UDI_REQUIRE_API_KEY=false` in the frontend so users are not prompted
+  for a key the server will reject.
+- **LangFuse cost attribution reads zero** for Bedrock model ids, which are not
+  in LangFuse's pricing table. Traces, latencies, and token counts still work.
+- **Unresolvable AWS credentials return a 503**, not a 500. The SDK resolves
+  credentials per request, so a detached instance profile or an unreachable
+  IMDS fails at request time rather than at startup. The response stays terse
+  because an end user cannot act on it; the operator-facing checklist (role,
+  `AWS_REGION`, IMDS hop limit) is logged at `ERROR`. Check the server log
+  first when a Bedrock deployment starts returning 503.
+
+Deployment prerequisites are listed under [Deployment](#deployment).
 
 ### With LangFuse observability
 
@@ -210,26 +260,28 @@ uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 
 <!-- BEGIN generated: env vars (scripts/gen_env_docs.py) -->
 
-| Variable                   | Default   | Description                                                                                                                                                                                                                                                            |
-| -------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `JWT_SECRET_KEY`           | —         | JWT signing key for self-issued tokens. Required unless `INSECURE_DEV_MODE=1` or `JWT_JWKS_URL` is set.                                                                                                                                                                |
-| `JWT_ALGORITHM`            | `HS256`   | JWT algorithm. Set to the identity provider's (e.g. `RS256`) when using `JWT_JWKS_URL`.                                                                                                                                                                                |
-| `JWT_JWKS_URL`             | —         | Verify externally issued tokens against an identity provider's JWKS endpoint instead of `JWT_SECRET_KEY`. Mutually exclusive with it.                                                                                                                                  |
-| `JWT_ISSUER`               | —         | Expected `iss` claim; validated only when set.                                                                                                                                                                                                                         |
-| `JWT_AUDIENCE`             | —         | Expected `aud` claim. Required with `JWT_JWKS_URL`.                                                                                                                                                                                                                    |
-| `INSECURE_DEV_MODE`        | `0`       | Skip JWT verification entirely. Development only — never set this in production.                                                                                                                                                                                       |
-| `UDI_CORS_ORIGINS`         | `*`       | Comma-separated list of browser origins allowed to call this server. Defaults to `*` (any origin). Note that credentialed requests are always permitted, so with `*` any site can call this server with a user's cookies — name your origins explicitly in production. |
-| `GPT_MODEL_NAME`           | `gpt-5.4` | Model for orchestration; with a custom base URL, that backend's model id. Callers may override it per-request only by supplying their own `X-OpenAI-Key`.                                                                                                              |
-| `OPENAI_API_KEY`           | —         | OpenAI API key. If unset, callers must supply one per-request via the `X-OpenAI-Key` header.                                                                                                                                                                           |
-| `OPENAI_BASE_URL`          | —         | Root of any OpenAI-compatible backend (Azure AI Foundry, Bedrock, OpenRouter, Ollama, vLLM). Must support function calling and JSON-schema structured outputs.                                                                                                         |
-| `LANGFUSE_PUBLIC_KEY`      | —         | LangFuse public key. Tracing is off unless all three are set.                                                                                                                                                                                                          |
-| `LANGFUSE_SECRET_KEY`      | —         | LangFuse secret key. Tracing is off unless all three are set.                                                                                                                                                                                                          |
-| `LANGFUSE_HOST`            | —         | LangFuse instance URL, e.g. `https://cloud.langfuse.com`.                                                                                                                                                                                                              |
-| `LANGFUSE_ENVIRONMENT`     | —         | Tags traces with an environment label (e.g. `production`). Does not by itself enable tracing.                                                                                                                                                                          |
-| `UDI_QUERY_BACKENDS`       | —         | Path to a JSON file mapping package names to StarRocks/DuckDB connections, served via `/v1/yac/query` and `/v1/yac/metadata`. Written by the seed scripts — see `dev/duckdb/README.md`.                                                                                |
-| `UDI_METADATA_TTL_SECONDS` | `3600`    | TTL for the introspected-metadata cache.                                                                                                                                                                                                                               |
-| `UDI_LOG_DIR`              | —         | Where the rotating log file goes. Defaults to `<package root>/logs`; file logging is skipped if unwritable.                                                                                                                                                            |
-| `UDI_DATA_DIR`             | —         | Repo-level dev data for `/v1/yac/examples`. Defaults to `<package root>/data`; set this when installed from a wheel.                                                                                                                                                   |
+| Variable                   | Default   | Description                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JWT_SECRET_KEY`           | —         | JWT signing key for self-issued tokens. Required unless `INSECURE_DEV_MODE=1` or `JWT_JWKS_URL` is set.                                                                                                                                                                                                                                                                                               |
+| `JWT_ALGORITHM`            | `HS256`   | JWT algorithm. Set to the identity provider's (e.g. `RS256`) when using `JWT_JWKS_URL`.                                                                                                                                                                                                                                                                                                               |
+| `JWT_JWKS_URL`             | —         | Verify externally issued tokens against an identity provider's JWKS endpoint instead of `JWT_SECRET_KEY`. Mutually exclusive with it.                                                                                                                                                                                                                                                                 |
+| `JWT_ISSUER`               | —         | Expected `iss` claim; validated only when set.                                                                                                                                                                                                                                                                                                                                                        |
+| `JWT_AUDIENCE`             | —         | Expected `aud` claim. Required with `JWT_JWKS_URL`.                                                                                                                                                                                                                                                                                                                                                   |
+| `INSECURE_DEV_MODE`        | `0`       | Skip JWT verification entirely. Development only — never set this in production.                                                                                                                                                                                                                                                                                                                      |
+| `UDI_CORS_ORIGINS`         | `*`       | Comma-separated list of browser origins allowed to call this server. Defaults to `*` (any origin). Note that credentialed requests are always permitted, so with `*` any site can call this server with a user's cookies — name your origins explicitly in production.                                                                                                                                |
+| `GPT_MODEL_NAME`           | `gpt-5.4` | Model for orchestration; with a custom base URL, that backend's model id. Callers may override it per-request only by supplying their own `X-OpenAI-Key`.                                                                                                                                                                                                                                             |
+| `OPENAI_API_KEY`           | —         | OpenAI API key. If unset, callers must supply one per-request via the `X-OpenAI-Key` header.                                                                                                                                                                                                                                                                                                          |
+| `OPENAI_BASE_URL`          | —         | Root of any OpenAI-compatible backend (Azure AI Foundry, Bedrock, OpenRouter, Ollama, vLLM). Must support function calling and JSON-schema structured outputs. For Bedrock this is the static-API-key path; see `UDI_BEDROCK` for an IAM role.                                                                                                                                                        |
+| `UDI_BEDROCK`              | `0`       | Authenticate to Amazon Bedrock with SigV4 from the default AWS credential chain (EC2 instance profile, ECS task role, `AWS_PROFILE`, `~/.aws/credentials`), so no key is stored. Mutually exclusive with `OPENAI_API_KEY` and `OPENAI_BASE_URL`. Per-request `X-OpenAI-Key` headers are refused with a 403 in this mode, so no prompt reaches api.openai.com. Requires the `udiagent[bedrock]` extra. |
+| `AWS_REGION`               | —         | AWS region for Bedrock; also determines the endpoint. Required with `UDI_BEDROCK`, though the AWS SDK will also accept `AWS_DEFAULT_REGION` or `~/.aws/config` — there is no instance metadata fallback. Set `AWS_BEDROCK_BASE_URL` instead to reach a PrivateLink endpoint.                                                                                                                          |
+| `LANGFUSE_PUBLIC_KEY`      | —         | LangFuse public key. Tracing is off unless all three are set.                                                                                                                                                                                                                                                                                                                                         |
+| `LANGFUSE_SECRET_KEY`      | —         | LangFuse secret key. Tracing is off unless all three are set.                                                                                                                                                                                                                                                                                                                                         |
+| `LANGFUSE_HOST`            | —         | LangFuse instance URL, e.g. `https://cloud.langfuse.com`.                                                                                                                                                                                                                                                                                                                                             |
+| `LANGFUSE_ENVIRONMENT`     | —         | Tags traces with an environment label (e.g. `production`). Does not by itself enable tracing.                                                                                                                                                                                                                                                                                                         |
+| `UDI_QUERY_BACKENDS`       | —         | Path to a JSON file mapping package names to StarRocks/DuckDB connections, served via `/v1/yac/query` and `/v1/yac/metadata`. Written by the seed scripts — see `dev/duckdb/README.md`.                                                                                                                                                                                                               |
+| `UDI_METADATA_TTL_SECONDS` | `3600`    | TTL for the introspected-metadata cache.                                                                                                                                                                                                                                                                                                                                                              |
+| `UDI_LOG_DIR`              | —         | Where the rotating log file goes. Defaults to `<package root>/logs`; file logging is skipped if unwritable.                                                                                                                                                                                                                                                                                           |
+| `UDI_DATA_DIR`             | —         | Repo-level dev data for `/v1/yac/examples`. Defaults to `<package root>/data`; set this when installed from a wheel.                                                                                                                                                                                                                                                                                  |
 
 <!-- END generated: env vars -->
 
@@ -320,9 +372,9 @@ docker build -f packages/agent/Dockerfile -t udiagent .   # from the repo root
 docker run -p 8007:80 --env-file packages/agent/.env udiagent
 ```
 
-The image installs the `server` + `langfuse` extras. Add `--extra duckdb` /
-`--extra starrocks` to both `uv sync` lines if the deployment serves
-[server-side query backends](#server-side-query-backends).
+The image installs the `server` + `langfuse` + `bedrock` extras. Add
+`--extra duckdb` / `--extra starrocks` to both `uv sync` lines if the deployment
+serves [server-side query backends](#server-side-query-backends).
 
 ## Deployment Guide
 
@@ -426,6 +478,61 @@ Two deployment consequences worth deciding on deliberately:
   `tool_choice: "required"`. Backends missing these degrade to fallback paths
   instead of failing loudly, so run step 4's visualization request after
   switching backends. Details: [Third-party backends](#third-party-openai-compatible-backends).
+
+#### (Optional) Amazon Bedrock with the instance's IAM role
+
+To drop the static key entirely and authenticate with the EC2 instance profile
+or ECS task role:
+
+```ini
+UDI_BEDROCK=1
+AWS_REGION=us-east-1
+GPT_MODEL_NAME=openai.gpt-oss-120b-1:0
+# Leave OPENAI_API_KEY and OPENAI_BASE_URL unset — the server refuses to start
+# if either is set alongside UDI_BEDROCK.
+```
+
+Callers cannot opt out of Bedrock: a request carrying `X-OpenAI-Key` is
+rejected with a 403 rather than served from api.openai.com, so no prompt or
+data schema leaves your AWS account. Pair this with
+`VITE_UDI_REQUIRE_API_KEY=false` in the chat frontend.
+
+Behavior and constraints: [Bedrock with an IAM
+role](#amazon-bedrock-with-an-iam-role-sigv4). Three infrastructure
+preconditions have to hold, and none of them fail loudly in an obvious way:
+
+1. **The role needs Bedrock permissions.** The instance profile in
+   `cloudformation/udi-agent.yaml` (`EC2Role`) currently carries only
+   `AmazonSSMManagedInstanceCore`. Add `bedrock:InvokeModel` and
+   `bedrock:InvokeModelWithResponseStream`. Models reachable only through a
+   cross-region inference profile also need the action on the profile ARN and
+   on the underlying foundation-model ARNs in every region the profile spans.
+2. **The IMDS hop limit must be ≥ 2 for a bridged container.** The launch
+   template sets no `MetadataOptions`, so the AWS default
+   `HttpPutResponseHopLimit: 1` applies — Docker's bridge network adds a hop,
+   the IMDSv2 token response never reaches the container, and credential
+   resolution fails. Either add `MetadataOptions` with
+   `HttpPutResponseHopLimit: 2` (which affects only **newly launched**
+   instances, so follow with an ASG instance refresh) or fix a running instance
+   in place:
+
+   ```bash
+   aws ec2 modify-instance-metadata-options --instance-id <id> \
+     --http-put-response-hop-limit 2 --http-tokens required
+   ```
+
+3. **`AWS_REGION` must be in the env file.** There is no instance-metadata
+   fallback for the region. Put it in `/home/ec2-user/.env` rather than passing
+   `-e AWS_REGION=...` to `docker run` — Docker applies `-e` after
+   `--env-file` regardless of order, so a flag would override the file and
+   remove the operator's ability to invoke cross-region.
+
+If any of the three is wrong, requests return **503** with a generic message
+and the server log carries the specific cause at `ERROR` — start there rather
+than from the client response.
+
+A local run with `AWS_PROFILE` set exercises the identical code path (same
+default credential chain), so the setup can be validated before deploying.
 
 ### 3A. Path A — build and run the container
 

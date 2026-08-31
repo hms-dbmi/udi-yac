@@ -167,6 +167,20 @@ wheels = [
 ]
 
 [[package]]
+name = "botocore"
+version = "1.43.83"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "python-dateutil" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ed/6f/cf16418004c832e6eb9abc6905fa323a3bf96a76ca7f2e97858801a4103e/botocore-1.43.83.tar.gz", hash = "sha256:d9389b3b74400c34219965a2fb858c1d48744718865ee0496fd03bd5b21b943f", size = 16010078, upload-time = "2026-08-28T19:35:46.211Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/98/50/332d6713fa09b05ff0882f5d194569fa70d1c8735aca9829b1286fef32ba/botocore-1.43.83-py3-none-any.whl", hash = "sha256:bf75a6cf587c22d968e43e79fe122c39f82deafbe9c3422bc5d3e80b6210fc98", size = 15704489, upload-time = "2026-08-28T19:35:40.603Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.6.17"
 source = { registry = "https://pypi.org/simple" }
@@ -951,6 +965,15 @@ wheels = [
 ]
 
 [[package]]
+name = "jmespath"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/59/322338183ecda247fb5d1763a6cbe46eff7222eaeebafd9fa65d4bf5cb11/jmespath-1.1.0.tar.gz", hash = "sha256:472c87d80f36026ae83c6ddd0f1d05d4e510134ed462851fd5f754c8c3cbb88d", size = 27377, upload-time = "2026-01-22T16:35:26.279Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/2f/967ba146e6d58cf6a652da73885f52fc68001525b4197effc174321d70b4/jmespath-1.1.0-py3-none-any.whl", hash = "sha256:a5663118de4908c91729bea0acadca56526eb2698e83de10cd116ae0f4e97c64", size = 20419, upload-time = "2026-01-22T16:35:24.919Z" },
+]
+
+[[package]]
 name = "jsonschema"
 version = "4.26.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1224,6 +1247,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/49/f5/7c7cb955305cb41f7f3c5fd7e0e38bf6bbf2658468863d4b7b868a5cb8df/openai-2.44.0.tar.gz", hash = "sha256:68a5a5ffad82b8ff7d451c437529fb64f7c3b8123aaf0c021966a882d9e3947d", size = 988753, upload-time = "2026-06-24T20:56:02.293Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ae/f4/561ed79fd94876160018a5e75254cfcb9b0e62d4dded9dcb20072e86d623/openai-2.44.0-py3-none-any.whl", hash = "sha256:0a2a3ab2e29aeda368700f662ff9ba0f9df17ba4c54577a64e08b8115a3cc0ad", size = 1366216, upload-time = "2026-06-24T20:55:58.882Z" },
+]
+
+[package.optional-dependencies]
+bedrock = [
+    { name = "botocore" },
 ]
 
 [[package]]
@@ -2081,12 +2109,16 @@ all = [
     { name = "huggingface-hub" },
     { name = "ijson" },
     { name = "langfuse" },
+    { name = "openai", extra = ["bedrock"] },
     { name = "pandas" },
     { name = "pydantic-settings" },
     { name = "pymysql" },
     { name = "python-dotenv" },
     { name = "python-jose", extra = ["cryptography"] },
     { name = "udi-grammar-py" },
+]
+bedrock = [
+    { name = "openai", extra = ["bedrock"] },
 ]
 benchmark = [
     { name = "datasets" },
@@ -2130,6 +2162,7 @@ requires-dist = [
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = ">=4" },
     { name = "openai", specifier = ">=2.15.0" },
+    { name = "openai", extras = ["bedrock"], marker = "extra == 'bedrock'", specifier = ">=2.44.0" },
     { name = "pandas", marker = "extra == 'codegen'", specifier = ">=2.0.0" },
     { name = "pydantic-settings", marker = "extra == 'server'", specifier = ">=2.0" },
     { name = "pymysql", marker = "extra == 'starrocks'", specifier = ">=1.1.0" },
@@ -2139,9 +2172,9 @@ requires-dist = [
     { name = "python-jose", extras = ["cryptography"], marker = "extra == 'server'", specifier = ">=3.5.0" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "udi-grammar-py", marker = "extra == 'codegen'", editable = "packages/grammar-py" },
-    { name = "udiagent", extras = ["langfuse", "server", "benchmark", "codegen", "starrocks", "duckdb"], marker = "extra == 'all'" },
+    { name = "udiagent", extras = ["langfuse", "server", "benchmark", "codegen", "starrocks", "duckdb", "bedrock"], marker = "extra == 'all'" },
 ]
-provides-extras = ["langfuse", "server", "benchmark", "codegen", "duckdb", "starrocks", "test", "all"]
+provides-extras = ["langfuse", "bedrock", "server", "benchmark", "codegen", "duckdb", "starrocks", "test", "all"]
 
 [[package]]
 name = "urllib3"
