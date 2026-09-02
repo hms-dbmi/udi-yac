@@ -247,10 +247,13 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
     }
     assert survival == {
         "survival": [],
-        "survival_baseline": ["field4"],
-        "survival_baseline_multivalue": ["field4"],
-        "survival_ever": ["field4"],
-        "survival_ever_multivalue": ["field4"],
+        # The stratifier sits on the event log, which is now the first side of a
+        # join in every variant (the censoring table is the other), so it is
+        # spelled entity1_field4 rather than field4.
+        "survival_baseline": ["entity1_field4"],
+        "survival_baseline_multivalue": ["entity1_field4"],
+        "survival_ever": ["entity1_field4"],
+        "survival_ever_multivalue": ["entity1_field4"],
         # The cross-table variants' stratifier lives on the joined entity.
         "survival_related": ["entity2_field"],
         "survival_related_multivalue": ["entity2_field"],

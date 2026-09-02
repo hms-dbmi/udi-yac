@@ -92,6 +92,13 @@ class StratumReading(Enum):
 # fills from the request's column domains, so they work with any event vocabulary.
 PREVIEW_START_EVENT = "Initial CNS Tumor"
 PREVIEW_END_EVENT = "Deceased"
+#: The censoring source for previews: pcx records "still alive as of" on the
+#: patient table, as a status column plus the date that status was current.
+PREVIEW_CENSOR_ENTITY = "Patient"
+PREVIEW_CENSOR_SUBJECT = "research_id"
+PREVIEW_CENSOR_STATUS = "vital_status"
+PREVIEW_CENSOR_DATE = "vital_status_date"
+PREVIEW_CENSOR_VALUE = "alive"
 
 
 _CUBE_MARGINAL_NOTE = (
@@ -209,7 +216,6 @@ def validate_specs(df, grammar_path, strict=False):
 
 
 # Dash pattern for the reference-line annotation on the survival curves.
-_SURVIVAL_DASH = [6, 4]
 
 # Prose shared by the stratified survival templates. Kept as constants because
 # these caveats must read identically across all four variants — a reader
@@ -229,17 +235,23 @@ _SURVIVAL_PRESENCE_WINDOW = (
     "subject in the event log gets an answer. "
 )
 _SURVIVAL_CENSORING = (
-    "The same censoring caveat as the unstratified survival curve applies, and it bites "
-    "harder here: subjects with no end event hold their stratum's curve up, so comparing "
-    "groups whose follow-up differs is misleading. This is not a Kaplan-Meier estimate "
-    "and carries no significance test. Strata are also unequal in size, and a small one "
-    "steps coarsely (n=4 moves in quarters), so a dramatic-looking curve may rest on a "
-    "handful of subjects. "
+    "Censored subjects — those who never reached the end event — are plotted at the time "
+    "their follow-up actually stopped, and each carries a vertical tick on its curve at "
+    "that point, so a flat run can be told apart from a run with nobody left in it. Those "
+    "two look identical without the ticks and mean opposite things. The censoring source "
+    "is a separate binding: a subject-level table with a status column and the date that "
+    "status was current, plus the value meaning 'no event yet'. A subject that table never "
+    "mentions still reaches the curve, at time zero and with no tick. "
+    "The estimate is still crude, not Kaplan-Meier: the denominator is the whole cohort "
+    "throughout rather than the number still at risk, so a curve whose follow-up thins out "
+    "is held up by subjects no longer being watched, and there is no significance test. "
+    "Strata are also unequal in size, and a small one steps coarsely (n=4 moves in "
+    "quarters), so a dramatic-looking curve may rest on a handful of subjects. "
 )
 _SURVIVAL_ANCHORING = (
-    "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 "
-    "and contribute no drop, and where a group has none of those, its flat opening segment "
-    "and the drop into its first event are drawn explicitly. The dashed rule carries the "
+    "Every curve starts at (0, 100%): a subject with no recorded censoring date sits at day 0 "
+    "and contributes no drop, and where a group has none of those, its flat opening segment "
+    "and the drop into its first event are drawn explicitly. A solid rule carries the "
     "final value out to the right edge, where a label repeats it as a number — so a group "
     "with no end events at all gets neither, having no final value to report."
 )
@@ -258,20 +270,19 @@ def _placeholder_base(placeholder: str) -> str:
 #: The subject-id placeholder. Named once because both the pipeline head (which
 #: groups by it) and the tail (which orders by it to break rank ties) must use the
 #: same binding.
-_SUBJECT_KEY = "<F1:n>"
+_SUBJECT_KEY = "<E1.F1:n>"
 
 
 def _survival_event_fields(reading):
-    """The event-log placeholders, which move under a join.
+    """The event-log placeholders.
 
-    A cross-table stratifier makes the event log the *first* side of a join, so its
-    columns are addressed as `<E1.F1>` rather than `<F1>`. Everything else about the
-    pipeline is identical, so the names are computed once here rather than branched
-    on at every use.
+    Always `<E1.*>`: every survival template now joins at least one other table
+    (the censoring source), so the event log is always the first side of a join
+    and there is no longer an unjoined spelling to branch on. Named once here
+    rather than repeated, because the head groups by the subject and the tail
+    orders by it to break rank ties — they have to agree.
     """
-    if reading in _JOINED_READINGS:
-        return {"subject": "<E1.F1:n>", "event_type": "<E1.F2:n>", "time": "<E1.F3:q>"}
-    return {"subject": _SUBJECT_KEY, "event_type": "<F2:n>", "time": "<F3:q>"}
+    return {"subject": _SUBJECT_KEY, "event_type": "<E1.F2:n>", "time": "<E1.F3:q>"}
 
 
 #: Readings that stratify by membership of another table rather than by a field.
@@ -292,6 +303,51 @@ _PRESENCE_STRATUM = "group"
 #: Aggregated away by the rollup, so it never reaches the chart.
 _BASELINE_STRATUM = "baseline stratum"
 
+
+#: The censoring source: a subject-level table saying who was still event-free
+#: when observation stopped, and when. Its entity number is whatever the
+#: stratifier left free, so it is asked for rather than hardcoded.
+def _censor_entity(reading) -> str:
+    if reading is StratumReading.PRESENCE_2X2:
+        return "E4"
+    if reading in (StratumReading.RELATED, StratumReading.PRESENCE):
+        return "E3"
+    return "E2"
+
+
+def _event_table(reading) -> str:
+    """The table name the event-log pipeline is carrying at the point the
+    censoring join happens — whatever the stratifier's own join named it."""
+    if reading is StratumReading.RELATED:
+        return "<E1>__<E2>"
+    if reading in _PRESENCE_READINGS:
+        return "<E1>__p"
+    return "<E1>"
+
+
+#: The status value meaning "no event yet" — `alive`, `in remission`, `active`.
+#: A value rather than a column, because which string means that is a property of
+#: the dataset, not of the schema.
+_CENSOR_VALUE = "<V3>"
+
+#: Per-subject censoring time, carried through every rollup so the tick layer can
+#: place a mark at it.
+_CENSOR_DAY = "censor day"
+
+#: The censoring tick's x: elapsed time to the censoring date, for censored
+#: subjects only.
+_CENSOR_YEAR = "censor year"
+
+#: A vertical bar centred on its point. Vega-lite's built-in `stroke` shape is
+#: horizontal — the wrong axis — so the tick is given as an SVG path, which the
+#: shape channel accepts.
+#:
+#: The path spans one unit and is scaled by sqrt(size)/2, so the tick draws
+#: sqrt(500)/2 ~= 11px tall: enough to read as a mark rather than a thickening of
+#: the line it sits on, without swamping a curve that carries dozens of them.
+#: Absolute pixels, so it does not shrink relative to a larger chart.
+_TICK_SHAPE = "M0,-0.5L0,0.5"
+_TICK_SIZE = 500
 
 #: Non-null markers left behind by the presence joins. A count is used because it
 #: survives a left join as null when there was no match, which is what makes
@@ -345,6 +401,56 @@ def _presence_join(reading: StratumReading):
     return chart
 
 
+def _censor_join(chart, reading):
+    """Attach each subject's censoring time to the event rows.
+
+    A subject who never reached the end event is *censored*, not event-free
+    forever: they were observed until some date and then the record stops. That
+    date is not in the event log — it is a subject-level fact ("still alive as
+    of") living in another table, so it has to be joined in.
+
+    Reduced to one row per subject BEFORE the join, for the same two reasons the
+    presence joins do it: it keeps the join from multiplying event rows, and it
+    makes the answer one value per subject rather than one per record. LEFT, so a
+    subject the censoring table never mentions still reaches the curve — it just
+    has no tick.
+
+    The status column is compared against a bound VALUE rather than assumed,
+    because which string means "no event yet" is a property of the dataset
+    (`alive`, `in remission`, `active`) and not something a schema declares.
+    """
+    key = _censor_entity(reading)
+    table = f"<{key}>"
+    return (
+        chart.source(table, f"<{key}.url>")
+        .derive(
+            {
+                _CENSOR_DAY: Expr.cond(
+                    Expr.binop(
+                        "==", Expr.field(f"<{key}.F2:n>"), Expr.lit(_CENSOR_VALUE)
+                    ),
+                    Expr.field(f"<{key}.F3:q>"),
+                    Expr.lit(None),
+                )
+            },
+            in_name=table,
+            out_name=f"{table}__c",
+        )
+        .groupby(f"<{key}.F1:n>", in_name=f"{table}__c")
+        .rollup(
+            {_CENSOR_DAY: Op.max(_CENSOR_DAY)},
+            in_name=f"{table}__c",
+            out_name=f"{table}__by_subject",
+        )
+        .join(
+            in_name=[_event_table(reading), f"{table}__by_subject"],
+            on=["<E1.F1>", f"<{key}.F1>"],
+            kind="left",
+            out_name="<E1>__cens",
+        )
+    )
+
+
 def _survival_subject_rows(
     stratum: str | None,
     reading: StratumReading | None,
@@ -391,7 +497,9 @@ def _survival_subject_rows(
     elif reading in _PRESENCE_READINGS:
         chart = _presence_join(reading)
     else:
-        chart = Chart().source("<E>", "<E.url>")
+        chart = Chart().source("<E1>", "<E1.url>")
+
+    chart = _censor_join(chart, reading)
 
     # `EVER` and `RELATED` both read membership off every row they see, so a
     # delimited column has to be expanded before the per-subject rollup — on the
@@ -470,6 +578,7 @@ def _survival_subject_rows(
                 {
                     "start day": Op.min("start day"),
                     "end day": Op.max("end day"),
+                    _CENSOR_DAY: Op.max(_CENSOR_DAY),
                     _PRESENCE_STRATUM: Op.max(_PRESENCE_STRATUM),
                 }
             )
@@ -481,6 +590,7 @@ def _survival_subject_rows(
             {
                 "start day": Op.min("start day"),
                 "end day": Op.max("end day"),
+                _CENSOR_DAY: Op.max(_CENSOR_DAY),
                 # Named after the stratifier itself, so every downstream
                 # reference — the colour mappings, the label, the heading, the
                 # stratum groupby — needs no change. `max` over a nominal column
@@ -528,13 +638,21 @@ def _survival_subject_rows(
         # min/max over columns already constant within the group: the rollup
         # needs an aggregate, not a reduction.
         chart = chart.rollup(
-            {"start day": Op.min("subject start"), "end day": Op.max("subject end")}
+            {
+                "start day": Op.min("subject start"),
+                "end day": Op.max("subject end"),
+                _CENSOR_DAY: Op.max(_CENSOR_DAY),
+            }
         )
         return chart.filter(Expr.not_null("start day"))
 
     # One row per subject. min/max ignore the nulls the conditionals leave behind.
     chart = chart.groupby(subject_key).rollup(
-        {"start day": Op.min("start day"), "end day": Op.max("end day")}
+        {
+            "start day": Op.min("start day"),
+            "end day": Op.max("end day"),
+            _CENSOR_DAY: Op.max(_CENSOR_DAY),
+        }
     )
     return chart.filter(Expr.not_null("start day"))
 
@@ -575,9 +693,18 @@ def _survival_chart(
 
     chart = _survival_subject_rows(stratum, reading, multi_value)
 
-    # Subjects with no end event sit at day 0 and contribute no drop. That is
-    # what puts the curve's first point at (0, 100%) — the grammar cannot
-    # synthesize a leading row, but these subjects legitimately belong there.
+    # Time under observation, which is the end event for those who reached it and
+    # the censoring date for those who did not. Placing a censored subject at its
+    # real observed time — rather than at day 0, where every one of them used to
+    # pile up — is what lets the curve say how long they were actually followed,
+    # and is what gives the tick layer an x to sit at.
+    #
+    # A subject the censoring table never mentions still falls back to day 0: it
+    # contributes to the denominator and no drop, which is what puts the curve's
+    # first point at (0, 100%) when such subjects exist. The grammar cannot
+    # synthesize a leading row, and where no subject sits at 0 the explicit
+    # lead-in layer draws that opening segment instead.
+    #
     # Row-wise, so this runs before any stratum grouping.
     chart = chart.derive(
         {
@@ -589,7 +716,11 @@ def _survival_chart(
             "survival days": Expr.cond(
                 Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
                 Expr.binop("-", Expr.field("end day"), Expr.field("start day")),
-                Expr.lit(0),
+                Expr.cond(
+                    Expr.binop("!=", Expr.field(_CENSOR_DAY), Expr.lit(None)),
+                    Expr.binop("-", Expr.field(_CENSOR_DAY), Expr.field("start day")),
+                    Expr.lit(0),
+                ),
             ),
         }
     )
@@ -609,8 +740,28 @@ def _survival_chart(
         }
     )
 
+    # The tick layer's x. Non-null only where the subject did not reach the end
+    # event and the censoring table did give a date — a subject with neither gets
+    # no tick, rather than a spurious one at zero. The tick's y is the curve's own
+    # `survival percentage` on this same row, which is what puts the mark exactly
+    # on the line instead of near it: the row sits at its censoring time in the
+    # ordering, so the rolling percentage there IS the curve's height at that x.
+    chart = chart.derive(
+        {
+            _CENSOR_YEAR: Expr.cond(
+                Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
+                Expr.lit(None),
+                Expr.cond(
+                    Expr.binop("!=", Expr.field(_CENSOR_DAY), Expr.lit(None)),
+                    Expr.field("survival years"),
+                    Expr.lit(None),
+                ),
+            )
+        }
+    )
+
     # Where the x axis ends, measured across the whole cohort rather than within
-    # one stratum: every curve's dashed lead-out has to reach the same edge, not
+    # one stratum: every curve's run-out has to reach the same edge, not
     # just a little past its own last event. Taken here because a rollup leaves
     # the table ungrouped, so this aggregate is global; once the stratum grouping
     # below is applied, the same expression would give a per-curve maximum.
@@ -653,7 +804,7 @@ def _survival_chart(
     # The curve only descends, so its minimum is its final value. `agg` respects
     # the current grouping, giving a per-stratum final when stratified.
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
-    # Anchor for the end-of-line label, and the far end of the dashed lead-out.
+    # Anchor for the end-of-line label, and the far end of the run-out rule.
     # It sits at the cohort-wide right edge — the same x for every curve — plus a
     # margin, so that even the longest curve (whose own last event *is* the
     # cohort end) gets a visible run of dashes. Being the largest x in the data,
@@ -680,7 +831,7 @@ def _survival_chart(
             )
         }
     )
-    # The rule is a short dashed lead-out from the end of the curve to its label,
+    # The rule is a short run-out from the end of the curve to its label,
     # rather than a full-width line cutting back across the descending curve.
     #
     # Only one row ever holds the final value (the last event), and a line mark
@@ -795,7 +946,7 @@ def _survival_chart(
         }
     )
 
-    # --- layers: the curve, a dashed reference line at the final value, and its
+    # --- layers: the curve, a solid reference line at the final value, its
     # numeric label just right of where the line ends.
     # Flat 100% lead-in, before the curve so the curve draws over it.
     chart = (
@@ -840,9 +991,33 @@ def _survival_chart(
 
     chart = (
         chart.mark("line")
-        .stroke_dash(_SURVIVAL_DASH)
+        # Solid, not dashed. The dashes were meant to read as "annotation, not
+        # data", but the run-out carries a real measured value — the final
+        # percentage held to the edge of observation — and a dashed line invited
+        # the opposite reading, that the value was uncertain or extrapolated.
         .x(field="rule year", type="quantitative", title="survival years", domain={"min": 0})
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
+    )
+    if stratum:
+        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+
+    # Censoring ticks: one vertical mark per subject who left the study without
+    # reaching the end event, at the time their follow-up stopped. Without them a
+    # flat run of curve is ambiguous — it could mean "nobody died" or "nobody was
+    # still being watched" — and those are opposite conclusions from the same
+    # picture. Standard Kaplan-Meier practice, and the reason the y is the curve's
+    # own percentage on the same row: the tick has to sit ON the line, centred, or
+    # it reads as a separate series.
+    chart = (
+        chart.mark("point")
+        .x(field=_CENSOR_YEAR, type="quantitative", title="survival years", domain={"min": 0})
+        .y(
+            field="survival percentage",
+            type="quantitative",
+            domain={"min": 0, "max": 100},
+        )
+        .shape(value=_TICK_SHAPE)
+        .size(value=_TICK_SIZE)
     )
     if stratum:
         chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
@@ -850,7 +1025,7 @@ def _survival_chart(
     chart = (
         chart.mark("text")
         # Right-aligned and lifted clear of the rule: a centred label would sit
-        # across the dashes and read as a strikethrough, and a left-aligned one
+        # across the line and read as a strikethrough, and a left-aligned one
         # would run off the plot. A white halo keeps it readable where it crosses
         # another stratum's curve.
         .place(align="right", dy=-9)
@@ -2355,7 +2530,7 @@ def generate():
             "product and per-time at-risk counts, which the grammar cannot express today. Read "
             "the curve as an observed-survival fraction over the cohort, and do not use it where "
             "differences in follow-up length matter."
-            "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 and contribute no drop, and where a group has none of those, its flat opening segment and the drop into its first event are drawn explicitly. The dashed rule carries the final value out to the right edge, where a label repeats it as a number — so a group with no end events at all gets neither, having no final value to report."
+            "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 and contribute no drop, and where a group has none of those, its flat opening segment and the drop into its first event are drawn explicitly. The run-out rule carries the final value out to the right edge, where a label repeats it as a number — so a group with no end events at all gets neither, having no final value to report."
         ),
         tasks=(
             "Judge how survival falls over time after a starting event; compare the observed "
@@ -2370,12 +2545,17 @@ def generate():
         # event type, or which holds the day offset — a type-directed search would
         # pick three plausible-looking columns and draw an empty curve. Name them.
         preview_bindings={
-            "E": "Event",
-            "F1": "research_id",
-            "F2": "event_type",
-            "F3": "event_date",
+            "E1": "Event",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E2": PREVIEW_CENSOR_ENTITY,
+            "E2.F1": PREVIEW_CENSOR_SUBJECT,
+            "E2.F2": PREVIEW_CENSOR_STATUS,
+            "E2.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 
@@ -2391,7 +2571,7 @@ def generate():
             "Compare survival between <F4:n> groups.",
             "Does survival differ by <F4:n>?",
         ],
-        spec=_survival_chart(stratum="<F4:n>", reading=StratumReading.AT_START),
+        spec=_survival_chart(stratum="<E1.F4:n>", reading=StratumReading.AT_START),
         chart_type=ChartType.LINE,
         name_hint="survival_baseline",
         task_types=[
@@ -2441,13 +2621,18 @@ def generate():
             "as real."
         ),
         preview_bindings={
-            "E": "Event",
-            "F1": "research_id",
-            "F2": "event_type",
-            "F3": "event_date",
-            "F4": "metastasis",
+            "E1": "Event",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E1.F4": "metastasis",
+            "E2": PREVIEW_CENSOR_ENTITY,
+            "E2.F1": PREVIEW_CENSOR_SUBJECT,
+            "E2.F2": PREVIEW_CENSOR_STATUS,
+            "E2.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 
@@ -2462,7 +2647,7 @@ def generate():
             "Compare survival across <F4:n>, where a subject can have several.",
         ],
         spec=_survival_chart(
-            stratum="<F4:n>", reading=StratumReading.AT_START, multi_value=True
+            stratum="<E1.F4:n>", reading=StratumReading.AT_START, multi_value=True
         ),
         chart_type=ChartType.LINE,
         name_hint="survival_baseline_multivalue",
@@ -2509,13 +2694,18 @@ def generate():
             "backend rejects unnest."
         ),
         preview_bindings={
-            "E": "Event",
-            "F1": "research_id",
-            "F2": "event_type",
-            "F3": "event_date",
-            "F4": "metastasis_location",
+            "E1": "Event",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E1.F4": "metastasis_location",
+            "E2": PREVIEW_CENSOR_ENTITY,
+            "E2.F1": PREVIEW_CENSOR_SUBJECT,
+            "E2.F2": PREVIEW_CENSOR_STATUS,
+            "E2.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 
@@ -2530,7 +2720,7 @@ def generate():
             "Show survival curves for each <F4:n> value ever recorded for a subject.",
             "Compare survival across every <F4:n> a subject has ever had.",
         ],
-        spec=_survival_chart(stratum="<F4:n>", reading=StratumReading.EVER),
+        spec=_survival_chart(stratum="<E1.F4:n>", reading=StratumReading.EVER),
         chart_type=ChartType.LINE,
         name_hint="survival_ever",
         task_types=[
@@ -2579,13 +2769,18 @@ def generate():
             "variant is strictly better and this one should be rejected."
         ),
         preview_bindings={
-            "E": "Event",
-            "F1": "research_id",
-            "F2": "event_type",
-            "F3": "event_date",
-            "F4": "metastasis",
+            "E1": "Event",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E1.F4": "metastasis",
+            "E2": PREVIEW_CENSOR_ENTITY,
+            "E2.F1": PREVIEW_CENSOR_SUBJECT,
+            "E2.F2": PREVIEW_CENSOR_STATUS,
+            "E2.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 
@@ -2598,7 +2793,7 @@ def generate():
             "Compare survival across every <F4:n> ever listed for a subject.",
         ],
         spec=_survival_chart(
-            stratum="<F4:n>", reading=StratumReading.EVER, multi_value=True
+            stratum="<E1.F4:n>", reading=StratumReading.EVER, multi_value=True
         ),
         chart_type=ChartType.LINE,
         name_hint="survival_ever_multivalue",
@@ -2643,13 +2838,18 @@ def generate():
             "partition."
         ),
         preview_bindings={
-            "E": "Event",
-            "F1": "research_id",
-            "F2": "event_type",
-            "F3": "event_date",
-            "F4": "metastasis_location",
+            "E1": "Event",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E1.F4": "metastasis_location",
+            "E2": PREVIEW_CENSOR_ENTITY,
+            "E2.F1": PREVIEW_CENSOR_SUBJECT,
+            "E2.F2": PREVIEW_CENSOR_STATUS,
+            "E2.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 
@@ -2731,8 +2931,13 @@ def generate():
             "E1.F3": "event_date",
             "E2.F1": "research_id",
             "E2.F": "protocol_name_and_arm",
+            "E3": PREVIEW_CENSOR_ENTITY,
+            "E3.F1": PREVIEW_CENSOR_SUBJECT,
+            "E3.F2": PREVIEW_CENSOR_STATUS,
+            "E3.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 
@@ -2843,8 +3048,13 @@ def generate():
             "E1.F3": "event_date",
             "E2.F1": "research_id",
             "E2.F": "chemotherapy_agents",
+            "E3": PREVIEW_CENSOR_ENTITY,
+            "E3.F1": PREVIEW_CENSOR_SUBJECT,
+            "E3.F2": PREVIEW_CENSOR_STATUS,
+            "E3.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 
@@ -2918,8 +3128,13 @@ def generate():
             "E1.F2": "event_type",
             "E1.F3": "event_date",
             "E2.F1": "research_id",
+            "E3": PREVIEW_CENSOR_ENTITY,
+            "E3.F1": PREVIEW_CENSOR_SUBJECT,
+            "E3.F2": PREVIEW_CENSOR_STATUS,
+            "E3.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 
@@ -2994,8 +3209,13 @@ def generate():
             "E1.F3": "event_date",
             "E2.F1": "research_id",
             "E3.F1": "research_id",
+            "E4": PREVIEW_CENSOR_ENTITY,
+            "E4.F1": PREVIEW_CENSOR_SUBJECT,
+            "E4.F2": PREVIEW_CENSOR_STATUS,
+            "E4.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
         },
     )
 

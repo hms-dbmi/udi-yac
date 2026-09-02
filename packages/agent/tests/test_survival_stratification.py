@@ -16,6 +16,8 @@ Runs the real templates through the real SQL compiler against DuckDB. No LLM.
 """
 
 import json
+import pathlib
+import tempfile
 
 import pytest
 
@@ -51,14 +53,64 @@ s5,visit,7,A
 s6,death,15,A
 """
 
+# Subject-level censoring: who was still event-free when follow-up stopped, and
+# when. s3 and s5 are the censored subjects, so they are the only two that should
+# earn a tick. s6 is deliberately absent, to prove a subject the censoring table
+# never mentions still reaches the curve.
+_PATIENTS = """subject,status,asof
+s1,deceased,10
+s2,deceased,20
+s3,alive,60
+s4,deceased,40
+s5,alive,90
+"""
+
+#: Written once for the module. Structural tests only read the schema; the DuckDB
+#: ones need a real file, and one shared path keeps both honest about the same data.
+_CENSOR_DIR = pathlib.Path(tempfile.mkdtemp(prefix="udi-censor-"))
+_CENSOR_CSV = _CENSOR_DIR / "patients.csv"
+_CENSOR_CSV.write_text(_PATIENTS)
+
+
+def _censor_resource():
+    return {
+        "name": "patients",
+        "path": str(_CENSOR_CSV),
+        "udi:row_count": 5,
+        "schema": {
+            "fields": [
+                {"name": "subject", "udi:data_type": "nominal"},
+                {"name": "status", "udi:data_type": "nominal"},
+                {"name": "asof", "udi:data_type": "quantitative"},
+            ]
+        },
+    }
+
+
 _ARGS = {
-    "entity": "events",
-    "field1": "subject",
-    "field2": "event",
-    "field3": "day",
+    "entity1": "events",
+    "entity1_field1": "subject",
+    "entity1_field2": "event",
+    "entity1_field3": "day",
     "value1": "start",
     "value2": "death",
+    "value3": "alive",
 }
+
+#: The censoring table's entity number differs per template — it takes whatever
+#: the stratifier left free — so its args are keyed off the tool's own parameter
+#: map rather than hardcoded. It is the only entity besides the event log that
+#: binds a second and third field.
+def _censor_args(param_map):
+    for n in (2, 3, 4):
+        if f"entity{n}_field3" in param_map:
+            return {
+                f"entity{n}": "patients",
+                f"entity{n}_field1": "subject",
+                f"entity{n}_field2": "status",
+                f"entity{n}_field3": "asof",
+            }
+    return {}
 
 
 @pytest.fixture()
@@ -66,6 +118,7 @@ def survival(tmp_path):
     """Run a survival template against the synthetic log, in DuckDB."""
     csv = tmp_path / "events.csv"
     csv.write_text(_EVENTS)
+    patients = _CENSOR_CSV
 
     schema = parse_schema_from_dict(
         {
@@ -83,7 +136,8 @@ def survival(tmp_path):
                             {"name": "arm", "udi:data_type": "nominal"},
                         ]
                     },
-                }
+                },
+                _censor_resource(),
             ],
         }
     )
@@ -91,7 +145,8 @@ def survival(tmp_path):
     assert generated is not None
     _defs, dispatch, templates, _tags = generated
     engine = QueryEngine(
-        DuckDBConnector(views={"events": str(csv)}), table_map={"events": "events"}
+        DuckDBConnector(views={"events": str(csv), "patients": str(_CENSOR_CSV)}),
+        table_map={"events": "events", "patients": "patients"},
     )
 
     def run(suffix, stratify=True):
@@ -99,8 +154,10 @@ def survival(tmp_path):
         tool = next(n for n in dispatch if n.endswith(suffix))
         idx, param_map = dispatch[tool]
         args = dict(_ARGS)
+        args.update(_censor_args(param_map))
         if stratify:
-            args["field4"] = "arm"
+            args["entity1_field4"] = "arm"
+        args.update(_censor_args(param_map))
         bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
         spec = instantiate_template(templates[idx], bindings, schema)
         result = engine.run_query(
@@ -220,17 +277,41 @@ def _survival_spec(suffix, stratifier="tumor_locations"):
                             {"name": stratifier, "udi:data_type": "nominal"},
                         ]
                     },
-                }
+                },
+                _censor_resource(),
             ],
         }
     )
-    args = {**_ARGS, "field4": stratifier}
+    args = {**_ARGS, "entity1_field4": stratifier}
+    args.update(_censor_args(param_map))
     bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
     return instantiate_template(templates[idx], bindings, schema)
 
 
 def _transform_index(spec, kind):
     return next(i for i, t in enumerate(spec["transformation"]) if kind in t)
+
+
+def _subject_rollup(spec):
+    """The rollup that reduces events to one row per subject.
+
+    Not simply the first rollup: the censoring join reduces its own table to one
+    row per subject before this one, so position no longer identifies it. The
+    span outputs do.
+    """
+    return next(
+        t["rollup"]
+        for t in spec["transformation"]
+        if "rollup" in t and "start day" in t["rollup"]
+    )
+
+
+def _subject_rollup_index(spec):
+    return next(
+        i
+        for i, t in enumerate(spec["transformation"])
+        if "rollup" in t and "start day" in t["rollup"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -254,7 +335,7 @@ def test_multi_value_unnest_sits_on_the_right_side_of_the_rollup(
     """
     spec = _survival_spec(suffix)
     unnest = _transform_index(spec, "unnest")
-    rollup = _transform_index(spec, "rollup")
+    rollup = _subject_rollup_index(spec)
     assert (unnest < rollup) is unnest_before_rollup
 
     config = next(t for t in spec["transformation"] if "unnest" in t)["unnest"]
@@ -277,7 +358,7 @@ def test_the_baseline_stratifier_is_aggregated_but_only_ever_drawn_as_a_category
     guard would have: the column is a category, never a quantity.
     """
     spec = _survival_spec(suffix)
-    rollup = next(t for t in spec["transformation"] if "rollup" in t)["rollup"]
+    rollup = _subject_rollup(spec)
     assert rollup["tumor_locations"] == {"op": "max", "field": "baseline stratum"}
 
     channels = {
@@ -445,6 +526,7 @@ def _related_spec(suffix="_line_survival_related", stratifier="protocol"):
                     ],
                 ),
                 table("therapy", [("subject", "nominal"), (stratifier, "nominal")]),
+                _censor_resource(),
             ],
         }
     )
@@ -459,6 +541,7 @@ def _related_spec(suffix="_line_survival_related", stratifier="protocol"):
         "value1": "start",
         "value2": "death",
     }
+    args.update(_censor_args(param_map))
     bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
     assert validate_bindings(templates[idx], bindings, schema) == []
     return instantiate_template(templates[idx], bindings, schema)
@@ -473,7 +556,11 @@ def test_cross_table_stratifier_joins_on_the_keys_it_binds():
     it as a binding keeps the template usable on any such pair.
     """
     spec = _related_spec()
-    assert [src["name"] for src in spec["source"]] == ["events", "therapy"]
+    assert [src["name"] for src in spec["source"]] == [
+        "events",
+        "therapy",
+        "patients",
+    ]
 
     join = next(t for t in spec["transformation"] if "join" in t)
     assert join["join"]["on"] == ["subject", "subject"]
@@ -490,7 +577,7 @@ def test_cross_table_stratifier_joins_on_the_keys_it_binds():
 
     # The join must precede the per-subject rollup, or the stratifier isn't there
     # to group by.
-    assert _transform_index(spec, "join") < _transform_index(spec, "rollup")
+    assert _transform_index(spec, "join") < _subject_rollup_index(spec)
 
 
 def test_cross_table_survival_reads_membership_and_overlaps(tmp_path):
@@ -535,6 +622,7 @@ def test_cross_table_survival_reads_membership_and_overlaps(tmp_path):
                         ]
                     },
                 },
+                _censor_resource(),
             ],
         }
     )
@@ -549,11 +637,18 @@ def test_cross_table_survival_reads_membership_and_overlaps(tmp_path):
         "value1": "start",
         "value2": "death",
     }
+    args.update(_censor_args(param_map))
     bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
     spec = instantiate_template(templates[idx], bindings, schema)
     engine = QueryEngine(
-        DuckDBConnector(views={"events": str(events), "therapy": str(therapy)}),
-        table_map={"events": "events", "therapy": "therapy"},
+        DuckDBConnector(
+            views={
+                "events": str(events),
+                "therapy": str(therapy),
+                "patients": str(_CENSOR_CSV),
+            }
+        ),
+        table_map={"events": "events", "therapy": "therapy", "patients": "patients"},
     )
     rows = engine.run_query(
         source=spec["source"], transformation=spec["transformation"]
@@ -583,7 +678,7 @@ def test_cross_table_multi_value_expands_the_joined_rows_before_the_rollup():
     spec = _related_spec("_line_survival_related_multivalue", stratifier="agents")
 
     unnest = _transform_index(spec, "unnest")
-    assert _transform_index(spec, "join") < unnest < _transform_index(spec, "rollup")
+    assert _transform_index(spec, "join") < unnest < _subject_rollup_index(spec)
 
     config = next(t for t in spec["transformation"] if "unnest" in t)["unnest"]
     assert config["field"] == "agents"
@@ -619,6 +714,7 @@ def test_a_survival_curve_never_rises_however_the_data_is_filtered(tmp_path, sub
     """
     csv = tmp_path / "events.csv"
     csv.write_text(_EVENTS)
+    patients = _CENSOR_CSV
     schema = parse_schema_from_dict(
         {
             "udi:path": "",
@@ -635,22 +731,26 @@ def test_a_survival_curve_never_rises_however_the_data_is_filtered(tmp_path, sub
                             {"name": "arm", "udi:data_type": "nominal"},
                         ]
                     },
-                }
+                },
+                _censor_resource(),
             ],
         }
     )
     generated = _load_generated_tools()
     _defs, dispatch, templates, _tags = generated
     engine = QueryEngine(
-        DuckDBConnector(views={"events": str(csv)}), table_map={"events": "events"}
+        DuckDBConnector(views={"events": str(csv), "patients": str(_CENSOR_CSV)}),
+        table_map={"events": "events", "patients": "patients"},
     )
 
     for suffix in ("_line_survival", "_line_survival_baseline", "_line_survival_ever"):
         tool = next(n for n in dispatch if n.endswith(suffix))
         idx, param_map = dispatch[tool]
         args = dict(_ARGS)
+        args.update(_censor_args(param_map))
         if suffix != "_line_survival":
-            args["field4"] = "arm"
+            args["entity1_field4"] = "arm"
+        args.update(_censor_args(param_map))
         bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
         spec = instantiate_template(templates[idx], bindings, schema)
 
@@ -750,12 +850,14 @@ def presence(tmp_path):
                 ),
                 resource("radiation", [("subject", "nominal"), ("site", "nominal")]),
                 resource("surgery", [("subject", "nominal"), ("extent", "nominal")]),
+                _censor_resource(),
             ],
         }
     )
     generated = _load_generated_tools()
     assert generated is not None
     _defs, dispatch, templates, _tags = generated
+    paths["patients"] = str(_CENSOR_CSV)
     engine = QueryEngine(DuckDBConnector(views=paths), table_map={n: n for n in paths})
 
     def run(suffix, cross=False, rows=True):
@@ -774,6 +876,7 @@ def presence(tmp_path):
         if cross:
             args["entity3"] = "surgery"
             args["entity3_field1"] = "subject"
+        args.update(_censor_args(param_map))
         bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
         assert validate_bindings(templates[idx], bindings, schema) == []
         spec = instantiate_template(templates[idx], bindings, schema)
@@ -794,7 +897,11 @@ def test_presence_stratification_names_no_field_from_the_second_table(presence):
     column picked to stand in for it could be null on exactly the rows that matter.
     """
     spec = presence("_line_survival_presence", rows=False)
-    assert [src["name"] for src in spec["source"]] == ["events", "radiation"]
+    assert [src["name"] for src in spec["source"]] == [
+        "events",
+        "radiation",
+        "patients",
+    ]
 
     # `site` is the only other column radiation has, and it must appear nowhere.
     assert "site" not in json.dumps(spec)
@@ -865,9 +972,17 @@ def test_presence_2x2_left_joins_both_tables(presence):
     just the 'both' cell while looking perfectly plausible.
     """
     spec = presence("_line_survival_presence_2x2", cross=True, rows=False)
-    assert [src["name"] for src in spec["source"]] == ["events", "radiation", "surgery"]
+    assert [src["name"] for src in spec["source"]] == [
+        "events",
+        "radiation",
+        "surgery",
+        "patients",
+    ]
     joins = [t for t in spec["transformation"] if "join" in t]
-    assert len(joins) == 2
+    # Three, not two: the two membership joins plus the censoring one. All left,
+    # for the same reason — an inner join would drop the subjects that answer
+    # "no", and would drop the ones the censoring table never mentions.
+    assert len(joins) == 3
     assert all(j["join"]["kind"] == "left" for j in joins)
     # Neither extra table contributes a column.
     assert "site" not in json.dumps(spec) and "extent" not in json.dumps(spec)

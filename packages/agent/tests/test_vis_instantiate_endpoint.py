@@ -35,13 +35,20 @@ def _survival_tool():
 
 _SURVIVAL_TOOL = _survival_tool()
 _ARGS = {
-    "entity": "Event",
-    "field1": "research_id",
-    "field2": "event_type",
-    "field3": "event_date",
-    "field4": "organization_name",
+    "entity1": "Event",
+    "entity1_field1": "research_id",
+    "entity1_field2": "event_type",
+    "entity1_field3": "event_date",
+    "entity1_field4": "organization_name",
+    # The censoring source: who was still event-free when follow-up stopped.
+    # Every survival template takes one, which is why the event log is entity1.
+    "entity2": "Patient",
+    "entity2_field1": "research_id",
+    "entity2_field2": "vital_status",
+    "entity2_field3": "vital_status_date",
     "value1": "Initial CNS Tumor",
     "value2": "Deceased",
+    "value3": "alive",
 }
 
 _HEADERS = {"Authorization": "Bearer dev"}
@@ -80,7 +87,7 @@ def _post(client, data_schema, **overrides):
 
 
 def test_rebinding_the_stratifier_moves_every_reference(client, data_schema):
-    response = _post(client, data_schema, field4="cns_diagnosis_category")
+    response = _post(client, data_schema, entity1_field4="cns_diagnosis_category")
     assert response.status_code == 200, response.text
     spec = response.json()["spec"]
 
@@ -90,12 +97,21 @@ def test_rebinding_the_stratifier_moves_every_reference(client, data_schema):
     # Grouped by subject alone, then by the stratum: the stratifier is read once
     # from the start event rather than joined into the per-subject key.
     groupbys = [t["groupby"] for t in spec["transformation"] if "groupby" in t]
-    assert groupbys == ["research_id", "cns_diagnosis_category"]
+    # Three: the censoring table reduced to one row per subject, then the event
+    # log grouped by subject, then by the stratum. The stratifier is read once
+    # from the start event rather than joined into the per-subject key.
+    assert groupbys == ["research_id", "research_id", "cns_diagnosis_category"]
 
     # A tenth site, and the one that makes the rewrite approach hopeless: the
     # stratifier is also the *name of a rollup output column*. Rename the colour
     # field alone and the rollup keeps emitting the old name.
-    rollup = next(t["rollup"] for t in spec["transformation"] if "rollup" in t)
+    # The per-subject rollup, named by what it emits: the censoring reduction is
+    # a rollup too, and it comes first.
+    rollup = next(
+        t["rollup"]
+        for t in spec["transformation"]
+        if "rollup" in t and "start day" in t["rollup"]
+    )
     assert "cns_diagnosis_category" in rollup
 
     # The derive a client-side rename cannot see: it neither walks `derive` blocks
@@ -117,7 +133,9 @@ def test_rebinding_the_stratifier_moves_every_reference(client, data_schema):
         for m in layer["mapping"]
         if m["encoding"] == "color"
     ]
-    assert colours == ["cns_diagnosis_category"] * 5
+    # Six layers now carry the colour: the flat lead-in, the opening drop, the
+    # curve, the run-out rule, the end label, and the censoring ticks.
+    assert colours == ["cns_diagnosis_category"] * 6
 
 
 def test_response_describes_the_parameters_it_accepts(client, data_schema):
@@ -127,8 +145,8 @@ def test_response_describes_the_parameters_it_accepts(client, data_schema):
 
     assert body["params"] == [
         {
-            "param": "field4",
-            "placeholder": "F4",
+            "param": "entity1_field4",
+            "placeholder": "E1.F4",
             "entity": "Event",
             "type": "nominal",
             "encodings": ["color"],
@@ -172,7 +190,7 @@ def test_unknown_template_is_a_404_naming_the_likely_cause(client, data_schema):
 def test_invalid_stratifier_is_rejected_with_reader_grade_prose(
     client, data_schema, field, expected
 ):
-    response = _post(client, data_schema, field4=field)
+    response = _post(client, data_schema, entity1_field4=field)
     assert response.status_code == 422
     body = response.json()
     assert body["code"] == "invalid_bindings"
@@ -184,7 +202,7 @@ def test_incomplete_bindings_are_rejected_rather_than_silently_resolved(
     client, data_schema
 ):
     """An omitted parameter would otherwise substitute "" and build a broken spec."""
-    args = {k: v for k, v in _ARGS.items() if k != "field3"}
+    args = {k: v for k, v in _ARGS.items() if k != "entity1_field3"}
     response = client.post(
         "/v1/yac/vis_instantiate",
         json={"tool": _SURVIVAL_TOOL, "toolArgs": args, "dataSchema": data_schema},
@@ -193,7 +211,7 @@ def test_incomplete_bindings_are_rejected_rather_than_silently_resolved(
     assert response.status_code == 422
     body = response.json()
     assert body["code"] == "missing_bindings"
-    assert body["errors"] == ["field3"]
+    assert body["errors"] == ["entity1_field3"]
     assert "spec" not in body
 
 
