@@ -151,7 +151,36 @@ def _infer_foreign_keys(resources: list[dict]) -> None:
             )
 
 
-def build_package(csv_dir: Path, name: str, udi_path: str, strips: list[str]) -> dict:
+def _annotate_cube(res: dict, measure: str) -> None:
+    """Mark a resource as a pre-aggregated marginal cube.
+
+    A cube row is a count (or other measure) over whichever dimensions are
+    non-null; a null dimension means the row aggregates over it, so the same
+    table holds the grand total, every one-way marginal, and every combination.
+    Consumers need to know which column is the measure and which are dimensions
+    — it cannot be inferred, since a dimension is just a nullable column — so it
+    is declared here and read back through the schema by the `<M>` and
+    `<MARGINAL:...>` placeholders.
+    """
+    names = [f["name"] for f in res["schema"]["fields"]]
+    if measure not in names:
+        sys.exit(f"{res['name']}: --measure {measure!r} is not a column (has: {', '.join(names)})")
+    res["udi:cube"] = True
+    res["udi:measures"] = [measure]
+    res["udi:dimensions"] = [n for n in names if n != measure]
+    for field in res["schema"]["fields"]:
+        if field["name"] == measure:
+            field["description"] = "Cube measure: the aggregated value for this row."
+        else:
+            field["description"] = (
+                f"Cube dimension: {field['name']}. Null when the row aggregates "
+                "over this dimension."
+            )
+
+
+def build_package(
+    csv_dir: Path, name: str, udi_path: str, strips: list[str], measure: str | None = None
+) -> dict:
     resources = []
     for path in sorted(csv_dir.glob("*.csv")):
         with path.open(newline="", encoding="utf-8") as fh:
@@ -161,6 +190,8 @@ def build_package(csv_dir: Path, name: str, udi_path: str, strips: list[str]) ->
         # name is the entity key (FK refs, source resolver, agent specs) — must be unique
         res = _profile_table(humanize(path.stem, strips), header, rows)
         res["path"] = path.name
+        if measure:
+            _annotate_cube(res, measure)
         resources.append(res)
 
     if not resources:
@@ -170,7 +201,8 @@ def build_package(csv_dir: Path, name: str, udi_path: str, strips: list[str]) ->
     if len(set(names)) != len(names):
         sys.exit(f"table names collide after humanizing: {names} — adjust --strip")
 
-    _infer_foreign_keys(resources)
+    if not measure:
+        _infer_foreign_keys(resources)
     return {
         "name": name,
         "resources": resources,
@@ -251,6 +283,12 @@ def main() -> None:
         help="substring to remove from file names before humanizing table names "
         "(repeatable), e.g. --strip pcx_30_ --strip _level_deid",
     )
+    ap.add_argument(
+        "--measure",
+        help="treat the directory as a pre-aggregated marginal CUBE: this column is "
+        "the measure, every other column a dimension (null = aggregated over). "
+        "Skips foreign-key inference, which is meaningless for a cube.",
+    )
     ap.add_argument("-o", "--out", help="output path (default: <dir>/datapackage.json)")
     ap.add_argument("--selftest", action="store_true", help="run inference self-check and exit")
     args = ap.parse_args()
@@ -266,7 +304,7 @@ def main() -> None:
     udi_path = args.udi_path or f"./data/{csv_dir.name}/"
     out = Path(args.out) if args.out else csv_dir / "datapackage.json"
 
-    pkg = build_package(csv_dir, name, udi_path, args.strip)
+    pkg = build_package(csv_dir, name, udi_path, args.strip, args.measure)
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])
