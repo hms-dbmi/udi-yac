@@ -100,22 +100,33 @@ export function PointFilterComponent({
     });
   };
 
+  // Base UI's Select fires `onValueChange` on every item press, including a
+  // press on the already-selected item — a common way to dismiss the menu.
+  // Both handlers below clear the checked values, so an unguarded re-commit
+  // would wipe the selection just from opening and closing the menu. Bail out
+  // when the value hasn't actually changed.
   const handleEntityChange = (val: string | null) => {
-    if (!val) return;
+    if (!val || val === entity) return;
+    // The field belongs to the entity being committed: keep the current one
+    // when the new entity has it, otherwise fall back to that entity's first
+    // categorical field. Only when it has none does the field carry over
+    // unchanged, leaving the widget to surface the invalid state.
+    const newFieldOptions = categoricalSourceFields?.[val] ?? [];
+    const nextField = newFieldOptions.includes(field) ? field : (newFieldOptions[0] ?? field);
     commit({
       ...dataSelection,
       dataSourceKey: val,
-      selection: field ? { [field]: [] } : {},
+      selection: nextField ? { [nextField]: [] } : {},
     });
     trackEvent('filter_entity_changed', {
       filterType: 'point',
       entity: val,
-      field,
+      field: nextField,
     });
   };
 
   const handleFieldChange = (val: string | null) => {
-    if (!val) return;
+    if (!val || val === field) return;
     commit({
       ...dataSelection,
       selection: { [val]: [] },
