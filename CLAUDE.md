@@ -41,7 +41,7 @@ Per-package (use `--filter`, no cd needed): `pnpm --filter udi-yac typecheck|tes
 Python:
 
 ```bash
-cd packages/agent && uv sync --extra server --extra langfuse --extra test && uv run pytest
+cd packages/agent && uv sync --extra server --extra langfuse --extra test --extra bedrock && uv run pytest
 cd packages/grammar-py && uv sync && uv run pytest
 uv run --project packages/agent --extra server fastapi dev packages/agent/src/udiagent/server/app.py --port 8007 --reload-dir packages/agent/src --reload-dir packages/grammar-py/src   # dev server (--reload-dir: don't watch the whole monorepo)
 ```
@@ -94,7 +94,7 @@ User query → chat ChatPanel → POST /v1/yac/completions (udiagent.server)
 
 - **udi-toolkit** (`packages/grammar/`) exposes `UDIVis` plus headless APIs from `udi-toolkit/react` (and `/ce`): `loadDataPackage`, `queryData` (memoized per sources/transformations/selectionHash/tablesVersion; `{ displayDataOnly: true }` skips the allData pass), `subscribeToSelections`, `clearAllSelections`. All share one Pinia `DataSourcesStore` singleton. Sources, `*.stories.ts`, and `.storybook/` sit flat at the package root; Storybook deliberately loads `.storybook/vite.config.stub.ts` instead of the package's `vite.config.js` (the lib build — dts emit, vue/pinia externalized — would break the preview).
 - **chat** bridges the toolkit as a Vue Custom Element via `udi-toolkit/react`. Zustand stores are **vanilla** (`createStore`), instantiated per-provider in `src/app/UDIChatContext.tsx` — never import a store module directly into a component. Pinia is the single source of truth for brush selections; no React-side mirror. Path alias `@/` → `src/`. Debug mode: type `!/admin` in chat input.
-- **agent** is a publishable library — configuration via constructor params, not env vars; server (`udiagent.server`, `[server]` extra) is a reference app; JWT auth (`INSECURE_DEV_MODE=1` skips in dev); langfuse optional via `_compat.py`.
+- **agent** is a publishable library — configuration via constructor params, not env vars; server (`udiagent.server`, `[server]` extra) is a reference app; JWT auth (`INSECURE_DEV_MODE=1` skips in dev); langfuse optional via `_compat.py`, as is Bedrock SigV4 (`bedrock=True` → `openai.providers.bedrock`, `[bedrock]` extra).
 - Feature boundaries in chat follow bulletproof-react: `app/`, `features/{chat,dashboard,data-package,tool-calls}` with `index.ts` barrels, shared code in top-level `components/`/`stores/`/`types/`/`utils/`.
 
 ## Code Style

@@ -16,7 +16,7 @@ Validate an env file against this model without booting the server::
 
 from pathlib import Path
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -136,7 +136,39 @@ class ServerConfig(BaseSettings):
         description=(
             "Root of any OpenAI-compatible backend (Azure AI Foundry, "
             "Bedrock, OpenRouter, Ollama, vLLM). Must support function "
-            "calling and JSON-schema structured outputs."
+            "calling and JSON-schema structured outputs. For Bedrock this is "
+            "the static-API-key path; see `UDI_BEDROCK` for an IAM role."
+        ),
+    )
+    udi_bedrock: bool = Field(
+        default=False,
+        description=(
+            "Authenticate to Amazon Bedrock with SigV4 from the default AWS "
+            "credential chain (EC2 instance profile, ECS task role, "
+            "`AWS_PROFILE`, `~/.aws/credentials`), so no key is stored. "
+            "Mutually exclusive with `OPENAI_API_KEY` and `OPENAI_BASE_URL`. "
+            "Per-request `X-OpenAI-Key` headers are refused with a 403 in "
+            "this mode, so no prompt reaches api.openai.com. Requires the "
+            "`udiagent[bedrock]` extra."
+        ),
+    )
+    aws_region: str | None = Field(
+        default=None,
+        # The only aliased field: AWS_DEFAULT_REGION is the AWS SDK's own
+        # fallback, and honoring it here keeps this object an accurate record
+        # of the region actually in force (the startup log and the credential
+        # error handler both report it). AWS_REGION must be listed explicitly —
+        # a validation_alias replaces the field-name lookup rather than adding
+        # to it. gen_env_docs.py documents the field name, so the table still
+        # reads AWS_REGION.
+        validation_alias=AliasChoices("AWS_REGION", "AWS_DEFAULT_REGION"),
+        examples=['us-east-1'],
+        description=(
+            "AWS region for Bedrock; also determines the endpoint. Required "
+            "with `UDI_BEDROCK`, though the AWS SDK will also accept "
+            "`AWS_DEFAULT_REGION` or `~/.aws/config` — there is no instance "
+            "metadata fallback. Set `AWS_BEDROCK_BASE_URL` instead to reach a "
+            "PrivateLink endpoint."
         ),
     )
 
@@ -209,6 +241,11 @@ class ServerConfig(BaseSettings):
             for origin in self.udi_cors_origins.split(",")
             if origin.strip()
         ]
+
+    @property
+    def has_server_credentials(self) -> bool:
+        """Whether the server can serve a request with no ``X-OpenAI-Key``."""
+        return bool(self.openai_api_key or self.openai_base_url or self.udi_bedrock)
 
     @field_validator("jwt_algorithm", mode="after")
     @classmethod
@@ -294,6 +331,25 @@ class ServerConfig(BaseSettings):
                 f"{', '.join(sorted(missing))} missing. Set all three to "
                 "enable tracing, or none to disable it."
             )
+
+        # The OpenAI SDK refuses `provider=` alongside api_key/base_url, so
+        # these cannot be reconciled at construction — they are a genuine
+        # either/or, not a precedence question.
+        if self.udi_bedrock:
+            if self.openai_api_key:
+                errors.append(
+                    "UDI_BEDROCK and OPENAI_API_KEY are mutually exclusive. "
+                    "Bedrock SigV4 signs requests with the instance's IAM "
+                    "role; unset OPENAI_API_KEY, or unset UDI_BEDROCK and set "
+                    "OPENAI_BASE_URL to the Bedrock endpoint to use a static "
+                    "Bedrock API key."
+                )
+            if self.openai_base_url:
+                errors.append(
+                    "UDI_BEDROCK and OPENAI_BASE_URL are mutually exclusive. "
+                    "The Bedrock endpoint is derived from AWS_REGION; set "
+                    "AWS_BEDROCK_BASE_URL instead to reach a private endpoint."
+                )
 
         # A bad path used to raise an uncaught FileNotFoundError at import,
         # from inside a module-level call with no config context.
