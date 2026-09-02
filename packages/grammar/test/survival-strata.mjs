@@ -17,6 +17,11 @@
  *   3. A `left` join keeps the rows with no match, which is the only way to say a
  *      subject is *absent* from another table — the stratifier the presence
  *      templates split by. The inner-join contrast is asserted alongside it.
+ *   4. `unnest` applied to a *join's output*, on a column that arrived from the
+ *      joined side, expands it the same way it expands a plain source. That is
+ *      what the cross-table multi-value template rests on, and it stacks two
+ *      row multiplications — the join's and the expansion's — which the
+ *      per-(subject, value) reduction downstream has to absorb unchanged.
  */
 import assert from 'node:assert/strict';
 import { createPinia, setActivePinia } from 'pinia';
@@ -210,6 +215,87 @@ assert.deepEqual(
   inner.map((r) => r.subject),
   ['s1'],
   'an inner join drops the subjects that answer "no" — hence kind: left',
+);
+
+// 6. A delimited column arriving from the *joined* side. The cross-table
+//    multi-value template unnests here rather than on a plain source, and two
+//    multiplications stack: the join fans each event out per related record, the
+//    expansion fans each of those out per listed value. Neither may reach the
+//    answer, because the reduction below is min/max over a (subject, value)
+//    group and both are idempotent under duplication.
+store.seedDataSource(
+  'therapy',
+  'therapy',
+  aq.from([
+    // Two regimens, one of them listing two agents: both multiplications at once.
+    { subject: 's1', agents: 'Brain;Spine' },
+    { subject: 's1', agents: 'Liver' },
+    { subject: 's2', agents: 'Brain' },
+    // Related record but no events: must not invent a cohort member.
+    { subject: 's9', agents: 'Kidney' },
+  ]),
+);
+
+const relatedMulti = store.getDataObject(
+  ['events', 'therapy'],
+  [
+    {
+      join: { on: ['subject', 'subject'] },
+      in: ['events', 'therapy'],
+      out: 'events_t',
+    },
+    { unnest: { field: 'agents', separator: ';' } },
+    { groupby: 'subject' },
+    // The subject's whole span, broadcast onto every one of its (now heavily
+    // duplicated) rows — exactly what the template does before regrouping.
+    {
+      derive: {
+        'subject start': { agg: 'min', field: 'day' },
+        'subject end': { agg: 'max', field: 'day' },
+      },
+    },
+    { groupby: ['subject', 'agents'] },
+    {
+      rollup: {
+        start: { op: 'min', field: 'subject start' },
+        end: { op: 'max', field: 'subject end' },
+      },
+    },
+  ],
+).displayData;
+
+assert.deepEqual(
+  relatedMulti
+    .map((r) => `${r.subject}:${r.agents}:${r.start}-${r.end}`)
+    .sort(),
+  // s1 joins all three of its agents and carries the same 0-10 span into each;
+  // s2 joins Brain with its own 0-5 span; s3 has no therapy row and leaves the
+  // inner join; s9 has no events and never appears.
+  ['s1:Brain:0-10', 's1:Liver:0-10', 's1:Spine:0-10', 's2:Brain:0-5'],
+  'unnesting a joined column must expand it without disturbing the per-subject span',
+);
+
+const relatedCohorts = store.getDataObject(
+  ['events', 'therapy'],
+  [
+    {
+      join: { on: ['subject', 'subject'] },
+      in: ['events', 'therapy'],
+      out: 'events_t',
+    },
+    { unnest: { field: 'agents', separator: ';' } },
+    { groupby: ['subject', 'agents'] },
+    { rollup: { rows: { op: 'count' } } },
+    { groupby: 'agents' },
+    { rollup: { subjects: { op: 'count' } } },
+  ],
+).displayData;
+assert.deepEqual(
+  Object.fromEntries(relatedCohorts.map((r) => [r.agents, r.subjects])),
+  // Overlapping, and counted once per subject rather than once per duplicated
+  // row: s1 is in three groups, not in six.
+  { Brain: 2, Spine: 1, Liver: 1 },
+  'cohorts should overlap by subject, not inflate by joined row or listed value',
 );
 
 console.log('survival-strata: all assertions passed');

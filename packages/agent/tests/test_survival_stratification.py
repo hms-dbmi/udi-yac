@@ -307,6 +307,7 @@ def test_survival_tool_names_distinguish_the_two_readings():
         "survival_ever",
         "survival_ever_multivalue",
         "survival_related",
+        "survival_related_multivalue",
         "survival_presence",
         "survival_presence_2x2",
     }
@@ -340,7 +341,12 @@ def test_every_stratified_survival_template_names_its_reading():
     # Every reading that defines membership from events after the clock starts —
     # including the cross-table one, where a protocol may begin after diagnosis —
     # must say that the cohorts overlap and name the bias it introduces.
-    for hint in ("survival_ever", "survival_ever_multivalue", "survival_related"):
+    for hint in (
+        "survival_ever",
+        "survival_ever_multivalue",
+        "survival_related",
+        "survival_related_multivalue",
+    ):
         template = by_hint[hint]
         assert "overlap" in template["description"].lower()
         assert "immortal-time" in template["design_considerations"].lower()
@@ -365,6 +371,7 @@ def test_every_stratified_survival_template_names_its_reading():
         "_line_survival_ever",
         "_line_survival_ever_multivalue",
         "_line_survival_related",
+        "_line_survival_related_multivalue",
     ],
 )
 def test_survival_curves_are_drawn_as_steps_on_a_year_axis(suffix):
@@ -379,7 +386,7 @@ def test_survival_curves_are_drawn_as_steps_on_a_year_axis(suffix):
     "548 days" in their head, and a day axis over a multi-year cohort labels every
     200th day.
     """
-    spec = _survival_spec(suffix) if "related" not in suffix else _related_spec()
+    spec = _related_spec(suffix) if "related" in suffix else _survival_spec(suffix)
 
     curve = next(
         layer
@@ -405,12 +412,12 @@ def test_survival_curves_are_drawn_as_steps_on_a_year_axis(suffix):
     assert titles == {"survival years"}
 
 
-def _related_spec():
-    """The cross-table variant, bound against a two-table schema."""
+def _related_spec(suffix="_line_survival_related", stratifier="protocol"):
+    """A cross-table variant, bound against a two-table schema."""
     generated = _load_generated_tools()
     assert generated is not None
     _defs, dispatch, templates, _tags = generated
-    tool = next(n for n in dispatch if n.endswith("_line_survival_related"))
+    tool = next(n for n in dispatch if n.endswith(suffix))
     idx, param_map = dispatch[tool]
 
     def table(name, fields):
@@ -437,7 +444,7 @@ def _related_spec():
                         ("day", "quantitative"),
                     ],
                 ),
-                table("therapy", [("subject", "nominal"), ("protocol", "nominal")]),
+                table("therapy", [("subject", "nominal"), (stratifier, "nominal")]),
             ],
         }
     )
@@ -448,7 +455,7 @@ def _related_spec():
         "entity1_field2": "event",
         "entity1_field3": "day",
         "entity2_field1": "subject",
-        "entity2_field": "protocol",
+        "entity2_field": stratifier,
         "value1": "start",
         "value2": "death",
     }
@@ -562,6 +569,39 @@ def test_cross_table_survival_reads_membership_and_overlaps(tmp_path):
     # The join duplicates event rows per related record; the spans must survive it.
     years = {r["protocol"]: r["survival years"] for r in rows if r["died"] == 1}
     assert round(years["B"], 2) == round(365 / 365.25, 2)
+
+
+def test_cross_table_multi_value_expands_the_joined_rows_before_the_rollup():
+    """Where the expansion sits is what separates this template from its siblings.
+
+    On the joined rows and *before* the per-subject rollup, so membership is read
+    from every value on every related record. After the rollup it would read the
+    list off whichever single row the rollup happened to keep — which is not the
+    baseline reading either, because a related table has no start event to be a
+    baseline. Asserted structurally, since the SQL backend rejects `unnest`.
+    """
+    spec = _related_spec("_line_survival_related_multivalue", stratifier="agents")
+
+    unnest = _transform_index(spec, "unnest")
+    assert _transform_index(spec, "join") < unnest < _transform_index(spec, "rollup")
+
+    config = next(t for t in spec["transformation"] if "unnest" in t)["unnest"]
+    assert config["field"] == "agents"
+    assert config["separator"] == ";"
+
+    # The expanded column is what the curves are split by, and it is only ever
+    # drawn as a category.
+    channels = {
+        m["encoding"]
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m.get("field") == "agents"
+    }
+    assert channels == {"color"}
+
+    # And the single-valued cross-table variant must not have picked up an
+    # expansion: the two differ by exactly this transform.
+    assert not any("unnest" in t for t in _related_spec()["transformation"])
 
 
 @pytest.mark.parametrize("subset", [None, ("s1",), ("s2",), ("s3",), ("s4",), ("s6",)])

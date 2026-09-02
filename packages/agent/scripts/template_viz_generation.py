@@ -393,9 +393,18 @@ def _survival_subject_rows(
     else:
         chart = Chart().source("<E>", "<E.url>")
 
-    # `EVER` reads membership off every event, so a delimited column has to be
-    # expanded on the event rows, before the per-subject rollup sees them.
-    if multi_value and reading is StratumReading.EVER:
+    # `EVER` and `RELATED` both read membership off every row they see, so a
+    # delimited column has to be expanded before the per-subject rollup — on the
+    # event rows for `EVER`, on the joined rows for `RELATED`, which is the same
+    # point in the pipeline. Expanding after the rollup instead reads the list off
+    # whichever single row the rollup kept, which is the baseline reading.
+    #
+    # For `RELATED` this stacks two multiplications: the join already fanned each
+    # event out per related record, and this fans each of those out per listed
+    # value. Still harmless, for the same reason the join is — everything
+    # downstream reduces by min/max over a (subject, value) group, and both are
+    # idempotent under duplication.
+    if multi_value and reading in (StratumReading.EVER, StratumReading.RELATED):
         chart = chart.unnest(stratum, separator=";")
 
     fields = _survival_event_fields(reading)
@@ -2722,6 +2731,118 @@ def generate():
             "E1.F3": "event_date",
             "E2.F1": "research_id",
             "E2.F": "protocol_name_and_arm",
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+        },
+    )
+
+    # The same cross-table stratifier, but the related column is a delimited LIST —
+    # the agents on a chemotherapy regimen, the sites one course of radiation
+    # covered. `unnest` runs on the JOINED rows, before the per-subject rollup, so
+    # a subject joins every value listed on any of its related records. Overlap
+    # therefore compounds twice over: across the subject's related records, and
+    # across each record's own list.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E1> split by each <E2.F:n> value.",
+            "Compare survival across every <E2.F:n> listed for a subject in <E2>.",
+            "Does survival differ by which <E2.F:n> a subject received?",
+        ],
+        spec=_survival_chart(
+            stratum="<E2.F:n>", reading=StratumReading.RELATED, multi_value=True
+        ),
+        chart_type=ChartType.LINE,
+        name_hint="survival_related_multivalue",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by each value of a multi-value (delimited) field in a RELATED "
+            "table, from an event log — one row per event, with a subject id, an event-type "
+            "column and a numeric time column. Joins the event log to a second entity on the "
+            "subject-id column each side names, expands that entity's semicolon-delimited column "
+            "so one record listing several values counts toward each of them, derives every "
+            "subject's elapsed time between a start and an end event type, and plots one curve "
+            "per value. Use this when the attribute to split by lives in another table AND that "
+            "column holds a set rather than a single value — the agents making up a chemotherapy "
+            "regimen, the sites one course of radiation covered, the conditions listed on a "
+            "diagnosis record. The cohorts OVERLAP: a subject joins a group for every value "
+            "listed on any of its related records, so the groups do not add up to the whole."
+        ),
+        design_considerations=(
+            "The cross-table and multi-value readings composed: the stratifier is neither a "
+            "column of the event log nor single-valued. The two entities are joined first, on "
+            "the subject-id column each side names — a declared relationship is not required and "
+            "usually does not exist, since the table carrying a stratifier is typically a "
+            "*sibling* of the event log, both hanging off a patient table. `unnest` then runs on "
+            "the joined rows, before the per-subject rollup, which is what makes membership read "
+            "from every value on every related record; expanding after the rollup would instead "
+            "read the list off whichever single row the rollup kept. "
+            "Both steps multiply rows — the join by the subject's related records, the expansion "
+            "by each record's list length — and that is harmless here only because everything "
+            "downstream reduces by min/max over a (subject, value) group, which is idempotent "
+            "under duplication. A template that counted rows after either step would silently "
+            "over-count, so do not copy this shape into one that aggregates. "
+            "Overlap compounds accordingly: cohort sizes sum to well above the subject count and "
+            "one death is attributed to every value the subject is associated with, so these "
+            "curves cannot be reconciled with the unstratified one and must not be read as a "
+            "partition. Without the expansion each distinct combination would be its own stratum "
+            "— a regimen column with ~20 distinct agents can easily have ~40 combinations, which "
+            "also exceeds the 50-cardinality cap for an encoded field. Subjects with no related "
+            "record at all drop out of the join and leave the cohort entirely, which is the one "
+            "way this can show FEWER subjects in total than the unstratified curve; a related "
+            "record whose list is present but empty expands to no rows and contributes to no "
+            "group. "
+            "The delimiter is a semicolon, matching the other multi-value templates: a "
+            "comma-delimited column has to be normalised in the data package first, since a "
+            "comma is also what separates fields in the source CSV. "
+            "IMPORTANT: the related record may post-date the start event — a regimen begun after "
+            "diagnosis, a treatment given on relapse — so membership can be defined by something "
+            "that happened after the clock started. That is immortal-time bias by construction: "
+            "a subject must survive long enough to be treated at all, so any group defined by "
+            "treatment is flattered relative to one that is not, and a value that only ever "
+            "accompanies a late record will look artificially good. A value appearing only "
+            "alongside an end event gives a group in which everyone is dead, drawing flat at 0%. "
+            "This chart describes groups; it does not compare treatments. "
+            "Strata are drawn as colours because the grammar has no facet channel. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare observed survival across overlapping categories drawn from a set-valued "
+            "column in another table — which agents of a regimen, which sites of a treatment, "
+            "coincide with worse survival."
+        ),
+        review_hint=(
+            "Check the end-of-curve labels name individual values (e.g. 'cisplatin') and not "
+            "combined strings like 'cisplatin;etoposide'; if they show combinations, unnest did "
+            "not run or the column is delimited by something other than a semicolon. Cohort "
+            "sizes overlap doubly here — expect them to sum to well over the subject count — "
+            "while the total can still be SMALLER than the unstratified cohort, since a subject "
+            "with no related record leaves the join. Both are expected; confirm them against the "
+            "data rather than treating either as a bug. THE MAIN THING TO JUDGE is whether the "
+            "number of curves is legible at all: a list column crossed with a join produces more "
+            "strata than any other survival variant, and only the 50-cardinality cap bounds it. "
+            "On pcx this draws 42 curves — 43 distinct agents from 37 distinct regimen strings, "
+            "under the cap and so not rejected — with cohort sizes summing to 579 over 63 "
+            "subjects and 336 death attributions from 34 deaths. Roughly 30 of those curves rest "
+            "on one or two subjects. If that is unreadable, the template needs a cardinality "
+            "limit rather than a caption. Check too that a sentinel string is not being drawn as "
+            "a category: pcx has a 'Not Reported' agent, which the null filter cannot catch "
+            "because it is a value, not a null. Requires browser (interactive) mode: the SQL "
+            "backend rejects unnest."
+        ),
+        preview_bindings={
+            "E1": "Event",
+            "E2": "Medical Therapy",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E2.F1": "research_id",
+            "E2.F": "chemotherapy_agents",
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
         },

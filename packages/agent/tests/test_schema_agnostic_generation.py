@@ -251,8 +251,9 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         "survival_baseline_multivalue": ["field4"],
         "survival_ever": ["field4"],
         "survival_ever_multivalue": ["field4"],
-        # The cross-table variant's stratifier lives on the joined entity.
+        # The cross-table variants' stratifier lives on the joined entity.
         "survival_related": ["entity2_field"],
+        "survival_related_multivalue": ["entity2_field"],
         # The presence variants offer nothing, and that is the honest answer: what
         # separates their curves is which *table* the subject appears in, and the
         # tweak dropdowns re-bind fields only. Offering the joined subject-id key
