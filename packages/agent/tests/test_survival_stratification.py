@@ -391,6 +391,9 @@ def test_survival_tool_names_distinguish_the_two_readings():
         "survival_related_multivalue",
         "survival_presence",
         "survival_presence_2x2",
+        # Built from a pre-aggregated cube rather than an event log.
+        "survival_cube",
+        "survival_cube_stratified",
     }
 
 

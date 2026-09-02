@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 72
+Tools: 74
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -876,6 +876,107 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "group", '
  '"type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, '
  '"strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2> / <E3>", "align": "right"}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2>"}, {"derive": '
+ '{"events": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, '
+ '"else": {"literal": 0}}, "censored": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, '
+ '"then": {"field": "<M>"}, "else": {"literal": 0}}}}, {"groupby": ["<D1>"]}, {"rollup": {"events": {"op": "sum", '
+ '"field": "events"}, "censored": {"op": "sum", "field": "censored"}}}, {"derive": {"observed": {"op": "+", "left": '
+ '{"field": "events"}, "right": {"field": "censored"}}}}, {"derive": {"cohort end": {"agg": "max", "field": "<D1>"}}}, '
+ '{"derive": {"subjects": {"agg": "sum", "field": "observed"}, "deaths": {"agg": "sum", "field": "events"}}}, '
+ '{"orderby": {"field": "<D1>", "order": "asc"}}, {"derive": {"survival percentage": {"rolling": {"expression": {"op": '
+ '"*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "sum", "field": "events"}, '
+ '"right": {"field": "subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": {"final percentage": {"agg": "min", '
+ '"field": "survival percentage"}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first time": '
+ '{"agg": "min", "field": "<D1>"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, '
+ '{"derive": {"lead time": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first time"}, "else": {"literal": null}}}, "drop time": {"if": {"op": "<=", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", '
+ '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": '
+ '"==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": '
+ '{"literal": null}}}}}, {"derive": {"label time": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"if": {"op": ">", "left": {"field": "deaths"}, "right": {"literal": 0}}, "then": {"op": '
+ '"*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}, "else": {"literal": '
+ 'null}}}}, {"derive": {"rule time": {"if": {"op": "==", "left": {"field": "deaths"}, "right": {"literal": 0}}, '
+ '"then": {"literal": null}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "label time"}, "else": {"if": {"op": "==", "left": {"field": "survival percentage"}, "right": {"field": '
+ '"final percentage"}}, "then": {"field": "<D1>"}, "else": {"literal": null}}}}}}, {"derive": {"censor time": {"if": '
+ '{"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, "then": {"field": "<D1>"}, "else": {"literal": '
+ 'null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": '
+ '0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": '
+ '{"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"survivors": {"op": "-", "left": {"field": '
+ '"subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"literal": "("}, {"field": '
+ '"survivors"}, {"literal": "/"}, {"field": "subjects"}, {"literal": ") "}, {"field": "final survival"}, {"literal": '
+ '"%"}]}}}], "representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead time", "type": '
+ '"quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop '
+ 'time", "type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": '
+ '"<D1>", "type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival '
+ 'percentage", "title": "event-free (%)", "type": "quantitative", "domain": {"min": 0, "max": 100}}], "interpolate": '
+ '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule time", "type": "quantitative", "title": '
+ '"time", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor time", "type": '
+ '"quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}]}, {"mark": "text", "mapping": '
+ '[{"encoding": "x", "field": "label time", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
+ '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
+ '{"encoding": "text", "field": "final label", "type": "nominal"}], "align": "right", "dy": -9, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}]}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2,D3>"}, {"derive": '
+ '{"events": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, '
+ '"else": {"literal": 0}}, "censored": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, '
+ '"then": {"field": "<M>"}, "else": {"literal": 0}}}}, {"groupby": ["<D3>", "<D1>"]}, {"rollup": {"events": {"op": '
+ '"sum", "field": "events"}, "censored": {"op": "sum", "field": "censored"}}}, {"derive": {"observed": {"op": "+", '
+ '"left": {"field": "events"}, "right": {"field": "censored"}}}}, {"derive": {"cohort end": {"agg": "max", "field": '
+ '"<D1>"}}}, {"groupby": "<D3>"}, {"derive": {"subjects": {"agg": "sum", "field": "observed"}, "deaths": {"agg": '
+ '"sum", "field": "events"}}}, {"orderby": {"field": "<D1>", "order": "asc"}}, {"derive": {"survival percentage": '
+ '{"rolling": {"expression": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": '
+ '{"agg": "sum", "field": "events"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": '
+ '{"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"full survival": {"literal": '
+ '100}}}, {"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, {"derive": {"first percentage": {"agg": "max", '
+ '"field": "survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": {"op": "<=", '
+ '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}, '
+ '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
+ 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", "left": {"field": "deaths"}, "right": {"literal": 0}}, '
+ '"then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}, '
+ '"else": {"literal": null}}}}, {"derive": {"rule time": {"if": {"op": "==", "left": {"field": "deaths"}, "right": '
+ '{"literal": 0}}, "then": {"literal": null}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"field": "label time"}, "else": {"if": {"op": "==", "left": {"field": "survival '
+ 'percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "<D1>"}, "else": {"literal": null}}}}}}, '
+ '{"derive": {"censor time": {"if": {"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, "then": '
+ '{"field": "<D1>"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
+ '{"survivors": {"op": "-", "left": {"field": "subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": '
+ '{"concat": [{"field": "<D3>"}, {"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, '
+ '{"field": "subjects"}, {"literal": ") "}, {"field": "final survival"}, {"literal": "%"}]}}}], "representation": '
+ '[{"mark": "line", "mapping": [{"encoding": "x", "field": "lead time", "type": "quantitative", "title": "time", '
+ '"domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, '
+ '"max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
+ '"mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
+ '{"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
+ '{"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": '
+ '[{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "survival percentage", "title": "event-free (%)", "type": "quantitative", "domain": {"min": 0, "max": '
+ '100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, '
+ '{"mark": "line", "mapping": [{"encoding": "x", "field": "rule time", "type": "quantitative", "title": "time", '
+ '"domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, '
+ '"max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "point", '
+ '"mapping": [{"encoding": "x", "field": "censor time", "type": "quantitative", "title": "time", "domain": {"min": '
+ '0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
+ '{"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, '
+ '{"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": '
+ '[{"encoding": "x", "field": "label time", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
+ '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
+ '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "<D3>", "type": '
+ '"nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
+ '0.7, "avoidOverlap": 8}], "title": {"text": "<D3>", "align": "right"}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F2>", "<F1>"]}, {"rollup": '
  '{"count <E>": {"op": "count"}}}, {"derive": {"udi_internal_percentile": {"op": "/", "left": {"field": "count <E>"}, '
  '"right": {"agg": "max", "field": "count <E>"}}}}, {"derive": {"udi_internal_text_color_threshold": {"if": {"op": '
@@ -2307,6 +2408,76 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
+ {'function': {'description': '[line] Survival curve from a pre-aggregated CUBE: one step per time point, falling as '
+                              'events accumulate. Needs two dimensions — a QUANTITATIVE elapsed-time dimension and a '
+                              'status dimension whose values say whether the subject had the event or was still '
+                              "event-free when last seen — plus the two status values themselves. Counts the cube's "
+                              'measure rather than reconstructing subjects, so it needs no event log. Censored time '
+                              'points carry a tick on the curve. Design: Reads the cube marginal by filtering to rows '
+                              'where the chosen dimension(s) are present and every other dimension is empty; the '
+                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
+                              "the per-request schema's dimension list, so this template works for any cube. The "
+                              'marginal broken out here is time x status, so each subject is counted exactly once and '
+                              'the cells add up to the cohort. The elapsed-time dimension must be quantitative. Cubes '
+                              "frequently bin time as strings ('0', '11', '>=60'), and there is no way to turn those "
+                              'in',
+               'name': 'vis_061_line_survival_cube',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
+                                                                           'x-axis.',
+                                                            'type': 'string'},
+                                             'dimension2': {'description': 'cube nominal dimension.', 'type': 'string'},
+                                             'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'value1': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'dimension1', 'dimension2', 'value1', 'value2'],
+                              'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[line] Survival curves from a pre-aggregated CUBE, one per value of a third dimension. '
+                              'Needs a QUANTITATIVE elapsed-time dimension, a status dimension saying whether the '
+                              'subject had the event, the stratifying dimension, and the two status values. Each '
+                              'subject is counted once within its own stratum, so the curves PARTITION the cohort and '
+                              "their sizes add back to the marginal's total. Censored time points carry a tick on "
+                              'their own curve. Design: Reads the cube marginal by filtering to rows where the chosen '
+                              'dimension(s) are present and every other dimension is empty; the measure is mapped '
+                              'directly with no re-aggregation. The marginal filter is expanded from the per-request '
+                              "schema's dimension list, so this template works for any cube. The marginal broken out "
+                              'here is time x status x stratifier, so every subject lands in exactly one stratum and '
+                              'one time point. Because a cube dimension is a per-subject attribute rather than an '
+                              'event-level column, this has none of the time-varying ambiguity the line-level '
+                              'stratified c',
+               'name': 'vis_062_line_survival_cube_stratified',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
+                                                                           'x-axis.',
+                                                            'type': 'string'},
+                                             'dimension2': {'description': 'cube nominal dimension.', 'type': 'string'},
+                                             'dimension3': {'description': 'cube nominal dimension, encodes color.',
+                                                            'type': 'string'},
+                                             'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'value1': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'dimension1', 'dimension2', 'dimension3', 'value1', 'value2'],
+                              'type': 'object'}},
+  'type': 'function'},
  {'function': {'description': '[heatmap] Displays the count of entities for each combination of two nominal fields as '
                               'a heatmap with labeled cells. Design: Rect marks with quantitative color encoding show '
                               'density. Overlaid text marks display exact counts. Text color adapts based on cell '
@@ -2315,7 +2486,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'in the co-occurrence of two fields; compare counts across combinations; find '
                               'correlations. Query patterns: Are there any clusters with respect to <E> counts of '
                               '<F1:n> and <F2:n>?; Make a heatmap of <E> <F1:n> and <F2:n>.',
-               'name': 'vis_061_heatmap_count',
+               'name': 'vis_063_heatmap_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2333,7 +2504,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'readability. Tasks: Identify patterns in the average value across two categorical '
                               'dimensions; find combinations with extreme values. Query patterns: What is the average '
                               '<F1:q> for each <F2:n> and <F3:n>?',
-               'name': 'vis_062_heatmap_avg',
+               'name': 'vis_064_heatmap_avg',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2355,7 +2526,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'across two dimensions; compare values across combinations. Query patterns: Are there '
                               'clusters in the measure across two dimensions?; Make a heatmap across two categorical '
                               'dimensions.',
-               'name': 'vis_063_heatmap_basic',
+               'name': 'vis_065_heatmap_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
                                                             'type': 'string'},
@@ -2373,7 +2544,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'assess whether the relationship between two quantitative fields differs across groups. '
                               'Query patterns: Are there clusters of <E> <F1:q> and <F2:q> values across different '
                               '<F3:n> groups?',
-               'name': 'vis_064_grouped_scatter_by_color',
+               'name': 'vis_066_grouped_scatter_by_color',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2391,7 +2562,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'span from bin start to bin end on x, with count on y. Tasks: Characterize the shape of '
                               'a distribution; identify modes, skewness, and gaps. Query patterns: What is the '
                               'distribution of <F:q>?; Make a histogram of <F:q>?',
-               'name': 'vis_065_histogram_distribution',
+               'name': 'vis_067_histogram_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2405,7 +2576,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
                               'distribution; identify modes and overall density patterns. Query patterns: What is the '
                               'distribution of <F:q>?',
-               'name': 'vis_066_area_density',
+               'name': 'vis_068_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2419,7 +2590,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'datasets (50 or fewer values) where individual observations are meaningful and '
                               'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
                               'values, clusters, and outliers. Query patterns: What is the distribution of <F:q>?',
-               'name': 'vis_067_dot_distribution',
+               'name': 'vis_069_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2435,7 +2606,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
                               'tendency or spread. Query patterns: Is the distribution of <F1:q> similar for each '
                               '<F2:n>?',
-               'name': 'vis_068_grouped_area_density',
+               'name': 'vis_070_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2452,7 +2623,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
                               'groups; identify clusters and outliers within each group. Query patterns: Is the '
                               'distribution of <F1:q> similar for each <F2:n>?',
-               'name': 'vis_069_grouped_dot_distribution',
+               'name': 'vis_071_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2470,7 +2641,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a field; determine how many records have valid values and what proportion. Query '
                               'patterns: How many <E> records have a non-null <F:q|o|n>?; What percentage of <E> '
                               'records have a non-null <F:q|o|n>?',
-               'name': 'vis_070_table_count_null_nonnull',
+               'name': 'vis_072_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2484,7 +2655,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Assess data quality; determine how many records are missing a value and what '
                               'proportion. Query patterns: How many <E> records have a null <F:q|o|n>?; What '
                               'percentage of <E> records have a null <F:q|o|n>?',
-               'name': 'vis_071_table_count_null',
+               'name': 'vis_073_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2679,17 +2850,30 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                          'value1': 'V1',
                                          'value2': 'V2',
                                          'value3': 'V3'}),
- 'vis_061_heatmap_count': (61, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_062_heatmap_avg': (62, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_063_heatmap_basic': (63, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
- 'vis_064_grouped_scatter_by_color': (64, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_065_histogram_distribution': (65, {'entity': 'E', 'field': 'F'}),
- 'vis_066_area_density': (66, {'entity': 'E', 'field': 'F'}),
- 'vis_067_dot_distribution': (67, {'entity': 'E', 'field': 'F'}),
- 'vis_068_grouped_area_density': (68, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_069_grouped_dot_distribution': (69, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_070_table_count_null_nonnull': (70, {'entity': 'E', 'field': 'F'}),
- 'vis_071_table_count_null': (71, {'entity': 'E', 'field': 'F'})}
+ 'vis_061_line_survival_cube': (61,
+                                {'dimension1': 'D1',
+                                 'dimension2': 'D2',
+                                 'entity': 'E',
+                                 'value1': 'V1',
+                                 'value2': 'V2'}),
+ 'vis_062_line_survival_cube_stratified': (62,
+                                           {'dimension1': 'D1',
+                                            'dimension2': 'D2',
+                                            'dimension3': 'D3',
+                                            'entity': 'E',
+                                            'value1': 'V1',
+                                            'value2': 'V2'}),
+ 'vis_063_heatmap_count': (63, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_064_heatmap_avg': (64, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_065_heatmap_basic': (65, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_066_grouped_scatter_by_color': (66, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_067_histogram_distribution': (67, {'entity': 'E', 'field': 'F'}),
+ 'vis_068_area_density': (68, {'entity': 'E', 'field': 'F'}),
+ 'vis_069_dot_distribution': (69, {'entity': 'E', 'field': 'F'}),
+ 'vis_070_grouped_area_density': (70, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_071_grouped_dot_distribution': (71, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_072_table_count_null_nonnull': (72, {'entity': 'E', 'field': 'F'}),
+ 'vis_073_table_count_null': (73, {'entity': 'E', 'field': 'F'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -2754,14 +2938,16 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_058_line_survival_related_multivalue': ['line_item', 'line'],
  'vis_059_line_survival_presence': ['line_item', 'line'],
  'vis_060_line_survival_presence_2x2': ['line_item', 'line'],
- 'vis_061_heatmap_count': ['line_item', 'heatmap'],
- 'vis_062_heatmap_avg': ['line_item', 'heatmap'],
- 'vis_063_heatmap_basic': ['data_cube', 'heatmap'],
- 'vis_064_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
- 'vis_065_histogram_distribution': ['line_item', 'histogram'],
- 'vis_066_area_density': ['line_item', 'area'],
- 'vis_067_dot_distribution': ['line_item', 'dot'],
- 'vis_068_grouped_area_density': ['line_item', 'grouped_area'],
- 'vis_069_grouped_dot_distribution': ['line_item', 'grouped_dot'],
- 'vis_070_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_071_table_count_null': ['line_item', 'table']}
+ 'vis_061_line_survival_cube': ['data_cube', 'line'],
+ 'vis_062_line_survival_cube_stratified': ['data_cube', 'line'],
+ 'vis_063_heatmap_count': ['line_item', 'heatmap'],
+ 'vis_064_heatmap_avg': ['line_item', 'heatmap'],
+ 'vis_065_heatmap_basic': ['data_cube', 'heatmap'],
+ 'vis_066_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
+ 'vis_067_histogram_distribution': ['line_item', 'histogram'],
+ 'vis_068_area_density': ['line_item', 'area'],
+ 'vis_069_dot_distribution': ['line_item', 'dot'],
+ 'vis_070_grouped_area_density': ['line_item', 'grouped_area'],
+ 'vis_071_grouped_dot_distribution': ['line_item', 'grouped_dot'],
+ 'vis_072_table_count_null_nonnull': ['line_item', 'table'],
+ 'vis_073_table_count_null': ['line_item', 'table']}

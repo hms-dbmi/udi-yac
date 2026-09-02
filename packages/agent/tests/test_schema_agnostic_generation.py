@@ -262,6 +262,12 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         # tweak dropdowns re-bind fields only. Offering the joined subject-id key
         # would be worse than offering nothing — changing it does not change what
         # the chart asks, it just breaks the join.
+        # The cube curves bind their axes as dimensions rather than deriving
+        # them, so the time dimension is an encoded field and shows up here.
+        # Re-binding it is offered only among quantitative dimensions, which is
+        # the same latitude every other tweakable field gets.
+        "survival_cube": ["dimension1"],
+        "survival_cube_stratified": ["dimension1", "dimension3"],
         "survival_presence": [],
         "survival_presence_2x2": [],
     }

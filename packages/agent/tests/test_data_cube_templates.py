@@ -94,7 +94,8 @@ SALES_CUBE = {
 
 def test_cube_templates_load_and_are_tagged():
     templates = _cube_templates()
-    assert len(templates) == 11
+    # 11 chart templates plus the two cube survival curves.
+    assert len(templates) == 13
     for t in templates:
         # multi-axis tags: the data-shape tag plus the chart-type tag
         assert t["tags"][0] == "data_cube"
@@ -281,7 +282,7 @@ def test_selection_scopes_tools_by_tag():
     # template was added, without testing anything the checks above miss.
     assert not (names & lnames), "a tool cannot serve both shapes"
     assert names | lnames == {d["function"]["name"] for d in tool_defs}
-    assert len(cube_only) == 11, "the cube template set is fixed; update if intentionally changed"
+    assert len(cube_only) == 13, "the cube template set is fixed; update if intentionally changed"
 
 
 def test_no_active_template_set_switch():

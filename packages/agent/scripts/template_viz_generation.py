@@ -100,6 +100,14 @@ PREVIEW_CENSOR_STATUS = "vital_status"
 PREVIEW_CENSOR_DATE = "vital_status_date"
 PREVIEW_CENSOR_VALUE = "alive"
 
+#: Preview bindings for the EFS cube (sample-data/pcx_efs_cube).
+PREVIEW_CUBE_ENTITY = "Efs Cube Raw"
+PREVIEW_CUBE_TIME = "event_free_survival_months"
+PREVIEW_CUBE_STATUS = "efs_status"
+PREVIEW_CUBE_STRATUM = "gender"
+PREVIEW_CUBE_EVENT_VALUE = "Event"
+PREVIEW_CUBE_CENSORED_VALUE = "Censored"
+
 
 _CUBE_MARGINAL_NOTE = (
     "Reads the cube marginal by filtering to rows where the chosen dimension(s) "
@@ -660,6 +668,270 @@ def _survival_subject_rows(
         }
     )
     return chart.filter(Expr.not_null("start day"))
+
+
+
+#: Columns the cube survival pipeline derives out of the status dimension. Named
+#: rather than bound: the cube holds one status column carrying two quantities.
+_CUBE_EVENTS = "events"
+_CUBE_CENSORED = "censored"
+_CUBE_CENSOR_TIME = "censor time"
+
+
+def _cube_survival_chart(stratified: bool = False):
+    """Build a survival curve from a pre-aggregated marginal CUBE.
+
+    The line-level templates reconstruct each subject's span from an event log.
+    A cube has no subjects to reconstruct: it already holds counts per
+    (time, status) cell, so the curve is assembled by accumulating those counts
+    instead. Everything downstream of that — the step curve, the run-out, the
+    label, the censoring ticks — is the same picture, so the same idioms are
+    used deliberately rather than reinvented.
+
+    Two dimensions are load-bearing. `<D1>` is elapsed time, which must be
+    QUANTITATIVE: a cube often bins it as strings ("0", "11", ">=60"), and there
+    is no way to turn those into numbers inside the grammar — Arquero coerces
+    them, the SQL backend refuses to, so the axis has to arrive numeric.
+    `<D2>` is the status dimension, split into events and censorings by the two
+    bound values.
+
+    The denominator is the cohort as selected by the marginal, not the cube's
+    grand total: a cube's grand-total row aggregates over time, so it can count
+    patients that the time-active marginal legitimately excludes (an unknown
+    follow-up time cannot be placed on a time axis). Taking it from the marginal
+    keeps the curve internally consistent with the cells it is drawn from.
+    """
+    dims = "D1,D2,D3" if stratified else "D1,D2"
+    stratum = "<D3>" if stratified else None
+
+    chart = (
+        Chart()
+        .source("<E>", "<E.url>")
+        # The marginal that breaks out time and status (and the stratifier), with
+        # every other dimension aggregated away. Selecting it is what makes the
+        # counts below add up to each patient exactly once.
+        .filter(f"<MARGINAL:{dims}>")
+        # The status dimension carries two different quantities in one column, so
+        # split it into two before anything is summed.
+        .derive(
+            {
+                _CUBE_EVENTS: Expr.cond(
+                    Expr.binop("==", Expr.field("<D2:n>"), Expr.lit("<V1>")),
+                    Expr.field("<M>"),
+                    Expr.lit(0),
+                ),
+                _CUBE_CENSORED: Expr.cond(
+                    Expr.binop("==", Expr.field("<D2:n>"), Expr.lit("<V2>")),
+                    Expr.field("<M>"),
+                    Expr.lit(0),
+                ),
+            }
+        )
+    )
+
+    # One row per time point (per stratum), which is what the curve steps through.
+    chart = chart.groupby(([stratum] if stratified else []) + ["<D1>"]).rollup(
+        {
+            _CUBE_EVENTS: Op.sum(_CUBE_EVENTS),
+            _CUBE_CENSORED: Op.sum(_CUBE_CENSORED),
+        }
+    )
+    chart = chart.derive(
+        {
+            "observed": Expr.binop(
+                "+", Expr.field(_CUBE_EVENTS), Expr.field(_CUBE_CENSORED)
+            )
+        }
+    )
+    # Global while the table is still ungrouped, so every curve's run-out reaches
+    # the same right edge rather than only its own last time point.
+    chart = chart.derive({"cohort end": Expr.agg("max", "<D1>")})
+
+    if stratified:
+        chart = chart.groupby(stratum)
+    chart = chart.derive(
+        {
+            "subjects": Expr.agg("sum", "observed"),
+            "deaths": Expr.agg("sum", _CUBE_EVENTS),
+        }
+    )
+    chart = chart.orderby("<D1>")
+    # Cumulative events over the ordered time points, as the fraction still
+    # event-free. Same construction as the line-level curve, counting cells
+    # rather than subjects.
+    chart = chart.derive(
+        {
+            "survival percentage": rolling(
+                Expr.binop(
+                    "*",
+                    Expr.binop(
+                        "-",
+                        Expr.lit(1),
+                        Expr.binop(
+                            "/", Expr.agg("sum", _CUBE_EVENTS), Expr.field("subjects")
+                        ),
+                    ),
+                    Expr.lit(100),
+                )
+            )
+        }
+    )
+    chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
+    chart = chart.derive({"full survival": Expr.lit(100)})
+    chart = chart.derive({"first time": Expr.agg("min", "<D1>")})
+    chart = chart.derive({"first percentage": Expr.agg("max", "survival percentage")})
+    # The flat opening segment and the drop into the first time point, drawn
+    # explicitly: a cube's earliest cell can already carry events, so without
+    # these the curve would begin partway down with nothing above it.
+    chart = chart.derive(
+        {
+            "lead time": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.lit(0),
+                Expr.cond(
+                    Expr.binop("==", Expr.rank(), Expr.lit(2)),
+                    Expr.field("first time"),
+                    Expr.lit(None),
+                ),
+            ),
+            "drop time": Expr.cond(
+                Expr.binop("<=", Expr.rank(), Expr.lit(2)),
+                Expr.field("first time"),
+                Expr.lit(None),
+            ),
+            "drop percentage": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.field("full survival"),
+                Expr.cond(
+                    Expr.binop("==", Expr.rank(), Expr.lit(2)),
+                    Expr.field("first percentage"),
+                    Expr.lit(None),
+                ),
+            ),
+        }
+    )
+    chart = chart.derive(
+        {
+            "label time": Expr.cond(
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.cond(
+                    Expr.binop(">", Expr.field("deaths"), Expr.lit(0)),
+                    Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
+                    Expr.lit(None),
+                ),
+                Expr.lit(None),
+            )
+        }
+    )
+    chart = chart.derive(
+        {
+            "rule time": Expr.cond(
+                Expr.binop("==", Expr.field("deaths"), Expr.lit(0)),
+                Expr.lit(None),
+                Expr.cond(
+                    Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                    Expr.field("label time"),
+                    Expr.cond(
+                        Expr.binop(
+                            "==",
+                            Expr.field("survival percentage"),
+                            Expr.field("final percentage"),
+                        ),
+                        Expr.field("<D1>"),
+                        Expr.lit(None),
+                    ),
+                ),
+            )
+        }
+    )
+    # One tick per time point that censored anybody — not one per patient, which
+    # a cube cannot express: the count is the cell, and there are no rows to
+    # expand it into. So a cell censoring four patients draws the same single
+    # mark as a cell censoring one.
+    chart = chart.derive(
+        {
+            _CUBE_CENSOR_TIME: Expr.cond(
+                Expr.binop(">", Expr.field(_CUBE_CENSORED), Expr.lit(0)),
+                Expr.field("<D1>"),
+                Expr.lit(None),
+            )
+        }
+    )
+    # Rounded percentage for the label — no round() in the grammar, so
+    # floor(x + 0.5) via the modulo operator.
+    chart = chart.derive(
+        {"_label_offset": Expr.binop("+", Expr.field("final percentage"), Expr.lit(0.5))}
+    )
+    chart = chart.derive(
+        {
+            "final survival": Expr.binop(
+                "-",
+                Expr.field("_label_offset"),
+                Expr.binop("%", Expr.field("_label_offset"), Expr.lit(1)),
+            )
+        }
+    )
+    chart = chart.derive(
+        {"survivors": Expr.binop("-", Expr.field("subjects"), Expr.field("deaths"))}
+    )
+    chart = chart.derive(
+        {
+            "final label": Expr.concat(
+                ([Expr.field(stratum)] if stratified else [])
+                + ([Expr.lit(" ")] if stratified else [])
+                + [
+                    Expr.lit("("),
+                    Expr.field("survivors"),
+                    Expr.lit("/"),
+                    Expr.field("subjects"),
+                    Expr.lit(") "),
+                    Expr.field("final survival"),
+                    Expr.lit("%"),
+                ]
+            )
+        }
+    )
+
+    def colour(c):
+        return c.color(field=stratum, type="nominal", omitLegend=True) if stratified else c
+
+    time_axis = dict(type="quantitative", title="time", domain={"min": 0})
+    pct_axis = dict(type="quantitative", domain={"min": 0, "max": 100})
+
+    chart = colour(
+        chart.mark("line").x(field="lead time", **time_axis).y(field="full survival", **pct_axis)
+    )
+    chart = colour(
+        chart.mark("line").x(field="drop time", **time_axis).y(field="drop percentage", **pct_axis)
+    )
+    chart = colour(
+        chart.mark("line")
+        .interpolate("step-after")
+        .x(field="<D1>", **time_axis)
+        .y(field="survival percentage", title="event-free (%)", **pct_axis)
+    )
+    chart = colour(
+        chart.mark("line").x(field="rule time", **time_axis).y(field="final percentage", **pct_axis)
+    )
+    chart = colour(
+        chart.mark("point")
+        .x(field=_CUBE_CENSOR_TIME, **time_axis)
+        .y(field="survival percentage", **pct_axis)
+        .shape(value=_TICK_SHAPE)
+        .size(value=_TICK_SIZE)
+    )
+    chart = colour(
+        chart.mark("text")
+        .place(align="right", dy=-9)
+        .outline(color="white", width=3, opacity=0.7)
+        .avoid_overlap(8)
+        .x(field="label time", **time_axis)
+        .y(field="final percentage", **pct_axis)
+        .text(field="final label", type="nominal")
+    )
+    if stratified:
+        chart = chart.title(stratum, align="right")
+    return chart
 
 
 def _survival_chart(
@@ -3221,6 +3493,143 @@ def generate():
             "V1": PREVIEW_START_EVENT,
             "V2": PREVIEW_END_EVENT,
             "V3": PREVIEW_CENSOR_VALUE,
+        },
+    )
+
+
+    # ---------------------------------------------------------------
+    # Survival from a pre-aggregated cube
+    # ---------------------------------------------------------------
+
+    # Unstratified: the whole cohort, accumulated out of (time, status) cells.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show a survival curve.",
+            "Kaplan-Meier plot for all patients.",
+            "What fraction remain event-free over time?",
+            "Plot event-free survival.",
+        ],
+        spec=_cube_survival_chart(),
+        chart_type=ChartType.LINE,
+        name_hint="survival_cube",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.DETERMINE_RANGE,
+        ],
+        description=(
+            "Survival curve from a pre-aggregated CUBE: one step per time point, falling as "
+            "events accumulate. Needs two dimensions — a QUANTITATIVE elapsed-time dimension "
+            "and a status dimension whose values say whether the subject had the event or was "
+            "still event-free when last seen — plus the two status values themselves. Counts "
+            "the cube's measure rather than reconstructing subjects, so it needs no event log. "
+            "Censored time points carry a tick on the curve."
+        ),
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " The marginal broken out here is time x status, so each "
+            "subject is counted exactly once and the cells add up to the cohort. "
+            "The elapsed-time dimension must be quantitative. Cubes frequently bin time as "
+            "strings ('0', '11', '>=60'), and there is no way to turn those into numbers "
+            "inside the grammar: the in-browser executor coerces them silently, the SQL "
+            "backend refuses outright, so a stringly-typed time dimension is not usable here "
+            "and the cube has to supply a numeric one. "
+            "The denominator is the cohort as the marginal selects it, NOT the cube's "
+            "grand-total row: that row aggregates over time and so can include subjects whose "
+            "follow-up time is unknown, which cannot be placed on a time axis at all. Reading "
+            "it from the marginal keeps the curve consistent with the cells it is drawn from, "
+            "at the cost of a total that may be smaller than the cube's headline count. "
+            "One tick is drawn per time point that censored anybody — not one per subject, "
+            "which a cube cannot express, since the count IS the cell and there are no rows to "
+            "expand it into. A cell censoring four subjects draws the same single mark as a "
+            "cell censoring one, so the ticks show WHERE follow-up ended, not how much. "
+            "The estimate is crude rather than Kaplan-Meier: the denominator stays the whole "
+            "cohort instead of the number still at risk, so a curve whose follow-up thins out "
+            "is held up by subjects no longer being watched. No significance test."
+        ),
+        tasks=(
+            "Read the fraction still event-free at a given time; find where the steepest drops "
+            "happen; read the final event-free percentage and the cohort it rests on."
+        ),
+        review_hint=(
+            "Check the curve starts at 100% and only ever descends — the explicit lead-in and "
+            "drop layers exist because a cube's earliest cell can already carry events, and "
+            "without them the curve begins partway down with nothing above it. The label's "
+            "denominator is the marginal's cohort, which can legitimately be SMALLER than the "
+            "cube's grand total when some subjects have no usable time; confirm that against "
+            "the data rather than reading it as a bug. Ticks mark time points with censoring, "
+            "one per point regardless of how many subjects it covers."
+        ),
+        shape="data_cube",
+        preview_bindings={
+            "E": PREVIEW_CUBE_ENTITY,
+            "D1": PREVIEW_CUBE_TIME,
+            "D2": PREVIEW_CUBE_STATUS,
+            "V1": PREVIEW_CUBE_EVENT_VALUE,
+            "V2": PREVIEW_CUBE_CENSORED_VALUE,
+        },
+    )
+
+    # Stratified: the same accumulation, split by a third dimension.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves split by <D3:n>.",
+            "Kaplan-Meier plot stratified by <D3:n>.",
+            "Does event-free survival differ by <D3:n>?",
+            "Compare survival across <D3:n>.",
+        ],
+        spec=_cube_survival_chart(stratified=True),
+        chart_type=ChartType.LINE,
+        name_hint="survival_cube_stratified",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves from a pre-aggregated CUBE, one per value of a third dimension. "
+            "Needs a QUANTITATIVE elapsed-time dimension, a status dimension saying whether "
+            "the subject had the event, the stratifying dimension, and the two status values. "
+            "Each subject is counted once within its own stratum, so the curves PARTITION the "
+            "cohort and their sizes add back to the marginal's total. Censored time points "
+            "carry a tick on their own curve."
+        ),
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " The marginal broken out here is time x status x stratifier, "
+            "so every subject lands in exactly one stratum and one time point. "
+            "Because a cube dimension is a per-subject attribute rather than an event-level "
+            "column, this has none of the time-varying ambiguity the line-level stratified "
+            "curves have to choose a reading for: there is one value per subject by "
+            "construction, and the strata partition the cohort. Their counts should sum to the "
+            "unstratified curve's. "
+            "The same requirements and caveats as the unstratified cube curve apply: the time "
+            "dimension must be numeric, the denominator comes from the marginal rather than "
+            "the grand total, one tick per censoring time point rather than per subject, and "
+            "the estimate is crude rather than Kaplan-Meier. "
+            "Strata are unequal in size, and a small one steps coarsely — a stratum of four "
+            "moves in quarters — so a dramatic-looking curve may rest on a handful of "
+            "subjects. Read the counts in the labels before reading the gaps."
+        ),
+        tasks=(
+            "Compare event-free survival across groups; see which stratum falls fastest and "
+            "how many subjects each curve rests on."
+        ),
+        review_hint=(
+            "The strata partition the cohort, so the label counts must sum to the unstratified "
+            "curve's total. Check each curve starts at 100%, and that a stratum whose subjects "
+            "all had the event still draws (falling to 0%) rather than vanishing. Previews "
+            "stratified by gender; ever_radiation and metastasis_at_diagnosis are the other "
+            "useful dimensions in this cube."
+        ),
+        shape="data_cube",
+        preview_bindings={
+            "E": PREVIEW_CUBE_ENTITY,
+            "D1": PREVIEW_CUBE_TIME,
+            "D2": PREVIEW_CUBE_STATUS,
+            "D3": PREVIEW_CUBE_STRATUM,
+            "V1": PREVIEW_CUBE_EVENT_VALUE,
+            "V2": PREVIEW_CUBE_CENSORED_VALUE,
         },
     )
 
