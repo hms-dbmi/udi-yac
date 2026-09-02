@@ -59,6 +59,7 @@ function UDIChatInner({
   const overviewOpen = useGlobal((s) => s.overviewOpen);
   const messages = useConversation((s) => s.messages);
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
   const trackEvent = useTracker();
@@ -135,6 +136,12 @@ function UDIChatInner({
   }, [messages, dashboardStore, sourceFields, memoryBankStore, dataPackageStore, trackEvent]);
 
   // Sync data filters from messages (replaces Vue's watch(messages, ...) in dataFiltersStore)
+  //
+  // `loadingPhase` is a change-trigger, not a body input: the validators read
+  // dataPackage/dataFieldDomains through getState(), which the linter can't
+  // see, so without it this effect fires only on a new `messages` identity and
+  // never when the package finishes loading. Re-running is free —
+  // syncFiltersFromMessages skips keys it already holds and only sets on change.
   useEffect(() => {
     const dpState = dataPackageStore.getState();
     const validate = {
@@ -142,7 +149,7 @@ function UDIChatInner({
       isValidPointFilter: dpState.isValidPointFilter,
     };
     dataFiltersStore.getState().syncFiltersFromMessages(messages, validate);
-  }, [messages, dataFiltersStore, dataPackageStore]);
+  }, [messages, loadingPhase, dataFiltersStore, dataPackageStore]);
 
   // Update spec filter structure when LLM FilterData selections change or when
   // the set of active visualizations changes. Brush selections don't need to

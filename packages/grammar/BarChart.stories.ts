@@ -23,7 +23,7 @@ export const Default = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -51,7 +51,7 @@ export const BarChartSexCounts = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -80,11 +80,11 @@ export const BarChartJoin = {
       source: [
         {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
       ],
       transformation: [
@@ -121,7 +121,7 @@ export const SingleBarChart = {
       source: [
         {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
       ],
       transformation: [
@@ -145,7 +145,7 @@ export const SingleBarChartStacked = {
       source: [
         {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
       ],
       transformation: [
@@ -173,7 +173,7 @@ export const SingleBarChartStackedRelative = {
       source: [
         {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
       ],
       transformation: [
@@ -202,7 +202,7 @@ export const SingleBarChartStackedRelative = {
 //     spec: {
 //       source: {
 //         name: 'datasets',
-//         source: './data/datasets.csv',
+//         source: './data/hubmap/datasets.tsv',
 //       },
 //       transformation: [
 //         {
@@ -235,7 +235,7 @@ export const MultipleBarChartStacked = {
     spec: {
       source: {
         name: 'datasets',
-        source: './data/datasets.csv',
+        source: './data/hubmap/datasets.tsv',
       },
       transformation: [
         {
@@ -271,7 +271,7 @@ export const MultipleBarChartStackedReverse = {
     spec: {
       source: {
         name: 'datasets',
-        source: './data/datasets.csv',
+        source: './data/hubmap/datasets.tsv',
       },
       transformation: [
         {
@@ -307,7 +307,7 @@ export const MultipleBarChartStackedRelative = {
     spec: {
       source: {
         name: 'datasets',
-        source: './data/datasets.csv',
+        source: './data/hubmap/datasets.tsv',
       },
       transformation: [
         {
@@ -360,7 +360,7 @@ export const MultipleBarChartStackedRelativeReverse = {
     spec: {
       source: {
         name: 'datasets',
-        source: './data/datasets.csv',
+        source: './data/hubmap/datasets.tsv',
       },
       transformation: [
         {
@@ -413,7 +413,7 @@ export const MultipleBarChartStackedFiltered = {
     spec: {
       source: {
         name: 'datasets',
-        source: './data/datasets.csv',
+        source: './data/hubmap/datasets.tsv',
       },
       transformation: [
         {

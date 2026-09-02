@@ -236,6 +236,64 @@ def simplify_data_schema(data_schema):
     return "\n".join(lines)
 
 
+# Budgets for how much of a categorical field's domain is spelled out in the
+# prompt. A field is enumerated in full only if it fits under BOTH; otherwise
+# the model gets a short sample plus a count, as it always did.
+#
+# Truncating a domain is not a neutral summarisation: a value the model cannot
+# see is a value it cannot filter on, so it invents one and the filter silently
+# matches nothing. The caps exist to keep genuinely unbounded fields (free-text
+# reports, DOIs, adapter sequences, email addresses) out of the prompt, not to
+# ration ordinary vocabularies. The character cap is what does the real work --
+# it excludes long-valued fields regardless of how few values they have.
+#
+# Calibrated against the HuBMAP package: at 40/600 the caps were catching
+# ordinary vocabularies alongside the free text, including `dataset_type`
+# (43 values, 780 chars) -- the most filterable field in the package, and the
+# one the reported "assay type = xenium" miss lands on. At 70/1000 the nine
+# fields still truncated are all genuinely unbounded (histological reports,
+# adapter sequences, DOIs, emails, ROI labels), which is the intent above.
+MAX_ENUMERATED_VALUES = 70
+MAX_ENUMERATED_CHARS = 1000
+
+# How many values to show when a domain is over budget.
+TRUNCATED_SAMPLE_SIZE = 5
+
+
+def _format_point_values(values):
+    """Render a categorical domain, in full when it fits the budget.
+
+    Small domains are listed outright:
+
+    >>> _format_point_values(['raw', 'processed'])
+    '[raw, processed]'
+
+    So are larger ones, as long as they stay under both caps -- this is the
+    case that matters, since the useful value is often last alphabetically:
+
+    >>> out = _format_point_values(['ATACseq', 'CODEX', 'RNAseq', 'Xenium'] * 5)
+    >>> 'Xenium' in out
+    True
+
+    Too many values, or too many characters, falls back to a sample:
+
+    >>> _format_point_values([f'value{i}' for i in range(80)])
+    '[value0, value1, value2, value3, value4, ...] (80 unique)'
+    >>> long_values = ['x' * 400, 'y' * 400, 'z' * 400]
+    >>> _format_point_values(long_values).endswith('(3 unique)')
+    True
+
+    >>> _format_point_values([])
+    '[]'
+    """
+    rendered = [str(v) for v in values]
+    total_chars = sum(len(v) + 2 for v in rendered)
+    if len(rendered) <= MAX_ENUMERATED_VALUES and total_chars <= MAX_ENUMERATED_CHARS:
+        return f"[{', '.join(rendered)}]"
+    sample = ", ".join(rendered[:TRUNCATED_SAMPLE_SIZE])
+    return f"[{sample}, ...] ({len(rendered)} unique)"
+
+
 def simplify_data_domains(data_domains):
     """Simplify data domains for better LLM consumption.
 
@@ -279,13 +337,6 @@ def simplify_data_domains(data_domains):
                 lines.append(f"        range: [{dmin}, {dmax}]")
             elif ftype == "point":
                 values = [v for v in domain.get("values", []) if v is not None]
-                if len(values) <= 8:
-                    vals_str = ", ".join(str(v) for v in values)
-                    lines.append(f"        values: [{vals_str}]")
-                else:
-                    sample = ", ".join(str(v) for v in values[:5])
-                    lines.append(
-                        f"        values: [{sample}, ...] ({len(values)} unique)"
-                    )
+                lines.append(f"        values: {_format_point_values(values)}")
 
     return "\n".join(lines)

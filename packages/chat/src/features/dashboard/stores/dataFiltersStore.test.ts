@@ -7,18 +7,26 @@ import {
   generateFilterMessage,
   messageFilterKey,
   messageFilterKeyWithToolCall,
+  filterSpecForToolCall,
   type DataSelection,
 } from './dataFiltersStore';
 import type { Message, ToolCall } from '@/types/messages';
+import type { ValidStatus } from '@/types/dataPackage';
 
 const alwaysValid = {
-  isValidIntervalFilter: () => ({ isValid: 'yes' }),
-  isValidPointFilter: () => ({ isValid: 'yes' }),
+  isValidIntervalFilter: (): ValidStatus => ({ isValid: 'yes' }),
+  isValidPointFilter: (): ValidStatus => ({ isValid: 'yes' }),
 };
 
 const alwaysInvalid = {
-  isValidIntervalFilter: () => ({ isValid: 'no' }),
-  isValidPointFilter: () => ({ isValid: 'no' }),
+  isValidIntervalFilter: (): ValidStatus => ({ isValid: 'no' }),
+  isValidPointFilter: (): ValidStatus => ({ isValid: 'no' }),
+};
+
+/** Unverifiable, not invalid — e.g. a remote field with >80 distinct values. */
+const alwaysUnknown = {
+  isValidIntervalFilter: (): ValidStatus => ({ isValid: 'unknown' }),
+  isValidPointFilter: (): ValidStatus => ({ isValid: 'unknown' }),
 };
 
 function filterMessage(
@@ -110,6 +118,26 @@ describe('extractAllFilterSpecsFromMessage', () => {
     expect(extracted.map((e) => e.toolCallIndex)).toEqual([0, 2]);
     expect(extracted[0].args.entity).toBe('donors');
     expect(extracted[1].args.entity).toBe('samples');
+  });
+
+  it('picks the args of the requested tool call, not always the first', () => {
+    const m: Message = {
+      role: 'assistant',
+      content: '',
+      tool_calls: [
+        filterMessage('donors', 'age', 0, 10).tool_calls![0],
+        {
+          function: { name: 'RenderVisualization', arguments: {} as Record<string, string> },
+        },
+        filterMessage('samples', 'size', 1, 2).tool_calls![0],
+      ],
+    };
+    expect(filterSpecForToolCall(m, 2)?.entity).toBe('samples');
+    expect(filterSpecForToolCall(m, 0)?.entity).toBe('donors');
+    // Mirrors messageFilterKey's own fallback to tool call 0.
+    expect(filterSpecForToolCall(m)?.entity).toBe('donors');
+    expect(filterSpecForToolCall(m, 1)).toBeNull();
+    expect(filterSpecForToolCall({ role: 'user', content: '' })).toBeNull();
   });
 
   it('normalizes legacy `{min, max}` shape into the current filter.intervalRange shape', () => {
@@ -286,6 +314,21 @@ describe('dataFiltersStore', () => {
       expect(store.getState().getValidDataSelections(alwaysInvalid)).toEqual({});
     });
 
+    // Paired with the syncFiltersFromMessages test below: admission and
+    // application must loosen together, or a filter renders a populated widget
+    // while filtering nothing.
+    it('keeps selections the validator cannot verify', () => {
+      const store = createDataFiltersStore();
+      store.getState().setDataSelection('message-filter-0-0', {
+        dataSourceKey: 'donors',
+        type: 'point',
+        selection: { donor_id: ['HBM123'] },
+      });
+      expect(Object.keys(store.getState().getValidDataSelections(alwaysUnknown))).toEqual([
+        'message-filter-0-0',
+      ]);
+    });
+
     it('keeps point selections that pass validation', () => {
       const store = createDataFiltersStore();
       store.getState().setDataSelection('message-filter-0-0', {
@@ -316,6 +359,24 @@ describe('dataFiltersStore', () => {
         .getState()
         .syncFiltersFromMessages([filterMessage('donors', 'age', 0, 100)], alwaysInvalid);
       expect(store.getState().dataSelections).toEqual({});
+    });
+
+    it('admits filters the validator cannot verify', () => {
+      const store = createDataFiltersStore();
+      store.getState().syncFiltersFromMessages(
+        [
+          filterMessage('donors', 'donor_id', 0, 0, {
+            filterType: 'point',
+            pointValues: ['HBM123'],
+          }),
+        ],
+        alwaysUnknown,
+      );
+      expect(store.getState().dataSelections['message-filter-0-0']).toEqual({
+        dataSourceKey: 'donors',
+        type: 'point',
+        selection: { donor_id: ['HBM123'] },
+      });
     });
 
     it('does not overwrite an existing selection for the same key', () => {

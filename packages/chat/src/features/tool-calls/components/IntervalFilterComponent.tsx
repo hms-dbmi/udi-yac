@@ -49,13 +49,19 @@ export function IntervalFilterComponent({
   const entity = dataSelection.dataSourceKey;
   const field = Object.keys(dataSelection.selection ?? {})[fieldIndex] ?? '';
 
-  const rangeMinMax = useMemo(() => {
+  // A slider needs a real track. Without an interval domain the fallback below
+  // is invented, and dragging it would commit a range that genuinely filters —
+  // e.g. `file_size BETWEEN 0 AND 100` on a column that runs to 4.1e9. So the
+  // widget is gated on `hasRange`, not on the validator, which now admits
+  // unverifiable fields. `Number.isFinite` also catches all-null columns, which
+  // the domain worker reports as {min: Infinity, max: -Infinity}.
+  const { rangeMinMax, hasRange } = useMemo(() => {
     const domain = getDomainForField(entity, field);
-    if (!domain || domain.type !== 'interval') return { min: 0, max: 100 };
-    return {
-      min: (domain.domain as { min: number; max: number }).min,
-      max: (domain.domain as { min: number; max: number }).max,
-    };
+    const iv = domain?.type === 'interval' ? (domain.domain as { min: number; max: number }) : null;
+    if (!iv || !Number.isFinite(iv.min) || !Number.isFinite(iv.max)) {
+      return { rangeMinMax: { min: 0, max: 100 }, hasRange: false };
+    }
+    return { rangeMinMax: { min: iv.min, max: iv.max }, hasRange: true };
   }, [getDomainForField, entity, field]);
 
   const storeRange = useMemo(() => {
@@ -206,7 +212,7 @@ export function IntervalFilterComponent({
   );
 
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
-  const isValid = isValidIntervalFilter(entity, field).isValid === 'yes';
+  const isValid = isValidIntervalFilter(entity, field).isValid !== 'no' && hasRange;
 
   const minText = localRange[0] <= rangeMinMax.min ? 'min' : formatNumber(localRange[0]);
   const maxText = localRange[1] >= rangeMinMax.max ? 'max' : formatNumber(localRange[1]);
@@ -279,8 +285,12 @@ export function IntervalFilterComponent({
           onValueChange={handleRangeChange}
           onValueCommitted={handleRangeCommit}
         />
-      ) : (
+      ) : hasRange ? (
         <span className="text-sm text-destructive">Error: Invalid filter.</span>
+      ) : (
+        <span className="text-sm text-muted-foreground">
+          Range unavailable for {field} — showing the requested bounds only.
+        </span>
       )}
     </div>
   );

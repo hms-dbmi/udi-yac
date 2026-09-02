@@ -52,9 +52,17 @@ def engine(request):
         import seed_starrocks
 
         args = _starrocks_conn_args()
-        entries = seed_starrocks.seed(
-            _SAMPLE_DATA, "udi_parity", only=set(_GOLDENS["sources"]), **args
-        )
+        # Golden sources no longer all sit in one flat directory: donors and
+        # samples come from the HuBMAP package (sample-data/hubmap), penguins
+        # from sample-data itself. Seed per directory into the same database.
+        by_dir: dict[Path, set[str]] = {}
+        for name, filename in _GOLDENS["sources"].items():
+            by_dir.setdefault((_SAMPLE_DATA / filename).parent, set()).add(name)
+        entries = [
+            e
+            for data_dir, names in by_dir.items()
+            for e in seed_starrocks.seed(data_dir, "udi_parity", only=names, **args)
+        ]
         connector = StarRocksConnector(**args, database="udi_parity")
         return QueryEngine(
             connector, table_map={e["entity"]: e["table"] for e in entries}
@@ -147,7 +155,7 @@ def test_cross_entity_selection_with_missing_field_errors_clearly(engine):
         [
             {
                 "vizId": "bad",
-                "source": {"name": "samples", "source": "samples.csv"},
+                "source": {"name": "samples", "source": "hubmap/samples.tsv"},
                 "transformation": [
                     {
                         "filter": {
@@ -202,12 +210,12 @@ def test_offset_pages_row_level_results():
     """`offset` windows row-level results deterministically when the spec
     orders by a UNIQUE key (tie order is otherwise unspecified in SQL —
     same caveat as rolling windows)."""
-    views = {"donors": str(_SAMPLE_DATA / "donors.csv")}
+    views = {"donors": str(_SAMPLE_DATA / "hubmap" / "donors.tsv")}
     engine = QueryEngine(
         DuckDBConnector(views=views), table_map={"donors": "donors"}, row_cap=100
     )
     spec = {
-        "source": {"name": "donors", "source": "donors.csv"},
+        "source": {"name": "donors", "source": "hubmap/donors.tsv"},
         "transformation": [
             {"orderby": [{"field": "hubmap_id", "order": "asc"}]},
         ],
@@ -222,17 +230,22 @@ def test_offset_pages_row_level_results():
 
     # Windows must tile the full ordered result: page1+page2 == first 200.
     full = QueryEngine(
-        DuckDBConnector(views=views), table_map={"donors": "donors"}, row_cap=400
+        DuckDBConnector(views=views), table_map={"donors": "donors"}, row_cap=10_000
     ).run_query(**spec)
+    assert "truncated" not in full, "row_cap must exceed the donors table"
     assert first["displayData"] + second["displayData"] == full["displayData"][:200]
 
-    # Last window: donors has 266 rows -> offset 250 yields 16, untruncated.
-    tail = engine.run_query(**spec, offset=250)
+    # Last window: a partial page, derived from the live row count so a data
+    # refresh can't quietly turn this into an ordinary full page.
+    tail_offset = len(full["displayData"]) - 16
+    tail = engine.run_query(**spec, offset=tail_offset)
     assert len(tail["displayData"]) == 16
     assert "truncated" not in tail
 
     # run_batch forwards offset.
-    batch = engine.run_batch([{"vizId": "q", **spec, "offset": 250}], selections=None)
+    batch = engine.run_batch(
+        [{"vizId": "q", **spec, "offset": tail_offset}], selections=None
+    )
     assert len(batch["q"]["displayData"]) == 16
 
 

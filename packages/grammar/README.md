@@ -12,13 +12,13 @@ The Grammar is defined with TypeScript typings in
 
 ## The grammar
 
-The Grammar maps variables to visual encodings. For instance, to create a scatterplot of height and weight we can map `height_value` to `x` and `weight_value` to `y` from the example `donors.csv` file.
+The Grammar maps variables to visual encodings. For instance, to create a scatterplot of height and weight we can map `height_value` to `x` and `weight_value` to `y` from the example `donors.tsv` file.
 
 ```json
 {
   "source": {
     "name": "donors",
-    "source": "./data/donors.csv"
+    "source": "./data/hubmap/donors.tsv"
   },
   "representation": {
     "mark": "point",
@@ -48,7 +48,7 @@ Scatterplots are easy since they map rows in data tables directly to marks. Howe
 {
   "source": {
     "name": "donors",
-    "source": "./data/donors.csv"
+    "source": "./data/hubmap/donors.tsv"
   },
   "transformation": [
     {
@@ -88,7 +88,7 @@ These data transformations can get more complex. For instance to create a relati
 {
   "source": {
     "name": "datasets",
-    "source": "./data/datasets.csv"
+    "source": "./data/hubmap/datasets.tsv"
   },
   "transformation": [
     {
@@ -185,7 +185,7 @@ npm install udi-toolkit vega vega-lite vega-embed arquero ag-grid-community
 
 <script>
   document.getElementById('chart').spec = {
-    source: { name: 'donors', source: './data/donors.csv' },
+    source: { name: 'donors', source: './data/hubmap/donors.tsv' },
     representation: {
       mark: 'point',
       mapping: [
@@ -231,7 +231,7 @@ import { queryData } from 'udi-toolkit/react';
 
 const result = await queryData(
   {
-    source: { name: 'donors', source: '/data/donors.csv' },
+    source: { name: 'donors', source: '/data/hubmap/donors.tsv' },
     transformation: [{ rollup: { count: { op: 'count' } } }],
   },
   selections,
@@ -267,9 +267,9 @@ const allDomains: DataFieldDomain[] = [];
 
 await loadDataPackage(
   [
-    { name: 'donors', url: '/data/donors.csv' },
-    { name: 'samples', url: '/data/samples.csv' },
-    { name: 'datasets', url: '/data/datasets.csv' },
+    { name: 'donors', url: '/data/hubmap/donors.tsv' },
+    { name: 'samples', url: '/data/hubmap/samples.tsv' },
+    { name: 'datasets', url: '/data/hubmap/datasets.tsv' },
   ],
   {
     onEntityDomains: (entityName, domains) => {

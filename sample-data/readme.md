@@ -73,16 +73,26 @@ there.**
 
 ## Contents
 
-| Path                                              | Description                                                                                                                                                                                                                                              |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./hubmap/datapackage.json`                       | Full HuBMAP data package (donors, samples, datasets), fetched fresh from `https://portal.hubmapconsortium.org/metadata/v0/udi/`. Chat's default data package.                                                                                            |
-| `./hubmap_examples/`                              | Curated HuBMAP subset (TSVs + chart thumbnails) used by the grammar-app examples page.                                                                                                                                                                   |
-| `./penguins.csv`                                  | Classic Palmer Penguins test dataset (loose CSV used by toolkit stories, parity goldens, and agent tests).                                                                                                                                               |
-| `./penguins/`                                     | The same Penguins data as a self-contained package (`penguins.csv` + `datapackage.json`) — the committed default for the server-side query quickstart (`seed_duckdb.py` / `seed_starrocks.py`) and browser mode via `set-chat-data-source.mjs penguins`. |
-| `./donors.csv`, `./samples.csv`, `./datasets.csv` | Loose single-table HuBMAP CSVs used by toolkit stories and grammar-app.                                                                                                                                                                                  |
-| `./example_*.csv`, `./match_test_*.csv`           | Small fixtures for tutorial/example specs.                                                                                                                                                                                                               |
+| Path                                    | Description                                                                                                                                                                                                                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./hubmap/`                             | Full HuBMAP data package (`datapackage.json` + donors/samples/datasets `.tsv`), fetched fresh from `https://portal.hubmapconsortium.org/metadata/v0/udi/`. The **only** copy of HuBMAP in the repo: chat's default package, the toolkit stories' source, and the donors/samples behind the parity goldens. |
+| `./hubmap_examples/thumbnails/`         | Pre-rendered chart thumbnails for the grammar-app examples page. The TSVs that once sat beside them were an unmaintained snapshot and are gone — the page's specs read the live portal, or `./hubmap/` offline.                                                                                            |
+| `./penguins.csv`                        | Classic Palmer Penguins test dataset (loose CSV used by toolkit stories, parity goldens, and agent tests).                                                                                                                                                                                                 |
+| `./penguins/`                           | The same Penguins data as a self-contained package (`penguins.csv` + `datapackage.json`) — the committed default for the server-side query quickstart (`seed_duckdb.py` / `seed_starrocks.py`) and browser mode via `set-chat-data-source.mjs penguins`.                                                   |
+| `./example_*.csv`, `./match_test_*.csv` | Small fixtures for tutorial/example specs.                                                                                                                                                                                                                                                                 |
 
 To refresh HuBMAP: re-run the four `curl`s against the portal `/udi/` endpoint
 into `./hubmap/`, then set the manifest's `udi:path` back to `"./data/hubmap/"`
 (consumers resolve it page-relative, i.e. against the served `/data` mount, not
 against the manifest's own location).
+
+Afterwards, regenerate the parity goldens — they read `hubmap/donors.tsv` and
+`hubmap/samples.tsv`, so a refresh changes their expected rows:
+
+    pnpm build:toolkit && node packages/grammar/scripts/gen-parity-goldens.mjs
+    cd packages/agent && uv run pytest tests/test_query_parity.py
+
+The portal's schema does drift: `assay_type` was dropped in favour of
+`dataset_type` / `soft_assaytype`, so check that anything naming a HuBMAP field
+(stories, specs, `packages/agent/data/data_domains/hubmap_data_schema.json`)
+still resolves.
