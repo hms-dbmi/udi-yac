@@ -342,11 +342,16 @@ _CENSOR_YEAR = "censor year"
 #: horizontal — the wrong axis — so the tick is given as an SVG path, which the
 #: shape channel accepts.
 #:
-#: The path spans one unit and is scaled by sqrt(size)/2, so the tick draws
-#: sqrt(500)/2 ~= 11px tall: enough to read as a mark rather than a thickening of
-#: the line it sits on, without swamping a curve that carries dozens of them.
+#: It must ENCLOSE AN AREA, not be a bare line. Point marks here are painted
+#: filled with `stroke: none`, and filling a zero-width path paints nothing: a
+#: `M0,-0.5L0,0.5` tick sits in the DOM at exactly the right place, correctly
+#: sized, and is completely invisible. So this is a thin rectangle instead.
+#:
+#: The path is scaled by sqrt(size)/2, so at size 500 the tick draws
+#: 0.18 * 11.18 ~= 2px wide by 11px tall: enough to read as a mark rather than a
+#: thickening of the line it sits on, without swamping a curve carrying dozens.
 #: Absolute pixels, so it does not shrink relative to a larger chart.
-_TICK_SHAPE = "M0,-0.5L0,0.5"
+_TICK_SHAPE = "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"
 _TICK_SIZE = 500
 
 #: Non-null markers left behind by the presence joins. A count is used because it
