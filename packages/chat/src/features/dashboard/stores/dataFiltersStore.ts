@@ -6,6 +6,7 @@ import type {
   PointSelection,
 } from 'udi-toolkit/react';
 import type { Message, ToolCall } from '@/types/messages';
+import type { ValidStatus } from '@/types/dataPackage';
 import type { FilterDataArgs } from '@/features/tool-calls';
 
 export type { DataSelection, DataSelections };
@@ -16,8 +17,21 @@ export interface ExtractedFilter {
 }
 
 interface ValidateFilterFn {
-  isValidIntervalFilter: (entity: string, field: string) => { isValid: string };
-  isValidPointFilter: (entity: string, field: string, values: unknown[]) => { isValid: string };
+  isValidIntervalFilter: (entity: string, field: string) => ValidStatus;
+  isValidPointFilter: (entity: string, field: string, values: unknown[]) => ValidStatus;
+}
+
+/**
+ * Admit anything not definitively invalid.
+ *
+ * `unknown` means "can't verify" — a remote package drops categorical domains
+ * above 80 distinct values, so demanding `yes` silently discarded perfectly
+ * good filters. Admission (syncFiltersFromMessages) and application
+ * (getValidDataSelections) must use the SAME rule: loosen one without the
+ * other and a filter renders a populated widget while filtering nothing.
+ */
+function isAdmissible(status: ValidStatus): boolean {
+  return status.isValid !== 'no';
 }
 
 export interface DataFiltersState {
@@ -82,6 +96,24 @@ export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFil
 export function extractFilterSpecFromMessage(message: Message): FilterDataArgs | null {
   const filters = extractAllFilterSpecsFromMessage(message);
   return filters.length > 0 ? filters[0].args : null;
+}
+
+/**
+ * The args of one specific FilterData call in a message.
+ *
+ * `messageFilterKeyWithToolCall` already keys per tool call, so a widget for
+ * tool call #1 must read #1's args — `extractFilterSpecFromMessage` always
+ * returns the first, which made a two-filter message render the wrong field.
+ */
+export function filterSpecForToolCall(
+  message: Message,
+  toolCallIndex?: number,
+): FilterDataArgs | null {
+  const all = extractAllFilterSpecsFromMessage(message);
+  if (all.length === 0) return null;
+  // Matches messageFilterKey's own fallback to tool call 0.
+  if (toolCallIndex == null) return all[0].args;
+  return all.find((f) => f.toolCallIndex === toolCallIndex)?.args ?? null;
 }
 
 /** Normalize legacy `{ entity, field, min, max }` format into the current
@@ -166,20 +198,24 @@ export function createDataFiltersStore() {
 
         if (selection.type === 'interval') {
           if (
-            validate.isValidIntervalFilter(
-              selection.dataSourceKey,
-              Object.keys(selection.selection)[0],
-            ).isValid === 'yes'
+            isAdmissible(
+              validate.isValidIntervalFilter(
+                selection.dataSourceKey,
+                Object.keys(selection.selection)[0],
+              ),
+            )
           ) {
             valid[key] = selection;
           }
         } else if (selection.type === 'point') {
           if (
-            validate.isValidPointFilter(
-              selection.dataSourceKey,
-              Object.keys(selection.selection)[0],
-              Object.values(selection.selection)[0],
-            ).isValid === 'yes'
+            isAdmissible(
+              validate.isValidPointFilter(
+                selection.dataSourceKey,
+                Object.keys(selection.selection)[0],
+                Object.values(selection.selection)[0],
+              ),
+            )
           ) {
             valid[key] = selection;
           }
@@ -202,9 +238,7 @@ export function createDataFiltersStore() {
           if (key in next) continue;
 
           if (filterSpec.filter.filterType === 'interval') {
-            if (
-              validate.isValidIntervalFilter(filterSpec.entity, filterSpec.field).isValid !== 'yes'
-            )
+            if (!isAdmissible(validate.isValidIntervalFilter(filterSpec.entity, filterSpec.field)))
               continue;
             next[key] = {
               dataSourceKey: filterSpec.entity,
@@ -219,11 +253,13 @@ export function createDataFiltersStore() {
             changed = true;
           } else {
             if (
-              validate.isValidPointFilter(
-                filterSpec.entity,
-                filterSpec.field,
-                filterSpec.filter.pointValues,
-              ).isValid !== 'yes'
+              !isAdmissible(
+                validate.isValidPointFilter(
+                  filterSpec.entity,
+                  filterSpec.field,
+                  filterSpec.filter.pointValues,
+                ),
+              )
             )
               continue;
             next[key] = {

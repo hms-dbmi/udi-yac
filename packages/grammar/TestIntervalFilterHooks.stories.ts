@@ -30,7 +30,7 @@ export const ReadFilterStateX = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -75,7 +75,7 @@ export const ReadFilterStateXY = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -120,7 +120,7 @@ export const ReadFilterStateXYExtraCharts = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -148,7 +148,7 @@ export const ReadFilterStateXYExtraCharts = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -167,7 +167,7 @@ export const ReadFilterStateXYExtraCharts = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -186,7 +186,7 @@ export const ReadFilterStateXYExtraCharts = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -215,7 +215,7 @@ export const WriteFilterStateX = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -264,7 +264,7 @@ export const WriteFilterStateXY = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -304,7 +304,7 @@ export const ReadWriteFilterStateXHistogram = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -374,7 +374,7 @@ export const ReadWriteFilterStateX = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -416,7 +416,7 @@ export const ReadWriteFilterStateY = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -464,7 +464,7 @@ export const ReadWriteFilterStateXY = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -509,7 +509,7 @@ export const ReadWriteFilterStateTwoCharts = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -542,7 +542,7 @@ export const ReadWriteFilterStateTwoCharts = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -597,7 +597,7 @@ export const ReadWriteFilterStateXYExtraCharts = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -635,7 +635,7 @@ export const ReadWriteFilterStateXYExtraCharts = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -671,7 +671,7 @@ export const ReadWriteFilterStateXYExtraCharts = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {

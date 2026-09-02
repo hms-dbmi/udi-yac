@@ -42,7 +42,7 @@ export const Default = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       representation: {
         mark: 'point',
@@ -61,7 +61,7 @@ export const HideVegaLiteActions = {
       config: { hideActions: true },
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       representation: {
         mark: 'point',
@@ -79,7 +79,7 @@ export const Heatmap = {
     spec: {
       source: {
         name: 'datasets',
-        source: './data/datasets.csv',
+        source: './data/hubmap/datasets.tsv',
       },
       transformation: [
         {
@@ -175,7 +175,7 @@ export const Layering = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -232,7 +232,7 @@ export const Checkboxes = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       representation: {
         mark: 'checkbox',

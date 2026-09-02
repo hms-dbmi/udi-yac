@@ -11,6 +11,8 @@ import { highlightMatch } from '@/utils/highlightMatch';
 interface FieldListChipProps {
   entity: string;
   fields: string[];
+  /** When set, chips become buttons that report the field they name. */
+  onSelect?: (field: string) => void;
 }
 
 interface FieldMeta {
@@ -27,7 +29,7 @@ const DEFAULT_VISIBLE = 5;
  * chip carries a tooltip with the field's description and data type, and the
  * expanded view exposes a substring filter that highlights matches.
  */
-export function FieldListChip({ entity, fields }: FieldListChipProps) {
+export function FieldListChip({ entity, fields, onSelect }: FieldListChipProps) {
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const dataPackage = useDataPackage((s) => s.dataPackage);
@@ -99,7 +101,13 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
       <TooltipProvider delay={150} timeout={0}>
         <div className="flex flex-wrap gap-1">
           {visible.map((field) => (
-            <FieldChip key={field} field={field} meta={fieldMeta[field]} highlight={trimmedQuery} />
+            <FieldChip
+              key={field}
+              field={field}
+              meta={fieldMeta[field]}
+              highlight={trimmedQuery}
+              onSelect={onSelect}
+            />
           ))}
           {filtered.length === 0 && (
             <span className="text-[10px] text-muted-foreground">
@@ -133,14 +141,35 @@ interface FieldChipProps {
   field: string;
   meta: FieldMeta | undefined;
   highlight: string;
+  onSelect?: (field: string) => void;
 }
 
-function FieldChip({ field, meta, highlight }: FieldChipProps) {
+function FieldChip({ field, meta, highlight, onSelect }: FieldChipProps) {
   return (
     <Tooltip>
       <TooltipTrigger
         render={
-          <Badge variant="secondary" className="max-w-[250px] cursor-default font-mono text-[10px]">
+          <Badge
+            variant="secondary"
+            className={
+              onSelect
+                ? 'max-w-[250px] cursor-pointer font-mono text-[10px] hover:bg-muted'
+                : 'max-w-[250px] cursor-default font-mono text-[10px]'
+            }
+            role={onSelect ? 'button' : undefined}
+            tabIndex={onSelect ? 0 : undefined}
+            onClick={onSelect ? () => onSelect(field) : undefined}
+            onKeyDown={
+              onSelect
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelect(field);
+                    }
+                  }
+                : undefined
+            }
+          >
             <span className="min-w-0 truncate">{highlightMatch(field, highlight)}</span>
             <Info className="shrink-0 opacity-60" />
           </Badge>

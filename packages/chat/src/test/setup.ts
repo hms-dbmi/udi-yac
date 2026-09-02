@@ -17,3 +17,8 @@ globalThis.ResizeObserver ??= class {
 } as unknown as typeof ResizeObserver;
 
 Element.prototype.getAnimations ??= () => [];
+
+// Base UI's Checkbox dispatches a synthetic PointerEvent on click; jsdom
+// doesn't implement the constructor, so a click would throw instead of
+// toggling. MouseEvent carries everything the handlers read.
+globalThis.PointerEvent ??= class extends MouseEvent {} as unknown as typeof PointerEvent;

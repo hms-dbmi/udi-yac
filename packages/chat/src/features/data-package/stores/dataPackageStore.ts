@@ -8,6 +8,9 @@ import type {
   ExportRowSet,
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
+// Relative, not via the feature barrel: the barrel already imports this store,
+// and normalizePointValues is needed at module-eval time by the validators.
+import { normalizePointValues } from '../utils/filterDiagnosis';
 import { httpError } from '@/utils/httpError';
 import {
   loadDataPackage,
@@ -54,6 +57,24 @@ export interface DataPackageState {
     fetchOptions?: RequestInit,
   ) => Promise<void>;
   getDomainForField: (entity: string, field: string) => DataFieldDomain | undefined;
+  /**
+   * Can this filter be applied?
+   *
+   * - `no`   — definitively invalid: the field is not in the schema, or it has
+   *            a domain and a requested value isn't in it.
+   * - `unknown` — unverifiable: the package hasn't loaded, or the field exists
+   *            but has no domain of the right type. Remote packages omit
+   *            categorical domains above 80 distinct values (introspect.py), so
+   *            this is common and must NOT be treated as invalid — callers
+   *            admit anything that isn't `no`.
+   * - `yes`  — verified against a real domain.
+   *
+   * `no` is anchored to `sourceFields`, which is set atomically when the
+   * package loads and never changes after, rather than to domain presence,
+   * which streams in per entity. That makes `no` monotone: a filter rejected
+   * once stays rejected, and one admitted while domains were still arriving is
+   * never silently lost.
+   */
   isValidIntervalFilter: (entity: string, field: string) => ValidStatus;
   isValidPointFilter: (entity: string, field: string, values: unknown[]) => ValidStatus;
   getEntityRelationship: (originSource: string, targetSource: string) => EntityRelationship | null;
@@ -167,21 +188,27 @@ export function createDataPackageStore() {
 
     isValidIntervalFilter: (entity: string, field: string): ValidStatus => {
       const state = get();
-      if (!state.dataPackage?.resources) return { isValid: 'unknown' };
+      if (!state.dataPackage?.resources || !state.sourceFields) return { isValid: 'unknown' };
+      if (!state.sourceFields[entity]?.includes(field)) return { isValid: 'no' };
       const domain = state.getDomainForField(entity, field);
-      if (!domain) return { isValid: 'no' };
+      if (domain?.type !== 'interval') return { isValid: 'unknown' };
       return { isValid: 'yes' };
     },
 
     isValidPointFilter: (entity: string, field: string, values: unknown[]): ValidStatus => {
       const state = get();
-      if (!state.dataPackage?.resources) return { isValid: 'unknown' };
+      if (!state.dataPackage?.resources || !state.sourceFields) return { isValid: 'unknown' };
+      if (!state.sourceFields[entity]?.includes(field)) return { isValid: 'no' };
       const domain = state.getDomainForField(entity, field);
-      if (!domain) return { isValid: 'no' };
+      if (domain?.type !== 'point') return { isValid: 'unknown' };
       const validValues = (domain.domain as CategoricalDomain).values;
-      if (!validValues) return { isValid: 'no' };
-      const isValid = values.every((v) => validValues.includes(v as string));
-      return { isValid: isValid ? 'yes' : 'no' };
+      if (!validValues) return { isValid: 'unknown' };
+      // An empty request is not a miss: `handleClearAll` and unticking the
+      // last box both commit `[]`, and the agent defaults an omitted
+      // `pointValues` to `[""]`. See normalizePointValues.
+      const requested = normalizePointValues(values);
+      if (requested.length === 0) return { isValid: 'yes' };
+      return { isValid: requested.every((v) => validValues.includes(v)) ? 'yes' : 'no' };
     },
 
     getEntityRelationship: (

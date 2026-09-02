@@ -58,10 +58,12 @@ export function FilterToolbar() {
       if (Object.values(sel.selection).every((v) => Array.isArray(v) && v.length === 0))
         return false;
       if (!key.startsWith('message-filter-')) return false;
+      // `!== 'no'` mirrors the store's admission rule: an unverifiable filter
+      // is applied to the data, so it must also get a chip the user can clear.
       if (sel.type === 'interval') {
         return (
           validate.isValidIntervalFilter(sel.dataSourceKey, Object.keys(sel.selection)[0])
-            .isValid === 'yes'
+            .isValid !== 'no'
         );
       }
       if (sel.type === 'point') {
@@ -70,7 +72,7 @@ export function FilterToolbar() {
             sel.dataSourceKey,
             Object.keys(sel.selection)[0],
             Object.values(sel.selection)[0] as unknown[],
-          ).isValid === 'yes'
+          ).isValid !== 'no'
         );
       }
       return false;

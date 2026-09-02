@@ -1,8 +1,8 @@
 {
   "sources": {
     "penguins": "penguins.csv",
-    "donors": "donors.csv",
-    "samples": "samples.csv"
+    "donors": "hubmap/donors.tsv",
+    "samples": "hubmap/samples.tsv"
   },
   "cases": [
     {
@@ -541,7 +541,7 @@
       "spec": {
         "source": {
           "name": "donors",
-          "source": "donors.csv"
+          "source": "hubmap/donors.tsv"
         },
         "transformation": [
           {
@@ -603,22 +603,30 @@
       "expect": {
         "displayData": [
           {
-            "sex": "Male",
-            "max_pct": 0.9924812030075187
-          },
-          {
             "sex": "Female",
             "max_pct": 1
+          },
+          {
+            "sex": "Unknown",
+            "max_pct": 0.9620758483033932
+          },
+          {
+            "sex": "Male",
+            "max_pct": 0.9960079840319361
           }
         ],
         "allData": [
           {
-            "sex": "Male",
-            "max_pct": 0.9924812030075187
-          },
-          {
             "sex": "Female",
             "max_pct": 1
+          },
+          {
+            "sex": "Unknown",
+            "max_pct": 0.9620758483033932
+          },
+          {
+            "sex": "Male",
+            "max_pct": 0.9960079840319361
           }
         ],
         "isSubset": false
@@ -920,11 +928,11 @@
         "source": [
           {
             "name": "donors",
-            "source": "donors.csv"
+            "source": "hubmap/donors.tsv"
           },
           {
             "name": "samples",
-            "source": "samples.csv"
+            "source": "hubmap/samples.tsv"
           }
         ],
         "transformation": [
@@ -952,22 +960,30 @@
       "expect": {
         "displayData": [
           {
-            "sex": "Male",
-            "samples_count": 995
+            "sex": "Female",
+            "samples_count": 2935
           },
           {
-            "sex": "Female",
-            "samples_count": 1359
+            "sex": "Male",
+            "samples_count": 2174
+          },
+          {
+            "sex": "Unknown",
+            "samples_count": 33
           }
         ],
         "allData": [
           {
-            "sex": "Male",
-            "samples_count": 995
+            "sex": "Female",
+            "samples_count": 2935
           },
           {
-            "sex": "Female",
-            "samples_count": 1359
+            "sex": "Male",
+            "samples_count": 2174
+          },
+          {
+            "sex": "Unknown",
+            "samples_count": 33
           }
         ],
         "isSubset": false
@@ -1046,7 +1062,7 @@
       "spec": {
         "source": {
           "name": "samples",
-          "source": "samples.csv"
+          "source": "hubmap/samples.tsv"
         },
         "transformation": [
           {
@@ -1084,38 +1100,38 @@
       "expect": {
         "displayData": [
           {
+            "sample_category": "section",
+            "n": 1469
+          },
+          {
             "sample_category": "block",
-            "n": 393
+            "n": 977
           },
           {
             "sample_category": "organ",
-            "n": 207
+            "n": 342
           },
           {
             "sample_category": "suspension",
-            "n": 53
-          },
-          {
-            "sample_category": "section",
-            "n": 706
+            "n": 147
           }
         ],
         "allData": [
           {
             "sample_category": "section",
-            "n": 1182
+            "n": 2659
           },
           {
             "sample_category": "block",
-            "n": 756
+            "n": 1660
           },
           {
             "sample_category": "organ",
-            "n": 344
+            "n": 601
           },
           {
             "sample_category": "suspension",
-            "n": 72
+            "n": 222
           }
         ],
         "isSubset": true

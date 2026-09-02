@@ -56,7 +56,7 @@ interface EntityOverviewProps {
 
 /**
  * ponytail: cap the expanded value list. An id-like column has one distinct
- * value per row (9474 for HuBMAP `datasets`), and the domain worker caps
+ * value per row (9530 for HuBMAP `datasets`), and the domain worker caps
  * nothing. Virtualise only if a real package needs more than this on screen.
  */
 const EXPANDED_VALUE_CAP = 200;
@@ -98,7 +98,7 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
 
   // When the query matched this field's values rather than its name, the label
   // narrows to "N of M values" and expanding shows just the matches — otherwise
-  // a hit on one of 9474 values would be impossible to find.
+  // a hit on one of 9530 values would be impossible to find.
   const matching = useMemo(
     () => (query ? values.filter((v) => v.toLowerCase().includes(query)) : values),
     [values, query],
@@ -245,7 +245,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
   const [showAllFields, setShowAllFields] = useState(false);
 
   // Opt-in, because mounting the table is by far the most expensive thing on
-  // this panel: ag-grid builds a RowNode per source row (9474 for HuBMAP
+  // this panel: ag-grid builds a RowNode per source row (9530 for HuBMAP
   // `datasets`) plus a Vue render root per visible cell, and TableComponent
   // scans a full column per mapping to derive scale domains. Rendering it
   // eagerly made expanding an entity block the main thread for ~1s — long

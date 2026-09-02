@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed a local StarRocks instance from a directory of CSVs.
+"""Seed a local StarRocks instance from a directory of CSV/TSV files.
 
 Companion to dev/starrocks/docker-compose.yml. Reads the directory's
 datapackage.json for entity names and field typing (generate one for any CSV
@@ -128,7 +128,7 @@ def load_package(data_dir: Path) -> list[dict]:
                 }
             )
     else:
-        for csv_path in sorted(data_dir.glob("*.csv")):
+        for csv_path in sorted([*data_dir.glob("*.csv"), *data_dir.glob("*.tsv")]):
             entries.append(
                 {
                     "entity": csv_path.stem,
@@ -140,7 +140,7 @@ def load_package(data_dir: Path) -> list[dict]:
                 }
             )
     if not entries:
-        raise SystemExit(f"no CSVs or datapackage.json found in {data_dir}")
+        raise SystemExit(f"no CSV/TSV files or datapackage.json found in {data_dir}")
     return entries
 
 
@@ -168,8 +168,12 @@ def read_csv(
     decides columns with no numeric evidence at all (e.g. entirely
     sentinel/empty).
     """
-    with open(entry["csv_path"], newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
+    # Delimiter by extension, matching the toolkit's own inference
+    # (loadDataPackage.ts / DataSourcesStore.ts). The committed HuBMAP package
+    # ships .tsv, so without this its columns all collapse into one.
+    path = Path(entry["csv_path"])
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter="\t" if path.suffix == ".tsv" else ",")
         header = next(reader)
         raw_rows = [row for row in reader if row]
 
