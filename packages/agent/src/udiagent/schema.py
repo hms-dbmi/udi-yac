@@ -246,8 +246,15 @@ def simplify_data_schema(data_schema):
 # reports, DOIs, adapter sequences, email addresses) out of the prompt, not to
 # ration ordinary vocabularies. The character cap is what does the real work --
 # it excludes long-valued fields regardless of how few values they have.
-MAX_ENUMERATED_VALUES = 40
-MAX_ENUMERATED_CHARS = 600
+#
+# Calibrated against the HuBMAP package: at 40/600 the caps were catching
+# ordinary vocabularies alongside the free text, including `dataset_type`
+# (43 values, 780 chars) -- the most filterable field in the package, and the
+# one the reported "assay type = xenium" miss lands on. At 70/1000 the nine
+# fields still truncated are all genuinely unbounded (histological reports,
+# adapter sequences, DOIs, emails, ROI labels), which is the intent above.
+MAX_ENUMERATED_VALUES = 70
+MAX_ENUMERATED_CHARS = 1000
 
 # How many values to show when a domain is over budget.
 TRUNCATED_SAMPLE_SIZE = 5
@@ -270,9 +277,9 @@ def _format_point_values(values):
 
     Too many values, or too many characters, falls back to a sample:
 
-    >>> _format_point_values([f'value{i}' for i in range(50)])
-    '[value0, value1, value2, value3, value4, ...] (50 unique)'
-    >>> long_values = ['x' * 200, 'y' * 200, 'z' * 200]
+    >>> _format_point_values([f'value{i}' for i in range(80)])
+    '[value0, value1, value2, value3, value4, ...] (80 unique)'
+    >>> long_values = ['x' * 400, 'y' * 400, 'z' * 400]
     >>> _format_point_values(long_values).endswith('(3 unique)')
     True
 

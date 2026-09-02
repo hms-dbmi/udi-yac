@@ -50,7 +50,10 @@ def test_domain_over_value_cap_is_sampled():
 
 def test_domain_under_value_cap_but_over_char_cap_is_sampled():
     # Few values, each enormous: free-text reports, DOIs, adapter sequences.
-    values = ["x" * 300, "y" * 300, "z" * 300]
+    # Sized off the cap so raising it can't quietly turn this into the
+    # within-budget case (which is exactly what a hardcoded length did).
+    huge = MAX_ENUMERATED_CHARS // 2
+    values = ["x" * huge, "y" * huge, "z" * huge]
     assert len(values) <= MAX_ENUMERATED_VALUES
     assert sum(len(v) + 2 for v in values) > MAX_ENUMERATED_CHARS
     out = simplify_data_domains(_point_field(values))
