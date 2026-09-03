@@ -469,11 +469,25 @@ export interface WindowExpr {
 export interface AggregateFunction {
   /**
    * The operation to apply (e.g., count, sum, mean, etc.).
+   *
+   * `count` counts ROWS. Use `distinct` to count how many different values a
+   * field takes — the number of *entities* in a table that holds several rows
+   * per entity (one row per event, per sample, ...), or on the "one" side of a
+   * one-to-many join, where `count` would multiply by the child rows.
    */
-  op: 'count' | 'sum' | 'mean' | 'min' | 'max' | 'median' | 'frequency';
+  op:
+    | 'count'
+    | 'sum'
+    | 'mean'
+    | 'min'
+    | 'max'
+    | 'median'
+    | 'frequency'
+    | 'distinct';
 
   /**
-   * The field to aggregate. Optional.
+   * The field to aggregate. Optional for `count`/`frequency` (which count
+   * rows); required for every other op, `distinct` included.
    */
   field?: string;
 }

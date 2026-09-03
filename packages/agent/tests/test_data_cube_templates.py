@@ -275,7 +275,7 @@ def test_selection_scopes_tools_by_tag():
     line_only = _select_tools(tool_defs, tool_tags, {"line_item"})
     lnames = {d["function"]["name"] for d in line_only}
     assert all("line_item" in tool_tags[n] for n in lnames)
-    assert len(cube_only) == 11 and len(line_only) == 52
+    assert len(cube_only) == 11 and len(line_only) == 54
 
 
 def test_no_active_template_set_switch():

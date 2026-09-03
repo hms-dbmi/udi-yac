@@ -1,5 +1,5 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import type { UDIGrammar } from 'udi-toolkit/react';
+import { pipelineOutputFields, type UDIGrammar } from 'udi-toolkit/react';
 import type { Layout, LayoutItem } from 'react-grid-layout';
 import type { Message } from '@/types/messages';
 import type { DataFiltersState } from './dataFiltersStore';
@@ -273,11 +273,19 @@ export function injectInteractivity(
       ? [rawMapping]
       : [];
 
+  // A brush may only name a column the pipeline actually produces. Mapping a
+  // field that `binby`/`rollup` consumed — `birth_date` behind a histogram of
+  // birth years, say — yields a selection the executor can't resolve (Arquero
+  // throws `Invalid column reference`, SQL backends reject the column). When
+  // the pipeline isn't statically analyzable, fall back to the source columns.
+  const availableFields =
+    pipelineOutputFields(spec, sourceFields) ??
+    (sourceFields?.[sourceName] ? new Set(sourceFields[sourceName]) : null);
+
   const resolveField = (mapping: SpecMappingLike): string | null => {
-    const fields = sourceFields?.[sourceName];
-    if (!fields) return mapping.field;
-    if (fields.includes(mapping.field)) return mapping.field;
-    if (mapping.title && fields.includes(mapping.title)) return mapping.title;
+    if (!availableFields) return mapping.field;
+    if (availableFields.has(mapping.field)) return mapping.field;
+    if (mapping.title && availableFields.has(mapping.title)) return mapping.title;
     return null;
   };
 
@@ -319,7 +327,6 @@ export function injectInteractivity(
     };
   }
 
-  console.log({ interactiveSpec });
   interactiveSpec.config = { hideActions: true };
   return interactiveSpec;
 }
@@ -603,10 +610,18 @@ export function createDashboardStore() {
         const baseTrans = structuredClone(viz.spec.transformation ?? []) as object[];
         // Structured expression AST, not the legacy raw string form — the
         // remote query backend rejects raw Arquero strings by design.
+        // These are appended AFTER the spec's own transformations, so they can
+        // only name columns that survive the pipeline. A represented field the
+        // pipeline aggregated away compiles to `WHERE <field> IS NOT NULL`
+        // against the post-rollup table, which fails outright rather than
+        // filtering nothing.
+        const availableFields = pipelineOutputFields(viz.spec, dpState.sourceFields);
         const nullFilters = state.filterAllNullValues
-          ? getRepresentedFields(viz.spec).map((field) => ({
-              filter: { op: '!=', left: { field }, right: { literal: null } },
-            }))
+          ? getRepresentedFields(viz.spec)
+              .filter((field) => availableFields?.has(field) ?? true)
+              .map((field) => ({
+                filter: { op: '!=', left: { field }, right: { literal: null } },
+              }))
           : [];
 
         const newTransformation = [

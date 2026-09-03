@@ -43,6 +43,57 @@ def _extract_placeholders(template_str: str) -> set[str]:
     return set(re.findall(r'<([^>]+)>', template_str))
 
 
+def aggregate_input_placeholders(spec_template: str) -> set[str]:
+    """Placeholder bases a template feeds to an aggregate and never encodes.
+
+    A rollup input is collapsed into one number per group, so it is not a
+    category axis: the "too many unique values" limit that protects an encoded
+    dimension must not apply to it. `{"op": "distinct", "field": "<F2>"}` is
+    the case that forces the distinction — the column counted there is an
+    identifying key, so a high cardinality is the point.
+
+    A composite output name like `"distinct <F2>"` does not count as encoding
+    `<F2>`; only a mapping whose whole field is the bare placeholder does.
+    """
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return set()
+
+    def base_of(value):
+        if not isinstance(value, str):
+            return None
+        match = re.fullmatch(r"<([^>]+)>", value)
+        return match.group(1).split(":")[0] if match else None
+
+    inputs: set[str] = set()
+    for transform in spec.get("transformation") or []:
+        if not isinstance(transform, dict):
+            continue
+        for agg in (transform.get("rollup") or {}).values():
+            if isinstance(agg, dict):
+                base = base_of(agg.get("field"))
+                if base:
+                    inputs.add(base)
+
+    encoded: set[str] = set()
+    representation = spec.get("representation") or {}
+    layers = representation if isinstance(representation, list) else [representation]
+    for layer in layers:
+        if not isinstance(layer, dict):
+            continue
+        mappings = layer.get("mapping") or []
+        if isinstance(mappings, dict):
+            mappings = [mappings]
+        for mapping in mappings:
+            if isinstance(mapping, dict):
+                base = base_of(mapping.get("field"))
+                if base:
+                    encoded.add(base)
+
+    return inputs - encoded
+
+
 def _derive_tool_name(template: dict, index: int) -> str:
     """Derive a meaningful tool name from chart_type + description keywords."""
     chart_type = template.get("chart_type", "chart").lower()
@@ -251,7 +302,11 @@ _ENCODING_LABELS = {
 }
 
 
-def _build_field_description(field_type: str | None, encoding_info: dict | None) -> str:
+def _build_field_description(
+    field_type: str | None,
+    encoding_info: dict | None,
+    aggregate_input: bool = False,
+) -> str:
     """Build a descriptive string for a field parameter.
 
     Args:
@@ -265,6 +320,19 @@ def _build_field_description(field_type: str | None, encoding_info: dict | None)
     type_str = resolved_type or "any type"
 
     encodings = encoding_info.get("encodings", []) if encoding_info else []
+    if aggregate_input:
+        # Its own values are collapsed into one number per group, so this is
+        # not a category axis — for a distinct count it is an identifying key,
+        # whose cardinality is the point rather than a problem.
+        where = (
+            f" (plotted on the {_ENCODING_LABELS.get(encodings[0], encodings[0])})"
+            if encodings
+            else ""
+        )
+        return (
+            f"{type_str} field to aggregate — its values are summarized, not "
+            f"drawn as categories{where}."
+        )
     if encodings:
         labels = [_ENCODING_LABELS.get(e, e) for e in encodings]
         return f"{type_str} field, encodes {', '.join(labels)}."
@@ -290,6 +358,7 @@ def _generate_single_entity_tool(
     tool_name = _derive_tool_name(template, index)
     description = _build_tool_description(template)
     encoding_info = _extract_encoding_info(spec_template)
+    aggregate_inputs = aggregate_input_placeholders(spec_template)
 
     properties = {
         "entity": {"type": "string", "description": "The data entity (table) to visualize."},
@@ -317,12 +386,16 @@ def _generate_single_entity_tool(
         seen.add(param_name)
 
         field_type = _get_field_type_for_placeholder(ph)
-        description = _build_field_description(field_type, encoding_info.get(base))
+        # Keep this out of `description`: that name holds the TOOL's
+        # description, which the model reads to pick a template at all.
+        field_description = _build_field_description(
+            field_type, encoding_info.get(base), base in aggregate_inputs
+        )
         if base.startswith("D"):
-            description = "cube " + description.replace("field", "dimension", 1)
+            field_description = "cube " + field_description.replace("field", "dimension", 1)
         properties[param_name] = {
             "type": "string",
-            "description": description,
+            "description": field_description,
         }
         required.append(param_name)
         param_map[param_name] = base

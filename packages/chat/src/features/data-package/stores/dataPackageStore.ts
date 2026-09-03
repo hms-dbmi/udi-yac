@@ -76,6 +76,11 @@ export interface DataPackageState {
   /** A field's declared `udi:data_type` (quantitative / ordinal / nominal).
    *  Available straight from the schema, unlike domains, which load from CSVs. */
   getFieldDataType: (entity: string, field: string) => string | undefined;
+  /** Which entity a column identifies: the entity itself when the column is
+   *  its primary key, the referenced entity when it's a foreign key, else
+   *  null. Lets a distinct count of a key be labelled by what it counts
+   *  ("Patients") rather than by the column ("Distinct Research Id"). */
+  getIdentifiedEntity: (entity: string, field: string) => string | null;
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
@@ -294,6 +299,18 @@ export function createDataPackageStore() {
     getFieldDataType: (entity: string, field: string): string | undefined => {
       const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
       return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:data_type'];
+    },
+
+    getIdentifiedEntity: (entity: string, field: string): string | null => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      if (!resource?.schema) return null;
+      for (const fk of resource.schema.foreignKeys ?? []) {
+        if ((fk.fields ?? []).includes(field)) return fk.reference?.resource ?? null;
+      }
+      if ((resource.schema.primaryKey ?? []).includes(field)) return entity;
+      // Packages predating primaryKey inference still mark unique columns.
+      const declared = resource.schema.fields?.find((f) => f.name === field);
+      return declared?.['udi:unique'] ? entity : null;
     },
 
     setFilteredData: (entity: string, data: ExportRowSet) => {

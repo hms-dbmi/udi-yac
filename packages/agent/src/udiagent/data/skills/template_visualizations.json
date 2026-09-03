@@ -36,6 +36,42 @@
     "summary_template": "Displays the number of <E> in each <F> category as horizontal bars."
   },
   {
+    "query_templates": [
+      "How many different <F2:n> are there, grouped by <F:n>?",
+      "How many <F2:n> are represented in each <F:n>?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"distinct <F2:n>\": {\"op\": \"distinct\", \"field\": \"<F2:n>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"distinct <F2:n>\", \"type\": \"quantitative\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value", "Determine_Range"],
+    "tags": ["line_item", "barchart"],
+    "description": "Counts how many different values an identifying column takes in each category \u2014 the entity count for a table with several rows per entity \u2014 as a vertical bar chart.",
+    "design_considerations": "Counts distinct keys rather than rows, so repeated rows for the same entity are counted once. Vertical orientation because category count is small (<=4).",
+    "tasks": "Compare entity counts across categories without double-counting repeated rows.",
+    "title_template": "Bar chart of the number of <F2:n> by <F>",
+    "summary_template": "Displays how many different <F2:n> values fall in each <F> category as vertical bars."
+  },
+  {
+    "query_templates": [
+      "How many different <F2:n> are there, grouped by <F:n>?",
+      "How many <F2:n> are represented in each <F:n>?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"groupby\": \"<F>\"}, {\"rollup\": {\"distinct <F2:n>\": {\"op\": \"distinct\", \"field\": \"<F2:n>\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"distinct <F2:n>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"<F>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "barchart",
+    "chart_complexity": "simple",
+    "spec_key_count": 12,
+    "task_types": ["Compute_Derived_Value", "Determine_Range"],
+    "tags": ["line_item", "barchart"],
+    "description": "Counts how many different values an identifying column takes in each category \u2014 the entity count for a table with several rows per entity \u2014 as a horizontal bar chart.",
+    "design_considerations": "Counts distinct keys rather than rows, so repeated rows for the same entity are counted once. Horizontal orientation because category count is high (>4), allowing longer labels on the y-axis.",
+    "tasks": "Compare entity counts across categories without double-counting repeated rows.",
+    "title_template": "Bar chart of the number of <F2:n> by <F>",
+    "summary_template": "Displays how many different <F2:n> values fall in each <F> category as horizontal bars."
+  },
+  {
     "query_templates": ["How many <E1> are there, grouped by <E2.F:n>?"],
     "spec_template": "{\"source\": [{\"name\": \"<E1>\", \"source\": \"<E1.url>\"}, {\"name\": \"<E2>\", \"source\": \"<E2.url>\"}], \"transformation\": [{\"join\": {\"on\": [\"<E1.r.E2.id.from>\", \"<E1.r.E2.id.to>\"]}, \"in\": [\"<E1>\", \"<E2>\"], \"out\": \"<E1>__<E2>\"}, {\"groupby\": \"<E2.F>\"}, {\"rollup\": {\"<E1> count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<E2.F>\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"<E1> count\", \"type\": \"quantitative\"}]}}",
     "creation_method": "template",

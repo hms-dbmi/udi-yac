@@ -17,6 +17,9 @@ vi.mock('udi-toolkit/react', () => ({
   UDIVis: () => <div data-testid="udi-vis" />,
   usePalette: () => undefined,
   describeTransformations: () => ['Group by sex'],
+  // "not statically analyzable" — injectInteractivity then falls back to the
+  // raw source columns, which is all these render tests need.
+  pipelineOutputFields: () => null,
 }));
 
 import {

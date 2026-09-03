@@ -45,6 +45,29 @@ describe('injectInteractivity', () => {
     expect(rep.select.how.field).toEqual(['age_value', 'weight_value']);
   });
 
+  it('leaves fields the pipeline aggregates away out of the interval select', () => {
+    const spec = makeSpec({
+      transformation: [{ binby: { field: 'age_value' } }, { rollup: { count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          // Stale: `age_value` doesn't survive binby + rollup.
+          { encoding: 'x', field: 'age_value', type: 'quantitative' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+        ],
+      },
+    });
+    const interactive = injectInteractivity(spec, 'uuid-hist', {
+      donors: ['age_value', 'weight_value'],
+    });
+    const rep = interactive.representation as unknown as {
+      select: { how: { type: string; on: string; field: string[] } };
+    };
+    expect(rep.select.how.type).toBe('interval');
+    expect(rep.select.how.on).toBe('y');
+    expect(rep.select.how.field).toEqual(['count']);
+  });
+
   it('adds a point select when the mapping has no quantitative x/y encodings', () => {
     const spec = makeSpec({
       representation: {
@@ -375,11 +398,13 @@ describe('dashboardStore — cross-store filter propagation', () => {
         },
       ],
     };
-    // Bypass the loading lifecycle — push state directly.
+    // Bypass the loading lifecycle — push state directly, including the
+    // derived caches fetchDataPackage would have filled.
     dp.setState({
       dataPackage,
       dataFieldDomains: domains,
       loadingPhase: 'ready',
+      sourceFields: { donors: ['age_value', 'weight_value'] },
     });
     return dp;
   }
@@ -441,6 +466,42 @@ describe('dashboardStore — cross-store filter propagation', () => {
     });
     expect(filters).toContainEqual(notNull('age_value'));
     expect(filters).toContainEqual(notNull('weight_value'));
+  });
+
+  it('updateSpecFilters skips null filters for fields the pipeline aggregates away', () => {
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+    const dataPackage = buildDataPackageStoreWith([]);
+
+    // A histogram: after binby + rollup the table holds `start`, `end` and
+    // `count` — `age_value` is gone, so a null filter naming it would be a
+    // reference the executor rejects, not a filter that matches everything.
+    const histogram = makeSpec({
+      transformation: [{ binby: { field: 'age_value' } }, { rollup: { count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'age_value', type: 'quantitative' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+        ],
+      },
+    });
+
+    dashboard
+      .getState()
+      .addActiveVisualization(0, 0, histogram, '', { donors: ['age_value', 'weight_value'] });
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const viz = dashboard.getState().activeVisualizations.get('0-0')!;
+    const transformation = (viz.interactiveSpec as { transformation: Array<{ filter?: unknown }> })
+      .transformation;
+    const nullFilters = transformation
+      .map((t) => t.filter)
+      .filter(
+        (f): f is { left: { field: string } } => typeof f === 'object' && f !== null && 'left' in f,
+      )
+      .map((f) => f.left.field);
+    expect(nullFilters).toEqual(['count']);
   });
 
   it('updateSpecFilters omits null filters when filterAllNullValues is false', () => {

@@ -57,7 +57,7 @@ def test_text_templates_are_tokenized_for_the_frontend():
     leftover = {k: v for k, v in TOOL_TEXT.items() if "<" in v[0] + v[1]}
     assert leftover == {}, f"untokenized placeholders: {leftover}"
     # A representative template, end to end.
-    assert TOOL_TEXT["vis_027_scatterplot_basic"] == (
+    assert TOOL_TEXT["vis_029_scatterplot_basic"] == (
         "Scatterplot of {enc:x} and {enc:y}",
         "Displays a point for each {entity:one}, positioned by {enc:x} and {enc:y}.",
     )
@@ -68,7 +68,7 @@ def test_bind_tokens_resolve_to_the_chosen_column():
     from udiagent.vis_generate import resolve_text_templates
 
     text = resolve_text_templates(
-        "vis_056_histogram_distribution", {"E": "donors", "F": "age_value"}
+        "vis_058_histogram_distribution", {"E": "donors", "F": "age_value"}
     )
     assert text["title"] == "Histogram of age_value"
     assert "{bind:" not in text["summary"]
@@ -79,6 +79,6 @@ def test_entity_singular_token_is_emitted():
     entity label names a table and so reads as a plural ("each Donors")."""
     from udiagent.generated_vis_tools import TOOL_TEXT
 
-    _, summary = TOOL_TEXT["vis_027_scatterplot_basic"]
+    _, summary = TOOL_TEXT["vis_029_scatterplot_basic"]
     assert "{entity:one}" in summary
     assert "for each {entity}," not in summary

@@ -240,6 +240,93 @@ def generate():
         tasks="Compare counts across categories; identify the most or least common category; assess the range of counts.",
     )
 
+    # ---------------------------------------------------------------
+    # Bar charts — distinct count of an identifying column
+    #
+    # A row count answers "how many rows", which is only the entity count when
+    # the table holds one row per entity. Event/therapy/sample tables hold
+    # several, so "how many patients per diagnosis" has to count DISTINCT
+    # patient keys — pcx event: 191 rows, 69 patients.
+    # ---------------------------------------------------------------
+
+    # MERGED: vertical bar, <=4 categories
+    df = add_row(
+        df,
+        query_templates=[
+            "How many different <F2:n> are there, grouped by <F:n>?",
+            "How many <F2:n> are represented in each <F:n>?",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .groupby("<F>")
+            .rollup({"distinct <F2:n>": Op.distinct("<F2:n>")})
+            .mark("bar")
+            .x(field="<F>", type="nominal")
+            .y(field="distinct <F2:n>", type="quantitative")
+        ),
+        chart_type=ChartType.BARCHART,
+        task_types=[
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.DETERMINE_RANGE,
+        ],
+        description=(
+            "Counts how many different values an identifying column takes in each "
+            "category — the entity count for a table with several rows per entity "
+            "— as a vertical bar chart."
+        ),
+        title_template="Bar chart of the number of <F2:n> by <F>",
+        summary_template=(
+            "Displays how many different <F2:n> values fall in each <F> category "
+            "as vertical bars."
+        ),
+        design_considerations=(
+            "Counts distinct keys rather than rows, so repeated rows for the same "
+            "entity are counted once. Vertical orientation because category count "
+            "is small (<=4)."
+        ),
+        tasks="Compare entity counts across categories without double-counting repeated rows.",
+    )
+
+    # MERGED: horizontal bar, >4 categories
+    df = add_row(
+        df,
+        query_templates=[
+            "How many different <F2:n> are there, grouped by <F:n>?",
+            "How many <F2:n> are represented in each <F:n>?",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .groupby("<F>")
+            .rollup({"distinct <F2:n>": Op.distinct("<F2:n>")})
+            .mark("bar")
+            .x(field="distinct <F2:n>", type="quantitative")
+            .y(field="<F>", type="nominal")
+        ),
+        chart_type=ChartType.BARCHART,
+        task_types=[
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.DETERMINE_RANGE,
+        ],
+        description=(
+            "Counts how many different values an identifying column takes in each "
+            "category — the entity count for a table with several rows per entity "
+            "— as a horizontal bar chart."
+        ),
+        title_template="Bar chart of the number of <F2:n> by <F>",
+        summary_template=(
+            "Displays how many different <F2:n> values fall in each <F> category "
+            "as horizontal bars."
+        ),
+        design_considerations=(
+            "Counts distinct keys rather than rows, so repeated rows for the same "
+            "entity are counted once. Horizontal orientation because category "
+            "count is high (>4), allowing longer labels on the y-axis."
+        ),
+        tasks="Compare entity counts across categories without double-counting repeated rows.",
+    )
+
     # Cross-entity bar, vertical, <=4 categories
     df = add_row(
         df,

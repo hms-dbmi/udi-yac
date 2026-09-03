@@ -136,6 +136,54 @@ def _infer_foreign_keys(resources: list[dict]) -> None:
             )
 
 
+def _near_key_warnings(pkg: dict) -> list[str]:
+    """Flag a SHARED column that just missed being a key, and so linked nothing.
+
+    ``_infer_foreign_keys`` only links a column that appears in two or more
+    tables and is unique in exactly one of them, and ``_profile_table`` calls a
+    column unique only when it has a value on every row. So a de-identified
+    export missing an id on 3 of 2571 rows yields no primaryKey — and then no
+    foreign keys anywhere, no ``relationships:`` for the LLM, and no way to
+    count entities rather than rows. Silent today; say it out loud.
+
+    Restricted to shared columns on purpose: a near-unique date column is not
+    a would-be key, and warning about those buries the one that matters.
+    """
+    cols_by_table = {
+        r["name"]: {f["name"]: f for f in r["schema"]["fields"]} for r in pkg["resources"]
+    }
+    shared = {
+        col
+        for col in {c for cols in cols_by_table.values() for c in cols}
+        if sum(col in cols for cols in cols_by_table.values()) >= 2
+    }
+
+    warnings = []
+    for col in sorted(shared):
+        # Already linked: some table owns this column as a unique key.
+        if any(cols[col]["udi:unique"] for cols in cols_by_table.values() if col in cols):
+            continue
+        for resource in pkg["resources"]:
+            field = cols_by_table[resource["name"]].get(col)
+            rows = resource["udi:row_count"]
+            if not field or rows == 0:
+                continue
+            gap = rows - field["udi:cardinality"]
+            # Distinct on all but a handful of rows: the gap reads as missing
+            # or repeated ids rather than as the column's nature. Only past a
+            # floor of rows — in a table of five, a foreign key that repeats
+            # once looks exactly like a key with one blank.
+            if rows >= 20 and 0 < gap <= max(3, rows // 200):
+                warnings.append(
+                    f"{resource['name']}.{col} has {field['udi:cardinality']} "
+                    f"distinct values across {rows} rows, so it is not unique "
+                    f"and no foreign keys were inferred from it. A few blank or "
+                    f"repeated ids do this — fill or drop those {gap} row(s) to "
+                    f"link the tables sharing '{col}'."
+                )
+    return warnings
+
+
 def build_package(csv_dir: Path, name: str, udi_path: str, strips: list[str]) -> dict:
     resources = []
     for path in sorted(csv_dir.glob("*.csv")):
@@ -197,6 +245,27 @@ def _selftest() -> None:
             "udi:cardinality": {"from": "many", "to": "one"},
         }
     ], child["schema"]["foreignKeys"]
+
+    # A shared id blank on a couple of rows out of many links nothing — and
+    # says so, naming the table that was meant to be the parent.
+    gappy_rows = "".join(f"P{i},v{i % 4}\n" for i in range(30))
+    gappy_parent = prof("id,x\n" + gappy_rows + ",v0\n,v1\n", "parent")
+    gappy_child = prof(
+        "id,y\n" + "".join(f"P{i % 30},q{i}\n" for i in range(40)), "child"
+    )
+    assert not gappy_parent["schema"].get("primaryKey"), gappy_parent["schema"]
+    _infer_foreign_keys([gappy_parent, gappy_child])
+    assert gappy_child["schema"]["foreignKeys"] == [], "blank id should link nothing"
+    warnings = _near_key_warnings({"resources": [gappy_parent, gappy_child]})
+    assert len(warnings) == 1 and "parent.id" in warnings[0], warnings
+
+    # The healthy case stays quiet: `id` is a real key on parent.
+    assert _near_key_warnings({"resources": [parent, child]}) == []
+    # A near-unique column no other table shares is not a would-be key, so it
+    # must not warn (date columns hit this constantly).
+    dates = prof("when,v\n" + "".join(f"{i // 2},a{i}\n" for i in range(40)), "dates")
+    assert _near_key_warnings({"resources": [dates, child]}) == []
+
     print("selftest OK")
 
 
@@ -239,6 +308,8 @@ def main() -> None:
     for r in pkg["resources"]:
         for fk in r["schema"]["foreignKeys"]:
             print(f"  {r['name']}.{fk['fields'][0]} -> {fk['reference']['resource']}")
+    for warning in _near_key_warnings(pkg):
+        print(f"  warning: {warning}")
 
 
 if __name__ == "__main__":

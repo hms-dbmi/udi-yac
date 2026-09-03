@@ -115,6 +115,31 @@ def test_count_by_category():
     }
 
 
+def test_distinct_count_by_category():
+    """Counting entities, not rows, in a table with many rows per entity."""
+    chart = Chart()
+    chart.source("samples", "./data/example_samples.csv").groupby("organ").rollup(
+        {"donor count": Op.distinct("donor.hubmap_id")}
+    ).mark("bar").x(field="organ", type="nominal").y(
+        field="donor count", type="quantitative"
+    )
+
+    assert chart.to_dict() == {
+        "source": {"name": "samples", "source": "./data/example_samples.csv"},
+        "transformation": [
+            {"groupby": "organ"},
+            {"rollup": {"donor count": {"op": "distinct", "field": "donor.hubmap_id"}}},
+        ],
+        "representation": {
+            "mark": "bar",
+            "mapping": [
+                {"encoding": "x", "field": "organ", "type": "nominal"},
+                {"encoding": "y", "field": "donor count", "type": "quantitative"},
+            ],
+        },
+    }
+
+
 def test_aggregate_by_category():
     chart = Chart()
     chart.source("donors", "./data/example_donors.csv").groupby("sex").rollup(
