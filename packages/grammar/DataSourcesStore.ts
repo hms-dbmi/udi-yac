@@ -905,6 +905,20 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         // frequency is a two step process, step one is getting the counts.
         // normalizing the counts happens outside this function.
         return op.count();
+      case 'distinct': {
+        if (!aggFunc.field) {
+          throw new Error('Field is required for distinct operation');
+        }
+        // COUNT(DISTINCT x) semantics: null is absent, not a value. Arquero's
+        // op.distinct counts it as one, so subtract that bucket back off when
+        // the group holds any null — otherwise the SQL compiler (Compiler B)
+        // and this executor would disagree on every nullable column.
+        const key = JSON.stringify(aggFunc.field);
+        return (
+          `d => op.distinct(d[${key}]) - ` +
+          `(op.valid(d[${key}]) < op.count() ? 1 : 0)`
+        );
+      }
       default:
         throw new Error(
           'unsupported Aggregate Function' + JSON.stringify(aggFunc),

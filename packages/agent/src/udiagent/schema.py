@@ -182,6 +182,10 @@ def simplify_data_schema(data_schema):
 
         lines.append(f"  - name: {name}")
         lines.append(f"    path: {path}")
+        # row_count next to each column's unique_values is what lets the model
+        # see a table's grain: 191 rows over 69 unique research_id means many
+        # rows per patient, so counting rows is not counting patients.
+        lines.append(f"    row_count: {row_count}")
         if description:
             lines.append(f"    description: {description}")
 
@@ -197,6 +201,20 @@ def simplify_data_schema(data_schema):
                 lines.append(f"    dimensions: [{', '.join(dimensions)}]")
 
         fields = resource.get("schema", {}).get("fields", [])
+
+        # The column that identifies one row of this entity — what to count
+        # distinct values of when the question asks how many entities.
+        resource_schema = resource.get("schema", {})
+        identifier = resource_schema.get("primaryKey") or [
+            field["name"]
+            for field in fields
+            if field.get("udi:unique") and "name" in field
+        ]
+        if isinstance(identifier, str):
+            identifier = [identifier]
+        if identifier:
+            lines.append(f"    identifier: {', '.join(identifier)}")
+
         columns = []
         for field in fields:
             if field.get("udi:cardinality", 0) == 0:

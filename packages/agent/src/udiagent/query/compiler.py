@@ -16,6 +16,10 @@ enforced by tests/goldens/parity.json. Pinned behaviors this must match:
   nothing — so results only match Arquero exactly when the orderby key is
   unique.
 - frequency rollup == count normalized by the grand total.
+- distinct rollup == COUNT(DISTINCT field): NULL is absent, not a value. The
+  Arquero side subtracts op.distinct's null bucket to match. Rollup-only: the
+  {agg: ...} broadcast form deliberately omits it, because
+  COUNT(DISTINCT x) OVER () is unsupported on StarRocks.
 - binby computes bin edges from the UNFILTERED pipeline prefix (named filters
   skipped) via a probe query, then groups by the bin columns.
 - Named filters (FilterDataSelection) resolve against the request's selection
@@ -448,6 +452,13 @@ class PipelineCompiler:
                 aggs.append(
                     f"{self.dialect.median(self._q(agg['field']))} AS {out_col}"
                 )
+            elif op == "distinct":
+                field = agg.get("field")
+                if not field:
+                    raise UnsupportedQueryError(
+                        "distinct rollup requires a 'field' to count values of"
+                    )
+                aggs.append(f"COUNT(DISTINCT {self._q(field)}) AS {out_col}")
             else:
                 raise UnsupportedQueryError(f"unsupported rollup op '{op}'")
         select_list = ", ".join(cols + aggs)

@@ -18,11 +18,13 @@ The output must be a valid UDI Grammar JSON object with three top-level keys. On
 - **source**: array of data sources, each with `"name"` (string) and `"source"` (string, CSV path)
 - **transformation** (optional): array of data operations. Each operation uses the operation name as the key:
   - `{"groupby": ["field1", "field2"]}`
-  - `{"rollup": {"new_field": {"op": "count|sum|mean|min|max|median", "field": "source_field"}}}`
+  - `{"rollup": {"new_field": {"op": "count|sum|mean|min|max|median|frequency", "field": "source_field"}}}` — `count` counts ROWS and takes no `field`
+  - `{"rollup": {"new_field": {"op": "distinct", "field": "id_field"}}}` — counts how many _different_ values `id_field` takes. Use this instead of `count` whenever the question asks how many **entities** (patients, donors, …) and the table holds more than one row per entity — its `row_count` exceeds the `unique_values` of its identifier — or when counting the "one" side of a one-to-many join, where you count distinct on the join key. In both cases `count` counts rows and silently reports a multiple of the real number.
   - `{"join": {"on": ["left_key", "right_key"]}, "in": ["left_table", "right_table"], "out": "joined_name"}`
   - `{"filter": <expr>}` — e.g. not-null: `{"filter": {"op": "!=", "left": {"field": "f"}, "right": {"literal": null}}}`
-  - `{"orderby": [{"field": "name", "order": "ascending|descending"}]}`
+  - `{"orderby": [{"field": "name", "order": "asc|desc"}]}` — only `"desc"` reverses; any other value sorts ascending
   - `{"derive": {"new_field": <expr>}}` — e.g. ratio: `{"derive": {"ratio": {"op": "/", "left": {"field": "a"}, "right": {"field": "b"}}}}`
+  - `{"binby": {"field": "name", "bins": number, "nice": true}}` — bins a quantitative field. `bins` is a _maximum bin count_ (default 10), NOT a bin width, and there is no fixed-interval option, so a request like "5-year buckets" can only be approximated by a bin count. Always follow `binby` with a `rollup`: the aggregate output holds the bin bounds as `start` and `end` (renamable via `{"output": {"bin_start": "...", "bin_end": "..."}}`) plus the rollup fields — the binned field itself is NOT in the output, so map `start`/`end` in the representation and put the original field name in the encoding's `"title"`.
 
   Expressions (`<expr>`) are structured objects, composed recursively from:
   - field reference: `{"field": "name"}`
@@ -31,7 +33,6 @@ The output must be a valid UDI Grammar JSON object with three top-level keys. On
   - conditional: `{"if": <expr>, "then": <expr>, "else": <expr>}`
   - group aggregate broadcast to rows: `{"agg": "count|sum|mean|min|max|median", "field": "name"}` (omit `field` for count)
   - window function: `{"window": "rank"}`
-  - `{"binby": {"field": "name", "step": number}}`
 
   Cross-table specs (joins, cross-entity filters) must follow the
   `relationships:` section of the data schema — join on exactly the listed
@@ -41,7 +42,7 @@ The output must be a valid UDI Grammar JSON object with three top-level keys. On
 
 - **representation** (optional): visualization specification with:
   - `"mark"`: one of `"bar"`, `"line"`, `"point"`, `"area"`, `"arc"`, `"rect"`, `"text"`, `"geometry"`
-  - `"mapping"`: array of field mappings, each with `"encoding"` (e.g. `"x"`, `"y"`, `"color"`), `"field"` (string), and `"type"` (`"quantitative"`, `"nominal"`, `"ordinal"`, `"temporal"`)
+  - `"mapping"`: array of field mappings, each with `"encoding"` (e.g. `"x"`, `"y"`, `"color"`), `"field"` (string), `"type"` (`"quantitative"`, `"nominal"`, `"ordinal"`, `"temporal"`), and an optional `"title"` (axis/legend label). Every `"field"` must be a column the transformation pipeline actually outputs.
 
 ## Reference Examples
 

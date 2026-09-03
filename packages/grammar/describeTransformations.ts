@@ -16,6 +16,7 @@ const OP_LABELS: Record<AggregateFunction['op'], string> = {
   max: 'max',
   median: 'median',
   frequency: 'frequency',
+  distinct: 'distinct count',
 };
 
 function describeRollup(rollup: RollUp['rollup']): string {

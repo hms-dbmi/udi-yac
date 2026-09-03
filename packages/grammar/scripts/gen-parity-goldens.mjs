@@ -34,7 +34,11 @@ for (const [name, file] of Object.entries(SOURCES)) {
 }
 
 const src = (name) => ({ name, source: SOURCES[name] });
-const notNull = (f) => ({ op: '!=', left: { field: f }, right: { literal: null } });
+const notNull = (f) => ({
+  op: '!=',
+  left: { field: f },
+  right: { literal: null },
+});
 
 // [name, {source, transformation}, selections?, displayDataOnly?]
 const CASES = [
@@ -86,8 +90,16 @@ const CASES = [
         {
           filter: {
             op: '&&',
-            left: { op: '>', left: { field: 'bill_length_mm' }, right: { literal: 45 } },
-            right: { op: '==', left: { field: 'sex' }, right: { literal: 'MALE' } },
+            left: {
+              op: '>',
+              left: { field: 'bill_length_mm' },
+              right: { literal: 45 },
+            },
+            right: {
+              op: '==',
+              left: { field: 'sex' },
+              right: { literal: 'MALE' },
+            },
           },
         },
         { groupby: 'species' },
@@ -111,9 +123,17 @@ const CASES = [
         },
         {
           derive: {
-            ratio: { op: '/', left: { field: 'mass' }, right: { field: 'flipper' } },
+            ratio: {
+              op: '/',
+              left: { field: 'mass' },
+              right: { field: 'flipper' },
+            },
             size: {
-              if: { op: '>', left: { field: 'mass' }, right: { literal: 1_000_000 } },
+              if: {
+                op: '>',
+                left: { field: 'mass' },
+                right: { literal: 1_000_000 },
+              },
               then: { literal: 'big' },
               else: { literal: 'small' },
             },
@@ -232,6 +252,60 @@ const CASES = [
         },
         { groupby: 'sex' },
         { rollup: { samples_count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    'rollup-distinct',
+    {
+      source: src('penguins'),
+      transformation: [
+        { groupby: 'island' },
+        {
+          rollup: {
+            rows: { op: 'count' },
+            species_seen: { op: 'distinct', field: 'species' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // `sex` is blank on 11 rows: pins COUNT(DISTINCT)'s "null is absent, not a
+    // value" semantics, which Arquero's op.distinct does NOT have on its own.
+    'rollup-distinct-with-nulls',
+    {
+      source: src('penguins'),
+      transformation: [
+        { groupby: 'species' },
+        {
+          rollup: {
+            rows: { op: 'count' },
+            sexes: { op: 'distinct', field: 'sex' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // Counting the "one" side of a one-to-many join: COUNT(*) would count
+    // samples, so the entity count must be distinct on the join key.
+    'join-rollup-distinct-parent',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        {
+          join: { on: ['hubmap_id', 'donor.hubmap_id'] },
+          in: ['donors', 'samples'],
+          out: 'joined',
+        },
+        { groupby: 'health_status' },
+        {
+          rollup: {
+            samples_count: { op: 'count' },
+            donors_count: { op: 'distinct', field: 'donor.hubmap_id' },
+          },
+        },
       ],
     },
   ],

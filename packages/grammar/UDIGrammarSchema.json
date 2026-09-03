@@ -22,12 +22,21 @@
       "description": "An aggregate function for summarizing data.",
       "properties": {
         "field": {
-          "description": "The field to aggregate. Optional.",
+          "description": "The field to aggregate. Optional for `count`/`frequency` (which count rows); required for every other op, `distinct` included.",
           "type": "string"
         },
         "op": {
-          "description": "The operation to apply (e.g., count, sum, mean, etc.).",
-          "enum": ["count", "sum", "mean", "min", "max", "median", "frequency"],
+          "description": "The operation to apply (e.g., count, sum, mean, etc.).\n\n`count` counts ROWS. Use `distinct` to count how many different values a field takes — the number of *entities* in a table that holds several rows per entity (one row per event, per sample, ...), or on the \"one\" side of a one-to-many join, where `count` would multiply by the child rows.",
+          "enum": [
+            "count",
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "median",
+            "frequency",
+            "distinct"
+          ],
           "type": "string"
         }
       },

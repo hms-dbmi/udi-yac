@@ -42,6 +42,11 @@ export interface VizTitleLabels {
   getEntityLabel?: (entity: string) => string;
   /** `udi:data_type` of a field, used to pick "categorized by" vs "colored by". */
   getFieldDataType?: (entity: string, field: string) => string | undefined;
+  /** Which entity a column identifies (its own primary key, or the entity a
+   *  foreign key points at). A distinct count of a key counts that entity, so
+   *  this is what makes the axis read "Patients" and not "Distinct Research
+   *  Id". */
+  getIdentifiedEntity?: (entity: string, field: string) => string | null;
   /** The package's categorical value labels, raw → label. Used to relabel axis
    *  and legend text; see `applyFieldLabels`. */
   valueLabels?: Record<string, string>;
@@ -57,6 +62,7 @@ const OP_LABELS: Record<string, string> = {
   max: 'Maximum',
   median: 'Median',
   frequency: 'Frequency',
+  distinct: 'Distinct',
 };
 
 /** Chart-type names by mark. Refined below by transformations that change what
@@ -146,6 +152,15 @@ function makeLabeler(spec: UDIGrammar, labels: VizTitleLabels) {
     if (!rollup) return fieldLabel(m.field);
     const op = rollup.op ? (OP_LABELS[rollup.op] ?? rollup.op) : null;
     if (!op) return fieldLabel(m.field);
+    // A distinct count of a key counts the entity that key identifies, so it
+    // reads as that entity ("Patients") rather than as the column it counts
+    // values of ("Distinct Research Id").
+    if (rollup.op === 'distinct' && rollup.field) {
+      const identified = sourceName ? labels.getIdentifiedEntity?.(sourceName, rollup.field) : null;
+      if (identified) {
+        return labels.getEntityLabel?.(identified) ?? humanizeFieldName(identified);
+      }
+    }
     // count / frequency aggregate rows rather than a column, so they name the
     // entity; the rest name their input field.
     if (!rollup.field) return entityLabel ? `${op} of ${entityLabel}` : op;

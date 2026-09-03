@@ -7,7 +7,10 @@ assert.deepEqual(describeTransformations({}), [], 'no transformation → []');
 
 assert.deepEqual(
   describeTransformations({
-    transformation: [{ groupby: 'sex' }, { rollup: { sex_count: { op: 'count' } } }],
+    transformation: [
+      { groupby: 'sex' },
+      { rollup: { sex_count: { op: 'count' } } },
+    ],
   }),
   ['Group by sex', 'Aggregate: count → sex_count'],
   'count-by-dimension',
@@ -21,13 +24,20 @@ assert.deepEqual(
       { orderby: { field: 'avg_age', order: 'desc' } },
     ],
   }),
-  ['Group by organ, sex', 'Aggregate: mean of age → avg_age', 'Sort by avg_age (desc)'],
+  [
+    'Group by organ, sex',
+    'Aggregate: mean of age → avg_age',
+    'Sort by avg_age (desc)',
+  ],
   'measure + multi-group + sort',
 );
 
 assert.deepEqual(
   describeTransformations({
-    transformation: [{ binby: { field: 'age', bins: 10 } }, { filter: 'd.age > 5' }],
+    transformation: [
+      { binby: { field: 'age', bins: 10 } },
+      { filter: 'd.age > 5' },
+    ],
   }),
   ['Bin age into 10 bins', 'Filter: d.age > 5'],
   'binby + legacy string filter',
@@ -35,7 +45,25 @@ assert.deepEqual(
 
 assert.deepEqual(
   describeTransformations({
-    transformation: [{ filter: { op: '!=', left: { field: 'mass' }, right: { literal: null } } }],
+    transformation: [
+      { groupby: 'diagnosis' },
+      { rollup: { 'patient count': { op: 'distinct', field: 'research_id' } } },
+    ],
+  }),
+  [
+    'Group by diagnosis',
+    'Aggregate: distinct count of research_id → patient count',
+  ],
+  'distinct count names the field it counts values of',
+);
+
+assert.deepEqual(
+  describeTransformations({
+    transformation: [
+      {
+        filter: { op: '!=', left: { field: 'mass' }, right: { literal: null } },
+      },
+    ],
   }),
   ['Filter rows'],
   'structured Expr filter → generic label',

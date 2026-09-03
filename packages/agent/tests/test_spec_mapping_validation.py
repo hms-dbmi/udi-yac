@@ -281,3 +281,52 @@ def test_parse_and_validate_without_entity_fields_unchanged():
     )
     _, errors = _parse_and_validate(json.dumps(spec), grammar["schema_dict"])
     assert errors == []  # schema-valid; the mapping bug needs entity_fields
+
+
+def test_binby_rollup_drops_the_binned_field():
+    """The binned field is not in the pipeline output — only the bin bounds."""
+    binned = _spec(
+        [
+            {"binby": {"field": "event_date"}},
+            {"rollup": {"Event count": {"op": "count"}}},
+        ],
+        [("x", "Event count"), ("y", "event_date")],
+    )
+    errors = spec_mapping_errors(binned, FIELDS)
+    assert len(errors) == 1
+    assert "'event_date'" in errors[0]
+
+    ok = _spec(
+        [
+            {"binby": {"field": "event_date"}},
+            {"rollup": {"Event count": {"op": "count"}}},
+        ],
+        [("x", "start"), ("y", "Event count")],
+    )
+    assert spec_mapping_errors(ok, FIELDS) == []
+
+
+def test_schema_and_mapping_errors_are_reported_together():
+    """A schema violation must not hide the mapping error behind it.
+
+    Observed failure: `binby.step` (not a grammar key — the generate skill
+    used to document it) failed the schema on every correction round, so the
+    mapping walk never ran and the stale `y -> event_date` mapping shipped
+    with the spec.
+    """
+    from udiagent.grammar import load_grammar
+
+    grammar = load_grammar("udi")
+    spec = _spec(
+        [
+            {"binby": {"field": "event_date", "step": 5}},
+            {"rollup": {"Event count": {"op": "count"}}},
+        ],
+        [("x", "Event count"), ("y", "event_date")],
+    )
+    _, errors = _parse_and_validate(
+        json.dumps(spec), grammar["schema_dict"], FIELDS
+    )
+    joined = "; ".join(errors)
+    assert "step" in joined, joined
+    assert "'event_date'" in joined, joined

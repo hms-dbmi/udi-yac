@@ -27,6 +27,16 @@ class Op:
     def sum(field):
         return {"op": "sum", "field": field}
 
+    @staticmethod
+    def distinct(field):
+        """How many different values ``field`` takes (``COUNT(DISTINCT``).
+
+        The entity count for a table holding several rows per entity, or on
+        the "one" side of a one-to-many join, where ``Op.count()`` counts rows
+        and so multiplies by the child rows. Nulls are not a value.
+        """
+        return {"op": "distinct", "field": field}
+
 
 def rolling(expression):
     return {"rolling": {"expression": expression}}

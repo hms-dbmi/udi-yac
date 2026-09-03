@@ -179,7 +179,10 @@ def _parse_and_validate(spec_str, schema_dict, entity_fields=None):
     except jsonschema.SchemaError as e:
         errors.append(f"Schema error: {e.message}")
 
-    if not errors and entity_fields:
+    # Run the mapping walk even when the schema already complained: the two
+    # error classes are independent, and reporting both in one correction
+    # round beats discovering them serially across a bounded retry budget.
+    if entity_fields:
         errors.extend(spec_mapping_errors(spec_dict, entity_fields))
 
     return spec_dict, errors
@@ -431,6 +434,45 @@ def _extract_xy_placeholders(spec_template):
     return result
 
 
+def aggregate_input_placeholders(spec_template):
+    """Re-exported from generate_tools so codegen and runtime validation share
+    one definition of "this column is aggregated, not drawn"."""
+    from udiagent.generate_tools import (
+        aggregate_input_placeholders as _impl,
+    )
+
+    return _impl(spec_template)
+
+
+def _counts_e1_rows_after_join(spec_template) -> bool:
+    """True when the template joins E1 to E2 and then counts ROWS as the E1
+    count.
+
+    That shape equals the E1 count only when E1 is the "many" side: one joined
+    row per E1 row. Put E1 on the "one" side and every E1 row repeats once per
+    matching E2 row (hubmap donors x samples: 499 donors -> 5044 rows, so a
+    "donor count" reads up to 10x high).
+    """
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return False
+    transforms = spec.get("transformation") or []
+    if not any(isinstance(t, dict) and "join" in t for t in transforms):
+        return False
+    for transform in transforms:
+        if not isinstance(transform, dict):
+            continue
+        for out_name, agg in (transform.get("rollup") or {}).items():
+            if (
+                isinstance(agg, dict)
+                and agg.get("op") == "count"
+                and "<E1>" in out_name
+            ):
+                return True
+    return False
+
+
 def validate_bindings(spec_template, bindings, schema):
     """Validate tool bindings against the schema before template instantiation.
 
@@ -473,6 +515,24 @@ def validate_bindings(spec_template, bindings, schema):
         )
         if not has_rel:
             errors.append(f"No relationship between '{e1}' and '{e2}'")
+        elif _counts_e1_rows_after_join(spec_template) and any(
+            r["from_entity"] == e2
+            and r["to_entity"] == e1
+            and r.get("to_cardinality", "one") == "one"
+            for r in schema.get("relationships", [])
+        ):
+            # Row counts over a joined table only answer "how many E1" from
+            # the many side. Rejecting sends one corrected-tool-call retry and
+            # then falls through to free-form generation, which knows to count
+            # distinct keys instead (see skills/generate.md). Sibling pairs
+            # need no case here: they are not in this schema's relationship
+            # list at all, so the has_rel check above already rejects them.
+            errors.append(
+                f"entity1 must be the 'many' side: '{e1}' is the 'one' side of "
+                f"the '{e2}' -> '{e1}' relationship, so joining them and "
+                f"counting rows counts '{e2}', not '{e1}'. Swap entity1 and "
+                f"entity2 if that answers the question."
+            )
 
     # Check that x and y encodings don't resolve to the same field
     xy_placeholders = _extract_xy_placeholders(spec_template)
@@ -521,6 +581,11 @@ def validate_bindings(spec_template, bindings, schema):
                         placeholder_types[base] = declared_type
     except (json.JSONDecodeError, TypeError):
         pass
+
+    # Columns the template only aggregates are never drawn, so the category
+    # limit below does not apply to them (a counted key has one value per
+    # entity by design).
+    aggregate_inputs = aggregate_input_placeholders(spec_template)
 
     # Check fields exist on entities and types match
     for key, field_name in bindings.items():
@@ -588,7 +653,11 @@ def validate_bindings(spec_template, bindings, schema):
                     f"Available {expected_type} fields: {', '.join(matching)}"
                 )
 
-        if (actual_type == "nominal" or actual_type == "ordinal") and cardinality > 50:
+        if (
+            (actual_type == "nominal" or actual_type == "ordinal")
+            and cardinality > 50
+            and key.split(":")[0] not in aggregate_inputs
+        ):
             errors.append(
                 f"Field '{field_name}' has {cardinality} unique values, which is too many "
                 f"for a visualization (max 50). Choose a different encoding or visualization."

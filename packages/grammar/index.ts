@@ -41,6 +41,10 @@ export { exprToArquero, isExpr } from './exprToArquero';
 // Plain-language summary of a spec's transformation pipeline (for info tooltips)
 export { describeTransformations } from './describeTransformations';
 
+// Which fields survive a spec's transformation pipeline — for callers that
+// inject field references (brushes, null filters) into someone else's spec.
+export { pipelineOutputFields } from './pipelineFields';
+
 // Query backend seam (local Arquero vs remote /v1/yac/query)
 export {
   setQueryBackend,

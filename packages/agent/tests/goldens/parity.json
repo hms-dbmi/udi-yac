@@ -974,6 +974,231 @@
       }
     },
     {
+      "name": "rollup-distinct",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "groupby": "island"
+          },
+          {
+            "rollup": {
+              "rows": {
+                "op": "count"
+              },
+              "species_seen": {
+                "op": "distinct",
+                "field": "species"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "island": "Torgersen",
+            "rows": 52,
+            "species_seen": 1
+          },
+          {
+            "island": "Biscoe",
+            "rows": 168,
+            "species_seen": 2
+          },
+          {
+            "island": "Dream",
+            "rows": 124,
+            "species_seen": 2
+          }
+        ],
+        "allData": [
+          {
+            "island": "Torgersen",
+            "rows": 52,
+            "species_seen": 1
+          },
+          {
+            "island": "Biscoe",
+            "rows": 168,
+            "species_seen": 2
+          },
+          {
+            "island": "Dream",
+            "rows": 124,
+            "species_seen": 2
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "rollup-distinct-with-nulls",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "rows": {
+                "op": "count"
+              },
+              "sexes": {
+                "op": "distinct",
+                "field": "sex"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "rows": 152,
+            "sexes": 2
+          },
+          {
+            "species": "Chinstrap",
+            "rows": 68,
+            "sexes": 2
+          },
+          {
+            "species": "Gentoo",
+            "rows": 124,
+            "sexes": 2
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "rows": 152,
+            "sexes": 2
+          },
+          {
+            "species": "Chinstrap",
+            "rows": 68,
+            "sexes": 2
+          },
+          {
+            "species": "Gentoo",
+            "rows": 124,
+            "sexes": 2
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "join-rollup-distinct-parent",
+      "spec": {
+        "source": [
+          {
+            "name": "donors",
+            "source": "donors.csv"
+          },
+          {
+            "name": "samples",
+            "source": "samples.csv"
+          }
+        ],
+        "transformation": [
+          {
+            "join": {
+              "on": ["hubmap_id", "donor.hubmap_id"]
+            },
+            "in": ["donors", "samples"],
+            "out": "joined"
+          },
+          {
+            "groupby": "health_status"
+          },
+          {
+            "rollup": {
+              "samples_count": {
+                "op": "count"
+              },
+              "donors_count": {
+                "op": "distinct",
+                "field": "donor.hubmap_id"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "health_status": null,
+            "samples_count": 1812,
+            "donors_count": 266
+          },
+          {
+            "health_status": "relatively healthy",
+            "samples_count": 428,
+            "donors_count": 47
+          },
+          {
+            "health_status": "cancer",
+            "samples_count": 60,
+            "donors_count": 23
+          },
+          {
+            "health_status": "chronic illness",
+            "samples_count": 52,
+            "donors_count": 2
+          },
+          {
+            "health_status": "healthy",
+            "samples_count": 2,
+            "donors_count": 1
+          }
+        ],
+        "allData": [
+          {
+            "health_status": null,
+            "samples_count": 1812,
+            "donors_count": 266
+          },
+          {
+            "health_status": "relatively healthy",
+            "samples_count": 428,
+            "donors_count": 47
+          },
+          {
+            "health_status": "cancer",
+            "samples_count": 60,
+            "donors_count": 23
+          },
+          {
+            "health_status": "chronic illness",
+            "samples_count": 52,
+            "donors_count": 2
+          },
+          {
+            "health_status": "healthy",
+            "samples_count": 2,
+            "donors_count": 1
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "named-filter-same-entity",
       "spec": {
         "source": {

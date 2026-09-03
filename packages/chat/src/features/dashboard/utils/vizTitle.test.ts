@@ -210,6 +210,59 @@ describe('buildVizTitle — clauses', () => {
   });
 });
 
+describe('buildVizTitle — distinct counts', () => {
+  /** "How many patients per <field>", off an event-grain table. */
+  const distinctBy = (field: string, key = 'research_id') =>
+    ({
+      source: { name: 'events', source: 'events.csv' },
+      transformation: [
+        { groupby: field },
+        { rollup: { 'patient count': { op: 'distinct', field: key } } },
+      ],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: 'patient count', type: 'quantitative' },
+          { encoding: 'y', field, type: 'nominal' },
+        ],
+      },
+    }) as unknown as UDIGrammar;
+
+  const labels = {
+    getEntityLabel: (entity: string) =>
+      ({ events: 'Events', patients: 'Patients' })[entity] ?? entity,
+    // research_id is a foreign key to the patient table.
+    getIdentifiedEntity: (_entity: string, field: string) =>
+      field === 'research_id' ? 'patients' : null,
+  };
+
+  it('names the entity the counted key identifies, not the key', () => {
+    expect(buildVizTitle(distinctBy('diagnosis'), labels)).toBe(
+      'Bar chart of Patients by Diagnosis',
+    );
+  });
+
+  it('falls back to naming the column when the key identifies nothing', () => {
+    expect(buildVizTitle(distinctBy('diagnosis', 'protocol'), labels)).toBe(
+      'Bar chart of Distinct Protocol by Diagnosis',
+    );
+  });
+
+  it('without package metadata, still says what it counted', () => {
+    expect(buildVizTitle(distinctBy('diagnosis'))).toBe(
+      'Bar chart of Distinct Research Id by Diagnosis',
+    );
+  });
+
+  it('carries the label onto the encoding for the axis', () => {
+    const labelled = applyFieldLabels(distinctBy('diagnosis'), labels) as unknown as {
+      representation: { mapping: Array<{ field: string; title?: string }> };
+    };
+    const measure = labelled.representation.mapping.find((m) => m.field === 'patient count');
+    expect(measure?.title).toBe('Patients');
+  });
+});
+
 describe('buildVizTitle — data package labels', () => {
   const labels = {
     getFieldLabel: (_entity: string, field: string) =>
