@@ -12,10 +12,11 @@ YAC expects a few additional fields. They are all prepended with `udi:` for the 
 
 At the top level:
 
-| Field      | Description                                                                                                                                         |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `udi:name` | The name of the full data resource. Can be the same as `name`.                                                                                      |
-| `udi:path` | The path of the data resources. It is assumed that all data resources are relative to this path. This can be a relative path, or a full remote URL. |
+| Field        | Description                                                                                                                                                                                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `udi:name`   | The name of the full data resource. Can be the same as `name`.                                                                                                                                                                                                                                                            |
+| `udi:path`   | The path of the data resources. It is assumed that all data resources are relative to this path. This can be a relative path, or a full remote URL.                                                                                                                                                                       |
+| `udi:labels` | Optional. Friendly labels for categorical **values**, raw → label (`{"Children's Hospital of Philadelphia": "CHOP"}`). Applied across every resource, so an institution renamed once covers `donors.group_name` and `samples.group_name` alike. Display only — the raw value is what reaches a spec, a query, or the LLM. |
 
 For each table resource:
 
@@ -26,12 +27,13 @@ For each table resource:
 
 For each data field:
 
-| Field                    | Description                                                                                                 |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `udi:cardinality`        | The number of unique values in the column.                                                                  |
-| `udi:unique`             | `true` if the value is unique for each row, `false` otherwise.                                              |
-| `udi:data_type`          | One of `quantitative`, `ordinal`, or `nominal`.                                                             |
-| `udi:overlapping_fields` | List of fields that are non-null on at least one row together. If all fields overlap, this should be `all`. |
+| Field                    | Description                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`                  | Optional. Frictionless's standard field label, used wherever the column is shown to a person: generated chart titles, the tweak pickers, filter chips. Set it when the column name humanizes badly — `body_mass_index_value` becomes "Body Mass Index" on its own, but the label wanted is "BMI". Display only; specs and queries always key on `name`. |
+| `udi:cardinality`        | The number of unique values in the column.                                                                                                                                                                                                                                                                                                              |
+| `udi:unique`             | `true` if the value is unique for each row, `false` otherwise.                                                                                                                                                                                                                                                                                          |
+| `udi:data_type`          | One of `quantitative`, `ordinal`, or `nominal`.                                                                                                                                                                                                                                                                                                         |
+| `udi:overlapping_fields` | List of fields that are non-null on at least one row together. If all fields overlap, this should be `all`.                                                                                                                                                                                                                                             |
 
 ## Entity relationships (foreignKeys) — modeling guidance
 
@@ -85,4 +87,6 @@ there.**
 To refresh HuBMAP: re-run the four `curl`s against the portal `/udi/` endpoint
 into `./hubmap/`, then set the manifest's `udi:path` back to `"./data/hubmap/"`
 (consumers resolve it page-relative, i.e. against the served `/data` mount, not
-against the manifest's own location).
+against the manifest's own location). The portal does not serve the display
+labels, so a refresh also drops the hand-authored field `title`s and the
+top-level `udi:labels` block — re-apply them from git history.

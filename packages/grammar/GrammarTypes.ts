@@ -564,6 +564,15 @@ export interface GenericFieldMapping<Encoding> {
    * Overrides the default field name displayed on the axis.
    */
   title?: string;
+
+  /**
+   * Display labels for this encoding's categorical values, raw value → label
+   * (e.g. `{ "Children's Hospital of Philadelphia": "CHOP" }`). Compiles to
+   * Vega's `labelExpr`, so it changes only the axis and legend text — the
+   * underlying data keeps its raw values, and selections, filters and tooltips
+   * are unaffected. Values with no entry render unchanged.
+   */
+  labels?: Record<string, string>;
 }
 
 /**

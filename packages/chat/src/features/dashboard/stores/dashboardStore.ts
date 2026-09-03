@@ -32,7 +32,15 @@ export interface ActiveVisualization {
   spec: UDIGrammar;
   interactiveSpec: UDIGrammar;
   userPrompt: string;
+  /** Assistant-written title, only present on cards from a session that
+   *  predates programmatic titles. Never mutated — it is a provenance record. */
   title?: string;
+  /** An explicit user rename. Wins over the built title. */
+  userTitle?: string;
+  /** Tokenized wording from the visualization template the agent used —
+   *  resolved against the live spec on every render (see utils/vizTitle.ts). */
+  titleTemplate?: string;
+  summaryTemplate?: string;
   uuid: string;
 }
 
@@ -40,6 +48,8 @@ export interface ExtractedSpec {
   spec: object;
   toolCallIndex: number;
   title?: string;
+  titleTemplate?: string;
+  summaryTemplate?: string;
 }
 
 export interface DashboardLayout {
@@ -62,6 +72,9 @@ export interface DashboardExportVisualization {
   toolCallIndex: number;
   userPrompt: string;
   title?: string;
+  userTitle?: string;
+  titleTemplate?: string;
+  summaryTemplate?: string;
   spec: UDIGrammar;
 }
 
@@ -94,6 +107,7 @@ export interface DashboardState {
     userPrompt: string,
     sourceFields: Record<string, string[]> | null,
     title?: string,
+    text?: { titleTemplate?: string; summaryTemplate?: string },
   ) => void;
   addActiveVisualizationBatch: (
     items: Array<{
@@ -103,6 +117,8 @@ export interface DashboardState {
       userPrompt: string;
       sourceFields: Record<string, string[]> | null;
       title?: string;
+      titleTemplate?: string;
+      summaryTemplate?: string;
     }>,
     dataPackageStore?: StoreApi<DataPackageState>,
   ) => void;
@@ -136,6 +152,9 @@ export interface DashboardState {
     newSpec: UDIGrammar,
     sourceFields: Record<string, string[]> | null,
   ) => void;
+  /** Rename a card. An empty/whitespace title clears the rename, handing the
+   *  displayed title back to the built title. */
+  setVisualizationTitle: (key: string, title: string) => void;
   setLayoutItems: (items: Layout) => void;
   setGridCols: (cols: number) => void;
   setGridRowHeight: (px: number) => void;
@@ -341,13 +360,22 @@ export function createDashboardStore() {
 
     vizKey: (messageIndex, toolCallIndex) => `${messageIndex}-${toolCallIndex}`,
 
-    addActiveVisualization: (index, toolCallIndex, spec, userPrompt, sourceFields, title) => {
+    addActiveVisualization: (index, toolCallIndex, spec, userPrompt, sourceFields, title, text) => {
       const uuid = generateId();
       const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
       const key = get().vizKey(index, toolCallIndex);
       set((state) => {
         const next = new Map(state.activeVisualizations);
-        next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+        next.set(key, {
+          index,
+          toolCallIndex,
+          spec,
+          interactiveSpec,
+          userPrompt,
+          title,
+          ...text,
+          uuid,
+        });
         return {
           activeVisualizations: next,
           layout: insertItemRowMajor(state.layout, newDefaultItem(key), state.gridCols),
@@ -367,12 +395,31 @@ export function createDashboardStore() {
         // "donors by race" chart lands tall enough to show every category
         // instead of cramped at the default height.
         const getDomainForField = dataPackageStore?.getState().getDomainForField;
-        for (const { index, toolCallIndex, spec, userPrompt, sourceFields, title } of items) {
+        for (const {
+          index,
+          toolCallIndex,
+          spec,
+          userPrompt,
+          sourceFields,
+          title,
+          titleTemplate,
+          summaryTemplate,
+        } of items) {
           const uuid = generateId();
           const interactiveSpec = injectInteractivity(spec, uuid, sourceFields);
           const key = `${index}-${toolCallIndex}`;
           if (state.activeVisualizations.has(key)) continue;
-          next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+          next.set(key, {
+            index,
+            toolCallIndex,
+            spec,
+            interactiveSpec,
+            userPrompt,
+            title,
+            titleTemplate,
+            summaryTemplate,
+            uuid,
+          });
           const h = getDomainForField
             ? computeInitialCardHeight(spec, getDomainForField, state.gridRowHeight)
             : DEFAULT_CARD_H;
@@ -594,6 +641,19 @@ export function createDashboardStore() {
       });
     },
 
+    setVisualizationTitle: (key, title) => {
+      const viz = get().activeVisualizations.get(key);
+      if (!viz) return;
+      const trimmed = title.trim();
+      const userTitle = trimmed.length > 0 ? trimmed : undefined;
+      if (userTitle === viz.userTitle) return;
+      set((state) => {
+        const next = new Map(state.activeVisualizations);
+        next.set(key, { ...viz, userTitle });
+        return { activeVisualizations: next };
+      });
+    },
+
     setLayoutItems: (items) => {
       const state = get();
       const knownKeys = new Set(state.activeVisualizations.keys());
@@ -710,6 +770,9 @@ export function createDashboardStore() {
           toolCallIndex: viz.toolCallIndex,
           userPrompt: viz.userPrompt,
           title: viz.title,
+          userTitle: viz.userTitle,
+          titleTemplate: viz.titleTemplate,
+          summaryTemplate: viz.summaryTemplate,
           spec: structuredClone(viz.spec),
         });
       }
@@ -731,6 +794,9 @@ export function createDashboardStore() {
           interactiveSpec,
           userPrompt: v.userPrompt,
           title: v.title,
+          userTitle: v.userTitle,
+          titleTemplate: v.titleTemplate,
+          summaryTemplate: v.summaryTemplate,
           uuid,
         });
       }
@@ -795,11 +861,15 @@ export function extractAllUdiSpecsFromMessage(message: Message): ExtractedSpec[]
     if (call.name !== 'RenderVisualization') continue;
     const spec = parseSpecFromToolCall(call);
     if (spec) {
-      const title = call.arguments?.title;
+      const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
       results.push({
         spec,
         toolCallIndex: call.originalIndex,
-        title: typeof title === 'string' ? title : undefined,
+        // `title` only appears on messages from sessions that predate
+        // programmatic titles; the two templates are what the agent sends now.
+        title: str(call.arguments?.title),
+        titleTemplate: str(call.arguments?.titleTemplate),
+        summaryTemplate: str(call.arguments?.summaryTemplate),
       });
     }
   }

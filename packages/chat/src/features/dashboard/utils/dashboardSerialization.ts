@@ -125,7 +125,10 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
     return { ok: false, error: `visualizations[${idx}].userPrompt must be a string` };
   if (!isObject(raw.spec))
     return { ok: false, error: `visualizations[${idx}].spec must be an object` };
-  const title = typeof raw.title === 'string' ? raw.title : undefined;
+  // All four are optional: `title` is an assistant-written title from an older
+  // session, `userTitle` an explicit rename, and the two templates the wording
+  // from the visualization template the agent used. Older exports carry fewer.
+  const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
   return {
     ok: true,
     value: {
@@ -134,7 +137,10 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
       index: raw.index,
       toolCallIndex: raw.toolCallIndex,
       userPrompt: raw.userPrompt,
-      title,
+      title: str(raw.title),
+      userTitle: str(raw.userTitle),
+      titleTemplate: str(raw.titleTemplate),
+      summaryTemplate: str(raw.summaryTemplate),
       spec: raw.spec as unknown as DashboardExportVisualization['spec'],
     },
   };

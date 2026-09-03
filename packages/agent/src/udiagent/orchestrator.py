@@ -290,10 +290,6 @@ class Orchestrator:
             model=model,
         )
 
-        title = tool_args.get("title", "")
-        if title:
-            result["arguments"]["title"] = title
-
         return result
 
     def _handle_rebuff(

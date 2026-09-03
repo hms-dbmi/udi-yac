@@ -16,6 +16,7 @@ interface FieldListChipProps {
 interface FieldMeta {
   description: string;
   dataType: string;
+  label: string;
 }
 
 const DEFAULT_VISIBLE = 5;
@@ -31,6 +32,7 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const dataPackage = useDataPackage((s) => s.dataPackage);
+  const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
 
   const fieldMeta = useMemo<Record<string, FieldMeta>>(() => {
     const out: Record<string, FieldMeta> = {};
@@ -40,10 +42,11 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
       out[f.name] = {
         description: f.description ?? '',
         dataType: f['udi:data_type'] ?? '',
+        label: getFieldLabel(entity, f.name),
       };
     }
     return out;
-  }, [dataPackage, entity]);
+  }, [dataPackage, entity, getFieldLabel]);
 
   const trimmedQuery = query.trim();
   const filtered = useMemo(() => {
@@ -148,6 +151,7 @@ function FieldChip({ field, meta, highlight }: FieldChipProps) {
       />
       <FieldTooltipContent
         field={field}
+        label={meta?.label}
         dataType={meta?.dataType}
         description={meta?.description}
       />

@@ -21,6 +21,7 @@
           {
             "description": "",
             "name": "hubmap_id",
+            "title": "HuBMAP ID",
             "type": "string",
             "udi:cardinality": 499,
             "udi:data_type": "nominal",
@@ -124,6 +125,7 @@
           {
             "description": "An individual's weight in kilograms divided by the square of the height in meters.",
             "name": "body_mass_index_value",
+            "title": "BMI",
             "type": "number",
             "udi:cardinality": 184,
             "udi:data_type": "quantitative",
@@ -260,6 +262,7 @@
           {
             "description": "",
             "name": "egfr_ckd_epi_2021__value",
+            "title": "eGFR",
             "type": "string",
             "udi:cardinality": 2,
             "udi:data_type": "nominal",
@@ -866,6 +869,7 @@
           {
             "description": "",
             "name": "hubmap_id",
+            "title": "HuBMAP ID",
             "type": "string",
             "udi:cardinality": 5044,
             "udi:data_type": "nominal",
@@ -2438,6 +2442,7 @@
           {
             "description": "",
             "name": "hubmap_id",
+            "title": "HuBMAP ID",
             "type": "string",
             "udi:cardinality": 9474,
             "udi:data_type": "nominal",
@@ -12807,5 +12812,10 @@
     }
   ],
   "udi:name": "hubmap_api",
+  "udi:labels": {
+    "Stanford University Bone Marrow TMC": "Stanford BM TMC",
+    "University of California San Diego TMC": "UCSD TMC",
+    "Children's Hospital of Philadelphia": "CHOP"
+  },
   "udi:path": "./data/hubmap/"
 }

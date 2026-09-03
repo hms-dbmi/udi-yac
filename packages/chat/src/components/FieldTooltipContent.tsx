@@ -3,6 +3,10 @@ import { TooltipContent } from '@/components/ui/tooltip';
 
 interface FieldTooltipContentProps {
   field: string;
+  /** The package's friendly label, when it says something the column name
+   *  doesn't (`body_mass_index_value` → "BMI"). Shown above the raw name
+   *  rather than replacing it — you hover a field to learn what it is called. */
+  label?: string | undefined;
   dataType?: string | undefined;
   description?: string | undefined;
 }
@@ -12,9 +16,16 @@ interface FieldTooltipContentProps {
  * its description. Shared by the chat's field chips and the data overview's
  * field list so a field looks the same wherever it is hovered.
  */
-export function FieldTooltipContent({ field, dataType, description }: FieldTooltipContentProps) {
+export function FieldTooltipContent({
+  field,
+  label,
+  dataType,
+  description,
+}: FieldTooltipContentProps) {
+  const showLabel = !!label && label !== field;
   return (
     <TooltipContent className="max-w-sm flex-col items-start gap-1 px-3 py-2 text-xs">
+      {showLabel && <span className="font-medium">{label}</span>}
       <div className="flex items-center gap-1.5">
         <span className="font-mono font-medium">{field}</span>
         {dataType && (

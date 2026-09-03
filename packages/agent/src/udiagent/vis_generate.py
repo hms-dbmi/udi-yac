@@ -660,6 +660,30 @@ def _parse_request_schema(data_schema):
         return {"base_path": "./", "entities": {}, "relationships": []}
 
 
+_BIND_TOKEN = re.compile(r"\{bind:([^}]+)\}")
+
+
+def resolve_text_templates(tool_name, bindings):
+    """The chosen template's user-facing (title, summary), ready for the client.
+
+    `{entity}` / `{enc:…}` / `{field:…}` tokens are left for the frontend to
+    resolve against the spec it is rendering, so both texts follow a field
+    swapped in the tweak panel. `{bind:…}` has no encoding to hang on (a binby
+    input, a sort-only column) and is substituted here with the column the model
+    actually chose — those fields are not swappable, so a static name is right.
+    """
+    from udiagent.generated_vis_tools import TOOL_TEXT
+
+    title, summary = TOOL_TEXT.get(tool_name, ("", ""))
+    if not title and not summary:
+        return None
+
+    def fill(text):
+        return _BIND_TOKEN.sub(lambda m: bindings.get(m.group(1), m.group(0)), text)
+
+    return {"title": fill(title), "summary": fill(summary)}
+
+
 def _execute_generate(skill, context):
     """Execute the generate skill: try function-calling tools first, fall back to LLM."""
     agent = context["agent"]
@@ -749,6 +773,7 @@ def _execute_generate(skill, context):
                 context["gen_messages"] = tool_messages
                 context["tool_used"] = tool_name
                 context["tool_args"] = tool_args
+                context["text_templates"] = resolve_text_templates(tool_name, bindings)
                 context["validation_retries"] = _attempt
                 return context
             except Exception:
@@ -936,6 +961,7 @@ def generate_vis_spec(
         "valid": context["valid"],
         "errors": context["errors"],
         "corrections": context["corrections"],
+        "text_templates": context.get("text_templates"),
         "meta": {
             "tool_used": context.get("tool_used"),
             "tool_args": context.get("tool_args"),
