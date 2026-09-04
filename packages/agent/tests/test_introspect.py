@@ -84,6 +84,50 @@ def test_entity_schemas_merged_into_resources():
     assert any(f["name"] == "body_mass_g" for f in resource["schema"]["fields"])
 
 
+def test_field_annotations_reach_the_metadata_endpoint():
+    """A database knows `birth_date` is a bigint, not that it holds a birth
+    YEAR while `event_date` holds an age in DAYS. That meaning is written into
+    the datapackage, carried into the backends config by the seed scripts, and
+    has to survive introspection — otherwise remote mode loses it and the
+    model reads a bare column name."""
+    connector = DuckDBConnector(views={"penguins": str(_SAMPLE / "penguins.csv")})
+    engine = QueryEngine(
+        connector,
+        table_map={"penguins": "penguins"},
+        entity_schemas={
+            "penguins": {
+                "primaryKey": ["species"],
+                "fieldAnnotations": {
+                    "body_mass_g": {
+                        "title": "Body Mass (g)",
+                        "description": "Grams, not kilograms.",
+                    }
+                },
+            }
+        },
+    )
+    meta = introspect(engine, "p")
+    resource = meta["dataSchema"]["resources"][0]
+
+    by_name = {f["name"]: f for f in resource["schema"]["fields"]}
+    assert by_name["body_mass_g"]["title"] == "Body Mass (g)"
+    assert by_name["body_mass_g"]["description"] == "Grams, not kilograms."
+    # Untouched fields keep the introspected default.
+    assert by_name["species"].get("title") is None
+    assert by_name["species"]["description"] == ""
+    # Introspected facts survive the merge.
+    assert by_name["body_mass_g"]["udi:data_type"] == "quantitative"
+    # fieldAnnotations is not a frictionless schema key — it must not leak
+    # into the resource schema alongside primaryKey.
+    assert "fieldAnnotations" not in resource["schema"]
+    assert resource["schema"]["primaryKey"] == ["species"]
+
+    mass_domain = next(
+        d for d in meta["dataDomains"] if d["field"] == "body_mass_g"
+    )
+    assert mass_domain["fieldDescription"] == "Grams, not kilograms."
+
+
 def test_metadata_cache_ttl(engine):
     cache = MetadataCache(engine, "p", ttl_seconds=10_000)
     first = cache.get()

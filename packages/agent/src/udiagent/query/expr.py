@@ -24,7 +24,7 @@ _BINARY_OPERATORS = {
     "-": "-",
     "*": "*",
     "/": "/",
-    "%": "%",
+    # NB: "%" is deliberately absent — see the MOD() case in compile_expr.
     "==": "=",
     "!=": "<>",
     ">": ">",
@@ -106,10 +106,19 @@ def compile_expr(node: Any, ctx: ExprContext) -> str:
 
     if "op" in node:
         op = node.get("op")
+        left, right = node.get("left"), node.get("right")
+        if op == "%":
+            # MOD(a, b), never `a % b`: pymysql's paramstyle is "format", so a
+            # literal % in the SQL is read as a format spec and the query dies
+            # with "unsupported format character". MOD is supported by
+            # StarRocks/MySQL and DuckDB alike, and truncates toward zero for
+            # negatives just as JS % does, so Arquero parity holds.
+            return (
+                f"MOD({compile_expr(left, ctx)}, {compile_expr(right, ctx)})"
+            )
         sql_op = _BINARY_OPERATORS.get(op)
         if sql_op is None:
             raise UnsupportedQueryError(f"unsupported operator '{op}'")
-        left, right = node.get("left"), node.get("right")
         # `x != null` / `x == null` -> IS [NOT] NULL
         for a, b in ((left, right), (right, left)):
             if isinstance(b, dict) and b.get("literal", "sentinel") is None and op in ("==", "!="):
