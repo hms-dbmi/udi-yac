@@ -974,6 +974,655 @@
       }
     },
     {
+      "name": "join-colliding-columns",
+      "spec": {
+        "source": [
+          {
+            "name": "donors",
+            "source": "donors.csv"
+          },
+          {
+            "name": "samples",
+            "source": "samples.csv"
+          }
+        ],
+        "transformation": [
+          {
+            "join": {
+              "on": ["hubmap_id", "donor.hubmap_id"]
+            },
+            "in": ["donors", "samples"],
+            "out": "joined"
+          },
+          {
+            "groupby": "group_name_2"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              },
+              "donors": {
+                "op": "distinct",
+                "field": "hubmap_id_1"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "group_name_2": "University of Rochester Medical Center TMC",
+            "n": 33,
+            "donors": 4
+          },
+          {
+            "group_name_2": "Vanderbilt TMC",
+            "n": 531,
+            "donors": 57
+          },
+          {
+            "group_name_2": "TMC - University of Pennsylvania",
+            "n": 249,
+            "donors": 7
+          },
+          {
+            "group_name_2": "TTD - University of San Diego and City of Hope",
+            "n": 42,
+            "donors": 14
+          },
+          {
+            "group_name_2": "University of California San Diego TMC",
+            "n": 274,
+            "donors": 42
+          },
+          {
+            "group_name_2": "California Institute of Technology TMC",
+            "n": 59,
+            "donors": 13
+          },
+          {
+            "group_name_2": "Stanford RTI",
+            "n": 277,
+            "donors": 66
+          },
+          {
+            "group_name_2": "University of Florida TMC",
+            "n": 225,
+            "donors": 15
+          },
+          {
+            "group_name_2": "Stanford TMC",
+            "n": 201,
+            "donors": 12
+          },
+          {
+            "group_name_2": "General Electric RTI",
+            "n": 336,
+            "donors": 12
+          },
+          {
+            "group_name_2": "TMC - University of California San Diego focusing on female reproduction",
+            "n": 88,
+            "donors": 16
+          },
+          {
+            "group_name_2": "Purdue TTD",
+            "n": 3,
+            "donors": 1
+          },
+          {
+            "group_name_2": "TMC - University of Connecticut",
+            "n": 18,
+            "donors": 6
+          },
+          {
+            "group_name_2": "TTD - Penn State University and Columbia University",
+            "n": 2,
+            "donors": 1
+          },
+          {
+            "group_name_2": "TC - University of Florida",
+            "n": 6,
+            "donors": 2
+          },
+          {
+            "group_name_2": "EXT - Human Cell Atlas",
+            "n": 10,
+            "donors": 5
+          }
+        ],
+        "allData": [
+          {
+            "group_name_2": "University of Rochester Medical Center TMC",
+            "n": 33,
+            "donors": 4
+          },
+          {
+            "group_name_2": "Vanderbilt TMC",
+            "n": 531,
+            "donors": 57
+          },
+          {
+            "group_name_2": "TMC - University of Pennsylvania",
+            "n": 249,
+            "donors": 7
+          },
+          {
+            "group_name_2": "TTD - University of San Diego and City of Hope",
+            "n": 42,
+            "donors": 14
+          },
+          {
+            "group_name_2": "University of California San Diego TMC",
+            "n": 274,
+            "donors": 42
+          },
+          {
+            "group_name_2": "California Institute of Technology TMC",
+            "n": 59,
+            "donors": 13
+          },
+          {
+            "group_name_2": "Stanford RTI",
+            "n": 277,
+            "donors": 66
+          },
+          {
+            "group_name_2": "University of Florida TMC",
+            "n": 225,
+            "donors": 15
+          },
+          {
+            "group_name_2": "Stanford TMC",
+            "n": 201,
+            "donors": 12
+          },
+          {
+            "group_name_2": "General Electric RTI",
+            "n": 336,
+            "donors": 12
+          },
+          {
+            "group_name_2": "TMC - University of California San Diego focusing on female reproduction",
+            "n": 88,
+            "donors": 16
+          },
+          {
+            "group_name_2": "Purdue TTD",
+            "n": 3,
+            "donors": 1
+          },
+          {
+            "group_name_2": "TMC - University of Connecticut",
+            "n": 18,
+            "donors": 6
+          },
+          {
+            "group_name_2": "TTD - Penn State University and Columbia University",
+            "n": 2,
+            "donors": 1
+          },
+          {
+            "group_name_2": "TC - University of Florida",
+            "n": 6,
+            "donors": 2
+          },
+          {
+            "group_name_2": "EXT - Human Cell Atlas",
+            "n": 10,
+            "donors": 5
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "join-shared-key-name",
+      "spec": {
+        "source": [
+          {
+            "name": "donors",
+            "source": "donors.csv"
+          },
+          {
+            "name": "samples",
+            "source": "samples.csv"
+          }
+        ],
+        "transformation": [
+          {
+            "derive": {
+              "donor.hubmap_id": {
+                "field": "hubmap_id"
+              }
+            },
+            "in": "donors",
+            "out": "keyed_donors"
+          },
+          {
+            "join": {
+              "on": ["donor.hubmap_id", "donor.hubmap_id"]
+            },
+            "in": ["keyed_donors", "samples"],
+            "out": "joined"
+          },
+          {
+            "groupby": "group_name_1"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              },
+              "donors": {
+                "op": "distinct",
+                "field": "donor.hubmap_id"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "group_name_1": "University of Rochester Medical Center TMC",
+            "n": 8,
+            "donors": 2
+          },
+          {
+            "group_name_1": "Vanderbilt TMC",
+            "n": 531,
+            "donors": 57
+          },
+          {
+            "group_name_1": "TMC - University of Pennsylvania",
+            "n": 249,
+            "donors": 7
+          },
+          {
+            "group_name_1": "TTD - University of San Diego and City of Hope",
+            "n": 42,
+            "donors": 14
+          },
+          {
+            "group_name_1": "University of California San Diego TMC",
+            "n": 297,
+            "donors": 40
+          },
+          {
+            "group_name_1": "California Institute of Technology TMC",
+            "n": 52,
+            "donors": 12
+          },
+          {
+            "group_name_1": "Stanford RTI",
+            "n": 277,
+            "donors": 66
+          },
+          {
+            "group_name_1": "University of Florida TMC",
+            "n": 225,
+            "donors": 15
+          },
+          {
+            "group_name_1": "Stanford TMC",
+            "n": 213,
+            "donors": 11
+          },
+          {
+            "group_name_1": "General Electric RTI",
+            "n": 336,
+            "donors": 12
+          },
+          {
+            "group_name_1": "TMC - University of California San Diego focusing on female reproduction",
+            "n": 88,
+            "donors": 16
+          },
+          {
+            "group_name_1": "TMC - University of Connecticut",
+            "n": 18,
+            "donors": 6
+          },
+          {
+            "group_name_1": "TTD - Penn State University and Columbia University",
+            "n": 2,
+            "donors": 1
+          },
+          {
+            "group_name_1": "TC - University of Florida",
+            "n": 6,
+            "donors": 2
+          },
+          {
+            "group_name_1": "EXT - Human Cell Atlas",
+            "n": 10,
+            "donors": 5
+          }
+        ],
+        "allData": [
+          {
+            "group_name_1": "University of Rochester Medical Center TMC",
+            "n": 8,
+            "donors": 2
+          },
+          {
+            "group_name_1": "Vanderbilt TMC",
+            "n": 531,
+            "donors": 57
+          },
+          {
+            "group_name_1": "TMC - University of Pennsylvania",
+            "n": 249,
+            "donors": 7
+          },
+          {
+            "group_name_1": "TTD - University of San Diego and City of Hope",
+            "n": 42,
+            "donors": 14
+          },
+          {
+            "group_name_1": "University of California San Diego TMC",
+            "n": 297,
+            "donors": 40
+          },
+          {
+            "group_name_1": "California Institute of Technology TMC",
+            "n": 52,
+            "donors": 12
+          },
+          {
+            "group_name_1": "Stanford RTI",
+            "n": 277,
+            "donors": 66
+          },
+          {
+            "group_name_1": "University of Florida TMC",
+            "n": 225,
+            "donors": 15
+          },
+          {
+            "group_name_1": "Stanford TMC",
+            "n": 213,
+            "donors": 11
+          },
+          {
+            "group_name_1": "General Electric RTI",
+            "n": 336,
+            "donors": 12
+          },
+          {
+            "group_name_1": "TMC - University of California San Diego focusing on female reproduction",
+            "n": 88,
+            "donors": 16
+          },
+          {
+            "group_name_1": "TMC - University of Connecticut",
+            "n": 18,
+            "donors": 6
+          },
+          {
+            "group_name_1": "TTD - Penn State University and Columbia University",
+            "n": 2,
+            "donors": 1
+          },
+          {
+            "group_name_1": "TC - University of Florida",
+            "n": 6,
+            "donors": 2
+          },
+          {
+            "group_name_1": "EXT - Human Cell Atlas",
+            "n": 10,
+            "donors": 5
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "binby-derived-column",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "derive": {
+              "mass_kg": {
+                "op": "/",
+                "left": {
+                  "field": "body_mass_g"
+                },
+                "right": {
+                  "literal": 1000
+                }
+              }
+            }
+          },
+          {
+            "binby": {
+              "field": "mass_kg",
+              "bins": 6
+            }
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "start": 3,
+            "end": 4,
+            "n": 156
+          },
+          {
+            "start": 4,
+            "end": 5,
+            "n": 110
+          },
+          {
+            "start": 2,
+            "end": 3,
+            "n": 9
+          },
+          {
+            "start": 5,
+            "end": 6,
+            "n": 63
+          },
+          {
+            "start": 6,
+            "end": 7,
+            "n": 4
+          }
+        ],
+        "allData": [
+          {
+            "start": 3,
+            "end": 4,
+            "n": 156
+          },
+          {
+            "start": 4,
+            "end": 5,
+            "n": 110
+          },
+          {
+            "start": 2,
+            "end": 3,
+            "n": 9
+          },
+          {
+            "start": 5,
+            "end": 6,
+            "n": 63
+          },
+          {
+            "start": 6,
+            "end": 7,
+            "n": 4
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "derive-modulo",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "derive": {
+              "band": {
+                "op": "-",
+                "left": {
+                  "field": "body_mass_g"
+                },
+                "right": {
+                  "op": "%",
+                  "left": {
+                    "field": "body_mass_g"
+                  },
+                  "right": {
+                    "literal": 1000
+                  }
+                }
+              },
+              "negative_mod": {
+                "op": "%",
+                "left": {
+                  "op": "-",
+                  "left": {
+                    "literal": 0
+                  },
+                  "right": {
+                    "field": "body_mass_g"
+                  }
+                },
+                "right": {
+                  "literal": 1000
+                }
+              }
+            }
+          },
+          {
+            "groupby": "band"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              },
+              "sample": {
+                "op": "min",
+                "field": "negative_mod"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "band": 3000,
+            "n": 156,
+            "sample": -975
+          },
+          {
+            "band": 4000,
+            "n": 110,
+            "sample": -975
+          },
+          {
+            "band": 2000,
+            "n": 9,
+            "sample": -975
+          },
+          {
+            "band": 5000,
+            "n": 63,
+            "sample": -950
+          },
+          {
+            "band": 6000,
+            "n": 4,
+            "sample": -300
+          }
+        ],
+        "allData": [
+          {
+            "band": 3000,
+            "n": 156,
+            "sample": -975
+          },
+          {
+            "band": 4000,
+            "n": 110,
+            "sample": -975
+          },
+          {
+            "band": 2000,
+            "n": 9,
+            "sample": -975
+          },
+          {
+            "band": 5000,
+            "n": 63,
+            "sample": -950
+          },
+          {
+            "band": 6000,
+            "n": 4,
+            "sample": -300
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "rollup-distinct",
       "spec": {
         "source": {

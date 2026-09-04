@@ -256,6 +256,121 @@ const CASES = [
     },
   ],
   [
+    // Colliding NON-key columns: donors and samples share `group_name`, so a
+    // join renames both (`_1` left, `_2` right). `SELECT *` would leave the
+    // name ambiguous in SQL — this pins the compiler to Arquero's naming.
+    'join-colliding-columns',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        {
+          join: { on: ['hubmap_id', 'donor.hubmap_id'] },
+          in: ['donors', 'samples'],
+          out: 'joined',
+        },
+        { groupby: 'group_name_2' },
+        {
+          rollup: {
+            n: { op: 'count' },
+            donors: { op: 'distinct', field: 'hubmap_id_1' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // Sibling shape (the pcx one): the join key has the SAME name on both
+    // sides, so it merges into one column and keeps its bare name, while
+    // every other shared column still splits into _1 / _2. The derive gives
+    // donors a same-named key to join on.
+    'join-shared-key-name',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        {
+          derive: { 'donor.hubmap_id': { field: 'hubmap_id' } },
+          in: 'donors',
+          out: 'keyed_donors',
+        },
+        {
+          join: { on: ['donor.hubmap_id', 'donor.hubmap_id'] },
+          in: ['keyed_donors', 'samples'],
+          out: 'joined',
+        },
+        { groupby: 'group_name_1' },
+        {
+          rollup: {
+            n: { op: 'count' },
+            donors: { op: 'distinct', field: 'donor.hubmap_id' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // Binning a DERIVED column: binby's extent probe has to run over the
+    // derived prefix, not the raw source, or the bin edges come from the
+    // wrong values. This is how a unit conversion reaches a histogram.
+    'binby-derived-column',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        {
+          derive: {
+            mass_kg: {
+              op: '/',
+              left: { field: 'body_mass_g' },
+              right: { literal: 1000 },
+            },
+          },
+        },
+        { binby: { field: 'mass_kg', bins: 6 } },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // MOD, not `a % b`: a literal % in the SQL collides with pymysql's
+    // format paramstyle. Negatives included — JS % and SQL MOD must agree.
+    'derive-modulo',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        {
+          derive: {
+            band: {
+              op: '-',
+              left: { field: 'body_mass_g' },
+              right: {
+                op: '%',
+                left: { field: 'body_mass_g' },
+                right: { literal: 1000 },
+              },
+            },
+            negative_mod: {
+              op: '%',
+              left: {
+                op: '-',
+                left: { literal: 0 },
+                right: { field: 'body_mass_g' },
+              },
+              right: { literal: 1000 },
+            },
+          },
+        },
+        { groupby: 'band' },
+        {
+          rollup: {
+            n: { op: 'count' },
+            sample: { op: 'min', field: 'negative_mod' },
+          },
+        },
+      ],
+    },
+  ],
+  [
     'rollup-distinct',
     {
       source: src('penguins'),

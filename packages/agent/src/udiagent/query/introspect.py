@@ -177,9 +177,23 @@ def introspect(
         # Relationship metadata (primaryKey/foreignKeys) isn't introspectable
         # from the database — merge it from the engine's configured schemas so
         # the chat's cross-entity filtering can resolve entity relationships.
-        extras = entity_schemas.get(entity)
+        extras = dict(entity_schemas.get(entity) or {})
+        # Column meaning isn't introspectable either, and unlike the rest of
+        # `extras` it belongs on individual fields rather than on the schema.
+        annotations = extras.pop("fieldAnnotations", None) or {}
         if extras:
             resource["schema"].update(extras)
+        if annotations:
+            for field in resource["schema"]["fields"]:
+                field.update(annotations.get(field["name"], {}))
+            described = {
+                name: ann["description"]
+                for name, ann in annotations.items()
+                if ann.get("description")
+            }
+            for domain in domains:
+                if domain["field"] in described:
+                    domain["fieldDescription"] = described[domain["field"]]
         resources.append(resource)
         all_domains.extend(domains)
     return {

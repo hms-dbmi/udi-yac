@@ -46,7 +46,7 @@ class QueryEngine:
         self.table_map = table_map
         self.row_cap = row_cap
         self.entity_schemas = entity_schemas or {}
-        self._columns_cache: dict[str, set] = {}
+        self._columns_cache: dict[str, list] = {}
 
     # ── public API ───────────────────────────────────────────────────────────
 
@@ -123,15 +123,19 @@ class QueryEngine:
 
     # ── internals ────────────────────────────────────────────────────────────
 
-    def _columns_of(self, entity: str) -> set:
-        """Cached physical column names for an entity (DESCRIBE)."""
+    def _columns_of(self, entity: str) -> list:
+        """Cached physical column names for an entity, in table order.
+
+        Ordered, not a set: the compiler names a join's output columns from
+        these, and the column order has to match the Arquero executor's.
+        """
         if entity not in self._columns_cache:
             from .introspect import _describe
 
             table = self.table_map[entity]
-            self._columns_cache[entity] = {
+            self._columns_cache[entity] = [
                 name for name, _ in _describe(self.connector, table)
-            }
+            ]
         return self._columns_cache[entity]
 
     def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], bool]:

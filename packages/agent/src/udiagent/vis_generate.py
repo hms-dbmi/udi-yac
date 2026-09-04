@@ -243,6 +243,7 @@ def spec_mapping_errors(spec_dict, entity_fields) -> list:
     current_name = sources[0]["name"]
     current = set(env[current_name])
     pending_group = []
+    errors: list[str] = []
 
     def resolve_in(transform):
         in_name = transform.get("in")
@@ -257,6 +258,17 @@ def spec_mapping_errors(spec_dict, entity_fields) -> list:
             gb = transform["groupby"]
             pending_group = [gb] if isinstance(gb, str) else list(gb)
             cols = resolve_in(transform)
+            # A rollup takes its group keys on trust, so an unresolvable
+            # groupby would otherwise reappear as a valid-looking output
+            # column and only fail in the database. This is where a join's
+            # renamed column bites: `organization_name` is gone, replaced by
+            # `organization_name_1` / `_2`.
+            unknown = [g for g in pending_group if g and g not in cols]
+            if unknown:
+                errors.append(
+                    f"groupby field(s) {unknown} are not in the pipeline at "
+                    f"that point; available columns: {sorted(cols)}"
+                )
         elif "rollup" in transform and isinstance(transform["rollup"], dict):
             cols = set(pending_group) | set(transform["rollup"].keys())
             pending_group = []
@@ -271,7 +283,25 @@ def spec_mapping_errors(spec_dict, entity_fields) -> list:
         elif "join" in transform:
             in_names = transform.get("in")
             if isinstance(in_names, list) and len(in_names) == 2:
-                cols = env.get(in_names[0], set()) | env.get(in_names[1], set())
+                left = env.get(in_names[0], set())
+                right = env.get(in_names[1], set())
+                # A column on both sides is renamed, not shared: both
+                # executors emit `x_1` and `x_2` (a bare `x` would be
+                # ambiguous). Keys matched to their own name merge into one.
+                on = (transform.get("join") or {}).get("on")
+                if isinstance(on, str):
+                    pairs = [(on, on)]
+                elif isinstance(on, list) and all(isinstance(x, str) for x in on):
+                    pairs = [(on[0], on[-1])]
+                elif isinstance(on, list) and len(on) == 2:
+                    pairs = list(zip(on[0], on[1]))
+                else:
+                    pairs = []
+                merged = {a for a, b in pairs if a == b}
+                collisions = (left & right) - merged
+                cols = (left | right) - collisions
+                for column in collisions:
+                    cols |= {f"{column}_1", f"{column}_2"}
             else:
                 cols = set(current)
             pending_group = []
@@ -286,14 +316,19 @@ def spec_mapping_errors(spec_dict, entity_fields) -> list:
             cols = resolve_in(transform)
 
         current = cols
+        # Mirrors the executors' setOutTable: `out` renames the current table,
+        # and a scalar `in` makes the table it read from the current one — so
+        # a later `{"in": ["<E>", ...]}` join sees <E>'s TRANSFORMED columns,
+        # not the base table's.
         out_name = transform.get("out")
+        in_name = transform.get("in")
         if out_name:
-            env[out_name] = set(current)
             current_name = out_name
-        elif current_name:
+        elif isinstance(in_name, str):
+            current_name = in_name
+        if current_name:
             env[current_name] = set(current)
 
-    errors = []
     representation = spec_dict.get("representation")
     layers = (
         representation
@@ -329,7 +364,41 @@ def spec_mapping_errors(spec_dict, entity_fields) -> list:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_placeholder(tag, bindings, schema):
+def join_column_renames(spec_template, bindings, schema) -> dict[str, str]:
+    """{"E1.<column>": "<column>_1", "E2.<column>": "<column>_2"} for a join.
+
+    A column present on both sides of a join cannot keep its bare name: both
+    executors rename them (Arquero's `_1`/`_2` suffixes, which the SQL
+    compiler now mirrors, because `SELECT *` over a join leaves the name
+    ambiguous). A template that groups by `<E2.F>` therefore has to name the
+    renamed column, not the original.
+
+    Keys matched to a column of the same name are merged into one and keep
+    their bare name, so they are excluded.
+    """
+    if '"join"' not in spec_template:
+        return {}
+    e1, e2 = bindings.get("E1"), bindings.get("E2")
+    entities = schema.get("entities", {})
+    if not e1 or not e2 or e1 not in entities or e2 not in entities:
+        return {}
+
+    left = set(entities[e1].get("fields", {}))
+    right = set(entities[e2].get("fields", {}))
+    merged = {
+        rel["from_field"]
+        for rel in schema.get("relationships", [])
+        if {rel["from_entity"], rel["to_entity"]} == {e1, e2}
+        and rel["from_field"] == rel["to_field"]
+    }
+    renames = {}
+    for column in (left & right) - merged:
+        renames[f"E1.{column}"] = f"{column}_1"
+        renames[f"E2.{column}"] = f"{column}_2"
+    return renames
+
+
+def _resolve_placeholder(tag, bindings, schema, renames=None):
     """Resolve a single <tag> placeholder using bindings and schema."""
     # Entity URL: E.url, E1.url, E2.url
     if tag.endswith(".url"):
@@ -383,7 +452,11 @@ def _resolve_placeholder(tag, bindings, schema):
     # Strip type suffix: F:n -> F, E1.F:q -> E1.F
     base = tag.split(":")[0] if ":" in tag else tag
 
-    return bindings.get(base, "")
+    resolved = bindings.get(base, "")
+    if renames and resolved and base.startswith(("E1.", "E2.")):
+        side = base[:3]  # "E1." / "E2."
+        return renames.get(f"{side}{resolved}", resolved)
+    return resolved
 
 
 def instantiate_template(spec_template, bindings, schema):
@@ -401,11 +474,12 @@ def instantiate_template(spec_template, bindings, schema):
     # string; strip the quotes around its placeholder so it injects unquoted
     # ("filter": {...}) and stays valid JSON.
     spec = re.sub(r'"(<MARGINAL[^>"]*>)"', r"\1", spec)
+    renames = join_column_renames(spec_template, bindings, schema)
     while True:
         match = re.search(r"<([^>]+)>", spec)
         if not match:
             break
-        resolved = _resolve_placeholder(match.group(1), bindings, schema)
+        resolved = _resolve_placeholder(match.group(1), bindings, schema, renames)
         spec = spec.replace(match.group(0), resolved, 1)
     return json.loads(spec)
 

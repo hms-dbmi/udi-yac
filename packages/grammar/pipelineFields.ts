@@ -168,18 +168,20 @@ function joinShape(
   // Keys matched to a same-named column appear once in Arquero's output; every
   // other name present on both sides is suffixed (`x` -> `x_1`, `x_2`).
   const { on } = transform.join;
-  const sharedKeys = new Set<string>();
+  const pairs: Array<[string, string]> = [];
   if (typeof on === 'string') {
-    sharedKeys.add(on);
+    pairs.push([on, on]);
   } else if (on.every((key): key is string => typeof key === 'string')) {
-    // An all-strings `on` reaches Arquero verbatim, which reads it as a list
-    // of columns present under the same name in both tables.
-    for (const key of on) sharedKeys.add(key);
+    // A string array is [leftKey, rightKey] — Arquero pairs them rather than
+    // reading them as a list of same-named columns. A single entry means the
+    // same name on both sides.
+    pairs.push([on[0], on[on.length - 1]]);
   } else {
     // Multi-key: the executor derives a composite key on each side and joins
     // on that, leaving the original key columns to collide like any other.
-    sharedKeys.add(MULTI_KEY_JOIN_COLUMN);
+    pairs.push([MULTI_KEY_JOIN_COLUMN, MULTI_KEY_JOIN_COLUMN]);
   }
+  const sharedKeys = new Set(pairs.filter(([a, b]) => a === b).map(([a]) => a));
 
   const columns = new Set<string>();
   for (const [index, side] of [left, right].entries()) {

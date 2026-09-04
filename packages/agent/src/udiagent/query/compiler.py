@@ -99,6 +99,10 @@ class _State:
     params: list = field(default_factory=list)
     #: logical table name -> SQL relation reference (quoted table or CTE name)
     env: dict[str, str] = field(default_factory=dict)
+    #: SQL relation reference -> its ordered output columns. Only a join needs
+    #: this (to alias colliding names), but it has to be threaded through every
+    #: step to be correct at the point a join reads a mid-pipeline CTE.
+    columns: dict[str, list[str]] = field(default_factory=dict)
     current: str = ""
     current_name: str | None = None
     pending_groupby: list[str] | None = None
@@ -117,14 +121,16 @@ class PipelineCompiler:
         dialect,
         selections: dict[str, Any] | None = None,
         probe: Callable[[str, list], list[dict]] | None = None,
-        columns_of: Callable[[str], set] | None = None,
+        columns_of: Callable[[str], list] | None = None,
     ):
         """
         table_map: entity name -> physical table/view name.
         dialect: quoting/placeholder/median provider (see connectors).
         selections: name -> ActiveDataSelection ({dataSourceKey, selection, type}).
         probe: executes SQL NOW and returns rows (used for binby extents).
-        columns_of: entity name -> physical column set. Enables the local
+        columns_of: entity name -> physical columns, in table order (a
+            join names its output columns from these, so order matters).
+            Enables the local
             engine's guard: named filters whose selection fields don't exist
             in the target table are SKIPPED (a brush on one dataset applied to
             another), matching GetMappedArqueroFilter in DataSourcesStore.ts.
@@ -166,7 +172,11 @@ class PipelineCompiler:
     ) -> _State:
         st = _State()
         for src in sources:
-            st.env[src["name"]] = self._table_ref(src["name"])
+            ref = self._table_ref(src["name"])
+            st.env[src["name"]] = ref
+            known = self._ordered_columns(src["name"])
+            if known is not None:
+                st.columns[ref] = known
         first = sources[0]["name"]
         st.current = st.env[first]
         st.current_name = first
@@ -234,16 +244,34 @@ class PipelineCompiler:
     def _q(self, ident: str) -> str:
         return self.dialect.quote(ident)
 
+    def _ordered_columns(self, entity: str) -> list[str] | None:
+        """An entity's physical columns, in order, or None when unknown."""
+        if self.columns_of is None:
+            return None
+        try:
+            known = self.columns_of(entity)
+        except Exception:  # noqa: BLE001 - introspection is best-effort here
+            return None
+        return list(known) if known else None
+
     def _table_ref(self, entity: str) -> str:
         table = self.table_map.get(entity)
         if table is None:
             raise UnsupportedQueryError(f"unknown entity '{entity}'")
         return self._q(table)
 
-    def _push(self, st: _State, sql: str, logical_name: str | None) -> None:
+    def _push(
+        self,
+        st: _State,
+        sql: str,
+        logical_name: str | None,
+        columns: list[str] | None = None,
+    ) -> None:
         st.counter += 1
         name = f"t{st.counter}"
         st.ctes.append((name, sql))
+        if columns is not None:
+            st.columns[name] = columns
         st.current = name
         if logical_name:
             st.env[logical_name] = name
@@ -339,7 +367,9 @@ class PipelineCompiler:
         (no columns_of hook, or the name isn't a physical entity)."""
         if self.columns_of is None or entity is None or entity not in self.table_map:
             return None
-        return self.columns_of(entity)
+        # columns_of is ordered (a join names its output from it); set
+        # semantics are what this membership guard wants.
+        return set(self.columns_of(entity))
 
     def _named_filter_sql(self, st: _State, filt: dict, in_entity: str | None) -> str | None:
         """FilterDataSelection -> WHERE clause (or None to skip)."""
@@ -413,7 +443,12 @@ class PipelineCompiler:
                 ctx = self._expr_ctx()
                 pred = compile_expr(filt, ctx)
                 st.params.extend(ctx.params)
-            self._push(st, f"SELECT * FROM {in_ref} WHERE {pred}", out_name)
+            self._push(
+                st,
+                f"SELECT * FROM {in_ref} WHERE {pred}",
+                out_name,
+                st.columns.get(in_ref),
+            )
             return
 
         # Named filter (FilterDataSelection)
@@ -429,7 +464,12 @@ class PipelineCompiler:
         if pred is None:
             return
         st.applied_named_filter = True
-        self._push(st, f"SELECT * FROM {in_ref} WHERE {pred}", out_name)
+        self._push(
+            st,
+            f"SELECT * FROM {in_ref} WHERE {pred}",
+            out_name,
+            st.columns.get(in_ref),
+        )
 
     def _compile_rollup(self, st: _State, transform: dict, out_name: str | None) -> None:
         in_ref = self._in_ref(st, transform.get("in"))
@@ -465,7 +505,7 @@ class PipelineCompiler:
         sql = f"SELECT {select_list} FROM {in_ref}"
         if cols:
             sql += " GROUP BY " + ", ".join(cols)
-        self._push(st, sql, out_name)
+        self._push(st, sql, out_name, list(groups) + list(transform["rollup"]))
         st.pending_groupby = None
         st.order_by = None
         st.aggregated = True
@@ -519,7 +559,15 @@ class PipelineCompiler:
                 st.params.extend(ctx.params)
             else:
                 raise UnsupportedQueryError(f"invalid derive expression: {expr!r}")
-        self._push(st, f"SELECT *, {', '.join(cols)} FROM {in_ref}", out_name)
+        known = st.columns.get(in_ref)
+        derived = (
+            known + [name for name in transform["derive"] if name not in known]
+            if known is not None
+            else None
+        )
+        self._push(
+            st, f"SELECT *, {', '.join(cols)} FROM {in_ref}", out_name, derived
+        )
 
     @staticmethod
     def _rolling_frame(window: list | None) -> str:
@@ -542,6 +590,35 @@ class PipelineCompiler:
             f"AND {bound(window[1], is_lower=False)}"
         )
 
+    def _join_columns(
+        self,
+        left_cols: list[str],
+        right_cols: list[str],
+        pairs: list[tuple[str, str]],
+    ) -> tuple[str, list[str]]:
+        """(select list, output column names) for a join, named as Arquero does.
+
+        Left columns keep their order, then the right's; a key matched to a
+        column of the same name is emitted once from the left, and any other
+        name present on both sides becomes `x_1` (left) and `x_2` (right).
+        """
+        merged_keys = {a for a, b in pairs if a == b}
+        left_set, right_set = set(left_cols), set(right_cols)
+
+        select: list[str] = []
+        names: list[str] = []
+        for col in left_cols:
+            alias = f"{col}_1" if col in right_set and col not in merged_keys else col
+            select.append(f"l.{self._q(col)} AS {self._q(alias)}")
+            names.append(alias)
+        for col in right_cols:
+            if col in merged_keys:
+                continue  # merged into the left copy, exactly as Arquero does
+            alias = f"{col}_2" if col in left_set else col
+            select.append(f"r.{self._q(col)} AS {self._q(alias)}")
+            names.append(alias)
+        return ", ".join(select), names
+
     def _compile_join(self, st: _State, transform: dict, out_name: str | None) -> None:
         in_names = transform.get("in")
         if not isinstance(in_names, list) or len(in_names) != 2:
@@ -552,22 +629,36 @@ class PipelineCompiler:
         if isinstance(on, str):
             pairs = [(on, on)]
         elif all(isinstance(x, str) for x in on):
-            pairs = [(on[0], on[1])]
+            # [left, right]; a single entry means the same name on both sides.
+            pairs = [(on[0], on[-1])]
         else:
             pairs = list(zip(on[0], on[1]))
 
-        if all(a == b for a, b in pairs):
-            # Same-name keys: USING merges and dedups the join columns —
-            # matches Arquero, works on both DuckDB and StarRocks/MySQL.
-            using = ", ".join(self._q(a) for a, _ in pairs)
-            sql = f"SELECT * FROM {left} l JOIN {right} r USING ({using})"
-        else:
-            # ponytail: differently-named keys keep both columns; non-key
-            # column collisions error in SQL instead of Arquero's _1/_2
-            # suffixing. Add introspected column lists if that ever bites.
-            cond = " AND ".join(f"l.{self._q(a)} = r.{self._q(b)}" for a, b in pairs)
-            sql = f"SELECT * FROM {left} l JOIN {right} r ON {cond}"
-        self._push(st, sql, out_name)
+        cond = " AND ".join(f"l.{self._q(a)} = r.{self._q(b)}" for a, b in pairs)
+        left_cols, right_cols = st.columns.get(left), st.columns.get(right)
+
+        if left_cols is None or right_cols is None:
+            # No introspection to name the columns with. USING at least merges
+            # same-name keys on DuckDB; on StarRocks even that leaves both
+            # copies, so a shared column downstream is ambiguous either way.
+            if all(a == b for a, b in pairs):
+                using = ", ".join(self._q(a) for a, _ in pairs)
+                sql = f"SELECT * FROM {left} l JOIN {right} r USING ({using})"
+            else:
+                sql = f"SELECT * FROM {left} l JOIN {right} r ON {cond}"
+            self._push(st, sql, out_name)
+            return
+
+        # `SELECT *` over a join is unusable: a column on both sides appears
+        # twice, and every later reference to it fails — "Column
+        # 'organization_name' is ambiguous" on StarRocks, and USING does not
+        # save even the join key there (StarRocks returns both copies). So
+        # name every column explicitly, using Arquero's rules so both
+        # executors produce the same table: a key matched to its own name
+        # appears once, and anything else on both sides is suffixed _1 / _2.
+        select_list, out_columns = self._join_columns(left_cols, right_cols, pairs)
+        sql = f"SELECT {select_list} FROM {left} l JOIN {right} r ON {cond}"
+        self._push(st, sql, out_name, out_columns)
         st.pending_groupby = None
         st.order_by = None
 
@@ -613,11 +704,18 @@ class PipelineCompiler:
             f"({bin_step!r} * (FLOOR(({col} - {bin_min!r}) / {bin_step!r}) + 1) "
             f"+ {bin_min!r})"
         )
+        known = st.columns.get(in_ref)
+        binned = (
+            known + [c for c in (start, end) if c not in known]
+            if known is not None
+            else None
+        )
         self._push(
             st,
             f"SELECT *, {expr0} AS {self._q(start)}, {expr1} AS {self._q(end)} "
             f"FROM {in_ref}",
             out_name,
+            binned,
         )
         st.pending_groupby = [start, end]
 

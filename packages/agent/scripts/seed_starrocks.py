@@ -114,6 +114,19 @@ def load_package(data_dir: Path) -> list[dict]:
                 for key in ("primaryKey", "foreignKeys")
                 if key in schema
             }
+            # Likewise for what a column MEANS: a database knows `birth_date`
+            # is a bigint, not that it holds a birth year while `event_date`
+            # holds an age in days. Carry the datapackage's hand-written
+            # titles/descriptions so introspection can put them back.
+            annotations = {
+                f["name"]: {
+                    key: f[key] for key in ("title", "description") if f.get(key)
+                }
+                for f in fields
+                if f.get("title") or f.get("description")
+            }
+            if annotations:
+                relationship_schema["fieldAnnotations"] = annotations
             entries.append(
                 {
                     "entity": resource["name"],

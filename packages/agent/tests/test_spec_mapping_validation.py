@@ -330,3 +330,57 @@ def test_schema_and_mapping_errors_are_reported_together():
     joined = "; ".join(errors)
     assert "step" in joined, joined
     assert "'event_date'" in joined, joined
+
+
+def test_binning_a_derived_column_is_expressible():
+    """Arithmetic before binning: the documented way to bin an age stored in
+    days into YEARS (skills/generate.md). Binning the raw column would give
+    1000-day buckets, so the unit conversion has to happen first — and the
+    derived column has to survive into binby's input.
+    """
+    from udiagent.grammar import load_grammar
+
+    grammar = load_grammar("udi")
+    years = {"op": "/", "left": {"field": "event_date"}, "right": {"literal": 365.25}}
+    spec = {
+        "source": {"name": "Event", "source": "event.csv"},
+        "transformation": [
+            {"derive": {"age_years": years}},
+            {"binby": {"field": "age_years", "bins": 6}},
+            {"rollup": {"n": {"op": "count"}}},
+        ],
+        "representation": {
+            "mark": "rect",
+            "mapping": [
+                {"encoding": "x", "field": "start", "type": "quantitative"},
+                {"encoding": "x2", "field": "end", "type": "quantitative"},
+                {"encoding": "y", "field": "n", "type": "quantitative"},
+            ],
+        },
+    }
+    _, errors = _parse_and_validate(json.dumps(spec), grammar["schema_dict"], FIELDS)
+    assert errors == [], errors
+
+
+def test_exact_width_buckets_are_expressible():
+    """"5-year groups" — binby's `bins` is a count and cannot promise a width,
+    so the documented route is a derived bucket plus groupby."""
+    from udiagent.grammar import load_grammar
+
+    grammar = load_grammar("udi")
+    years = {"op": "/", "left": {"field": "event_date"}, "right": {"literal": 365.25}}
+    band = {
+        "op": "-",
+        "left": years,
+        "right": {"op": "%", "left": years, "right": {"literal": 5}},
+    }
+    spec = _spec(
+        [
+            {"derive": {"age_band": band}},
+            {"groupby": ["age_band"]},
+            {"rollup": {"n": {"op": "count"}}},
+        ],
+        [("x", "age_band"), ("y", "n")],
+    )
+    _, errors = _parse_and_validate(json.dumps(spec), grammar["schema_dict"], FIELDS)
+    assert errors == [], errors

@@ -162,5 +162,8 @@ class StarRocksConnector:
     @staticmethod
     def _run(conn, sql: str, params: list | None) -> list[dict]:
         with conn.cursor() as cursor:
-            cursor.execute(sql, params or [])
+            # None, not []: with any args pymysql runs the SQL through
+            # %-formatting, so a stray % in the query (a LIKE pattern, an
+            # oddly named column) dies as "unsupported format character".
+            cursor.execute(sql, params or None)
             return cursor.fetchall()

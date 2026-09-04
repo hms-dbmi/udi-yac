@@ -151,6 +151,23 @@ assert.deepEqual(
   'multi-key join feeds the rest of the pipeline through `out`',
 );
 
+// A two-string `on` is [leftKey, rightKey], not two same-named keys: Arquero
+// pairs them, so differently-named keys both survive and everything else that
+// collides is suffixed.
+assert.deepEqual(
+  fields(
+    {
+      source: [patients, { name: 'visits', source: 'visits.csv' }],
+      transformation: [
+        { in: ['patients', 'visits'], join: { on: ['id', 'patient_id'] } },
+      ],
+    },
+    { patients: ['id', 'site'], visits: ['patient_id', 'site'] },
+  ),
+  ['id', 'patient_id', 'site_1', 'site_2'],
+  'differently-named join keys both survive; the shared column splits',
+);
+
 assert.equal(
   fields({ source: patients }, null),
   null,

@@ -35,6 +35,31 @@ def humanize(stem: str, strips: list[str]) -> str:
     return " ".join(w[:1].upper() + w[1:] for w in words) if words else stem
 
 
+# Placeholder strings that mean "no value" in an otherwise-numeric column
+# (routine in de-identified clinical exports). Kept in step with
+# DEFAULT_NULL_SENTINELS in packages/agent/scripts/seed_starrocks.py, which
+# nulls these on load — a test asserts the two lists match. Duplicated rather
+# than imported so this script stays stdlib-only and standalone.
+NULL_SENTINELS = frozenset(
+    {
+        "not available",
+        "not applicable",
+        "not reported",
+        "unavailable",
+        "unknown",
+        "n/a",
+        "na",
+        "none",
+        "null",
+        "nan",
+    }
+)
+
+
+def _is_sentinel(s: str) -> bool:
+    return s.strip().lower() in NULL_SENTINELS
+
+
 def _is_number(s: str) -> bool:
     s = s.strip()
     if not s:
@@ -66,9 +91,19 @@ def _profile_table(name: str, header: list[str], rows: list[list[str]]) -> dict:
 
     for c, col in enumerate(header):
         vals = [rows[i][c].strip() for i in present[c]]
+        # Same rule as the seeders: a column is numeric when it has numeric
+        # evidence and every non-empty value is a number or a null sentinel.
+        # Those sentinels load as NULL, so they are not values here either —
+        # otherwise "1736" and "Not Available" in one column would make an age
+        # in days look like a category.
+        numeric = [v for v in vals if _is_number(v)]
+        is_num = bool(numeric) and all(
+            _is_number(v) or _is_sentinel(v) for v in vals
+        )
+        if is_num:
+            vals = numeric
         distinct = set(vals)
         card = len(distinct)
-        is_num = card > 0 and all(_is_number(v) for v in vals)
         unique = card == n and len(vals) == n  # one distinct value on every row
         overlapping = [header[j] for j in range(len(header)) if j in overlaps[c]]
         fields.append(
@@ -184,6 +219,52 @@ def _near_key_warnings(pkg: dict) -> list[str]:
     return warnings
 
 
+# Keys a human may write into a generated datapackage that inference cannot
+# recover: what a column MEANS. Everything else here is derived from the CSVs
+# and is rewritten on every run.
+_AUTHORED_KEYS = ("title", "description")
+
+
+def _carry_authored_metadata(pkg: dict, previous: Path) -> int:
+    """Copy hand-written titles/descriptions from a previous datapackage.json.
+
+    Inference can tell that `birth_date` holds numbers; only a person can say
+    it holds a birth YEAR while `event_date` holds the patient's age in DAYS.
+    That knowledge is written into the generated file, so without this a
+    regeneration silently drops it. Matched by resource and field name, so
+    annotations for columns that no longer exist simply fall away.
+    """
+    try:
+        old = json.loads(previous.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return 0
+
+    old_resources = {r.get("name"): r for r in old.get("resources", []) if r.get("name")}
+    carried = 0
+    for resource in pkg["resources"]:
+        old_resource = old_resources.get(resource["name"])
+        if not old_resource:
+            continue
+        for key in _AUTHORED_KEYS:
+            if old_resource.get(key) and not resource.get(key):
+                resource[key] = old_resource[key]
+                carried += 1
+        old_fields = {
+            f.get("name"): f
+            for f in old_resource.get("schema", {}).get("fields", [])
+            if f.get("name")
+        }
+        for field in resource["schema"]["fields"]:
+            old_field = old_fields.get(field["name"])
+            if not old_field:
+                continue
+            for key in _AUTHORED_KEYS:
+                if old_field.get(key) and not field.get(key):
+                    field[key] = old_field[key]
+                    carried += 1
+    return carried
+
+
 def build_package(csv_dir: Path, name: str, udi_path: str, strips: list[str]) -> dict:
     resources = []
     for path in sorted(csv_dir.glob("*.csv")):
@@ -266,6 +347,53 @@ def _selftest() -> None:
     dates = prof("when,v\n" + "".join(f"{i // 2},a{i}\n" for i in range(40)), "dates")
     assert _near_key_warnings({"resources": [dates, child]}) == []
 
+    # A day-offset column peppered with sentinels is still quantitative, and
+    # the sentinels are not values (the seeders load them as NULL).
+    ages = prof("age_days,x\n456,a\nNot Available,b\n1736,c\nnot applicable,d\n", "ages")
+    af = ages["schema"]["fields"][0]
+    assert af["udi:data_type"] == "quantitative", af
+    assert af["udi:cardinality"] == 2, af  # 456 and 1736; sentinels excluded
+    assert not af["udi:unique"], af  # not a value on every row
+
+    # A genuinely categorical column keeps its sentinels as real categories.
+    status = prof("status,x\nalive,a\nNot Reported,b\ndeceased,c\n", "status")
+    sf = status["schema"]["fields"][0]
+    assert sf["udi:data_type"] == "nominal", sf
+    assert sf["udi:cardinality"] == 3, sf
+
+    # Hand-written meaning survives a regeneration; inferred values do not.
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        previous = Path(tmp) / "datapackage.json"
+        previous.write_text(
+            json.dumps(
+                {
+                    "resources": [
+                        {
+                            "name": "parent",
+                            "title": "Patients",
+                            "schema": {
+                                "fields": [
+                                    {"name": "id", "description": "Birth year, not a date."}
+                                ]
+                            },
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        fresh = {"resources": [prof("id,x\n1,a\n2,b\n", "parent")]}
+        assert _carry_authored_metadata(fresh, previous) == 2
+        assert fresh["resources"][0]["title"] == "Patients"
+        assert fresh["resources"][0]["schema"]["fields"][0]["description"] == (
+            "Birth year, not a date."
+        )
+        # An annotation for a column that no longer exists just falls away.
+        gone = {"resources": [prof("other,x\n1,a\n", "parent")]}
+        assert _carry_authored_metadata(gone, previous) == 1  # the resource title only
+
     print("selftest OK")
 
 
@@ -301,10 +429,13 @@ def main() -> None:
     out = Path(args.out) if args.out else csv_dir / "datapackage.json"
 
     pkg = build_package(csv_dir, name, udi_path, args.strip)
+    carried = _carry_authored_metadata(pkg, out) if out.exists() else 0
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])
     print(f"{out} — {len(pkg['resources'])} tables, {fks} foreign key(s) inferred")
+    if carried:
+        print(f"  kept {carried} hand-written title/description value(s)")
     for r in pkg["resources"]:
         for fk in r["schema"]["foreignKeys"]:
             print(f"  {r['name']}.{fk['fields'][0]} -> {fk['reference']['resource']}")
