@@ -1,0 +1,11 @@
+--- a/lib/validator.js
++++ b/lib/validator.js
+@@ -260,7 +260,7 @@
+     return {subschema: ctx.schemas[switchSchema], switchSchema: switchSchema};
+   }
+   // Else try walking the property pointer
+-  let parsed = new URL(switchSchema,'thismessage::/');
++  let parsed = new URL(switchSchema,'thismessage:/');
+   let fragment = parsed.hash;
+   var document = fragment && fragment.length && switchSchema.substr(0, switchSchema.length - fragment.length);
+   if (!document || !ctx.schemas[document]) {

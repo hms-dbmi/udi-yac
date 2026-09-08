@@ -40,14 +40,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          # Pinned: Node 24.20.0 tightened URL parsing so that resolving an
-          # absolute path against an opaque-path base throws (spec-correct).
-          # jsonschema@1.5.0 does exactly that — `new URL(ref, 'thismessage::/')`
-          # — which crashes eslint-plugin-project-structure's config validation
-          # and so the whole `eslint .` run. Latest jsonschema and plugin
-          # releases both still carry it, so unpin once upstream fixes it:
-          # https://github.com/tdegrunt/jsonschema
-          node-version: 24.19.0
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 

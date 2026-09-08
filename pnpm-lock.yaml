@@ -21,6 +21,9 @@ overrides:
   rollup-plugin-visualizer>picomatch: 4.0.4
   tinyglobby>picomatch: 4.0.4
 
+patchedDependencies:
+  jsonschema@1.5.0: 076920b76723de767578cf4916997c72169d45cd9992fecfe567f12e86de31f3
+
 importers:
   .:
     devDependencies:
@@ -13309,7 +13312,7 @@ snapshots:
       "@typescript-eslint/utils": 8.63.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3)
       comment-json: 4.6.2
       js-yaml: 4.1.1
-      jsonschema: 1.5.0
+      jsonschema: 1.5.0(patch_hash=076920b76723de767578cf4916997c72169d45cd9992fecfe567f12e86de31f3)
       micromatch: 4.0.8
     transitivePeerDependencies:
       - eslint
@@ -14111,7 +14114,8 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  jsonschema@1.5.0: {}
+  jsonschema@1.5.0(patch_hash=076920b76723de767578cf4916997c72169d45cd9992fecfe567f12e86de31f3):
+    {}
 
   jstransformer@1.0.0:
     dependencies:
