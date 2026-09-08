@@ -7,35 +7,65 @@ import { projectStructurePlugin, createIndependentModules } from 'eslint-plugin-
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 /**
+ * The plugin derives its project root by walking up to the first `node_modules`
+ * in its own path, which under pnpm is the WORKSPACE root — not this package.
+ * Both of these are resolved against that root, so without them every linted
+ * path arrives as `packages/chat/src/...`, matches none of the `src/**` module
+ * patterns below, and the rule silently passes every file:
+ *   - pathAliases.baseUrl  makes file and alias paths package-relative again
+ *   - packageRoot          is where `node_modules` actually lives, so external
+ *                          imports (react, vitest, ...) are recognised as such
+ */
+const PACKAGE_ROOT = './packages/chat';
+
+/**
  * Bulletproof-react-style module boundaries. Features cannot import from
  * each other's internals — only through the feature's `index.ts` barrel.
  * The `app/` layer is the composition root and is allowed to reach into
  * any feature internal (needed by UDIChatContext to wire vanilla stores).
  *
- * The `{family}` token captures the folder segment at the wildcard
- * position so a feature can reference its own tree without naming itself.
+ * `{family_3}` resolves to the common path prefix of the importing file and the
+ * import, but only when that prefix is at least 3 segments deep — i.e.
+ * `src/features/<name>`. A same-feature import therefore matches it, while a
+ * cross-feature one bottoms out at `src/features` (2 segments), resolves to
+ * NO_FAMILY, and is refused. Note it must not appear in a module's `pattern`:
+ * those are matched literally, so a `{family}` there matches nothing at all and
+ * silently disables the rule for that module.
  */
 const independentModules = createIndependentModules({
+  packageRoot: PACKAGE_ROOT,
   pathAliases: {
-    baseUrl: '.',
+    baseUrl: PACKAGE_ROOT,
     paths: {
       '@/*': ['./src/*'],
     },
   },
   reusableImportPatterns: {
-    // Shared layers any source file is allowed to reach.
-    sharedLayers: ['src/types/**', 'src/lib/**', 'src/stores/**', 'src/components/ui/**'],
+    // Shared layers any source file is allowed to reach. `src/components/**`
+    // rather than just `ui/**`: the top-level components dir IS the shared
+    // component layer (MarkdownText, FieldTooltipContent), and assets are inert.
+    sharedLayers: [
+      'src/types/**',
+      'src/lib/**',
+      'src/stores/**',
+      'src/components/**',
+      'src/assets/**',
+    ],
   },
   modules: [
     // Feature internals: own family + cross-feature barrels + shared layers.
     {
       name: 'Feature internals',
-      pattern: 'src/features/{family}/**',
+      pattern: 'src/features/*/**',
       allowImportsFrom: [
-        'src/features/{family}/**',
+        '{family_3}/**',
         // Cross-feature: barrels only.
         'src/features/*/index.ts',
         'src/utils/**',
+        // The one part of the composition root features may reach. Stores are
+        // vanilla and instantiated per-provider here, so a component consumes
+        // them through this context rather than importing a store module.
+        'src/app/UDIChatContext.tsx',
         '{sharedLayers}',
       ],
       allowExternalImports: true,
