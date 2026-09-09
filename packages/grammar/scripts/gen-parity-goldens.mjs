@@ -487,6 +487,78 @@ const CASES = [
     },
     false, // displayDataOnly: force the extent pass
   ],
+  [
+    // A dynamic stratification grouping, nominal: values combined into named
+    // strata by a chain of `==` under `||`, with everything unclaimed falling to
+    // an Other label. This is exactly what `udiagent.stratify.grouping_expr`
+    // emits, and it has to mean the same thing in both executors — a grouped
+    // survival curve computes its strata in a derive and then groups by them.
+    'derive-nominal-grouping',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '||',
+                left: {
+                  op: '==',
+                  left: { field: 'species' },
+                  right: { literal: 'Adelie' },
+                },
+                right: {
+                  op: '==',
+                  left: { field: 'species' },
+                  right: { literal: 'Gentoo' },
+                },
+              },
+              then: { literal: 'Adelie or Gentoo' },
+              else: { literal: 'Other' },
+            },
+          },
+        },
+        { groupby: 'stratum' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // The same, quantitative: ascending `<` tests, so the first that passes is
+    // the right bucket and the final else is everything at or above the last
+    // cut. Half-open on the right in both executors, or a subject at exactly the
+    // threshold lands in a different curve depending on where the query ran.
+    'derive-quantitative-grouping',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '<',
+                left: { field: 'body_mass_g' },
+                right: { literal: 3500 },
+              },
+              then: { literal: '< 3500' },
+              else: {
+                if: {
+                  op: '<',
+                  left: { field: 'body_mass_g' },
+                  right: { literal: 4500 },
+                },
+                then: { literal: '3500-4500' },
+                else: { literal: '>= 4500' },
+              },
+            },
+          },
+        },
+        { groupby: 'stratum' },
+        { rollup: { n: { op: 'count' }, heaviest: { op: 'max', field: 'body_mass_g' } } },
+      ],
+    },
+  ],
 ];
 
 const goldens = { sources: SOURCES, cases: [] };

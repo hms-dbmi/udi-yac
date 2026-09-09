@@ -404,11 +404,18 @@ def _declared_binding(
             return declared.get(prefix)
         return declared.get("E")
 
-    # <V*> declares a literal data value, not a column, so it must not be checked
-    # against the entity's field list.
+    # <V*> declares a literal data value and <GROUP*> a stratifier grouping;
+    # neither is a column, so neither may be checked against the entity's field
+    # list. Declaring a grouping is what lets the studio preview a template in
+    # its GROUPED form — and for the numeric stratifier that is the only form it
+    # has, since validation refuses an uncut continuous column.
     missing = []
     for key, value in declared.items():
-        if _ENTITY_KEY.fullmatch(key) or re.fullmatch(r"V\d*", key):
+        if (
+            _ENTITY_KEY.fullmatch(key)
+            or re.fullmatch(r"V\d*", key)
+            or re.fullmatch(r"GROUP\d*", key)
+        ):
             continue
         owner = _entity_for(key)
         if owner is None or value not in entities.get(owner, {}).get("fields", {}):
@@ -456,7 +463,16 @@ def _search_bindings(
     relationships = parsed_schema.get("relationships", [])
     required_types = _required_types(spec_template)
     entity_keys = [k for k in binding_keys if k in ("E", "E1", "E2")]
-    field_keys = [k for k in binding_keys if k not in ("E", "E1", "E2")]
+    # A <GROUP*> key is not a column to search for — it is an optional grouping,
+    # and the search has no basis for inventing one. Left unbound, so a template
+    # without declared preview bindings previews ungrouped, which is the state
+    # every stratified chart starts in anyway. Searching for it would bind a
+    # column name where JSON is expected and fail the whole preview.
+    field_keys = [
+        k
+        for k in binding_keys
+        if k not in ("E", "E1", "E2") and not re.fullmatch(r"GROUP\d*", k)
+    ]
     wants_cube = _needs_cube(spec_template)
 
     ranked_entities = sorted(entities.items(), key=lambda kv: _entity_rank(*kv))
