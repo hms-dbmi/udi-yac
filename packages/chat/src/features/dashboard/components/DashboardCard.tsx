@@ -73,8 +73,11 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   // "Show visualization in dashboard" pressed on this card's chat message.
   const jump = useDashboard((s) => s.jumpToVisualization);
+  // `block: 'start'` — a card is usually taller than a message, and its title
+  // and toolbar are at the top, so land the top edge rather than the bottom.
   const { ref: cardRef, flashing } = useJumpTarget<HTMLDivElement>(
     jump?.key === vizKey ? jump.nonce : null,
+    { block: 'start' },
   );
 
   // Whether the gear button can do anything for this spec. Charts whose

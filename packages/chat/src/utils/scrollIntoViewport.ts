@@ -1,28 +1,43 @@
+export interface ScrollIntoViewportOptions {
+  /** Where to land an element that isn't fully visible. `'nearest'` moves it
+   *  the shorter way (off the top → align top, off the bottom → align bottom);
+   *  `'start'` always brings its top to the top of the viewport, which is what
+   *  you want for a tall target whose header carries its identity. */
+  block?: 'nearest' | 'start';
+  /** Breathing room, in px, between the element and the viewport edge. */
+  margin?: number;
+}
+
 /**
  * Scroll an element into view inside its own ScrollArea viewport.
  *
  * `Element.scrollIntoView` walks every scrollable ancestor, which drags the
  * host page along when the chat is embedded in another site (see the same
  * note in useMessageListScroll). This finds the enclosing Base UI viewport
- * (`data-slot="scroll-area-viewport"`) and scrolls only that, mirroring
- * `block: 'nearest'`: an element already fully visible doesn't move, one off
- * the top aligns to the top, one off the bottom aligns to the bottom — each
- * with `margin` px of breathing room.
+ * (`data-slot="scroll-area-viewport"`) and scrolls only that. An element
+ * already fully visible never moves, whichever `block` is asked for.
  */
-export function scrollIntoViewport(el: HTMLElement, margin = 8): void {
+export function scrollIntoViewport(
+  el: HTMLElement,
+  { block = 'nearest', margin = 8 }: ScrollIntoViewportOptions = {},
+): void {
   const viewport = el.closest<HTMLElement>('[data-slot="scroll-area-viewport"]');
   if (!viewport) return;
 
   const viewportRect = viewport.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
+  // Signed distances the element's edges sit outside the viewport: `above < 0`
+  // means its top is cut off above, `below > 0` its bottom below.
   const above = elRect.top - viewportRect.top - margin;
   const below = elRect.bottom - viewportRect.bottom + margin;
 
-  // Both positive/both negative can't happen unless the element is taller than
-  // the viewport, in which case aligning its top is the useful choice.
-  let delta = 0;
-  if (above < 0) delta = above;
-  else if (below > 0) delta = Math.min(below, above);
+  // Fully visible: nothing to do.
+  if (above >= 0 && below <= 0) return;
+
+  // `above` is exactly the shift that puts the element's top at the viewport
+  // top, so 'start' — and any element too tall to fit, where aligning the
+  // bottom would hide the top — uses it directly.
+  const delta = block === 'start' || above < 0 ? above : Math.min(below, above);
   if (delta === 0) return;
 
   viewport.scrollTo({ top: viewport.scrollTop + delta, behavior: 'smooth' });
