@@ -44,22 +44,78 @@ def parse_schema(schema_path: str) -> dict:
 #: first colon names the field placeholder it cuts.
 _GROUP_TAG = re.compile(r"(GROUP\d*)(?::(.+))?$")
 
-#: What the model has to know to write a grouping. Long, because the parameter is
-#: free-form JSON and the alternative to spelling out both shapes is the model
-#: inventing a third one.
-_GROUPING_DESCRIPTION = (
-    "OPTIONAL. Combine the stratifier's values into a few named strata, as a "
-    "JSON object. Omit it entirely for one stratum per distinct value, which is "
-    "usually what you want. Use it when the request asks to compare groups of "
-    "values rather than every value ('white versus all other races') or splits a "
-    "number at a threshold ('over 65'). Two shapes: for a nominal stratifier, "
-    '{"type": "nominal", "groups": [{"label": "White", "values": ["White"]}], '
-    '"other": "Other"} — values not listed fall into "other", or are left out of '
-    'the chart when "other" is null. For a quantitative stratifier, '
-    '{"type": "quantitative", "cuts": [65]} — ascending cut points, each bucket '
-    "half-open on the right, so 65 lands in the upper one. Copy nominal values "
-    "exactly as they appear in the column, and define at most 10 strata."
-)
+#: The grouping parameter, declared as a real object rather than JSON inside a
+#: string. Models are markedly worse at emitting a valid JSON document as a
+#: string value than at filling typed fields, and these tools already ask for
+#: fourteen other arguments — this was the one most likely to come back
+#: malformed, and a malformed one costs the whole tool call.
+#:
+#: Each field carries its own description, so the shape no longer has to be
+#: spelled out in prose that competed with the tool description for the 1024
+#: character budget.
+_GROUPING_SCHEMA = {
+    "type": "object",
+    "description": (
+        "OPTIONAL. Combine the stratifier's values into a few named strata. Omit "
+        "it entirely for one stratum per distinct value, which is usually what "
+        "you want. Supply it when the request compares GROUPS of values rather "
+        "than every value ('white versus all other races'), or splits a number "
+        "at a threshold ('over 65'). At most 10 strata."
+    ),
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": ["nominal", "quantitative"],
+            "description": (
+                "'nominal' to combine named values, 'quantitative' to cut a "
+                "number at thresholds. Must match the stratifier column's type."
+            ),
+        },
+        "groups": {
+            "type": "array",
+            "description": (
+                "Nominal only. One entry per stratum. Values not listed in any "
+                "group fall into 'other'."
+            ),
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string",
+                        "description": "What this stratum is called in the legend.",
+                    },
+                    "values": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Column values in this stratum, copied EXACTLY as "
+                            "they appear in the data, including case. A value "
+                            "may appear in only one group."
+                        ),
+                    },
+                },
+                "required": ["label", "values"],
+            },
+        },
+        "other": {
+            "type": ["string", "null"],
+            "description": (
+                "Nominal only. Label for values no group claims; null to leave "
+                "them out of the chart entirely. Defaults to 'Other'."
+            ),
+        },
+        "cuts": {
+            "type": "array",
+            "items": {"type": "number"},
+            "description": (
+                "Quantitative only. Ascending thresholds; N cuts make N+1 "
+                "buckets, each half-open on the right — a cut at 65 puts 65 in "
+                "the upper bucket."
+            ),
+        },
+    },
+    "required": ["type"],
+}
 
 
 def _extract_placeholders(template_str: str) -> set[str]:
@@ -150,23 +206,69 @@ def _derive_tool_name(template: dict, index: int) -> str:
     return re.sub(r'[^a-z0-9_]', '', name)
 
 
+#: OpenAI's limit on a function description. Enforced here rather than by a
+#: slice at the call site so the budget can be spent deliberately.
+DESCRIPTION_LIMIT = 1024
+
+
+def _fit(text: str, budget: int) -> str:
+    """`text` trimmed to `budget`, cut at a sentence end where one is close.
+
+    Better a section that stops early than one that stops mid-word: a truncated
+    clause reads as an instruction the model then tries to follow.
+    """
+    if len(text) <= budget:
+        return text
+    clipped = text[:budget]
+    stop = max(clipped.rfind(". "), clipped.rfind("? "), clipped.rfind("! "))
+    if stop > budget * 0.6:
+        return clipped[: stop + 1]
+    return clipped.rstrip() + "…"
+
+
 def _build_tool_description(template: dict) -> str:
-    """Build a rich description from template metadata."""
-    parts = []
-    if template.get("chart_type"):
-        parts.append(f"[{template['chart_type']}]")
-    if template.get("description"):
-        parts.append(template["description"])
+    """Build a rich description from template metadata, within the API's limit.
+
+    Budgeted rather than concatenated-then-sliced. The old form let
+    `design_considerations` — the longest and least discriminating section —
+    consume the whole allowance, so a template whose prose ran long lost the end
+    of its own `description` mid-word. The description is what the model selects
+    on, so it is the one part that must always survive intact; everything after
+    it is added only as far as it fits.
+    """
+    head = f"[{template['chart_type']}] " if template.get("chart_type") else ""
+    description = (template.get("description") or "").strip()
+    if len(head) + len(description) > DESCRIPTION_LIMIT:
+        # Caught at authoring time rather than silently clipped at request time,
+        # which is how a template ended up telling the model it "REQUIRES" a
+        # parameter in a sentence the model never saw.
+        print(
+            f"⚠ description for {template.get('name_hint') or template.get('chart_type')} "
+            f"is {len(description)} chars and will be cut at {DESCRIPTION_LIMIT}; "
+            f"move detail into design_considerations."
+        )
+    parts = [head + description if description else head.strip()]
+
+    extras = []
     if template.get("design_considerations"):
-        parts.append(f"Design: {template['design_considerations']}")
+        extras.append(f"Design: {template['design_considerations']}")
     if template.get("tasks"):
-        parts.append(f"Tasks: {template['tasks']}")
+        extras.append(f"Tasks: {template['tasks']}")
     query_templates = template.get("query_templates", [])
     if isinstance(query_templates, str):
         query_templates = [query_templates]
     if query_templates:
-        parts.append(f"Query patterns: {'; '.join(query_templates)}")
-    return " ".join(parts)
+        extras.append(f"Query patterns: {'; '.join(query_templates)}")
+
+    out = parts[0]
+    for extra in extras:
+        remaining = DESCRIPTION_LIMIT - len(out) - 1
+        # Not worth a fragment: a two-word "Design:" stub tells the model less
+        # than leaving the section out.
+        if remaining < 80:
+            break
+        out = f"{out} {_fit(extra, remaining)}"
+    return _fit(out, DESCRIPTION_LIMIT)
 
 
 def _get_field_type_for_placeholder(placeholder: str) -> str | None:
@@ -250,7 +352,7 @@ def _add_grouping_param(
     if param_name in seen:
         return
     seen.add(param_name)
-    properties[param_name] = {"type": "string", "description": _GROUPING_DESCRIPTION}
+    properties[param_name] = dict(_GROUPING_SCHEMA)
     param_map[param_name] = group_key
 
 
@@ -352,7 +454,8 @@ def _generate_single_entity_tool(
         "type": "function",
         "function": {
             "name": tool_name,
-            "description": description[:1024],
+            # Already budgeted by _build_tool_description.
+            "description": description,
             "parameters": {
                 "type": "object",
                 "properties": properties,
@@ -462,7 +565,8 @@ def _generate_join_entity_tool(
         "type": "function",
         "function": {
             "name": tool_name,
-            "description": description[:1024],
+            # Already budgeted by _build_tool_description.
+            "description": description,
             "parameters": {
                 "type": "object",
                 "properties": properties,

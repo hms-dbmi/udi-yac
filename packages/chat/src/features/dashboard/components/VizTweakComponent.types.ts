@@ -4,6 +4,7 @@
  * subset of the grammar's layer/mapping types so the component can
  * introspect without depending on the full upstream type graph.
  */
+import type { TemplateArgValue } from '@/types/messages';
 
 interface TweakableParamBase {
   /** Value shown in the dropdown — the field currently bound. */
@@ -49,21 +50,21 @@ export interface BindingTweakableParam extends TweakableParamBase {
  * The grouping that cuts a stratifier into the strata a chart draws.
  *
  * Applied the same way a `binding` is — the agent resolves the template again —
- * but it is not a field swap, so it gets its own control rather than a dropdown:
- * `field` names the column being cut and `fieldType` decides whether that
- * control lists values to combine or thresholds to cut at.
- *
- * `field` on the base type is the *serialized grouping* here, not a column, so
- * that the shared `options`/`field` plumbing keeps working; `stratifier` is the
- * column. Ugly, and the alternative — splitting the base type — costs more at
- * every call site than it saves here.
+ * but it is not a field swap, so it deliberately does NOT extend the base type:
+ * it has no single bound field and no list of options to pick one from, and
+ * borrowing those slots to carry a grouping (as an earlier version did) meant
+ * every reader of `param.field` had to know which kind it was looking at.
  */
-export interface GroupingTweakableParam extends TweakableParamBase {
+export interface GroupingTweakableParam {
   kind: 'grouping';
+  /** What the control is called. */
+  label: string;
   /** Tool parameter to override in the re-bind request. */
   param: string;
   /** Template placeholder it fills — for telemetry and debugging. */
   placeholder: string;
+  /** The grouping as bound; `''` means ungrouped. */
+  value: TemplateArgValue;
   /** The stratifier column being cut. */
   stratifier: string;
   /** Its type in the schema, which decides which editor is right. */

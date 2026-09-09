@@ -9,10 +9,11 @@ import {
 } from '@/app/UDIChatContext';
 import { instantiateVisTemplate, VisRebindError } from '../api/visTemplate';
 import type { TemplateProvenance } from '../stores/dashboardStore';
+import type { TemplateArgValue } from '@/types/messages';
 
 export interface TemplateRebind {
   /** Change one template binding and replace the chart with the result. */
-  rebind: (param: string, newField: string) => Promise<void>;
+  rebind: (param: string, newValue: TemplateArgValue) => Promise<void>;
   /** Parameter currently in flight, if any. */
   pendingParam: string | null;
   /** Why the last attempt was refused, if it was. */
@@ -48,7 +49,7 @@ export function useTemplateRebind(
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const rebind = useCallback(
-    async (param: string, newField: string) => {
+    async (param: string, newValue: TemplateArgValue) => {
       if (!template) return;
       const seq = ++requestSeq.current;
       abortRef.current?.abort();
@@ -63,7 +64,7 @@ export function useTemplateRebind(
             tool: template.tool,
             // Everything the agent gave us with this one parameter changed, so
             // successive tweaks compose instead of resetting each other.
-            toolArgs: { ...template.toolArgs, [param]: newField },
+            toolArgs: { ...template.toolArgs, [param]: newValue },
             dataSchema: dataPackageStore.getState().dataPackageString,
           },
           controller.signal,

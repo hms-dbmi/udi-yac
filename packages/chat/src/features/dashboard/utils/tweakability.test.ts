@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { computeTweakableParams, hasTweakableFields } from './tweakability';
 import type { TemplateProvenance } from '../stores/dashboardStore';
 import type { UDIGrammar } from 'udi-toolkit/react';
+import type { GroupingTweakableParam, TweakableParam } from '../components/VizTweakComponent.types';
 
 /** Mirrors the survival templates: every axis is a column the spec derives. */
 function survivalSpec(): UDIGrammar {
@@ -57,6 +58,16 @@ function provenance(overrides: Partial<TemplateProvenance['params'][0]> = {}): T
   };
 }
 
+/**
+ * Narrow away the grouping control, which binds no single field and offers no
+ * list of columns — every assertion below is about the field-swap controls.
+ */
+function fields(params: TweakableParam[]) {
+  return params.filter(
+    (p): p is Exclude<TweakableParam, GroupingTweakableParam> => p.kind !== 'grouping',
+  );
+}
+
 // Two entities, so a lookup against the wrong one is visible rather than lucky.
 const SOURCE_FIELDS = {
   Event: ['organization_name', 'event_type', 'event_date', 'research_id'],
@@ -89,17 +100,16 @@ describe('computeTweakableParams — template (binding) mode', () => {
   it('takes options from the descriptor’s entity, not the spec’s first source', () => {
     // A join template binds a field on the second entity; only the descriptor
     // knows which one, so a lookup keyed on the spec's source would be wrong.
-    const params = compute(survivalSpec(), provenance({ entity: 'Patient', value: 'sex' }));
+    const params = fields(compute(survivalSpec(), provenance({ entity: 'Patient', value: 'sex' })));
     expect(params[0].options).toEqual(CATEGORICAL.Patient);
   });
 
   it('follows the required field type', () => {
-    expect(compute(survivalSpec(), provenance({ type: 'quantitative' }))[0].options).toEqual([
-      'organization_name',
-      ...QUANTITATIVE.Event,
-    ]);
+    expect(
+      fields(compute(survivalSpec(), provenance({ type: 'quantitative' })))[0].options,
+    ).toEqual(['organization_name', ...QUANTITATIVE.Event]);
     // Unconstrained: anything on the entity is fair game.
-    expect(compute(survivalSpec(), provenance({ type: null }))[0].options).toEqual(
+    expect(fields(compute(survivalSpec(), provenance({ type: null })))[0].options).toEqual(
       SOURCE_FIELDS.Event,
     );
   });
@@ -107,7 +117,7 @@ describe('computeTweakableParams — template (binding) mode', () => {
   it('always includes the bound field, even when the schema disagrees about it', () => {
     // A Select whose value is absent from its items renders blank, which reads
     // as a broken control rather than as a schema disagreement.
-    const params = compute(survivalSpec(), provenance({ value: 'not_in_schema' }));
+    const params = fields(compute(survivalSpec(), provenance({ value: 'not_in_schema' })));
     expect(params[0].field).toBe('not_in_schema');
     expect(params[0].options[0]).toBe('not_in_schema');
   });
@@ -130,7 +140,7 @@ describe('computeTweakableParams — falling back to the spec heuristics', () =>
     // The reason this feature needed the template: with no provenance, every
     // encoding here is a column the spec computes, so none can be swapped by
     // rewriting — and the one that could (color) would corrupt the rest.
-    const params = compute(survivalSpec());
+    const params = fields(compute(survivalSpec()));
     expect(params.map((p) => p.field)).toEqual(['organization_name']);
     expect(params[0].kind).toBe('dimension');
   });
@@ -151,7 +161,7 @@ describe('computeTweakableParams — falling back to the spec heuristics', () =>
         ],
       },
     } as unknown as UDIGrammar;
-    expect(compute(spec).map((p) => [p.label, p.field])).toEqual([
+    expect(fields(compute(spec)).map((p) => [p.label, p.field])).toEqual([
       ['x', 'event_date'],
       ['color', 'event_type'],
     ]);
@@ -188,8 +198,10 @@ describe('computeTweakableParams — falling back to the spec heuristics', () =>
       stratifier: 'organization_name',
       stratifierType: 'nominal',
       entity: 'Event',
-      field: '',
-      options: [],
+      // No bound field and no column list: it is not a field swap, so it
+      // carries neither of the things every other control is built from.
+      value: '',
     });
+    expect(grouping).not.toHaveProperty('options');
   });
 });

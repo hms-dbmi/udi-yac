@@ -16,28 +16,30 @@
  * rather than of the payload.
  */
 
+import type { TemplateArgValue } from '@/types/messages';
+
 /** The most strata worth drawing; matches `MAX_GROUPS` in `udiagent.stratify`. */
 export const MAX_GROUPS = 10;
 
 export const DEFAULT_OTHER_LABEL = 'Other';
 
-export interface NominalGroup {
+export type NominalGroup = {
   label: string;
   values: string[];
-}
+};
 
-export interface NominalGrouping {
+export type NominalGrouping = {
   type: 'nominal';
   groups: NominalGroup[];
   /** Label for values no group claims, or null to leave them out of the chart. */
   other: string | null;
-}
+};
 
-export interface QuantitativeGrouping {
+export type QuantitativeGrouping = {
   type: 'quantitative';
   /** Ascending; N cuts make N+1 buckets, each half-open on the right. */
   cuts: number[];
-}
+};
 
 export type Grouping = NominalGrouping | QuantitativeGrouping;
 
@@ -49,13 +51,20 @@ export type Grouping = NominalGrouping | QuantitativeGrouping;
  * stored payload is malformed strands the user with no way to fix it; falling
  * back to ungrouped leaves the editor usable and the chart unchanged.
  */
-export function parseGrouping(raw: string | undefined | null): Grouping | null {
-  if (!raw || !raw.trim()) return null;
+export function parseGrouping(raw: TemplateArgValue | undefined | null): Grouping | null {
+  if (!raw) return null;
   let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return null;
+  if (typeof raw === 'string') {
+    // The older wire form, kept readable so a chart saved before the parameter
+    // became a typed object still opens.
+    if (!raw.trim()) return null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  } else {
+    parsed = raw;
   }
   if (!parsed || typeof parsed !== 'object') return null;
   const value = parsed as Record<string, unknown>;

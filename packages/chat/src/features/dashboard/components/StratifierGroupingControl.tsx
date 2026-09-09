@@ -14,6 +14,7 @@ import {
 import { useDataPackage } from '@/app/UDIChatContext';
 import type { CategoricalDomain, IntervalDomain } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
+import type { TemplateArgValue } from '@/types/messages';
 import type { GroupingTweakableParam } from './VizTweakComponent.types';
 import { CutPointHistogram } from './CutPointHistogram';
 import {
@@ -28,7 +29,6 @@ import {
   parseGrouping,
   removeCut,
   renameGroup,
-  serializeGrouping,
   unassignedValues,
   type Grouping,
   type NominalGrouping,
@@ -37,8 +37,12 @@ import {
 
 interface StratifierGroupingControlProps {
   param: GroupingTweakableParam;
-  /** Applies the grouping by re-resolving the template. */
-  onApply: (serialized: string) => void;
+  /**
+   * Applies the grouping by re-resolving the template. Takes the grouping
+   * object, or '' for ungrouped — the same shape the agent binds, so nothing
+   * serializes and reparses it on the way through.
+   */
+  onApply: (grouping: TemplateArgValue) => void;
   disabled?: boolean;
 }
 
@@ -60,16 +64,16 @@ export function StratifierGroupingControl({
   disabled = false,
 }: StratifierGroupingControlProps) {
   const [open, setOpen] = useState(false);
-  const stored = useMemo(() => parseGrouping(param.field), [param.field]);
+  const stored = useMemo(() => parseGrouping(param.value), [param.value]);
   // Local until applied. A re-bind replaces the whole spec, so firing one per
   // keystroke would rebuild the chart while the user is still naming a group.
   const [draft, setDraft] = useState<Grouping | null>(stored);
-  const [draftKey, setDraftKey] = useState(param.field);
-  if (draftKey !== param.field) {
+  const [draftKey, setDraftKey] = useState(param.value);
+  if (draftKey !== param.value) {
     // The agent accepted a different grouping than the one being edited (a
     // rebind elsewhere, or a restored conversation). Adopt it rather than
     // keeping a draft that no longer describes the chart.
-    setDraftKey(param.field);
+    setDraftKey(param.value);
     setDraft(stored);
   }
 
@@ -89,7 +93,7 @@ export function StratifierGroupingControl({
   const apply = useCallback(
     (grouping: Grouping | null) => {
       setDraft(grouping);
-      onApply(serializeGrouping(grouping));
+      onApply(grouping ?? '');
     },
     [onApply],
   );

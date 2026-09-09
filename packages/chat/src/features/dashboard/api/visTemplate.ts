@@ -1,5 +1,5 @@
 import type { UDIGrammar } from 'udi-toolkit/react';
-import type { TemplateParamDescriptor } from '@/types/messages';
+import type { TemplateArgValue, TemplateParamDescriptor } from '@/types/messages';
 import { extractErrorDetail } from '@/utils/httpError';
 
 export interface VisTemplateConfig {
@@ -10,7 +10,7 @@ export interface VisTemplateConfig {
 export interface VisRebindResult {
   spec: UDIGrammar;
   /** Bindings the agent accepted, to send back with the next change. */
-  toolArgs: Record<string, string>;
+  toolArgs: Record<string, TemplateArgValue>;
   params: TemplateParamDescriptor[];
 }
 
@@ -44,7 +44,7 @@ export class VisRebindError extends Error {
  */
 export async function instantiateVisTemplate(
   config: VisTemplateConfig,
-  body: { tool: string; toolArgs: Record<string, string>; dataSchema: string },
+  body: { tool: string; toolArgs: Record<string, TemplateArgValue>; dataSchema: string },
   signal?: AbortSignal,
 ): Promise<VisRebindResult> {
   const response = await fetch(`${config.apiBaseUrl}/v1/yac/vis_instantiate`, {

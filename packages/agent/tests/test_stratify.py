@@ -210,3 +210,28 @@ def test_valid_groupings_report_no_errors():
         )
         == []
     )
+
+
+# --- the grouping arrives as an object, not JSON inside a string -------------
+
+
+def test_a_grouping_object_needs_no_parsing():
+    """The tool parameter is a typed object now: models are markedly worse at
+    emitting a valid JSON document as a string value, and a malformed one used
+    to cost the whole tool call."""
+    grouping = {"type": "quantitative", "cuts": [65]}
+    assert parse_grouping(grouping) == grouping
+    assert grouping_expr(parse_grouping(grouping), "age")["then"] == {"literal": "< 65"}
+
+
+def test_the_string_form_still_parses():
+    """A chart saved before the parameter became an object still opens."""
+    assert parse_grouping('{"type": "quantitative", "cuts": [65]}') == {
+        "type": "quantitative",
+        "cuts": [65],
+    }
+
+
+def test_an_empty_object_is_ungrouped_not_invalid():
+    """A model that feels obliged to send something for an optional parameter."""
+    assert parse_grouping({}) is None

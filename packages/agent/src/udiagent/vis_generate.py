@@ -1136,9 +1136,11 @@ def template_tweakable_params(spec_template, param_map, bindings, schema):
                     "type": field_type,
                     "encodings": channels,
                     "label": "groups",
-                    # The grouping travels as JSON in a string argument, so an
-                    # empty string is the honest spelling of "not grouped".
-                    "value": str(bindings.get(placeholder) or ""),
+                    # The grouping object itself, or "" for not grouped. Passed
+                    # through rather than stringified: the model now fills a
+                    # typed object, and re-serialising it here would make the
+                    # client parse back what it is about to send again.
+                    "value": bindings.get(placeholder) or "",
                     "field": field_name,
                     "fieldType": field_type,
                 }

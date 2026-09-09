@@ -161,9 +161,8 @@ function templateParams(
     if (descriptor.kind === 'grouping') {
       return {
         kind: 'grouping' as const,
-        field: descriptor.value,
+        value: descriptor.value,
         label: descriptor.label || 'groups',
-        options: [],
         param: descriptor.param,
         placeholder: descriptor.placeholder,
         stratifier: descriptor.field ?? '',
@@ -172,6 +171,9 @@ function templateParams(
       };
     }
 
+    // Every other parameter binds a column, so its value is a column name. The
+    // guard is for the type only — the agent never sends an object here.
+    const value = typeof descriptor.value === 'string' ? descriptor.value : '';
     const byType =
       descriptor.type === 'quantitative'
         ? quantitativeSourceFields
@@ -182,12 +184,10 @@ function templateParams(
     // The bound field always appears, even when the schema's declared type
     // disagrees with the template's requirement — a Select whose value is absent
     // from its items renders blank, which reads as a broken control.
-    const withCurrent = options.includes(descriptor.value)
-      ? options
-      : [descriptor.value, ...options];
+    const withCurrent = options.includes(value) ? options : [value, ...options];
     return {
       kind: 'binding' as const,
-      field: descriptor.value,
+      field: value,
       label: descriptor.label,
       options: withCurrent,
       param: descriptor.param,

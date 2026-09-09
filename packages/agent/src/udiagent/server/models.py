@@ -46,7 +46,11 @@ class YACVisInstantiateRequest(BaseModel):
     """
 
     tool: str
-    toolArgs: dict[str, str]
+    #: Values are column names and literal values, except a stratifier
+    #: `grouping`, which is a structured object — the model fills it as typed
+    #: fields rather than as JSON inside a string, and a client re-binding one
+    #: sends the same shape straight back.
+    toolArgs: dict[str, str | dict]
     dataSchema: str
 
 
@@ -55,8 +59,8 @@ class YACVisParam(BaseModel):
 
     Two kinds. A ``field`` parameter swaps which column a channel is bound to,
     and its ``value`` is that column's name. A ``grouping`` parameter re-cuts a
-    stratifier into named strata, and its ``value`` is the grouping as JSON (or
-    empty for the ungrouped default) — a client renders it from ``field`` and
+    stratifier into named strata, and its ``value`` is the grouping object (or
+    ``""`` for the ungrouped default) — a client renders it from ``field`` and
     ``fieldType``, which say what is being cut and therefore which control fits.
     """
 
@@ -70,7 +74,8 @@ class YACVisParam(BaseModel):
     type: str | None = None
     encodings: list[str] = []
     label: str
-    value: str
+    #: A column name for a ``field``; the grouping object (or "") for a grouping.
+    value: str | dict
     #: Grouping parameters only: the stratifier field and its type in the schema.
     field: str | None = None
     fieldType: str | None = None
@@ -80,7 +85,8 @@ class YACVisInstantiateResponse(BaseModel):
     #: Parsed spec, not a JSON string — no LLM in this path needs one.
     spec: dict
     #: The accepted bindings, pruned to parameters this template actually has,
-    #: so a client can send them straight back for the next tweak.
-    toolArgs: dict[str, str]
+    #: so a client can send them straight back for the next tweak. A stratifier
+    #: `grouping` rides here as an object, like it does on the way in.
+    toolArgs: dict[str, str | dict]
     params: list[YACVisParam]
 

@@ -1,7 +1,12 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import type { Layout, LayoutItem } from 'react-grid-layout';
-import type { Message, TemplateParamDescriptor, ToolCallMeta } from '@/types/messages';
+import type {
+  Message,
+  TemplateArgValue,
+  TemplateParamDescriptor,
+  ToolCallMeta,
+} from '@/types/messages';
 import type { DataFiltersState } from './dataFiltersStore';
 import type { DataPackageState } from '@/features/data-package';
 import type { MemoryBankState } from './memoryBankStore';
@@ -50,7 +55,7 @@ export interface ActiveVisualization {
  */
 export interface TemplateProvenance {
   tool: string;
-  toolArgs: Record<string, string>;
+  toolArgs: Record<string, TemplateArgValue>;
   params: TemplateParamDescriptor[];
 }
 
@@ -180,7 +185,7 @@ export interface DashboardState {
   applyTemplateRebind: (
     key: string,
     newSpec: UDIGrammar,
-    toolArgs: Record<string, string>,
+    toolArgs: Record<string, TemplateArgValue>,
     params: TemplateParamDescriptor[] | undefined,
     sourceFields: Record<string, string[]> | null,
   ) => void;
@@ -1007,7 +1012,7 @@ export function parseTemplateProvenance(
       typeof p.label === 'string',
   );
   if (!wellFormed) return undefined;
-  return { tool, toolArgs: toolArgs as Record<string, string>, params };
+  return { tool, toolArgs: toolArgs as Record<string, TemplateArgValue>, params };
 }
 
 export function extractAllUdiSpecsFromMessage(message: Message): ExtractedSpec[] {

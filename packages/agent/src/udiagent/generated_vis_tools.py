@@ -1966,8 +1966,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'encoded, so its cardinality does not matter. IMPORTANT: this is a crude survival curve, '
                               'not a Kaplan-Meier estimate. Subjects with no end event are kept in the denominator but '
                               'contribute no drop, which assumes every one of them was followed for the whole window. '
-                              'A true Kaplan-Meier estimator reweights by the number still at risk at each event time; '
-                              'that needs a cumulative product and per-time at-risk counts, which the gramma',
+                              'Tasks: Judge how survival falls over time after a starting event; compare the observed '
+                              'survival fraction of a cohort at a given number of days.',
                'name': 'vis_052_line_survival',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2020,7 +2020,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'template reads it once, at the start event, which is what makes the groups a partition: '
                               'reading it per event would split a subject whose value changed into two rows, one with '
                               'a start and no end (read as censored) and one with an end and no start (dropped), '
-                              'losing the death from both. The value is nulled everywhere but the start event and ',
+                              'losing the death from both.',
                'name': 'vis_053_line_survival_baseline',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2036,26 +2036,85 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
-                                                                         'into a few named strata, as a JSON object. '
-                                                                         'Omit it entirely for one stratum per '
-                                                                         'distinct value, which is usually what you '
-                                                                         'want. Use it when the request asks to '
-                                                                         'compare groups of values rather than every '
-                                                                         "value ('white versus all other races') or "
-                                                                         "splits a number at a threshold ('over 65'). "
-                                                                         'Two shapes: for a nominal stratifier, '
-                                                                         '{"type": "nominal", "groups": [{"label": '
-                                                                         '"White", "values": ["White"]}], "other": '
-                                                                         '"Other"} — values not listed fall into '
-                                                                         '"other", or are left out of the chart when '
-                                                                         '"other" is null. For a quantitative '
-                                                                         'stratifier, {"type": "quantitative", "cuts": '
-                                                                         '[65]} — ascending cut points, each bucket '
-                                                                         'half-open on the right, so 65 lands in the '
-                                                                         'upper one. Copy nominal values exactly as '
-                                                                         'they appear in the column, and define at '
-                                                                         'most 10 strata.',
-                                                          'type': 'string'},
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2097,7 +2156,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               "later is absent by design — that is what keeps each subject's whole timeline "
                               'attributable to the categories it started with. `unnest` runs after the per-subject '
                               'rollup, on a row that is already one-per-subject, so it multiplies nothing that has '
-                              'been counted. The c',
+                              'been counted.',
                'name': 'vis_054_line_survival_baseline_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2113,26 +2172,85 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
-                                                                         'into a few named strata, as a JSON object. '
-                                                                         'Omit it entirely for one stratum per '
-                                                                         'distinct value, which is usually what you '
-                                                                         'want. Use it when the request asks to '
-                                                                         'compare groups of values rather than every '
-                                                                         "value ('white versus all other races') or "
-                                                                         "splits a number at a threshold ('over 65'). "
-                                                                         'Two shapes: for a nominal stratifier, '
-                                                                         '{"type": "nominal", "groups": [{"label": '
-                                                                         '"White", "values": ["White"]}], "other": '
-                                                                         '"Other"} — values not listed fall into '
-                                                                         '"other", or are left out of the chart when '
-                                                                         '"other" is null. For a quantitative '
-                                                                         'stratifier, {"type": "quantitative", "cuts": '
-                                                                         '[65]} — ascending cut points, each bucket '
-                                                                         'half-open on the right, so 65 lands in the '
-                                                                         'upper one. Copy nominal values exactly as '
-                                                                         'they appear in the column, and define at '
-                                                                         'most 10 strata.',
-                                                          'type': 'string'},
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2173,7 +2291,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               "stops it. This template treats it as membership: the subject's span is broadcast onto "
                               'each of its event rows, then re-grouped per (subject, value), so one subject can appear '
                               'in several curves and a single death is attributed to each group the subject belongs '
-                              'to. The groups therefore cannot be reconciled with the unstratified curve ',
+                              'to.',
                'name': 'vis_055_line_survival_ever',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2189,26 +2307,85 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
-                                                                         'into a few named strata, as a JSON object. '
-                                                                         'Omit it entirely for one stratum per '
-                                                                         'distinct value, which is usually what you '
-                                                                         'want. Use it when the request asks to '
-                                                                         'compare groups of values rather than every '
-                                                                         "value ('white versus all other races') or "
-                                                                         "splits a number at a threshold ('over 65'). "
-                                                                         'Two shapes: for a nominal stratifier, '
-                                                                         '{"type": "nominal", "groups": [{"label": '
-                                                                         '"White", "values": ["White"]}], "other": '
-                                                                         '"Other"} — values not listed fall into '
-                                                                         '"other", or are left out of the chart when '
-                                                                         '"other" is null. For a quantitative '
-                                                                         'stratifier, {"type": "quantitative", "cuts": '
-                                                                         '[65]} — ascending cut points, each bucket '
-                                                                         'half-open on the right, so 65 lands in the '
-                                                                         'upper one. Copy nominal values exactly as '
-                                                                         'they appear in the column, and define at '
-                                                                         'most 10 strata.',
-                                                          'type': 'string'},
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2248,9 +2425,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               "subject's recorded value can differ between the event that starts the clock and the "
                               'event that stops it. `unnest` runs first, on the event rows, so the per-subject rollup '
                               'sees one row per (subject, value) pair and a subject joins every value it ever listed. '
-                              'Overlap compounds: a subject contributes to one group per distinct value across its '
-                              'whole timeline, so cohort sizes sum to well above the subject count and a single death '
-                              'is attr',
+                              'Tasks: Compare observed survival across overlapping categories a subject recorded at '
+                              'any point; see which attributes ever present coincide with worse survival.',
                'name': 'vis_056_line_survival_ever_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2266,26 +2442,85 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
-                                                                         'into a few named strata, as a JSON object. '
-                                                                         'Omit it entirely for one stratum per '
-                                                                         'distinct value, which is usually what you '
-                                                                         'want. Use it when the request asks to '
-                                                                         'compare groups of values rather than every '
-                                                                         "value ('white versus all other races') or "
-                                                                         "splits a number at a threshold ('over 65'). "
-                                                                         'Two shapes: for a nominal stratifier, '
-                                                                         '{"type": "nominal", "groups": [{"label": '
-                                                                         '"White", "values": ["White"]}], "other": '
-                                                                         '"Other"} — values not listed fall into '
-                                                                         '"other", or are left out of the chart when '
-                                                                         '"other" is null. For a quantitative '
-                                                                         'stratifier, {"type": "quantitative", "cuts": '
-                                                                         '[65]} — ascending cut points, each bucket '
-                                                                         'half-open on the right, so 65 lands in the '
-                                                                         'upper one. Copy nominal values exactly as '
-                                                                         'they appear in the column, and define at '
-                                                                         'most 10 strata.',
-                                                          'type': 'string'},
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2327,7 +2562,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'is not a column of the event log, so the two entities are joined first, on the '
                               'subject-id column each side names. A declared relationship is not required and usually '
                               'does not exist: the tables carrying a stratifier are typically *siblings* of the event '
-                              'log ',
+                              'log…',
                'name': 'vis_057_line_survival_related',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2347,26 +2582,85 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
-                                                                         'into a few named strata, as a JSON object. '
-                                                                         'Omit it entirely for one stratum per '
-                                                                         'distinct value, which is usually what you '
-                                                                         'want. Use it when the request asks to '
-                                                                         'compare groups of values rather than every '
-                                                                         "value ('white versus all other races') or "
-                                                                         "splits a number at a threshold ('over 65'). "
-                                                                         'Two shapes: for a nominal stratifier, '
-                                                                         '{"type": "nominal", "groups": [{"label": '
-                                                                         '"White", "values": ["White"]}], "other": '
-                                                                         '"Other"} — values not listed fall into '
-                                                                         '"other", or are left out of the chart when '
-                                                                         '"other" is null. For a quantitative '
-                                                                         'stratifier, {"type": "quantitative", "cuts": '
-                                                                         '[65]} — ascending cut points, each bucket '
-                                                                         'half-open on the right, so 65 lands in the '
-                                                                         'upper one. Copy nominal values exactly as '
-                                                                         'they appear in the column, and define at '
-                                                                         'most 10 strata.',
-                                                          'type': 'string'},
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2408,8 +2702,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'whenever the attribute to split by is a number rather than a label. Design: The buckets '
                               'are computed BEFORE the (subject, stratum) grouping, so two values in the same bucket '
                               'collapse to one row for that subject rather than two — a subject is counted once in its '
-                              'own curve, not once per matching value. A bucket label is a string derived from the '
-                              'bounds, so it is drawn and ordered as a category: with more than a handful o',
+                              'own curve, not once per matching value. Tasks: Compare survival above and below a '
+                              'numeric threshold; judge whether a continuous attribute — age, a lab value, a…',
                'name': 'vis_058_line_survival_related_numeric',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2429,26 +2723,85 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
-                                                                         'into a few named strata, as a JSON object. '
-                                                                         'Omit it entirely for one stratum per '
-                                                                         'distinct value, which is usually what you '
-                                                                         'want. Use it when the request asks to '
-                                                                         'compare groups of values rather than every '
-                                                                         "value ('white versus all other races') or "
-                                                                         "splits a number at a threshold ('over 65'). "
-                                                                         'Two shapes: for a nominal stratifier, '
-                                                                         '{"type": "nominal", "groups": [{"label": '
-                                                                         '"White", "values": ["White"]}], "other": '
-                                                                         '"Other"} — values not listed fall into '
-                                                                         '"other", or are left out of the chart when '
-                                                                         '"other" is null. For a quantitative '
-                                                                         'stratifier, {"type": "quantitative", "cuts": '
-                                                                         '[65]} — ascending cut points, each bucket '
-                                                                         'half-open on the right, so 65 lands in the '
-                                                                         'upper one. Copy nominal values exactly as '
-                                                                         'they appear in the column, and define at '
-                                                                         'most 10 strata.',
-                                                          'type': 'string'},
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2490,8 +2843,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'rather than a single value — the agents making up a chemotherapy regimen, the sites one '
                               'course of radiation covered, the conditions listed on a diagnosis record. The cohorts '
                               'OVERLAP: a subject joins a group for every value listed on any of its related records, '
-                              'so the groups do not add up to the whole. Design: The cross-table and multi-value '
-                              'readings composed: the stratifier is neither a column of the event log nor single-va',
+                              'so the groups do not add up to the whole.',
                'name': 'vis_059_line_survival_related_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2511,26 +2863,85 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
-                                                                         'into a few named strata, as a JSON object. '
-                                                                         'Omit it entirely for one stratum per '
-                                                                         'distinct value, which is usually what you '
-                                                                         'want. Use it when the request asks to '
-                                                                         'compare groups of values rather than every '
-                                                                         "value ('white versus all other races') or "
-                                                                         "splits a number at a threshold ('over 65'). "
-                                                                         'Two shapes: for a nominal stratifier, '
-                                                                         '{"type": "nominal", "groups": [{"label": '
-                                                                         '"White", "values": ["White"]}], "other": '
-                                                                         '"Other"} — values not listed fall into '
-                                                                         '"other", or are left out of the chart when '
-                                                                         '"other" is null. For a quantitative '
-                                                                         'stratifier, {"type": "quantitative", "cuts": '
-                                                                         '[65]} — ascending cut points, each bucket '
-                                                                         'half-open on the right, so 65 lands in the '
-                                                                         'upper one. Copy nominal values exactly as '
-                                                                         'they appear in the column, and define at '
-                                                                         'most 10 strata.',
-                                                          'type': 'string'},
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2571,10 +2982,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'the cohort: every subject is in one or the other, so the two groups add back to the '
                               'whole and reconcile with the unstratified curve. Design: Use this, not the '
                               'related-field variant, when the question is whether a subject has any record in a table '
-                              'rather than which value it holds. Absence is unanswerable from an ordinary join, which '
-                              "drops exactly the rows that would have answered 'no', so the second table is first "
-                              'reduced to one row per subject and LEFT joined; a subject with no match keeps a null '
-                              'mark',
+                              'rather than which value it holds.',
                'name': 'vis_060_line_survival_presence',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2634,7 +3042,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'reduced to one row per subject, so absence stays visible and neither join multiplies '
                               "event rows. Each cell is labelled with the tables it names — '<E2> + <E3>', '<E2> "
                               "only', '<E3> only', 'Neither' — rather than a pair of flags, so no decoding is "
-                              'required. Presence i',
+                              'required.',
                'name': 'vis_061_line_survival_presence_2x2',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2698,9 +3106,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
                               "the per-request schema's dimension list, so this template works for any cube. The "
                               'marginal broken out here is time x status, so each subject is counted exactly once and '
-                              'the cells add up to the cohort. The elapsed-time dimension must be quantitative. Cubes '
-                              "frequently bin time as strings ('0', '11', '>=60'), and there is no way to turn those "
-                              'in',
+                              'the cells add up to the cohort. The elapsed-time dimension must be quantitative.',
                'name': 'vis_062_line_survival_cube',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
@@ -2732,9 +3138,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'directly with no re-aggregation. The marginal filter is expanded from the per-request '
                               "schema's dimension list, so this template works for any cube. The marginal broken out "
                               'here is time x status x stratifier, so every subject lands in exactly one stratum and '
-                              'one time point. Because a cube dimension is a per-subject attribute rather than an '
-                              'event-level column, this has none of the time-varying ambiguity the line-level '
-                              'stratified c',
+                              'one time point. Tasks: Compare event-free survival across groups; see which stratum '
+                              'falls fastest and how many subjects each curve rests on.',
                'name': 'vis_063_line_survival_cube_stratified',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '

@@ -24,6 +24,16 @@ export interface FlatToolCall {
  * the agent. The agent decides what is offerable — it holds the template — and
  * the UI only renders a control per descriptor and sends the new value back.
  */
+/**
+ * One tool argument as the agent binds it.
+ *
+ * A column name or a literal data value for most parameters, and a structured
+ * object for a stratifier `grouping` — the model fills that one as typed fields
+ * rather than as JSON inside a string, so it travels as an object the whole way
+ * rather than being serialized and reparsed at each hop.
+ */
+export type TemplateArgValue = string | Record<string, unknown>;
+
 export interface TemplateParamDescriptor {
   /**
    * What the parameter changes. A `field` swaps which column a channel is bound
@@ -44,11 +54,11 @@ export interface TemplateParamDescriptor {
   /** Display label — the channels, or the parameter name as a fallback. */
   label: string;
   /**
-   * Currently bound field — or, for a `grouping`, the grouping as JSON. Empty
+   * Currently bound field — or, for a `grouping`, the grouping object. Empty
    * there means ungrouped, which is a state of the control rather than the
    * absence of a binding.
    */
-  value: string;
+  value: TemplateArgValue;
   /** Grouping parameters only: the stratifier being cut, and its type. */
   field?: string | null;
   fieldType?: 'nominal' | 'ordinal' | 'quantitative' | null;
@@ -63,7 +73,7 @@ export interface ToolCallMeta {
   /** Template tool that produced the spec, e.g. `vis_053_line_survival`. */
   tool_used?: string | null;
   /** Bindings it was resolved with, keyed by tool parameter name. */
-  tool_args?: Record<string, string> | null;
+  tool_args?: Record<string, TemplateArgValue> | null;
   /** Parameters the agent will accept a re-binding for. */
   tweakable_params?: TemplateParamDescriptor[];
   /**
