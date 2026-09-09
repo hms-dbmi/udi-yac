@@ -134,6 +134,25 @@ def _extract_placeholders(template_str: str) -> set[str]:
     return found
 
 
+def _best_placeholders(placeholders) -> list[str]:
+    """One spelling per placeholder base, preferring the one carrying a type.
+
+    A template mentions the same binding both ways — `<E2.F:n>` where the type
+    matters and `<E2.F>` everywhere else — and both come back from
+    `_extract_placeholders`. Walking them in sorted order let the bare spelling
+    claim the parameter first and the typed one be skipped, so the parameter was
+    described as "any type field" even though `validate_bindings` goes on to
+    enforce the suffix. The description was advertising freedom the binding does
+    not have, which for the survival tools left eleven parameters looking alike.
+    """
+    best: dict[str, str] = {}
+    for placeholder in sorted(placeholders):
+        base = placeholder.split(":")[0]
+        if base not in best or (":" in placeholder and ":" not in best[base]):
+            best[base] = placeholder
+    return sorted(best.values())
+
+
 def _derive_tool_name(template: dict, index: int) -> str:
     """Derive a meaningful tool name from chart_type + description keywords."""
     chart_type = template.get("chart_type", "chart").lower()
@@ -283,43 +302,21 @@ def _get_field_type_for_placeholder(placeholder: str) -> str | None:
 
 
 def _extract_encoding_info(spec_template: str) -> dict[str, dict]:
-    """Extract encoding roles and declared types for each placeholder from a spec template.
+    """Encoding roles and declared types per placeholder base.
 
-    Parses the spec_template JSON and walks the representation mappings to find
-    which visual encoding (x, y, color, theta, etc.) each placeholder is used in,
-    and what data type the encoding declares.
+    Delegates to :func:`udiagent.vis_generate.placeholder_encoding_info`, which is
+    the same walk `validate_bindings` uses. It used to be a second copy that read
+    only the representation mappings, and when charts began splitting by a derived
+    `stratum` column the copies diverged: the stratifier stopped being described as
+    a nominal field that encodes colour, becoming "any type field." next to a join
+    key described the same way — and the model started binding one to the other.
 
     Returns: dict mapping placeholder base (e.g. "F1", "E2.F") to
-             {"encodings": ["x", ...], "declared_type": "nominal" | "quantitative" | None}
+             {"encodings": ["x", ...], "declared_type": "nominal" | ... | None}
     """
-    info: dict[str, dict] = {}
-    try:
-        spec = json.loads(spec_template)
-    except (json.JSONDecodeError, TypeError):
-        return info
+    from udiagent.vis_generate import placeholder_encoding_info
 
-    rep = spec.get("representation", {})
-    reps = rep if isinstance(rep, list) else [rep]
-    for r in reps:
-        mappings = r.get("mapping", [])
-        if isinstance(mappings, dict):
-            mappings = [mappings]
-        for m in mappings:
-            encoding = m.get("encoding", "")
-            field = m.get("field", "")
-            declared_type = m.get("type")  # "nominal", "quantitative", "ordinal"
-            # Match fields that are a single placeholder like "<F1>" or "<E2.F>"
-            match = re.fullmatch(PLACEHOLDER, field)
-            if match and encoding:
-                ph = match.group(1)
-                base = ph.split(":")[0] if ":" in ph else ph
-                if base not in info:
-                    info[base] = {"encodings": [], "declared_type": None}
-                if encoding not in info[base]["encodings"]:
-                    info[base]["encodings"].append(encoding)
-                if declared_type and info[base]["declared_type"] is None:
-                    info[base]["declared_type"] = declared_type
-    return info
+    return placeholder_encoding_info(spec_template)
 
 
 _ENCODING_LABELS = {
@@ -406,7 +403,7 @@ def _generate_single_entity_tool(
     # fields; D* are data-cube dimensions (the measure <M> and the <MARGINAL:…>
     # filter are resolved from the schema at runtime, so they get no param).
     seen = set()
-    for ph in sorted(placeholders):
+    for ph in _best_placeholders(placeholders):
         if ph in ("E", "E.url"):
             continue
         group = _GROUP_TAG.fullmatch(ph)
@@ -517,7 +514,7 @@ def _generate_join_entity_tool(
     skip.update(f"{key}.url" for key in entity_keys)
 
     seen = set()
-    for ph in sorted(placeholders):
+    for ph in _best_placeholders(placeholders):
         if ph in skip:
             continue
 

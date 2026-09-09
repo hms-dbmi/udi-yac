@@ -502,33 +502,44 @@ def _encoded_placeholders(spec_template):
     return set(_placeholder_encodings(spec_template))
 
 
-def _placeholder_encodings(spec_template):
-    """Which visual channels each placeholder is drawn on.
+def placeholder_encoding_info(spec_template):
+    """What each placeholder is *drawn as*: ``{base: {encodings, declared_type}}``.
 
-    Same walk as `_encoded_placeholders` (which is a view over this), but keeps
-    the channel names, so a tweakable parameter can be labelled by what it
-    actually drives — "color" rather than "field4".
+    One walk, two consumers. `validate_bindings` wants only the channel names, to
+    decide what the cardinality cap applies to and which parameters are offerable
+    as tweaks; the tool generator wants the declared type as well, to describe the
+    parameter to the model. They were separate implementations, and when charts
+    began splitting by a derived column only one of them learned to follow the
+    derive — which left the stratifier parameter described as "any type field",
+    indistinguishable from the join key beside it, and the model duly swapped the
+    two. Hence one function.
 
-    A mapping can also be bound to a *derived* column rather than to a
-    placeholder directly, which is how dynamic stratification works: the chart
-    colours by a `stratum` column that a `derive` computes from the stratifier
-    binding. Attributing that column's channels back to the placeholders inside
-    the derive is what keeps the binding visible as something a reader can see
-    the effect of changing — and so keeps it both offerable as a tweak and
-    subject to the cardinality cap. One level only, deliberately: chasing a chain
-    of derives would make every intermediate column's inputs "encoded", which is
-    true of the whole survival pipeline and says nothing useful.
+    A mapping can be bound to a *derived* column rather than to a placeholder
+    directly, which is how dynamic stratification works: the chart colours by a
+    `stratum` column that a `derive` computes from the stratifier binding.
+    Attributing that column's channel and type back to the placeholders inside the
+    derive is what keeps the binding visible as something a reader can see the
+    effect of changing. One level only, deliberately: chasing a chain of derives
+    would make every intermediate column's inputs "encoded", which is true of the
+    whole survival pipeline and says nothing useful.
     """
-    encodings = {}
+    info = {}
     try:
         spec = json.loads(spec_template)
     except (json.JSONDecodeError, TypeError):
-        return encodings
+        return info
+
+    def record(base, channel, declared_type):
+        entry = info.setdefault(base, {"encodings": [], "declared_type": None})
+        if isinstance(channel, str) and channel not in entry["encodings"]:
+            entry["encodings"].append(channel)
+        if declared_type and entry["declared_type"] is None:
+            entry["declared_type"] = declared_type
 
     reps = spec.get("representation", {})
     reps = reps if isinstance(reps, list) else [reps]
-    #: Channels each drawn column name is bound to, for the derive walk below.
-    column_channels = {}
+    #: Channel + declared type per drawn column name, for the derive walk below.
+    drawn = {}
     for rep in reps:
         if not isinstance(rep, dict):
             continue
@@ -538,19 +549,19 @@ def _placeholder_encodings(spec_template):
             if not isinstance(mapping, dict):
                 continue
             channel = mapping.get("encoding")
+            declared_type = mapping.get("type")
             # `field` is what gets drawn; `column` only places a table column.
             for value in (mapping.get("field"), mapping.get("column")):
                 if not isinstance(value, str):
                     continue
                 if isinstance(channel, str):
-                    drawn = column_channels.setdefault(value, [])
-                    if channel not in drawn:
-                        drawn.append(channel)
+                    entry = drawn.setdefault(value, {"encodings": [], "declared_type": None})
+                    if channel not in entry["encodings"]:
+                        entry["encodings"].append(channel)
+                    if declared_type and entry["declared_type"] is None:
+                        entry["declared_type"] = declared_type
                 for placeholder in re.findall(PLACEHOLDER, value):
-                    base = placeholder.split(":")[0]
-                    seen = encodings.setdefault(base, [])
-                    if isinstance(channel, str) and channel not in seen:
-                        seen.append(channel)
+                    record(placeholder.split(":")[0], channel, declared_type)
 
     for transform in spec.get("transformation") or []:
         if not isinstance(transform, dict):
@@ -559,26 +570,35 @@ def _placeholder_encodings(spec_template):
         if not isinstance(derive, dict):
             continue
         for column, expression in derive.items():
-            channels = column_channels.get(column)
-            if not channels:
+            target = drawn.get(column)
+            if not target or not target["encodings"]:
                 continue
             for placeholder in re.findall(PLACEHOLDER, json.dumps(expression)):
                 bases = [placeholder.split(":")[0]]
                 # A `<GROUP:E1.F4>` tag carries the field it cuts *inside* it, so
-                # the field is not a placeholder of its own here. Attribute the
-                # channels to both: the stratifier is every bit as drawn as the
-                # grouping is, and it is the one the cardinality cap and the
-                # field-swap control care about.
+                # the field is not a placeholder of its own here. Attribute to
+                # both: the stratifier is every bit as drawn as the grouping is,
+                # and it is the one the cardinality cap, the field-swap control
+                # and the model's own parameter description care about.
                 if _GROUP_KEY.match(placeholder):
-                    _, _, target = placeholder.partition(":")
-                    if target:
-                        bases.append(target.split(":")[0])
+                    _, _, group_target = placeholder.partition(":")
+                    if group_target:
+                        bases.append(group_target.split(":")[0])
                 for base in bases:
-                    seen = encodings.setdefault(base, [])
-                    for channel in channels:
-                        if channel not in seen:
-                            seen.append(channel)
-    return encodings
+                    for channel in target["encodings"]:
+                        record(base, channel, target["declared_type"])
+    return info
+
+
+def _placeholder_encodings(spec_template):
+    """Which visual channels each placeholder is drawn on — a view over
+    :func:`placeholder_encoding_info`, keeping the channel names so a tweakable
+    parameter can be labelled by what it actually drives ("color", not "field4").
+    """
+    return {
+        base: entry["encodings"]
+        for base, entry in placeholder_encoding_info(spec_template).items()
+    }
 
 
 def _extract_xy_placeholders(spec_template):
@@ -1265,43 +1285,63 @@ def _parse_request_schema(data_schema):
         return {"base_path": "./", "entities": {}, "relationships": []}
 
 
-def _retry_turns(tool_name, tool_args, errors):
-    """The two messages that tell the model its tool call was rejected.
+def _retry_turns(rejected):
+    """The conversation turns telling the model what has already been refused.
 
-    A real `tool_calls` assistant turn followed by a matching `tool` result,
-    rather than a prose recap of what it just did. That is the shape the model
-    was trained on: it can see its own arguments as arguments and correct one of
-    them, where a paraphrase in an assistant message reads as a new instruction
-    to be re-interpreted — and the usual fix here is a single argument out of
-    fifteen, so keeping the rest verbatim is the whole point.
+    Every rejection, not just the newest. With only the latest error in view the
+    model walks a cycle: it picks template A, is told A is wrong, picks B, is
+    told B is wrong, and — having forgotten A — picks A again, so the third
+    attempt re-makes the first mistake. Replaying the whole history is what lets
+    it see that both candidates are spent and look for a third.
+
+    Each rejection is a real `tool_calls` assistant turn plus a matching `tool`
+    result, rather than a prose recap. That is the shape the model was trained
+    on: it can see its own arguments as arguments and correct one of them, where
+    a paraphrase reads as a fresh instruction to reinterpret — and the usual fix
+    is a single argument out of fifteen, so keeping the rest verbatim is the
+    whole point.
     """
-    call_id = f"call_retry_{uuid.uuid4().hex[:8]}"
-    return [
+    turns = []
+    for index, (tool_name, tool_args, errors) in enumerate(rejected):
+        call_id = f"call_retry_{index}_{uuid.uuid4().hex[:6]}"
+        turns.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": call_id,
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(tool_args, default=str),
+                        },
+                    }
+                ],
+            }
+        )
+        turns.append(
+            {
+                "role": "tool",
+                "tool_call_id": call_id,
+                "content": (
+                    "This tool call was rejected:\n"
+                    + "\n".join(f"- {e}" for e in errors)
+                ),
+            }
+        )
+    turns.append(
         {
-            "role": "assistant",
-            "content": None,
-            "tool_calls": [
-                {
-                    "id": call_id,
-                    "type": "function",
-                    "function": {
-                        "name": tool_name,
-                        "arguments": json.dumps(tool_args, default=str),
-                    },
-                }
-            ],
-        },
-        {
-            "role": "tool",
-            "tool_call_id": call_id,
+            "role": "user",
             "content": (
-                "This tool call was rejected:\n"
-                + "\n".join(f"- {e}" for e in errors)
-                + "\n\nCall the tool again with those arguments corrected. Keep "
-                "every argument that was not named above exactly as it was."
+                "Call the tool again with those problems fixed. Keep every "
+                "argument that was not named above exactly as it was. Do not "
+                "repeat a call that has already been rejected above — if a "
+                "template cannot work here, choose a different one."
             ),
-        },
-    ]
+        }
+    )
+    return turns
 
 
 def _execute_generate(skill, context):
@@ -1325,6 +1365,8 @@ def _execute_generate(skill, context):
     #: The last thing validation objected to, for the message the user sees.
     failure_errors = []
     failure_tool = None
+    #: Every (tool, args, errors) refused so far, replayed on each retry.
+    rejected = []
 
     # --- Primary path: function-calling with generated tools ---
     generated = _load_generated_tools()
@@ -1420,13 +1462,16 @@ def _execute_generate(skill, context):
                     len(validation_errors),
                     "; ".join(validation_errors)[:1000],
                 )
+                rejected.append((tool_name, tool_args, validation_errors))
                 if _attempt < 2:
                     logger.info(
-                        "[vis %s] retrying tool selection with the error text", rid
+                        "[vis %s] retrying tool selection, %d rejection(s) in view",
+                        rid,
+                        len(rejected),
                     )
                     result = _call_llm_with_tools(
                         agent,
-                        tool_messages + _retry_turns(tool_name, tool_args, validation_errors),
+                        tool_messages + _retry_turns(rejected),
                         selected_defs,
                         config,
                         usage=usage,

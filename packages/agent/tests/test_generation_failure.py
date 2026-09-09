@@ -134,9 +134,9 @@ def test_validation_failure_retries_twice_then_gives_up(monkeypatch, caplog):
 def test_the_retry_replays_the_call_as_a_real_tool_turn():
     """Not a prose recap. The model can correct one argument among fifteen when
     it sees them as arguments; a paraphrase reads as a fresh instruction."""
-    turns = _retry_turns("vis_001_bar", {"entity": "penguins"}, ["boom"])
+    turns = _retry_turns([("vis_001_bar", {"entity": "penguins"}, ["boom"])])
 
-    assistant, tool_result = turns
+    assistant, tool_result, instruction = turns
     assert assistant["role"] == "assistant"
     assert assistant["content"] is None
     call = assistant["tool_calls"][0]
@@ -146,6 +146,29 @@ def test_the_retry_replays_the_call_as_a_real_tool_turn():
     assert tool_result["role"] == "tool"
     assert tool_result["tool_call_id"] == call["id"]
     assert "boom" in tool_result["content"]
+    assert instruction["role"] == "user"
+
+
+def test_the_retry_replays_every_rejection_not_just_the_newest():
+    """The cycle this breaks, straight from a real session: the model chose
+    `related`, was told it was wrong, chose `baseline`, was told that was wrong,
+    and — with only the newest error in view — went back to `related`. Both
+    failures have to stay on the table for it to look for a third option."""
+    turns = _retry_turns(
+        [
+            ("vis_057_related", {"entity2_field": "research_id"}, ["too many values"]),
+            ("vis_053_baseline", {"entity1_field4": "gender"}, ["not found on Event"]),
+        ]
+    )
+
+    called = [
+        t["tool_calls"][0]["function"]["name"] for t in turns if t["role"] == "assistant"
+    ]
+    assert called == ["vis_057_related", "vis_053_baseline"]
+    said = " ".join(t["content"] for t in turns if t["role"] == "tool")
+    assert "too many values" in said and "not found on Event" in said
+    # And it is told not to go round again.
+    assert "already been rejected" in turns[-1]["content"]
 
 
 # --- what the reader gets ----------------------------------------------------
