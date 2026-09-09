@@ -34,6 +34,13 @@ PLACEHOLDER = r"<([A-Z][A-Za-z0-9_.,:]*)>"
 # match this.
 _ENTITY_KEY = re.compile(r"E\d*")
 
+# A dynamic-stratification grouping: `<GROUP:E1.F4>` (or a numbered `<GROUP2:…>`
+# for a template that splits two ways). The part after the first colon names the
+# *field* placeholder being grouped; the binding key is everything before it.
+_GROUP_KEY = re.compile(r"GROUP\d*(?::|$)")
+#: Just the binding key, for callers separating a grouping from a field binding.
+_GROUP_BASE = re.compile(r"GROUP\d*")
+
 
 # ---------------------------------------------------------------------------
 # Few-shot example loading
@@ -391,6 +398,21 @@ def _resolve_placeholder(tag, bindings, schema):
                 return rel["to_field"] if direction == "from" else rel["from_field"]
         return ""
 
+    # Dynamic stratification: <GROUP:E1.F4> resolves to the expression computing
+    # a stratum column out of whatever field E1.F4 is bound to. Like <MARGINAL:…>
+    # this resolves to a structured Expr object rather than a name, so
+    # instantiate_template strips the quotes around it and it injects as JSON.
+    #
+    # The grouping is an *optional* binding: with none supplied this is the
+    # identity, which is what keeps a stratified chart splitting by raw value.
+    if _GROUP_KEY.match(tag):
+        from udiagent.stratify import grouping_expr, parse_grouping
+
+        group_key, _, field_tag = tag.partition(":")
+        field_name = bindings.get(field_tag.split(":")[0], "") if field_tag else ""
+        grouping = parse_grouping(bindings.get(group_key))
+        return json.dumps(grouping_expr(grouping, field_name))
+
     # Strip type suffix: F:n -> F, E1.F:q -> E1.F
     base = tag.split(":")[0] if ":" in tag else tag
 
@@ -420,6 +442,9 @@ def instantiate_template(spec_template, bindings, schema):
     # string; strip the quotes around its placeholder so it injects unquoted
     # ("filter": {...}) and stays valid JSON.
     spec = re.sub(r'"(<MARGINAL[^>"]*>)"', r"\1", spec)
+    # Same for a stratifier grouping, which resolves to the derive expression
+    # computing the stratum column.
+    spec = re.sub(r'"(<GROUP\d*(?::[^>"]*)?>)"', r"\1", spec)
     while True:
         match = re.search(PLACEHOLDER, spec)
         if not match:
@@ -448,6 +473,16 @@ def _placeholder_encodings(spec_template):
     Same walk as `_encoded_placeholders` (which is a view over this), but keeps
     the channel names, so a tweakable parameter can be labelled by what it
     actually drives — "color" rather than "field4".
+
+    A mapping can also be bound to a *derived* column rather than to a
+    placeholder directly, which is how dynamic stratification works: the chart
+    colours by a `stratum` column that a `derive` computes from the stratifier
+    binding. Attributing that column's channels back to the placeholders inside
+    the derive is what keeps the binding visible as something a reader can see
+    the effect of changing — and so keeps it both offerable as a tweak and
+    subject to the cardinality cap. One level only, deliberately: chasing a chain
+    of derives would make every intermediate column's inputs "encoded", which is
+    true of the whole survival pipeline and says nothing useful.
     """
     encodings = {}
     try:
@@ -457,6 +492,8 @@ def _placeholder_encodings(spec_template):
 
     reps = spec.get("representation", {})
     reps = reps if isinstance(reps, list) else [reps]
+    #: Channels each drawn column name is bound to, for the derive walk below.
+    column_channels = {}
     for rep in reps:
         if not isinstance(rep, dict):
             continue
@@ -470,10 +507,31 @@ def _placeholder_encodings(spec_template):
             for value in (mapping.get("field"), mapping.get("column")):
                 if not isinstance(value, str):
                     continue
+                if isinstance(channel, str):
+                    drawn = column_channels.setdefault(value, [])
+                    if channel not in drawn:
+                        drawn.append(channel)
                 for placeholder in re.findall(PLACEHOLDER, value):
                     base = placeholder.split(":")[0]
                     seen = encodings.setdefault(base, [])
                     if isinstance(channel, str) and channel not in seen:
+                        seen.append(channel)
+
+    for transform in spec.get("transformation") or []:
+        if not isinstance(transform, dict):
+            continue
+        derive = transform.get("derive")
+        if not isinstance(derive, dict):
+            continue
+        for column, expression in derive.items():
+            channels = column_channels.get(column)
+            if not channels:
+                continue
+            for placeholder in re.findall(PLACEHOLDER, json.dumps(expression)):
+                base = placeholder.split(":")[0]
+                seen = encodings.setdefault(base, [])
+                for channel in channels:
+                    if channel not in seen:
                         seen.append(channel)
     return encodings
 
@@ -559,6 +617,24 @@ def _placeholder_type_requirements(spec_template):
     return placeholder_types
 
 
+def grouping_targets(spec_template):
+    """``{grouping binding key: field binding key}`` for a template's `<GROUP:…>` tags.
+
+    A grouping is only meaningful against the field it cuts, so every consumer —
+    validation, the tweakable descriptor, the preview exporter — needs to get
+    from one to the other. Read off the template rather than passed around,
+    because the pairing is a property of the template.
+    """
+    targets = {}
+    for match in re.finditer(PLACEHOLDER, spec_template):
+        tag = match.group(1)
+        if not _GROUP_KEY.match(tag):
+            continue
+        group_key, _, field_tag = tag.partition(":")
+        targets[group_key] = field_tag.split(":")[0] if field_tag else ""
+    return targets
+
+
 def validate_bindings(spec_template, bindings, schema):
     """Validate tool bindings against the schema before template instantiation.
 
@@ -634,6 +710,14 @@ def validate_bindings(spec_template, bindings, schema):
 
     placeholder_types = _placeholder_type_requirements(spec_template)
 
+    # Fields this request supplies a grouping for, which exempts them from the
+    # cardinality cap below.
+    grouped_field_keys = {
+        field_key
+        for group_key, field_key in grouping_targets(spec_template).items()
+        if field_key and str(bindings.get(group_key) or "").strip()
+    }
+
     # Check fields exist on entities and types match
     for key, field_name in bindings.items():
         if _ENTITY_KEY.fullmatch(key):
@@ -649,6 +733,39 @@ def validate_bindings(spec_template, bindings, schema):
                     f"Value '{key}' is empty; supply the data value to match "
                     f"(e.g. one of the values present in the relevant column)."
                 )
+            continue
+
+        # <GROUP*> binds a stratifier *grouping* — a JSON description of how to
+        # combine the stratifier's values into a handful of named strata — rather
+        # than a column, so none of the field checks below apply. It is optional:
+        # an absent or empty grouping means "one stratum per value", which is
+        # what every stratified chart does until someone regroups it.
+        if _GROUP_BASE.fullmatch(key):
+            from udiagent.stratify import (
+                GroupingError,
+                parse_grouping,
+                validate_grouping,
+            )
+
+            try:
+                grouping = parse_grouping(field_name)
+            except GroupingError as exc:
+                errors.append(str(exc))
+                continue
+            if grouping is None:
+                continue
+            # The type of the field being cut decides which kind of grouping is
+            # even meaningful — cutting a string column at numeric thresholds
+            # raises nowhere and silently lumps every row into one bucket.
+            target_key = grouping_targets(spec_template).get(key, "")
+            target_field = bindings.get(target_key)
+            target_entity = _entity_for_binding_key(target_key, entity_bindings)
+            target_type = None
+            if target_field and target_entity in entities:
+                info = entities[target_entity].get("fields", {}).get(target_field)
+                if info is not None:
+                    target_type = info["type"] if isinstance(info, dict) else info
+            errors.extend(validate_grouping(grouping, target_type))
             continue
 
         entity_name = _entity_for_binding_key(key, entity_bindings)
@@ -709,10 +826,15 @@ def validate_bindings(spec_template, bindings, schema):
 
         # Only cap fields that are actually drawn; a grouping key the pipeline
         # rolls up never reaches a visual channel. See _encoded_placeholders.
+        # A field the request also supplies a *grouping* for is exempt: the chart
+        # draws the handful of strata that grouping defines, not the field's own
+        # domain, and combining an unwieldy domain into a few named groups is
+        # exactly what the cap should be pushing a caller towards.
         if (
             (actual_type == "nominal" or actual_type == "ordinal")
             and cardinality > 50
             and key in encoded_placeholders
+            and key not in grouped_field_keys
         ):
             errors.append(
                 f"Field '{field_name}' has {cardinality} unique values, which is too many "
@@ -736,7 +858,13 @@ def unbound_placeholders(spec_template, param_map, bindings):
     """
     required = set()
     for match in re.finditer(PLACEHOLDER, spec_template):
-        required.add(match.group(1).split(":")[0])
+        base = match.group(1).split(":")[0]
+        # A stratifier grouping is optional by construction: no grouping is the
+        # default reading of every stratified chart, so an absent one is an
+        # answer rather than an omission.
+        if _GROUP_BASE.fullmatch(base):
+            continue
+        required.add(base)
 
     missing = []
     for param, placeholder in param_map.items():
@@ -759,12 +887,23 @@ def template_tweakable_params(spec_template, param_map, bindings, schema):
     is not a tweak, and literal values (`<V*>`), because changing which values a
     template filters on changes what the chart *means* rather than how it is cut.
 
+    A stratifier *grouping* (`<GROUP:…>`) is offered too, and is the one
+    parameter offered when it has no binding at all: "no grouping" is a real,
+    and indeed the default, state of that control, so withholding it until
+    someone has already grouped the chart would mean it could never be reached.
+    Its descriptor names the field being cut and that field's type, because those
+    decide which control a client draws — a list of values to combine, or cut
+    points along a distribution.
+
     Each descriptor carries what a UI needs to render one control and send back a
-    complete request: `{param, placeholder, entity, type, encodings, label,
-    value}`. `type` is the required field type, or None when unconstrained.
+    complete request: `{kind, param, placeholder, entity, type, encodings, label,
+    value}`, plus `field`/`fieldType` on a grouping. `type` is the required field
+    type, or None when unconstrained.
     """
     encodings_by_placeholder = _placeholder_encodings(spec_template)
     placeholder_types = _placeholder_type_requirements(spec_template)
+    targets = grouping_targets(spec_template)
+    entities = schema.get("entities", {}) if isinstance(schema, dict) else {}
 
     params = []
     for param, placeholder in param_map.items():
@@ -772,11 +911,37 @@ def template_tweakable_params(spec_template, param_map, bindings, schema):
             continue
         if re.fullmatch(r"E\d*|V\d*", placeholder):
             continue
+        channels = encodings_by_placeholder[placeholder]
+
+        if _GROUP_BASE.fullmatch(placeholder):
+            field_key = targets.get(placeholder, "")
+            field_name = bindings.get(field_key, "")
+            entity = _entity_for_binding_key(field_key, bindings)
+            info = entities.get(entity, {}).get("fields", {}).get(field_name)
+            field_type = (info["type"] if isinstance(info, dict) else info) if info else None
+            params.append(
+                {
+                    "kind": "grouping",
+                    "param": param,
+                    "placeholder": placeholder,
+                    "entity": entity,
+                    "type": field_type,
+                    "encodings": channels,
+                    "label": "groups",
+                    # The grouping travels as JSON in a string argument, so an
+                    # empty string is the honest spelling of "not grouped".
+                    "value": str(bindings.get(placeholder) or ""),
+                    "field": field_name,
+                    "fieldType": field_type,
+                }
+            )
+            continue
+
         if placeholder not in bindings:
             continue
-        channels = encodings_by_placeholder[placeholder]
         params.append(
             {
+                "kind": "field",
                 "param": param,
                 "placeholder": placeholder,
                 "entity": _entity_for_binding_key(placeholder, bindings),

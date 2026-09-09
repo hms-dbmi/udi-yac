@@ -145,13 +145,19 @@ def test_response_describes_the_parameters_it_accepts(client, data_schema):
 
     assert body["params"] == [
         {
+            "kind": "field",
             "param": "entity1_field4",
             "placeholder": "E1.F4",
             "entity": "Event",
             "type": "nominal",
-            "encodings": ["color"],
-            "label": "color",
+            # `text` as well as `color` because the end-of-curve label
+            # concatenates the stratifier's value: it is drawn, not just used to
+            # split, so changing it changes what that label reads.
+            "encodings": ["color", "text"],
+            "label": "color/text",
             "value": "organization_name",
+            "field": None,
+            "fieldType": None,
         }
     ]
     # Echoed back so a client can send them straight into the next tweak.

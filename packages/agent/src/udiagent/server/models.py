@@ -51,8 +51,18 @@ class YACVisInstantiateRequest(BaseModel):
 
 
 class YACVisParam(BaseModel):
-    """One re-bindable template parameter, as offered to a UI."""
+    """One re-bindable template parameter, as offered to a UI.
 
+    Two kinds. A ``field`` parameter swaps which column a channel is bound to,
+    and its ``value`` is that column's name. A ``grouping`` parameter re-cuts a
+    stratifier into named strata, and its ``value`` is the grouping as JSON (or
+    empty for the ungrouped default) — a client renders it from ``field`` and
+    ``fieldType``, which say what is being cut and therefore which control fits.
+    """
+
+    #: Defaulted rather than required so an older client, and any caller
+    #: constructing one positionally, still validates.
+    kind: str = "field"
     param: str
     placeholder: str
     entity: str | None = None
@@ -61,6 +71,9 @@ class YACVisParam(BaseModel):
     encodings: list[str] = []
     label: str
     value: str
+    #: Grouping parameters only: the stratifier field and its type in the schema.
+    field: str | None = None
+    fieldType: str | None = None
 
 
 class YACVisInstantiateResponse(BaseModel):
