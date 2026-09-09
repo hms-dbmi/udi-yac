@@ -91,6 +91,13 @@ export interface DashboardExport {
   layout: DashboardLayout;
 }
 
+/** A cross-panel jump request: which vizKey to reveal, plus a bumped nonce so
+ *  repeat requests for the same target still fire. */
+export interface JumpRequest {
+  key: string;
+  nonce: number;
+}
+
 export interface DashboardState {
   activeVisualizations: Map<string, ActiveVisualization>;
   layout: DashboardLayout;
@@ -101,12 +108,19 @@ export interface DashboardState {
   tableViewKeys: Set<string>;
   // Linked-hover state, one field per direction so each stays unambiguous:
   // `hoveredVisualizationIndex` = the hovered card's vizKey (drives the chat
-  // message + matching accordion-item highlight/scroll); `hoveredMessageVizKey`
-  // = the vizKey the chat is pointing at — a single-viz message's card, or a
-  // specific accordion item in a multi-viz message — drives that card's
-  // highlight/scroll.
+  // message + matching accordion-item highlight); `hoveredMessageVizKey` = the
+  // vizKey the chat is pointing at — a single-viz message's card, or a specific
+  // accordion item in a multi-viz message — drives that card's highlight.
+  // Hover only highlights; scrolling is an explicit jump (below).
   hoveredVisualizationIndex: string | null;
   hoveredMessageVizKey: string | null;
+  // Explicit cross-panel "jump to" requests, raised by the jump buttons on a
+  // dashboard card's toolbar and a chat message. `jumpToVisualization` asks the
+  // card with that vizKey to scroll itself into view; `jumpToMessage` asks the
+  // message that produced that vizKey to do the same. The nonce bumps on every
+  // request so pressing the same button twice re-fires on the receiving side.
+  jumpToVisualization: JumpRequest | null;
+  jumpToMessage: JumpRequest | null;
   vizKey: (messageIndex: number, toolCallIndex: number) => string;
   addActiveVisualization: (
     index: number,
@@ -143,6 +157,8 @@ export interface DashboardState {
   setHoveredVisualizationIndex: (key: string | null) => void;
   isHovered: (key: string) => boolean;
   setHoveredMessageVizKey: (key: string | null) => void;
+  requestJumpToVisualization: (key: string) => void;
+  requestJumpToMessage: (key: string) => void;
   updateSpecFilters: (
     dataFiltersStore: StoreApi<DataFiltersState>,
     dataPackageStore: StoreApi<DataPackageState>,
@@ -397,6 +413,8 @@ export function createDashboardStore() {
     tableViewKeys: new Set(),
     hoveredVisualizationIndex: null,
     hoveredMessageVizKey: null,
+    jumpToVisualization: null,
+    jumpToMessage: null,
 
     vizKey: (messageIndex, toolCallIndex) => `${messageIndex}-${toolCallIndex}`,
 
@@ -557,6 +575,14 @@ export function createDashboardStore() {
     isHovered: (key) => get().hoveredVisualizationIndex === key,
 
     setHoveredMessageVizKey: (key) => set({ hoveredMessageVizKey: key }),
+
+    requestJumpToVisualization: (key) =>
+      set((s) => ({
+        jumpToVisualization: { key, nonce: (s.jumpToVisualization?.nonce ?? 0) + 1 },
+      })),
+
+    requestJumpToMessage: (key) =>
+      set((s) => ({ jumpToMessage: { key, nonce: (s.jumpToMessage?.nonce ?? 0) + 1 } })),
 
     getFilterIds: (dataFiltersStore) => {
       const vizFilterIDs = Array.from(get().activeVisualizations.values()).map((v) => v.uuid);
