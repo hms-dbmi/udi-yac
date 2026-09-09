@@ -72,9 +72,26 @@ apps/template-studio  ← renders templates, writes review decisions to
    template stays dataset-agnostic. Use `Expr.lit("<V1>")` where the value goes.
 
    Two things follow. Values are **not** validated as columns (no field-existence,
-   type or cardinality check) — only that something non-empty was supplied. And
-   they are JSON-escaped on substitution, because they are spliced into the spec's
-   raw JSON string and a value like `Grade "III"` would otherwise corrupt it.
+   type or cardinality check). And they are JSON-escaped on substitution, because
+   they are spliced into the spec's raw JSON string and a value like `Grade "III"`
+   would otherwise corrupt it.
+
+   They **are** checked against the column they are compared to, whenever the
+   request carried domains: `value_field_pairs` reads that pairing off the
+   template (a `==` between a `{"field": "<E1.F2>"}` and a `{"literal": "<V1>"}`,
+   wherever it sits), and a value absent from that column's domain is refused.
+   Write the comparison that way and the check follows for free.
+
+   > This is the one binding error that produces an **empty chart rather than a
+   > wrong one**, which is why it is worth a check of its own. Nothing else
+   > catches it: bind an event log and a subject-level table the wrong way round
+   > and every type check still passes, because both have a nominal column and a
+   > numeric one — but then every conditional the values feed is false, no
+   > subject has a start or an end, and the curve draws nothing. A near miss on
+   > case is reported as a near miss, since "copy it exactly" is a different fix
+   > from "you picked the wrong column". A column with no domain (high
+   > cardinality ones are dropped before sending; an interval domain is a
+   > min/max) is left unchecked, never reported as empty.
 
    Describe such a template by the **shape** it needs ("an event log with a subject
    id, an event-type column and a numeric time column"), not by the dataset that
@@ -116,7 +133,48 @@ apps/template-studio  ← renders templates, writes review decisions to
 | `<MARGINAL:D1,D2>`          | cube marginal filter: listed dims non-null, all others null      |
 | `<E1.r.E2.id.from>` / `.to` | join keys, from the schema's relationships                       |
 | `<V>`, `<V1>`…`<V3>`        | a literal data **value** the model supplies (not a column)       |
+| `<GROUP:E1.F4>`             | the expression cutting that field into strata (see below)        |
 | `:n` / `:q` / `:o` suffix   | constrains the bound field's type (nominal/quantitative/ordinal) |
+
+**Dynamic stratification: `<GROUP:…>`.** A stratified chart splits by a field, one
+stratum per distinct value. That only works when the field's domain is already the
+comparison a reader wants — a race column draws nine unreadable curves when the
+question was "white versus everyone else", and an age column is continuous, so its
+values are not strata at all. `<GROUP:E1.F4>` resolves to the **derive expression**
+computing the stratum column out of whatever `E1.F4` is bound to, so a template can
+offer both readings from one spec:
+
+```python
+chart.derive({"stratum": "<GROUP:E1.F4>"}).filter(Expr.not_null("stratum"))
+```
+
+- **It resolves to structure, not a name.** Like `<MARGINAL:…>`, the quotes around
+  it are stripped so a JSON object injects, and what it emits is a nested
+  `Expr.cond` tree — which is why it runs in SQL as well as Arquero.
+- **It is the only optional binding.** No grouping resolves to the field itself,
+  which is what keeps every pre-existing stratified chart drawing exactly what it
+  drew before. `unbound_placeholders` skips it, and it is offered as a tweakable
+  parameter even unbound, because ungrouped is a state of that control rather than
+  the absence of one.
+- **Bind the target field with no `:n`** if a quantitative stratifier should be
+  allowed. Validation then requires a grouping for a quantitative binding — a
+  continuous column has no categories to draw a curve for, and the cardinality cap
+  will not catch it, since that only looks at nominal and ordinal fields.
+- **Apply it after the per-subject value is settled.** This is the same hazard
+  documented at length below: grouping raw event rows and reducing afterwards lets
+  a subject whose value changed fall into a group it never belonged to. Under a
+  membership reading it goes before the `(subject, stratum)` grouping instead, so
+  two values in one bucket collapse to one row rather than counting the subject
+  twice. `_apply_grouping` in the template script exists to keep that placement in
+  one place.
+- **`preview_bindings` can declare a grouping** (`"GROUP": '{"type": …}'`), which
+  is how the studio previews a template in its grouped form. The type-directed
+  search never invents one, so an undeclared template previews ungrouped.
+
+The payload's two shapes, and everything that validates them, live in
+`udiagent.stratify`; the editor half is `packages/chat/src/features/dashboard/utils/grouping.ts`.
+Bucket labels are generated in both and must agree character-for-character — the
+control names the strata before the chart draws them.
 
 **Annotating a chart.** Three pieces the survival curves rely on, all recent
 additions:

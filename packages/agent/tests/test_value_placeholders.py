@@ -182,3 +182,102 @@ def test_concat_compiles_to_sql():
 
     with pytest.raises(UnsupportedQueryError):
         compile_expr({"concat": []}, ExprContext(quote=str, placeholder="?", params=[]))
+
+
+# ---------------------------------------------------------------------------
+# A value is checked against the column it is compared to, when domains are given
+# ---------------------------------------------------------------------------
+
+#: What the client sends alongside the schema. Only categorical columns carry a
+#: value list; an interval domain is a min/max and says nothing about strings.
+DOMAINS = [
+    {
+        "entity": "events",
+        "field": "event_type",
+        "type": "point",
+        "domain": {"values": ["Initial CNS Tumor", "Deceased", "Progressive"]},
+        "fieldDescription": "",
+    },
+    {
+        "entity": "events",
+        "field": "day",
+        "type": "interval",
+        "domain": {"min": 0, "max": 900},
+        "fieldDescription": "",
+    },
+]
+
+
+def test_a_value_absent_from_its_column_is_rejected():
+    """The failure this exists for produces an EMPTY chart, not a wrong one.
+
+    Every conditional the value feeds is false, so no row has a start or an end
+    and the curve has nothing to draw. Nothing else catches it: the type checks
+    pass happily when two tables are bound the wrong way round, because both have
+    a nominal column and a numeric one.
+    """
+    errors = validate_bindings(
+        TEMPLATE, {**BASE, "V1": "vital_status_is_not_an_event"}, SCHEMA, DOMAINS
+    )
+    assert len(errors) == 1
+    assert "does not appear in column 'event_type'" in errors[0]
+    # Names what would go wrong, and what the alternatives are.
+    assert "empty" in errors[0]
+    assert "Initial CNS Tumor" in errors[0]
+
+
+def test_a_value_present_in_its_column_is_accepted():
+    errors = validate_bindings(TEMPLATE, {**BASE, "V1": "Deceased"}, SCHEMA, DOMAINS)
+    assert errors == [], errors
+
+
+def test_a_case_mismatch_is_reported_as_one():
+    """Different mistake, different fix: the model was told to copy exactly."""
+    errors = validate_bindings(TEMPLATE, {**BASE, "V1": "deceased"}, SCHEMA, DOMAINS)
+    assert len(errors) == 1
+    assert "'Deceased' does" in errors[0]
+    assert "including case" in errors[0]
+
+
+def test_without_domains_nothing_is_checked():
+    """Not every caller has them — re-instantiating a stored chart has only the
+    schema — and a missing domain must mean unchecked, never invalid."""
+    assert validate_bindings(TEMPLATE, {**BASE, "V1": "anything at all"}, SCHEMA) == []
+
+
+def test_a_column_with_no_domain_is_left_alone():
+    """A high-cardinality column is dropped before the domains are sent, and an
+    interval domain cannot say whether a string occurs."""
+    interval_only = [d for d in DOMAINS if d["type"] == "interval"]
+    assert (
+        validate_bindings(TEMPLATE, {**BASE, "V1": "unverifiable"}, SCHEMA, interval_only)
+        == []
+    )
+
+
+def test_the_pairing_follows_the_template_not_a_convention():
+    """`value_field_pairs` reads which column each value is tested on out of the
+    spec, so a template comparing V2 against a different column is checked
+    against that one rather than against the first nominal field it finds."""
+    from udiagent.vis_generate import value_field_pairs
+
+    pairs = value_field_pairs(TEMPLATE)
+    assert pairs == {"V1": {"F2"}}
+
+
+def test_the_survival_template_pairs_its_events_with_the_event_column():
+    """The real template, and the shape the reported empty chart came from: two
+    values on the event log's type column, one on the censoring table's status."""
+    from udiagent.vis_generate import _load_generated_tools, value_field_pairs
+
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    idx, _param_map = dispatch[
+        next(n for n in dispatch if n.endswith("_line_survival"))
+    ]
+    assert value_field_pairs(templates[idx]) == {
+        "V1": {"E1.F2"},
+        "V2": {"E1.F2"},
+        "V3": {"E2.F2"},
+    }

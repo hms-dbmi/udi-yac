@@ -40,9 +40,42 @@ def parse_schema(schema_path: str) -> dict:
 # Template analysis
 # ---------------------------------------------------------------------------
 
+#: A dynamic-stratification grouping tag, `<GROUP:E1.F4>` — the part after the
+#: first colon names the field placeholder it cuts.
+_GROUP_TAG = re.compile(r"(GROUP\d*)(?::(.+))?$")
+
+#: What the model has to know to write a grouping. Long, because the parameter is
+#: free-form JSON and the alternative to spelling out both shapes is the model
+#: inventing a third one.
+_GROUPING_DESCRIPTION = (
+    "OPTIONAL. Combine the stratifier's values into a few named strata, as a "
+    "JSON object. Omit it entirely for one stratum per distinct value, which is "
+    "usually what you want. Use it when the request asks to compare groups of "
+    "values rather than every value ('white versus all other races') or splits a "
+    "number at a threshold ('over 65'). Two shapes: for a nominal stratifier, "
+    '{"type": "nominal", "groups": [{"label": "White", "values": ["White"]}], '
+    '"other": "Other"} — values not listed fall into "other", or are left out of '
+    'the chart when "other" is null. For a quantitative stratifier, '
+    '{"type": "quantitative", "cuts": [65]} — ascending cut points, each bucket '
+    "half-open on the right, so 65 lands in the upper one. Copy nominal values "
+    "exactly as they appear in the column, and define at most 10 strata."
+)
+
+
 def _extract_placeholders(template_str: str) -> set[str]:
-    """Extract all <placeholder> names from a template string."""
-    return set(re.findall(PLACEHOLDER, template_str))
+    """Extract all <placeholder> names from a template string.
+
+    A `<GROUP:E1.F4>` tag also contributes the field placeholder it names, so
+    that field gets a parameter of its own even in a template that mentions it
+    nowhere else. Without this a stratifier reached only through its grouping
+    would resolve to an empty column name rather than failing.
+    """
+    found = set(re.findall(PLACEHOLDER, template_str))
+    for placeholder in list(found):
+        match = _GROUP_TAG.fullmatch(placeholder)
+        if match and match.group(2):
+            found.add(match.group(2))
+    return found
 
 
 def _derive_tool_name(template: dict, index: int) -> str:
@@ -202,6 +235,25 @@ _ENCODING_LABELS = {
 }
 
 
+def _add_grouping_param(
+    properties: dict, param_map: dict, seen: set, group_key: str
+) -> None:
+    """Register the optional grouping parameter for one `<GROUP*>` placeholder.
+
+    Deliberately absent from the tool's `required` list — the only parameter that
+    is. Every other one names something the template cannot resolve without, but
+    a grouping's absence is itself an answer: one stratum per value, which is
+    what a stratified chart does until someone asks for something else. Making it
+    required would force the model to invent a grouping for every survival curve.
+    """
+    param_name = "grouping" if group_key == "GROUP" else f"grouping{group_key[5:]}"
+    if param_name in seen:
+        return
+    seen.add(param_name)
+    properties[param_name] = {"type": "string", "description": _GROUPING_DESCRIPTION}
+    param_map[param_name] = group_key
+
+
 def _build_field_description(field_type: str | None, encoding_info: dict | None) -> str:
     """Build a descriptive string for a field parameter.
 
@@ -254,6 +306,10 @@ def _generate_single_entity_tool(
     seen = set()
     for ph in sorted(placeholders):
         if ph in ("E", "E.url"):
+            continue
+        group = _GROUP_TAG.fullmatch(ph)
+        if group:
+            _add_grouping_param(properties, param_map, seen, group.group(1))
             continue
         m = re.match(r'(F\d*|D\d*|V\d*)', ph)
         if not m:
@@ -366,6 +422,11 @@ def _generate_join_entity_tool(
         # the same side of a join. Collapsing every `E1.F*` onto one name would
         # keep only the first and leave the rest unbound — which resolves to an
         # empty field name rather than an error.
+        group = _GROUP_TAG.fullmatch(ph)
+        if group:
+            _add_grouping_param(properties, param_map, seen, group.group(1))
+            continue
+
         m = re.match(r'(E\d+)\.(F\d*)', ph)
         if m:
             param_name = f"entity{m.group(1)[1:]}_field{m.group(2)[1:]}"

@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 74
+Tools: 75
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -320,17 +320,18 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}, "censor day": {"op": "max", "field": '
  '"censor day"}, "<E1.F4>": {"op": "max", "field": "baseline stratum"}}}, {"filter": {"op": "!=", "left": {"field": '
  '"start day"}, "right": {"literal": null}}}, {"filter": {"op": "!=", "left": {"field": "<E1.F4>"}, "right": '
- '{"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": '
- 'null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end '
- 'day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start '
- 'day"}}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"op": '
- '"-", "left": {"field": "censor day"}, "right": {"field": "start day"}}, "else": {"literal": 0}}}}}, {"filter": '
- '{"op": ">=", "left": {"field": "survival days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": '
- '"/", "left": {"field": "survival days"}, "right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": {"op": '
- '"!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": null}, "else": {"if": {"op": '
- '"!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"field": "survival years"}, "else": '
- '{"literal": null}}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": '
- '"<E1.F4>"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": "sum", "field": "died"}}}, {"orderby": '
+ '{"literal": null}}}, {"derive": {"stratum": "<GROUP:E1.F4>"}}, {"filter": {"op": "!=", "left": {"field": "stratum"}, '
+ '"right": {"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, "right": '
+ '{"literal": null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", "left": '
+ '{"field": "end day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, "right": '
+ '{"field": "start day"}}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": null}}, '
+ '"then": {"op": "-", "left": {"field": "censor day"}, "right": {"field": "start day"}}, "else": {"literal": 0}}}}}, '
+ '{"filter": {"op": ">=", "left": {"field": "survival days"}, "right": {"literal": 0}}}, {"derive": {"survival years": '
+ '{"op": "/", "left": {"field": "survival days"}, "right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": '
+ '{"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": null}, "else": {"if": '
+ '{"op": "!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"field": "survival years"}, '
+ '"else": {"literal": null}}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": '
+ '"stratum"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": "sum", "field": "died"}}}, {"orderby": '
  '{"field": ["survival years", "<E1.F1>"], "order": "asc"}}, {"derive": {"survival percentage": {"rolling": '
  '{"expression": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "sum", '
  '"field": "died"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": {"final percentage": '
@@ -352,29 +353,29 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  'null}}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": '
  '0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": '
  '{"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"survivors": {"op": "-", "left": {"field": '
- '"subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"field": "<E1.F4>"}, '
+ '"subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, '
  '{"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, {"field": "subjects"}, {"literal": ") '
  '"}, {"field": "final survival"}, {"literal": "%"}]}}}], "representation": [{"mark": "line", "mapping": [{"encoding": '
  '"x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
  '"y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
- '"field": "<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
  '"field": "drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", '
  '"field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
- '"field": "<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
  '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
  '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
- '(%)"}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
  '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": '
  '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
  'true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": '
  '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
  '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
- '{"encoding": "size", "value": 500}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": '
+ '{"encoding": "size", "value": 500}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
  'true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year", "type": "quantitative", "title": '
  '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
  '"domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": '
- '"color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", '
+ '"color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", '
  '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
  '[{"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E2.F2:n>"}, "right": {"literal": "<V3>"}}, '
@@ -390,17 +391,18 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}, "censor day": {"op": "max", "field": '
  '"censor day"}, "<E1.F4>": {"op": "max", "field": "baseline stratum"}}}, {"filter": {"op": "!=", "left": {"field": '
  '"start day"}, "right": {"literal": null}}}, {"filter": {"op": "!=", "left": {"field": "<E1.F4>"}, "right": '
- '{"literal": null}}}, {"unnest": {"field": "<E1.F4>", "separator": ";"}}, {"derive": {"died": {"if": {"op": "!=", '
- '"left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": {"literal": 0}}, '
- '"survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"op": "-", '
- '"left": {"field": "end day"}, "right": {"field": "start day"}}, "else": {"if": {"op": "!=", "left": {"field": '
+ '{"literal": null}}}, {"unnest": {"field": "<E1.F4>", "separator": ";"}}, {"derive": {"stratum": "<GROUP:E1.F4>"}}, '
+ '{"filter": {"op": "!=", "left": {"field": "stratum"}, "right": {"literal": null}}}, {"derive": {"died": {"if": '
+ '{"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": {"literal": '
+ '0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"op": '
+ '"-", "left": {"field": "end day"}, "right": {"field": "start day"}}, "else": {"if": {"op": "!=", "left": {"field": '
  '"censor day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "censor day"}, "right": {"field": '
  '"start day"}}, "else": {"literal": 0}}}}}, {"filter": {"op": ">=", "left": {"field": "survival days"}, "right": '
  '{"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "survival days"}, "right": {"literal": '
  '365.25}}}}, {"derive": {"censor year": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": '
  'null}}, "then": {"literal": null}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": '
  'null}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": {"cohort end": {"agg": "max", '
- '"field": "survival years"}}}, {"groupby": "<E1.F4>"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": '
+ '"field": "survival years"}}}, {"groupby": "stratum"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": '
  '"sum", "field": "died"}}}, {"orderby": {"field": ["survival years", "<E1.F1>"], "order": "asc"}}, {"derive": '
  '{"survival percentage": {"rolling": {"expression": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": '
  '{"op": "/", "left": {"agg": "sum", "field": "died"}, "right": {"field": "subjects"}}}, "right": {"literal": '
@@ -423,28 +425,28 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
  '{"survivors": {"op": "-", "left": {"field": "subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": '
- '{"concat": [{"field": "<E1.F4>"}, {"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, '
+ '{"concat": [{"field": "stratum"}, {"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, '
  '{"field": "subjects"}, {"literal": ") "}, {"field": "final survival"}, {"literal": "%"}]}}}], "representation": '
  '[{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival '
  'years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": '
- '0, "max": 100}}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": '
+ '0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": '
  '"line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", "title": "survival years", '
  '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
- '"max": 100}}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
+ '"max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
  '"mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", "title": "survival years", '
  '"domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": '
- '0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": '
+ '0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
  'true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": '
  '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<E1.F4>", "type": '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": '
  '"nominal", "omitLegend": true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": '
  '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
  '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
  '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
- '"<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
  'year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final '
  'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", '
- '"type": "nominal"}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}], "align": '
+ '"type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": '
  '"right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
  '"<E1.F4>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
@@ -458,25 +460,26 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": "min", "field": "start day"}, "subject '
  'end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E1.F4:n>"}, "right": '
- '{"literal": null}}}, {"groupby": ["<E1.F1>", "<E1.F4:n>"]}, {"rollup": {"start day": {"op": "min", "field": "subject '
- 'start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": "max", "field": "censor day"}}}, '
- '{"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": null}}}, {"derive": {"died": {"if": '
- '{"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": {"literal": '
- '0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"op": '
- '"-", "left": {"field": "end day"}, "right": {"field": "start day"}}, "else": {"if": {"op": "!=", "left": {"field": '
- '"censor day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "censor day"}, "right": {"field": '
- '"start day"}}, "else": {"literal": 0}}}}}, {"filter": {"op": ">=", "left": {"field": "survival days"}, "right": '
- '{"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "survival days"}, "right": {"literal": '
- '365.25}}}}, {"derive": {"censor year": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": '
- 'null}}, "then": {"literal": null}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": '
- 'null}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": {"cohort end": {"agg": "max", '
- '"field": "survival years"}}}, {"groupby": "<E1.F4>"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": '
- '"sum", "field": "died"}}}, {"orderby": {"field": ["survival years", "<E1.F1>"], "order": "asc"}}, {"derive": '
- '{"survival percentage": {"rolling": {"expression": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": '
- '{"op": "/", "left": {"agg": "sum", "field": "died"}, "right": {"field": "subjects"}}}, "right": {"literal": '
- '100}}}}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"label '
- 'year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", "left": '
- '{"field": "deaths"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": '
+ '{"literal": null}}}, {"derive": {"stratum": "<GROUP:E1.F4>"}}, {"filter": {"op": "!=", "left": {"field": "stratum"}, '
+ '"right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": {"start day": {"op": "min", "field": '
+ '"subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": "max", "field": "censor '
+ 'day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": null}}}, {"derive": {"died": '
+ '{"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": '
+ '{"literal": 0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, '
+ '"then": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start day"}}, "else": {"if": {"op": "!=", '
+ '"left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "censor day"}, '
+ '"right": {"field": "start day"}}, "else": {"literal": 0}}}}}, {"filter": {"op": ">=", "left": {"field": "survival '
+ 'days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "survival days"}, '
+ '"right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": {"op": "!=", "left": {"field": "end day"}, '
+ '"right": {"literal": null}}, "then": {"literal": null}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, '
+ '"right": {"literal": null}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": {"cohort '
+ 'end": {"agg": "max", "field": "survival years"}}}, {"groupby": "stratum"}, {"derive": {"subjects": {"agg": "count"}, '
+ '"deaths": {"agg": "sum", "field": "died"}}}, {"orderby": {"field": ["survival years", "<E1.F1>"], "order": "asc"}}, '
+ '{"derive": {"survival percentage": {"rolling": {"expression": {"op": "*", "left": {"op": "-", "left": {"literal": '
+ '1}, "right": {"op": "/", "left": {"agg": "sum", "field": "died"}, "right": {"field": "subjects"}}}, "right": '
+ '{"literal": 100}}}}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
+ '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", '
+ '"left": {"field": "deaths"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": '
  '{"literal": 1.05}}, "else": {"literal": null}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
  '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
  'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
@@ -493,28 +496,28 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
  '{"survivors": {"op": "-", "left": {"field": "subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": '
- '{"concat": [{"field": "<E1.F4>"}, {"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, '
+ '{"concat": [{"field": "stratum"}, {"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, '
  '{"field": "subjects"}, {"literal": ") "}, {"field": "final survival"}, {"literal": "%"}]}}}], "representation": '
  '[{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival '
  'years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": '
- '0, "max": 100}}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": '
+ '0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": '
  '"line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", "title": "survival years", '
  '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
- '"max": 100}}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
+ '"max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
  '"mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", "title": "survival years", '
  '"domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": '
- '0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": '
+ '0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
  'true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": '
  '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<E1.F4>", "type": '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": '
  '"nominal", "omitLegend": true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": '
  '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
  '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
  '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
- '"<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
  'year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final '
  'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", '
- '"type": "nominal"}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}], "align": '
+ '"type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": '
  '"right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
  '"<E1.F4>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
@@ -528,65 +531,66 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  'null}}, "end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": '
  '{"field": "<E1.F3>"}, "else": {"literal": null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": '
  '"min", "field": "start day"}, "subject end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": '
- '{"field": "<E1.F4:n>"}, "right": {"literal": null}}}, {"groupby": ["<E1.F1>", "<E1.F4:n>"]}, {"rollup": {"start '
- 'day": {"op": "min", "field": "subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": '
- '{"op": "max", "field": "censor day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": '
- 'null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": '
- '{"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": '
- '{"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start day"}}, "else": '
- '{"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"op": "-", "left": '
- '{"field": "censor day"}, "right": {"field": "start day"}}, "else": {"literal": 0}}}}}, {"filter": {"op": ">=", '
- '"left": {"field": "survival days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": '
- '{"field": "survival days"}, "right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": {"op": "!=", "left": '
- '{"field": "end day"}, "right": {"literal": null}}, "then": {"literal": null}, "else": {"if": {"op": "!=", "left": '
- '{"field": "censor day"}, "right": {"literal": null}}, "then": {"field": "survival years"}, "else": {"literal": '
- 'null}}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": "<E1.F4>"}, {"derive": '
- '{"subjects": {"agg": "count"}, "deaths": {"agg": "sum", "field": "died"}}}, {"orderby": {"field": ["survival years", '
- '"<E1.F1>"], "order": "asc"}}, {"derive": {"survival percentage": {"rolling": {"expression": {"op": "*", "left": '
- '{"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "sum", "field": "died"}, "right": {"field": '
- '"subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival '
- 'percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"if": {"op": ">", "left": {"field": "deaths"}, "right": {"literal": 0}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}, "else": {"literal": null}}}}, '
- '{"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival '
- 'years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead '
- 'year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": '
- '{"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
- '{"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": '
- '{"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, '
- '{"derive": {"rule year": {"if": {"op": "==", "left": {"field": "deaths"}, "right": {"literal": 0}}, "then": '
- '{"literal": null}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
- '{"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival percentage"}, "right": {"field": '
- '"final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}}, {"derive": '
- '{"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": '
- '{"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": '
- '"_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"survivors": {"op": "-", "left": {"field": "subjects"}, '
- '"right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"field": "<E1.F4>"}, {"literal": " "}, '
- '{"literal": "("}, {"field": "survivors"}, {"literal": "/"}, {"field": "subjects"}, {"literal": ") "}, {"field": '
- '"final survival"}, {"literal": "%"}]}}}], "representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": '
- '"lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
- '"full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": '
- '"<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop '
- 'year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop '
- 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<E1.F4>", '
- '"type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", '
- '"type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival '
- 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": '
- '"color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", '
- '"mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "point", '
- '"mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": "survival years", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": '
- '500}, {"encoding": "color", "field": "<E1.F4>", "type": "nominal", "omitLegend": true}]}, {"mark": "text", '
- '"mapping": [{"encoding": "x", "field": "label year", "type": "quantitative", "title": "survival years", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "<E1.F4>", '
- '"type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, '
- '"strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
+ '{"field": "<E1.F4:n>"}, "right": {"literal": null}}}, {"derive": {"stratum": "<GROUP:E1.F4>"}}, {"filter": {"op": '
+ '"!=", "left": {"field": "stratum"}, "right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": '
+ '{"start day": {"op": "min", "field": "subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor '
+ 'day": {"op": "max", "field": "censor day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": '
+ '{"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": '
+ 'null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end '
+ 'day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start '
+ 'day"}}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"op": '
+ '"-", "left": {"field": "censor day"}, "right": {"field": "start day"}}, "else": {"literal": 0}}}}}, {"filter": '
+ '{"op": ">=", "left": {"field": "survival days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": '
+ '"/", "left": {"field": "survival days"}, "right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": {"op": '
+ '"!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": null}, "else": {"if": {"op": '
+ '"!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"field": "survival years"}, "else": '
+ '{"literal": null}}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": '
+ '"stratum"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": "sum", "field": "died"}}}, {"orderby": '
+ '{"field": ["survival years", "<E1.F1>"], "order": "asc"}}, {"derive": {"survival percentage": {"rolling": '
+ '{"expression": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "sum", '
+ '"field": "died"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": {"final percentage": '
+ '{"agg": "min", "field": "survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", "left": {"field": "deaths"}, "right": {"literal": 0}}, '
+ '"then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}, '
+ '"else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": '
+ '"min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival '
+ 'percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": '
+ '{"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, '
+ '"right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": '
+ '{"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": '
+ '{"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, '
+ '"else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"field": "deaths"}, "right": '
+ '{"literal": 0}}, "then": {"literal": null}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival '
+ 'percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": '
+ 'null}}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": '
+ '0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": '
+ '{"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"survivors": {"op": "-", "left": {"field": '
+ '"subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, '
+ '{"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, {"field": "subjects"}, {"literal": ") '
+ '"}, {"field": "final survival"}, {"literal": "%"}]}}}], "representation": [{"mark": "line", "mapping": [{"encoding": '
+ '"x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", '
+ '"field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
+ '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": '
+ '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
+ 'true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": '
+ '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
+ '{"encoding": "size", "value": 500}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
+ 'true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year", "type": "quantitative", "title": '
+ '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": '
+ '"color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
  '"source": "<E3.url>"}], "transformation": [{"join": {"on": ["<E1.F1>", "<E2.F1:n>"]}, "in": ["<E1>", "<E2>"], "out": '
  '"<E1>__<E2>"}, {"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E3.F2:n>"}, "right": {"literal": '
@@ -599,25 +603,26 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": "min", "field": "start day"}, "subject '
  'end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E2.F:n>"}, "right": '
- '{"literal": null}}}, {"groupby": ["<E1.F1>", "<E2.F:n>"]}, {"rollup": {"start day": {"op": "min", "field": "subject '
- 'start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": "max", "field": "censor day"}}}, '
- '{"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": null}}}, {"derive": {"died": {"if": '
- '{"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": {"literal": '
- '0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"op": '
- '"-", "left": {"field": "end day"}, "right": {"field": "start day"}}, "else": {"if": {"op": "!=", "left": {"field": '
- '"censor day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "censor day"}, "right": {"field": '
- '"start day"}}, "else": {"literal": 0}}}}}, {"filter": {"op": ">=", "left": {"field": "survival days"}, "right": '
- '{"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "survival days"}, "right": {"literal": '
- '365.25}}}}, {"derive": {"censor year": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": '
- 'null}}, "then": {"literal": null}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": '
- 'null}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": {"cohort end": {"agg": "max", '
- '"field": "survival years"}}}, {"groupby": "<E2.F>"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": '
- '"sum", "field": "died"}}}, {"orderby": {"field": ["survival years", "<E1.F1>"], "order": "asc"}}, {"derive": '
- '{"survival percentage": {"rolling": {"expression": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": '
- '{"op": "/", "left": {"agg": "sum", "field": "died"}, "right": {"field": "subjects"}}}, "right": {"literal": '
- '100}}}}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"label '
- 'year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", "left": '
- '{"field": "deaths"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": '
+ '{"literal": null}}}, {"derive": {"stratum": "<GROUP:E2.F>"}}, {"filter": {"op": "!=", "left": {"field": "stratum"}, '
+ '"right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": {"start day": {"op": "min", "field": '
+ '"subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": "max", "field": "censor '
+ 'day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": null}}}, {"derive": {"died": '
+ '{"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": '
+ '{"literal": 0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, '
+ '"then": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start day"}}, "else": {"if": {"op": "!=", '
+ '"left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "censor day"}, '
+ '"right": {"field": "start day"}}, "else": {"literal": 0}}}}}, {"filter": {"op": ">=", "left": {"field": "survival '
+ 'days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "survival days"}, '
+ '"right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": {"op": "!=", "left": {"field": "end day"}, '
+ '"right": {"literal": null}}, "then": {"literal": null}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, '
+ '"right": {"literal": null}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": {"cohort '
+ 'end": {"agg": "max", "field": "survival years"}}}, {"groupby": "stratum"}, {"derive": {"subjects": {"agg": "count"}, '
+ '"deaths": {"agg": "sum", "field": "died"}}}, {"orderby": {"field": ["survival years", "<E1.F1>"], "order": "asc"}}, '
+ '{"derive": {"survival percentage": {"rolling": {"expression": {"op": "*", "left": {"op": "-", "left": {"literal": '
+ '1}, "right": {"op": "/", "left": {"agg": "sum", "field": "died"}, "right": {"field": "subjects"}}}, "right": '
+ '{"literal": 100}}}}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
+ '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", '
+ '"left": {"field": "deaths"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": '
  '{"literal": 1.05}}, "else": {"literal": null}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
  '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
  'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
@@ -634,28 +639,100 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
  '{"survivors": {"op": "-", "left": {"field": "subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": '
- '{"concat": [{"field": "<E2.F>"}, {"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, '
+ '{"concat": [{"field": "stratum"}, {"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, '
  '{"field": "subjects"}, {"literal": ") "}, {"field": "final survival"}, {"literal": "%"}]}}}], "representation": '
  '[{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival '
  'years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": '
- '0, "max": 100}}, {"encoding": "color", "field": "<E2.F>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
- '"mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", "title": "survival years", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "color", "field": "<E2.F>", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
+ '0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": '
+ '"line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", "title": "survival years", '
+ '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
+ '"max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
  '"mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", "title": "survival years", '
  '"domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": '
- '0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "<E2.F>", "type": "nominal", "omitLegend": '
+ '0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
  'true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": '
  '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<E2.F>", "type": '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": '
  '"nominal", "omitLegend": true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": '
  '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
  '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
  '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
- '"<E2.F>", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
  'year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final '
  'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", '
- '"type": "nominal"}, {"encoding": "color", "field": "<E2.F>", "type": "nominal", "omitLegend": true}], "align": '
+ '"type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": '
+ '"right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
+ '"<E2.F>", "align": "right"}}',
+ '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
+ '"source": "<E3.url>"}], "transformation": [{"join": {"on": ["<E1.F1>", "<E2.F1:n>"]}, "in": ["<E1>", "<E2>"], "out": '
+ '"<E1>__<E2>"}, {"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E3.F2:n>"}, "right": {"literal": '
+ '"<V3>"}}, "then": {"field": "<E3.F3:q>"}, "else": {"literal": null}}}, "in": "<E3>", "out": "<E3>__c"}, {"groupby": '
+ '"<E3.F1:n>", "in": "<E3>__c"}, {"rollup": {"censor day": {"op": "max", "field": "censor day"}}, "in": "<E3>__c", '
+ '"out": "<E3>__by_subject"}, {"join": {"on": ["<E1.F1>", "<E3.F1>"], "kind": "left"}, "in": ["<E1>__<E2>", '
+ '"<E3>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": '
+ '{"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": '
+ '{"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
+ '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
+ 'null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": "min", "field": "start day"}, "subject '
+ 'end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E2.F:q>"}, "right": '
+ '{"literal": null}}}, {"derive": {"stratum": "<GROUP:E2.F>"}}, {"filter": {"op": "!=", "left": {"field": "stratum"}, '
+ '"right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": {"start day": {"op": "min", "field": '
+ '"subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": "max", "field": "censor '
+ 'day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": null}}}, {"derive": {"died": '
+ '{"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": '
+ '{"literal": 0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, '
+ '"then": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start day"}}, "else": {"if": {"op": "!=", '
+ '"left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "censor day"}, '
+ '"right": {"field": "start day"}}, "else": {"literal": 0}}}}}, {"filter": {"op": ">=", "left": {"field": "survival '
+ 'days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": {"field": "survival days"}, '
+ '"right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": {"op": "!=", "left": {"field": "end day"}, '
+ '"right": {"literal": null}}, "then": {"literal": null}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, '
+ '"right": {"literal": null}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": {"cohort '
+ 'end": {"agg": "max", "field": "survival years"}}}, {"groupby": "stratum"}, {"derive": {"subjects": {"agg": "count"}, '
+ '"deaths": {"agg": "sum", "field": "died"}}}, {"orderby": {"field": ["survival years", "<E1.F1>"], "order": "asc"}}, '
+ '{"derive": {"survival percentage": {"rolling": {"expression": {"op": "*", "left": {"op": "-", "left": {"literal": '
+ '1}, "right": {"op": "/", "left": {"agg": "sum", "field": "died"}, "right": {"field": "subjects"}}}, "right": '
+ '{"literal": 100}}}}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
+ '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", '
+ '"left": {"field": "deaths"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": '
+ '{"literal": 1.05}}, "else": {"literal": null}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
+ '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
+ 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
+ '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
+ '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
+ '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": '
+ '"==", "left": {"field": "deaths"}, "right": {"literal": 0}}, "then": {"literal": null}, "else": {"if": {"op": "==", '
+ '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", '
+ '"left": {"field": "survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival '
+ 'years"}, "else": {"literal": null}}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
+ '{"survivors": {"op": "-", "left": {"field": "subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": '
+ '{"concat": [{"field": "stratum"}, {"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, '
+ '{"field": "subjects"}, {"literal": ") "}, {"field": "final survival"}, {"literal": "%"}]}}}], "representation": '
+ '[{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": '
+ '0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": '
+ '"line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", "title": "survival years", '
+ '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
+ '"max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", '
+ '"mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", "title": "survival years", '
+ '"domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": '
+ '0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
+ 'true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": '
+ '"nominal", "omitLegend": true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final '
+ 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", '
+ '"type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": '
  '"right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
  '"<E2.F>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
@@ -670,65 +747,66 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  'null}}, "end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": '
  '{"field": "<E1.F3>"}, "else": {"literal": null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": '
  '"min", "field": "start day"}, "subject end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": '
- '{"field": "<E2.F:n>"}, "right": {"literal": null}}}, {"groupby": ["<E1.F1>", "<E2.F:n>"]}, {"rollup": {"start day": '
- '{"op": "min", "field": "subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": '
- '"max", "field": "censor day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": {"literal": '
- 'null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": '
- '{"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end day"}, "right": '
- '{"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start day"}}, "else": '
- '{"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"op": "-", "left": '
- '{"field": "censor day"}, "right": {"field": "start day"}}, "else": {"literal": 0}}}}}, {"filter": {"op": ">=", '
- '"left": {"field": "survival days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": "/", "left": '
- '{"field": "survival days"}, "right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": {"op": "!=", "left": '
- '{"field": "end day"}, "right": {"literal": null}}, "then": {"literal": null}, "else": {"if": {"op": "!=", "left": '
- '{"field": "censor day"}, "right": {"literal": null}}, "then": {"field": "survival years"}, "else": {"literal": '
- 'null}}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": "<E2.F>"}, {"derive": '
- '{"subjects": {"agg": "count"}, "deaths": {"agg": "sum", "field": "died"}}}, {"orderby": {"field": ["survival years", '
- '"<E1.F1>"], "order": "asc"}}, {"derive": {"survival percentage": {"rolling": {"expression": {"op": "*", "left": '
- '{"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "sum", "field": "died"}, "right": {"field": '
- '"subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival '
- 'percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"if": {"op": ">", "left": {"field": "deaths"}, "right": {"literal": 0}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}, "else": {"literal": null}}}}, '
- '{"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival '
- 'years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead '
- 'year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": '
- '{"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
- '{"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": '
- '{"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, '
- '{"derive": {"rule year": {"if": {"op": "==", "left": {"field": "deaths"}, "right": {"literal": 0}}, "then": '
- '{"literal": null}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
- '{"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival percentage"}, "right": {"field": '
- '"final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}}, {"derive": '
- '{"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": '
- '{"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": '
- '"_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"survivors": {"op": "-", "left": {"field": "subjects"}, '
- '"right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"field": "<E2.F>"}, {"literal": " "}, '
- '{"literal": "("}, {"field": "survivors"}, {"literal": "/"}, {"field": "subjects"}, {"literal": ") "}, {"field": '
- '"final survival"}, {"literal": "%"}]}}}], "representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": '
- '"lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
- '"full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<E2.F>", '
- '"type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", '
- '"type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop '
- 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<E2.F>", '
- '"type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", '
- '"type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival '
- 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": '
- '"color", "field": "<E2.F>", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", '
- '"mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "color", "field": "<E2.F>", "type": "nominal", "omitLegend": true}]}, {"mark": "point", '
- '"mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": "survival years", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": '
- '500}, {"encoding": "color", "field": "<E2.F>", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "<E2.F>", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}], "title": {"text": "<E2.F>", "align": "right"}}',
+ '{"field": "<E2.F:n>"}, "right": {"literal": null}}}, {"derive": {"stratum": "<GROUP:E2.F>"}}, {"filter": {"op": '
+ '"!=", "left": {"field": "stratum"}, "right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": '
+ '{"start day": {"op": "min", "field": "subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor '
+ 'day": {"op": "max", "field": "censor day"}}}, {"filter": {"op": "!=", "left": {"field": "start day"}, "right": '
+ '{"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, "right": {"literal": '
+ 'null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", "left": {"field": "end '
+ 'day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, "right": {"field": "start '
+ 'day"}}, "else": {"if": {"op": "!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"op": '
+ '"-", "left": {"field": "censor day"}, "right": {"field": "start day"}}, "else": {"literal": 0}}}}}, {"filter": '
+ '{"op": ">=", "left": {"field": "survival days"}, "right": {"literal": 0}}}, {"derive": {"survival years": {"op": '
+ '"/", "left": {"field": "survival days"}, "right": {"literal": 365.25}}}}, {"derive": {"censor year": {"if": {"op": '
+ '"!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"literal": null}, "else": {"if": {"op": '
+ '"!=", "left": {"field": "censor day"}, "right": {"literal": null}}, "then": {"field": "survival years"}, "else": '
+ '{"literal": null}}}}}, {"derive": {"cohort end": {"agg": "max", "field": "survival years"}}}, {"groupby": '
+ '"stratum"}, {"derive": {"subjects": {"agg": "count"}, "deaths": {"agg": "sum", "field": "died"}}}, {"orderby": '
+ '{"field": ["survival years", "<E1.F1>"], "order": "asc"}}, {"derive": {"survival percentage": {"rolling": '
+ '{"expression": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"agg": "sum", '
+ '"field": "died"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}}}}}, {"derive": {"final percentage": '
+ '{"agg": "min", "field": "survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 1}}, "then": {"if": {"op": ">", "left": {"field": "deaths"}, "right": {"literal": 0}}, '
+ '"then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}, '
+ '"else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": '
+ '"min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival '
+ 'percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": '
+ '{"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, '
+ '"right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": '
+ '{"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": '
+ '{"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, '
+ '"else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"field": "deaths"}, "right": '
+ '{"literal": 0}}, "then": {"literal": null}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival '
+ 'percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": '
+ 'null}}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": '
+ '0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": '
+ '{"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"survivors": {"op": "-", "left": {"field": '
+ '"subjects"}, "right": {"field": "deaths"}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, '
+ '{"literal": " "}, {"literal": "("}, {"field": "survivors"}, {"literal": "/"}, {"field": "subjects"}, {"literal": ") '
+ '"}, {"field": "final survival"}, {"literal": "%"}]}}}], "representation": [{"mark": "line", "mapping": [{"encoding": '
+ '"x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", '
+ '"field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
+ '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": '
+ '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
+ 'true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": '
+ '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
+ '{"encoding": "size", "value": 500}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
+ 'true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year", "type": "quantitative", "title": '
+ '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": '
+ '"color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2.F>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
  '"source": "<E3.url>"}], "transformation": [{"groupby": "<E2.F1:n>", "in": "<E2>"}, {"rollup": {"in second table": '
  '{"op": "count"}}, "in": "<E2>", "out": "<E2>__by_subject"}, {"join": {"on": ["<E1.F1>", "<E2.F1>"], "kind": "left"}, '
@@ -1950,14 +2028,34 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity1_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity1_field2': {'description': 'any type field.', 'type': 'string'},
                                              'entity1_field3': {'description': 'any type field.', 'type': 'string'},
-                                             'entity1_field4': {'description': 'nominal field, encodes color.',
-                                                                'type': 'string'},
+                                             'entity1_field4': {'description': 'any type field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
                                              'entity2_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata, as a JSON object. '
+                                                                         'Omit it entirely for one stratum per '
+                                                                         'distinct value, which is usually what you '
+                                                                         'want. Use it when the request asks to '
+                                                                         'compare groups of values rather than every '
+                                                                         "value ('white versus all other races') or "
+                                                                         "splits a number at a threshold ('over 65'). "
+                                                                         'Two shapes: for a nominal stratifier, '
+                                                                         '{"type": "nominal", "groups": [{"label": '
+                                                                         '"White", "values": ["White"]}], "other": '
+                                                                         '"Other"} — values not listed fall into '
+                                                                         '"other", or are left out of the chart when '
+                                                                         '"other" is null. For a quantitative '
+                                                                         'stratifier, {"type": "quantitative", "cuts": '
+                                                                         '[65]} — ascending cut points, each bucket '
+                                                                         'half-open on the right, so 65 lands in the '
+                                                                         'upper one. Copy nominal values exactly as '
+                                                                         'they appear in the column, and define at '
+                                                                         'most 10 strata.',
+                                                          'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2007,14 +2105,34 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity1_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity1_field2': {'description': 'any type field.', 'type': 'string'},
                                              'entity1_field3': {'description': 'any type field.', 'type': 'string'},
-                                             'entity1_field4': {'description': 'nominal field, encodes color.',
-                                                                'type': 'string'},
+                                             'entity1_field4': {'description': 'any type field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
                                              'entity2_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata, as a JSON object. '
+                                                                         'Omit it entirely for one stratum per '
+                                                                         'distinct value, which is usually what you '
+                                                                         'want. Use it when the request asks to '
+                                                                         'compare groups of values rather than every '
+                                                                         "value ('white versus all other races') or "
+                                                                         "splits a number at a threshold ('over 65'). "
+                                                                         'Two shapes: for a nominal stratifier, '
+                                                                         '{"type": "nominal", "groups": [{"label": '
+                                                                         '"White", "values": ["White"]}], "other": '
+                                                                         '"Other"} — values not listed fall into '
+                                                                         '"other", or are left out of the chart when '
+                                                                         '"other" is null. For a quantitative '
+                                                                         'stratifier, {"type": "quantitative", "cuts": '
+                                                                         '[65]} — ascending cut points, each bucket '
+                                                                         'half-open on the right, so 65 lands in the '
+                                                                         'upper one. Copy nominal values exactly as '
+                                                                         'they appear in the column, and define at '
+                                                                         'most 10 strata.',
+                                                          'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2063,14 +2181,34 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity1_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity1_field2': {'description': 'any type field.', 'type': 'string'},
                                              'entity1_field3': {'description': 'any type field.', 'type': 'string'},
-                                             'entity1_field4': {'description': 'nominal field, encodes color.',
-                                                                'type': 'string'},
+                                             'entity1_field4': {'description': 'any type field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
                                              'entity2_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata, as a JSON object. '
+                                                                         'Omit it entirely for one stratum per '
+                                                                         'distinct value, which is usually what you '
+                                                                         'want. Use it when the request asks to '
+                                                                         'compare groups of values rather than every '
+                                                                         "value ('white versus all other races') or "
+                                                                         "splits a number at a threshold ('over 65'). "
+                                                                         'Two shapes: for a nominal stratifier, '
+                                                                         '{"type": "nominal", "groups": [{"label": '
+                                                                         '"White", "values": ["White"]}], "other": '
+                                                                         '"Other"} — values not listed fall into '
+                                                                         '"other", or are left out of the chart when '
+                                                                         '"other" is null. For a quantitative '
+                                                                         'stratifier, {"type": "quantitative", "cuts": '
+                                                                         '[65]} — ascending cut points, each bucket '
+                                                                         'half-open on the right, so 65 lands in the '
+                                                                         'upper one. Copy nominal values exactly as '
+                                                                         'they appear in the column, and define at '
+                                                                         'most 10 strata.',
+                                                          'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2120,14 +2258,34 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity1_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity1_field2': {'description': 'any type field.', 'type': 'string'},
                                              'entity1_field3': {'description': 'any type field.', 'type': 'string'},
-                                             'entity1_field4': {'description': 'nominal field, encodes color.',
-                                                                'type': 'string'},
+                                             'entity1_field4': {'description': 'any type field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
                                              'entity2_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata, as a JSON object. '
+                                                                         'Omit it entirely for one stratum per '
+                                                                         'distinct value, which is usually what you '
+                                                                         'want. Use it when the request asks to '
+                                                                         'compare groups of values rather than every '
+                                                                         "value ('white versus all other races') or "
+                                                                         "splits a number at a threshold ('over 65'). "
+                                                                         'Two shapes: for a nominal stratifier, '
+                                                                         '{"type": "nominal", "groups": [{"label": '
+                                                                         '"White", "values": ["White"]}], "other": '
+                                                                         '"Other"} — values not listed fall into '
+                                                                         '"other", or are left out of the chart when '
+                                                                         '"other" is null. For a quantitative '
+                                                                         'stratifier, {"type": "quantitative", "cuts": '
+                                                                         '[65]} — ascending cut points, each bucket '
+                                                                         'half-open on the right, so 65 lands in the '
+                                                                         'upper one. Copy nominal values exactly as '
+                                                                         'they appear in the column, and define at '
+                                                                         'most 10 strata.',
+                                                          'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2180,8 +2338,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
-                                             'entity2_field': {'description': 'nominal field, encodes color.',
-                                                               'type': 'string'},
+                                             'entity2_field': {'description': 'any type field.', 'type': 'string'},
                                              'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
                                              'entity3': {'description': 'An additional data entity (table) to join '
                                                                         'with (entity3).',
@@ -2189,6 +2346,109 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity3_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata, as a JSON object. '
+                                                                         'Omit it entirely for one stratum per '
+                                                                         'distinct value, which is usually what you '
+                                                                         'want. Use it when the request asks to '
+                                                                         'compare groups of values rather than every '
+                                                                         "value ('white versus all other races') or "
+                                                                         "splits a number at a threshold ('over 65'). "
+                                                                         'Two shapes: for a nominal stratifier, '
+                                                                         '{"type": "nominal", "groups": [{"label": '
+                                                                         '"White", "values": ["White"]}], "other": '
+                                                                         '"Other"} — values not listed fall into '
+                                                                         '"other", or are left out of the chart when '
+                                                                         '"other" is null. For a quantitative '
+                                                                         'stratifier, {"type": "quantitative", "cuts": '
+                                                                         '[65]} — ascending cut points, each bucket '
+                                                                         'half-open on the right, so 65 lands in the '
+                                                                         'upper one. Copy nominal values exactly as '
+                                                                         'they appear in the column, and define at '
+                                                                         'most 10 strata.',
+                                                          'type': 'string'},
+                                             'value1': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'},
+                                             'value3': {'description': 'A literal data VALUE to match (not a column '
+                                                                       'name) — one of the values actually present in '
+                                                                       'the relevant column, copied exactly, including '
+                                                                       'case and spacing.',
+                                                        'type': 'string'}},
+                              'required': ['entity1',
+                                           'entity2',
+                                           'entity3',
+                                           'entity1_field1',
+                                           'entity1_field2',
+                                           'entity1_field3',
+                                           'entity2_field',
+                                           'entity2_field1',
+                                           'entity3_field1',
+                                           'entity3_field2',
+                                           'entity3_field3',
+                                           'value1',
+                                           'value2',
+                                           'value3'],
+                              'type': 'object'}},
+  'type': 'function'},
+ {'function': {'description': '[line] Survival curves split by a NUMERIC field in a related table, cut into buckets at '
+                              "thresholds — 'under 65 versus 65 and over', tertiles of a lab value. Takes an event log "
+                              '(one row per event, with a subject id, an event-type column and a numeric time column) '
+                              'and a second table holding a per-subject number, joined on the subject-id column each '
+                              'side names. Supply the cut points in `grouping`: this template REQUIRES one, because a '
+                              'continuous column has no categories to draw a curve for. Ascending cut points, each '
+                              'bucket half-open on the right, so a cut at 65 puts 65 in the upper bucket. Use it '
+                              'whenever the attribute to split by is a number rather than a label. Design: The buckets '
+                              'are computed BEFORE the (subject, stratum) grouping, so two values in the same bucket '
+                              'collapse to one row for that subject rather than two — a subject is counted once in its '
+                              'own curve, not once per matching value. A bucket label is a string derived from the '
+                              'bounds, so it is drawn and ordered as a category: with more than a handful o',
+               'name': 'vis_058_line_survival_related_numeric',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                                                         'type': 'string'},
+                                             'entity1_field1': {'description': 'any type field.', 'type': 'string'},
+                                             'entity1_field2': {'description': 'any type field.', 'type': 'string'},
+                                             'entity1_field3': {'description': 'any type field.', 'type': 'string'},
+                                             'entity2': {'description': 'The secondary data entity (table) to join '
+                                                                        'with.',
+                                                         'type': 'string'},
+                                             'entity2_field': {'description': 'any type field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity3': {'description': 'An additional data entity (table) to join '
+                                                                        'with (entity3).',
+                                                         'type': 'string'},
+                                             'entity3_field1': {'description': 'any type field.', 'type': 'string'},
+                                             'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata, as a JSON object. '
+                                                                         'Omit it entirely for one stratum per '
+                                                                         'distinct value, which is usually what you '
+                                                                         'want. Use it when the request asks to '
+                                                                         'compare groups of values rather than every '
+                                                                         "value ('white versus all other races') or "
+                                                                         "splits a number at a threshold ('over 65'). "
+                                                                         'Two shapes: for a nominal stratifier, '
+                                                                         '{"type": "nominal", "groups": [{"label": '
+                                                                         '"White", "values": ["White"]}], "other": '
+                                                                         '"Other"} — values not listed fall into '
+                                                                         '"other", or are left out of the chart when '
+                                                                         '"other" is null. For a quantitative '
+                                                                         'stratifier, {"type": "quantitative", "cuts": '
+                                                                         '[65]} — ascending cut points, each bucket '
+                                                                         'half-open on the right, so 65 lands in the '
+                                                                         'upper one. Copy nominal values exactly as '
+                                                                         'they appear in the column, and define at '
+                                                                         'most 10 strata.',
+                                                          'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2232,7 +2492,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'OVERLAP: a subject joins a group for every value listed on any of its related records, '
                               'so the groups do not add up to the whole. Design: The cross-table and multi-value '
                               'readings composed: the stratifier is neither a column of the event log nor single-va',
-               'name': 'vis_058_line_survival_related_multivalue',
+               'name': 'vis_059_line_survival_related_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -2242,8 +2502,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
-                                             'entity2_field': {'description': 'nominal field, encodes color.',
-                                                               'type': 'string'},
+                                             'entity2_field': {'description': 'any type field.', 'type': 'string'},
                                              'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
                                              'entity3': {'description': 'An additional data entity (table) to join '
                                                                         'with (entity3).',
@@ -2251,6 +2510,27 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'entity3_field1': {'description': 'any type field.', 'type': 'string'},
                                              'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata, as a JSON object. '
+                                                                         'Omit it entirely for one stratum per '
+                                                                         'distinct value, which is usually what you '
+                                                                         'want. Use it when the request asks to '
+                                                                         'compare groups of values rather than every '
+                                                                         "value ('white versus all other races') or "
+                                                                         "splits a number at a threshold ('over 65'). "
+                                                                         'Two shapes: for a nominal stratifier, '
+                                                                         '{"type": "nominal", "groups": [{"label": '
+                                                                         '"White", "values": ["White"]}], "other": '
+                                                                         '"Other"} — values not listed fall into '
+                                                                         '"other", or are left out of the chart when '
+                                                                         '"other" is null. For a quantitative '
+                                                                         'stratifier, {"type": "quantitative", "cuts": '
+                                                                         '[65]} — ascending cut points, each bucket '
+                                                                         'half-open on the right, so 65 lands in the '
+                                                                         'upper one. Copy nominal values exactly as '
+                                                                         'they appear in the column, and define at '
+                                                                         'most 10 strata.',
+                                                          'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2295,7 +2575,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               "drops exactly the rows that would have answered 'no', so the second table is first "
                               'reduced to one row per subject and LEFT joined; a subject with no match keeps a null '
                               'mark',
-               'name': 'vis_059_line_survival_presence',
+               'name': 'vis_060_line_survival_presence',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -2355,7 +2635,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               "event rows. Each cell is labelled with the tables it names — '<E2> + <E3>', '<E2> "
                               "only', '<E3> only', 'Neither' — rather than a pair of flags, so no decoding is "
                               'required. Presence i',
-               'name': 'vis_060_line_survival_presence_2x2',
+               'name': 'vis_061_line_survival_presence_2x2',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
@@ -2421,7 +2701,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'the cells add up to the cohort. The elapsed-time dimension must be quantitative. Cubes '
                               "frequently bin time as strings ('0', '11', '>=60'), and there is no way to turn those "
                               'in',
-               'name': 'vis_061_line_survival_cube',
+               'name': 'vis_062_line_survival_cube',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
                                                                            'x-axis.',
@@ -2455,7 +2735,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'one time point. Because a cube dimension is a per-subject attribute rather than an '
                               'event-level column, this has none of the time-varying ambiguity the line-level '
                               'stratified c',
-               'name': 'vis_062_line_survival_cube_stratified',
+               'name': 'vis_063_line_survival_cube_stratified',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
                                                                            'x-axis.',
@@ -2486,7 +2766,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'in the co-occurrence of two fields; compare counts across combinations; find '
                               'correlations. Query patterns: Are there any clusters with respect to <E> counts of '
                               '<F1:n> and <F2:n>?; Make a heatmap of <E> <F1:n> and <F2:n>.',
-               'name': 'vis_063_heatmap_count',
+               'name': 'vis_064_heatmap_count',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2504,7 +2784,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'readability. Tasks: Identify patterns in the average value across two categorical '
                               'dimensions; find combinations with extreme values. Query patterns: What is the average '
                               '<F1:q> for each <F2:n> and <F3:n>?',
-               'name': 'vis_064_heatmap_avg',
+               'name': 'vis_065_heatmap_avg',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2526,7 +2806,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'across two dimensions; compare values across combinations. Query patterns: Are there '
                               'clusters in the measure across two dimensions?; Make a heatmap across two categorical '
                               'dimensions.',
-               'name': 'vis_065_heatmap_basic',
+               'name': 'vis_066_heatmap_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
                                                             'type': 'string'},
@@ -2544,7 +2824,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'assess whether the relationship between two quantitative fields differs across groups. '
                               'Query patterns: Are there clusters of <E> <F1:q> and <F2:q> values across different '
                               '<F3:n> groups?',
-               'name': 'vis_066_grouped_scatter_by_color',
+               'name': 'vis_067_grouped_scatter_by_color',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2562,7 +2842,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'span from bin start to bin end on x, with count on y. Tasks: Characterize the shape of '
                               'a distribution; identify modes, skewness, and gaps. Query patterns: What is the '
                               'distribution of <F:q>?; Make a histogram of <F:q>?',
-               'name': 'vis_067_histogram_distribution',
+               'name': 'vis_068_histogram_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2576,7 +2856,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
                               'distribution; identify modes and overall density patterns. Query patterns: What is the '
                               'distribution of <F:q>?',
-               'name': 'vis_068_area_density',
+               'name': 'vis_069_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2590,7 +2870,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'datasets (50 or fewer values) where individual observations are meaningful and '
                               'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
                               'values, clusters, and outliers. Query patterns: What is the distribution of <F:q>?',
-               'name': 'vis_069_dot_distribution',
+               'name': 'vis_070_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2606,7 +2886,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
                               'tendency or spread. Query patterns: Is the distribution of <F1:q> similar for each '
                               '<F2:n>?',
-               'name': 'vis_070_grouped_area_density',
+               'name': 'vis_071_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2623,7 +2903,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
                               'groups; identify clusters and outliers within each group. Query patterns: Is the '
                               'distribution of <F1:q> similar for each <F2:n>?',
-               'name': 'vis_071_grouped_dot_distribution',
+               'name': 'vis_072_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2641,7 +2921,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a field; determine how many records have valid values and what proportion. Query '
                               'patterns: How many <E> records have a non-null <F:q|o|n>?; What percentage of <E> '
                               'records have a non-null <F:q|o|n>?',
-               'name': 'vis_072_table_count_null_nonnull',
+               'name': 'vis_073_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2655,7 +2935,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Assess data quality; determine how many records are missing a value and what '
                               'proportion. Query patterns: How many <E> records have a null <F:q|o|n>?; What '
                               'percentage of <E> records have a null <F:q|o|n>?',
-               'name': 'vis_073_table_count_null',
+               'name': 'vis_074_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -2748,6 +3028,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                      'entity2_field1': 'E2.F1',
                                      'entity2_field2': 'E2.F2',
                                      'entity2_field3': 'E2.F3',
+                                     'grouping': 'GROUP',
                                      'value1': 'V1',
                                      'value2': 'V2',
                                      'value3': 'V3'}),
@@ -2761,6 +3042,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                                 'entity2_field1': 'E2.F1',
                                                 'entity2_field2': 'E2.F2',
                                                 'entity2_field3': 'E2.F3',
+                                                'grouping': 'GROUP',
                                                 'value1': 'V1',
                                                 'value2': 'V2',
                                                 'value3': 'V3'}),
@@ -2774,6 +3056,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                  'entity2_field1': 'E2.F1',
                                  'entity2_field2': 'E2.F2',
                                  'entity2_field3': 'E2.F3',
+                                 'grouping': 'GROUP',
                                  'value1': 'V1',
                                  'value2': 'V2',
                                  'value3': 'V3'}),
@@ -2787,6 +3070,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'entity2_field1': 'E2.F1',
                                             'entity2_field2': 'E2.F2',
                                             'entity2_field3': 'E2.F3',
+                                            'grouping': 'GROUP',
                                             'value1': 'V1',
                                             'value2': 'V2',
                                             'value3': 'V3'}),
@@ -2802,10 +3086,27 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                     'entity3_field1': 'E3.F1',
                                     'entity3_field2': 'E3.F2',
                                     'entity3_field3': 'E3.F3',
+                                    'grouping': 'GROUP',
                                     'value1': 'V1',
                                     'value2': 'V2',
                                     'value3': 'V3'}),
- 'vis_058_line_survival_related_multivalue': (58,
+ 'vis_058_line_survival_related_numeric': (58,
+                                           {'entity1': 'E1',
+                                            'entity1_field1': 'E1.F1',
+                                            'entity1_field2': 'E1.F2',
+                                            'entity1_field3': 'E1.F3',
+                                            'entity2': 'E2',
+                                            'entity2_field': 'E2.F',
+                                            'entity2_field1': 'E2.F1',
+                                            'entity3': 'E3',
+                                            'entity3_field1': 'E3.F1',
+                                            'entity3_field2': 'E3.F2',
+                                            'entity3_field3': 'E3.F3',
+                                            'grouping': 'GROUP',
+                                            'value1': 'V1',
+                                            'value2': 'V2',
+                                            'value3': 'V3'}),
+ 'vis_059_line_survival_related_multivalue': (59,
                                               {'entity1': 'E1',
                                                'entity1_field1': 'E1.F1',
                                                'entity1_field2': 'E1.F2',
@@ -2817,10 +3118,11 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                                'entity3_field1': 'E3.F1',
                                                'entity3_field2': 'E3.F2',
                                                'entity3_field3': 'E3.F3',
+                                               'grouping': 'GROUP',
                                                'value1': 'V1',
                                                'value2': 'V2',
                                                'value3': 'V3'}),
- 'vis_059_line_survival_presence': (59,
+ 'vis_060_line_survival_presence': (60,
                                     {'entity1': 'E1',
                                      'entity1_field1': 'E1.F1',
                                      'entity1_field2': 'E1.F2',
@@ -2834,7 +3136,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                      'value1': 'V1',
                                      'value2': 'V2',
                                      'value3': 'V3'}),
- 'vis_060_line_survival_presence_2x2': (60,
+ 'vis_061_line_survival_presence_2x2': (61,
                                         {'entity1': 'E1',
                                          'entity1_field1': 'E1.F1',
                                          'entity1_field2': 'E1.F2',
@@ -2850,30 +3152,30 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                          'value1': 'V1',
                                          'value2': 'V2',
                                          'value3': 'V3'}),
- 'vis_061_line_survival_cube': (61,
+ 'vis_062_line_survival_cube': (62,
                                 {'dimension1': 'D1',
                                  'dimension2': 'D2',
                                  'entity': 'E',
                                  'value1': 'V1',
                                  'value2': 'V2'}),
- 'vis_062_line_survival_cube_stratified': (62,
+ 'vis_063_line_survival_cube_stratified': (63,
                                            {'dimension1': 'D1',
                                             'dimension2': 'D2',
                                             'dimension3': 'D3',
                                             'entity': 'E',
                                             'value1': 'V1',
                                             'value2': 'V2'}),
- 'vis_063_heatmap_count': (63, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_064_heatmap_avg': (64, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_065_heatmap_basic': (65, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
- 'vis_066_grouped_scatter_by_color': (66, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_067_histogram_distribution': (67, {'entity': 'E', 'field': 'F'}),
- 'vis_068_area_density': (68, {'entity': 'E', 'field': 'F'}),
- 'vis_069_dot_distribution': (69, {'entity': 'E', 'field': 'F'}),
- 'vis_070_grouped_area_density': (70, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_071_grouped_dot_distribution': (71, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_072_table_count_null_nonnull': (72, {'entity': 'E', 'field': 'F'}),
- 'vis_073_table_count_null': (73, {'entity': 'E', 'field': 'F'})}
+ 'vis_064_heatmap_count': (64, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_065_heatmap_avg': (65, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_066_heatmap_basic': (66, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_067_grouped_scatter_by_color': (67, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_068_histogram_distribution': (68, {'entity': 'E', 'field': 'F'}),
+ 'vis_069_area_density': (69, {'entity': 'E', 'field': 'F'}),
+ 'vis_070_dot_distribution': (70, {'entity': 'E', 'field': 'F'}),
+ 'vis_071_grouped_area_density': (71, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_072_grouped_dot_distribution': (72, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_073_table_count_null_nonnull': (73, {'entity': 'E', 'field': 'F'}),
+ 'vis_074_table_count_null': (74, {'entity': 'E', 'field': 'F'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -2935,19 +3237,20 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_055_line_survival_ever': ['line_item', 'line'],
  'vis_056_line_survival_ever_multivalue': ['line_item', 'line'],
  'vis_057_line_survival_related': ['line_item', 'line'],
- 'vis_058_line_survival_related_multivalue': ['line_item', 'line'],
- 'vis_059_line_survival_presence': ['line_item', 'line'],
- 'vis_060_line_survival_presence_2x2': ['line_item', 'line'],
- 'vis_061_line_survival_cube': ['data_cube', 'line'],
- 'vis_062_line_survival_cube_stratified': ['data_cube', 'line'],
- 'vis_063_heatmap_count': ['line_item', 'heatmap'],
- 'vis_064_heatmap_avg': ['line_item', 'heatmap'],
- 'vis_065_heatmap_basic': ['data_cube', 'heatmap'],
- 'vis_066_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
- 'vis_067_histogram_distribution': ['line_item', 'histogram'],
- 'vis_068_area_density': ['line_item', 'area'],
- 'vis_069_dot_distribution': ['line_item', 'dot'],
- 'vis_070_grouped_area_density': ['line_item', 'grouped_area'],
- 'vis_071_grouped_dot_distribution': ['line_item', 'grouped_dot'],
- 'vis_072_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_073_table_count_null': ['line_item', 'table']}
+ 'vis_058_line_survival_related_numeric': ['line_item', 'line'],
+ 'vis_059_line_survival_related_multivalue': ['line_item', 'line'],
+ 'vis_060_line_survival_presence': ['line_item', 'line'],
+ 'vis_061_line_survival_presence_2x2': ['line_item', 'line'],
+ 'vis_062_line_survival_cube': ['data_cube', 'line'],
+ 'vis_063_line_survival_cube_stratified': ['data_cube', 'line'],
+ 'vis_064_heatmap_count': ['line_item', 'heatmap'],
+ 'vis_065_heatmap_avg': ['line_item', 'heatmap'],
+ 'vis_066_heatmap_basic': ['data_cube', 'heatmap'],
+ 'vis_067_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
+ 'vis_068_histogram_distribution': ['line_item', 'histogram'],
+ 'vis_069_area_density': ['line_item', 'area'],
+ 'vis_070_dot_distribution': ['line_item', 'dot'],
+ 'vis_071_grouped_area_density': ['line_item', 'grouped_area'],
+ 'vis_072_grouped_dot_distribution': ['line_item', 'grouped_dot'],
+ 'vis_073_table_count_null_nonnull': ['line_item', 'table'],
+ 'vis_074_table_count_null': ['line_item', 'table']}

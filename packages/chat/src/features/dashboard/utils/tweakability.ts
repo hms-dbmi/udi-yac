@@ -154,6 +154,24 @@ function templateParams(
   const fallbackEntity = resolveSourceName(spec);
   return template.params.map((descriptor) => {
     const entity = descriptor.entity ?? fallbackEntity;
+
+    // A grouping is not a field swap: its value is the grouping itself, and the
+    // control it needs is decided by the type of the column it cuts rather than
+    // by a list of columns to choose among.
+    if (descriptor.kind === 'grouping') {
+      return {
+        kind: 'grouping' as const,
+        field: descriptor.value,
+        label: descriptor.label || 'groups',
+        options: [],
+        param: descriptor.param,
+        placeholder: descriptor.placeholder,
+        stratifier: descriptor.field ?? '',
+        stratifierType: descriptor.fieldType ?? null,
+        entity: entity ?? null,
+      };
+    }
+
     const byType =
       descriptor.type === 'quantitative'
         ? quantitativeSourceFields

@@ -1709,6 +1709,195 @@
         ],
         "isSubset": true
       }
+    },
+    {
+      "name": "derive-nominal-grouping",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "derive": {
+              "stratum": {
+                "if": {
+                  "op": "||",
+                  "left": {
+                    "op": "==",
+                    "left": {
+                      "field": "species"
+                    },
+                    "right": {
+                      "literal": "Adelie"
+                    }
+                  },
+                  "right": {
+                    "op": "==",
+                    "left": {
+                      "field": "species"
+                    },
+                    "right": {
+                      "literal": "Gentoo"
+                    }
+                  }
+                },
+                "then": {
+                  "literal": "Adelie or Gentoo"
+                },
+                "else": {
+                  "literal": "Other"
+                }
+              }
+            }
+          },
+          {
+            "groupby": "stratum"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "stratum": "Adelie or Gentoo",
+            "n": 276
+          },
+          {
+            "stratum": "Other",
+            "n": 68
+          }
+        ],
+        "allData": [
+          {
+            "stratum": "Adelie or Gentoo",
+            "n": 276
+          },
+          {
+            "stratum": "Other",
+            "n": 68
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "derive-quantitative-grouping",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "derive": {
+              "stratum": {
+                "if": {
+                  "op": "<",
+                  "left": {
+                    "field": "body_mass_g"
+                  },
+                  "right": {
+                    "literal": 3500
+                  }
+                },
+                "then": {
+                  "literal": "< 3500"
+                },
+                "else": {
+                  "if": {
+                    "op": "<",
+                    "left": {
+                      "field": "body_mass_g"
+                    },
+                    "right": {
+                      "literal": 4500
+                    }
+                  },
+                  "then": {
+                    "literal": "3500-4500"
+                  },
+                  "else": {
+                    "literal": ">= 4500"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "groupby": "stratum"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              },
+              "heaviest": {
+                "op": "max",
+                "field": "body_mass_g"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "stratum": "3500-4500",
+            "n": 153,
+            "heaviest": 4475
+          },
+          {
+            "stratum": "< 3500",
+            "n": 71,
+            "heaviest": 3475
+          },
+          {
+            "stratum": ">= 4500",
+            "n": 118,
+            "heaviest": 6300
+          }
+        ],
+        "allData": [
+          {
+            "stratum": "3500-4500",
+            "n": 153,
+            "heaviest": 4475
+          },
+          {
+            "stratum": "< 3500",
+            "n": 71,
+            "heaviest": 3475
+          },
+          {
+            "stratum": ">= 4500",
+            "n": 118,
+            "heaviest": 6300
+          }
+        ],
+        "isSubset": false
+      }
     }
   ]
 }

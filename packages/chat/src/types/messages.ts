@@ -25,6 +25,12 @@ export interface FlatToolCall {
  * the UI only renders a control per descriptor and sends the new value back.
  */
 export interface TemplateParamDescriptor {
+  /**
+   * What the parameter changes. A `field` swaps which column a channel is bound
+   * to; a `grouping` re-cuts a stratifier into named strata. Optional because an
+   * agent predating dynamic stratification sends neither — absent means `field`.
+   */
+  kind?: 'field' | 'grouping';
   /** Tool parameter name to send back, e.g. `field4`. */
   param: string;
   /** The template placeholder it fills, e.g. `F4`. For debugging/telemetry. */
@@ -37,8 +43,15 @@ export interface TemplateParamDescriptor {
   encodings: string[];
   /** Display label — the channels, or the parameter name as a fallback. */
   label: string;
-  /** Currently bound field. */
+  /**
+   * Currently bound field — or, for a `grouping`, the grouping as JSON. Empty
+   * there means ungrouped, which is a state of the control rather than the
+   * absence of a binding.
+   */
   value: string;
+  /** Grouping parameters only: the stratifier being cut, and its type. */
+  field?: string | null;
+  fieldType?: 'nominal' | 'ordinal' | 'quantitative' | null;
 }
 
 /**

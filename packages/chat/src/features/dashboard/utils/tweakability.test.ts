@@ -156,4 +156,40 @@ describe('computeTweakableParams — falling back to the spec heuristics', () =>
       ['color', 'event_type'],
     ]);
   });
+
+  it('turns a grouping descriptor into its own control, not a field dropdown', () => {
+    // The grouping is offered with nothing bound to it, which is the case the
+    // field path would drop: ungrouped is a state of the control rather than a
+    // missing binding.
+    const withGrouping: TemplateProvenance = {
+      ...provenance(),
+      params: [
+        ...provenance().params,
+        {
+          kind: 'grouping',
+          param: 'grouping',
+          placeholder: 'GROUP',
+          entity: 'Event',
+          type: 'nominal',
+          encodings: ['color'],
+          label: 'groups',
+          value: '',
+          field: 'organization_name',
+          fieldType: 'nominal',
+        },
+      ],
+    };
+
+    const params = compute(survivalSpec(), withGrouping);
+    const grouping = params.find((p) => p.kind === 'grouping');
+    expect(grouping).toBeDefined();
+    expect(grouping).toMatchObject({
+      param: 'grouping',
+      stratifier: 'organization_name',
+      stratifierType: 'nominal',
+      entity: 'Event',
+      field: '',
+      options: [],
+    });
+  });
 });

@@ -149,7 +149,7 @@ def survival(tmp_path):
         table_map={"events": "events", "patients": "patients"},
     )
 
-    def run(suffix, stratify=True):
+    def run(suffix, stratify=True, grouping=None):
         # By name suffix, not index: inserting a template renumbers every later one.
         tool = next(n for n in dispatch if n.endswith(suffix))
         idx, param_map = dispatch[tool]
@@ -157,6 +157,8 @@ def survival(tmp_path):
         args.update(_censor_args(param_map))
         if stratify:
             args["entity1_field4"] = "arm"
+        if grouping is not None:
+            args["grouping"] = grouping
         args.update(_censor_args(param_map))
         bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
         spec = instantiate_template(templates[idx], bindings, schema)
@@ -182,7 +184,7 @@ def test_baseline_stratification_reconciles_with_the_pooled_curve(survival):
     # still part of the whole cohort.
     assert (pooled["subjects"], pooled["deaths"]) == (5, 3)
 
-    cohorts = _cohorts(survival("_line_survival_baseline"), "arm")
+    cohorts = _cohorts(survival("_line_survival_baseline"), "stratum")
 
     # The assertion that fails on the per-event pipeline: it credited arm A with
     # only one death, because s1's death landed on a row (s1, B) that had no start
@@ -211,7 +213,7 @@ def test_a_missing_value_is_excluded_rather_than_made_into_a_stratum(survival, s
     row must not also drop the start event that row carried, which is why that
     filter sits after the span is broadcast rather than before.
     """
-    cohorts = _cohorts(survival(suffix), "arm")
+    cohorts = _cohorts(survival(suffix), "stratum")
     assert None not in cohorts
     if suffix.endswith("_baseline"):
         # s4's only value lives on its death row and must not leak in from there.
@@ -221,7 +223,7 @@ def test_a_missing_value_is_excluded_rather_than_made_into_a_stratum(survival, s
 
 
 def test_a_stratum_with_no_deaths_stays_flat_and_unlabelled(survival):
-    rows = [r for r in survival("_line_survival_baseline") if r["arm"] == "B"]
+    rows = [r for r in survival("_line_survival_baseline") if r["stratum"] == "B"]
     assert rows, "arm B should render"
     assert all(r["final percentage"] == 100 for r in rows)
     # No final value to report, so the rule and its label are suppressed.
@@ -230,7 +232,7 @@ def test_a_stratum_with_no_deaths_stays_flat_and_unlabelled(survival):
 
 def test_ever_recorded_stratification_overlaps_and_must_not_reconcile(survival):
     pooled = survival("_line_survival", stratify=False)[0]
-    cohorts = _cohorts(survival("_line_survival_ever"), "arm")
+    cohorts = _cohorts(survival("_line_survival_ever"), "stratum")
 
     # s1 -> A and B; s2 -> A; s4 -> C; s5 -> A and B; s3 -> B.
     assert cohorts == {"A": (3, 2), "B": (3, 1), "C": (1, 1)}
@@ -249,7 +251,7 @@ def test_ever_recorded_stratification_keeps_its_immortal_time_artefact(survival)
     curve is flat at 0% by construction. It is documented in the template's design
     considerations; if it ever silently disappears, that documentation is wrong.
     """
-    rows = [r for r in survival("_line_survival_ever") if r["arm"] == "C"]
+    rows = [r for r in survival("_line_survival_ever") if r["stratum"] == "C"]
     assert rows
     assert all(r["final percentage"] == 0 for r in rows)
 
@@ -365,7 +367,7 @@ def test_the_baseline_stratifier_is_aggregated_but_only_ever_drawn_as_a_category
         mapping["encoding"]
         for layer in spec["representation"]
         for mapping in layer["mapping"]
-        if mapping.get("field") == "tumor_locations"
+        if mapping.get("field") == "stratum"
     }
     assert channels == {"color"}
 
@@ -389,6 +391,9 @@ def test_survival_tool_names_distinguish_the_two_readings():
         "survival_ever_multivalue",
         "survival_related",
         "survival_related_multivalue",
+        # The related stratifier read as a NUMBER and cut into buckets, rather
+        # than taken as categories.
+        "survival_related_numeric",
         "survival_presence",
         "survival_presence_2x2",
         # Built from a pre-aggregated cube rather than an event log.
@@ -574,7 +579,7 @@ def test_cross_table_stratifier_joins_on_the_keys_it_binds():
         m["encoding"]
         for layer in spec["representation"]
         for m in layer["mapping"]
-        if m.get("field") == "protocol"
+        if m.get("field") == "stratum"
     }
     assert channels == {"color"}
 
@@ -656,7 +661,7 @@ def test_cross_table_survival_reads_membership_and_overlaps(tmp_path):
     rows = engine.run_query(
         source=spec["source"], transformation=spec["transformation"]
     )["displayData"]
-    cohorts = _cohorts(rows, "protocol")
+    cohorts = _cohorts(rows, "stratum")
 
     # A: s1 and s2. B: s1 alone. C: s3 has no events, so it never reaches the curve.
     assert cohorts == {"A": (2, 2), "B": (1, 1)}
@@ -665,7 +670,7 @@ def test_cross_table_survival_reads_membership_and_overlaps(tmp_path):
     assert sum(d for _, d in cohorts.values()) == 3
 
     # The join duplicates event rows per related record; the spans must survive it.
-    years = {r["protocol"]: r["survival years"] for r in rows if r["died"] == 1}
+    years = {r["stratum"]: r["survival years"] for r in rows if r["died"] == 1}
     assert round(years["B"], 2) == round(365 / 365.25, 2)
 
 
@@ -693,7 +698,7 @@ def test_cross_table_multi_value_expands_the_joined_rows_before_the_rollup():
         m["encoding"]
         for layer in spec["representation"]
         for m in layer["mapping"]
-        if m.get("field") == "agents"
+        if m.get("field") == "stratum"
     }
     assert channels == {"color"}
 
@@ -779,7 +784,7 @@ def test_a_survival_curve_never_rises_however_the_data_is_filtered(tmp_path, sub
         ]
         by_group = {}
         for row in rows:
-            key = row.get("arm")
+            key = row.get("stratum")
             by_group.setdefault(key, []).append(
                 (row["survival years"], row["survival percentage"])
             )
@@ -1009,3 +1014,248 @@ def test_presence_survival_curves_never_rise(presence):
                     f"{suffix} group {key!r} rises: {before} -> {after}"
                 )
 
+
+
+# ---------------------------------------------------------------------------
+# Dynamic stratification: grouping the stratifier's values into strata
+# ---------------------------------------------------------------------------
+
+
+def test_an_absent_grouping_leaves_the_curves_exactly_as_they_were(survival):
+    """The default must stay the default.
+
+    Every stratified chart that existed before groupings did resolves through the
+    same `<GROUP:…>` placeholder now, so the identity case has to be pinned
+    directly: pass no grouping and the strata are still the stratifier's own
+    values, with the same cohorts and the same deaths.
+    """
+    ungrouped = _cohorts(survival("_line_survival_baseline"), "stratum")
+    explicitly_none = _cohorts(
+        survival("_line_survival_baseline", grouping=""), "stratum"
+    )
+    assert ungrouped == explicitly_none == {"A": (2, 2), "B": (2, 0)}
+
+
+def test_a_nominal_grouping_merges_values_into_one_stratum(survival):
+    """Two arms combined into one curve, which is the whole point of the feature.
+
+    The merged cohort must be the SUM of the two it replaces — a subject counted
+    once, not once per value it matched — which is what places the grouping
+    before the per-subject reduction rather than after it.
+    """
+    grouped = _cohorts(
+        survival(
+            "_line_survival_baseline",
+            grouping=json.dumps(
+                {
+                    "type": "nominal",
+                    "groups": [{"label": "A or B", "values": ["A", "B"]}],
+                    "other": None,
+                }
+            ),
+        ),
+        "stratum",
+    )
+    assert grouped == {"A or B": (4, 2)}
+
+
+def test_unassigned_values_pool_into_other_or_leave_the_chart(survival):
+    """The two answers for a value no group claims, both of them expressible."""
+    pooled = _cohorts(
+        survival(
+            "_line_survival_baseline",
+            grouping=json.dumps(
+                {
+                    "type": "nominal",
+                    "groups": [{"label": "Arm A", "values": ["A"]}],
+                    "other": "Everyone else",
+                }
+            ),
+        ),
+        "stratum",
+    )
+    assert pooled == {"Arm A": (2, 2), "Everyone else": (2, 0)}
+
+    dropped = _cohorts(
+        survival(
+            "_line_survival_baseline",
+            grouping=json.dumps(
+                {
+                    "type": "nominal",
+                    "groups": [{"label": "Arm A", "values": ["A"]}],
+                    "other": None,
+                }
+            ),
+        ),
+        "stratum",
+    )
+    assert dropped == {"Arm A": (2, 2)}
+
+
+def test_grouping_an_overlapping_reading_counts_a_subject_once_per_stratum(survival):
+    """Two values in one bucket must not put the subject in it twice.
+
+    Under the "ever" reading a subject joins a group for each value it ever had,
+    so s1 and s5 are in both A and B. Merge A and B and each of them belongs to
+    the merged group once — the grouping is applied before the (subject, stratum)
+    grouping precisely so the duplicate collapses there.
+    """
+    separate = _cohorts(survival("_line_survival_ever"), "stratum")
+    assert separate["A"][0] == 3 and separate["B"][0] == 3
+
+    merged = _cohorts(
+        survival(
+            "_line_survival_ever",
+            grouping=json.dumps(
+                {
+                    "type": "nominal",
+                    "groups": [{"label": "A or B", "values": ["A", "B"]}],
+                    "other": None,
+                }
+            ),
+        ),
+        "stratum",
+    )
+    # s1, s2, s3, s5 — four distinct subjects, not the six the two cohorts
+    # would add to. s4 is in C only and the grouping drops it.
+    assert merged == {"A or B": (4, 2)}
+
+
+def test_a_grouped_curve_still_never_rises(survival):
+    """The monotonicity invariant, on the path that computes strata in a derive."""
+    rows = survival(
+        "_line_survival_baseline",
+        grouping=json.dumps(
+            {
+                "type": "nominal",
+                "groups": [{"label": "Arm A", "values": ["A"]}],
+                "other": "Everyone else",
+            }
+        ),
+    )
+    by_group = {}
+    for row in rows:
+        by_group.setdefault(row["stratum"], []).append(
+            (row["survival years"], row["survival percentage"])
+        )
+    assert set(by_group) == {"Arm A", "Everyone else"}
+    for key, points in by_group.items():
+        ordered = sorted(set(points))
+        for (_, before), (_, after) in zip(ordered, ordered[1:]):
+            assert after <= before + 1e-9, f"group {key!r} rises: {before} -> {after}"
+
+
+def _numeric_related(grouping=None, stratifier_type="quantitative"):
+    """Bind the numeric cross-table variant; return (errors, spec_or_None)."""
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith("_line_survival_related_numeric"))
+    idx, param_map = dispatch[tool]
+
+    def table(name, fields):
+        return {
+            "name": name,
+            "path": f"{name}.csv",
+            "udi:row_count": 10,
+            "schema": {"fields": [{"name": f, "udi:data_type": t} for f, t in fields]},
+        }
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                table(
+                    "events",
+                    [
+                        ("subject", "nominal"),
+                        ("event", "nominal"),
+                        ("day", "quantitative"),
+                    ],
+                ),
+                table("demographics", [("subject", "nominal"), ("age", stratifier_type)]),
+                _censor_resource(),
+            ],
+        }
+    )
+    args = {
+        "entity1": "events",
+        "entity2": "demographics",
+        "entity1_field1": "subject",
+        "entity1_field2": "event",
+        "entity1_field3": "day",
+        "entity2_field1": "subject",
+        "entity2_field": "age",
+        "value1": "start",
+        "value2": "death",
+    }
+    if grouping is not None:
+        args["grouping"] = grouping
+    args.update(_censor_args(param_map))
+    bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+    errors = validate_bindings(templates[idx], bindings, schema)
+    if errors:
+        return errors, None
+    return [], instantiate_template(templates[idx], bindings, schema)
+
+
+def test_a_continuous_stratifier_without_cut_points_is_refused():
+    """One curve per distinct age is not a chart, and nothing else catches it.
+
+    The cardinality cap only looks at nominal and ordinal fields, so a numeric
+    stratifier would sail past it and draw a thousand curves of one subject each.
+    """
+    errors, spec = _numeric_related()
+    assert spec is None
+    assert "quantitative" in errors[0] and "cuts" in errors[0]
+
+
+def test_cut_points_become_a_nested_conditional_over_the_bound_field():
+    _errors, spec = _numeric_related(
+        grouping=json.dumps({"type": "quantitative", "cuts": [50, 65]})
+    )
+    stratum = next(
+        t["derive"]["stratum"]
+        for t in spec["transformation"]
+        if "derive" in t and "stratum" in t["derive"]
+    )
+    # Ascending tests, so the first one that passes is the right bucket, and the
+    # final else is everything at or above the last cut.
+    assert stratum["if"] == {
+        "op": "<",
+        "left": {"field": "age"},
+        "right": {"literal": 50},
+    }
+    assert stratum["then"] == {"literal": "< 50"}
+    assert stratum["else"]["then"] == {"literal": "50–65"}
+    assert stratum["else"]["else"] == {"literal": "≥ 65"}
+
+    # And it is a structured Expr, not an Arquero string — the SQL compiler
+    # rejects those, so this is what makes the template run server-side.
+    assert "d[" not in json.dumps(stratum)
+
+
+def test_the_numeric_variant_still_splits_by_the_derived_column():
+    _errors, spec = _numeric_related(
+        grouping=json.dumps({"type": "quantitative", "cuts": [65]})
+    )
+    groupbys = [t["groupby"] for t in spec["transformation"] if "groupby" in t]
+    assert ["subject", "stratum"] in groupbys
+    colours = {
+        m["field"]
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m["encoding"] == "color"
+    }
+    assert colours == {"stratum"}
+
+
+def test_cutting_a_nominal_field_at_numbers_is_refused():
+    """Comparing a string against a number raises nowhere; it just lumps
+    every row into one bucket, so it has to be caught before instantiation."""
+    errors, spec = _numeric_related(
+        grouping=json.dumps({"type": "quantitative", "cuts": [65]}),
+        stratifier_type="nominal",
+    )
+    assert spec is None
+    assert any("nominal" in e for e in errors)

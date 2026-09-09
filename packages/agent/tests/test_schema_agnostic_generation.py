@@ -250,13 +250,18 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         # The stratifier sits on the event log, which is now the first side of a
         # join in every variant (the censoring table is the other), so it is
         # spelled entity1_field4 rather than field4.
-        "survival_baseline": ["entity1_field4"],
-        "survival_baseline_multivalue": ["entity1_field4"],
-        "survival_ever": ["entity1_field4"],
-        "survival_ever_multivalue": ["entity1_field4"],
+        # Each also offers the grouping that cuts that stratifier into strata —
+        # the one parameter offered whether or not it is bound, since ungrouped
+        # is a state of that control rather than the absence of one.
+        "survival_baseline": ["entity1_field4", "grouping"],
+        "survival_baseline_multivalue": ["entity1_field4", "grouping"],
+        "survival_ever": ["entity1_field4", "grouping"],
+        "survival_ever_multivalue": ["entity1_field4", "grouping"],
         # The cross-table variants' stratifier lives on the joined entity.
-        "survival_related": ["entity2_field"],
-        "survival_related_multivalue": ["entity2_field"],
+        "survival_related": ["entity2_field", "grouping"],
+        "survival_related_multivalue": ["entity2_field", "grouping"],
+        # Same shape, but the related value is a number cut at thresholds.
+        "survival_related_numeric": ["entity2_field", "grouping"],
         # The presence variants offer nothing, and that is the honest answer: what
         # separates their curves is which *table* the subject appears in, and the
         # tweak dropdowns re-bind fields only. Offering the joined subject-id key
