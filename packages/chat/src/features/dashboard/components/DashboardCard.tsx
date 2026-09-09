@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { UDIVis, describeTransformations } from 'udi-toolkit/react';
 import type { DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   Loader2,
   Columns3,
   Info,
+  Crosshair,
 } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
@@ -42,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
 import { hasTweakableFields } from '../utils/tweakability';
 import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
+import { useJumpTarget } from '@/hooks/useJumpTarget';
 
 interface DashboardCardProps {
   vizKey: string;
@@ -64,16 +66,16 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   // Highlight when this card is hovered directly, or when the chat is pointing
   // at it (its single-viz message, or its accordion item in a multi-viz
-  // message). Scroll only reacts to the chat-hover direction so a card's own
-  // hover never scrolls the dashboard.
+  // message). Hover never scrolls — the chat's jump button does that.
   const isSelfHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
   const isMessageHovered = useDashboard((s) => s.hoveredMessageVizKey === vizKey);
   const isHovered = isSelfHovered || isMessageHovered;
 
-  const cardRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (isMessageHovered) cardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [isMessageHovered]);
+  // "Show visualization in dashboard" pressed on this card's chat message.
+  const jump = useDashboard((s) => s.jumpToVisualization);
+  const { ref: cardRef, flashing } = useJumpTarget<HTMLDivElement>(
+    jump?.key === vizKey ? jump.nonce : null,
+  );
 
   // Whether the gear button can do anything for this spec. Charts whose
   // mappings only reference computed / locked fields (count of groupby,
@@ -194,7 +196,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
         // py-2/gap-2 override the shared Card defaults (py-4/gap-4) to give the
         // visualization more room — the dominant vertical chrome inside a card.
         'relative transition-shadow h-full flex flex-col min-h-0 py-2 gap-2',
-        isHovered && 'ring-3 ring-primary/40',
+        (isHovered || flashing) && 'ring-3 ring-primary/40',
       )}
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
@@ -225,6 +227,22 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           >
             {viz.title ?? viz.userPrompt}
           </span>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  aria-label="Show message in chat"
+                  onClick={() => dashboardStore.getState().requestJumpToMessage(vizKey)}
+                />
+              }
+            >
+              <Crosshair className="h-3 w-3" />
+            </TooltipTrigger>
+            <TooltipContent>Show message in chat</TooltipContent>
+          </Tooltip>
           {tweakable && (
             <Tooltip>
               <TooltipTrigger

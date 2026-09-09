@@ -325,6 +325,24 @@ describe('dashboardStore — UI toggles', () => {
     store.getState().setHoveredMessageVizKey(null);
     expect(store.getState().hoveredMessageVizKey).toBeNull();
   });
+
+  it('jump requests carry the target vizKey and bump the nonce on every press', () => {
+    const store = createDashboardStore();
+    expect(store.getState().jumpToVisualization).toBeNull();
+    expect(store.getState().jumpToMessage).toBeNull();
+
+    store.getState().requestJumpToVisualization('2-1');
+    expect(store.getState().jumpToVisualization).toEqual({ key: '2-1', nonce: 1 });
+    // Same target twice must still change the nonce, so the receiving card
+    // re-runs its scroll effect.
+    store.getState().requestJumpToVisualization('2-1');
+    expect(store.getState().jumpToVisualization).toEqual({ key: '2-1', nonce: 2 });
+
+    // The two directions are independent.
+    store.getState().requestJumpToMessage('0-0');
+    expect(store.getState().jumpToMessage).toEqual({ key: '0-0', nonce: 1 });
+    expect(store.getState().jumpToVisualization).toEqual({ key: '2-1', nonce: 2 });
+  });
 });
 
 describe('dashboardStore — updateActiveVisualizationSpec', () => {
