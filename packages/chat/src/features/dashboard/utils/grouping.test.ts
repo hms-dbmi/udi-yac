@@ -157,8 +157,13 @@ describe('cut point editing', () => {
   });
 
   it('rounds off the float noise a drag produces', () => {
-    // The agent would accept 64.99999999999999 and put it in a bucket label.
-    expect(addCut([], 64.999999999999996)).toEqual([65]);
+    // A drag computes `min + ratio * span`, which lands on values like
+    // 0.30000000000000004. The agent would accept that and render every digit
+    // of it in a bucket label.
+    expect(0.1 + 0.2).not.toBe(0.3);
+    expect(addCut([], 0.1 + 0.2)).toEqual([0.3]);
+    // And a genuinely precise value is trimmed to what an axis can be read at.
+    expect(addCut([], 65.123456)).toEqual([65.1235]);
   });
 
   it('splits a range into equally wide buckets', () => {
