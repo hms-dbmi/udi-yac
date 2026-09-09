@@ -11,13 +11,18 @@ import openai
 from udiagent.skills import Skill, load_skills, render_template
 from udiagent.grammar import load_grammar
 from udiagent.messages import normalize_tool_calls, split_tool_calls
-from udiagent.schema import parse_schema_from_dict, simplify_data_domains
+from udiagent.schema import (
+    parse_schema_from_dict,
+    simplify_data_domains,
+    simplify_data_schema,
+)
 from udiagent.structured_functions import (
     validate_structured_text,
     segment_structured_text,
     get_function_signatures,
 )
 from udiagent.tools import (
+    INTERNAL_ORCHESTRATOR_TOOLS,
     ORCHESTRATOR_TOOLS,
     function_call_render_visualization,
 )
@@ -146,6 +151,12 @@ class OrchestratorResult:
     tool_calls: list[dict] = field(default_factory=list)
     orchestrator_choice: str = "render-visualization"
     usage: Usage = field(default_factory=Usage)
+
+
+#: How many times the orchestrator may look up a column's values before it has
+#: to decide. Two is enough to check a table and a column; more means it is not
+#: converging, and a chart drawn on a good-enough guess beats another round trip.
+MAX_VALUE_LOOKUPS = 2
 
 
 class Orchestrator:
@@ -291,6 +302,66 @@ class Orchestrator:
 
         return result
 
+    def _lookup_field_values(self, tool_args, data_domains):
+        """Answer `ListFieldValues`: the values the prompt only sampled.
+
+        The values are already in the request — the client sends every column's
+        domain, capped for size — they are simply not all in the prompt. So this
+        reads them back rather than fetching anything, which is what makes a
+        sample honest: the rest is one call away and no round trip to the client
+        is needed.
+        """
+        entity = (tool_args.get("entity") or "").strip()
+        field = (tool_args.get("field") or "").strip()
+        try:
+            domains = (
+                json.loads(data_domains)
+                if isinstance(data_domains, str)
+                else data_domains
+            ) or []
+        except (json.JSONDecodeError, TypeError):
+            domains = []
+
+        match = next(
+            (
+                d
+                for d in domains
+                if d.get("entity") == entity and d.get("field") == field
+            ),
+            None,
+        )
+        if match is None:
+            known = sorted(
+                {f"{d.get('entity')}.{d.get('field')}" for d in domains if d.get("field")}
+            )
+            return (
+                f"No column '{field}' on '{entity}'. Columns with values on "
+                f"record: {', '.join(known[:40]) or 'none'}."
+            )
+
+        domain = match.get("domain") or {}
+        if match.get("type") == "interval":
+            return (
+                f"{entity}.{field} is numeric, ranging from "
+                f"{domain.get('min')} to {domain.get('max')}."
+            )
+
+        values = [v for v in domain.get("values", []) if v is not None]
+        distinct = domain.get("distinct", len(values))
+        if not values:
+            return (
+                f"{entity}.{field} has {distinct} distinct values, too many to "
+                f"list — it is an identifier or a date. Filter on a range, or "
+                f"group by it, rather than naming values."
+            )
+        listed = ", ".join(str(v) for v in values)
+        if len(values) < distinct:
+            return (
+                f"{entity}.{field} has {distinct} distinct values. The "
+                f"{len(values)} on record here: {listed}."
+            )
+        return f"{entity}.{field} has {distinct} distinct values, all of them: {listed}."
+
     def _handle_rebuff(
         self,
         tool_args,
@@ -363,7 +434,12 @@ class Orchestrator:
             if t["function"]["name"] not in ("Rebuff", "FreeTextExplain")
         )
 
-        data_schema_simple = simplify_data_domains(data_domains)
+        # "What fields are available?" is answered here, so this is the other
+        # place that must read the schema rather than a sample of values. The
+        # old name for this variable said schema and held domains, which is how
+        # that went unnoticed.
+        data_domains_simple = simplify_data_domains(data_domains)
+        data_schema_simple = simplify_data_schema(data_schema)
 
         explain_skill = self.skills.get("free_text_explain")
         if explain_skill:
@@ -374,6 +450,7 @@ class Orchestrator:
                     "response_type": tool_args.get("response_type", "general"),
                     "available_tools": available_tools,
                     "data_schema": data_schema_simple,
+                    "data_domains": data_domains_simple,
                     "structured_functions": get_function_signatures(),
                 },
             )
@@ -505,24 +582,90 @@ class Orchestrator:
         msgs = normalize_tool_calls(copy.deepcopy(messages))
 
         orchestrate_skill = self.skills["orchestrate"]
+        # Both, and they are not interchangeable. The schema is the inventory of
+        # what exists; the domains are a lossy sample of values, with the
+        # highest-cardinality columns shortened or dropped by the client. This
+        # prompt used to receive only the domains, so a table whose every column
+        # was too long to send simply was not here — and the orchestrator told
+        # the user it did not exist.
         rendered = render_template(
             orchestrate_skill.instructions,
-            {"data_domains": simplify_data_domains(data_domains)},
+            {
+                "data_schema": simplify_data_schema(data_schema),
+                "data_domains": simplify_data_domains(data_domains),
+            },
         )
         msgs.insert(0, {"role": "system", "content": rendered})
 
         gpt_client = self.agent._get_gpt_client(openai_api_key)
-        resp = _call_with_budget_guard(
-            gpt_client.chat.completions.create,
-            usage,
-            model=self.agent.gpt_model_name,
-            messages=msgs,
-            tools=self.tools,
-            tool_choice="required",
-            temperature=0.0,
-            max_completion_tokens=1024,
-        )
-        usage.add("orchestrate", getattr(resp, "usage", None))
+
+        # The model may ask for a column's full values before deciding. Those
+        # calls answer themselves and loop; every other tool is an outcome and
+        # ends the turn. Bounded, because a model that keeps looking things up
+        # is not converging and a chart is better than another lookup.
+        for _lookup in range(MAX_VALUE_LOOKUPS + 1):
+            resp = _call_with_budget_guard(
+                gpt_client.chat.completions.create,
+                usage,
+                model=self.agent.gpt_model_name,
+                messages=msgs,
+                tools=self.tools,
+                tool_choice="required",
+                temperature=0.0,
+                max_completion_tokens=1024,
+            )
+            usage.add("orchestrate", getattr(resp, "usage", None))
+
+            pending = resp.choices[0].message.tool_calls or []
+            lookups = [
+                tc for tc in pending if tc.function.name in INTERNAL_ORCHESTRATOR_TOOLS
+            ]
+            if not lookups or _lookup == MAX_VALUE_LOOKUPS:
+                if lookups and _lookup == MAX_VALUE_LOOKUPS:
+                    logger.warning(
+                        "orchestrator stopped looking up field values after %d "
+                        "round(s); deciding on what it has",
+                        MAX_VALUE_LOOKUPS,
+                    )
+                break
+
+            msgs.append(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            },
+                        }
+                        for tc in pending
+                    ],
+                }
+            )
+            for tc in pending:
+                if tc in lookups:
+                    args = json.loads(tc.function.arguments)
+                    answer = self._lookup_field_values(args, data_domains)
+                    logger.info(
+                        "field values looked up: %s.%s",
+                        args.get("entity"),
+                        args.get("field"),
+                    )
+                else:
+                    # Asked for alongside a lookup. Tell the model to ask again
+                    # once it has the values, rather than acting on it now and
+                    # returning two conflicting outcomes.
+                    answer = (
+                        "Not run — you also asked to look up field values. "
+                        "Call this again if you still want it."
+                    )
+                msgs.append(
+                    {"role": "tool", "tool_call_id": tc.id, "content": answer}
+                )
 
         # Post-orchestrate budget check: bail before expensive per-tool dispatch
         # (CreateVisualization can issue multiple inner completions).
@@ -553,6 +696,11 @@ class Orchestrator:
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
             tool_args = json.loads(tc.function.arguments)
+
+            if tool_name in INTERNAL_ORCHESTRATOR_TOOLS:
+                # Answered in the lookup loop above, and not an outcome of the
+                # turn. Only reachable when the loop hit its bound.
+                continue
 
             handler = tool_dispatch.get(tool_name)
             if handler is None:

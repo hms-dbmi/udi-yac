@@ -345,16 +345,18 @@ describe('dataPackageStore — serialization strings', () => {
     expect(store.getState().dataPackageString).not.toContain('udi:overlapping_fields');
   });
 
-  it('dataDomainsString drops large categorical domains (>= 80 values)', async () => {
+  it('dataDomainsString keeps every column, with its true distinct count', async () => {
+    // It used to DELETE any categorical column with 80+ values. The agent reads
+    // this payload to decide what exists, so a table whose columns were all
+    // high-cardinality disappeared and was reported to the user as not existing.
     const store = createDataPackageStore();
-    const largeValues = Array.from({ length: 100 }, (_, i) => `v${i}`);
-    const largeDomains: DataFieldDomain[] = [
+    const domains: DataFieldDomain[] = [
       {
         entity: 'donors',
-        field: 'donor_id',
+        field: 'chemotherapy_agent',
         type: 'point',
         fieldDescription: '',
-        domain: { values: largeValues },
+        domain: { values: Array.from({ length: 100 }, (_, i) => `drug${i}`) },
       },
       {
         entity: 'donors',
@@ -364,9 +366,36 @@ describe('dataPackageStore — serialization strings', () => {
         domain: { min: 0, max: 100 },
       },
     ];
-    await store.getState().setDataPackage(makePackage(), largeDomains);
-    const serialized = store.getState().dataDomainsString;
-    expect(serialized).toContain('age_value');
-    expect(serialized).not.toContain('donor_id');
+    await store.getState().setDataPackage(makePackage(), domains);
+    const sent = JSON.parse(store.getState().dataDomainsString);
+
+    expect(sent).toHaveLength(2);
+    const agent = sent.find((d: { field: string }) => d.field === 'chemotherapy_agent');
+    // Under the cap, so every value travels — these are the columns a user
+    // names, and the agent has no other way to reach them.
+    expect(agent.domain.values).toHaveLength(100);
+    expect(agent.domain.distinct).toBe(100);
+    expect(sent.find((d: { field: string }) => d.field === 'age_value')).toBeTruthy();
+  });
+
+  it('sends an identifier column as a count rather than 900 ids', async () => {
+    const store = createDataPackageStore();
+    const domains: DataFieldDomain[] = [
+      {
+        entity: 'donors',
+        field: 'donor_id',
+        type: 'point',
+        fieldDescription: '',
+        domain: { values: Array.from({ length: 900 }, (_, i) => `d${i}`) },
+      },
+    ];
+    await store.getState().setDataPackage(makePackage(), domains);
+    const [sent] = JSON.parse(store.getState().dataDomainsString);
+
+    // Still named — the column exists and the agent must be able to see that.
+    expect(sent.field).toBe('donor_id');
+    expect(sent.domain.values).toEqual([]);
+    expect(sent.domain.distinct).toBe(900);
+    expect(sent.domain.omitted).toBe(true);
   });
 });

@@ -226,7 +226,41 @@ ORCHESTRATOR_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "ListFieldValues",
+            "description": (
+                "Look up the complete list of values in one column. The Column "
+                "Values section of your instructions is only a sample — where it "
+                "says 'showing N of M', or lists no values at all, the rest are "
+                "here. Call this before telling the user a value or a category "
+                "does not exist, and before filtering on a value you have not "
+                "seen spelled out. This does not produce a chart or any visible "
+                "output; you will get the values back and can then continue."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity": {
+                        "type": "string",
+                        "description": "Table name, exactly as the schema spells it.",
+                    },
+                    "field": {
+                        "type": "string",
+                        "description": "Column name, exactly as the schema spells it.",
+                    },
+                },
+                "required": ["entity", "field"],
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
+
+#: Tools the orchestrator answers itself and loops on, rather than returning to
+#: the client. They gather context; they are not an outcome of the turn.
+INTERNAL_ORCHESTRATOR_TOOLS = {"ListFieldValues"}
 
 
 # ---------------------------------------------------------------------------

@@ -19,9 +19,20 @@ The user asked an informational question that doesn't require generating a visua
 
 {{available_tools}}
 
-## Data Schema
+## Data Schema — the complete list of tables and columns
+
+Authoritative. Answer "what tables/fields are available?" from this, and never
+say a table or column is absent unless it is missing here.
 
 {{data_schema}}
+
+## Column Values — a PARTIAL sample
+
+Sample values for some columns. A column missing from this section still exists
+if the schema lists it, and where a column says `showing N of M` those are not
+all its values.
+
+{{data_domains}}
 
 ## Structured Function References
 

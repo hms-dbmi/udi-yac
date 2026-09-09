@@ -236,6 +236,12 @@ def simplify_data_schema(data_schema):
     return "\n".join(lines)
 
 
+#: Values shown per column in a prompt. Deliberately small and unrelated to how
+#: many the client transports: the prompt needs enough to recognise the column's
+#: vocabulary, and `ListFieldValues` covers the rest on demand.
+PROMPT_VALUE_SAMPLE = 8
+
+
 def simplify_data_domains(data_domains):
     """Simplify data domains for better LLM consumption.
 
@@ -279,13 +285,30 @@ def simplify_data_domains(data_domains):
                 lines.append(f"        range: [{dmin}, {dmax}]")
             elif ftype == "point":
                 values = [v for v in domain.get("values", []) if v is not None]
-                if len(values) <= 8:
+                # The client sends the true count alongside the values, which may
+                # be fewer or none. Without it a shortened list reads as the whole
+                # column, and the model starts telling users a value does not
+                # exist because it was not in the sample.
+                distinct = domain.get("distinct")
+                if not isinstance(distinct, int) or distinct < len(values):
+                    distinct = len(values)
+
+                if domain.get("omitted") or (distinct and not values):
+                    lines.append(
+                        f"        values: {distinct} distinct — not listed "
+                        f"(identifier or date); call "
+                        f'ListFieldValues("{entity}", "{name}") if you need them'
+                    )
+                elif len(values) <= PROMPT_VALUE_SAMPLE and distinct == len(values):
                     vals_str = ", ".join(str(v) for v in values)
                     lines.append(f"        values: [{vals_str}]")
                 else:
-                    sample = ", ".join(str(v) for v in values[:5])
+                    sample = ", ".join(str(v) for v in values[:PROMPT_VALUE_SAMPLE])
                     lines.append(
-                        f"        values: [{sample}, ...] ({len(values)} unique)"
+                        f"        values: [{sample}, ...] — showing "
+                        f"{min(PROMPT_VALUE_SAMPLE, len(values))} of {distinct}; "
+                        f'call ListFieldValues("{entity}", "{name}") for all '
+                        f"{distinct}"
                     )
 
     return "\n".join(lines)

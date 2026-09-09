@@ -3,6 +3,7 @@ import type {
   DataFieldDomain,
   DataPackage,
   CategoricalDomain,
+  IntervalDomain,
   ValidStatus,
   EntityRelationship,
   ExportRowSet,
@@ -64,6 +65,21 @@ export interface DataPackageState {
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
+/**
+ * A domain as it is sent to the agent: the toolkit's shape plus the true
+ * `distinct` count, and `omitted` when the values were left out for size. The
+ * count is what stops a shortened list reading as a complete one.
+ */
+interface SentCategoricalDomain {
+  values: string[];
+  distinct: number;
+  omitted?: boolean;
+}
+
+type SentFieldDomain = Omit<DataFieldDomain, 'domain'> & {
+  domain: IntervalDomain | SentCategoricalDomain;
+};
+
 function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
   if (!data?.resources || !Array.isArray(data.resources)) return data;
   const clone = jsonClone(data);
@@ -77,10 +93,36 @@ function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
   return clone;
 }
 
-function removeLongDomains(data: DataFieldDomain[], threshold = 80): DataFieldDomain[] {
-  return data.filter(
-    (d) => d.type === 'interval' || (d.domain as CategoricalDomain).values.length < threshold,
-  );
+/**
+ * Values we are willing to put on the wire for one column.
+ *
+ * Above this a column is an identifier or a date — research_id, surgery_date —
+ * and enumerating it helps nobody, so we send the count alone. Below it we send
+ * every value, because these are the columns a user names ("which chemo
+ * agents?") and the agent has no other way to reach them.
+ */
+const DOMAIN_VALUE_CAP = 250;
+
+/**
+ * Cap each column's value list. Never drop a column.
+ *
+ * This used to `filter` out any categorical domain with 80 or more values,
+ * which deleted 19 of 51 fields on the pcx package — and Patient Agents, whose
+ * every column is high-cardinality, disappeared from the payload entirely. The
+ * orchestrator reads this to decide what exists, so it told the user that table
+ * did not exist. Whatever is trimmed here must stay visible as a named column
+ * with an honest count; `simplify_data_domains` renders that, and the agent's
+ * `ListFieldValues` tool fetches the rest.
+ */
+function capLongDomains(data: DataFieldDomain[]): SentFieldDomain[] {
+  return data.map((d) => {
+    if (d.type === 'interval') return d as SentFieldDomain;
+    const values = (d.domain as CategoricalDomain).values;
+    if (values.length <= DOMAIN_VALUE_CAP) {
+      return { ...d, domain: { values, distinct: values.length } };
+    }
+    return { ...d, domain: { values: [], distinct: values.length, omitted: true } };
+  });
 }
 
 function computeSourceFields(dp: DataPackage | null): Record<string, string[]> | null {
@@ -141,7 +183,7 @@ function computeDataPackageString(dp: DataPackage | null): string {
 
 function computeDataDomainsString(domains: DataFieldDomain[]): string {
   if (domains.length === 0) return '';
-  return JSON.stringify(removeLongDomains(domains));
+  return JSON.stringify(capLongDomains(domains));
 }
 
 export function createDataPackageStore() {
