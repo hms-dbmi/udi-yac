@@ -107,6 +107,9 @@ export function DashboardPanel() {
           {/* No pb here: the Separator is the band's bottom edge so the stuck
               shadow casts straight onto the gray grid instead of a white chin. */}
           <div
+            // Marks the band as overlaying the scrolled content, so a jumped-to
+            // card lands below it instead of underneath (scrollIntoViewport).
+            data-scroll-sticky-top
             className={cn(
               'sticky top-0 z-10 flex flex-col gap-3 bg-background pt-3 transition-shadow',
               isStuck && 'shadow-md',
