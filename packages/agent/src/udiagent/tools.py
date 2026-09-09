@@ -256,8 +256,60 @@ def function_call_render_visualization(
         openai_api_key=openai_api_key,
         data_domains=data_domains,
     )
+    failure = result.get("failure")
+    if failure:
+        # Say so, rather than rendering an empty card. A chart that cannot be
+        # built is a fact the reader can act on — pick a different column, name
+        # a value that exists — and an empty card is not.
+        return {
+            "name": "FreeTextExplain",
+            "arguments": _visualization_failure_args(failure),
+            "meta": result.get("meta"),
+        }
     return {
         "name": "RenderVisualization",
         "arguments": {"spec": result["spec"]},
         "meta": result.get("meta"),
+    }
+
+
+#: Reader-facing wording per failure reason. The validation errors are already
+#: written for a reader (they name the column and its valid values), so they are
+#: passed through rather than summarised away.
+_FAILURE_OPENERS = {
+    "validation_failed": (
+        "I could not build that chart: the template I picked needs arguments this "
+        "data package cannot satisfy."
+    ),
+    "no_tool_call": (
+        "I could not find a chart template that fits that request against this "
+        "data package."
+    ),
+    "unknown_tool": "I could not build that chart — I picked a template that no longer exists.",
+    "instantiate_failed": (
+        "I could not build that chart: the template failed to resolve against this "
+        "data package. This is a bug in the template rather than in your request."
+    ),
+}
+
+
+def _visualization_failure_args(failure):
+    """FreeTextExplain arguments describing why no chart was produced.
+
+    Built here rather than asked of the model: the reasons are already known and
+    already phrased for a reader, and a second LLM call to restate them is a cost
+    with no information in it.
+    """
+    reason = failure.get("reason")
+    lines = [_FAILURE_OPENERS.get(reason, "I could not build that chart.")]
+    for error in failure.get("errors") or []:
+        lines.append(f"• {error}")
+    lines.append(
+        "Try naming the columns or values you want it to use, or ask for a "
+        "simpler version of the chart."
+    )
+    return {
+        "response_type": "general",
+        "text": lines,
+        "has_structured_elements": False,
     }

@@ -8,7 +8,9 @@ context between them.
 """
 
 import json
+import logging
 import re
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -40,6 +42,25 @@ _ENTITY_KEY = re.compile(r"E\d*")
 _GROUP_KEY = re.compile(r"GROUP\d*(?::|$)")
 #: Just the binding key, for callers separating a grouping from a field binding.
 _GROUP_BASE = re.compile(r"GROUP\d*")
+
+logger = logging.getLogger(__name__)
+
+# Why the template path was abandoned. Named rather than inlined because these
+# strings reach the caller as `meta["fallback_reason"]` and are what a log grep
+# or a bug report is keyed on — and because every one of them used to be a bare
+# `break` that left no trace at all.
+#
+#: No generated templates in this deployment. The only reason that still permits
+#: freehand generation, because it is the only one where nothing else exists.
+FALLBACK_NO_GENERATED_TOOLS = "no_generated_tools"
+#: The model declined to call a tool, or the call itself failed.
+FALLBACK_NO_TOOL_CALL = "no_tool_call"
+#: The model named a tool that is not in the dispatch table.
+FALLBACK_UNKNOWN_TOOL = "unknown_tool"
+#: Bindings were still invalid after every attempt.
+FALLBACK_VALIDATION_FAILED = "validation_failed"
+#: Placeholder resolution raised — a template or schema bug, not a model mistake.
+FALLBACK_INSTANTIATE_FAILED = "instantiate_failed"
 
 
 # ---------------------------------------------------------------------------
@@ -113,12 +134,18 @@ def _load_examples(
 
 
 def _call_llm_with_tools(
-    agent, messages, tools, config, usage=None, openai_api_key=None
+    agent, messages, tools, config, usage=None, openai_api_key=None, req_id="-"
 ):
     """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None.
 
     Quota / rate-limit errors are re-raised as ``BudgetExceededError`` so callers
     can short-circuit; other errors swallow to None to preserve the fallback path.
+
+    Both failure modes log before returning None. They are worth telling apart:
+    "the model looked at 62 tools and chose none" is a prompt or tool-description
+    problem, while "the request blew up" is a network or API one — and to the
+    caller they are the same `None`, which is how a swallowed traceback used to
+    surface as a mysterious freehand chart.
     """
     from udiagent.orchestrator import _call_with_budget_guard, BudgetExceededError
 
@@ -140,10 +167,18 @@ def _call_llm_with_tools(
         if choice.message.tool_calls:
             tc = choice.message.tool_calls[0]
             return tc.function.name, json.loads(tc.function.arguments)
+        logger.warning(
+            "[vis %s] model returned no tool call from %d offered "
+            "(finish_reason=%s, content_chars=%d)",
+            req_id,
+            len(tools),
+            getattr(choice, "finish_reason", None),
+            len(choice.message.content or ""),
+        )
     except BudgetExceededError:
         raise
     except Exception:
-        pass
+        logger.exception("[vis %s] tool-calling LLM request failed", req_id)
     return None
 
 
@@ -1148,6 +1183,10 @@ def _load_generated_tools():
 
         return TOOL_DEFS, TOOL_DISPATCH, TEMPLATES, TOOL_TAGS
     except ImportError:
+        logger.exception(
+            "generated_vis_tools is not importable; the template path is disabled "
+            "and every visualization will be generated freehand"
+        )
         return None
 
 
@@ -1159,15 +1198,40 @@ def _active_template_tags(request_schema):
     return {"data_cube"} if schema_is_cube(request_schema) else {"line_item"}
 
 
-def _select_tools(tool_defs, tool_tags, active_tags):
+def _tool_entity_arity(tool_def):
+    """How many distinct tables a tool needs — its `entity*` parameter count.
+
+    Read off the parameters rather than the template, because the parameters are
+    what the model would have to fill and `_select_tools` has no template to hand.
+    """
+    properties = tool_def.get("function", {}).get("parameters", {}).get("properties", {})
+    return sum(1 for name in properties if re.fullmatch(r"entity\d*", name))
+
+
+def _select_tools(tool_defs, tool_tags, active_tags, request_schema=None):
     """Keep tools whose tags intersect ``active_tags`` (untagged tools always
-    kept). Falls back to all tools if the selection would be empty."""
+    kept). Falls back to all tools if the selection would be empty.
+
+    Also drops tools that need more tables than the data package has. That is
+    not a guess at relevance — a three-table join template cannot bind a
+    single-table package under any arguments — so removing it costs the model
+    nothing and takes a whole class of impossible choice off the list. Tags and
+    arity are the only filters here on purpose: anything that ranked templates by
+    apparent relevance could hide the right one, and the logs should say whether
+    selection is a problem before that trade is worth making.
+    """
     selected = [
         d
         for d in tool_defs
         if not tool_tags.get(d["function"]["name"])
         or (set(tool_tags.get(d["function"]["name"], [])) & active_tags)
     ]
+
+    entity_count = len((request_schema or {}).get("entities") or {})
+    if entity_count:
+        within_reach = [d for d in selected if _tool_entity_arity(d) <= entity_count]
+        selected = within_reach or selected
+
     return selected or tool_defs
 
 
@@ -1186,8 +1250,56 @@ def _parse_request_schema(data_schema):
         if not isinstance(raw, dict):
             raise TypeError("data_schema is not an object")
         return parse_schema_from_dict(raw)
-    except (json.JSONDecodeError, TypeError, KeyError, AttributeError):
+    except (json.JSONDecodeError, TypeError, KeyError, AttributeError) as exc:
+        # Worth a line of its own: an empty schema makes every field check in
+        # `validate_bindings` a no-op rather than an error, so a malformed schema
+        # looks exactly like a well-bound request until the chart comes out wrong.
+        logger.warning(
+            "data_schema could not be parsed (%s: %s); continuing with an empty "
+            "schema, which disables binding validation",
+            type(exc).__name__,
+            exc,
+        )
         return {"base_path": "./", "entities": {}, "relationships": []}
+
+
+def _retry_turns(tool_name, tool_args, errors):
+    """The two messages that tell the model its tool call was rejected.
+
+    A real `tool_calls` assistant turn followed by a matching `tool` result,
+    rather than a prose recap of what it just did. That is the shape the model
+    was trained on: it can see its own arguments as arguments and correct one of
+    them, where a paraphrase in an assistant message reads as a new instruction
+    to be re-interpreted — and the usual fix here is a single argument out of
+    fifteen, so keeping the rest verbatim is the whole point.
+    """
+    call_id = f"call_retry_{uuid.uuid4().hex[:8]}"
+    return [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "arguments": json.dumps(tool_args, default=str),
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": call_id,
+            "content": (
+                "This tool call was rejected:\n"
+                + "\n".join(f"- {e}" for e in errors)
+                + "\n\nCall the tool again with those arguments corrected. Keep "
+                "every argument that was not named above exactly as it was."
+            ),
+        },
+    ]
 
 
 def _execute_generate(skill, context):
@@ -1205,15 +1317,31 @@ def _execute_generate(skill, context):
     # arbitrary datasets.
     request_schema = _parse_request_schema(data_schema)
 
+    rid = context.get("req_id", "-")
+    #: Why the template path was abandoned; None while it is still viable.
+    fallback_reason = None
+    #: The last thing validation objected to, for the message the user sees.
+    failure_errors = []
+    failure_tool = None
+
     # --- Primary path: function-calling with generated tools ---
     generated = _load_generated_tools()
-    if generated is not None:
+    if generated is None:
+        fallback_reason = FALLBACK_NO_GENERATED_TOOLS
+    else:
         tool_defs, tool_dispatch, templates, tool_tags = generated
 
         # Select the template subset for this request by tag (e.g. cube schemas
         # get the data-cube tools). Replaces a hard-coded active-set switch.
         active_tags = _active_template_tags(request_schema)
-        selected_defs = _select_tools(tool_defs, tool_tags, active_tags)
+        selected_defs = _select_tools(tool_defs, tool_tags, active_tags, request_schema)
+        logger.info(
+            "[vis %s] template tools offered: count=%d of %d (tags=%s)",
+            rid,
+            len(selected_defs),
+            len(tool_defs),
+            sorted(active_tags),
+        )
 
         system_msg = (
             "You are a data visualization assistant. The user wants a visualization "
@@ -1243,14 +1371,34 @@ def _execute_generate(skill, context):
         usage = context.get("usage")
         result = _call_llm_with_tools(
             agent, tool_messages, selected_defs, config,
-            usage=usage, openai_api_key=openai_api_key,
+            usage=usage, openai_api_key=openai_api_key, req_id=rid,
         )
-        for _attempt in range(2):
+        # Three attempts rather than two. A rejected binding is usually one
+        # argument out of fifteen — a miscased literal value, a stratifier that
+        # needs cut points — and the error text says exactly which, so a second
+        # correction is cheap next to what used to follow a third failure.
+        for _attempt in range(3):
             if result is None:
+                fallback_reason = FALLBACK_NO_TOOL_CALL
                 break
             tool_name, tool_args = result
+            logger.info(
+                "[vis %s] attempt=%d model chose %s args=%s",
+                rid,
+                _attempt,
+                tool_name,
+                json.dumps(tool_args, sort_keys=True, default=str)[:600],
+            )
+            failure_tool = tool_name
             dispatch = tool_dispatch.get(tool_name)
             if dispatch is None:
+                logger.warning(
+                    "[vis %s] %s is not in the dispatch table (%d known tools)",
+                    rid,
+                    tool_name,
+                    len(tool_dispatch),
+                )
+                fallback_reason = FALLBACK_UNKNOWN_TOOL
                 break
 
             template_idx, param_map = dispatch
@@ -1260,28 +1408,32 @@ def _execute_generate(skill, context):
             )
 
             if validation_errors:
-                if _attempt == 0:
-                    hint = "The previous tool call had errors:\n" + "\n".join(
-                        f"- {e}" for e in validation_errors
+                failure_errors = validation_errors
+                logger.warning(
+                    "[vis %s] binding validation failed for %s "
+                    "(attempt=%d, %d error(s)): %s",
+                    rid,
+                    tool_name,
+                    _attempt,
+                    len(validation_errors),
+                    "; ".join(validation_errors)[:1000],
+                )
+                if _attempt < 2:
+                    logger.info(
+                        "[vis %s] retrying tool selection with the error text", rid
                     )
-                    retry_messages = tool_messages + [
-                        {
-                            "role": "assistant",
-                            "content": f"Tool call: {tool_name}({json.dumps(tool_args)})",
-                        },
-                        {
-                            "role": "user",
-                            "content": hint
-                            + "\n\nPlease select a corrected tool call.",
-                        },
-                    ]
                     result = _call_llm_with_tools(
-                        agent, retry_messages, selected_defs, config,
-                        usage=usage, openai_api_key=openai_api_key,
+                        agent,
+                        tool_messages + _retry_turns(tool_name, tool_args, validation_errors),
+                        selected_defs,
+                        config,
+                        usage=usage,
+                        openai_api_key=openai_api_key,
+                        req_id=rid,
                     )
                     continue
-                else:
-                    break
+                fallback_reason = FALLBACK_VALIDATION_FAILED
+                break
 
             try:
                 spec_dict = instantiate_template(
@@ -1296,9 +1448,55 @@ def _execute_generate(skill, context):
                     templates[template_idx], param_map, bindings, request_schema
                 )
                 context["validation_retries"] = _attempt
+                logger.info(
+                    "[vis %s] instantiated %s (retries=%d, tweakable_params=%d)",
+                    rid,
+                    tool_name,
+                    _attempt,
+                    len(context["tweakable_params"]),
+                )
                 return context
             except Exception:
+                # A template or schema bug rather than a model mistake, so the
+                # traceback is the useful part: it names the placeholder that
+                # would not resolve.
+                logger.exception(
+                    "[vis %s] instantiate_template failed for %s bindings=%s",
+                    rid,
+                    tool_name,
+                    json.dumps(bindings, sort_keys=True, default=str)[:600],
+                )
+                fallback_reason = FALLBACK_INSTANTIATE_FAILED
                 break
+
+    # --- The template path did not produce a spec ---
+    context["fallback_reason"] = fallback_reason
+
+    # Freehand generation survives for exactly one reason: a deployment with no
+    # templates at all, where it is the only thing there is. Everywhere else it
+    # is worse than nothing. Its prompt carries every template's spec verbatim,
+    # so what it produces is a convincing imitation of the pipeline it was shown
+    # — right column names, wrong mechanics — and that ships to the reader as a
+    # chart rather than as a failure.
+    if fallback_reason != FALLBACK_NO_GENERATED_TOOLS:
+        logger.warning(
+            "[vis %s] no visualization built: reason=%s tool=%s errors=%s",
+            rid,
+            fallback_reason,
+            failure_tool,
+            "; ".join(failure_errors)[:1000] or "-",
+        )
+        context["generation_failed"] = {
+            "reason": fallback_reason,
+            "tool": failure_tool,
+            "errors": list(failure_errors),
+        }
+        context["spec_str"] = "{}"
+        context["gen_messages"] = list(context["messages"])
+        context["tool_used"] = None
+        context["tool_args"] = None
+        context["tweakable_params"] = []
+        return context
 
     # --- Fallback: single-shot LLM generation ---
     examples_path = config.get("examples_path")
@@ -1314,6 +1512,12 @@ def _execute_generate(skill, context):
 
     gen_messages = [{"role": "system", "content": rendered}] + list(context["messages"])
 
+    logger.warning(
+        "[vis %s] FALLBACK: freehand generation, reason=%s (examples=%d chars)",
+        rid,
+        fallback_reason,
+        len(examples),
+    )
     spec_str = _call_llm(
         agent, gen_messages, grammar, config,
         usage=context.get("usage"),
@@ -1330,6 +1534,12 @@ def _execute_generate(skill, context):
 
 def _execute_validate(skill, context):
     """Execute the validate skill: parse, validate, and correct via LLM."""
+    # Nothing was generated, so there is nothing to repair. Running the
+    # correction loop over the empty placeholder spec would spend two LLM calls
+    # inventing one, which is the freehand path this deliberately replaced.
+    if context.get("generation_failed"):
+        return context
+
     agent = context["agent"]
     grammar = context["grammar"]
     config = context["config"]
@@ -1471,6 +1681,10 @@ def generate_vis_spec(
         "corrections": 0,
         "openai_api_key": openai_api_key,
         "usage": usage,
+        # Ties every log line from this request together. uvicorn interleaves
+        # requests, so timestamps alone do not, and the value comes back in
+        # `meta` so a reported chart carries its own grep key.
+        "req_id": uuid.uuid4().hex[:8],
     }
 
     plan = ["generate", "validate"]
@@ -1489,9 +1703,17 @@ def generate_vis_spec(
         "valid": context["valid"],
         "errors": context["errors"],
         "corrections": context["corrections"],
+        # Present only when no chart could be built. The caller turns this into
+        # something the reader can act on instead of rendering an empty card.
+        "failure": context.get("generation_failed"),
         "meta": {
             "tool_used": context.get("tool_used"),
             "tool_args": context.get("tool_args"),
+            # None when a template produced this spec. Any other value means the
+            # template path was abandoned, and says where — which `tool_used:
+            # None` alone could not, since it also meant "no templates exist".
+            "fallback_reason": context.get("fallback_reason"),
+            "vis_req_id": context.get("req_id"),
             # Only advertise re-bindable parameters while the delivered spec is
             # still exactly `instantiate_template(template, bindings)`. A
             # correction pass replaces it with an LLM-repaired spec that the

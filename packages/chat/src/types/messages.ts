@@ -66,6 +66,14 @@ export interface ToolCallMeta {
   tool_args?: Record<string, string> | null;
   /** Parameters the agent will accept a re-binding for. */
   tweakable_params?: TemplateParamDescriptor[];
+  /**
+   * Why the agent abandoned the template path, or null/absent when a template
+   * produced this spec. Distinct from `tool_used == null`, which also meant
+   * "this deployment has no templates" and so could not tell the two apart.
+   */
+  fallback_reason?: string | null;
+  /** Correlation id for grepping `packages/agent/logs/udi_agent.log`. */
+  vis_req_id?: string;
   valid?: boolean;
   corrections?: number;
   /** Forward-compatible: the agent adds diagnostic keys over time. */
