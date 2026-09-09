@@ -19,6 +19,7 @@ import type { UDIGrammar } from 'udi-toolkit/react';
 import { swapPlainField, swapDimensionField, swapMeasureField } from '@/utils/specMutations';
 import { computeTweakableParams } from '../utils/tweakability';
 import { useTemplateRebind } from '../hooks/useTemplateRebind';
+import { StratifierGroupingControl } from './StratifierGroupingControl';
 import type { TweakableParam } from './VizTweakComponent.types';
 
 interface VizTweakComponentProps {
@@ -72,6 +73,10 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
         void rebind(param.param, newField);
         return;
       }
+      // A grouping never reaches here — it has its own control, not a dropdown —
+      // but the union includes it, and the spec-rewrite branches below are all
+      // keyed on an `encoding` it does not have.
+      if (param.kind === 'grouping') return;
       let updatedSpec: UDIGrammar;
       switch (param.kind) {
         case 'dimension':
@@ -120,28 +125,43 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2 flex-wrap">
-        {tweakableParams.map((param) => (
-          <Select
-            key={param.kind === 'binding' ? param.param : param.encoding}
-            value={param.field}
-            // A re-bind replaces the whole spec, so a second concurrent edit
-            // would be applied to a chart that is about to be replaced.
-            disabled={pendingParam !== null}
-            onValueChange={(val) => handleFieldChange(param, val)}
-          >
-            <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
-              <span className="text-muted-foreground mr-1">{param.label}:</span>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {param.options.map((opt) => (
-                <SelectItem key={opt} value={opt}>
-                  {opt}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ))}
+        {tweakableParams.map((param) =>
+          param.kind === 'grouping' ? (
+            <StratifierGroupingControl
+              key={param.param}
+              param={param}
+              disabled={pendingParam !== null}
+              onApply={(serialized) => {
+                void rebind(param.param, serialized);
+                trackEvent('visualization_tweaked', {
+                  encoding: param.param,
+                  kind: 'grouping',
+                });
+              }}
+            />
+          ) : (
+            <Select
+              key={param.kind === 'binding' ? param.param : param.encoding}
+              value={param.field}
+              // A re-bind replaces the whole spec, so a second concurrent edit
+              // would be applied to a chart that is about to be replaced.
+              disabled={pendingParam !== null}
+              onValueChange={(val) => handleFieldChange(param, val)}
+            >
+              <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
+                <span className="text-muted-foreground mr-1">{param.label}:</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {param.options.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ),
+        )}
       </div>
       {error && (
         <p role="status" className="text-xs text-destructive">

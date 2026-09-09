@@ -45,7 +45,35 @@ export interface BindingTweakableParam extends TweakableParamBase {
   placeholder: string;
 }
 
-export type TweakableParam = HeuristicTweakableParam | BindingTweakableParam;
+/**
+ * The grouping that cuts a stratifier into the strata a chart draws.
+ *
+ * Applied the same way a `binding` is — the agent resolves the template again —
+ * but it is not a field swap, so it gets its own control rather than a dropdown:
+ * `field` names the column being cut and `fieldType` decides whether that
+ * control lists values to combine or thresholds to cut at.
+ *
+ * `field` on the base type is the *serialized grouping* here, not a column, so
+ * that the shared `options`/`field` plumbing keeps working; `stratifier` is the
+ * column. Ugly, and the alternative — splitting the base type — costs more at
+ * every call site than it saves here.
+ */
+export interface GroupingTweakableParam extends TweakableParamBase {
+  kind: 'grouping';
+  /** Tool parameter to override in the re-bind request. */
+  param: string;
+  /** Template placeholder it fills — for telemetry and debugging. */
+  placeholder: string;
+  /** The stratifier column being cut. */
+  stratifier: string;
+  /** Its type in the schema, which decides which editor is right. */
+  stratifierType: 'nominal' | 'ordinal' | 'quantitative' | null;
+  /** Entity the stratifier lives on, for looking up its domain. */
+  entity: string | null;
+}
+
+export type TweakableParam =
+  HeuristicTweakableParam | BindingTweakableParam | GroupingTweakableParam;
 
 export interface MappingLike {
   field?: string;
