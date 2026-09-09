@@ -100,7 +100,10 @@ def test_rebinding_the_stratifier_moves_every_reference(client, data_schema):
     # Three: the censoring table reduced to one row per subject, then the event
     # log grouped by subject, then by the stratum. The stratifier is read once
     # from the start event rather than joined into the per-subject key.
-    assert groupbys == ["research_id", "research_id", "cns_diagnosis_category"]
+    # The last one is the derived stratum column rather than the stratifier
+    # itself: the curves split by whatever the grouping made of it, which for an
+    # ungrouped chart like this one is the field's own values.
+    assert groupbys == ["research_id", "research_id", "stratum"]
 
     # A tenth site, and the one that makes the rewrite approach hopeless: the
     # stratifier is also the *name of a rollup output column*. Rename the colour
@@ -122,7 +125,7 @@ def test_rebinding_the_stratifier_moves_every_reference(client, data_schema):
         for t in spec["transformation"]
         if "derive" in t and "final label" in t["derive"]
     )
-    assert label["concat"][0] == {"field": "cns_diagnosis_category"}
+    assert label["concat"][0] == {"field": "stratum"}
 
     # The heading names the grouping variable, and stands in for the legend.
     assert spec["title"]["text"] == "cns_diagnosis_category"
@@ -135,7 +138,7 @@ def test_rebinding_the_stratifier_moves_every_reference(client, data_schema):
     ]
     # Six layers now carry the colour: the flat lead-in, the opening drop, the
     # curve, the run-out rule, the end label, and the censoring ticks.
-    assert colours == ["cns_diagnosis_category"] * 6
+    assert colours == ["stratum"] * 6
 
 
 def test_response_describes_the_parameters_it_accepts(client, data_schema):
@@ -150,15 +153,30 @@ def test_response_describes_the_parameters_it_accepts(client, data_schema):
             "placeholder": "E1.F4",
             "entity": "Event",
             "type": "nominal",
-            # `text` as well as `color` because the end-of-curve label
-            # concatenates the stratifier's value: it is drawn, not just used to
-            # split, so changing it changes what that label reads.
-            "encodings": ["color", "text"],
-            "label": "color/text",
+            # Reached through the `stratum` derive that the colour is bound to,
+            # which is what keeps the stratifier visible as a drawn field now
+            # that no encoding names it directly.
+            "encodings": ["color"],
+            "label": "color",
             "value": "organization_name",
             "field": None,
             "fieldType": None,
-        }
+        },
+        # Offered although nothing is bound to it: ungrouped is a state of this
+        # control, not the absence of one, so withholding it until the chart is
+        # already grouped would put it out of reach.
+        {
+            "kind": "grouping",
+            "param": "grouping",
+            "placeholder": "GROUP",
+            "entity": "Event",
+            "type": "nominal",
+            "encodings": ["color"],
+            "label": "groups",
+            "value": "",
+            "field": "organization_name",
+            "fieldType": "nominal",
+        },
     ]
     # Echoed back so a client can send them straight into the next tweak.
     assert body["toolArgs"] == _ARGS

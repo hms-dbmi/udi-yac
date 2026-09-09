@@ -528,11 +528,21 @@ def _placeholder_encodings(spec_template):
             if not channels:
                 continue
             for placeholder in re.findall(PLACEHOLDER, json.dumps(expression)):
-                base = placeholder.split(":")[0]
-                seen = encodings.setdefault(base, [])
-                for channel in channels:
-                    if channel not in seen:
-                        seen.append(channel)
+                bases = [placeholder.split(":")[0]]
+                # A `<GROUP:E1.F4>` tag carries the field it cuts *inside* it, so
+                # the field is not a placeholder of its own here. Attribute the
+                # channels to both: the stratifier is every bit as drawn as the
+                # grouping is, and it is the one the cardinality cap and the
+                # field-swap control care about.
+                if _GROUP_KEY.match(placeholder):
+                    _, _, target = placeholder.partition(":")
+                    if target:
+                        bases.append(target.split(":")[0])
+                for base in bases:
+                    seen = encodings.setdefault(base, [])
+                    for channel in channels:
+                        if channel not in seen:
+                            seen.append(channel)
     return encodings
 
 
@@ -712,9 +722,10 @@ def validate_bindings(spec_template, bindings, schema):
 
     # Fields this request supplies a grouping for, which exempts them from the
     # cardinality cap below.
+    targets = grouping_targets(spec_template)
     grouped_field_keys = {
         field_key
-        for group_key, field_key in grouping_targets(spec_template).items()
+        for group_key, field_key in targets.items()
         if field_key and str(bindings.get(group_key) or "").strip()
     }
 
@@ -839,6 +850,36 @@ def validate_bindings(spec_template, bindings, schema):
             errors.append(
                 f"Field '{field_name}' has {cardinality} unique values, which is too many "
                 f"for a visualization (max 50). Choose a different encoding or visualization."
+            )
+
+    # A continuous stratifier with no grouping is not a chart: it has no
+    # categories to draw a curve for, so it would draw one per distinct value —
+    # a thousand curves of one subject each, which renders, takes a while, and
+    # says nothing. The cardinality cap does not catch this; it only applies to
+    # nominal and ordinal fields.
+    #
+    # Last, and only where the template left the type open. A template that asks
+    # for a nominal stratifier has already reported the better error above —
+    # "this field is quantitative but the template requires nominal" says to pick
+    # a different field, which is the actual fix there, where this would say to
+    # supply cut points for a template that cannot use them.
+    for group_key, field_key in targets.items():
+        if not field_key or field_key in grouped_field_keys:
+            continue
+        if placeholder_types.get(field_key) not in (None, "quantitative"):
+            continue
+        field_name = bindings.get(field_key)
+        entity_name = _entity_for_binding_key(field_key, entity_bindings)
+        if not field_name or entity_name not in entities:
+            continue
+        info = entities[entity_name].get("fields", {}).get(field_name)
+        actual = (info["type"] if isinstance(info, dict) else info) if info else None
+        if actual == "quantitative":
+            errors.append(
+                f"Field '{field_name}' is quantitative, so it needs a grouping "
+                f"saying where to cut it — otherwise every distinct value would be "
+                f'its own stratum. Supply one, e.g. {{"type": "quantitative", '
+                f'"cuts": [65]}}.'
             )
 
     return errors

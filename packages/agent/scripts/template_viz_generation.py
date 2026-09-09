@@ -100,6 +100,12 @@ PREVIEW_CENSOR_STATUS = "vital_status"
 PREVIEW_CENSOR_DATE = "vital_status_date"
 PREVIEW_CENSOR_VALUE = "alive"
 
+#: Preview grouping for the numeric stratifier. pcx records `birth_date` as a
+#: birth *year* (1989–2023, median 2015), so cutting at 2015 splits the cohort
+#: roughly in half into older and younger patients — two curves of comparable
+#: size, which is what makes a preview worth looking at.
+PREVIEW_NUMERIC_GROUPING = '{"type": "quantitative", "cuts": [2015]}'
+
 #: Preview bindings for the EFS cube (sample-data/pcx_efs_cube).
 PREVIEW_CUBE_ENTITY = "Efs Cube Raw"
 PREVIEW_CUBE_TIME = "event_free_survival_months"
@@ -311,6 +317,28 @@ _PRESENCE_STRATUM = "group"
 #: Aggregated away by the rollup, so it never reaches the chart.
 _BASELINE_STRATUM = "baseline stratum"
 
+#: The column every field-stratified curve actually splits by.
+#:
+#: Not the stratifier column itself, because the strata are no longer required to
+#: BE its values: a `<GROUP:…>` grouping can combine several values into one
+#: named stratum, or cut a number at thresholds, and the result is a label that
+#: exists in no column. Deriving it under a fixed name means the colour mappings,
+#: the inline series labels and the stratum groupby all read one column whether
+#: or not a grouping was supplied — and the reader never sees the name, because
+#: the legend is dropped in favour of a heading that names the field.
+_STRATUM_COL = "stratum"
+
+
+def _group_tag(stratum: str) -> str:
+    """``"<E1.F4:n>"`` -> ``"<GROUP:E1.F4>"`` — the grouping that cuts that field.
+
+    Resolves to the whole derive expression computing `_STRATUM_COL`: the field
+    itself when no grouping was supplied, a nested conditional over its values
+    when one was. See `udiagent.stratify`.
+    """
+    base = _placeholder_base(stratum)
+    return f"<GROUP:{base[1:-1]}>"
+
 
 #: The censoring source: a subject-level table saying who was still event-free
 #: when observation stopped, and when. Its entity number is whatever the
@@ -461,6 +489,26 @@ def _censor_join(chart, reading):
             kind="left",
             out_name="<E1>__cens",
         )
+    )
+
+
+def _apply_grouping(chart, stratum: str):
+    """Derive `_STRATUM_COL` from the stratifier, and drop anything unassigned.
+
+    Placement is the whole point of this being a function rather than two lines
+    inlined at each call site: the grouping must be applied to the value that has
+    already been settled *for the subject*, never to the raw event rows. Grouping
+    first and reducing afterwards would let a subject whose recorded value changed
+    between two events fall into a group it never belonged to — the same class of
+    error `_survival_subject_rows` documents at length, and just as invisible,
+    because the chart still draws.
+
+    The null filter is what makes "leave unassigned values out" expressible: a
+    grouping with no Other bucket resolves them to null, and this is where they
+    leave the cohort.
+    """
+    return chart.derive({_STRATUM_COL: _group_tag(stratum)}).filter(
+        Expr.not_null(_STRATUM_COL)
     )
 
 
@@ -629,7 +677,7 @@ def _survival_subject_rows(
             # multiplies nothing; expanding first would instead read the
             # stratifier off every event, which is the other reading.
             chart = chart.unnest(_placeholder_base(stratum), separator=";")
-        return chart
+        return _apply_grouping(chart, stratum)
 
     if reading in (StratumReading.EVER, StratumReading.RELATED):
         chart = chart.groupby(subject_key)
@@ -647,7 +695,12 @@ def _survival_subject_rows(
         # event with it whenever that event carried no value, silently dropping
         # the subject from every group instead of just this one.
         chart = chart.filter(Expr.not_null(stratum))
-        chart = chart.groupby([_placeholder_base(subject_key), stratum])
+        # Grouped BEFORE the (subject, value) grouping, so two values that fall in
+        # the same stratum collapse into one row for that subject rather than two
+        # — which is what makes membership of a group mean "recorded any of its
+        # values", and stops the subject being counted twice in its own curve.
+        chart = _apply_grouping(chart, stratum)
+        chart = chart.groupby([_placeholder_base(subject_key), _STRATUM_COL])
         # min/max over columns already constant within the group: the rollup
         # needs an aggregate, not a reduction.
         chart = chart.rollup(
@@ -968,6 +1021,18 @@ def _survival_chart(
             "the two readings give different numbers"
         )
 
+    # What the curves actually split by, as distinct from what the caller named.
+    # A presence reading derives its own two- or four-valued label; every other
+    # stratified reading goes through `_apply_grouping`, which may have combined
+    # the stratifier's values into strata that exist in no column at all. Either
+    # way the column has one fixed name from here down, so nothing below has to
+    # know which case it is in.
+    stratum_col = None
+    if stratum:
+        stratum_col = (
+            _PRESENCE_STRATUM if reading in _PRESENCE_READINGS else _STRATUM_COL
+        )
+
     chart = _survival_subject_rows(stratum, reading, multi_value)
 
     # Time under observation, which is the end event for those who reached it and
@@ -1046,7 +1111,7 @@ def _survival_chart(
 
     if stratum:
         # Re-group so each curve is a fraction of its own cohort.
-        chart = chart.groupby(_placeholder_base(stratum))
+        chart = chart.groupby(stratum_col)
     chart = chart.derive(
         {"subjects": Expr.agg("count"), "deaths": Expr.agg("sum", "died")}
     )
@@ -1208,7 +1273,7 @@ def _survival_chart(
     chart = chart.derive(
         {
             "final label": Expr.concat(
-                ([Expr.field(_placeholder_base(stratum))] if stratum else [])
+                ([Expr.field(stratum_col)] if stratum else [])
                 + ([Expr.lit(" ")] if stratum else [])
                 + [
                     Expr.lit("("),
@@ -1233,7 +1298,7 @@ def _survival_chart(
     )
     if stratum:
         chart = chart.color(
-            field=_placeholder_base(stratum), type="nominal", omitLegend=True
+            field=stratum_col, type="nominal", omitLegend=True
         )
 
     # The vertical drop from that lead-in into the curve's first point.
@@ -1244,7 +1309,7 @@ def _survival_chart(
     )
     if stratum:
         chart = chart.color(
-            field=_placeholder_base(stratum), type="nominal", omitLegend=True
+            field=stratum_col, type="nominal", omitLegend=True
         )
 
     chart = (
@@ -1264,7 +1329,7 @@ def _survival_chart(
         )
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+        chart = chart.color(field=stratum_col, type="nominal", omitLegend=True)
 
     chart = (
         chart.mark("line")
@@ -1276,7 +1341,7 @@ def _survival_chart(
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+        chart = chart.color(field=stratum_col, type="nominal", omitLegend=True)
 
     # Censoring ticks: one vertical mark per subject who left the study without
     # reaching the end event, at the time their follow-up stopped. Without them a
@@ -1297,7 +1362,7 @@ def _survival_chart(
         .size(value=_TICK_SIZE)
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+        chart = chart.color(field=stratum_col, type="nominal", omitLegend=True)
 
     chart = (
         chart.mark("text")
@@ -1316,7 +1381,7 @@ def _survival_chart(
         .text(field="final label", type="nominal")
     )
     if stratum:
-        chart = chart.color(field=_placeholder_base(stratum), type="nominal", omitLegend=True)
+        chart = chart.color(field=stratum_col, type="nominal", omitLegend=True)
 
     if stratum:
         # Right-aligned to sit over the series labels it names. The presence
@@ -3208,6 +3273,90 @@ def generate():
             "E1.F3": "event_date",
             "E2.F1": "research_id",
             "E2.F": "protocol_name_and_arm",
+            "E3": PREVIEW_CENSOR_ENTITY,
+            "E3.F1": PREVIEW_CENSOR_SUBJECT,
+            "E3.F2": PREVIEW_CENSOR_STATUS,
+            "E3.F3": PREVIEW_CENSOR_DATE,
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
+        },
+    )
+
+    # The same cross-table stratifier, but NUMERIC: cut into buckets rather than
+    # read as categories. A continuous column has no categories to be one curve
+    # each — a thousand distinct ages would draw a thousand curves of one subject
+    # — so the grouping is required rather than optional here, and validation
+    # refuses the binding without one.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E1> split by <E2.F:q> above and below a threshold.",
+            "Compare survival for <E1> by <E2.F:q> group.",
+            "Does survival differ between high and low <E2.F:q>?",
+        ],
+        spec=_survival_chart(stratum="<E2.F:q>", reading=StratumReading.RELATED),
+        chart_type=ChartType.LINE,
+        name_hint="survival_related_numeric",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by a NUMERIC field in a related table, cut into buckets at "
+            "thresholds — 'under 65 versus 65 and over', tertiles of a lab value. Takes an event "
+            "log (one row per event, with a subject id, an event-type column and a numeric time "
+            "column) and a second table holding a per-subject number, joined on the subject-id "
+            "column each side names. Supply the cut points in `grouping`: this template REQUIRES "
+            "one, because a continuous column has no categories to draw a curve for. Ascending "
+            "cut points, each bucket half-open on the right, so a cut at 65 puts 65 in the upper "
+            "bucket. Use it whenever the attribute to split by is a number rather than a label."
+        ),
+        design_considerations=(
+            "The buckets are computed BEFORE the (subject, stratum) grouping, so two values in "
+            "the same bucket collapse to one row for that subject rather than two — a subject is "
+            "counted once in its own curve, not once per matching value. "
+            "A bucket label is a string derived from the bounds, so it is drawn and ordered as a "
+            "category: with more than a handful of cuts the colour scale stops distinguishing "
+            "them, which is why the grouping is capped at ten strata. "
+            "Everything else follows the nominal related-table variant, including its "
+            "limitations: the join is on the shared subject id rather than a declared "
+            "relationship, a subject with several related records joins every bucket its values "
+            "fall in (so cohorts can OVERLAP, though a genuinely per-subject number puts each "
+            "subject in exactly one), and a subject with no related record leaves the join and "
+            "the cohort. "
+            "IMPORTANT: cut points are a modelling choice, not a property of the data. Moving "
+            "one moves the curves, and a threshold chosen after seeing the outcome will separate "
+            "the groups by construction. The chart cannot tell a reader which happened. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare survival above and below a numeric threshold; judge whether a continuous "
+            "attribute — age, a lab value, a dose — coincides with worse observed survival."
+        ),
+        review_hint=(
+            "Check the bucket labels read as ranges ('< 65', '≥ 65') and that they sit in "
+            "ascending order, not alphabetical. Confirm the group sizes add to the unstratified "
+            "cohort when the number is genuinely one-per-subject — if they exceed it, the "
+            "related table has several rows per subject and the cohorts overlap, which is "
+            "expected but changes what the chart means. Try moving a cut point and check the "
+            "curves move with it rather than staying put, which would mean the grouping is not "
+            "reaching the pipeline. Previews by cutting birth_date, which stands in for age."
+        ),
+        preview_bindings={
+            "E1": "Event",
+            "E2": "Demographics",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E2.F1": "research_id",
+            "E2.F": "birth_date",
+            # Previewed grouped, because ungrouped is not a state this template
+            # has: the studio would otherwise render the one thing validation
+            # refuses.
+            "GROUP": PREVIEW_NUMERIC_GROUPING,
             "E3": PREVIEW_CENSOR_ENTITY,
             "E3.F1": PREVIEW_CENSOR_SUBJECT,
             "E3.F2": PREVIEW_CENSOR_STATUS,
