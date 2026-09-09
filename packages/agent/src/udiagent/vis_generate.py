@@ -627,6 +627,89 @@ def _placeholder_type_requirements(spec_template):
     return placeholder_types
 
 
+def value_field_pairs(spec_template):
+    """``{value key: {field placeholder keys it is compared against}}``.
+
+    A `<V*>` binding is a literal the model supplies — an event type, a status
+    string — and it is only ever meaningful against the column it is tested on.
+    Reading that pairing off the template is what lets validation check the value
+    actually occurs in that column, which is the difference between a chart that
+    is wrong and a chart that is empty.
+
+    Walks the whole spec rather than a known list of transforms, because a
+    comparison can sit in a `derive`, a `filter`, or nested inside either.
+    """
+    pairs = {}
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return pairs
+
+    def visit(node):
+        if isinstance(node, dict):
+            left, right = node.get("left"), node.get("right")
+            if (
+                node.get("op") in ("==", "!=")
+                and isinstance(left, dict)
+                and isinstance(right, dict)
+            ):
+                for a, b in ((left, right), (right, left)):
+                    field, literal = a.get("field"), b.get("literal")
+                    if not isinstance(field, str) or not isinstance(literal, str):
+                        continue
+                    field_match = re.fullmatch(PLACEHOLDER, field)
+                    value_match = re.fullmatch(PLACEHOLDER, literal)
+                    if not field_match or not value_match:
+                        continue
+                    value_key = value_match.group(1).split(":")[0]
+                    if re.fullmatch(r"V\d*", value_key):
+                        pairs.setdefault(value_key, set()).add(
+                            field_match.group(1).split(":")[0]
+                        )
+            for child in node.values():
+                visit(child)
+        elif isinstance(node, list):
+            for child in node:
+                visit(child)
+
+    visit(spec)
+    return pairs
+
+
+def _categorical_domains(data_domains):
+    """``{(entity, field): [values]}`` for the columns that have a value list.
+
+    Only categorical ("point") domains: an interval domain is a min/max, which
+    says nothing about whether a particular string occurs. A high-cardinality
+    column may carry no domain at all — the client drops those before sending —
+    and a column that is simply absent here is left unchecked rather than
+    reported as empty.
+    """
+    try:
+        entries = (
+            json.loads(data_domains)
+            if isinstance(data_domains, str)
+            else data_domains
+        ) or []
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    if not isinstance(entries, list):
+        return {}
+
+    out = {}
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("type") != "point":
+            continue
+        domain = entry.get("domain")
+        values = domain.get("values") if isinstance(domain, dict) else None
+        if not isinstance(values, list):
+            continue
+        out[(entry.get("entity"), entry.get("field"))] = [
+            v for v in values if isinstance(v, str)
+        ]
+    return out
+
+
 def grouping_targets(spec_template):
     """``{grouping binding key: field binding key}`` for a template's `<GROUP:…>` tags.
 
@@ -645,10 +728,15 @@ def grouping_targets(spec_template):
     return targets
 
 
-def validate_bindings(spec_template, bindings, schema):
+def validate_bindings(spec_template, bindings, schema, data_domains=None):
     """Validate tool bindings against the schema before template instantiation.
 
     Returns list of error strings (empty = valid).
+
+    `data_domains`, when supplied, additionally checks each `<V*>` literal
+    against the column it is compared to. Optional because not every caller has
+    domains — re-instantiating a stored chart has only the schema — and a
+    missing domain means "unchecked", never "invalid".
     """
     errors = []
     entities = schema.get("entities", {})
@@ -881,6 +969,50 @@ def validate_bindings(spec_template, bindings, schema):
                 f'its own stratum. Supply one, e.g. {{"type": "quantitative", '
                 f'"cuts": [65]}}.'
             )
+
+    # A <V*> literal is only meaningful against the column it is tested on, and
+    # nothing above checks that it occurs there: the type checks pass happily
+    # when the event-log and subject-level tables are bound the wrong way round,
+    # because both have a nominal column and a numeric one. What comes out is not
+    # a wrong chart but an EMPTY one — every conditional the value feeds is false,
+    # so no subject has a start or an end and the curve has nothing to draw.
+    #
+    # Checked last so a genuinely missing column is reported first, and only where
+    # the caller supplied domains and the bound column actually has a value list.
+    domains = _categorical_domains(data_domains) if data_domains else {}
+    if domains:
+        for value_key, field_keys in value_field_pairs(spec_template).items():
+            value = bindings.get(value_key)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            for field_key in sorted(field_keys):
+                field_name = bindings.get(field_key)
+                entity_name = _entity_for_binding_key(field_key, entity_bindings)
+                known = domains.get((entity_name, field_name))
+                if not known or value in known:
+                    continue
+                # A near miss is worth naming as one: the model was told to copy
+                # a value exactly, and "deceased" for "Deceased" is a different
+                # mistake from having picked the wrong column entirely.
+                lowered = {v.lower(): v for v in known}
+                if value.lower() in lowered:
+                    errors.append(
+                        f"Value '{value}' does not appear in column "
+                        f"'{field_name}' on '{entity_name}', but "
+                        f"'{lowered[value.lower()]}' does — copy it exactly, "
+                        f"including case."
+                    )
+                else:
+                    sample = ", ".join(repr(v) for v in known[:8])
+                    more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
+                    errors.append(
+                        f"Value '{value}' does not appear in column "
+                        f"'{field_name}' on '{entity_name}', which this template "
+                        f"compares it against — so the comparison would match no "
+                        f"rows and the chart would come out empty. Either pick a "
+                        f"value that is in that column ({sample}{more}), or bind a "
+                        f"different column."
+                    )
 
     return errors
 
@@ -1124,7 +1256,7 @@ def _execute_generate(skill, context):
             template_idx, param_map = dispatch
             bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
             validation_errors = validate_bindings(
-                templates[template_idx], bindings, request_schema
+                templates[template_idx], bindings, request_schema, data_domains
             )
 
             if validation_errors:

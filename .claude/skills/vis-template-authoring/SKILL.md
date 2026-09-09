@@ -72,9 +72,26 @@ apps/template-studio  ← renders templates, writes review decisions to
    template stays dataset-agnostic. Use `Expr.lit("<V1>")` where the value goes.
 
    Two things follow. Values are **not** validated as columns (no field-existence,
-   type or cardinality check) — only that something non-empty was supplied. And
-   they are JSON-escaped on substitution, because they are spliced into the spec's
-   raw JSON string and a value like `Grade "III"` would otherwise corrupt it.
+   type or cardinality check). And they are JSON-escaped on substitution, because
+   they are spliced into the spec's raw JSON string and a value like `Grade "III"`
+   would otherwise corrupt it.
+
+   They **are** checked against the column they are compared to, whenever the
+   request carried domains: `value_field_pairs` reads that pairing off the
+   template (a `==` between a `{"field": "<E1.F2>"}` and a `{"literal": "<V1>"}`,
+   wherever it sits), and a value absent from that column's domain is refused.
+   Write the comparison that way and the check follows for free.
+
+   > This is the one binding error that produces an **empty chart rather than a
+   > wrong one**, which is why it is worth a check of its own. Nothing else
+   > catches it: bind an event log and a subject-level table the wrong way round
+   > and every type check still passes, because both have a nominal column and a
+   > numeric one — but then every conditional the values feed is false, no
+   > subject has a start or an end, and the curve draws nothing. A near miss on
+   > case is reported as a near miss, since "copy it exactly" is a different fix
+   > from "you picked the wrong column". A column with no domain (high
+   > cardinality ones are dropped before sending; an interval domain is a
+   > min/max) is left unchecked, never reported as empty.
 
    Describe such a template by the **shape** it needs ("an event log with a subject
    id, an event-type column and a numeric time column"), not by the dataset that
