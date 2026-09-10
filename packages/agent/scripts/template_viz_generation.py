@@ -4015,24 +4015,6 @@ def generate():
             .source("<E>", "<E.url>")
             .groupby(["<F2>", "<F1>"])
             .rollup({"count <E>": Op.count()})
-            .derive(
-                {
-                    "udi_internal_percentile": Expr.binop(
-                        "/", Expr.field("count <E>"), Expr.agg("max", "count <E>")
-                    )
-                }
-            )
-            .derive(
-                {
-                    "udi_internal_text_color_threshold": Expr.cond(
-                        Expr.binop(
-                            ">", Expr.field("udi_internal_percentile"), Expr.lit(0.5)
-                        ),
-                        Expr.lit("large"),
-                        Expr.lit("small"),
-                    )
-                }
-            )
             .mark("rect")
             .color(field="count <E>", type="quantitative")
             .y(field="<F1>", type="nominal")
@@ -4041,13 +4023,16 @@ def generate():
             .text(field="count <E>", type="quantitative")
             .y(field="<F1>", type="nominal")
             .x(field="<F2>", type="nominal")
-            .color(
-                field="udi_internal_text_color_threshold",
-                type="nominal",
-                domain=["large", "small"],
-                range=["white", "black"],
-                omitLegend=True,
-            )
+            # Black on a white halo, rather than black-or-white chosen by how
+            # dark the cell is. That threshold was derived as
+            # `value / max(value)`, and the max is an aggregate over whatever
+            # rows survive a filter — so brushing away the largest cell flipped
+            # labels to white while the rect scale stayed anchored to the
+            # unfiltered extent, putting white text on pale cells. A halo reads
+            # against any fill, so nothing about the label depends on the data
+            # still in view.
+            .color(value="black")
+            .outline(color="white", width=3, opacity=0.7)
         ),
         chart_type=ChartType.HEATMAP,
         task_types=[
@@ -4100,24 +4085,6 @@ def generate():
             Chart()
             .source("<E>", "<E.url>")
             .filter("<MARGINAL:D1,D2>")
-            .derive(
-                {
-                    "udi_internal_percentile": Expr.binop(
-                        "/", Expr.field("<M>"), Expr.agg("max", "<M>")
-                    )
-                }
-            )
-            .derive(
-                {
-                    "udi_internal_text_color_threshold": Expr.cond(
-                        Expr.binop(
-                            ">", Expr.field("udi_internal_percentile"), Expr.lit(0.5)
-                        ),
-                        Expr.lit("large"),
-                        Expr.lit("small"),
-                    )
-                }
-            )
             .mark("rect")
             .color(field="<M>", type="quantitative")
             .y(field="<D2:n>", type="nominal")
@@ -4126,13 +4093,16 @@ def generate():
             .text(field="<M>", type="quantitative")
             .y(field="<D2:n>", type="nominal")
             .x(field="<D1:n>", type="nominal")
-            .color(
-                field="udi_internal_text_color_threshold",
-                type="nominal",
-                domain=["large", "small"],
-                range=["white", "black"],
-                omitLegend=True,
-            )
+            # Black on a white halo, rather than black-or-white chosen by how
+            # dark the cell is. That threshold was derived as
+            # `value / max(value)`, and the max is an aggregate over whatever
+            # rows survive a filter — so brushing away the largest cell flipped
+            # labels to white while the rect scale stayed anchored to the
+            # unfiltered extent, putting white text on pale cells. A halo reads
+            # against any fill, so nothing about the label depends on the data
+            # still in view.
+            .color(value="black")
+            .outline(color="white", width=3, opacity=0.7)
         ),
         chart_type=ChartType.HEATMAP,
         task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
