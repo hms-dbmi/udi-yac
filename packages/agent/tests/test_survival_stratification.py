@@ -397,6 +397,8 @@ def test_survival_tool_names_distinguish_the_two_readings():
         "survival_related_numeric",
         "survival_presence",
         "survival_presence_2x2",
+        # Presence of a SUBSET of that table, which is a different question.
+        "survival_ever_matching",
         # Built from a pre-aggregated cube rather than an event log.
         "survival_cube",
         "survival_cube_stratified",
@@ -870,7 +872,7 @@ def presence(tmp_path):
     paths["patients"] = str(_CENSOR_CSV)
     engine = QueryEngine(DuckDBConnector(views=paths), table_map={n: n for n in paths})
 
-    def run(suffix, cross=False, rows=True):
+    def run(suffix, cross=False, rows=True, grouping=None):
         tool = next(n for n in dispatch if n.endswith(suffix))
         idx, param_map = dispatch[tool]
         args = {
@@ -886,6 +888,11 @@ def presence(tmp_path):
         if cross:
             args["entity3"] = "surgery"
             args["entity3_field1"] = "subject"
+        if grouping is not None:
+            # The membership reading names its column and its value sets
+            # together: the grouping IS the predicate.
+            args["entity2_field"] = "site"
+            args["grouping"] = grouping
         args.update(_censor_args(param_map))
         bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
         assert validate_bindings(templates[idx], bindings, schema) == []
@@ -1420,3 +1427,148 @@ def test_only_the_entities_a_template_names_may_be_shared():
     # A template that declares nothing gets nothing.
     plain = next(n for n in dispatch if n.endswith("_barchart_count_vert_grouped"))
     assert shared_entities_for(plain) == ()
+
+
+# ---------------------------------------------------------------------------
+# Membership of a VALUE SET: "ever received methotrexate" vs everyone else
+# ---------------------------------------------------------------------------
+#
+# The radiation fixture already holds every case this reading has to get right:
+#   p1  head AND spine — a matching row and a non-matching one, the overlap case
+#   p2  no radiation row at all — absent, and still part of "everyone else"
+#   p3  head only
+#   p9  head, but no events — never reaches the curve
+# Cohort from the event log is p1, p2, p3 (p4 has a death and no start).
+
+_HEAD = json.dumps(
+    {"type": "nominal", "groups": [{"label": "Head", "values": ["head"]}],
+     "other": "No head"}
+)
+
+
+def test_membership_curves_partition_the_cohort(presence):
+    """The invariant the whole template exists for.
+
+    Reading the related table row by row — which is what the related-field
+    variant does for its own question — puts p1 in both curves, because it has a
+    matching row and a non-matching one. Then the cohorts sum to more than the
+    cohort. On pcx that failure is total: every methotrexate patient also
+    received something else, so the comparison curve would hold the entire
+    treated group and the chart would look perfectly reasonable.
+    """
+    pooled = presence("_line_survival", rows=True)[0]
+    cohorts = _cohorts(presence("_line_survival_ever_matching", grouping=_HEAD), "stratum")
+
+    assert cohorts == {"Head": (2, 1), "No head": (1, 1)}
+    assert sum(n for n, _ in cohorts.values()) == pooled["subjects"]
+    assert sum(d for _, d in cohorts.values()) == pooled["deaths"]
+
+
+def test_a_subject_with_a_matching_and_a_non_matching_row_is_counted_once(presence):
+    """p1 has head and spine. It belongs in Head, and only in Head."""
+    rows = presence("_line_survival_ever_matching", grouping=_HEAD)
+    strata = {r["stratum"] for r in rows}
+    assert strata == {"Head", "No head"}
+    # Two subjects match, and p1 is one of them — not three across two curves.
+    assert _cohorts(rows, "stratum")["Head"][0] == 2
+
+
+def test_a_subject_absent_from_the_table_joins_the_comparison_group(presence):
+    """p2 has no radiation row at all. "Everyone else" has to include it, or the
+    chart quietly compares one treatment against another rather than against the
+    untreated — on pcx that is 249 subjects."""
+    cohorts = _cohorts(presence("_line_survival_ever_matching", grouping=_HEAD), "stratum")
+    assert cohorts["No head"] == (1, 1)
+
+
+def test_the_first_named_group_wins_a_subject_that_matches_two(presence):
+    """p1 is head AND spine. Declaration order decides, so it is drawn once, in
+    the group the reader was told about first."""
+    both = json.dumps(
+        {
+            "type": "nominal",
+            "groups": [
+                {"label": "Head", "values": ["head"]},
+                {"label": "Spine", "values": ["spine"]},
+            ],
+            "other": "Neither",
+        }
+    )
+    cohorts = _cohorts(presence("_line_survival_ever_matching", grouping=both), "stratum")
+    assert cohorts["Head"][0] == 2          # p1 and p3
+    assert "Spine" not in cohorts           # p1's only spine row lost to Head
+    assert cohorts["Neither"] == (1, 1)     # p2
+
+
+def test_membership_reduces_before_it_labels(presence):
+    """Structural, so the ordering cannot regress silently: the tag is rolled up
+    per subject BEFORE the join that carries it onto the event rows."""
+    spec = presence("_line_survival_ever_matching", grouping=_HEAD, rows=False)
+    steps = spec["transformation"]
+    rollup = next(
+        i for i, s in enumerate(steps)
+        if "rollup" in s and "membership tag" in s["rollup"]
+    )
+    join = next(
+        i for i, s in enumerate(steps)
+        if "join" in s and s.get("out") == "events__p"
+    )
+    assert rollup < join, "the tag must be one per subject before it is joined on"
+    assert steps[join]["join"]["kind"] == "left"
+
+
+def test_a_membership_template_without_a_grouping_is_refused():
+    """Without value sets it is the presence template with extra steps, and the
+    model has been reaching for presence when it wanted this."""
+    generated = _load_generated_tools()
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith("_line_survival_ever_matching"))
+    idx, param_map = dispatch[tool]
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "events",
+                    "path": "events.csv",
+                    "udi:row_count": 10,
+                    "schema": {"fields": [
+                        {"name": "subject", "udi:data_type": "nominal"},
+                        {"name": "event", "udi:data_type": "nominal"},
+                        {"name": "day", "udi:data_type": "quantitative"},
+                    ]},
+                },
+                {
+                    "name": "radiation",
+                    "path": "radiation.csv",
+                    "udi:row_count": 4,
+                    "schema": {"fields": [
+                        {"name": "subject", "udi:data_type": "nominal"},
+                        {"name": "site", "udi:data_type": "nominal"},
+                    ]},
+                },
+                _censor_resource(),
+            ],
+        }
+    )
+    args = {
+        "entity1": "events", "entity1_field1": "subject",
+        "entity1_field2": "event", "entity1_field3": "day",
+        "entity2": "radiation", "entity2_field1": "subject", "entity2_field": "site",
+        "value1": "start", "value2": "death",
+    }
+    args.update(_censor_args(param_map))
+    bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+    errors = validate_bindings(
+        templates[idx], bindings, schema,
+        shared_entities=shared_entities_for(tool),
+    )
+    assert any("needs a grouping" in e for e in errors), errors
+
+    # And cut points are the wrong kind of question for a column of names.
+    bindings["GROUP"] = {"type": "quantitative", "cuts": [5]}
+    errors = validate_bindings(
+        templates[idx], bindings, schema,
+        shared_entities=shared_entities_for(tool),
+    )
+    assert any("nominal grouping" in e for e in errors), errors

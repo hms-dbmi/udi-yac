@@ -262,6 +262,9 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         "survival_related_multivalue": ["entity2_field", "grouping"],
         # Same shape, but the related value is a number cut at thresholds.
         "survival_related_numeric": ["entity2_field", "grouping"],
+        # And the same pair again for membership of a value set: the column
+        # being tested, and the sets that define a match.
+        "survival_ever_matching": ["entity2_field", "grouping"],
         # The presence variants offer nothing, and that is the honest answer: what
         # separates their curves is which *table* the subject appears in, and the
         # tweak dropdowns re-bind fields only. Offering the joined subject-id key

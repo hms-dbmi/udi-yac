@@ -36,12 +36,28 @@ PLACEHOLDER = r"<([A-Z][A-Za-z0-9_.,:]*)>"
 # match this.
 _ENTITY_KEY = re.compile(r"E\d*")
 
-# A dynamic-stratification grouping: `<GROUP:E1.F4>` (or a numbered `<GROUP2:…>`
-# for a template that splits two ways). The part after the first colon names the
-# *field* placeholder being grouped; the binding key is everything before it.
-_GROUP_KEY = re.compile(r"GROUP\d*(?::|$)")
+# A dynamic-stratification grouping placeholder. Three spellings, one binding:
+#
+#   <GROUP:E1.F4>       the stratum expression for a single-valued stratifier
+#   <GROUPTAG:E2.F>     per-row group index, for a stratifier a subject has
+#                       SEVERAL of (a long multi-select table)
+#   <GROUPLABEL:E2.F>   that index, reduced per subject, turned into a label
+#
+# All three read the SAME `GROUP` binding — one grouping per template, however
+# many places the template has to spell it — so the model fills one parameter
+# and the tweak widget edits one control.
+_GROUPING_PLACEHOLDER = re.compile(r"GROUP(TAG|LABEL)?(\d*)(?::(.+))?$")
 #: Just the binding key, for callers separating a grouping from a field binding.
 _GROUP_BASE = re.compile(r"GROUP\d*")
+
+
+def _grouping_parts(tag):
+    """``"GROUPTAG2:E2.F"`` -> ``("TAG", "GROUP2", "E2.F")``; None if not one."""
+    match = _GROUPING_PLACEHOLDER.fullmatch(tag)
+    if not match:
+        return None
+    kind, number, field = match.groups()
+    return kind, f"GROUP{number or ''}", (field or "").split(":")[0]
 
 logger = logging.getLogger(__name__)
 
@@ -440,12 +456,22 @@ def _resolve_placeholder(tag, bindings, schema):
     #
     # The grouping is an *optional* binding: with none supplied this is the
     # identity, which is what keeps a stratified chart splitting by raw value.
-    if _GROUP_KEY.match(tag):
-        from udiagent.stratify import grouping_expr, parse_grouping
+    parts = _grouping_parts(tag)
+    if parts is not None:
+        from udiagent.stratify import (
+            grouping_expr,
+            membership_label_expr,
+            membership_tag_expr,
+            parse_grouping,
+        )
 
-        group_key, _, field_tag = tag.partition(":")
-        field_name = bindings.get(field_tag.split(":")[0], "") if field_tag else ""
+        kind, group_key, field_key = parts
+        field_name = bindings.get(field_key, "") if field_key else ""
         grouping = parse_grouping(bindings.get(group_key))
+        if kind == "TAG":
+            return json.dumps(membership_tag_expr(grouping, field_name))
+        if kind == "LABEL":
+            return json.dumps(membership_label_expr(grouping))
         return json.dumps(grouping_expr(grouping, field_name))
 
     # Strip type suffix: F:n -> F, E1.F:q -> E1.F
@@ -479,7 +505,7 @@ def instantiate_template(spec_template, bindings, schema):
     spec = re.sub(r'"(<MARGINAL[^>"]*>)"', r"\1", spec)
     # Same for a stratifier grouping, which resolves to the derive expression
     # computing the stratum column.
-    spec = re.sub(r'"(<GROUP\d*(?::[^>"]*)?>)"', r"\1", spec)
+    spec = re.sub(r'"(<GROUP(?:TAG|LABEL)?\d*(?::[^>"]*)?>)"', r"\1", spec)
     while True:
         match = re.search(PLACEHOLDER, spec)
         if not match:
@@ -608,10 +634,14 @@ def placeholder_encoding_info(spec_template):
                 # both: the stratifier is every bit as drawn as the grouping is,
                 # and it is the one the cardinality cap, the field-swap control
                 # and the model's own parameter description care about.
-                if _GROUP_KEY.match(placeholder):
-                    _, _, group_target = placeholder.partition(":")
+                grouping_parts = _grouping_parts(placeholder)
+                if grouping_parts is not None:
+                    _kind, group_key, group_target = grouping_parts
+                    # The binding, not the spelling: `<GROUPLABEL:…>` and
+                    # `<GROUPTAG:…>` are two halves of one parameter.
+                    bases = [group_key]
                     if group_target:
-                        bases.append(group_target.split(":")[0])
+                        bases.append(group_target)
                 for base in bases:
                     for channel in target["encodings"]:
                         record(base, channel, target["declared_type"])
@@ -838,10 +868,14 @@ def grouping_targets(spec_template):
     targets = {}
     for match in re.finditer(PLACEHOLDER, spec_template):
         tag = match.group(1)
-        if not _GROUP_KEY.match(tag):
+        parts = _grouping_parts(tag)
+        if parts is None:
             continue
-        group_key, _, field_tag = tag.partition(":")
-        targets[group_key] = field_tag.split(":")[0] if field_tag else ""
+        _kind, group_key, field_key = parts
+        # TAG and LABEL name the same field; whichever carries it wins, and a
+        # bare `<GROUP2>` with no field must not blank an entry already set.
+        if field_key or group_key not in targets:
+            targets[group_key] = field_key
     return targets
 
 
@@ -1128,6 +1162,39 @@ def validate_bindings(
                 f'its own stratum. Supply one, e.g. {{"type": "quantitative", '
                 f'"cuts": [65]}}.'
             )
+
+    # A membership template asks "did this subject ever appear with one of THESE
+    # values", so the value sets are the question. Without them it is
+    # `survival_presence` with extra steps, and with cut points it is asking a
+    # numeric question of a column of names.
+    if "GROUPTAG" in spec_template:
+        from udiagent.stratify import GroupingError, grouping_kind, parse_grouping
+
+        for group_key, field_key in targets.items():
+            try:
+                grouping = parse_grouping(bindings.get(group_key))
+            except GroupingError:
+                continue  # already reported by the per-binding check above
+            column = bindings.get(field_key) or field_key
+            if grouping is None:
+                errors.append(
+                    f"This chart splits by whether a subject ever appears with "
+                    f"particular values of '{column}', so it needs a grouping "
+                    f'naming them — e.g. {{"type": "nominal", "groups": '
+                    f'[{{"label": "Methotrexate", "values": ["methotrexate"]}}]}}. '
+                    f"To split by presence in the table as a whole, use the "
+                    f"presence template instead."
+                )
+                continue
+            try:
+                if grouping_kind(grouping) != "nominal":
+                    errors.append(
+                        f"'{column}' holds names, not numbers, so this chart needs "
+                        f"a nominal grouping listing the values that count as a "
+                        f"match — cut points do not apply."
+                    )
+            except GroupingError:
+                continue
 
     # One column cannot be both a table's record id and the column a literal is
     # matched against. Binding it to both says the join should match rows whose

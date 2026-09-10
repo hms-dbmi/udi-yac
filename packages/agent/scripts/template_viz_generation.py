@@ -82,6 +82,15 @@ class StratumReading(Enum):
     #: Presence in *two* other tables, crossed: neither, one, the other, both.
     #: Also a partition, with up to four groups.
     PRESENCE_2X2 = "presence_2x2"
+    #: Whether the subject ever appears in a related table with one of a NAMED
+    #: SET of values — "did this patient ever receive methotrexate". The
+    #: stratifier is multi-valued: the table holds one row per (subject, value),
+    #: so a subject has a SET rather than a value. That makes grouping a
+    #: different operation from `RELATED`, which reads each row on its own and
+    #: therefore puts a subject with a matching and a non-matching row in both
+    #: curves. Here the match is reduced per subject BEFORE the label is chosen,
+    #: so every subject gets exactly one and the groups partition the cohort.
+    ANY_OF = "any_of"
 
 
 # Shared design note for data-cube templates: a cube is read by marginal
@@ -105,6 +114,15 @@ PREVIEW_CENSOR_VALUE = "alive"
 #: roughly in half into older and younger patients — two curves of comparable
 #: size, which is what makes a preview worth looking at.
 PREVIEW_NUMERIC_GROUPING = '{"type": "quantitative", "cuts": [2015]}'
+
+#: Preview grouping for the membership stratifier. The therapy table holds one
+#: row per regimen, so a patient has several protocols and most patients with
+#: any given one also have another — which is the overlap this reading exists to
+#: handle, visible in the preview rather than only in a test.
+PREVIEW_MEMBERSHIP_GROUPING = (
+    '{"type": "nominal", "groups": [{"label": "DFCI Modified IRS-III", '
+    '"values": ["DFCI Modified IRS-III"]}], "other": "Other or no protocol"}'
+)
 
 #: Preview bindings for the EFS cube (sample-data/pcx_efs_cube).
 PREVIEW_CUBE_ENTITY = "Efs Cube Raw"
@@ -355,7 +373,7 @@ def _group_tag(stratum: str) -> str:
 def _censor_entity(reading) -> str:
     if reading is StratumReading.PRESENCE_2X2:
         return "E4"
-    if reading in (StratumReading.RELATED, StratumReading.PRESENCE):
+    if reading in (StratumReading.RELATED, StratumReading.PRESENCE, StratumReading.ANY_OF):
         return "E3"
     return "E2"
 
@@ -365,7 +383,7 @@ def _event_table(reading) -> str:
     censoring join happens — whatever the stratifier's own join named it."""
     if reading is StratumReading.RELATED:
         return "<E1>__<E2>"
-    if reading in _PRESENCE_READINGS:
+    if reading in _PRESENCE_READINGS or reading is StratumReading.ANY_OF:
         return "<E1>__p"
     return "<E1>"
 
@@ -449,6 +467,59 @@ def _presence_join(reading: StratumReading):
             )
         )
     return chart
+
+
+#: Column the membership rollup reduces each subject's rows into. Mirrors
+#: `udiagent.stratify.MEMBERSHIP_TAG`, which builds the expressions that write
+#: and read it — the two have to agree on the name.
+_MEMBERSHIP_TAG = "membership tag"
+
+
+def _membership_join(chart=None):
+    """Left-join the event log to "did this subject ever match" per subject.
+
+    The same three moves as `_presence_join`, for a sharper question. Presence
+    asks whether the subject is in the table at all; this asks whether any of
+    its rows carries one of a named set of values — "ever received
+    methotrexate", where the table holds one row per drug given.
+
+    The order is the whole point, and it is the opposite of what `RELATED` does.
+    A subject's rows are reduced to ONE tag before the label is chosen, so a
+    patient on methotrexate and cisplatin is labelled once. Grouping row-wise
+    instead — which is what `RELATED` does, correctly, for a different
+    question — would put that patient in the methotrexate curve AND the
+    everyone-else curve; on pcx every methotrexate patient also received
+    something else, so the comparison curve would contain the entire treated
+    cohort and the chart would mean nothing while looking fine.
+
+    `min` over the tag is what makes the reduction pick a winner: the tag is a
+    group's index as a digit, nulls are skipped, and both executors order
+    strings by codepoint, so the lowest surviving digit is the first-declared
+    group the subject matched.
+    """
+    return (
+        Chart()
+        .source("<E1>", "<E1.url>")
+        .source("<E2>", "<E2.url>")
+        .derive({_MEMBERSHIP_TAG: "<GROUPTAG:E2.F>"}, in_name="<E2>", out_name="<E2>__m")
+        .groupby("<E2.F1:n>", in_name="<E2>__m")
+        .rollup(
+            {_MEMBERSHIP_TAG: Op.min(_MEMBERSHIP_TAG)},
+            in_name="<E2>__m",
+            out_name="<E2>__by_subject",
+        )
+        # LEFT, so a subject with no rows in the table at all still reaches the
+        # curve. It arrives with a null tag and lands in the comparison group,
+        # which is what "everyone else" has to mean: on pcx that is 249 subjects
+        # who were never given chemotherapy, and dropping them would compare
+        # methotrexate against other chemotherapy instead.
+        .join(
+            in_name=["<E1>", "<E2>__by_subject"],
+            on=["<E1.F1>", "<E2.F1>"],
+            kind="left",
+            out_name="<E1>__p",
+        )
+    )
 
 
 def _censor_join(chart, reading):
@@ -566,6 +637,8 @@ def _survival_subject_rows(
         )
     elif reading in _PRESENCE_READINGS:
         chart = _presence_join(reading)
+    elif reading is StratumReading.ANY_OF:
+        chart = _membership_join()
     else:
         chart = Chart().source("<E1>", "<E1.url>")
 
@@ -609,6 +682,12 @@ def _survival_subject_rows(
             Expr.field(stratum),
             Expr.lit(None),
         )
+    if reading is StratumReading.ANY_OF:
+        # The reduced tag becomes the label here, on rows that are already
+        # one-per-subject as far as this column is concerned: the join attached
+        # a single tag to every event row of the subject.
+        derives[_STRATUM_COL] = "<GROUPLABEL:E2.F>"
+
     if reading in _PRESENCE_READINGS:
         # Turn "the marker survived the left join" into a readable label. Named
         # after the tables rather than yes/no, so a legend reads "Radiation" /
@@ -638,6 +717,23 @@ def _survival_subject_rows(
             )
 
     chart = chart.filter(Expr.not_null(time_field)).derive(derives)
+
+    if reading is StratumReading.ANY_OF:
+        # A per-subject fact like presence, so the same shape: one row per
+        # subject carrying its label. `max` over the label is a reduction over
+        # copies of one value — the tag was already reduced before the join.
+        return (
+            chart.groupby(subject_key)
+            .rollup(
+                {
+                    "start day": Op.min("start day"),
+                    "end day": Op.max("end day"),
+                    _CENSOR_DAY: Op.max(_CENSOR_DAY),
+                    _STRATUM_COL: Op.max(_STRATUM_COL),
+                }
+            )
+            .filter(Expr.not_null("start day"))
+        )
 
     if reading in _PRESENCE_READINGS:
         # Presence is a per-subject fact, so this partitions: one row per subject
@@ -1022,6 +1118,16 @@ def _survival_chart(
         assert stratum is None, "a presence reading derives its own stratum column"
         assert not multi_value, "presence is boolean; there is nothing to expand"
         stratum = _PRESENCE_STRATUM
+    elif reading is StratumReading.ANY_OF:
+        # The stratifier IS a field, but it is named inside the `<GROUPTAG:…>`
+        # tag rather than passed here: the grouping and the column it tests are
+        # one binding, and the label is derived rather than read.
+        assert stratum is None, "a membership reading names its column in the tag"
+        assert not multi_value, (
+            "a membership reading already reduces a subject's several values; "
+            "there is nothing left to expand"
+        )
+        stratum = _STRATUM_COL
     elif stratum is None:
         assert reading is None and not multi_value, "reading/multi_value need a stratum"
     else:
@@ -1400,6 +1506,8 @@ def _survival_chart(
             heading = "<E2>"
         elif reading is StratumReading.PRESENCE_2X2:
             heading = "<E2> / <E3>"
+        elif reading is StratumReading.ANY_OF:
+            heading = "<E2.F>"
         else:
             heading = _placeholder_base(stratum)
         chart = chart.title(heading, align="right")
@@ -3505,6 +3613,95 @@ def generate():
     # Stratified by whether the subject appears in another table at all — did this
     # patient receive radiation, have surgery, enrol on any protocol. The
     # stratifier is not a column anywhere, so it is derived from a LEFT join;
+    # Presence of a SUBSET of a related table: not "is the subject in it" but
+    # "is the subject in it with one of these values". The distinction is the
+    # whole template — on pcx, presence in the agents table means "received any
+    # chemotherapy" (664 of 913 subjects), which is not the question anyone asks
+    # of a drug name.
+    df = add_row(
+        df,
+        query_templates=[
+            "Show survival curves for <E1> split by whether the subject ever received <V4>.",
+            "Compare survival for subjects who ever had <E2.F> = <V4> against everyone else.",
+            "Does survival differ for patients who ever got <V4>?",
+            "Survival by whether the patient was ever treated with <V4>.",
+        ],
+        spec=_survival_chart(reading=StratumReading.ANY_OF),
+        chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.ANY_OF)],
+        name_hint="survival_ever_matching",
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Survival curves split by whether a subject EVER appears in a related table with "
+            "one of a named set of values — 'ever received methotrexate', 'ever enrolled on "
+            "protocol X' — against everyone else. Use this when the related table holds one "
+            "row per subject per value (a patient's list of drugs, sites, diagnoses), so a "
+            "subject has SEVERAL values rather than one, and the question is about having a "
+            "particular one of them at any point. Supply the values in `grouping`: this "
+            "template REQUIRES one, and the values it names are the question. "
+            "Prefer this over the presence template, which asks only whether the subject is "
+            "in the table at all (for a drug table that is 'received any treatment'), and "
+            "over the related-field template, which draws one curve per value and lets a "
+            "subject appear in several."
+        ),
+        design_considerations=(
+            "The match is reduced to one answer PER SUBJECT before the label is chosen, which "
+            "is what makes the curves a partition: each subject appears exactly once, and the "
+            "groups add back up to the unstratified cohort. Reading the same table row by row "
+            "instead — which is what the related-field variant does, correctly, for a "
+            "different question — would put a patient given methotrexate and cisplatin in "
+            "both the methotrexate curve and the comparison curve. "
+            "The join is LEFT, so subjects with no row in the table at all join the comparison "
+            "group rather than leaving the cohort: 'everyone else' includes the never-treated. "
+            "Naming several groups draws several curves, resolved by declaration order — a "
+            "subject matching two is placed in the first one named, so order them by what the "
+            "reader should see first. At most ten. "
+            "IMPORTANT: 'ever' is read over the subject's whole history, not as of the start "
+            "event, so a treatment begun after diagnosis still counts. That is immortal-time "
+            "bias by construction — a subject has to survive long enough to be treated — so "
+            "the matched group is flattered, and this chart cannot be read as an effect. "
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
+        ),
+        tasks=(
+            "Compare observed survival between subjects who ever had a particular treatment, "
+            "exposure or attribute recorded and those who did not."
+        ),
+        review_hint=(
+            "The check that matters: the two cohort sizes must ADD UP to the unstratified "
+            "curve's, and so must the deaths. If they exceed it, the match is being read per "
+            "row instead of per subject and subjects are in both curves — on pcx that failure "
+            "is total, since every methotrexate patient also received something else. "
+            "Confirm the comparison group includes subjects absent from the table entirely "
+            "(pcx: 249 with no chemotherapy recorded), not just those with a non-matching "
+            "row. Previews a treatment protocol, where most patients on any given one were "
+            "also on another — the overlap this reading exists to collapse. The motivating "
+            "case, 'ever received methotrexate', needs a value LIST rather than one value: "
+            "that drug is recorded under three spellings."
+        ),
+        preview_bindings={
+            "E1": "Event",
+            "E2": "Medical Therapy",
+            "E1.F1": "research_id",
+            "E1.F2": "event_type",
+            "E1.F3": "event_date",
+            "E2.F1": "research_id",
+            "E2.F": "protocol_name_and_arm",
+            "GROUP": PREVIEW_MEMBERSHIP_GROUPING,
+            "E3": PREVIEW_CENSOR_ENTITY,
+            "E3.F1": PREVIEW_CENSOR_SUBJECT,
+            "E3.F2": PREVIEW_CENSOR_STATUS,
+            "E3.F3": PREVIEW_CENSOR_DATE,
+            "V1": PREVIEW_START_EVENT,
+            "V2": PREVIEW_END_EVENT,
+            "V3": PREVIEW_CENSOR_VALUE,
+        },
+    )
+
     # unlike the other cross-table variant this one PARTITIONS the cohort.
     df = add_row(
         df,

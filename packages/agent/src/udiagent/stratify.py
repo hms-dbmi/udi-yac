@@ -387,3 +387,80 @@ def grouping_expr(grouping, field_name):
             "else": expr,
         }
     return expr
+
+
+# ---------------------------------------------------------------------------
+# Membership of a value set: grouping a stratifier a subject has SEVERAL of
+# ---------------------------------------------------------------------------
+
+#: Column the membership pipeline reduces each subject's rows into. Holds the
+#: index of the first group that subject matched, as a string, or null.
+MEMBERSHIP_TAG = "membership tag"
+
+
+def _membership_groups(grouping):
+    """The nominal groups, checked and capped for a membership grouping.
+
+    The cap does more work here than elsewhere. Group index is carried through a
+    rollup as a *string* digit and recovered with `min`, which orders by
+    codepoint — so "10" would sort before "2" and the eleventh group would
+    outrank the third. Ten named groups is the most that stays sound, and
+    `_check_group_count` already refuses more.
+    """
+    groups = _nominal_groups(grouping)
+    other = _other_label(grouping)
+    _check_group_count(len(groups) + (1 if other is not None else 0))
+    if len(groups) > 10:
+        raise GroupingError(
+            "a membership grouping may name at most 10 groups, because the group "
+            "index travels as a single digit through the per-subject rollup."
+        )
+    return groups, other
+
+
+def membership_tag_expr(grouping, field_name):
+    """Per row: which group this row's value falls in, as a priority index.
+
+    A digit string rather than the label, because the next step reduces it with
+    `min` over the subject's rows and the *order* is what picks the winner.
+    Null where the row matches nothing, so `min` skips it — a subject is tagged
+    by its best-matching row and by nothing else.
+    """
+    groups, _other = _membership_groups(grouping)
+    expr = {"literal": None}
+    # Built from the last group backwards so the first-declared group ends up
+    # the outermost test, which is also the lowest index and therefore the one
+    # `min` keeps.
+    for index, (_label, values) in reversed(list(enumerate(groups))):
+        test = None
+        for value in values:
+            clause = {
+                "op": "==",
+                "left": {"field": field_name},
+                "right": {"literal": value},
+            }
+            test = clause if test is None else {"op": "||", "left": test, "right": clause}
+        expr = {"if": test, "then": {"literal": str(index)}, "else": expr}
+    return expr
+
+
+def membership_label_expr(grouping, tag_column=MEMBERSHIP_TAG):
+    """Per subject: the reduced tag turned into the label the chart draws.
+
+    The null branch carries both cases that mean "none of these": a subject with
+    rows in the table that matched no group, and a subject with no rows at all,
+    which the left join leaves null. Both belong in the same comparison line.
+    """
+    groups, other = _membership_groups(grouping)
+    expr = {"literal": other}
+    for index, (label, _values) in reversed(list(enumerate(groups))):
+        expr = {
+            "if": {
+                "op": "==",
+                "left": {"field": tag_column},
+                "right": {"literal": str(index)},
+            },
+            "then": {"literal": label},
+            "else": expr,
+        }
+    return expr

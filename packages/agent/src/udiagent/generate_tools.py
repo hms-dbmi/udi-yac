@@ -40,9 +40,13 @@ def parse_schema(schema_path: str) -> dict:
 # Template analysis
 # ---------------------------------------------------------------------------
 
-#: A dynamic-stratification grouping tag, `<GROUP:E1.F4>` — the part after the
-#: first colon names the field placeholder it cuts.
-_GROUP_TAG = re.compile(r"(GROUP\d*)(?::(.+))?$")
+#: A dynamic-stratification grouping tag. Three spellings — `<GROUP:E1.F4>`,
+#: `<GROUPTAG:E2.F>`, `<GROUPLABEL:E2.F>` — and all of them are ONE parameter:
+#: a template that spells the grouping in two places (the per-row match and the
+#: per-subject label) still asks the model for it once. The part after the colon
+#: names the field placeholder being grouped. Mirrors `_GROUPING_PLACEHOLDER` in
+#: `vis_generate`, which resolves them.
+_GROUP_TAG = re.compile(r"GROUP(?:TAG|LABEL)?(\d*)(?::(.+))?$")
 
 #: The grouping parameter, declared as a real object rather than JSON inside a
 #: string. Models are markedly worse at emitting a valid JSON document as a
@@ -132,6 +136,12 @@ def _extract_placeholders(template_str: str) -> set[str]:
         if match and match.group(2):
             found.add(match.group(2))
     return found
+
+
+def _grouping_param_key(placeholder: str) -> str | None:
+    """The binding key a grouping placeholder fills, or None if it is not one."""
+    match = _GROUP_TAG.fullmatch(placeholder)
+    return f"GROUP{match.group(1)}" if match else None
 
 
 def _best_placeholders(placeholders) -> list[str]:
@@ -449,9 +459,9 @@ def _generate_single_entity_tool(
     for ph in _best_placeholders(placeholders):
         if ph in ("E", "E.url"):
             continue
-        group = _GROUP_TAG.fullmatch(ph)
-        if group:
-            _add_grouping_param(properties, param_map, seen, group.group(1))
+        group_key = _grouping_param_key(ph)
+        if group_key:
+            _add_grouping_param(properties, param_map, seen, group_key)
             continue
         m = re.match(r'(F\d*|D\d*|V\d*)', ph)
         if not m:
@@ -577,9 +587,9 @@ def _generate_join_entity_tool(
         # the same side of a join. Collapsing every `E1.F*` onto one name would
         # keep only the first and leave the rest unbound — which resolves to an
         # empty field name rather than an error.
-        group = _GROUP_TAG.fullmatch(ph)
-        if group:
-            _add_grouping_param(properties, param_map, seen, group.group(1))
+        group_key = _grouping_param_key(ph)
+        if group_key:
+            _add_grouping_param(properties, param_map, seen, group_key)
             continue
 
         m = re.match(r'(E\d+)\.(F\d*)', ph)

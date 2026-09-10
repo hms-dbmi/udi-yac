@@ -122,19 +122,20 @@ apps/template-studio  ← renders templates, writes review decisions to
 
 ### Placeholders
 
-| Placeholder                 | Resolves to                                                      |
-| --------------------------- | ---------------------------------------------------------------- |
-| `<E>`, `<E1>`, `<E2>`       | entity (table) name                                              |
-| `<E.url>`                   | that entity's data URL                                           |
-| `<F>`, `<F1>`…`<F3>`        | field name on `<E>`                                              |
-| `<E1.F>`, `<E2.F2>`         | field on a specific entity in a join                             |
-| `<D>`, `<D1>`, `<D2>`       | cube **dimension** column                                        |
-| `<M>`                       | cube **measure** column (from the schema, not bound)             |
-| `<MARGINAL:D1,D2>`          | cube marginal filter: listed dims non-null, all others null      |
-| `<E1.r.E2.id.from>` / `.to` | join keys, from the schema's relationships                       |
-| `<V>`, `<V1>`…`<V3>`        | a literal data **value** the model supplies (not a column)       |
-| `<GROUP:E1.F4>`             | the expression cutting that field into strata (see below)        |
-| `:n` / `:q` / `:o` suffix   | constrains the bound field's type (nominal/quantitative/ordinal) |
+| Placeholder                             | Resolves to                                                      |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| `<E>`, `<E1>`, `<E2>`                   | entity (table) name                                              |
+| `<E.url>`                               | that entity's data URL                                           |
+| `<F>`, `<F1>`…`<F3>`                    | field name on `<E>`                                              |
+| `<E1.F>`, `<E2.F2>`                     | field on a specific entity in a join                             |
+| `<D>`, `<D1>`, `<D2>`                   | cube **dimension** column                                        |
+| `<M>`                                   | cube **measure** column (from the schema, not bound)             |
+| `<MARGINAL:D1,D2>`                      | cube marginal filter: listed dims non-null, all others null      |
+| `<E1.r.E2.id.from>` / `.to`             | join keys, from the schema's relationships                       |
+| `<V>`, `<V1>`…`<V3>`                    | a literal data **value** the model supplies (not a column)       |
+| `<GROUP:E1.F4>`                         | the expression cutting that field into strata (see below)        |
+| `<GROUPTAG:E2.F>` / `<GROUPLABEL:E2.F>` | the same grouping, for a stratifier a subject has SEVERAL of     |
+| `:n` / `:q` / `:o` suffix               | constrains the bound field's type (nominal/quantitative/ordinal) |
 
 **Dynamic stratification: `<GROUP:…>`.** A stratified chart splits by a field, one
 stratum per distinct value. That only works when the field's domain is already the
@@ -170,6 +171,33 @@ chart.derive({"stratum": "<GROUP:E1.F4>"}).filter(Expr.not_null("stratum"))
 - **`preview_bindings` can declare a grouping** (`"GROUP": '{"type": …}'`), which
   is how the studio previews a template in its grouped form. The type-directed
   search never invents one, so an undeclared template previews ungrouped.
+
+**A stratifier a subject has SEVERAL of.** `<GROUP:…>` assumes one value per
+subject. A related table holding one row per (subject, value) — a patient's
+drugs, sites, diagnoses — breaks that assumption, and grouping it row-wise puts
+a subject with a matching and a non-matching row in _both_ curves. On pcx that
+failure is total: every methotrexate patient also received something else, so
+the comparison curve holds the entire treated cohort and the chart looks fine.
+
+For those, use the pair. They read the **same `GROUP` binding** — one parameter,
+however many places the template spells it:
+
+- `<GROUPTAG:E2.F>` in a `derive` on the related table: the index of the first
+  matching group, as a digit string, null for no match.
+- reduce it with `rollup {tag: min(tag)}` per subject, then LEFT join. `min`
+  over a string skips nulls and orders by codepoint in both executors, so the
+  lowest surviving digit is the first-declared group the subject matched — which
+  is why the group cap of ten matters here beyond legibility: an eleventh group
+  would sort `"10"` before `"2"`.
+- `<GROUPLABEL:E2.F>` turns the reduced tag into the label.
+
+LEFT, so a subject with no row in the table at all still reaches the curve and
+lands in the comparison group. That is what makes "everyone else" mean everyone
+else rather than everyone else _who was treated_.
+
+> The invariant to test is that the curves **partition**: cohort sizes and death
+> counts sum to the unstratified curve's. Reduce after labelling instead and they
+> exceed it, which is the only visible symptom.
 
 The payload's two shapes, and everything that validates them, live in
 `udiagent.stratify`; the editor half is `packages/chat/src/features/dashboard/utils/grouping.ts`.
