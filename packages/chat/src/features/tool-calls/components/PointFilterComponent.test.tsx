@@ -9,8 +9,9 @@
  * dropped (removeLongDomains) must also render, falling back to the
  * clicked values as options.
  */
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import { UDIChatProvider, useDataPackage, useDataPackageStore } from '@/app/UDIChatContext';
 import { PointFilterComponent } from './PointFilterComponent';
@@ -32,6 +33,12 @@ const pkg = {
         ],
       },
     },
+    {
+      name: 'Donor',
+      path: 'donor.csv',
+      'udi:row_count': 10,
+      schema: { fields: [{ name: 'sex', 'udi:data_type': 'nominal' }] },
+    },
   ],
 } as unknown as DataPackage;
 
@@ -50,6 +57,13 @@ const domains: DataFieldDomain[] = [
     type: 'point',
     fieldDescription: '',
     domain: { values: ['Deceased', 'Progressive', 'Recurrence'] },
+  },
+  {
+    entity: 'Donor',
+    field: 'sex',
+    type: 'point',
+    fieldDescription: '',
+    domain: { values: ['Female', 'Male'] },
   },
 ];
 
@@ -81,20 +95,32 @@ function Harness({ children, labels }: { children: ReactNode; labels: LabelOverr
       dataPackage: packageWith(labels),
       dataFieldDomains: domains,
       loadingPhase: 'ready',
+      entityNames: ['Event', 'Donor'],
+      categoricalSourceFields: {
+        Event: ['organization_name', 'event_type', 'protocol_name_and_arm'],
+        Donor: ['sex'],
+      },
     });
   }, [dataPackageStore, labels]);
   return loadingPhase === 'ready' ? <>{children}</> : null;
 }
 
-function renderFilter(selection: DataSelection, labels: LabelOverrides = {}) {
+function renderFilter(
+  selection: DataSelection,
+  {
+    tweakable = false,
+    onCommit = () => {},
+    ...labels
+  }: LabelOverrides & { tweakable?: boolean; onCommit?: (s: DataSelection) => void } = {},
+) {
   return render(
     <UDIChatProvider>
       <Harness labels={labels}>
         <PointFilterComponent
           dataSelection={selection}
-          tweakable={false}
+          tweakable={tweakable}
           filterKey="uuid-1"
-          onCommit={() => {}}
+          onCommit={onCommit}
         />
       </Harness>
     </UDIChatProvider>,
@@ -150,8 +176,72 @@ describe('PointFilterComponent — chart-click selections', () => {
     expect(screen.getByText('ACNS0331 Arm B')).toBeTruthy();
   });
 
+  it('renders unchecked, not an error, for a cleared field (toolbar chip clear)', () => {
+    renderFilter({ dataSourceKey: 'Event', type: 'point', selection: { organization_name: [] } });
+    expect(screen.queryByText(/Invalid filter/)).toBeNull();
+    expect(screen.getByText('CHOP')).toBeTruthy();
+  });
+
   it('still errors when the selection has no fields at all', () => {
     renderFilter({ dataSourceKey: 'Event', type: 'point', selection: {} });
     expect(screen.getByText(/Invalid filter/)).toBeTruthy();
+  });
+});
+
+/**
+ * Same Base UI Select quirk as the interval filter: pressing the
+ * already-selected item (a common way to dismiss the menu) fires
+ * `onValueChange`, and both pickers clear the checked values.
+ */
+describe('PointFilterComponent — entity/field pickers', () => {
+  it('keeps checked values when a menu is dismissed by re-picking the same option', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderFilter(
+      {
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { organization_name: ['CHOP'] },
+      },
+      { tweakable: true, onCommit },
+    );
+
+    // [entity, field] pickers, rendered in that order.
+    const fieldTrigger = screen.getAllByRole('combobox')[1];
+    await user.click(fieldTrigger);
+    const list = await waitFor(() => screen.getByRole('listbox'));
+    const same = Array.from(list.querySelectorAll<HTMLElement>('[role="option"]')).find(
+      (o) => o.textContent === 'organization_name',
+    )!;
+    await user.click(same);
+
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the new entity's first field when the current one is absent", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderFilter(
+      {
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { organization_name: ['CHOP'] },
+      },
+      { tweakable: true, onCommit },
+    );
+
+    const entityTrigger = screen.getAllByRole('combobox')[0];
+    await user.click(entityTrigger);
+    const list = await waitFor(() => screen.getByRole('listbox'));
+    const donor = Array.from(list.querySelectorAll<HTMLElement>('[role="option"]')).find(
+      (o) => o.textContent === 'Donor',
+    )!;
+    await user.click(donor);
+
+    // Donor has no `organization_name`; carrying it over would commit a filter
+    // that renders as "Error: Invalid filter."
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ dataSourceKey: 'Donor', selection: { sex: [] } }),
+    );
   });
 });

@@ -214,17 +214,34 @@ describe('dataFiltersStore', () => {
     expect(store.getState().internalDataSelections).toBe(before);
   });
 
-  it('clearFilter nulls the selection but preserves the key', () => {
+  it("clearFilter empties an LLM filter's fields, keeping the key and the field names", () => {
     const store = createDataFiltersStore();
     store.getState().setDataSelection('message-filter-0-0', {
       dataSourceKey: 'donors',
-      type: 'interval',
-      selection: { age: [0, 10] },
+      type: 'point',
+      selection: { sex: ['male'] },
     });
     store.getState().clearFilter('message-filter-0-0');
     const sel = store.getState().dataSelections['message-filter-0-0'];
     expect(sel).toBeDefined();
-    expect(sel.selection).toBeNull();
+    // Nulling the selection left the message-anchored widget with no fields,
+    // which renders as "Error: Invalid filter." Keep the field, drop values —
+    // the shape the widget's own clear-all button produces.
+    expect(sel.selection).toEqual({ sex: [] });
+  });
+
+  it('clearFilter keeps every field of a multi-field LLM filter', () => {
+    const store = createDataFiltersStore();
+    store.getState().setDataSelection('message-filter-0-0', {
+      dataSourceKey: 'donors',
+      type: 'point',
+      selection: { sex: ['male'], organ: ['Kidney'] },
+    });
+    store.getState().clearFilter('message-filter-0-0');
+    expect(store.getState().dataSelections['message-filter-0-0'].selection).toEqual({
+      sex: [],
+      organ: [],
+    });
   });
 
   it('clearFilter with a `uuid::field` key drops only that field of a split point filter', () => {

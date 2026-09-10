@@ -150,6 +150,16 @@ export function generateFilterMessage(key: string, selection: DataSelection): Me
 
 // --- Store ---
 
+/** Same shape the filter widgets' clear-all produces: fields kept, values dropped. */
+function emptySelection(sel: DataSelection): DataSelection {
+  if (!sel.selection) return sel;
+  const fields = Object.keys(sel.selection);
+  return {
+    ...sel,
+    selection: Object.fromEntries(fields.map((f) => [f, []])) as DataSelection['selection'],
+  };
+}
+
 export function createDataFiltersStore() {
   return createStore<DataFiltersState>()((set, get) => ({
     dataSelections: {},
@@ -303,7 +313,13 @@ export function createDataFiltersStore() {
         return;
       }
 
-      if (nextData[key]) nextData[key] = { ...nextData[key], selection: null };
+      // An LLM filter's widget is anchored to its chat message, so it stays
+      // rendered after a clear. Nulling the selection left it with no fields,
+      // which PointFilterComponent renders as "Error: Invalid filter." — empty
+      // the fields instead, matching the widget's own clear-all button.
+      // Brush selections have no such anchor: null removes their widget too,
+      // which is the intended "remove this filter" for a chip.
+      if (nextData[key]) nextData[key] = emptySelection(nextData[key]);
       if (nextInternal[key]) nextInternal[key] = { ...nextInternal[key], selection: null };
       set({ dataSelections: nextData, internalDataSelections: nextInternal });
     },

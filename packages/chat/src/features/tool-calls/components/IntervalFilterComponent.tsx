@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { RotateCcw } from 'lucide-react';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '@/features/dashboard';
+import type { DataFieldDomain } from '@/types/dataPackage';
 import type { RangeSelection } from 'udi-toolkit/react';
 
 interface IntervalFilterComponentProps {
@@ -32,6 +33,22 @@ function formatNumber(n: number): string {
   return Number.isInteger(n) ? n.toString() : n.toFixed(2);
 }
 
+/**
+ * Full extent of an (entity, field) interval domain. Fields with no domain, or
+ * a non-interval one, fall back to a neutral 0-100 — the widget renders
+ * "Error: Invalid filter." for those anyway.
+ */
+function intervalExtent(
+  getDomainForField: (entity: string, field: string) => DataFieldDomain | undefined,
+  entity: string,
+  field: string,
+): { min: number; max: number } {
+  const domain = getDomainForField(entity, field);
+  if (!domain || domain.type !== 'interval') return { min: 0, max: 100 };
+  const { min, max } = domain.domain as { min: number; max: number };
+  return { min, max };
+}
+
 export function IntervalFilterComponent({
   dataSelection,
   fieldIndex,
@@ -49,14 +66,10 @@ export function IntervalFilterComponent({
   const entity = dataSelection.dataSourceKey;
   const field = Object.keys(dataSelection.selection ?? {})[fieldIndex] ?? '';
 
-  const rangeMinMax = useMemo(() => {
-    const domain = getDomainForField(entity, field);
-    if (!domain || domain.type !== 'interval') return { min: 0, max: 100 };
-    return {
-      min: (domain.domain as { min: number; max: number }).min,
-      max: (domain.domain as { min: number; max: number }).max,
-    };
-  }, [getDomainForField, entity, field]);
+  const rangeMinMax = useMemo(
+    () => intervalExtent(getDomainForField, entity, field),
+    [getDomainForField, entity, field],
+  );
 
   const storeRange = useMemo(() => {
     const arr = dataSelection.selection?.[field] as number[] | undefined;
@@ -165,36 +178,44 @@ export function IntervalFilterComponent({
     });
   }, [commitToStore, rangeMinMax, trackEvent, entity, field]);
 
+  // Base UI's Select fires `onValueChange` on every item press, including a
+  // press on the already-selected item — a common way to dismiss the menu.
+  // Both handlers below reset the range to the field's full domain, so an
+  // unguarded re-commit would wipe a narrowed range just from opening and
+  // closing the menu. Bail out when the value hasn't actually changed.
   const handleEntityChange = useCallback(
     (val: string | null) => {
-      if (!val) return;
+      if (!val || val === entity) return;
+      // The field and its extent both belong to the entity being committed, so
+      // resolve them against `val` rather than the outgoing entity: keep the
+      // current field when the new entity has it, otherwise fall back to that
+      // entity's first quantitative field. Only when it has none at all does
+      // the field carry over unchanged, leaving the widget to surface the
+      // invalid state instead of inventing a field.
+      const newFieldOptions = quantitativeSourceFields?.[val] ?? [];
+      const nextField = newFieldOptions.includes(field) ? field : (newFieldOptions[0] ?? field);
+      const extent = intervalExtent(getDomainForField, val, nextField);
       commit({
         ...dataSelection,
         dataSourceKey: val,
-        selection: { [field]: [rangeMinMax.min, rangeMinMax.max] },
+        selection: { [nextField]: [extent.min, extent.max] },
       });
       trackEvent('filter_entity_changed', {
         filterType: 'interval',
         entity: val,
-        field,
+        field: nextField,
       });
     },
-    [commit, dataSelection, field, rangeMinMax, trackEvent],
+    [commit, dataSelection, entity, field, quantitativeSourceFields, getDomainForField, trackEvent],
   );
 
   const handleFieldChange = useCallback(
     (val: string | null) => {
-      if (!val) return;
-      const newDomain = getDomainForField(entity, val);
-      const min =
-        newDomain?.type === 'interval' ? (newDomain.domain as { min: number; max: number }).min : 0;
-      const max =
-        newDomain?.type === 'interval'
-          ? (newDomain.domain as { min: number; max: number }).max
-          : 100;
+      if (!val || val === field) return;
+      const extent = intervalExtent(getDomainForField, entity, val);
       commit({
         ...dataSelection,
-        selection: { [val]: [min, max] },
+        selection: { [val]: [extent.min, extent.max] },
       });
       trackEvent('filter_field_changed', {
         filterType: 'interval',
@@ -202,7 +223,7 @@ export function IntervalFilterComponent({
         field: val,
       });
     },
-    [commit, dataSelection, getDomainForField, entity, trackEvent],
+    [commit, dataSelection, getDomainForField, entity, field, trackEvent],
   );
 
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
