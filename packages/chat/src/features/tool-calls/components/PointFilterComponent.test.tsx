@@ -132,6 +132,12 @@ describe('PointFilterComponent — chart-click selections', () => {
     expect(screen.getByText('ACNS0331 Arm B')).toBeTruthy();
   });
 
+  it('renders unchecked, not an error, for a cleared field (toolbar chip clear)', () => {
+    renderFilter({ dataSourceKey: 'Event', type: 'point', selection: { organization_name: [] } });
+    expect(screen.queryByText(/Invalid filter/)).toBeNull();
+    expect(screen.getByText('CHOP')).toBeTruthy();
+  });
+
   it('still errors when the selection has no fields at all', () => {
     renderFilter({ dataSourceKey: 'Event', type: 'point', selection: {} });
     expect(screen.getByText(/Invalid filter/)).toBeTruthy();
