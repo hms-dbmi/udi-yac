@@ -302,3 +302,20 @@ def test_a_broken_agent_returns_a_failure_rather_than_raising(caplog):
     failed = [r for r in caplog.records if r.levelno >= logging.ERROR]
     assert failed and failed[0].exc_info, "the exception must reach the log"
     assert all(f"[vis {req_id}]" in r.getMessage() for r in caplog.records)
+
+
+def test_the_prompt_steers_a_named_value_toward_a_grouping_tool(monkeypatch):
+    """Asked to split by "whether the patient received methotrexate", the model
+    reached for a presence tool — which, for a table holding one row per drug
+    given, answers "had any chemotherapy". The rule points at the `grouping`
+    argument rather than at a tool name, so it survives templates being added
+    and renamed; this pins that it reaches the prompt at all.
+    """
+    seen = _stub_tool_call(monkeypatch, [None])
+    vg._execute_generate(skill=None, context=_context())
+
+    system = seen[0][0]["content"]
+    assert "Naming particular values" in system
+    assert "`grouping` argument" in system
+    # And it says what goes wrong, not just what to do.
+    assert "had any treatment" in system

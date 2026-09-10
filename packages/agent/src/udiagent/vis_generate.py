@@ -1592,6 +1592,21 @@ def _execute_generate(skill, context):
             "You are a data visualization assistant. The user wants a visualization "
             "from the available datasets. Select the most appropriate visualization "
             "tool and provide the correct arguments.\n\n"
+            # Named values versus table membership. Asked to split by "whether the
+            # patient received methotrexate", the model reaches for a tool that
+            # tests presence in a table — which for a table holding one row per
+            # drug given answers "had any chemotherapy", a far larger group, and
+            # looks entirely reasonable on the chart. Pointed at the `grouping`
+            # argument rather than at tool names, because that is the part of the
+            # schema the model can check, and it stays true as templates come and go.
+            "## Naming particular values\n\n"
+            "When the request names particular values — a specific drug, protocol, "
+            "diagnosis or site — choose a tool that accepts a `grouping` argument "
+            "and put those values in it. A tool without one can only split by "
+            "whether a subject appears in a table at all: for a table with one row "
+            "per drug given, that answers 'had any treatment', not 'had that drug'. "
+            "Name every spelling of the value you can see in the column, since one "
+            "drug or protocol is often recorded several ways.\n\n"
             f"## Available Datasets\n\n{data_schema_simple}"
         )
         # Some tools take a literal data value (a `value*` parameter) rather than
