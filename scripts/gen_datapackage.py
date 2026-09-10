@@ -9,6 +9,12 @@ Stdlib only — run without installing anything:
 
     python3 scripts/gen_datapackage.py sample-data/pcx
 
+Column descriptions are the one thing profiling cannot infer, and they reach
+the LLM (a bare number column called `age_at_diagnosis` is read as years unless
+something says days). Supply them with `--descriptions`, a JSON file of
+``{"Table.column": "text"}`` — kept beside the CSVs so a regenerated manifest
+does not lose them.
+
 Writes <dir>/datapackage.json. See sample-data/readme.md for the format.
 Run `python3 scripts/gen_datapackage.py --selftest` to check the inference.
 """
@@ -178,8 +184,30 @@ def _annotate_cube(res: dict, measure: str) -> None:
             )
 
 
+def _apply_descriptions(resources: list[dict], descriptions: dict[str, str]) -> int:
+    """Fill in `description` from ``{"Table.column": text}``. Returns matches.
+
+    Keyed by the *humanized* table name, the same name specs and foreign keys
+    use, so a description is written against the table as the rest of the system
+    sees it rather than against a filename the strips could change.
+    """
+    applied = 0
+    for resource in resources:
+        for field in resource["schema"]["fields"]:
+            text = descriptions.get(f"{resource['name']}.{field['name']}")
+            if text:
+                field["description"] = text
+                applied += 1
+    return applied
+
+
 def build_package(
-    csv_dir: Path, name: str, udi_path: str, strips: list[str], measure: str | None = None
+    csv_dir: Path,
+    name: str,
+    udi_path: str,
+    strips: list[str],
+    measure: str | None = None,
+    descriptions: dict[str, str] | None = None,
 ) -> dict:
     resources = []
     for path in sorted(csv_dir.glob("*.csv")):
@@ -203,6 +231,24 @@ def build_package(
 
     if not measure:
         _infer_foreign_keys(resources)
+
+    if descriptions:
+        applied = _apply_descriptions(resources, descriptions)
+        unmatched = sorted(
+            key
+            for key in descriptions
+            if not any(
+                key == f"{r['name']}.{f['name']}"
+                for r in resources
+                for f in r["schema"]["fields"]
+            )
+        )
+        print(f"applied {applied} column description(s)")
+        # Loud, because a typo here is otherwise invisible: the manifest simply
+        # comes out without the description it was meant to carry.
+        for key in unmatched:
+            print(f"  ⚠ no such column: {key}", file=sys.stderr)
+
     return {
         "name": name,
         "resources": resources,
@@ -264,6 +310,14 @@ def _selftest() -> None:
             }
         ], (table["name"], table["schema"]["foreignKeys"])
 
+    # Descriptions are keyed by the humanized table name and land on the field
+    # itself; a key naming no column is reported rather than applied.
+    described = prof("id,x\n1,a\n", "wide")
+    assert _apply_descriptions([described], {"wide.x": "an x", "wide.nope": "?"}) == 1
+    by_name = {f["name"]: f for f in described["schema"]["fields"]}
+    assert by_name["x"]["description"] == "an x", by_name["x"]
+    assert by_name["id"]["description"] == "", by_name["id"]
+
     print("selftest OK")
 
 
@@ -289,6 +343,12 @@ def main() -> None:
         "the measure, every other column a dimension (null = aggregated over). "
         "Skips foreign-key inference, which is meaningless for a cube.",
     )
+    ap.add_argument(
+        "--descriptions",
+        type=Path,
+        help='JSON file of {"Table.column": "description"} to write into the manifest '
+        "(default: <dir>/field_descriptions.json when present)",
+    )
     ap.add_argument("-o", "--out", help="output path (default: <dir>/datapackage.json)")
     ap.add_argument("--selftest", action="store_true", help="run inference self-check and exit")
     args = ap.parse_args()
@@ -304,7 +364,17 @@ def main() -> None:
     udi_path = args.udi_path or f"./data/{csv_dir.name}/"
     out = Path(args.out) if args.out else csv_dir / "datapackage.json"
 
-    pkg = build_package(csv_dir, name, udi_path, args.strip, args.measure)
+    descriptions_path = args.descriptions
+    if descriptions_path is None:
+        default = csv_dir / "field_descriptions.json"
+        descriptions_path = default if default.is_file() else None
+    elif not descriptions_path.is_file():
+        ap.error(f"--descriptions file not found: {descriptions_path}")
+    descriptions = (
+        json.loads(descriptions_path.read_text(encoding="utf-8")) if descriptions_path else None
+    )
+
+    pkg = build_package(csv_dir, name, udi_path, args.strip, args.measure, descriptions)
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])

@@ -281,3 +281,86 @@ def test_the_survival_template_pairs_its_events_with_the_event_column():
         "V2": {"E1.F2"},
         "V3": {"E2.F2"},
     }
+
+
+def test_one_column_cannot_be_both_the_join_key_and_the_matched_column():
+    """The half of the survival misbinding that domains cannot catch.
+
+    `research_id` carries hundreds of values, so the client sends no domain for
+    it and the value check above has nothing to compare against. But binding one
+    column to both the join key and the column a literal is tested on is wrong
+    on its face: it asks the join to match rows whose subject id happens to
+    equal 'Initial CNS Tumor'. Every column exists, every type is right, and the
+    chart comes out empty.
+    """
+    from udiagent.schema import parse_schema_from_dict
+    from udiagent.vis_generate import (
+        _load_generated_tools,
+        shared_entities_for,
+        validate_bindings,
+    )
+
+    def table(name, fields):
+        return {
+            "name": name,
+            "path": f"{name}.csv",
+            "udi:row_count": 10,
+            "schema": {"fields": [{"name": f, "udi:data_type": t} for f, t in fields]},
+        }
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                table(
+                    "events",
+                    [
+                        ("subject", "nominal"),
+                        ("event", "nominal"),
+                        ("day", "quantitative"),
+                    ],
+                ),
+                table("demographics", [("subject", "nominal"), ("sex", "nominal")]),
+                table(
+                    "patients",
+                    [
+                        ("subject", "nominal"),
+                        ("status", "nominal"),
+                        ("asof", "quantitative"),
+                    ],
+                ),
+            ],
+        }
+    )
+    _defs, dispatch, templates, _tags = _load_generated_tools()
+    tool = next(n for n in dispatch if n.endswith("_line_survival_related"))
+    index, param_map = dispatch[tool]
+    good = {
+        "entity1": "events",
+        "entity1_field1": "subject",
+        "entity1_field2": "event",
+        "entity1_field3": "day",
+        "entity2": "demographics",
+        "entity2_field1": "subject",
+        "entity2_field": "sex",
+        "entity3": "patients",
+        "entity3_field1": "subject",
+        "entity3_field2": "status",
+        "entity3_field3": "asof",
+        "value1": "start",
+        "value2": "death",
+        "value3": "alive",
+    }
+
+    def check(args):
+        bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+        return validate_bindings(
+            templates[index], bindings, schema, None, shared_entities_for(tool)
+        )
+
+    assert check(good) == []
+
+    # The event log's join key bound to its event-type column, as the model did.
+    errors = check({**good, "entity1_field1": "event"})
+    assert errors, "binding the join key to the matched column must be refused"
+    assert "join key" in errors[0] and "event" in errors[0], errors

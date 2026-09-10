@@ -26,6 +26,7 @@ from udiagent.schema import parse_schema_from_dict
 from udiagent.vis_generate import (
     _load_generated_tools,
     instantiate_template,
+    shared_entities_for,
     validate_bindings,
 )
 
@@ -648,6 +649,7 @@ def test_cross_table_survival_reads_membership_and_overlaps(tmp_path):
     args.update(_censor_args(param_map))
     bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
     spec = instantiate_template(templates[idx], bindings, schema)
+
     engine = QueryEngine(
         DuckDBConnector(
             views={
@@ -1259,3 +1261,162 @@ def test_cutting_a_nominal_field_at_numbers_is_refused():
     )
     assert spec is None
     assert any("nominal" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# One table, two roles
+# ---------------------------------------------------------------------------
+
+#: A subject-level table carrying BOTH the numeric stratifier and the censoring
+#: status. This is pcx's `Patient` in miniature — `age_at_diagnosis` next to
+#: `vital_status` / `vital_status_date` — and it is the shape that made "survival
+#: stratified by age at diagnosis" unanswerable: every entity had to be a
+#: different table, so the censoring source was bound to some other table whose
+#: status column held none of the values the template compares against.
+_SUBJECTS = """subject,age_days,status,asof
+s1,200,deceased,300
+s2,1500,deceased,2000
+s3,400,alive,1800
+s4,2000,deceased,900
+s5,3000,alive,2500
+"""
+
+_SPAN_EVENTS = """subject,event,day
+s1,start,0
+s1,death,300
+s2,start,0
+s2,death,2000
+s3,start,0
+s4,start,0
+s4,death,900
+s5,start,0
+"""
+
+
+def _one_table_args(param_map, table):
+    """Bind the stratifier and the censoring source to the same table."""
+    args = {
+        "entity1": "events",
+        "entity1_field1": "subject",
+        "entity1_field2": "event",
+        "entity1_field3": "day",
+        "entity2": table,
+        "entity2_field1": "subject",
+        "entity2_field": "age_days",
+        "entity3": table,
+        "entity3_field1": "subject",
+        "entity3_field2": "status",
+        "entity3_field3": "asof",
+        "value1": "start",
+        "value2": "death",
+        "value3": "alive",
+        "grouping": json.dumps({"type": "quantitative", "cuts": [1095]}),
+    }
+    return {param_map[k]: v for k, v in args.items() if k in param_map}
+
+
+def test_the_censoring_source_may_be_the_stratifier_s_own_table(tmp_path):
+    """The whole point of `shared_entities`, end to end through DuckDB.
+
+    Distinctness is still the default — it stops a template crossing a table with
+    itself — but the censoring source is not crossed with anything: it is read for
+    one per-subject fact and left-joined. A template says so, and this is what
+    that permission buys.
+    """
+    events = tmp_path / "events.csv"
+    events.write_text(_SPAN_EVENTS)
+    subjects = tmp_path / "subjects.csv"
+    subjects.write_text(_SUBJECTS)
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "events",
+                    "path": str(events),
+                    "udi:row_count": 8,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "event", "udi:data_type": "nominal"},
+                            {"name": "day", "udi:data_type": "quantitative"},
+                        ]
+                    },
+                },
+                {
+                    "name": "subjects",
+                    "path": str(subjects),
+                    "udi:row_count": 5,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "age_days", "udi:data_type": "quantitative"},
+                            {"name": "status", "udi:data_type": "nominal"},
+                            {"name": "asof", "udi:data_type": "quantitative"},
+                        ]
+                    },
+                },
+            ],
+        }
+    )
+
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith("_line_survival_related_numeric"))
+    idx, param_map = dispatch[tool]
+    bindings = _one_table_args(param_map, "subjects")
+
+    assert validate_bindings(templates[idx], bindings, schema) == [
+        "entity2 and entity3 cannot be the same ('subjects')"
+    ], "the default is still distinctness"
+    assert (
+        validate_bindings(
+            templates[idx], bindings, schema, None, shared_entities_for(tool)
+        )
+        == []
+    )
+
+    spec = instantiate_template(templates[idx], bindings, schema)
+
+    # One table, named once. The template declares a source per role, so both
+    # roles resolving to `subjects` used to emit it twice — which the browser
+    # executor, keying its loaded tables by name, read as a source still
+    # loading, so the chart waited on a table it already had and never rendered.
+    assert [src["name"] for src in spec["source"]] == ["events", "subjects"]
+
+    engine = QueryEngine(
+        DuckDBConnector(views={"events": str(events), "subjects": str(subjects)}),
+        table_map={"events": "events", "subjects": "subjects"},
+    )
+    rows = engine.run_query(
+        source=spec["source"], transformation=spec["transformation"]
+    )["displayData"]
+
+    # s1 (200) and s3 (400) under the cut, s2/s4/s5 at or over it; the deaths are
+    # s1 below and s2, s4 above. A chart, not just a spec that validated.
+    assert _cohorts(rows, "stratum") == {"< 1095": (2, 1), "≥ 1095": (3, 2)}
+
+
+def test_only_the_entities_a_template_names_may_be_shared():
+    """The exemption is per template and per entity, not a blanket relaxation.
+
+    The 2x2 presence template crosses two tables' membership: bind both sides to
+    one table and every subject lands in the same corner of the cross, which is
+    exactly the degenerate chart the distinctness rule exists to prevent.
+    """
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, _templates, _tags = generated
+    for suffix, shared in (
+        ("_line_survival_related_numeric", ["E3"]),
+        ("_line_survival_presence_2x2", ["E4"]),
+        ("_line_survival", ["E2"]),
+    ):
+        tool = next(n for n in dispatch if n.endswith(suffix))
+        assert list(shared_entities_for(tool)) == shared, tool
+
+    # A template that declares nothing gets nothing.
+    plain = next(n for n in dispatch if n.endswith("_barchart_count_vert_grouped"))
+    assert shared_entities_for(plain) == ()

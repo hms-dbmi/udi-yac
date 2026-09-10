@@ -353,12 +353,51 @@ def _add_grouping_param(
     param_map[param_name] = group_key
 
 
-def _build_field_description(field_type: str | None, encoding_info: dict | None) -> str:
+def _extract_field_roles(spec_template: str) -> dict[str, str]:
+    """What each field placeholder is FOR: ``{placeholder base: role sentence}``.
+
+    A type and an encoding are not always enough to tell two parameters apart.
+    The survival templates ask each table for its record id and, right beside
+    it, for the column a literal is matched against — both nominal, neither
+    encoded, and so described identically ("nominal field."). The model has
+    swapped them, joining an event log to a status table on
+    `event_type = vital_status`: nothing matches, every curve is empty, and
+    validation sees only columns that exist with the types asked for. Reading
+    the role off the template is what makes the two parameters distinguishable
+    at the point the model fills them in.
+    """
+    from udiagent.vis_generate import join_key_placeholders, value_field_pairs
+
+    roles = {}
+    for base in join_key_placeholders(spec_template):
+        roles[base] = (
+            "the JOIN KEY on this table: the column holding the shared record id "
+            "(e.g. a subject or patient id). Both sides of a join must name "
+            "columns holding the SAME identifiers, or nothing matches"
+        )
+    targets: dict[str, set[str]] = {}
+    for value_key, fields in value_field_pairs(spec_template).items():
+        for base in fields:
+            targets.setdefault(base, set()).add(value_key)
+    for base, value_keys in targets.items():
+        # A join key that is also value-matched keeps the join wording: getting
+        # the join wrong empties the chart, which is the worse failure.
+        if base in roles:
+            continue
+        params = ", ".join(f"value{key[1:]}" for key in sorted(value_keys))
+        roles[base] = f"the column whose values {params} name"
+    return roles
+
+
+def _build_field_description(
+    field_type: str | None, encoding_info: dict | None, role: str | None = None
+) -> str:
     """Build a descriptive string for a field parameter.
 
     Args:
         field_type: Type from placeholder suffix (:n, :q, :o) or None.
         encoding_info: {"encodings": [...], "declared_type": str|None} from spec template.
+        role: What the template uses the binding for (see `_extract_field_roles`).
     """
     # Prefer placeholder suffix type, fall back to declared type from encoding
     resolved_type = field_type
@@ -367,10 +406,13 @@ def _build_field_description(field_type: str | None, encoding_info: dict | None)
     type_str = resolved_type or "any type"
 
     encodings = encoding_info.get("encodings", []) if encoding_info else []
+    text = f"{type_str} field"
     if encodings:
         labels = [_ENCODING_LABELS.get(e, e) for e in encodings]
-        return f"{type_str} field, encodes {', '.join(labels)}."
-    return f"{type_str} field."
+        text += f", encodes {', '.join(labels)}"
+    if role:
+        text += f" — {role}"
+    return text + "."
 
 
 # ---------------------------------------------------------------------------
@@ -392,6 +434,7 @@ def _generate_single_entity_tool(
     tool_name = _derive_tool_name(template, index)
     description = _build_tool_description(template)
     encoding_info = _extract_encoding_info(spec_template)
+    field_roles = _extract_field_roles(spec_template)
 
     properties = {
         "entity": {"type": "string", "description": "The data entity (table) to visualize."},
@@ -428,7 +471,9 @@ def _generate_single_entity_tool(
         # built above, and shadowing it here used to leak the last parameter's
         # blurb ("any type field.") out as the tool's own description — leaving
         # every single-entity tool with nothing for the model to select on.
-        param_description = _build_field_description(field_type, encoding_info.get(base))
+        param_description = _build_field_description(
+            field_type, encoding_info.get(base), field_roles.get(base)
+        )
         if base.startswith("D"):
             param_description = "cube " + param_description.replace("field", "dimension", 1)
         elif base.startswith("V"):
@@ -483,6 +528,7 @@ def _generate_join_entity_tool(
     tool_name = _derive_tool_name(template, index)
     description = _build_tool_description(template)
     encoding_info = _extract_encoding_info(spec_template)
+    field_roles = _extract_field_roles(spec_template)
 
     # One entity parameter per numbered entity the template actually mentions,
     # rather than a fixed pair: a template can bring in a third table (crossing
@@ -495,17 +541,26 @@ def _generate_join_entity_tool(
         "E1": "The primary data entity (table).",
         "E2": "The secondary data entity (table) to join with.",
     }
+    # Entities the template lets share a table with another. Worth saying out
+    # loud: the model is otherwise told every entity must be distinct, and a
+    # schema that keeps two of these roles on one table (the survival censoring
+    # status beside the stratifier, both per-subject facts) then looks
+    # unchartable, so it binds some other table and the values stop matching.
+    shared = set(template.get("shared_entities") or [])
     properties = {}
     required = []
     param_map = {}
     for key in entity_keys:
         param = f"entity{key[1:]}"
-        properties[param] = {
-            "type": "string",
-            "description": entity_descriptions.get(
-                key, f"An additional data entity (table) to join with ({param})."
-            ),
-        }
+        description = entity_descriptions.get(
+            key, f"An additional data entity (table) to join with ({param})."
+        )
+        if key in shared:
+            description += (
+                " MAY be the same table as another entity here, when one table "
+                "carries both roles."
+            )
+        properties[param] = {"type": "string", "description": description}
         required.append(param)
         param_map[param] = key
 
@@ -552,7 +607,7 @@ def _generate_join_entity_tool(
         else:
             field_type = _get_field_type_for_placeholder(ph)
             param_description = _build_field_description(
-                field_type, encoding_info.get(base)
+                field_type, encoding_info.get(base), field_roles.get(base)
             )
         properties[param_name] = {"type": "string", "description": param_description}
         required.append(param_name)
@@ -606,6 +661,7 @@ def generate(template_sources, output_path: str):
     spec_templates = []
     tool_dispatch = {}
     tool_tags = {}
+    tool_shared_entities = {}
     tool_name_set = {}
     sources_used = []
     counter = 0
@@ -639,6 +695,9 @@ def generate(template_sources, output_path: str):
             tool_defs.append(tool_def)
             tool_dispatch[tool_name] = (template_idx, param_map)
             tool_tags[tool_name] = list(template.get("tags") or default_tags)
+            tool_shared_entities[tool_name] = list(
+                template.get("shared_entities") or []
+            )
             counter += 1
 
     output = [
@@ -670,6 +729,11 @@ def generate(template_sources, output_path: str):
         '',
         '# Tags per tool name (drives per-request template selection)',
         f'TOOL_TAGS = {pprint.pformat(tool_tags, width=120)}',
+        '',
+        '',
+        '# Entity keys per tool name that may share a table with another entity',
+        '# (validate_bindings otherwise requires every entity to be distinct)',
+        f'TOOL_SHARED_ENTITIES = {pprint.pformat(tool_shared_entities, width=120)}',
         '',
     ]
 

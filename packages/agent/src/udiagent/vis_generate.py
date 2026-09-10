@@ -486,7 +486,35 @@ def instantiate_template(spec_template, bindings, schema):
             break
         resolved = _resolve_placeholder(match.group(1), bindings, schema)
         spec = spec.replace(match.group(0), resolved, 1)
-    return json.loads(spec)
+    return _dedupe_sources(json.loads(spec))
+
+
+def _dedupe_sources(spec):
+    """Drop repeated `source` entries — identical name AND url.
+
+    A template declares one source per ROLE (the event log, the table the
+    stratifier lives in, the table the censoring status lives in), and two roles
+    can resolve to the same table: pcx's Patient carries `age_at_diagnosis`
+    beside `vital_status`. The resolved spec then names it twice, which says
+    nothing extra — the pipeline refers to it by name — and it is not harmless:
+    the browser executor keys its loaded tables by name, so the duplicate
+    collapses and the spec looks like it is still waiting for a table that never
+    arrives. Deduped here, at the point the placeholders collapse, so every
+    consumer sees a spec that lists each table once.
+    """
+    sources = spec.get("source")
+    if not isinstance(sources, list):
+        return spec
+    seen = set()
+    unique = []
+    for source in sources:
+        key = json.dumps(source, sort_keys=True) if isinstance(source, dict) else source
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(source)
+    spec["source"] = unique
+    return spec
 
 
 def _encoded_placeholders(spec_template):
@@ -682,6 +710,40 @@ def _placeholder_type_requirements(spec_template):
     return placeholder_types
 
 
+def join_key_placeholders(spec_template):
+    """Placeholder bases a template uses as a `join.on` key.
+
+    Which of a table's columns is its *identifier* is the one thing a template
+    knows and a bare type cannot say. Described as "nominal field." alongside
+    the event-type column beside it, the two are interchangeable to the model,
+    and it has swapped them — joining an event log to a status table on
+    `event_type = vital_status`, which matches nothing and draws no line while
+    every column named in the spec exists and has the right type.
+
+    Reads `on` in both spellings the grammar allows: a pair of columns, or a
+    single column shared by both sides.
+    """
+    keys = set()
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return keys
+
+    def add(value):
+        if isinstance(value, str):
+            match = re.fullmatch(PLACEHOLDER, value)
+            if match:
+                keys.add(match.group(1).split(":")[0])
+        elif isinstance(value, list):
+            for item in value:
+                add(item)
+
+    for step in spec.get("transformation") or []:
+        if isinstance(step, dict) and isinstance(step.get("join"), dict):
+            add(step["join"].get("on"))
+    return keys
+
+
 def value_field_pairs(spec_template):
     """``{value key: {field placeholder keys it is compared against}}``.
 
@@ -783,7 +845,34 @@ def grouping_targets(spec_template):
     return targets
 
 
-def validate_bindings(spec_template, bindings, schema, data_domains=None):
+def shared_entities_for(tool_name):
+    """Entity keys this tool allows on the same table as another entity.
+
+    Read from the generated module rather than passed down from the caller, so
+    a template's own declaration reaches validation without every call site
+    having to carry it. Unknown tool, or no generated module: no exemptions,
+    which is the stricter answer.
+    """
+    try:
+        from udiagent.generated_vis_tools import TOOL_SHARED_ENTITIES
+    except ImportError:
+        return ()
+    return tuple(TOOL_SHARED_ENTITIES.get(tool_name) or ())
+
+
+def _binding_entity_key(field_key):
+    """``"E3.F2"`` -> ``"E3"``; a bare ``"F2"`` -> ``"E"``. None if neither."""
+    match = re.fullmatch(r"(E\d*)\.(F\d*|[A-Za-z]\w*)", field_key)
+    if match:
+        return match.group(1)
+    if re.fullmatch(r"F\d*", field_key):
+        return "E"
+    return None
+
+
+def validate_bindings(
+    spec_template, bindings, schema, data_domains=None, shared_entities=()
+):
     """Validate tool bindings against the schema before template instantiation.
 
     Returns list of error strings (empty = valid).
@@ -792,6 +881,9 @@ def validate_bindings(spec_template, bindings, schema, data_domains=None):
     against the column it is compared to. Optional because not every caller has
     domains — re-instantiating a stored chart has only the schema — and a
     missing domain means "unchecked", never "invalid".
+
+    `shared_entities` names entity keys the template lets share a table with
+    another entity (see `shared_entities_for`).
     """
     errors = []
     entities = schema.get("entities", {})
@@ -819,9 +911,21 @@ def validate_bindings(spec_template, bindings, schema, data_domains=None):
     # Check join entities are different — every pair, so a three-table template
     # cannot quietly cross a table with itself and report every subject as
     # belonging to both groups.
+    #
+    # Except where the template says otherwise. Crossing is not the only reason
+    # to name a second table: the survival templates also read a per-subject
+    # fact (the censoring status and its date) out of one, and there the same
+    # table serving two roles is ordinary rather than degenerate — pcx's Patient
+    # carries `age_at_diagnosis` and `vital_status` side by side. Blanket
+    # distinctness made that request unsatisfiable, and the model answered it by
+    # binding some other table, whose columns then held none of the values the
+    # template compares against.
+    shared = set(shared_entities)
     numbered = sorted(k for k in entity_bindings if k != "E")
     for i, key_a in enumerate(numbered):
         for key_b in numbered[i + 1 :]:
+            if key_a in shared or key_b in shared:
+                continue
             if entity_bindings[key_a] == entity_bindings[key_b]:
                 errors.append(
                     f"entity{key_a[1:]} and entity{key_b[1:]} cannot be the same "
@@ -1024,6 +1128,36 @@ def validate_bindings(spec_template, bindings, schema, data_domains=None):
                 f'its own stratum. Supply one, e.g. {{"type": "quantitative", '
                 f'"cuts": [65]}}.'
             )
+
+    # One column cannot be both a table's record id and the column a literal is
+    # matched against. Binding it to both says the join should match rows whose
+    # id happens to equal 'Initial CNS Tumor' — no rows, an empty chart, and
+    # every column named exists with the type asked for, so nothing else here
+    # objects. Seen in the wild on the survival templates, where the two
+    # parameters sat side by side and read identically.
+    join_keys = join_key_placeholders(spec_template)
+    for value_key, field_keys in value_field_pairs(spec_template).items():
+        for field_key in sorted(field_keys):
+            if field_key in join_keys:
+                continue
+            entity_key = _binding_entity_key(field_key)
+            column = bindings.get(field_key)
+            if not column or not entity_key:
+                continue
+            clash = sorted(
+                key
+                for key in join_keys
+                if _binding_entity_key(key) == entity_key and bindings.get(key) == column
+            )
+            if clash:
+                entity_name = entity_bindings.get(entity_key, entity_key)
+                errors.append(
+                    f"Column '{column}' on '{entity_name}' is bound both as the join "
+                    f"key and as the column '{bindings.get(value_key)}' is matched "
+                    f"against. It can only be one of those: bind the join key to the "
+                    f"column holding the record id, and the other to the column that "
+                    f"holds that value."
+                )
 
     # A <V*> literal is only meaningful against the column it is tested on, and
     # nothing above checks that it occurs there: the type checks pass happily
@@ -1448,7 +1582,11 @@ def _execute_generate(skill, context):
             template_idx, param_map = dispatch
             bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
             validation_errors = validate_bindings(
-                templates[template_idx], bindings, request_schema, data_domains
+                templates[template_idx],
+                bindings,
+                request_schema,
+                data_domains,
+                shared_entities_for(tool_name),
             )
 
             if validation_errors:

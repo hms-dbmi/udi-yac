@@ -1152,11 +1152,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[barchart] Joins two entities and counts records grouped by a field from the related '
-                              'entity, displayed as a vertical bar chart. Design: Cross-entity join groups by a field '
-                              'not native to the counted entity. Vertical orientation for small category counts (<=4). '
-                              'Tasks: Compare counts across categories from a related entity; discover cross-entity '
-                              'frequency patterns. Query patterns: How many <E1> are there, grouped by <E2.F:n>?',
+ {'function': {'description': 'The secondary data entity (table) to join with.',
                'name': 'vis_002_barchart_join_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1169,11 +1165,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity1', 'entity2', 'entity2_field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[barchart] Joins two entities and counts records grouped by a field from the related '
-                              'entity, displayed as a horizontal bar chart. Design: Cross-entity join with horizontal '
-                              'orientation for higher category counts (>4). Tasks: Compare counts across categories '
-                              'from a related entity; discover cross-entity frequency patterns. Query patterns: How '
-                              'many <E1> are there, grouped by <E2.F:n>?',
+ {'function': {'description': 'The secondary data entity (table) to join with.',
                'name': 'vis_003_barchart_join_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1220,13 +1212,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[stacked_bar] Joins two entities and produces a vertical stacked bar chart of counts '
-                              'grouped by two nominal fields. Design: Stacked bars show part-to-whole composition '
-                              'within each category. Vertical layout for small category counts (<=4). Color encodes '
-                              'the secondary grouping field from the related entity. Color is preferably mapped to the '
-                              'variable with fewer unique values for better discriminability. Tasks: Compare group '
-                              'compositions across categories; identify dominant sub-groups within each bar. Query '
-                              'patterns: How many <E1> are there, grouped by <E1.F1:n> and <E2.F2:n>?',
+ {'function': {'description': 'The secondary data entity (table) to join with.',
                'name': 'vis_006_stacked_bar_join_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1241,13 +1227,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity1', 'entity2', 'entity1_field1', 'entity2_field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[stacked_bar] Joins two entities and produces a horizontal stacked bar chart of counts '
-                              'grouped by two nominal fields. Design: Horizontal orientation for higher category '
-                              'counts (>4). Color encodes the primary grouping field. Cross-entity join required. '
-                              'Color is preferably mapped to the variable with fewer unique values for better '
-                              'discriminability. Tasks: Compare group compositions across categories; identify '
-                              'dominant sub-groups within each bar. Query patterns: How many <E1> are there, grouped '
-                              'by <E1.F1:n> and <E2.F2:n>?',
+ {'function': {'description': 'The secondary data entity (table) to join with.',
                'name': 'vis_007_stacked_bar_join_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1384,7 +1364,12 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                         'type': 'string'},
                                              'field1': {'description': 'nominal field, encodes color, y-axis.',
                                                         'type': 'string'},
-                                             'field2': {'description': 'nominal field, encodes x-axis, y-axis.',
+                                             'field2': {'description': 'nominal field, encodes x-axis, y-axis — the '
+                                                                       'JOIN KEY on this table: the column holding the '
+                                                                       'shared record id (e.g. a subject or patient '
+                                                                       'id). Both sides of a join must name columns '
+                                                                       'holding the SAME identifiers, or nothing '
+                                                                       'matches.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
@@ -1402,7 +1387,12 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                         'type': 'string'},
                                              'field1': {'description': 'nominal field, encodes color, x-axis.',
                                                         'type': 'string'},
-                                             'field2': {'description': 'nominal field, encodes y-axis, x-axis.',
+                                             'field2': {'description': 'nominal field, encodes y-axis, x-axis — the '
+                                                                       'JOIN KEY on this table: the column holding the '
+                                                                       'shared record id (e.g. a subject or patient '
+                                                                       'id). Both sides of a join must name columns '
+                                                                       'holding the SAME identifiers, or nothing '
+                                                                       'matches.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
@@ -1416,7 +1406,12 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'the proportion of <dimension2> for each <dimension1>?',
                'name': 'vis_016_stacked_bar_proportion_stacked_normalized',
                'parameters': {'additionalProperties': False,
-                              'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
+                              'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis — '
+                                                                           'the JOIN KEY on this table: the column '
+                                                                           'holding the shared record id (e.g. a '
+                                                                           'subject or patient id). Both sides of a '
+                                                                           'join must name columns holding the SAME '
+                                                                           'identifiers, or nothing matches.',
                                                             'type': 'string'},
                                              'dimension2': {'description': 'cube nominal dimension, encodes color.',
                                                             'type': 'string'},
@@ -1721,12 +1716,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[table] Joins two related entities and displays the combined data as a table. Design: '
-                              'Cross-entity join enriches the view by combining fields from two related entities. '
-                              'Requires a valid foreign-key relationship. Tasks: Explore combined data from two '
-                              'related entities; retrieve specific values; identify anomalies and extremes. Query '
-                              'patterns: What does the combined data of <E1> and <E2> look like?; Make a table that '
-                              'combines <E1> and <E2>.',
+ {'function': {'description': 'The secondary data entity (table) to join with.',
                'name': 'vis_036_table_join',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1737,11 +1727,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity1', 'entity2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[table] Finds which related entity record has the highest count of associated records, '
-                              'displayed as a ranked table with bar indicators. Design: Groups by foreign key, counts, '
-                              'ranks, and highlights the top record with color encoding. Bar marks on the count column '
-                              'provide visual comparison. Tasks: Identify the record with the most associated '
-                              'entities; compare counts across records. Query patterns: What <E2> has the most <E1>?',
+ {'function': {'description': 'The secondary data entity (table) to join with.',
                'name': 'vis_037_table_join_count_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1766,11 +1752,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[table] Joins two entities, computes the maximum of a quantitative field per group, and '
-                              'ranks the results in a table with bar indicators. Design: Cross-entity join followed by '
-                              'group-level max aggregation. Highlights the top record with color encoding. Tasks: '
-                              'Identify which related record has the largest aggregated value; compare across groups. '
-                              'Query patterns: What Record in <E2> has the largest <E1> <E1.F:q>?',
+ {'function': {'description': 'The secondary data entity (table) to join with.',
                'name': 'vis_039_table_join_max_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1799,12 +1781,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[table] Joins two entities, computes the minimum of a quantitative field per group, and '
-                              'ranks the results in a table with conditional formatting. Design: Cross-entity join '
-                              'followed by group-level min aggregation. Highlights the top record with background '
-                              'color via rect mark. Tasks: Identify which related record has the smallest aggregated '
-                              'value; compare across groups. Query patterns: What Record in <E2> has the smallest <E1> '
-                              '<E1.F:q>?',
+ {'function': {'description': 'The secondary data entity (table) to join with.',
                'name': 'vis_041_table_join_min_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1973,30 +1950,37 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curve from an event log — a table with one row per event, a subject id, '
-                              'an event-type column and a numeric time column. Given a start event type and an end '
-                              "event type, derives each subject's elapsed time between them and plots the falling "
-                              'fraction of subjects that have not yet reached the end event. Design: Survival time is '
-                              'not stored anywhere; it is reconstructed as the gap between two events for the same '
-                              'subject, so the template groups the event log by subject id and rolls it up to one row '
-                              'each before computing anything. The subject id is only a grouping key and is never '
-                              'encoded, so its cardinality does not matter. IMPORTANT: this is a crude survival curve, '
-                              'not a Kaplan-Meier estimate. Subjects with no end event are kept in the denominator but '
-                              'contribute no drop, which assumes every one of them was followed for the whole window. '
-                              'Tasks: Judge how survival falls over time after a starting event; compare the observed '
-                              'survival fraction of a cohort at a given number of days.',
+ {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
+                              'here, when one table carries both roles.',
                'name': 'vis_052_line_survival',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
-                                                                        'with.',
+                                                                        'with. MAY be the same table as another entity '
+                                                                        'here, when one table carries both roles.',
                                                          'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity2_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
@@ -2026,32 +2010,39 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by a nominal field as recorded at the start event, from an '
-                              'event log — one row per event, with a subject id, an event-type column and a numeric '
-                              "time column. Given a start and an end event type, derives each subject's elapsed time "
-                              'between them and plots one curve per category. The stratifier is read once, from the '
-                              "subject's start event, so each subject falls in exactly one group and the groups add "
-                              'back up to the whole cohort. This is the default way to split a survival curve. Design: '
-                              "An event-level column has no single value per subject: a subject's recorded value can "
-                              'differ between the event that starts the clock and the event that stops it. This '
-                              'template reads it once, at the start event, which is what makes the groups a partition: '
-                              'reading it per event would split a subject whose value changed into two rows, one with '
-                              'a start and no end (read as censored) and one with an end and no start (dropped), '
-                              'losing the death from both.',
+ {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
+                              'here, when one table carries both roles.',
                'name': 'vis_053_line_survival_baseline',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity1_field4': {'description': 'nominal field, encodes color.',
                                                                 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
-                                                                        'with.',
+                                                                        'with. MAY be the same table as another entity '
+                                                                        'here, when one table carries both roles.',
                                                          'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity2_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
                                                                          'into a few named strata. Omit it entirely '
@@ -2162,33 +2153,39 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by each value of a multi-value (delimited) field as '
-                              'recorded at the start event, from an event log — one row per event, with a subject id, '
-                              "an event-type column and a numeric time column. Expands the start event's list so a "
-                              "subject counts toward every value it listed then, derives each subject's elapsed time "
-                              'between a start and an end event type, and plots one curve per value. Design: For '
-                              'set-valued columns such as tumor locations, where one subject can belong to several '
-                              "categories at once. An event-level column has no single value per subject: a subject's "
-                              'recorded value can differ between the event that starts the clock and the event that '
-                              'stops it. The list is taken from the start event only, so a category first recorded '
-                              "later is absent by design — that is what keeps each subject's whole timeline "
-                              'attributable to the categories it started with. `unnest` runs after the per-subject '
-                              'rollup, on a row that is already one-per-subject, so it multiplies nothing that has '
-                              'been counted.',
+ {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
+                              'here, when one table carries both roles.',
                'name': 'vis_054_line_survival_baseline_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity1_field4': {'description': 'nominal field, encodes color.',
                                                                 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
-                                                                        'with.',
+                                                                        'with. MAY be the same table as another entity '
+                                                                        'here, when one table carries both roles.',
                                                          'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity2_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
                                                                          'into a few named strata. Omit it entirely '
@@ -2299,32 +2296,39 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by every value a subject ever recorded, from an event log '
-                              '— one row per event, with a subject id, an event-type column and a numeric time column. '
-                              'A subject joins every group whose value appears anywhere on its timeline and carries '
-                              'its whole elapsed time into each, so the cohorts OVERLAP and the groups do not add up '
-                              'to the whole. Use this only when the request is explicitly about ever having a value; '
-                              'otherwise prefer the variant that reads the field at the start event, which partitions '
-                              "the cohort. Design: An event-level column has no single value per subject: a subject's "
-                              'recorded value can differ between the event that starts the clock and the event that '
-                              "stops it. This template treats it as membership: the subject's span is broadcast onto "
-                              'each of its event rows, then re-grouped per (subject, value), so one subject can appear '
-                              'in several curves and a single death is attributed to each group the subject belongs '
-                              'to.',
+ {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
+                              'here, when one table carries both roles.',
                'name': 'vis_055_line_survival_ever',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity1_field4': {'description': 'nominal field, encodes color.',
                                                                 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
-                                                                        'with.',
+                                                                        'with. MAY be the same table as another entity '
+                                                                        'here, when one table carries both roles.',
                                                          'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity2_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
                                                                          'into a few named strata. Omit it entirely '
@@ -2435,32 +2439,39 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by every value of a multi-value (delimited) field a '
-                              'subject ever recorded, from an event log — one row per event, with a subject id, an '
-                              'event-type column and a numeric time column. Expands the delimited column on every '
-                              'event, so a subject joins each value listed at any point and carries its whole elapsed '
-                              'time into all of them. Cohorts OVERLAP twice over — across values of one event and '
-                              'across events — and do not add up. Design: For set-valued columns where membership at '
-                              'any point is the question. An event-level column has no single value per subject: a '
-                              "subject's recorded value can differ between the event that starts the clock and the "
-                              'event that stops it. `unnest` runs first, on the event rows, so the per-subject rollup '
-                              'sees one row per (subject, value) pair and a subject joins every value it ever listed. '
-                              'Tasks: Compare observed survival across overlapping categories a subject recorded at '
-                              'any point; see which attributes ever present coincide with worse survival.',
+ {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
+                              'here, when one table carries both roles.',
                'name': 'vis_056_line_survival_ever_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity1_field4': {'description': 'nominal field, encodes color.',
                                                                 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
-                                                                        'with.',
+                                                                        'with. MAY be the same table as another entity '
+                                                                        'here, when one table carries both roles.',
                                                          'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity2_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity2_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
                                                                          'into a few named strata. Omit it entirely '
@@ -2571,37 +2582,50 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by a field in a RELATED table, from an event log — one row '
-                              'per event, with a subject id, an event-type column and a numeric time column. Joins the '
-                              "event log to a second entity on the relationship between them, derives each subject's "
-                              'elapsed time between a start and an end event type, and plots one curve per value of '
-                              'the related field. Both tables must name the subject-id column they share, which is '
-                              'what the join runs on. Use this when the attribute to split by does not live on the '
-                              'event log itself — a treatment protocol, an enrolling site, a cohort assignment '
-                              'recorded elsewhere. A subject with several related records joins a group for each, so '
-                              'the cohorts OVERLAP and the groups do not add up to the whole. Design: The stratifier '
-                              'is not a column of the event log, so the two entities are joined first, on the '
-                              'subject-id column each side names. A declared relationship is not required and usually '
-                              'does not exist: the tables carrying a stratifier are typically *siblings* of the event '
-                              'log…',
+ {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
+                              'another entity here, when one table carries both roles.',
                'name': 'vis_057_line_survival_related',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
                                              'entity2_field': {'description': 'nominal field, encodes color.',
                                                                'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
                                              'entity3': {'description': 'An additional data entity (table) to join '
-                                                                        'with (entity3).',
+                                                                        'with (entity3). MAY be the same table as '
+                                                                        'another entity here, when one table carries '
+                                                                        'both roles.',
                                                          'type': 'string'},
-                                             'entity3_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity3_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity3_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
                                                                          'into a few named strata. Omit it entirely '
@@ -2714,36 +2738,50 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by a NUMERIC field in a related table, cut into buckets at '
-                              "thresholds — 'under 65 versus 65 and over', tertiles of a lab value. Takes an event log "
-                              '(one row per event, with a subject id, an event-type column and a numeric time column) '
-                              'and a second table holding a per-subject number, joined on the subject-id column each '
-                              'side names. Supply the cut points in `grouping`: this template REQUIRES one, because a '
-                              'continuous column has no categories to draw a curve for. Ascending cut points, each '
-                              'bucket half-open on the right, so a cut at 65 puts 65 in the upper bucket. Use it '
-                              'whenever the attribute to split by is a number rather than a label. Design: The buckets '
-                              'are computed BEFORE the (subject, stratum) grouping, so two values in the same bucket '
-                              'collapse to one row for that subject rather than two — a subject is counted once in its '
-                              'own curve, not once per matching value. Tasks: Compare survival above and below a '
-                              'numeric threshold; judge whether a continuous attribute — age, a lab value, a…',
+ {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
+                              'another entity here, when one table carries both roles.',
                'name': 'vis_058_line_survival_related_numeric',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
                                              'entity2_field': {'description': 'quantitative field, encodes color.',
                                                                'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
                                              'entity3': {'description': 'An additional data entity (table) to join '
-                                                                        'with (entity3).',
+                                                                        'with (entity3). MAY be the same table as '
+                                                                        'another entity here, when one table carries '
+                                                                        'both roles.',
                                                          'type': 'string'},
-                                             'entity3_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity3_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity3_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
                                                                          'into a few named strata. Omit it entirely '
@@ -2856,35 +2894,50 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by each value of a multi-value (delimited) field in a '
-                              'RELATED table, from an event log — one row per event, with a subject id, an event-type '
-                              'column and a numeric time column. Joins the event log to a second entity on the '
-                              "subject-id column each side names, expands that entity's semicolon-delimited column so "
-                              "one record listing several values counts toward each of them, derives every subject's "
-                              'elapsed time between a start and an end event type, and plots one curve per value. Use '
-                              'this when the attribute to split by lives in another table AND that column holds a set '
-                              'rather than a single value — the agents making up a chemotherapy regimen, the sites one '
-                              'course of radiation covered, the conditions listed on a diagnosis record. The cohorts '
-                              'OVERLAP: a subject joins a group for every value listed on any of its related records, '
-                              'so the groups do not add up to the whole.',
+ {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
+                              'another entity here, when one table carries both roles.',
                'name': 'vis_059_line_survival_related_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
                                              'entity2_field': {'description': 'nominal field, encodes color.',
                                                                'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
                                              'entity3': {'description': 'An additional data entity (table) to join '
-                                                                        'with (entity3).',
+                                                                        'with (entity3). MAY be the same table as '
+                                                                        'another entity here, when one table carries '
+                                                                        'both roles.',
                                                          'type': 'string'},
-                                             'entity3_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity3_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity3_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
                                                                          'into a few named strata. Omit it entirely '
@@ -2997,32 +3050,48 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves split by PRESENCE OR ABSENCE of the subject in a second table, '
-                              'from an event log — one row per event, with a subject id, an event-type column and a '
-                              "numeric time column. Answers 'did this subject receive/undergo/enrol in the thing that "
-                              "table records' — radiation, surgery, a protocol — where the fact is the existence of a "
-                              'row, not the value of any column. No field from the second table is named or plotted; '
-                              'only the shared subject-id column on each side. Exactly two curves, and they PARTITION '
-                              'the cohort: every subject is in one or the other, so the two groups add back to the '
-                              'whole and reconcile with the unstratified curve. Design: Use this, not the '
-                              'related-field variant, when the question is whether a subject has any record in a table '
-                              'rather than which value it holds.',
+ {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
+                              'another entity here, when one table carries both roles.',
                'name': 'vis_060_line_survival_presence',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
                                              'entity3': {'description': 'An additional data entity (table) to join '
-                                                                        'with (entity3).',
+                                                                        'with (entity3). MAY be the same table as '
+                                                                        'another entity here, when one table carries '
+                                                                        'both roles.',
                                                          'type': 'string'},
-                                             'entity3_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity3_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity3_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity3_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
@@ -3054,39 +3123,58 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves for the 2x2 CROSS of presence in two other tables, from an event '
-                              'log — one row per event, with a subject id, an event-type column and a numeric time '
-                              'column. Produces up to four curves — second table only, third table only, both, neither '
-                              '— for questions about combinations of treatments or procedures recorded in separate '
-                              'tables. No field from either extra table is named or plotted; only the shared '
-                              'subject-id column on each side. The four groups PARTITION the cohort: every subject '
-                              'falls in exactly one cell, so they add back to the whole. Use the single-table presence '
-                              'variant when only one table is in question — four curves for a two-way question is '
-                              'harder to read for no gain. Design: Two LEFT joins, each against the other table '
-                              'reduced to one row per subject, so absence stays visible and neither join multiplies '
-                              "event rows. Each cell is labelled with the tables it names — '<E2> + <E3>', '<E2> "
-                              "only', '<E3> only', 'Neither' — rather than a pair of flags, so no decoding is "
-                              'required.',
+ {'function': {'description': 'An additional data entity (table) to join with (entity4). MAY be the same table as '
+                              'another entity here, when one table carries both roles.',
                'name': 'vis_061_line_survival_presence_2x2',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity1_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity1_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value1, value2 name.',
+                                                                'type': 'string'},
                                              'entity1_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'},
-                                             'entity2_field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity2_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
                                              'entity3': {'description': 'An additional data entity (table) to join '
                                                                         'with (entity3).',
                                                          'type': 'string'},
-                                             'entity3_field1': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity3_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
                                              'entity4': {'description': 'An additional data entity (table) to join '
-                                                                        'with (entity4).',
+                                                                        'with (entity4). MAY be the same table as '
+                                                                        'another entity here, when one table carries '
+                                                                        'both roles.',
                                                          'type': 'string'},
-                                             'entity4_field1': {'description': 'nominal field.', 'type': 'string'},
-                                             'entity4_field2': {'description': 'nominal field.', 'type': 'string'},
+                                             'entity4_field1': {'description': 'nominal field — the JOIN KEY on this '
+                                                                               'table: the column holding the shared '
+                                                                               'record id (e.g. a subject or patient '
+                                                                               'id). Both sides of a join must name '
+                                                                               'columns holding the SAME identifiers, '
+                                                                               'or nothing matches.',
+                                                                'type': 'string'},
+                                             'entity4_field2': {'description': 'nominal field — the column whose '
+                                                                               'values value3 name.',
+                                                                'type': 'string'},
                                              'entity4_field3': {'description': 'quantitative field.', 'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
@@ -3136,7 +3224,9 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
                                                                            'x-axis.',
                                                             'type': 'string'},
-                                             'dimension2': {'description': 'cube nominal dimension.', 'type': 'string'},
+                                             'dimension2': {'description': 'cube nominal dimension — the column whose '
+                                                                           'values value1, value2 name.',
+                                                            'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -3169,7 +3259,9 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
                                                                            'x-axis.',
                                                             'type': 'string'},
-                                             'dimension2': {'description': 'cube nominal dimension.', 'type': 'string'},
+                                             'dimension2': {'description': 'cube nominal dimension — the column whose '
+                                                                           'values value1, value2 name.',
+                                                            'type': 'string'},
                                              'dimension3': {'description': 'cube nominal dimension, encodes color, '
                                                                            'text label.',
                                                             'type': 'string'},
@@ -3689,3 +3781,82 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_072_grouped_dot_distribution': ['line_item', 'grouped_dot'],
  'vis_073_table_count_null_nonnull': ['line_item', 'table'],
  'vis_074_table_count_null': ['line_item', 'table']}
+
+
+# Entity keys per tool name that may share a table with another entity
+# (validate_bindings otherwise requires every entity to be distinct)
+TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
+ 'vis_001_barchart_count_horiz_grouped': [],
+ 'vis_002_barchart_join_count_vert_grouped': [],
+ 'vis_003_barchart_join_count_horiz_grouped': [],
+ 'vis_004_barchart_basic': [],
+ 'vis_005_barchart_basic': [],
+ 'vis_006_stacked_bar_join_count_vert_stacked_grouped': [],
+ 'vis_007_stacked_bar_join_count_horiz_stacked_grouped': [],
+ 'vis_008_stacked_bar_count_vert_stacked_grouped': [],
+ 'vis_009_stacked_bar_count_horiz_stacked_grouped': [],
+ 'vis_010_stacked_bar_vert_stacked': [],
+ 'vis_011_stacked_bar_count_vert_grouped': [],
+ 'vis_012_stacked_bar_count_horiz_grouped': [],
+ 'vis_013_stacked_bar_grouped': [],
+ 'vis_014_stacked_bar_freq_vert_normalized': [],
+ 'vis_015_stacked_bar_freq_horiz_normalized': [],
+ 'vis_016_stacked_bar_proportion_stacked_normalized': [],
+ 'vis_017_barchart_min_horiz': [],
+ 'vis_018_barchart_min_vert': [],
+ 'vis_019_barchart_max_horiz': [],
+ 'vis_020_barchart_max_vert': [],
+ 'vis_021_barchart_avg_horiz': [],
+ 'vis_022_barchart_avg_vert': [],
+ 'vis_023_barchart_median_horiz': [],
+ 'vis_024_barchart_median_vert': [],
+ 'vis_025_barchart_sum_horiz': [],
+ 'vis_026_barchart_sum_vert': [],
+ 'vis_027_scatterplot_basic': [],
+ 'vis_028_stacked_bar_count_vert_stacked_grouped': [],
+ 'vis_029_stacked_bar_count_horiz_stacked_grouped': [],
+ 'vis_030_circular_proportion_distribution': [],
+ 'vis_031_circular_proportion_distribution': [],
+ 'vis_032_circular_proportion': [],
+ 'vis_033_circular_proportion': [],
+ 'vis_034_table_count': [],
+ 'vis_035_table_raw': [],
+ 'vis_036_table_join': [],
+ 'vis_037_table_join_count_ranked': [],
+ 'vis_038_table_ranked': [],
+ 'vis_039_table_join_max_ranked': [],
+ 'vis_040_table_ranked': [],
+ 'vis_041_table_join_min_ranked': [],
+ 'vis_042_table_sorted': [],
+ 'vis_043_table_min': [],
+ 'vis_044_table_count_sorted_distinct': [],
+ 'vis_045_table_range': [],
+ 'vis_046_table_ranked_mode': [],
+ 'vis_047_table_sum': [],
+ 'vis_048_table_sorted': [],
+ 'vis_049_line_cdf': [],
+ 'vis_050_grouped_line_cdf': [],
+ 'vis_051_line_sorted': [],
+ 'vis_052_line_survival': ['E2'],
+ 'vis_053_line_survival_baseline': ['E2'],
+ 'vis_054_line_survival_baseline_multivalue': ['E2'],
+ 'vis_055_line_survival_ever': ['E2'],
+ 'vis_056_line_survival_ever_multivalue': ['E2'],
+ 'vis_057_line_survival_related': ['E3'],
+ 'vis_058_line_survival_related_numeric': ['E3'],
+ 'vis_059_line_survival_related_multivalue': ['E3'],
+ 'vis_060_line_survival_presence': ['E3'],
+ 'vis_061_line_survival_presence_2x2': ['E4'],
+ 'vis_062_line_survival_cube': [],
+ 'vis_063_line_survival_cube_stratified': [],
+ 'vis_064_heatmap_count': [],
+ 'vis_065_heatmap_avg': [],
+ 'vis_066_heatmap_basic': [],
+ 'vis_067_grouped_scatter_by_color': [],
+ 'vis_068_histogram_distribution': [],
+ 'vis_069_area_density': [],
+ 'vis_070_dot_distribution': [],
+ 'vis_071_grouped_area_density': [],
+ 'vis_072_grouped_dot_distribution': [],
+ 'vis_073_table_count_null_nonnull': [],
+ 'vis_074_table_count_null': []}

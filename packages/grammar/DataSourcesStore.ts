@@ -476,7 +476,13 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     // (UDIVis) will retry when tablesVersion bumps. Previously this only
     // checked size === 0, which let partial-data transformations run when
     // some-but-not-all sources had arrived.
-    if (namedTables.size !== keys.length) return null;
+    //
+    // Counted against the DISTINCT keys, because the map is keyed by name: a
+    // spec may legitimately list one table twice (a template naming the same
+    // entity for two roles), and comparing against `keys.length` read that
+    // collapsed duplicate as a source still loading. The chart then waited
+    // forever on a table it already had, and rendered blank with no error.
+    if (namedTables.size !== new Set(keys).size) return null;
 
     const { data: dataTable, containsNamedFilter } = PerformDataTransformations(
       namedTables,

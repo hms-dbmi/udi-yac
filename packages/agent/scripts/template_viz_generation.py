@@ -136,6 +136,7 @@ def add_row(
     review_hint: str = "",
     preview_bindings: dict | None = None,
     name_hint: str = "",
+    shared_entities: list[str] | None = None,
 ):
     spec_key_count = get_total_key_count(spec.to_dict())
     if spec_key_count <= 12:
@@ -182,6 +183,14 @@ def add_row(
         # variant's keyword. Set this where the name has to be stable and
         # meaningful; leave it empty to keep the derived name.
         "name_hint": name_hint,
+        # Entity keys exempt from the "two entities cannot be the same table"
+        # rule. That rule exists so a template cannot quietly cross a table with
+        # itself, but it is wrong for a table a template merely *reads a
+        # per-subject fact from*: the survival censoring source is one of those,
+        # and a schema that keeps the stratifier and the status column on the
+        # same subject-level table (pcx's Patient holds both `age_at_diagnosis`
+        # and `vital_status`) is otherwise unchartable.
+        "shared_entities": shared_entities or [],
     }
     return df
 
@@ -1415,6 +1424,7 @@ def generate():
             "review_hint",
             "preview_bindings",
             "name_hint",
+            "shared_entities",
         ]
     )
 
@@ -2850,6 +2860,7 @@ def generate():
         ],
         spec=_survival_chart(),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(None)],
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -2915,6 +2926,7 @@ def generate():
         ],
         spec=_survival_chart(stratum="<E1.F4:n>", reading=StratumReading.AT_START),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.AT_START)],
         name_hint="survival_baseline",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -2992,6 +3004,7 @@ def generate():
             stratum="<E1.F4:n>", reading=StratumReading.AT_START, multi_value=True
         ),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.AT_START)],
         name_hint="survival_baseline_multivalue",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -3064,6 +3077,7 @@ def generate():
         ],
         spec=_survival_chart(stratum="<E1.F4:n>", reading=StratumReading.EVER),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.EVER)],
         name_hint="survival_ever",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -3138,6 +3152,7 @@ def generate():
             stratum="<E1.F4:n>", reading=StratumReading.EVER, multi_value=True
         ),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.EVER)],
         name_hint="survival_ever_multivalue",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -3210,6 +3225,7 @@ def generate():
             stratum="<E2.F:n>", reading=StratumReading.RELATED
         ),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -3297,6 +3313,7 @@ def generate():
         ],
         spec=_survival_chart(stratum="<E2.F:q>", reading=StratumReading.RELATED),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related_numeric",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -3384,6 +3401,7 @@ def generate():
             stratum="<E2.F:n>", reading=StratumReading.RELATED, multi_value=True
         ),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related_multivalue",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -3498,6 +3516,7 @@ def generate():
         ],
         spec=_survival_chart(reading=StratumReading.PRESENCE),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.PRESENCE)],
         name_hint="survival_presence",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
@@ -3575,6 +3594,7 @@ def generate():
         ],
         spec=_survival_chart(reading=StratumReading.PRESENCE_2X2),
         chart_type=ChartType.LINE,
+        shared_entities=[_censor_entity(StratumReading.PRESENCE_2X2)],
         name_hint="survival_presence_2x2",
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,

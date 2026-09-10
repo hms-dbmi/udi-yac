@@ -142,3 +142,55 @@ def test_the_two_encoding_walks_are_one_walk(generated):
         assert _extract_encoding_info(templates[index]) == placeholder_encoding_info(
             templates[index]
         )
+
+
+def test_no_table_offers_two_fields_the_model_cannot_tell_apart(generated):
+    """Within one entity, no two required field parameters may read identically.
+
+    This is the invariant behind the swap that keeps happening. The survival
+    templates ask each table for its record id AND for the column a literal is
+    matched against; both nominal, neither encoded, so both were described
+    "nominal field." and the model duly bound `event_type` to the join key —
+    joining an event log to a status table on a column of event names. Nothing
+    downstream objects: every column exists with the right type, the join simply
+    matches nothing and the chart draws no line.
+
+    Scoped per entity on purpose. `entity1_field1` and `entity3_field1` may well
+    both be "the join key on this table" — the parameter name already says which
+    table, and forcing those apart would mean inventing differences that are not
+    there. It is two fields of the SAME table that must be distinguishable.
+
+    Fails 10 times against the commit that introduced it.
+    """
+    tool_defs, _dispatch, _templates, _tags = generated
+    for tool in tool_defs:
+        fn = tool["function"]
+        required = set(fn["parameters"]["required"])
+        by_entity: dict[tuple[str, str], list[str]] = {}
+        for name, spec in fn["parameters"]["properties"].items():
+            match = re.fullmatch(r"(entity\d*)_(field\d*)", name)
+            if not match or name not in required:
+                continue
+            by_entity.setdefault((match.group(1), spec["description"]), []).append(name)
+        clashes = {k: v for k, v in by_entity.items() if len(v) > 1}
+        assert not clashes, f"{fn['name']}: {clashes}"
+
+
+def test_a_join_key_parameter_says_it_is_a_join_key(generated):
+    """The role has to reach the model, not just the template author."""
+    tool_defs, dispatch, templates, _tags = generated
+    from udiagent.vis_generate import join_key_placeholders
+
+    by_name = {d["function"]["name"]: d["function"] for d in tool_defs}
+    name = next(n for n in dispatch if n.endswith("_line_survival_related"))
+    index, param_map = dispatch[name]
+    keys = join_key_placeholders(templates[index])
+    assert keys == {"E1.F1", "E2.F1", "E3.F1"}, keys
+
+    props = by_name[name]["parameters"]["properties"]
+    for param, placeholder in param_map.items():
+        if placeholder in keys:
+            assert "JOIN KEY" in props[param]["description"], param
+    # And the column a value is matched against says *that* instead.
+    assert "value1, value2" in props["entity1_field2"]["description"]
+    assert "value3" in props["entity3_field2"]["description"]
