@@ -31,3 +31,16 @@ overrides:
   "@rollup/pluginutils>picomatch": 4.0.4
   "rollup-plugin-visualizer>picomatch": 4.0.4
   "tinyglobby>picomatch": 4.0.4
+
+# Node 24.20.0 made URL parsing spec-correct: an absolute path can no longer be
+# resolved against an opaque-path base. jsonschema walks $refs with
+# `new URL(ref, 'thismessage::/')`, and that base's path IS opaque, so any ref
+# carrying a path part now throws — which crashes
+# eslint-plugin-project-structure's config validation as its rule loads, taking
+# the whole `eslint .` run down. The patch drops one colon: hash-identical
+# wherever the original worked (the parsed URL is only ever read for `.hash`)
+# and no longer throwing where it now does. jsonschema 1.5.0 is its latest
+# release and plugin 3.14.4 still depends on ^1.5.0, so there is nothing to
+# upgrade to; drop this once upstream ships a fix.
+patchedDependencies:
+  jsonschema@1.5.0: patches/jsonschema@1.5.0.patch

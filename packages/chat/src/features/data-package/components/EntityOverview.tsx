@@ -165,7 +165,7 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
   );
 }
 
-function FieldNameCell({ row, query }: { row: FieldRow; query: string }) {
+function FieldNameCell({ row, query, label }: { row: FieldRow; query: string; label?: string }) {
   const name = (
     <span className="flex min-w-0 items-center gap-1 font-mono">
       <span className="truncate">{highlightMatch(row.name, query)}</span>
@@ -177,16 +177,23 @@ function FieldNameCell({ row, query }: { row: FieldRow; query: string }) {
   // Undescribed fields with no data type have nothing to show on hover, so they
   // skip the Tooltip entirely — which is also what keeps the per-row cost of a
   // 258-field entity down.
-  if (!row.description && !row.dataType) return name;
+  const hasLabel = !!label && label !== row.name;
+  if (!row.description && !row.dataType && !hasLabel) return name;
   return (
     <Tooltip>
       <TooltipTrigger render={<span className="flex min-w-0 cursor-help" />}>{name}</TooltipTrigger>
-      <FieldTooltipContent field={row.name} dataType={row.dataType} description={row.description} />
+      <FieldTooltipContent
+        field={row.name}
+        label={label}
+        dataType={row.dataType}
+        description={row.description}
+      />
     </Tooltip>
   );
 }
 
-function FieldList({ rows, query }: { rows: FieldRow[]; query: string }) {
+function FieldList({ rows, query, entity }: { rows: FieldRow[]; query: string; entity: string }) {
+  const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
   return (
     // Same provider settings as the chat's field chips, so hover timing matches.
     <TooltipProvider delay={150} timeout={0}>
@@ -200,7 +207,7 @@ function FieldList({ rows, query }: { rows: FieldRow[]; query: string }) {
                   aria-label="key field"
                 />
               )}
-              <FieldNameCell row={row} query={query} />
+              <FieldNameCell row={row} query={query} label={getFieldLabel(entity, row.name)} />
             </span>
             {row.values ? (
               <CategoricalValues values={row.values} query={query} />
@@ -508,13 +515,13 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
         {shownNumeric.length > 0 && (
           <div>
             <FieldListHeader label="Quantitative" />
-            <FieldList rows={shownNumeric} query={needle} />
+            <FieldList rows={shownNumeric} query={needle} entity={entity} />
           </div>
         )}
         {shownCategorical.length > 0 && (
           <div className={cn(shownNumeric.length > 0 && 'mt-2')}>
             <FieldListHeader label="Nominal" />
-            <FieldList rows={shownCategorical} query={needle} />
+            <FieldList rows={shownCategorical} query={needle} entity={entity} />
           </div>
         )}
         {shownNumeric.length === 0 && shownCategorical.length === 0 && (

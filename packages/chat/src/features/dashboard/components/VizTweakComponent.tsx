@@ -26,6 +26,7 @@ interface VizTweakComponentProps {
 
 export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTweakComponentProps) {
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
   const quantitativeSourceFields = useDataPackage((s) => s.quantitativeSourceFields);
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
   const dashboardStore = useDashboardStore();
@@ -37,6 +38,20 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
     () =>
       computeTweakableParams(spec, sourceFields, quantitativeSourceFields, categoricalSourceFields),
     [spec, sourceFields, quantitativeSourceFields, categoricalSourceFields],
+  );
+
+  // Display only: the Select's value and every option value stay raw field
+  // names, because that is what the spec mutations key on. Only the text the
+  // user reads is relabelled, so the picker and the built title agree.
+  const sourceName = useMemo(() => {
+    const src = Array.isArray(spec.source)
+      ? (spec.source as Array<{ name?: string }>)[0]
+      : (spec.source as { name?: string } | undefined);
+    return src?.name ?? null;
+  }, [spec]);
+  const fieldLabel = useCallback(
+    (field: string) => (sourceName ? getFieldLabel(sourceName, field) : field),
+    [sourceName, getFieldLabel],
   );
 
   const handleFieldChange = useCallback(
@@ -95,12 +110,12 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
         >
           <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
             <span className="text-muted-foreground mr-1">{param.encoding}:</span>
-            <SelectValue />
+            <SelectValue>{fieldLabel(param.field)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {param.options.map((opt) => (
               <SelectItem key={opt} value={opt}>
-                {opt}
+                {fieldLabel(opt)}
               </SelectItem>
             ))}
           </SelectContent>

@@ -53,7 +53,24 @@ const domains: DataFieldDomain[] = [
   },
 ];
 
-function Harness({ children }: { children: ReactNode }) {
+/** Optional display labels, as a package author would supply them. */
+interface LabelOverrides {
+  fieldTitles?: Record<string, string>;
+  valueLabels?: Record<string, string>;
+}
+
+function packageWith({ fieldTitles, valueLabels }: LabelOverrides): DataPackage {
+  const next = JSON.parse(JSON.stringify(pkg)) as DataPackage;
+  if (fieldTitles) {
+    for (const f of next.resources[0].schema.fields) {
+      if (fieldTitles[f.name]) f.title = fieldTitles[f.name];
+    }
+  }
+  if (valueLabels) next['udi:labels'] = valueLabels;
+  return next;
+}
+
+function Harness({ children, labels }: { children: ReactNode; labels: LabelOverrides }) {
   const dataPackageStore = useDataPackageStore();
   // Gate children on a STORE value so they mount only after the seed —
   // the component under test subscribes to stable function slices and
@@ -61,18 +78,18 @@ function Harness({ children }: { children: ReactNode }) {
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   useEffect(() => {
     dataPackageStore.setState({
-      dataPackage: pkg,
+      dataPackage: packageWith(labels),
       dataFieldDomains: domains,
       loadingPhase: 'ready',
     });
-  }, [dataPackageStore]);
+  }, [dataPackageStore, labels]);
   return loadingPhase === 'ready' ? <>{children}</> : null;
 }
 
-function renderFilter(selection: DataSelection) {
+function renderFilter(selection: DataSelection, labels: LabelOverrides = {}) {
   return render(
     <UDIChatProvider>
-      <Harness>
+      <Harness labels={labels}>
         <PointFilterComponent
           dataSelection={selection}
           tweakable={false}
@@ -93,13 +110,33 @@ describe('PointFilterComponent — chart-click selections', () => {
     });
 
     expect(screen.queryByText(/Invalid filter/)).toBeNull();
-    // Per-field section labels
-    expect(screen.getByText('organization_name')).toBeTruthy();
-    expect(screen.getByText('event_type')).toBeTruthy();
+    // Per-field section labels, shown with the data package's display label —
+    // here the humanized fallback, since these fields carry no `title`.
+    expect(screen.getByText('Organization Name')).toBeTruthy();
+    expect(screen.getByText('Event Type')).toBeTruthy();
     // Full domain options render for each field (not just clicked values)
     expect(screen.getByText('Seattle')).toBeTruthy();
     expect(screen.getByText('Progressive')).toBeTruthy();
     expect(screen.getByText('CHOP')).toBeTruthy();
+  });
+
+  it('shows the package labels for fields and values, filtering on the raw ones', () => {
+    renderFilter(
+      {
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { organization_name: ['CHOP'], event_type: ['Deceased'] },
+      },
+      {
+        fieldTitles: { organization_name: 'Site' },
+        valueLabels: { Seattle: "Seattle Children's" },
+      },
+    );
+
+    expect(screen.getByText('Site')).toBeTruthy();
+    expect(screen.queryByText('Organization Name')).toBeNull();
+    expect(screen.getByText("Seattle Children's")).toBeTruthy();
+    expect(screen.queryByText('Seattle')).toBeNull();
   });
 
   it('falls back to selected values when a field has no domain (high cardinality)', () => {

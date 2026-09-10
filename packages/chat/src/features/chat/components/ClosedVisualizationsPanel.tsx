@@ -6,6 +6,7 @@ import {
   useMemoryBankStore,
   useDataPackageStore,
 } from '@/app/UDIChatContext';
+import { resolveVizTitle, useVizTitleLabels } from '@/features/dashboard';
 
 /**
  * Renders a strip of recently-closed visualizations with per-item restore
@@ -17,6 +18,7 @@ export function ClosedVisualizationsPanel() {
   const dashboardStore = useDashboardStore();
   const memoryBankStore = useMemoryBankStore();
   const dataPackageStore = useDataPackageStore();
+  const titleLabels = useVizTitleLabels();
 
   const handleRestore = useCallback(
     (key: string) => {
@@ -40,7 +42,7 @@ export function ClosedVisualizationsPanel() {
             onClick={() => handleRestore(key)}
           >
             <RotateCw className="h-3 w-3 shrink-0 text-muted-foreground" />
-            <span className="truncate">{viz.title ?? viz.userPrompt}</span>
+            <span className="truncate">{resolveVizTitle(viz, titleLabels)}</span>
           </button>
         ))}
       </div>

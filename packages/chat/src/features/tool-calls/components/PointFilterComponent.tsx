@@ -34,6 +34,8 @@ export function PointFilterComponent({
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidPointFilter = useDataPackage((s) => s.isValidPointFilter);
+  const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
+  const getValueLabel = useDataPackage((s) => s.getValueLabel);
   const setDataSelection = useDataFilters((s) => s.setDataSelection);
   const trackEvent = useTracker();
 
@@ -173,11 +175,14 @@ export function PointFilterComponent({
             return (
               <div key={f} className="space-y-1.5">
                 {allFields.length > 1 && (
-                  <div className="text-xs font-medium text-muted-foreground">{f}</div>
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {getFieldLabel(entity, f)}
+                  </div>
                 )}
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {optionsOf(f).map((value) => {
-                    const label = value == null ? '<null>' : String(value);
+                    // Display only — `value` itself still goes into the filter.
+                    const label = value == null ? '<null>' : getValueLabel(String(value));
                     const id = `${filterKey}-${f}-${value}`;
                     return (
                       <div key={value ?? '__null__'} className="flex items-center gap-2">
