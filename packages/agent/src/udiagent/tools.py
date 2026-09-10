@@ -151,12 +151,11 @@ ORCHESTRATOR_TOOLS = [
                         "type": "string",
                         "description": "A brief natural-language description of what visualization to create.",
                     },
-                    "title": {
-                        "type": "string",
-                        "description": "A short, informative title for the chart (e.g. 'Donor Count by Sex', 'Height vs Weight'). Do NOT include the value of the filter since that can change dynamically later.",
-                    },
                 },
-                "required": ["description", "title"],
+                # No `title`: chart names are built programmatically from the
+                # generated spec on the frontend, which is free, deterministic,
+                # and cannot drift from what is actually plotted.
+                "required": ["description"],
                 "additionalProperties": False,
             },
         },
@@ -237,8 +236,18 @@ def function_call_render_visualization(
         openai_api_key=openai_api_key,
         model=model,
     )
+    arguments = {"spec": result["spec"]}
+    # The chosen template's user-facing title and one-line summary, with tokens
+    # the frontend resolves against the live spec. Costs no output tokens: the
+    # text comes from the template registry, not the model.
+    text = result.get("text_templates")
+    if text:
+        if text.get("title"):
+            arguments["titleTemplate"] = text["title"]
+        if text.get("summary"):
+            arguments["summaryTemplate"] = text["summary"]
     return {
         "name": "RenderVisualization",
-        "arguments": {"spec": result["spec"]},
+        "arguments": arguments,
         "meta": result.get("meta"),
     }
