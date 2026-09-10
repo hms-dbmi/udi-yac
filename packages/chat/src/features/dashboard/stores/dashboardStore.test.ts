@@ -443,6 +443,43 @@ describe('template provenance', () => {
     expect(parseTemplateProvenance(meta as never)).toBeUndefined();
   });
 
+  it('accepts a grouping descriptor, whose value is an object not a column name', () => {
+    // The shape check demanded a string `value` from every descriptor, which is
+    // true of a field binding and false of a grouping. So the moment the agent
+    // actually supplied a grouping, the whole descriptor list was rejected and
+    // the card lost EVERY tweak control — including the cut-point widget the
+    // grouping exists for. The chart still rendered, so nothing looked broken.
+    const meta = {
+      ...META,
+      tweakable_params: [
+        ...META.tweakable_params,
+        {
+          kind: 'grouping',
+          param: 'grouping',
+          placeholder: 'GROUP',
+          entity: 'Demographics',
+          type: 'quantitative',
+          encodings: ['color'],
+          label: 'groups',
+          value: { type: 'quantitative', cuts: [2010] },
+          field: 'birth_date',
+          fieldType: 'quantitative',
+        },
+      ],
+    };
+    const provenance = parseTemplateProvenance(meta as never);
+    expect(provenance).toBeDefined();
+    expect(provenance!.params).toHaveLength(META.tweakable_params.length + 1);
+  });
+
+  it('still refuses a non-grouping descriptor carrying an object value', () => {
+    const meta = {
+      ...META,
+      tweakable_params: [{ param: 'field4', label: 'color', value: { nope: true } }],
+    };
+    expect(parseTemplateProvenance(meta as never)).toBeUndefined();
+  });
+
   it('applyTemplateRebind swaps the spec, keeps the uuid and merges the bindings', () => {
     const store = createDashboardStore();
     store

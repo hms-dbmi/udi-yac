@@ -1008,8 +1008,15 @@ export function parseTemplateProvenance(
       !!p &&
       typeof p === 'object' &&
       typeof p.param === 'string' &&
-      typeof p.value === 'string' &&
-      typeof p.label === 'string',
+      typeof p.label === 'string' &&
+      // A field binding's value is a column name; a grouping's is the grouping
+      // object itself. Requiring a string rejected the whole descriptor list —
+      // and with it every control on the card, not just the grouping — the
+      // moment the agent actually supplied a grouping. The chart rendered, so
+      // the only symptom was a tweak panel that quietly stopped appearing on
+      // exactly the charts the grouping widget was built for.
+      (typeof p.value === 'string' ||
+        (p.kind === 'grouping' && typeof p.value === 'object' && p.value !== null)),
   );
   if (!wellFormed) return undefined;
   return { tool, toolArgs: toolArgs as Record<string, TemplateArgValue>, params };
