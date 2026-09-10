@@ -562,20 +562,15 @@ def _generate_join_entity_tool(
     param_map = {}
     for key in entity_keys:
         param = f"entity{key[1:]}"
-        # Deliberately NOT named `description`: that holds the *tool* description
-        # built above, and shadowing it here published this blurb as the tool's
-        # own — leaving all 19 join templates, every survival variant among them,
-        # with nothing for the model to select on but their names. The
-        # single-entity generator carries the same warning for the same reason.
-        entity_description = entity_descriptions.get(
+        description = entity_descriptions.get(
             key, f"An additional data entity (table) to join with ({param})."
         )
         if key in shared:
-            entity_description += (
+            description += (
                 " MAY be the same table as another entity here, when one table "
                 "carries both roles."
             )
-        properties[param] = {"type": "string", "description": entity_description}
+        properties[param] = {"type": "string", "description": description}
         required.append(param)
         param_map[param] = key
 

@@ -3621,10 +3621,10 @@ def generate():
     df = add_row(
         df,
         query_templates=[
-            "Survival plot stratified by whether the patient received <a named drug> or not.",
-            "Compare survival for subjects who ever had a particular <E2.F> against everyone else.",
-            "Does survival differ for patients who ever got <a named treatment>?",
-            "Survival by whether the patient was ever treated with <a named drug>.",
+            "Show survival curves for <E1> split by whether the subject ever received <V4>.",
+            "Compare survival for subjects who ever had <E2.F> = <V4> against everyone else.",
+            "Does survival differ for patients who ever got <V4>?",
+            "Survival by whether the patient was ever treated with <V4>.",
         ],
         spec=_survival_chart(reading=StratumReading.ANY_OF),
         chart_type=ChartType.LINE,
@@ -3636,11 +3636,9 @@ def generate():
             TaskType.CORRELATE,
         ],
         description=(
-            "Survival curves split by whether a subject EVER had a NAMED THING recorded, against "
-            "everyone else. This is the template for 'did the patient receive methotrexate or "
-            "not', 'ever enrolled on protocol X', 'ever had a brain metastasis' — any request "
-            "that names a particular drug, protocol, site or diagnosis rather than a whole "
-            "table. Use it when the related table holds one "
+            "Survival curves split by whether a subject EVER appears in a related table with "
+            "one of a named set of values — 'ever received methotrexate', 'ever enrolled on "
+            "protocol X' — against everyone else. Use this when the related table holds one "
             "row per subject per value (a patient's list of drugs, sites, diagnoses), so a "
             "subject has SEVERAL values rather than one, and the question is about having a "
             "particular one of them at any point. Supply the values in `grouping`: this "
@@ -3711,7 +3709,7 @@ def generate():
             "Show survival curves for <E1> split by whether the subject appears in <E2>.",
             "Compare survival between subjects with and without a <E2> record.",
             "Does survival differ for subjects who have <E2> records?",
-            "Survival by whether the patient ever underwent <E2> at all.",
+            "Survival by whether the patient received <E2>.",
         ],
         spec=_survival_chart(reading=StratumReading.PRESENCE),
         chart_type=ChartType.LINE,
@@ -3725,16 +3723,12 @@ def generate():
         description=(
             "Survival curves split by PRESENCE OR ABSENCE of the subject in a second table, from "
             "an event log — one row per event, with a subject id, an event-type column and a "
-            "numeric time column. Use this ONLY when being in the table IS the fact: a radiation "
-            "table, a surgery table, where every row means the same thing and no column needs "
-            "naming. "
-            "DO NOT use it when the request names a particular value — a specific drug, "
-            "protocol, site or diagnosis. A table that records many such things ('one row per "
-            "drug given') answers only 'had any treatment' by its presence, which is a different "
-            "and much larger group; for a named value use the survival template that splits by "
-            "whether the subject EVER appears with one of a named set of values. "
-            "No field from the second table is named or plotted; only the shared subject-id "
-            "column on each side. Exactly two curves, and they PARTITION the cohort."
+            "numeric time column. Answers 'did this subject receive/undergo/enrol in the thing "
+            "that table records' — radiation, surgery, a protocol — where the fact is the "
+            "existence of a row, not the value of any column. No field from the second table is "
+            "named or plotted; only the shared subject-id column on each side. Exactly two "
+            "curves, and they PARTITION the cohort: every subject is in one or the other, so the "
+            "two groups add back to the whole and reconcile with the unstratified curve."
         ),
         design_considerations=(
             "Use this, not the related-field variant, when the question is whether a subject has "
