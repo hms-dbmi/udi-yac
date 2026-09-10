@@ -18,20 +18,24 @@ pnpm test:watch   # vitest in watch mode
 
 ### Standalone app config (env vars)
 
-The standalone `App.tsx` reads these Vite env vars (see `.env.example`). Copy `.env.example` to `.env.local` to override locally:
+The standalone `App.tsx` reads these Vite env vars. Copy `.env.example` to `.env.local` to override locally — all are optional.
 
-| Var                        | Default                                                             | Purpose                                                                               |
-| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `VITE_UDI_API_BASE_URL`    | `http://localhost:8007`                                             | UDIAgent FastAPI server URL                                                           |
-| `VITE_UDI_DATA_PACKAGE`    | (unset → inline HuBMAP API package from `src/data/hubmapRemote.ts`) | Optional path/URL to a `datapackage_udi.json`. Overrides the inline default when set. |
-| `VITE_UDI_REQUIRE_API_KEY` | `true`                                                              | Set to `false` to skip the in-app OpenAI key prompt                                   |
-| `VITE_UDI_MODEL`           | (unset)                                                             | Optional LLM model override                                                           |
+Each is described once in [`src/app/envVars.ts`](src/app/envVars.ts); this table, `.env.example`, and `src/env.d.ts` are generated from it by `node scripts/gen-chat-env-docs.mjs`, and CI fails if they drift.
 
-By default the standalone app talks to the live HuBMAP Portal metadata API. To use the locally bundled snapshot instead, set:
+<!-- BEGIN generated: env vars (scripts/gen-chat-env-docs.mjs) -->
 
-```
-VITE_UDI_DATA_PACKAGE=/data/hubmap_2025-05-05/datapackage_udi.json
-```
+| Variable                   | Default                         | Description                                                                                                                                                                                                                                            |
+| -------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_UDI_API_BASE_URL`    | `http://localhost:8007`         | UDIAgent FastAPI server URL. May also be a same-origin path (e.g. `/api/yac`) when the chat sits behind the host app’s reverse proxy.                                                                                                                  |
+| `VITE_UDI_DATA_PACKAGE`    | `/data/hubmap/datapackage.json` | Path or URL to a `datapackage.json`. Defaults to the bundled HuBMAP snapshot synced from `sample-data/`. Ignored when `VITE_UDI_REMOTE_PACKAGE` is set.                                                                                                |
+| `VITE_UDI_REMOTE_PACKAGE`  | —                               | Name of a server-side data package (configured on the agent via `UDI_QUERY_BACKENDS`). When set, no CSVs load in the browser: metadata comes from `/v1/yac/metadata` and queries go to `/v1/yac/query`. Takes precedence over `VITE_UDI_DATA_PACKAGE`. |
+| `VITE_UDI_REQUIRE_API_KEY` | `true`                          | Prompt the user for an OpenAI key in the UI. Defaults to `true`, but `.env.example` ships `false` because local dev runs against an agent that has its own `OPENAI_API_KEY`.                                                                           |
+| `VITE_UDI_MODEL`           | —                               | LLM model override. Sent **only when the user supplies their own OpenAI key** — the agent honors a requested model only alongside an `X-OpenAI-Key`, so whoever pays for the tokens picks the model. Otherwise the agent’s `GPT_MODEL_NAME` applies.   |
+| `VITE_BASE`                | `/`                             | Public base path for the built SPA (read in `vite.config.ts`, build-time only). The library build always uses `./`.                                                                                                                                    |
+
+<!-- END generated: env vars -->
+
+To switch between bundled data packages and server-side (remote) mode, use `node scripts/set-chat-data-source.mjs <package> [--remote]` rather than editing `.env.local` by hand — the repo-root README and `dev/duckdb/README.md` cover the full flow.
 
 > **Note on `build` vs `build:lib`**: `pnpm build` produces a deployable standalone SPA — this is the default so CI/deploy pipelines behave as expected. To build the publishable library bundle (the `UDIChat` React component), use `pnpm build:lib`, which invokes `vite build --mode lib` and emits both JS and `.d.ts` files under `dist/`.
 

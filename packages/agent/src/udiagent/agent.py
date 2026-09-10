@@ -131,6 +131,7 @@ class UDIAgent:
         json_schema: str,
         n=1,
         openai_api_key: str | None = None,
+        model: str | None = None,
     ):
         # Normalize schema to dict
         if isinstance(json_schema, str):
@@ -150,7 +151,7 @@ class UDIAgent:
 
         client = self._get_gpt_client(openai_api_key)
         resp = client.chat.completions.create(
-            model=self.gpt_model_name,
+            model=model or self.gpt_model_name,
             messages=messages,
             response_format={
                 "type": "json_schema",

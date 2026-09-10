@@ -58,13 +58,18 @@ load_dotenv(_PACKAGE_ROOT / ".env")
 # override=False keeps the path above (and real env vars) winning where both exist.
 load_dotenv(Path.cwd() / ".env")
 
+# --- Config ---
+# Built before logging so a misconfiguration is reported immediately, and so
+# every env var in the process flows through one validated model.
+config = ServerConfig.from_env()
+
 # When installed from a wheel, _PACKAGE_ROOT lands inside site-packages, which
 # has no data/ (only src/udiagent/data is packaged) and is often read-only —
 # hence the overrides. See the deployment guide in the package README.
-_DATA_DIR = Path(os.getenv("UDI_DATA_DIR") or _PACKAGE_ROOT / "data")
+_DATA_DIR = Path(config.udi_data_dir or _PACKAGE_ROOT / "data")
 
 # --- Logging setup ---
-_log_dir = Path(os.getenv("UDI_LOG_DIR") or _PACKAGE_ROOT / "logs")
+_log_dir = Path(config.udi_log_dir or _PACKAGE_ROOT / "logs")
 
 _handlers: list[logging.Handler] = [logging.StreamHandler()]
 try:
@@ -93,9 +98,6 @@ logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-# --- Config ---
-config = ServerConfig.from_env()
-
 # --- Agent & Orchestrator ---
 agent = UDIAgent(
     gpt_model_name=config.gpt_model_name,
@@ -121,8 +123,12 @@ app = FastAPI()
 app.state.budget_check = None
 
 
-def _usage_headers(usage: Usage | None) -> dict[str, str]:
-    """Render a ``Usage`` as the ``X-Usage-*`` header bundle for metering."""
+def _usage_headers(usage: Usage | None, model: str | None = None) -> dict[str, str]:
+    """Render a ``Usage`` as the ``X-Usage-*`` header bundle for metering.
+
+    *model* is the model the request actually ran on; it differs from the
+    server's default when a bring-your-own-key caller overrode it.
+    """
     if usage is None:
         usage = Usage()
     return {
@@ -131,7 +137,7 @@ def _usage_headers(usage: Usage | None) -> dict[str, str]:
         "X-Usage-Total-Tokens": str(usage.total_tokens),
         "X-Usage-Cached-Prompt-Tokens": str(usage.cached_prompt_tokens),
         "X-Usage-Reasoning-Tokens": str(usage.reasoning_tokens),
-        "X-Usage-Model": agent.gpt_model_name,
+        "X-Usage-Model": model or agent.gpt_model_name,
     }
 
 
@@ -167,7 +173,11 @@ async def _openai_auth_error_handler(request, exc: AuthenticationError):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # Defaults to ["*"] — any origin. Set UDI_CORS_ORIGINS to name the hosts
+    # that embed the chat once you know them; with the wildcard, Starlette
+    # echoes back whatever Origin asked, so any site can call this server with
+    # a user's credentials.
+    allow_origins=config.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -242,11 +252,24 @@ def yac_completions(
     # Only enforce budget for users who don't bring their own key.
     budget_check = None if x_openai_key else app.state.budget_check
 
+    # A caller-supplied model is honored only alongside a caller-supplied key:
+    # whoever pays for the tokens picks the model. On the server's own key,
+    # model choice (and its cost) stays the operator's.
+    # ponytail: key ownership is the permission check here. If deployments ever
+    # need to grant model choice independently of who pays, that becomes a
+    # role/claim lookup on token_payload — see the agent README.
+    requested_model = request.model if x_openai_key else None
+    if request.model and not x_openai_key:
+        logger.info(
+            "ignoring requested model %r: no caller-supplied key", request.model
+        )
+
     result = orchestrator.run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
+        model=requested_model,
         budget_check=budget_check,
         session_id=x_conversation_id,
     )
@@ -259,7 +282,7 @@ def yac_completions(
     )
     return JSONResponse(
         content=result.tool_calls,
-        headers=_usage_headers(result.usage),
+        headers=_usage_headers(result.usage, requested_model),
     )
 
 
@@ -295,7 +318,7 @@ def _engine_from_config(spec: dict):
 
 
 def _load_query_engines() -> dict:
-    path = os.getenv("UDI_QUERY_BACKENDS")
+    path = config.udi_query_backends
     if not path:
         return {}
     engines = {}
@@ -354,8 +377,9 @@ def yac_metadata(
     if key not in caches:
         from udiagent.query import MetadataCache
 
-        ttl = float(os.getenv("UDI_METADATA_TTL_SECONDS", "3600"))
-        caches[key] = MetadataCache(engine, package or key, ttl_seconds=ttl)
+        caches[key] = MetadataCache(
+            engine, package or key, ttl_seconds=config.udi_metadata_ttl_seconds
+        )
     metadata = caches[key].refresh() if refresh else caches[key].get()
     return {
         "package": package or key,
@@ -394,6 +418,7 @@ def yac_benchmark(
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
+        model=request.model if x_openai_key else None,
     )
 
     return {

@@ -16,27 +16,25 @@ how the query backend works, see
 
 **One-click (VS Code):** run **Data: Use penguins (remote/DuckDB)** — it seeds
 penguins into a local DuckDB file and points the chat at it
-(`VITE_UDI_REMOTE_PACKAGE=penguins`) — then **Dev: chat + agent (remote/DuckDB)**
-to start the stack (the agent launches with `UDI_QUERY_BACKENDS` set; the plain
-**Dev: agent** task does _not_, so remote packages 404 there). Restart the chat
-dev server after the data task so it picks up the env change.
+(`VITE_UDI_REMOTE_PACKAGE=penguins`) — then **Dev: chat + agent** to start the
+stack. Seeding also writes `UDI_QUERY_BACKENDS` into `packages/agent/.env`, so
+there is no separate remote-mode agent task and no env prefix to remember.
+Restart both dev servers after the data task so they pick up the env change.
 
 Manual equivalent:
 
 ```bash
 # 1. Seed sample-data/penguins into packages/agent/penguins.duckdb
-#    (+ duckdb-backends.json). Instant — no container. From the repo root:
+#    (+ duckdb-backends.json, + UDI_QUERY_BACKENDS in packages/agent/.env).
+#    Instant — no container. From the repo root:
 uv run --project packages/agent --extra duckdb \
   python packages/agent/scripts/seed_duckdb.py
 
-# 2. Start the agent pointed at the DuckDB config (WITHOUT UDI_QUERY_BACKENDS
-#    the agent has no query backends and every remote package 404s):
-UDI_QUERY_BACKENDS=packages/agent/duckdb-backends.json INSECURE_DEV_MODE=1 \
-  uv run --project packages/agent --extra server --extra duckdb \
-  fastapi dev packages/agent/src/udiagent/server/app.py --port 8007
-
-# 3. Point the chat at it, then start it:
+# 2. Point the chat at it:
 node scripts/set-chat-data-source.mjs penguins --remote   # VITE_UDI_REMOTE_PACKAGE=penguins
+
+# 3. Start the stack — the agent reads UDI_QUERY_BACKENDS from its .env:
+pnpm dev:agent
 pnpm dev:chat
 ```
 

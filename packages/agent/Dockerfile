@@ -19,7 +19,7 @@ ENV UV_CACHE_DIR=/tmp/uv-cache
 COPY --chown=app:app pyproject.toml uv.lock ./
 COPY --chown=app:app packages/agent/pyproject.toml packages/agent/
 COPY --chown=app:app packages/grammar-py/pyproject.toml packages/grammar-py/
-RUN uv sync --frozen --no-install-project --package udiagent --extra server --extra langfuse
+RUN uv sync --frozen --no-install-project --package udiagent --extra server --extra langfuse --extra duckdb --extra starrocks
 
 # Copy application code and data
 COPY --chown=app:app packages/agent/src/ ./packages/agent/src/
@@ -27,7 +27,11 @@ COPY --chown=app:app packages/agent/data/ ./packages/agent/data/
 COPY --chown=app:app packages/agent/README.md ./packages/agent/
 
 # Install the project itself
-RUN uv sync --frozen --package udiagent --extra server --extra langfuse
+# duckdb/starrocks are needed whenever UDI_QUERY_BACKENDS is set: the connector
+# imports in _engine_from_config are lazy, and _load_query_engines swallows the
+# resulting ImportError into a warning — so without them a configured backend
+# degrades silently to 404s instead of failing at startup.
+RUN uv sync --frozen --package udiagent --extra server --extra langfuse --extra duckdb --extra starrocks
 
 WORKDIR /app/packages/agent
 
