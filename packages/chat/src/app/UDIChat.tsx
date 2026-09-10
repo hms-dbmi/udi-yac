@@ -97,12 +97,14 @@ function UDIChatInner({
       userPrompt: string;
       sourceFields: Record<string, string[]> | null;
       title?: string;
+      titleTemplate?: string;
+      summaryTemplate?: string;
     }> = [];
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       if (message.role !== 'assistant') continue;
       const specs = extractAllUdiSpecsFromMessage(message);
-      for (const { spec, toolCallIndex, title } of specs) {
+      for (const { spec, toolCallIndex, title, titleTemplate, summaryTemplate } of specs) {
         const key = state.vizKey(i, toolCallIndex);
         if (state.activeVisualizations.has(key)) continue;
         if (mbState.closedVisualizations.has(key)) continue;
@@ -118,6 +120,8 @@ function UDIChatInner({
           userPrompt,
           sourceFields,
           title,
+          titleTemplate,
+          summaryTemplate,
         });
       }
     }

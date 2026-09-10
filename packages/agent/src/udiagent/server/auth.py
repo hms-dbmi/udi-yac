@@ -21,15 +21,6 @@ _JWKS_TTL_SECONDS = 300
 # the floor between such refreshes, so a stream of unrecognized tokens can't be
 # used to hammer the provider.
 _JWKS_MIN_REFRESH_SECONDS = 10
-# Asymmetric signature algorithms accepted against an external key set, keyed
-# by uppercase form so a lowercased env value still resolves to the spelling
-# jose expects. python-jose verifies no others — it has no PS* or EdDSA
-# backend — so anything outside this set would fail per-request anyway; being
-# explicit turns that into one clear error at startup instead.
-_JWKS_ALGORITHMS = {
-    alg.upper(): alg
-    for alg in ("RS256", "RS384", "RS512", "ES256", "ES384", "ES512")
-}
 
 
 def make_verify_jwt(
@@ -44,54 +35,16 @@ def make_verify_jwt(
     """Return a FastAPI dependency that verifies JWT tokens.
 
     In insecure dev mode, verification is skipped entirely.
+
+    Configuration consistency (secret-vs-JWKS exclusivity, the audience
+    requirement, the asymmetric-algorithm requirement) is enforced by
+    ``ServerConfig``, so every misconfiguration is reported at once at startup
+    rather than one at a time from here.
     """
     secret_key = secret_key.strip()
-    algorithm = algorithm.strip()
     jwks_url = jwks_url.strip()
     issuer = issuer.strip()
     audience = audience.strip()
-
-    if not insecure_dev_mode:
-        if secret_key and jwks_url:
-            raise RuntimeError(
-                "JWT_SECRET_KEY and JWT_JWKS_URL are mutually exclusive. "
-                "Set the secret for self-issued tokens, or the JWKS URL for "
-                "tokens issued by an external identity provider."
-            )
-        if not secret_key and not jwks_url:
-            raise RuntimeError(
-                "JWT_SECRET_KEY or JWT_JWKS_URL must be set unless "
-                "INSECURE_DEV_MODE=1. Refusing to start without a way to "
-                "verify JWTs."
-            )
-        if algorithm.lower() == "none":
-            # jose already refuses `none`, but a signature-less algorithm is
-            # worth turning away at startup rather than per-request.
-            raise RuntimeError(
-                "JWT_ALGORITHM must not be 'none' — that would accept "
-                "unsigned tokens. Set it to the algorithm your tokens are "
-                "actually signed with."
-            )
-        if jwks_url:
-            canonical = _JWKS_ALGORITHMS.get(algorithm.upper())
-            if canonical is None:
-                raise RuntimeError(
-                    f"JWT_JWKS_URL requires one of "
-                    f"{', '.join(sorted(_JWKS_ALGORITHMS.values()))}, got "
-                    f"{algorithm!r}. Set JWT_ALGORITHM to the one your identity "
-                    f"provider signs with (e.g. RS256)."
-                )
-            # Accept a lowercased env value, but hand jose the exact spelling
-            # it matches the token header against.
-            algorithm = canonical
-            if not audience:
-                # Without an audience, any token the IdP minted for any of its
-                # clients would be accepted here.
-                raise RuntimeError(
-                    "JWT_AUDIENCE must be set when using JWT_JWKS_URL, so that "
-                    "tokens issued for other clients of the same identity "
-                    "provider are rejected."
-                )
 
     import requests
     from jose import jwt, JWTError

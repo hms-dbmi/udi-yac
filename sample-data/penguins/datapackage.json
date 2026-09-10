@@ -33,6 +33,7 @@
           },
           {
             "name": "bill_length_mm",
+            "title": "Bill Length (mm)",
             "type": "number",
             "description": "",
             "udi:cardinality": 164,
@@ -42,6 +43,7 @@
           },
           {
             "name": "bill_depth_mm",
+            "title": "Bill Depth (mm)",
             "type": "number",
             "description": "",
             "udi:cardinality": 80,
@@ -51,6 +53,7 @@
           },
           {
             "name": "flipper_length_mm",
+            "title": "Flipper Length (mm)",
             "type": "number",
             "description": "",
             "udi:cardinality": 55,
@@ -60,6 +63,7 @@
           },
           {
             "name": "body_mass_g",
+            "title": "Body Mass (g)",
             "type": "number",
             "description": "",
             "udi:cardinality": 94,

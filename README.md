@@ -65,32 +65,32 @@ Use HuBMAP (CSV, browser mode)** VS Code task).
 grammar to SQL and runs it there, so the browser never loads the CSVs. Both
 backends seed the committed `sample-data/penguins` package by default.
 
+Seeding writes `UDI_QUERY_BACKENDS` into `packages/agent/.env`, so the same
+**Dev: chat + agent** task (or `pnpm dev:agent` + `dev:chat`) serves both modes —
+there is no separate remote-mode task and no env prefix to remember.
+
 - **DuckDB — no container** (easiest). In VS Code, run the **Data: Use penguins
   (remote/DuckDB)** task (seeds penguins + points the chat at it), then **Dev:
-  chat + agent (remote/DuckDB)**. Manually:
+  chat + agent**. Manually:
 
   ```bash
   uv run --project packages/agent --extra duckdb \
     python packages/agent/scripts/seed_duckdb.py            # → packages/agent/penguins.duckdb
-  UDI_QUERY_BACKENDS=packages/agent/duckdb-backends.json INSECURE_DEV_MODE=1 \
-    uv run --project packages/agent --extra server --extra duckdb \
-    fastapi dev packages/agent/src/udiagent/server/app.py --port 8007
+  node scripts/set-chat-data-source.mjs penguins --remote
   ```
 
-  Then `node scripts/set-chat-data-source.mjs penguins --remote` and
-  `pnpm dev:chat`. (The plain `pnpm dev:agent` / **Dev: agent** task starts the
-  agent _without_ `UDI_QUERY_BACKENDS`, so remote packages 404 — use the remote
-  task/command above.) Full guide: [`dev/duckdb/README.md`](dev/duckdb/README.md).
+  Then `pnpm dev:agent` + `pnpm dev:chat`.
+  Full guide: [`dev/duckdb/README.md`](dev/duckdb/README.md).
 
 - **StarRocks — Docker** (closest to a production OLAP target):
 
   ```bash
   docker compose -f dev/starrocks/docker-compose.yml up -d
   cd packages/agent && uv sync --extra starrocks && uv run python scripts/seed_starrocks.py
+  node scripts/set-chat-data-source.mjs penguins --remote
   ```
 
-  Then set `VITE_UDI_REMOTE_PACKAGE=penguins`, start the agent
-  (`UDI_QUERY_BACKENDS=$(pwd)/starrocks-backends.json`), and `pnpm dev:chat`.
+  Then `pnpm dev:agent` + `pnpm dev:chat`.
   Full guide: [`dev/starrocks/README.md`](dev/starrocks/README.md).
 
 How the compiler and parity work: [`packages/agent/src/udiagent/query/README.md`](packages/agent/src/udiagent/query/README.md).

@@ -38,6 +38,9 @@ import {
   useTracker,
 } from '@/app/UDIChatContext';
 import { VizTweakComponent } from './VizTweakComponent';
+import { EditableCardTitle } from './EditableCardTitle';
+import { applyFieldLabels, resolveVizSummary } from '../utils/vizTitle';
+import { useVizTitleLabels } from '../hooks/useVizTitleLabels';
 import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
 import { hasTweakableFields } from '../utils/tweakability';
@@ -85,20 +88,26 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     [viz.spec, sourceFields],
   );
 
+  // Field labels go on at render time, not in the store: the toolkit turns each
+  // mapping's `title` into the Vega encoding title, so axes, legends and tooltips
+  // read "Weight" while the stored spec keeps `weight_value` for export, the
+  // reset comparison and the query compiler.
+  const titleLabels = useVizTitleLabels();
   const plainSpec = useMemo(
-    () => JSON.parse(JSON.stringify(viz.interactiveSpec)),
-    [viz.interactiveSpec],
+    () => applyFieldLabels(JSON.parse(JSON.stringify(viz.interactiveSpec)), titleLabels),
+    [viz.interactiveSpec, titleLabels],
   );
 
   // Fingerprint the spec so we can force UDIVis to remount when the spec
   // content changes — the Vue CE may not reliably re-render on prop updates
-  // alone despite the useLayoutEffect fix in the wrapper.
+  // alone despite the useLayoutEffect fix in the wrapper. Fingerprinting the
+  // *labelled* spec means labels arriving late (the package loads after the
+  // card mounts) also force the remount that picks them up.
   const specKey = useMemo(() => {
-    const s = viz.interactiveSpec;
-    const repr = JSON.stringify(s.representation);
-    const src = JSON.stringify(s.source);
+    const repr = JSON.stringify(plainSpec.representation);
+    const src = JSON.stringify(plainSpec.source);
     return `${src}|${repr}`;
-  }, [viz.interactiveSpec]);
+  }, [plainSpec]);
 
   // Pass the full selection set — including this viz's OWN brush (keyed by its
   // uuid) — back to UDIVis. Feeding the own selection back lets an edit made
@@ -113,8 +122,8 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
 
   const handleClose = useCallback(() => {
     dashboardStore.getState().closeVisualization(vizKey, memoryBankStore);
-    trackEvent('visualization_closed', { hasTitle: !!viz.title });
-  }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title]);
+    trackEvent('visualization_closed', { hasTitle: !!viz.title, renamed: !!viz.userTitle });
+  }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title, viz.userTitle]);
 
   // Mirror brush/click selections out of the shared Pinia DataSourcesStore into
   // dataFiltersStore.internalDataSelections (keyed by viz uuid), matching the
@@ -146,6 +155,10 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   }
 
   const [showTweak, setShowTweak] = useState(false);
+  // While the title is being renamed the header collapses to just the field
+  // and its accept/cancel buttons: the row is too narrow to hold both, and
+  // hiding the grip also stops a stray drag mid-edit.
+  const [editingTitle, setEditingTitle] = useState(false);
   const [copied, setCopied] = useState(false);
   // Table view defaults to the fields relevant to the visualization (chart
   // mappings + entity key columns); toggled to all fields per card.
@@ -174,6 +187,11 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // displayed data was derived (grouped, aggregated, sorted, …).
   const transformSteps = useMemo(() => describeTransformations(viz.spec), [viz.spec]);
 
+  // The visualization template's own one-line explanation, resolved against the
+  // live spec. Leads the info tooltip because it says what the chart shows;
+  // the step list stays underneath for anyone who wants the mechanics.
+  const summary = useMemo(() => resolveVizSummary(viz, titleLabels), [viz, titleLabels]);
+
   const specJson = useMemo(() => JSON.stringify(viz.spec, null, 2), [viz.spec]);
 
   const specEditorUrl = useMemo(() => {
@@ -201,176 +219,185 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     >
       <CardHeader className="p-1 pb-0 shrink-0">
         <div className="flex items-center w-full min-w-0 gap-0.5">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    'h-6 w-6 cursor-grab active:cursor-grabbing touch-none',
-                    DRAG_HANDLE_CLASS,
-                  )}
-                  aria-label="Drag card"
-                />
-              }
-            >
-              <GripVertical className="h-3 w-3 text-muted-foreground" />
-            </TooltipTrigger>
-            <TooltipContent>Drag to reorder card</TooltipContent>
-          </Tooltip>
-          <span
-            className="text-xs font-medium truncate flex-1 min-w-0"
-            title={viz.title ?? viz.userPrompt}
-          >
-            {viz.title ?? viz.userPrompt}
-          </span>
-          {tweakable && (
+          {!editingTitle && (
             <Tooltip>
               <TooltipTrigger
                 render={
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setShowTweak((v) => !v)}
+                    className={cn(
+                      'h-6 w-6 cursor-grab active:cursor-grabbing touch-none',
+                      DRAG_HANDLE_CLASS,
+                    )}
+                    aria-label="Drag card"
                   />
                 }
               >
-                <Settings2 className="h-3 w-3" />
+                <GripVertical className="h-3 w-3 text-muted-foreground" />
               </TooltipTrigger>
-              <TooltipContent>Tweak fields</TooltipContent>
+              <TooltipContent>Drag to reorder card</TooltipContent>
             </Tooltip>
           )}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
-                />
-              }
-            >
-              {isTableView ? <BarChart3 className="h-3 w-3" /> : <Table2 className="h-3 w-3" />}
-            </TooltipTrigger>
-            <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
-          </Tooltip>
-          {isTableView && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn('h-6 w-6', showAllFields && 'text-primary')}
-                    onClick={() => setShowAllFields((v) => !v)}
-                  />
-                }
-              >
-                <Columns3 className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                {showAllFields ? 'Show relevant fields only' : 'Show all fields'}
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {transformSteps.length > 0 && (
-            <Tooltip>
-              <TooltipTrigger render={<Button variant="ghost" size="icon" className="h-6 w-6" />}>
-                <Info className="h-3 w-3 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="max-w-xs">
-                  <p className="font-medium mb-1">Transformations</p>
-                  <ol className="list-decimal pl-4 space-y-0.5">
-                    {transformSteps.map((step, i) => (
-                      <li key={i}>{step}</li>
-                    ))}
-                  </ol>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {debugMode && (
-            <Dialog>
+          <EditableCardTitle vizKey={vizKey} viz={viz} onEditingChange={setEditingTitle} />
+          {!editingTitle && (
+            <>
+              {tweakable && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setShowTweak((v) => !v)}
+                      />
+                    }
+                  >
+                    <Settings2 className="h-3 w-3" />
+                  </TooltipTrigger>
+                  <TooltipContent>Tweak fields</TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <DialogTrigger
-                      render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
-                    >
-                      <Code2 className="h-3 w-3" />
-                    </DialogTrigger>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
+                    />
                   }
-                />
-                <TooltipContent>View spec</TooltipContent>
+                >
+                  {isTableView ? <BarChart3 className="h-3 w-3" /> : <Table2 className="h-3 w-3" />}
+                </TooltipTrigger>
+                <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
               </Tooltip>
-              <DialogContent className="max-w-2xl max-h-[80vh]">
-                <DialogHeader>
-                  <DialogTitle className="text-sm">UDI Grammar Spec</DialogTitle>
-                </DialogHeader>
-                <div className="relative">
-                  <div className="flex gap-1 absolute top-1 right-1">
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={handleCopySpec}
-                          />
-                        }
-                      >
-                        {copied ? (
-                          <Check className="h-3.5 w-3.5 text-green-600" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                      </TooltipTrigger>
-                      <TooltipContent>{copied ? 'Copied' : 'Copy spec'}</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => window.open(specEditorUrl, '_blank')}
-                          />
-                        }
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent>Open in UDI Grammar Editor</TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <pre className="text-xs overflow-auto max-h-[60vh] bg-muted p-3 rounded-md">
-                    {specJson}
-                  </pre>
-                </div>
-              </DialogContent>
-            </Dialog>
+              {isTableView && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn('h-6 w-6', showAllFields && 'text-primary')}
+                        onClick={() => setShowAllFields((v) => !v)}
+                      />
+                    }
+                  >
+                    <Columns3 className="h-3 w-3" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {showAllFields ? 'Show relevant fields only' : 'Show all fields'}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {(summary || transformSteps.length > 0) && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="max-w-xs">
+                      {summary && <p className="mb-1">{summary}</p>}
+                      {transformSteps.length > 0 && (
+                        <>
+                          {summary && <div className="my-1.5 border-t border-current/20" />}
+                          <p className="font-medium mb-1">Transformations</p>
+                          <ol className="list-decimal pl-4 space-y-0.5">
+                            {transformSteps.map((step, i) => (
+                              <li key={i}>{step}</li>
+                            ))}
+                          </ol>
+                        </>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {debugMode && (
+                <Dialog>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <DialogTrigger
+                          render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
+                        >
+                          <Code2 className="h-3 w-3" />
+                        </DialogTrigger>
+                      }
+                    />
+                    <TooltipContent>View spec</TooltipContent>
+                  </Tooltip>
+                  <DialogContent className="max-w-2xl max-h-[80vh]">
+                    <DialogHeader>
+                      <DialogTitle className="text-sm">UDI Grammar Spec</DialogTitle>
+                    </DialogHeader>
+                    <div className="relative">
+                      <div className="flex gap-1 absolute top-1 right-1">
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={handleCopySpec}
+                              />
+                            }
+                          >
+                            {copied ? (
+                              <Check className="h-3.5 w-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </TooltipTrigger>
+                          <TooltipContent>{copied ? 'Copied' : 'Copy spec'}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => window.open(specEditorUrl, '_blank')}
+                              />
+                            }
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Open in UDI Grammar Editor</TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <pre className="text-xs overflow-auto max-h-[60vh] bg-muted p-3 rounded-md">
+                        {specJson}
+                      </pre>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+              <span
+                aria-hidden
+                className="mx-0.5 select-none text-sm leading-none text-muted-foreground/40"
+              >
+                |
+              </span>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClose} />
+                  }
+                >
+                  <X className="h-3 w-3" />
+                </TooltipTrigger>
+                <TooltipContent>Close</TooltipContent>
+              </Tooltip>
+            </>
           )}
-          <span
-            aria-hidden
-            className="mx-0.5 select-none text-sm leading-none text-muted-foreground/40"
-          >
-            |
-          </span>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClose} />
-              }
-            >
-              <X className="h-3 w-3" />
-            </TooltipTrigger>
-            <TooltipContent>Close</TooltipContent>
-          </Tooltip>
         </div>
       </CardHeader>
       {showTweak && (

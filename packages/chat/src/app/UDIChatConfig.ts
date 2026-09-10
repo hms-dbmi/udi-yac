@@ -41,6 +41,13 @@ export interface UDIChatConfig {
   authToken?: string;
   /** If true, prompt the user to enter an OpenAI API key before chatting. */
   requireApiKey?: boolean;
+  /**
+   * LLM model id to run the request on. Applied **only when the user supplies
+   * their own OpenAI key** (`requireApiKey`, or a key entered in the UI): the
+   * server honors a requested model only alongside an `X-OpenAI-Key`, so that
+   * whoever pays for the tokens picks the model. Without a caller key the
+   * server's own `GPT_MODEL_NAME` applies and this value is not sent.
+   */
   model?: string;
   /**
    * Extra items to append to the Download Data dropdown. Each action's

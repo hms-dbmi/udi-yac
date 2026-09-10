@@ -370,3 +370,66 @@ describe('dataPackageStore — serialization strings', () => {
     expect(serialized).not.toContain('donor_id');
   });
 });
+
+describe('dataPackageStore — display labels', () => {
+  /** The same package, plus the two optional label keys a package author sets. */
+  function makeLabelledPackage(): DataPackage {
+    const pkg = makePackage();
+    pkg.resources[0].title = 'Donor';
+    pkg.resources[0].schema.fields[0].title = 'Age at death';
+    pkg['udi:labels'] = { "Children's Hospital of Philadelphia": 'CHOP' };
+    return pkg;
+  }
+
+  it('prefers a field title over humanizing the column name', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeLabelledPackage(), []);
+    expect(store.getState().getFieldLabel('donors', 'age_value')).toBe('Age at death');
+    // No title on this one, so the humanized fallback stands.
+    expect(store.getState().getFieldLabel('donors', 'organ')).toBe('Organ');
+  });
+
+  it('humanizes every field when the package carries no titles', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), []);
+    expect(store.getState().getFieldLabel('donors', 'age_value')).toBe('Age');
+    expect(store.getState().getFieldLabel('samples', 'sample_size')).toBe('Sample Size');
+  });
+
+  it('falls back to humanizing for an unknown entity or field', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeLabelledPackage(), []);
+    expect(store.getState().getFieldLabel('nope', 'age_value')).toBe('Age');
+    expect(store.getState().getFieldLabel('donors', 'not_a_field')).toBe('Not A Field');
+  });
+
+  it('labels entities from the resource title, humanizing otherwise', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeLabelledPackage(), []);
+    expect(store.getState().getEntityLabel('donors')).toBe('Donor');
+    expect(store.getState().getEntityLabel('samples')).toBe('Samples');
+  });
+
+  it('maps categorical values through udi:labels and passes the rest through', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeLabelledPackage(), []);
+    expect(store.getState().getValueLabel("Children's Hospital of Philadelphia")).toBe('CHOP');
+    expect(store.getState().getValueLabel('Vanderbilt TMC')).toBe('Vanderbilt TMC');
+  });
+
+  it('passes every value through when the package has no label map', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), []);
+    expect(store.getState().getValueLabel("Children's Hospital of Philadelphia")).toBe(
+      "Children's Hospital of Philadelphia",
+    );
+  });
+
+  it('reads a field data type straight from the schema', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), []);
+    expect(store.getState().getFieldDataType('donors', 'age_value')).toBe('quantitative');
+    expect(store.getState().getFieldDataType('donors', 'organ')).toBe('nominal');
+    expect(store.getState().getFieldDataType('donors', 'nope')).toBeUndefined();
+  });
+});
