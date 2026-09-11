@@ -25,7 +25,7 @@ jobs:
       matrix:
         include:
           - package: agent
-            sync-args: --extra server --extra langfuse --extra test
+            sync-args: --extra server --extra langfuse --extra test --extra bedrock
           - package: grammar-py
             sync-args: ""
     defaults:

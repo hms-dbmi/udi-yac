@@ -49,12 +49,15 @@ class TestGetGptClient:
     def setup_method(self):
         _make_openai_client.cache_clear()
 
-    def _make_agent(self):
+    def _make_agent(self, use_bedrock: bool = False):
         """Create a UDIAgent without initializing model connections."""
         agent = UDIAgent.__new__(UDIAgent)
         agent.gpt_model = MagicMock(name="default_gpt_model")
         agent.gpt_model_name = "gpt-4.1"
         agent._openai_class = _StubOpenAI
+        # Set explicitly rather than defaulted via getattr in the production
+        # code: a BYOK guard that no-ops on a missing attribute would fail open.
+        agent.use_bedrock = use_bedrock
         return agent
 
     def test_none_key_returns_default_client(self):
@@ -66,6 +69,16 @@ class TestGetGptClient:
         agent = self._make_agent()
         client = agent._get_gpt_client("sk-custom-key")
         assert client is not agent.gpt_model
+
+    def test_custom_key_refused_in_bedrock_mode(self):
+        """BYOK must not fall back to api.openai.com when Bedrock is configured."""
+        agent = self._make_agent(use_bedrock=True)
+        with pytest.raises(ValueError, match="per-request OpenAI keys are refused"):
+            agent._get_gpt_client("sk-custom-key")
+
+    def test_bedrock_mode_still_serves_keyless_requests(self):
+        agent = self._make_agent(use_bedrock=True)
+        assert agent._get_gpt_client(None) is agent.gpt_model
 
 
 # ---------------------------------------------------------------------------
@@ -175,3 +188,154 @@ class TestApiHeaderExtraction:
             )
             mock_run.assert_called_once()
             assert mock_run.call_args.kwargs.get("openai_api_key") is None
+
+
+# ---------------------------------------------------------------------------
+# Pre-flight credential check (the 401 that precedes orchestration)
+# ---------------------------------------------------------------------------
+
+
+class TestPreflightCredentialCheck:
+    @pytest.fixture(autouse=True)
+    def setup_app(self):
+        with patch.object(UDIAgent, "__init__", lambda self, **kwargs: None):
+            import udiagent.server.app as server_app
+
+            mock_agent = UDIAgent.__new__(UDIAgent)
+            mock_agent.gpt_model = MagicMock(name="default_gpt_model")
+            mock_agent.gpt_model_name = "gpt-4.1"
+
+            server_app.agent = mock_agent
+            server_app.orchestrator.agent = mock_agent
+
+            from starlette.testclient import TestClient
+
+            self.client = TestClient(server_app.app)
+            self.server_app = server_app
+            yield
+
+    def _post(self):
+        return self.client.post(
+            "/v1/yac/completions",
+            json={
+                "model": "gpt-4.1",
+                "messages": [{"role": "user", "content": "show a bar chart"}],
+                "dataSchema": "{}",
+                "dataDomains": "{}",
+            },
+            headers={"Authorization": "Bearer test"},
+        )
+
+    def _with_config(self, config):
+        """Swap the module-global config the endpoint reads at call time."""
+        return patch.object(self.server_app, "config", config)
+
+    def test_bedrock_counts_as_credentialed(self, monkeypatch):
+        """UDI_BEDROCK signs with the instance's IAM role — no key needed."""
+        from test_bedrock_config import _config
+
+        with self._with_config(_config(udi_bedrock=True)):
+            with patch.object(
+                self.server_app.orchestrator,
+                "run",
+                return_value=MagicMock(tool_calls=[], usage=Usage()),
+            ) as mock_run:
+                response = self._post()
+                assert response.status_code != 401
+                mock_run.assert_called_once()
+
+    def test_byok_refused_in_bedrock_mode(self):
+        """A caller's key must not be served from api.openai.com."""
+        from test_bedrock_config import _config
+
+        with self._with_config(_config(udi_bedrock=True)):
+            with patch.object(
+                self.server_app.orchestrator,
+                "run",
+                return_value=MagicMock(tool_calls=[], usage=Usage()),
+            ) as mock_run:
+                response = self.client.post(
+                    "/v1/yac/completions",
+                    json={
+                        "model": "openai.gpt-oss-120b-1:0",
+                        "messages": [{"role": "user", "content": "show a bar chart"}],
+                        "dataSchema": "{}",
+                        "dataDomains": "{}",
+                    },
+                    headers={
+                        "Authorization": "Bearer test",
+                        "X-OpenAI-Key": "sk-user-provided",
+                    },
+                )
+                assert response.status_code == 403
+                assert "api.openai.com" in response.json()["error"]
+                # The refusal must precede orchestration — no prompt goes out.
+                mock_run.assert_not_called()
+
+    def test_byok_refused_on_benchmark_endpoint_too(self):
+        """Every endpoint taking X-OpenAI-Key must share the guard."""
+        from test_bedrock_config import _config
+
+        with self._with_config(_config(udi_bedrock=True)):
+            with patch.object(
+                self.server_app.orchestrator,
+                "run",
+                return_value=MagicMock(
+                    tool_calls=[], orchestrator_choice=None, usage=Usage()
+                ),
+            ) as mock_run:
+                response = self.client.post(
+                    "/v1/yac/benchmark",
+                    json={
+                        "messages": [{"role": "user", "content": "show a bar chart"}],
+                        "dataSchema": "{}",
+                        "dataDomains": "{}",
+                    },
+                    headers={
+                        "Authorization": "Bearer test",
+                        "X-OpenAI-Key": "sk-user-provided",
+                    },
+                )
+                assert response.status_code == 403
+                mock_run.assert_not_called()
+
+    def test_byok_allowed_when_bedrock_is_off(self):
+        """Regression guard: BYOK is untouched outside Bedrock mode."""
+        from test_bedrock_config import _config
+
+        with self._with_config(_config()):
+            with patch.object(
+                self.server_app.orchestrator,
+                "run",
+                return_value=MagicMock(tool_calls=[], usage=Usage()),
+            ) as mock_run:
+                response = self.client.post(
+                    "/v1/yac/completions",
+                    json={
+                        "model": "gpt-4.1",
+                        "messages": [{"role": "user", "content": "show a bar chart"}],
+                        "dataSchema": "{}",
+                        "dataDomains": "{}",
+                    },
+                    headers={
+                        "Authorization": "Bearer test",
+                        "X-OpenAI-Key": "sk-user-provided",
+                    },
+                )
+                assert response.status_code == 200
+                mock_run.assert_called_once()
+
+    def test_no_credentials_and_no_header_still_401(self):
+        """Regression guard for the pre-existing behavior."""
+        from test_bedrock_config import _config
+
+        with self._with_config(_config()):
+            with patch.object(
+                self.server_app.orchestrator,
+                "run",
+                return_value=MagicMock(tool_calls=[], usage=Usage()),
+            ) as mock_run:
+                response = self._post()
+                assert response.status_code == 401
+                assert "UDI_BEDROCK" in response.json()["error"]
+                mock_run.assert_not_called()

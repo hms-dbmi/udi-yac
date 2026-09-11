@@ -5,7 +5,7 @@ import logging
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 
-from udiagent._compat import get_openai_class
+from udiagent._compat import get_openai_class, make_bedrock_provider
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,16 @@ class UDIAgent:
     ``OPENAI_BASE_URL`` environment variable is set, which the OpenAI SDK
     applies to every client it builds.
 
+    Amazon Bedrock with an IAM role: pass ``bedrock=True`` (optionally
+    ``bedrock_region``) instead of ``openai_api_key``. Requests are signed with
+    SigV4 using the default AWS credential chain — an EC2 instance profile or
+    ECS task role — and the endpoint is derived from the region, so no key is
+    held by the process. Requires ``pip install udiagent[bedrock]``. Mutually
+    exclusive with ``openai_api_key`` and ``openai_base_url``; for a static
+    Bedrock API key use those instead. Per-request (bring-your-own) keys are
+    **refused** in this mode rather than served from api.openai.com — see
+    ``_get_gpt_client``.
+
     LangFuse observability is opt-in: pass any of ``langfuse_public_key``,
     ``langfuse_secret_key``, or ``langfuse_host`` to route requests through
     ``langfuse.openai.OpenAI``. When none are provided, the plain ``openai``
@@ -43,6 +53,8 @@ class UDIAgent:
         openai_api_key: str | None = None,
         *,
         openai_base_url: str | None = None,
+        bedrock: bool = False,
+        bedrock_region: str | None = None,
         langfuse_public_key: str | None = None,
         langfuse_secret_key: str | None = None,
         langfuse_host: str | None = None,
@@ -50,6 +62,23 @@ class UDIAgent:
     ):
         self.gpt_model_name = gpt_model_name
         self.openai_base_url = openai_base_url
+        # Either param opts in, matching the LangFuse convention below — a
+        # bedrock_region= that silently did nothing would be a trap.
+        self.use_bedrock = any([bedrock, bedrock_region])
+        if self.use_bedrock and (openai_api_key or openai_base_url):
+            raise ValueError(
+                "Bedrock SigV4 authentication cannot be combined with "
+                "openai_api_key or openai_base_url — the OpenAI SDK refuses "
+                "`provider=` alongside either. Use bedrock=True for an IAM "
+                "role, or openai_api_key + openai_base_url for a static "
+                "Bedrock API key. To reach a private Bedrock endpoint, set "
+                "AWS_BEDROCK_BASE_URL."
+            )
+        # Built before the LangFuse client so a missing udiagent[bedrock] fails
+        # without first spawning LangFuse's background flusher thread.
+        self._bedrock_provider = (
+            make_bedrock_provider(region=bedrock_region) if self.use_bedrock else None
+        )
         use_langfuse = any(
             [langfuse_public_key, langfuse_secret_key, langfuse_host]
         )
@@ -95,6 +124,15 @@ class UDIAgent:
 
         Uses the explicitly provided *openai_api_key* if given.
         """
+        if self._bedrock_provider is not None:
+            logger.info(
+                "Bedrock SigV4 enabled; GPT-based features authenticate via the "
+                "default AWS credential chain (no API key held)."
+            )
+            # provider= is mutually exclusive with api_key/base_url, so this is a
+            # separate construction, not an extra kwarg on the call below.
+            self.gpt_model = self._openai_class(provider=self._bedrock_provider)
+            return
         if openai_api_key is None and self.openai_base_url:
             # ponytail: self-hosted backends (Ollama, vLLM, …) take no key, but
             # the SDK refuses to build a client without one. Placeholder beats a
@@ -115,7 +153,22 @@ class UDIAgent:
             )
 
     def _get_gpt_client(self, openai_api_key: str | None = None):
-        """Return a per-request OpenAI client if a custom key is provided, otherwise the default."""
+        """Return a per-request OpenAI client if a custom key is provided, otherwise the default.
+
+        Bring-your-own-key is refused in Bedrock mode. Honoring it would build a
+        client against api.openai.com and send the prompt — including the data
+        schema and domains — to a third party, defeating the point of routing
+        inference through Bedrock. Deployments choose Bedrock precisely to keep
+        data inside their AWS account, so this fails closed rather than silently
+        falling back to the public API.
+        """
+        if openai_api_key and self.use_bedrock:
+            raise ValueError(
+                "This agent is configured for Amazon Bedrock; per-request "
+                "OpenAI keys are refused because serving one would send the "
+                "prompt and data schema to api.openai.com. Omit the key to use "
+                "the Bedrock backend."
+            )
         if openai_api_key:
             return _make_openai_client(openai_api_key, self._openai_class)
         if self.gpt_model is None:

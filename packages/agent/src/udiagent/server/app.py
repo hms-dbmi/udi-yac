@@ -17,7 +17,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import AuthenticationError
+from openai import APIError, AuthenticationError, OpenAIError
 from fastapi import FastAPI, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -103,6 +103,8 @@ agent = UDIAgent(
     gpt_model_name=config.gpt_model_name,
     openai_api_key=config.openai_api_key,
     openai_base_url=config.openai_base_url,
+    bedrock=config.udi_bedrock,
+    bedrock_region=config.aws_region,
     langfuse_public_key=config.langfuse_public_key,
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
@@ -171,6 +173,51 @@ async def _openai_auth_error_handler(request, exc: AuthenticationError):
     )
 
 
+@app.exception_handler(OpenAIError)
+async def _openai_config_error_handler(request, exc: OpenAIError):
+    """Surface an unusable LLM backend as a 503 instead of a bare 500.
+
+    The OpenAI SDK raises a plain ``OpenAIError`` for client-construction and
+    credential problems, and an ``APIError`` subclass for anything the API
+    itself returned. Only the former is a server-configuration fault, so real
+    API failures are re-raised and keep their existing handling.
+
+    The common trigger is Bedrock SigV4 signing with no resolvable AWS
+    credentials — the SDK resolves them per request, so this fails at request
+    time rather than at startup. The response stays terse (an end user cannot
+    act on it); the actionable checklist goes to the log, where the operator
+    is looking.
+    """
+    if isinstance(exc, APIError):
+        raise exc
+
+    if config.udi_bedrock:
+        logger.error(
+            "Bedrock request failed — could not resolve AWS credentials: %s "
+            "Check that the instance profile / task role is attached and grants "
+            "bedrock:InvokeModel, that AWS_REGION is set (region=%s), and — for "
+            "a container on Docker's bridge network — that the IMDSv2 hop limit "
+            "is at least 2 (`aws ec2 modify-instance-metadata-options "
+            "--http-put-response-hop-limit 2 --http-tokens required`).",
+            exc,
+            config.aws_region or "unset",
+        )
+        detail = (
+            "The server could not authenticate to its Amazon Bedrock backend. "
+            "This is a server configuration problem, not a problem with your "
+            "request — please contact the administrator."
+        )
+    else:
+        logger.error("LLM backend is misconfigured: %s", exc)
+        detail = (
+            "The server's LLM backend is misconfigured. This is a server "
+            "problem, not a problem with your request — please contact the "
+            "administrator."
+        )
+
+    return JSONResponse(status_code=503, content={"error": detail})
+
+
 app.add_middleware(
     CORSMiddleware,
     # Defaults to ["*"] — any origin. Set UDI_CORS_ORIGINS to name the hosts
@@ -219,6 +266,35 @@ def read_root():
     }
 
 
+def _reject_byok_in_bedrock_mode(x_openai_key: str | None) -> JSONResponse | None:
+    """Refuse a per-request OpenAI key when the server is backed by Bedrock.
+
+    Honoring one would build a client against api.openai.com and send the
+    prompt — including the data schema and domains — to a third party.
+    Deployments choose Bedrock to keep data inside their own AWS account, so
+    this fails closed rather than quietly falling back to the public API.
+
+    ``UDIAgent._get_gpt_client`` enforces the same rule as a backstop; this
+    exists so callers get an actionable 403 instead of a 500. Every endpoint
+    that accepts ``X-OpenAI-Key`` must call it.
+    """
+    if not (x_openai_key and config.udi_bedrock):
+        return None
+    logger.warning(
+        "Refused a per-request OpenAI key: this server routes inference "
+        "through Amazon Bedrock."
+    )
+    return JSONResponse(
+        status_code=403,
+        content={
+            "error": "This server routes all inference through Amazon Bedrock "
+            "and does not accept per-request OpenAI keys, because using one "
+            "would send your prompt and data schema to api.openai.com. Remove "
+            "the X-OpenAI-Key header to continue."
+        },
+    )
+
+
 @app.post("/v1/yac/completions")
 def yac_completions(
     request: YACCompletionRequest,
@@ -236,16 +312,21 @@ def yac_completions(
         x_conversation_id is not None,
     )
 
-    # No key from the caller and none configured server-side → actionable 401
+    refusal = _reject_byok_in_bedrock_mode(x_openai_key)
+    if refusal is not None:
+        return refusal
+
+    # No key from the caller and no server-side credential → actionable 401
     # instead of the RuntimeError the orchestrator would raise (a bare 500).
-    # A configured OPENAI_BASE_URL counts as credentialed: self-hosted backends
-    # take no key, and the agent builds a placeholder-key client for them.
-    if not x_openai_key and not config.openai_api_key and not config.openai_base_url:
+    # A configured OPENAI_BASE_URL counts as credentialed (self-hosted backends
+    # take no key, and the agent builds a placeholder-key client for them), as
+    # does UDI_BEDROCK (requests are signed with the instance's IAM role).
+    if not x_openai_key and not config.has_server_credentials:
         return JSONResponse(
             status_code=401,
             content={
-                "error": "No OpenAI API key. Set OPENAI_API_KEY in the agent's "
-                ".env or send one via the X-OpenAI-Key header."
+                "error": "No OpenAI API key. Set OPENAI_API_KEY (or UDI_BEDROCK) "
+                "in the agent's .env, or send a key via the X-OpenAI-Key header."
             },
         )
 
@@ -413,6 +494,10 @@ def yac_benchmark(
     token_payload: dict = Depends(verify_jwt),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
+    refusal = _reject_byok_in_bedrock_mode(x_openai_key)
+    if refusal is not None:
+        return refusal
+
     result = orchestrator.run(
         messages=request.messages,
         data_schema=request.dataSchema,
