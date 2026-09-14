@@ -3,6 +3,7 @@ import {
   DEFAULT_OTHER_LABEL,
   addCut,
   assignValue,
+  cutPrecision,
   equalWidthCuts,
   groupingLabels,
   moveCut,
@@ -174,5 +175,43 @@ describe('cut point editing', () => {
   it('has nothing to split when the range is empty or degenerate', () => {
     expect(equalWidthCuts(5, 5, 2)).toEqual([]);
     expect(equalWidthCuts(0, 100, 1)).toEqual([]);
+  });
+
+  it('does not emit a duplicate cut once rounding closes the gap', () => {
+    // At precision 0 two boundaries can round onto the same integer, which
+    // would otherwise leave a bucket nothing can fall into: quartering [0, 4]
+    // wants 0.5/1/1.5/2/2.5/3/3.5, and rounding pairs them up.
+    expect(equalWidthCuts(0, 4, 8, 0)).toEqual([1, 2, 3, 4]);
+    expect(equalWidthCuts(0, 3, 4, 0)).toEqual([1, 2]);
+    // A range wide enough for the rounding to separate them keeps every cut.
+    expect(equalWidthCuts(0, 10.5, 4, 0)).toEqual([3, 5, 8]);
+  });
+});
+
+describe('cutPrecision', () => {
+  // A threshold is argued about at the precision the field has. Days-since-birth
+  // spanning thousands wants integers; a ratio running 0–1 wants two decimals.
+  it('gives integers to a range wider than 10', () => {
+    expect(cutPrecision(0, 13333)).toBe(0);
+    expect(cutPrecision(1989, 2023)).toBe(0);
+    expect(cutPrecision(0, 10.01)).toBe(0);
+  });
+
+  it('gives one decimal to a range of 2 through 10', () => {
+    expect(cutPrecision(0, 10)).toBe(1);
+    expect(cutPrecision(0, 2)).toBe(1);
+    expect(cutPrecision(5, 12)).toBe(1);
+  });
+
+  it('gives two decimals to a range narrower than 2', () => {
+    expect(cutPrecision(0, 1)).toBe(2);
+    expect(cutPrecision(0, 1.999)).toBe(2);
+  });
+
+  it('is unbothered by a reversed, empty or non-finite range', () => {
+    expect(cutPrecision(2023, 1989)).toBe(0); // reversed reads the same width
+    expect(cutPrecision(5, 5)).toBe(2);
+    expect(cutPrecision(0, Infinity)).toBe(2);
+    expect(cutPrecision(NaN, 1)).toBe(2);
   });
 });

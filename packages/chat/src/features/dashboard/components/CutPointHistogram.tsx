@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { cutPrecision } from '../utils/grouping';
+
 interface CutPointHistogramProps {
   /** Bin counts across [min, max], left to right. Empty renders the axis alone. */
   bins: number[];
@@ -47,6 +49,10 @@ export function CutPointHistogram({
 
   const span = max - min;
   const peak = useMemo(() => bins.reduce((a, b) => Math.max(a, b), 0), [bins]);
+  // A pointer lands on a sub-pixel value; the cut it produces should read at the
+  // precision the field is actually discussed at, not at whatever the drag
+  // happened to sample.
+  const precision = cutPrecision(min, max);
 
   const toPercent = useCallback(
     (value: number) => (span > 0 ? ((value - min) / span) * 100 : 0),
@@ -80,10 +86,10 @@ export function CutPointHistogram({
       // Not re-sorted mid-drag: reordering under the pointer would swap which
       // handle is being held and send it flying to the other cut's position.
       const next = [...cuts];
-      next[dragging] = Number(valueAt(event.clientX).toFixed(4));
+      next[dragging] = Number(valueAt(event.clientX).toFixed(precision));
       onChange(next);
     },
-    [cuts, dragging, onChange, valueAt],
+    [cuts, dragging, onChange, precision, valueAt],
   );
 
   const endDrag = useCallback(() => {
@@ -97,13 +103,16 @@ export function CutPointHistogram({
   const handleBackgroundClick = useCallback(
     (event: React.MouseEvent) => {
       if (disabled || dragging !== null) return;
-      const value = Number(valueAt(event.clientX).toFixed(4));
+      const value = Number(valueAt(event.clientX).toFixed(precision));
       if (cuts.some((c) => Math.abs(toPercent(c) - toPercent(value)) < 2)) return;
+      // Rounding can land a new cut exactly on an existing one even when the
+      // proximity check above passed, so guard the value as well as the gap.
+      if (cuts.includes(value)) return;
       const next = [...cuts, value].sort((a, b) => a - b);
       onChange(next);
       onCommit(next);
     },
-    [cuts, disabled, dragging, onChange, onCommit, toPercent, valueAt],
+    [cuts, disabled, dragging, onChange, onCommit, precision, toPercent, valueAt],
   );
 
   return (
@@ -175,14 +184,14 @@ export function CutPointHistogram({
         })}
       </svg>
       <div className="flex justify-between text-[10px] text-muted-foreground">
-        <span>{formatBound(min)}</span>
-        <span>{formatBound(max)}</span>
+        <span>{formatBound(min, precision)}</span>
+        <span>{formatBound(max, precision)}</span>
       </div>
     </div>
   );
 }
 
-function formatBound(value: number): string {
+function formatBound(value: number, precision: number): string {
   if (!isFinite(value)) return '—';
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+  return Number.isInteger(value) ? String(value) : value.toFixed(precision);
 }

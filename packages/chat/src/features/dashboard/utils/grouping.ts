@@ -195,6 +195,23 @@ export function nextGroupLabel(grouping: NominalGrouping): string {
 }
 
 /**
+ * Decimals a cut is worth carrying for a field spanning [min, max].
+ *
+ * A threshold is read, typed and argued about at the precision the field itself
+ * has — nobody splits an age-in-days cohort at 2087.4213, and nobody splits a
+ * ratio that runs 0–1 at whole numbers. Dragging used to round everything to
+ * four decimals, which was noise on a wide field and not enough room on a
+ * narrow one, so the precision follows the range instead of being fixed.
+ */
+export function cutPrecision(min: number, max: number): number {
+  const range = Math.abs(max - min);
+  if (!isFinite(range) || range === 0) return 2;
+  if (range > 10) return 0;
+  if (range >= 2) return 1;
+  return 2;
+}
+
+/**
  * Insert a cut point, keeping the list ascending and free of duplicates.
  *
  * Rounded to the precision the axis is worth reading at, so dragging a handle
@@ -217,9 +234,19 @@ export function removeCut(cuts: number[], index: number): number[] {
   return cuts.filter((_, i) => i !== index);
 }
 
-/** Cut points splitting [min, max] into `count` equally wide buckets. */
-export function equalWidthCuts(min: number, max: number, count: number): number[] {
+/**
+ * Cut points splitting [min, max] into `count` equally wide buckets.
+ *
+ * De-duplicated after rounding: at precision 0 a range narrow enough for two
+ * boundaries to land on the same integer would otherwise produce a cut list
+ * with an empty bucket in it, which the agent reads as a stratum nothing can
+ * fall into.
+ */
+export function equalWidthCuts(min: number, max: number, count: number, precision = 4): number[] {
   if (count < 2 || !isFinite(min) || !isFinite(max) || max <= min) return [];
   const step = (max - min) / count;
-  return Array.from({ length: count - 1 }, (_, i) => Number((min + step * (i + 1)).toFixed(4)));
+  const cuts = Array.from({ length: count - 1 }, (_, i) =>
+    Number((min + step * (i + 1)).toFixed(precision)),
+  );
+  return [...new Set(cuts)];
 }

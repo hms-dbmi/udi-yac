@@ -195,6 +195,11 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   return (
     <Card
       ref={cardRef}
+      // Something for a popover opened inside this card to anchor against, so
+      // it can sit beside the card instead of on top of the chart it belongs
+      // to. Read with `closest()` rather than passed down, because the tweak
+      // row is shared with the chat bubble, which has no card to anchor to.
+      data-udi-viz-card=""
       className={cn(
         // py-2/gap-2 override the shared Card defaults (py-4/gap-4) to give the
         // visualization more room — the dominant vertical chrome inside a card.

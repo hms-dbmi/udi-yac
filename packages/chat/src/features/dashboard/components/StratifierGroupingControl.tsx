@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useQueryData, type QueryDataSpec } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import {
   MAX_GROUPS,
   addCut,
   assignValue,
+  cutPrecision,
   equalWidthCuts,
   groupingLabels,
   moveCut,
@@ -29,6 +30,7 @@ import {
   parseGrouping,
   removeCut,
   renameGroup,
+  serializeGrouping,
   unassignedValues,
   type Grouping,
   type NominalGrouping,
@@ -77,6 +79,14 @@ export function StratifierGroupingControl({
     setDraft(stored);
   }
 
+  // What Reset goes back to. A lazy initializer captures the grouping this
+  // control first mounted with and never recomputes it — deliberately not
+  // refreshed by the adoption branch above, which is for a rebind somewhere
+  // else: Reset should still mean "the split this chart started with" after
+  // any number of Applies. A chart created ungrouped captures null, so Reset
+  // there still clears, exactly as before.
+  const [original] = useState<Grouping | null>(() => parseGrouping(param.value));
+
   const domains = useDataPackage((s) => s.dataFieldDomains);
   const domain = useMemo(
     () => domains.find((d) => d.entity === param.entity && d.field === param.stratifier),
@@ -98,9 +108,59 @@ export function StratifierGroupingControl({
     [onApply],
   );
 
+  // A trigger-anchored popover lands on whatever the reader is looking at, and
+  // the tweak row renders in two places that need opposite answers.
+  //
+  // On a dashboard card it goes to the *left of the card*: covering a
+  // neighbouring card is fine, and there is always room that way because the
+  // chat column is there. In a chat bubble the trigger is indented inside the
+  // bubble, so 320px starting at it spills over the dashboard — there it keeps
+  // the trigger's vertical position but takes its left edge from the chat
+  // column, which is what puts it fully inside the chat.
+  //
+  // Both hosts are found with one `closest()` from the trigger: the card is the
+  // nearer ancestor on the dashboard, and the column is the only match in the
+  // chat. Resolved on open rather than passed down, so neither site needs to
+  // know which one it is.
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [host, setHost] = useState<{ el: Element; onCard: boolean } | null>(null);
+
+  const anchor = !host
+    ? undefined
+    : host.onCard
+      ? host.el
+      : {
+          getBoundingClientRect: (): DOMRect => {
+            const column = host.el.getBoundingClientRect();
+            const trigger = triggerRef.current?.getBoundingClientRect();
+            if (!trigger) return column;
+            // The column's horizontal placement, the trigger's vertical one.
+            return {
+              x: column.left,
+              y: trigger.top,
+              left: column.left,
+              right: column.left + column.width,
+              top: trigger.top,
+              bottom: trigger.top + trigger.height,
+              width: column.width,
+              height: trigger.height,
+            } as DOMRect;
+          },
+        };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
+          const el = triggerRef.current?.closest('[data-udi-viz-card], [data-udi-chat-column]');
+          setHost(el ? { el, onCard: el.hasAttribute('data-udi-viz-card') } : null);
+        }
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger
+        ref={triggerRef}
         render={
           <Button
             variant="outline"
@@ -113,7 +173,12 @@ export function StratifierGroupingControl({
         <span className="text-muted-foreground mr-1">{param.label}:</span>
         {summarize(draft, param.stratifier)}
       </PopoverTrigger>
-      <PopoverContent className="w-80" align="start">
+      <PopoverContent
+        className="w-80"
+        align="start"
+        side={host?.onCard ? 'left' : 'bottom'}
+        anchor={anchor}
+      >
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-xs font-medium">Group {param.stratifier}</p>
@@ -154,8 +219,8 @@ export function StratifierGroupingControl({
               variant="ghost"
               size="sm"
               className="h-7 text-xs"
-              disabled={disabled || !draft}
-              onClick={() => apply(null)}
+              disabled={disabled || serializeGrouping(draft) === serializeGrouping(original)}
+              onClick={() => apply(original)}
             >
               Reset
             </Button>
@@ -448,6 +513,8 @@ function QuantitativeEditor({
     };
   }, [displayData, domain]);
 
+  const precision = cutPrecision(min, max);
+
   const setCuts = useCallback(
     (next: number[], commit: boolean) => {
       const grouping: QuantitativeGrouping = { type: 'quantitative', cuts: next };
@@ -475,23 +542,12 @@ function QuantitativeEditor({
         {cuts.map((cut, index) => (
           <div key={index} className="flex items-center gap-1">
             <span className="w-10 shrink-0 text-[10px] text-muted-foreground">cut {index + 1}</span>
-            <Input
-              type="number"
+            <CutInput
               value={cut}
+              precision={precision}
               disabled={disabled}
-              aria-label={`Cut point ${index + 1}`}
-              className="h-6 text-xs"
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                if (Number.isNaN(value)) return;
-                setCuts(moveCut(cuts, index, value), false);
-              }}
-              onBlur={() =>
-                setCuts(
-                  [...cuts].sort((a, b) => a - b),
-                  true,
-                )
-              }
+              label={`Cut point ${index + 1}`}
+              onCommit={(value) => setCuts(moveCut(cuts, index, value, precision), true)}
             />
             <Button
               variant="ghost"
@@ -513,7 +569,7 @@ function QuantitativeEditor({
           size="sm"
           className="h-7 flex-1 text-xs"
           disabled={disabled || cuts.length + 1 >= MAX_GROUPS}
-          onClick={() => setCuts(addCut(cuts, (min + max) / 2), true)}
+          onClick={() => setCuts(addCut(cuts, (min + max) / 2, precision), true)}
         >
           <Plus className="mr-1 h-3 w-3" /> Add cut
         </Button>
@@ -522,7 +578,7 @@ function QuantitativeEditor({
           size="sm"
           className="h-7 flex-1 text-xs"
           disabled={disabled}
-          onClick={() => setCuts(equalWidthCuts(min, max, 2), true)}
+          onClick={() => setCuts(equalWidthCuts(min, max, 2, precision), true)}
           title="Split the range in half"
         >
           Halve
@@ -532,7 +588,7 @@ function QuantitativeEditor({
           size="sm"
           className="h-7 flex-1 text-xs"
           disabled={disabled}
-          onClick={() => setCuts(equalWidthCuts(min, max, 4), true)}
+          onClick={() => setCuts(equalWidthCuts(min, max, 4, precision), true)}
           title="Four equally wide buckets"
         >
           Quarters
@@ -545,5 +601,112 @@ function QuantitativeEditor({
           : groupingLabels({ type: 'quantitative', cuts }).join(' · ')}
       </p>
     </div>
+  );
+}
+
+/**
+ * One cut point as a number you can type into.
+ *
+ * The text is held locally and only reported when the edit is finished, because
+ * the cut list is kept sorted: reporting each keystroke meant that typing `1000`
+ * into the upper of two cuts sent `1` through `moveCut` first, which re-sorted
+ * the list and moved a *different* cut under the caret. The field then showed
+ * its neighbour's value and the rest of the edit landed on the wrong cut.
+ *
+ * Re-syncing from the prop only while unfocused is what makes that safe: a
+ * commit that reorders the list updates every other field, and leaves the one
+ * being typed in alone.
+ */
+function CutInput({
+  value,
+  precision,
+  disabled,
+  label,
+  onCommit,
+}: {
+  value: number;
+  precision: number;
+  disabled: boolean;
+  label: string;
+  onCommit: (value: number) => void;
+}) {
+  const [text, setText] = useState(() => String(value));
+  // "The user has typed something here that they have not finished", NOT "this
+  // field has focus". Base UI moves focus into the popup when it opens, and
+  // this is the first focusable thing in it — so gating on focus meant the
+  // field was considered mid-edit from the moment the popover opened, and a
+  // cut dragged on the histogram never reached the box beside it.
+  const [dirty, setDirty] = useState(false);
+  const [syncedTo, setSyncedTo] = useState(value);
+  if (!dirty && syncedTo !== value) {
+    setSyncedTo(value);
+    setText(String(value));
+  }
+  // Escape blurs the field, and the blur that follows must not commit what
+  // Escape just discarded. A ref rather than state because the blur handler
+  // runs before a state update from the keydown would reach it.
+  const cancelled = useRef(false);
+
+  const commit = (raw: string) => {
+    const parsed = Number(raw);
+    if (raw.trim() === '' || !isFinite(parsed)) {
+      setText(String(value)); // unparseable: keep the cut where it was
+      return;
+    }
+    // Tabbing through an untouched field should not re-bind the chart.
+    if (Number(parsed.toFixed(precision)) === value) {
+      setText(String(value));
+      return;
+    }
+    onCommit(parsed);
+  };
+
+  return (
+    <Input
+      type="number"
+      // Arrow keys and the spinner should move by the smallest step the field is
+      // worth reading at, not always by 1.
+      step={10 ** -precision}
+      value={text}
+      disabled={disabled}
+      aria-label={label}
+      className="h-6 text-xs"
+      onChange={(e) => {
+        const next = e.target.value;
+        setText(next);
+        // Typing is an unfinished thought and waits for Enter or blur; a step
+        // is a finished one and applies at once. Every browser reports a text
+        // edit with an `inputType` ("insertText", "deleteContentBackward", …)
+        // and reports a value change that was not a text edit — the spinner
+        // buttons and the arrow keys, which the input steps natively — with
+        // none, which is what tells the two apart.
+        if ((e.nativeEvent as Partial<InputEvent>).inputType) {
+          setDirty(true);
+          return;
+        }
+        setDirty(false);
+        commit(next);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+          cancelled.current = true;
+          setDirty(false);
+          setText(String(value));
+          e.currentTarget.blur();
+        }
+      }}
+      onBlur={() => {
+        setDirty(false);
+        if (cancelled.current) {
+          cancelled.current = false;
+          setText(String(value));
+          return;
+        }
+        commit(text);
+      }}
+    />
   );
 }

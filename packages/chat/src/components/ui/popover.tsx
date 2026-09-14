@@ -20,11 +20,22 @@ const PopoverTrigger = React.forwardRef<HTMLButtonElement, PopoverPrimitive.Trig
 function PopoverContent({
   className,
   align = 'end',
+  alignOffset,
+  side,
   sideOffset = 6,
+  anchor,
   ...props
 }: PopoverPrimitive.Popup.Props & {
   align?: PopoverPrimitive.Positioner.Props['align'];
+  alignOffset?: PopoverPrimitive.Positioner.Props['alignOffset'];
+  side?: PopoverPrimitive.Positioner.Props['side'];
   sideOffset?: PopoverPrimitive.Positioner.Props['sideOffset'];
+  /**
+   * Position against something other than the trigger. Everything not listed
+   * here falls through to the Popup, so a positioner prop has to be named
+   * explicitly to reach the Positioner at all.
+   */
+  anchor?: PopoverPrimitive.Positioner.Props['anchor'];
 }) {
   return (
     <PopoverPrimitive.Portal>
@@ -37,7 +48,10 @@ function PopoverContent({
         // `z-10` sticky header).
         className="isolate z-1500 outline-none"
         align={align}
+        alignOffset={alignOffset}
+        side={side}
         sideOffset={sideOffset}
+        anchor={anchor}
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"

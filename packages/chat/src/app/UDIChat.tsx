@@ -166,7 +166,14 @@ function UDIChatInner({
           <ConversationList />
         </div>
       )}
-      <div className="w-[400px] min-w-[300px] shrink-0 border-r flex flex-col overflow-hidden">
+      <div
+        // A popover opened from a chart *in the chat* aligns its left edge to
+        // this column rather than to its trigger, which sits indented inside a
+        // bubble — 320px starting there would spill over the dashboard. Found
+        // with `closest()` from the trigger, so no ref or context is needed.
+        data-udi-chat-column=""
+        className="w-[400px] min-w-[300px] shrink-0 border-r flex flex-col overflow-hidden"
+      >
         <ChatPanel
           config={queryConfig}
           needsApiKey={apiKey.needsApiKey}
