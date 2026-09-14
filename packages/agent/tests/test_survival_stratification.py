@@ -257,7 +257,12 @@ def test_ever_recorded_stratification_keeps_its_immortal_time_artefact(survival)
     assert all(r["final percentage"] == 0 for r in rows)
 
 
-def _survival_spec(suffix, stratifier="tumor_locations"):
+def _survival_spec(
+    suffix,
+    stratifier="tumor_locations",
+    stratifier_type="nominal",
+    grouping=None,
+):
     """Instantiate a survival template without executing it."""
     generated = _load_generated_tools()
     assert generated is not None
@@ -277,7 +282,7 @@ def _survival_spec(suffix, stratifier="tumor_locations"):
                             {"name": "subject", "udi:data_type": "nominal"},
                             {"name": "event", "udi:data_type": "nominal"},
                             {"name": "day", "udi:data_type": "quantitative"},
-                            {"name": stratifier, "udi:data_type": "nominal"},
+                            {"name": stratifier, "udi:data_type": stratifier_type},
                         ]
                     },
                 },
@@ -288,7 +293,20 @@ def _survival_spec(suffix, stratifier="tumor_locations"):
     args = {**_ARGS, "entity1_field4": stratifier}
     args.update(_censor_args(param_map))
     bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+    if grouping is not None:
+        bindings["GROUP"] = grouping
     return instantiate_template(templates[idx], bindings, schema)
+
+
+def _colour_mappings(spec):
+    """Every colour mapping in a spec, across all layers."""
+    found = []
+    for layer in spec["representation"]:
+        mapping = layer.get("mapping")
+        for entry in mapping if isinstance(mapping, list) else [mapping]:
+            if isinstance(entry, dict) and entry.get("encoding") == "color":
+                found.append(entry)
+    return found
 
 
 def _transform_index(spec, kind):
@@ -1572,3 +1590,125 @@ def test_a_membership_template_without_a_grouping_is_refused():
         shared_entities=shared_entities_for(tool),
     )
     assert any("nominal grouping" in e for e in errors), errors
+
+
+# ---------------------------------------------------------------------------
+# The colour scale: pinned to the strata, and ordered when the strata are
+# ---------------------------------------------------------------------------
+
+
+def test_a_grouped_curve_names_its_colour_domain_in_bucket_order():
+    """Otherwise the renderer infers the domain from the row order.
+
+    It computes a missing categorical domain as the values in the order the rows
+    happen to mention them, and assigns colours by position in that array. A
+    survival table is ordered by time, so "first stratum" is "the group holding
+    the earliest event" — move a cut point and every curve changes colour for no
+    reason the reader can see.
+    """
+    spec = _survival_spec(
+        "_line_survival_baseline",
+        stratifier="age",
+        stratifier_type="quantitative",
+        grouping={"type": "quantitative", "cuts": [2000, 2010]},
+    )
+    colours = _colour_mappings(spec)
+    assert colours, "the stratified template should colour by stratum"
+    for mapping in colours:
+        assert mapping["field"] == "stratum"
+        # Low to high, not the order the data happens to mention them.
+        assert mapping["domain"] == ["< 2000", "2000–2010", "≥ 2010"]
+
+
+def test_moving_a_cut_point_does_not_permute_the_colour_domain():
+    """The reported symptom: colours reshuffling while a threshold is dragged."""
+    before = _colour_mappings(
+        _survival_spec(
+            "_line_survival_baseline",
+            stratifier="age",
+            stratifier_type="quantitative",
+            grouping={"type": "quantitative", "cuts": [2000, 2010]},
+        )
+    )[0]["domain"]
+    after = _colour_mappings(
+        _survival_spec(
+            "_line_survival_baseline",
+            stratifier="age",
+            stratifier_type="quantitative",
+            grouping={"type": "quantitative", "cuts": [2006, 2010]},
+        )
+    )[0]["domain"]
+    # The middle bucket's bounds move, but each bucket keeps its position — so
+    # each keeps its colour.
+    assert before == ["< 2000", "2000–2010", "≥ 2010"]
+    assert after == ["< 2006", "2006–2010", "≥ 2010"]
+
+
+def test_numeric_buckets_are_ordinal_and_named_groups_are_not():
+    """`< 50` really is below `50–65`; "White" and "Other" are not a spectrum."""
+    numeric = _colour_mappings(
+        _survival_spec(
+            "_line_survival_baseline",
+            stratifier="age",
+            stratifier_type="quantitative",
+            grouping={"type": "quantitative", "cuts": [65]},
+        )
+    )
+    for mapping in numeric:
+        assert mapping["type"] == "ordinal"
+        assert mapping["domain"] == ["< 65", "≥ 65"]
+
+    named = _colour_mappings(
+        _survival_spec(
+            "_line_survival_baseline",
+            grouping={
+                "type": "nominal",
+                "groups": [{"label": "Frontal", "values": ["frontal"]}],
+                "other": "Other",
+            },
+        )
+    )
+    for mapping in named:
+        assert mapping["type"] == "nominal"
+        # Other is a stratum, and it is drawn last.
+        assert mapping["domain"] == ["Frontal", "Other"]
+
+
+def test_an_ungrouped_curve_leaves_the_colour_scale_alone():
+    """Its strata are the field's raw values, which live in the data, not here.
+
+    Naming a domain we cannot know would be worse than leaving it: the renderer
+    would draw only the values we guessed.
+    """
+    for mapping in _colour_mappings(_survival_spec("_line_survival_baseline")):
+        assert "domain" not in mapping
+        assert mapping["type"] == "nominal"
+
+
+def test_a_presence_curve_names_its_two_strata_from_the_table_it_joined(presence):
+    """Presence labels are literals, so the template can name them outright.
+
+    These carry no grouping payload, so the instantiation-time helper cannot
+    reach them — the domain is declared in the template and resolved by the
+    ordinary placeholder pass. Nominal, not ordinal: presence is not a spectrum.
+    """
+    colours = _colour_mappings(presence("_line_survival_presence", rows=False))
+    assert colours
+    for mapping in colours:
+        assert mapping["field"] == "group"
+        assert mapping["type"] == "nominal"
+        assert mapping["domain"] == ["radiation", "No radiation"]
+
+
+def test_a_2x2_presence_curve_names_all_four_cells(presence):
+    colours = _colour_mappings(
+        presence("_line_survival_presence_2x2", cross=True, rows=False)
+    )
+    assert colours
+    for mapping in colours:
+        assert mapping["domain"] == [
+            "radiation + surgery",
+            "radiation only",
+            "surgery only",
+            "Neither",
+        ]

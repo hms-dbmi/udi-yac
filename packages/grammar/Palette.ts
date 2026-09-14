@@ -40,6 +40,14 @@ export type DiscreteColor = string[] | string;
  */
 export const DEFAULT_PALETTE: UDIPalette = {
   mark: '#E6A01A',
+  // A *named* scheme rather than an array of stops, because the two are not
+  // interchangeable here: Vega hands `range.ordinal[i]` to the i-th domain
+  // entry, so a five-stop array on a three-bucket chart would use the first
+  // three and come out uniformly light, never reaching the dark end. A
+  // continuous scheme is sampled across however many buckets exist, which is
+  // what makes an ordered ramp actually read as ordered. `teals` runs
+  // #bbdfdf -> #006667, alongside the #16A987 already in `category`.
+  ordinal: 'teals',
   category: [
     '#E6A01A',
     '#16A987',

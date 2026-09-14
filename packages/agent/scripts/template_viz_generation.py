@@ -7,6 +7,8 @@ import jsonschema
 import pandas as pd
 from udi_grammar_py import Chart, Expr, Op, rolling
 
+from udiagent.stratify import STRATUM_COLUMN
+
 # Shared AST fragment: legacy "d.rank == 1 ? 'yes' : 'no'". derive/filter carry
 # the structured Expr AST (not raw Arquero strings) so the same templates run
 # in the browser (Arquero) AND server-side (SQL) — raw strings are rejected by
@@ -353,7 +355,10 @@ _BASELINE_STRATUM = "baseline stratum"
 #: the inline series labels and the stratum groupby all read one column whether
 #: or not a grouping was supplied — and the reader never sees the name, because
 #: the legend is dropped in favour of a heading that names the field.
-_STRATUM_COL = "stratum"
+#:
+#: Imported rather than repeated: `udiagent.vis_generate` looks the colour mapping
+#: up by this name to pin its scale domain, so the two have to agree.
+_STRATUM_COL = STRATUM_COLUMN
 
 
 def _group_tag(stratum: str) -> str:
@@ -1148,6 +1153,24 @@ def _survival_chart(
             _PRESENCE_STRATUM if reading in _PRESENCE_READINGS else _STRATUM_COL
         )
 
+    # A presence reading knows its strata outright — they are literals in the
+    # derive above, not values read out of a column — so name them as the colour
+    # domain. Without one the renderer infers the domain from the order the rows
+    # happen to mention each label, which is whichever group holds the earliest
+    # event, so the two curves swap colours as the cohort changes. The
+    # `<GROUP…>` readings get the same treatment at instantiation time, where
+    # the grouping is known (`udiagent.vis_generate._pin_stratum_colours`).
+    stratum_colour = {"field": stratum_col, "type": "nominal", "omitLegend": True}
+    if reading is StratumReading.PRESENCE:
+        stratum_colour["domain"] = ["<E2>", "No <E2>"]
+    elif reading is StratumReading.PRESENCE_2X2:
+        stratum_colour["domain"] = [
+            "<E2> + <E3>",
+            "<E2> only",
+            "<E3> only",
+            "Neither",
+        ]
+
     chart = _survival_subject_rows(stratum, reading, multi_value)
 
     # Time under observation, which is the end event for those who reached it and
@@ -1412,9 +1435,7 @@ def _survival_chart(
         .y(field="full survival", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
-        chart = chart.color(
-            field=stratum_col, type="nominal", omitLegend=True
-        )
+        chart = chart.color(**stratum_colour)
 
     # The vertical drop from that lead-in into the curve's first point.
     chart = (
@@ -1423,9 +1444,7 @@ def _survival_chart(
         .y(field="drop percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
-        chart = chart.color(
-            field=stratum_col, type="nominal", omitLegend=True
-        )
+        chart = chart.color(**stratum_colour)
 
     chart = (
         chart.mark("line")
@@ -1444,7 +1463,7 @@ def _survival_chart(
         )
     )
     if stratum:
-        chart = chart.color(field=stratum_col, type="nominal", omitLegend=True)
+        chart = chart.color(**stratum_colour)
 
     chart = (
         chart.mark("line")
@@ -1456,7 +1475,7 @@ def _survival_chart(
         .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
-        chart = chart.color(field=stratum_col, type="nominal", omitLegend=True)
+        chart = chart.color(**stratum_colour)
 
     # Censoring ticks: one vertical mark per subject who left the study without
     # reaching the end event, at the time their follow-up stopped. Without them a
@@ -1477,7 +1496,7 @@ def _survival_chart(
         .size(value=_TICK_SIZE)
     )
     if stratum:
-        chart = chart.color(field=stratum_col, type="nominal", omitLegend=True)
+        chart = chart.color(**stratum_colour)
 
     chart = (
         chart.mark("text")
@@ -1496,7 +1515,7 @@ def _survival_chart(
         .text(field="final label", type="nominal")
     )
     if stratum:
-        chart = chart.color(field=stratum_col, type="nominal", omitLegend=True)
+        chart = chart.color(**stratum_colour)
 
     if stratum:
         # Right-aligned to sit over the series labels it names. The presence

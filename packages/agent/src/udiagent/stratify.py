@@ -42,6 +42,14 @@ MAX_GROUPS = 10
 #: Label for values no group claims, when the grouping does not name one.
 DEFAULT_OTHER_LABEL = "Other"
 
+#: The column every field-stratified chart splits by.
+#:
+#: Named here rather than in the template builder because both sides need it: the
+#: builder derives it, and `vis_generate` has to find the colour mapping bound to
+#: it to pin that scale's domain. Two spellings of one column name is exactly the
+#: kind of drift that shows up as a chart whose colours quietly stop being pinned.
+STRATUM_COLUMN = "stratum"
+
 
 class GroupingError(ValueError):
     """A grouping payload that cannot be turned into strata.

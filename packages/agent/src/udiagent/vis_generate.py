@@ -512,7 +512,68 @@ def instantiate_template(spec_template, bindings, schema):
             break
         resolved = _resolve_placeholder(match.group(1), bindings, schema)
         spec = spec.replace(match.group(0), resolved, 1)
-    return _dedupe_sources(json.loads(spec))
+    parsed = _dedupe_sources(json.loads(spec))
+    return _pin_stratum_colours(parsed, spec_template, bindings)
+
+
+def _pin_stratum_colours(spec, spec_template, bindings):
+    """Pin the colour scale of a grouped chart to its strata, in bucket order.
+
+    Two things go wrong without this, both invisible until you watch a reader
+    re-cut a chart.
+
+    The renderer computes a missing categorical domain as the values in the order
+    the *rows* happen to mention them, and assigns colours by position in that
+    array. A survival table is ordered by time, so "first stratum" means "the
+    group holding the earliest event" — move a cut point and the array permutes
+    and every curve changes colour, for no reason the reader can see. The
+    renderer skips any mapping that already carries a domain, so naming it here
+    settles the order once.
+
+    And the buckets of a *quantitative* grouping are ordered — `< 50` really is
+    below `50-65` — so they are drawn as an ordinal ramp rather than as unrelated
+    categories. Named groups stay nominal: "White" and "Other" are not a spectrum.
+
+    Only reachable when a grouping was supplied. Without one the strata are the
+    field's raw values, which live in the data rather than in the binding, so
+    there is nothing to name here and the behaviour is unchanged.
+    """
+    from udiagent.stratify import (
+        STRATUM_COLUMN,
+        grouping_kind,
+        grouping_labels,
+        parse_grouping,
+    )
+
+    representation = spec.get("representation")
+    if not isinstance(representation, list):
+        return spec
+
+    for group_key in grouping_targets(spec_template):
+        grouping = parse_grouping(bindings.get(group_key))
+        if grouping is None:
+            continue
+        labels = grouping_labels(grouping)
+        ordered = grouping_kind(grouping) == "quantitative"
+        for layer in representation:
+            if not isinstance(layer, dict):
+                continue
+            mapping = layer.get("mapping")
+            entries = mapping if isinstance(mapping, list) else [mapping]
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get("encoding") != "color":
+                    continue
+                if entry.get("field") != STRATUM_COLUMN:
+                    continue
+                # A template that named its own domain meant it.
+                if "domain" in entry:
+                    continue
+                entry["domain"] = labels
+                if ordered:
+                    entry["type"] = "ordinal"
+    return spec
 
 
 def _dedupe_sources(spec):
