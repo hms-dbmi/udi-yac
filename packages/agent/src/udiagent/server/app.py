@@ -18,7 +18,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import AuthenticationError
-from fastapi import FastAPI, Header, Depends, Request
+from fastapi import FastAPI, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -30,8 +30,11 @@ from udiagent.orchestrator import (
     build_rebuff_toolcall,
 )
 from udiagent.structured_functions import export_registry_json
+# Dependency-free (no duckdb/pymysql at module scope), unlike the connector
+# imports further down, which stay lazy because the drivers are extras.
+from udiagent.query import DatabaseAuthError, use_db_token
 from udiagent.server.config import ServerConfig
-from udiagent.server.auth import make_verify_jwt
+from udiagent.server.auth import RAW_TOKEN_CLAIM, make_verify_jwt
 from udiagent.server.models import (
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
@@ -153,6 +156,21 @@ async def _budget_exceeded_handler(request, exc: BudgetExceededError):
         status_code=200,
         content=[build_rebuff_toolcall(exc.message, reason="budget_exceeded")],
         headers=_usage_headers(exc.usage),
+    )
+
+
+@app.exception_handler(DatabaseAuthError)
+async def _db_auth_error_handler(request, exc: DatabaseAuthError):
+    """Surface a database identity rejection as a 403.
+
+    Raised when a JWT-passthrough backend cannot authenticate the caller to the
+    database. The message is fixed: the underlying pymysql error names the
+    principal and the host, neither of which belongs in a client response.
+    """
+    logger.warning("database rejected forwarded identity: %s", exc)
+    return JSONResponse(
+        status_code=403,
+        content={"error": "The database rejected your credentials for this dataset."},
     )
 
 
@@ -300,13 +318,30 @@ def _engine_from_config(spec: dict):
     from udiagent.query import DuckDBConnector, QueryEngine, StarRocksConnector
 
     backend_type = spec.get("type")
+    passthrough = bool(spec.get("jwtPassthrough"))
     if backend_type == "duckdb":
+        if passthrough:
+            raise ValueError("jwtPassthrough is not supported on duckdb (no user auth)")
         connector = DuckDBConnector(
             database=spec.get("database", ":memory:"),
             views=spec.get("views"),
         )
     elif backend_type == "starrocks":
-        connector = StarRocksConnector(**spec.get("connection", {}))
+        connection = spec.get("connection", {})
+        if passthrough and config.insecure_dev_mode and not connection.get("user"):
+            # Dev mode issues no real token, so passthrough has nothing to
+            # forward. Fail at startup rather than letting every query 403 —
+            # and never silently fall back to a shared credential, which is the
+            # exact behaviour passthrough exists to remove.
+            raise ValueError(
+                "jwtPassthrough backend needs a fallback connection.user under "
+                "INSECURE_DEV_MODE"
+            )
+        connector = StarRocksConnector(
+            **connection,
+            jwt_passthrough=passthrough,
+            principal_field=spec.get("principalField", "sub"),
+        )
     else:
         raise ValueError(f"unknown query backend type: {backend_type!r}")
     return QueryEngine(
@@ -352,7 +387,16 @@ def _no_backend_message(package, engines) -> str:
 
 
 app.state.query_engines = _load_query_engines()
-# package name -> MetadataCache (created lazily per configured engine)
+# (package name, principal) -> MetadataCache, created lazily. Keyed by
+# principal because dataDomains holds the actual distinct VALUES of each column
+# (introspect.py), so under per-user row policies a shared cache would serve one
+# user's data to the next. principal is None whenever the backend is not doing
+# passthrough, which collapses this back to one entry per package.
+# Bounded: unbounded per-user caches are a slow leak in a long-lived process.
+# A plain dict, not an OrderedDict: dicts are insertion-ordered, LRU needs only
+# re-insert and drop-first, and this stays a documented extension point that
+# callers can assign a bare {} to.
+_MAX_METADATA_CACHES = 32
 app.state.metadata_caches = {}
 
 
@@ -373,14 +417,24 @@ def yac_metadata(
             status_code=404,
             content={"error": _no_backend_message(package, engines)},
         )
+    token = token_payload.get(RAW_TOKEN_CLAIM)
+    principal = token_payload.get("sub") if engine.connector.jwt_passthrough else None
     caches = app.state.metadata_caches
-    if key not in caches:
+    cache_key = (key, principal)
+    if cache_key in caches:
+        caches[cache_key] = caches.pop(cache_key)  # re-insert = move to newest
+    else:
         from udiagent.query import MetadataCache
 
-        caches[key] = MetadataCache(
+        caches[cache_key] = MetadataCache(
             engine, package or key, ttl_seconds=config.udi_metadata_ttl_seconds
         )
-    metadata = caches[key].refresh() if refresh else caches[key].get()
+        while len(caches) > _MAX_METADATA_CACHES:
+            del caches[next(iter(caches))]  # oldest insertion = LRU
+
+    with use_db_token(token):
+        cache = caches[cache_key]
+        metadata = cache.refresh() if refresh else cache.get()
     return {
         "package": package or key,
         "interactive": False,
@@ -400,10 +454,11 @@ def yac_query(
             status_code=404,
             content={"error": _no_backend_message(request.package, engines)},
         )
-    results = engine.run_batch(
-        [q.model_dump() for q in request.queries],
-        request.selections,
-    )
+    with use_db_token(token_payload.get(RAW_TOKEN_CLAIM)):
+        results = engine.run_batch(
+            [q.model_dump() for q in request.queries],
+            request.selections,
+        )
     return {"results": results}
 
 

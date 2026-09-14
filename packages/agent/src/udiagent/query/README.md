@@ -238,10 +238,80 @@ you, carrying `foreignKeys`/`primaryKey` from the directory's
 - `packages/agent/scripts/seed_starrocks.py` → a running StarRocks database +
   `starrocks-backends.json`. See `dev/starrocks/README.md`.
 
+### 3.1a Per-user database authentication (JWT passthrough)
+
+By default every caller's queries run as the one service credential in the
+backend spec: the agent authenticates the _caller_, but the database sees a
+single shared account, so authorization stops at the API boundary.
+
+Set `jwtPassthrough` and the agent instead forwards each caller's own bearer
+token to StarRocks as the connection password. StarRocks verifies it against
+the same JWKS the agent used and applies that user's own grants and row/column
+policies, so the database becomes the authority on who sees what and the audit
+trail names real users.
+
+```jsonc
+{
+  "my_cohort": {
+    "type": "starrocks",
+    "jwtPassthrough": true,
+    // Claim whose value is the StarRocks username. MUST match `principal_field`
+    // in the security integration. Keycloak's `sub` is a UUID, so a realistic
+    // deployment wants `preferred_username` or `email`. Default: "sub".
+    "principalField": "preferred_username",
+    "connection": {
+      "host": "starrocks.internal",
+      "port": 9030,
+      "database": "my_cohort",
+      // No password: the caller's token is the credential. A `user` here is
+      // used only as a fallback under INSECURE_DEV_MODE, which issues no token.
+    },
+    "tables": { "donors": "donors" },
+  },
+}
+```
+
+Requirements and caveats:
+
+- **StarRocks >= 3.5.0** — JWT authentication does not exist before it. Verified
+  against 3.5.21.
+- **Every caller needs a StarRocks user**, named by the `principalField` claim,
+  plus grants. There is no automatic provisioning; this is usually the
+  long pole in a rollout, not the agent-side configuration.
+- The `required_audience` of the StarRocks security integration must match the
+  agent's `JWT_AUDIENCE`, or one token cannot satisfy both.
+- **Revocation ceiling.** MySQL binds identity at CONNECT time and StarRocks
+  does not re-check `exp` mid-session, so the connector recycles a cached
+  connection once the token that opened it expires. A grant revoked inside a
+  live session is not seen until then — at most one token lifetime.
+- `jwtPassthrough` is rejected on `duckdb`, which has no concept of a user, and
+  rejected at startup under `INSECURE_DEV_MODE` unless `connection.user` gives
+  it a fallback. It never silently degrades to a shared credential.
+- Metadata is cached per principal, because `dataDomains` holds the actual
+  distinct values of each column and would otherwise leak across users.
+
+StarRocks side, once per realm:
+
+```sql
+CREATE SECURITY INTEGRATION keycloak PROPERTIES (
+  "type" = "authentication_jwt",
+  "jwks_url" = "https://idp.example/realms/udi/protocol/openid-connect/certs",
+  "principal_field" = "preferred_username",
+  "required_issuer" = "https://idp.example/realms/udi",
+  "required_audience" = "udi-yac"
+);
+```
+
+To exercise it locally, `dev/starrocks/setup_jwt_auth.py` provisions the
+equivalent (a throwaway JWKS plus two users with different grants) against the
+dev container.
+
 ### 3.2 HTTP contract (for a non-toolkit consumer)
 
 Two JWT-guarded endpoints (dev: `INSECURE_DEV_MODE=1`, `Authorization: Bearer
-dev`).
+dev`). With `jwtPassthrough` set on a backend, that same token is also what
+authenticates the query to the database; a token the database refuses yields
+**403** for the whole request (never a per-visualization error inside a 200).
 
 **`GET /v1/yac/metadata?package=<name>&refresh=<0|1>`** — introspected schema
 for a package:
