@@ -64,6 +64,14 @@ function UDIChatInner({
   const trackEvent = useTracker();
   useLayoutPersistence();
 
+  // Keep the store's token current. A host that refreshes the JWT must not
+  // trigger a package reload: `authToken` is deliberately absent from the
+  // loader effect's deps below, and the remote query backend re-reads the token
+  // from the store on every request instead of capturing it.
+  useEffect(() => {
+    dataPackageStore.getState().setAuthToken(authToken);
+  }, [dataPackageStore, authToken]);
+
   // Load data package on mount
   useEffect(() => {
     if (remotePackage) {
@@ -75,11 +83,15 @@ function UDIChatInner({
     } else if (dataPackagePath) {
       dataPackageStore.getState().fetchDataPackage(dataPackagePath, fetchOptions);
     }
+    // authToken is intentionally excluded from the deps below: reloading the
+    // whole package on every token refresh is exactly the bug this avoids. The
+    // effect above keeps the store's copy in sync, and the remote backend reads
+    // it from there per request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     dataPackageStore,
     remotePackage,
     apiBaseUrl,
-    authToken,
     dataPackagePath,
     dataPackageProp,
     dataFieldDomainsProp,
