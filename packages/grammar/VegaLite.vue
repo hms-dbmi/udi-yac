@@ -281,45 +281,15 @@ let heightIsContainer = false;
 let lastW = 0;
 let lastH = 0;
 
-/** Tear the view down and compile it again. The live brush rect lives on the
- *  Vega view and is dropped by finalize(); the active selection itself lives in
- *  Pinia (props.selections) and is re-applied by initVegaChart, so
- *  cross-filtering survives. */
-function reembed(): void {
+const reembedForResize = debounce(() => {
   if (!vegaView.value) return;
-  // Whatever prompted this compile supersedes a queued one.
-  reembedOnSettle.cancel();
+  // The live brush rect lives on the Vega view and is dropped by finalize();
+  // the active selection itself lives in Pinia (props.selections) and is
+  // re-applied by initVegaChart below, so cross-filtering survives the resize.
   vegaView.value.finalize();
   vegaView.value = null;
   initVegaChart();
-}
-
-const reembedForResize = debounce(reembed, 150);
-
-/**
- * Re-compile once the data has stopped changing. **A mitigation, not a fix.**
- *
- * Some charts render stale marks after a data changeset — a line carrying a
- * point its data no longer has (hms-dbmi/udi-yac#34). What is established: the
- * rows handed to the view are correct and `view.data()` agrees with them, so the
- * wrong state is inside the Vega view; `.resize().runAsync()` — which the update
- * path already does — does not clear it; and only a fresh compile does, which is
- * why toggling the card to table view and back, or resizing it, has always been
- * the workaround. A changeset carrying the same shapes as the failing chart
- * (five layers over one dataset, a colour facet, a shrinking row count, a moving
- * scale extent) is clean against Vega in isolation, so the retaining node is not
- * yet located and `test/changeset-*.mjs` cannot yet pin it.
- *
- * So: keep the changeset, which is what makes a brush drag smooth, and follow it
- * with the one thing known to produce a correct picture. Trailing-debounced, so
- * a drag re-compiles once on settle rather than every frame, and cancelled
- * whenever something else re-embeds first.
- *
- * Delete this the moment the retaining node is found — it costs a vega-lite
- * recompile per settled interaction, and it hides the bug rather than removing
- * it.
- */
-const reembedOnSettle = debounce(reembed, 200);
+}, 150);
 
 // Remote (non-interactive) mode: each live brush tick would trigger a server
 // round-trip, so buffer ticks here and commit once on pointer release. The
@@ -377,7 +347,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointercancel', commitRemoteSelections);
   window.removeEventListener('mouseup', commitRemoteSelections);
   reembedForResize.cancel();
-  reembedOnSettle.cancel();
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
@@ -396,10 +365,10 @@ async function updateVegaChart() {
   // through the old spec. The changeset path below stays the fast one for the
   // case it was built for: a brush, where only the rows change.
   if (specShape(specObject) !== embeddedSpecShape) {
-    // Already the strongest update there is; nothing left for the settle pass.
-    reembedOnSettle.cancel();
+    vegaView.value.finalize();
+    vegaView.value = null;
     // Re-applies props.selections itself, as the resize re-embed does.
-    reembed();
+    initVegaChart();
     return;
   }
 
@@ -467,9 +436,6 @@ async function updateVegaChart() {
   // ordering — the fix for "editing a filter's sliders doesn't move the
   // brush". No-op when props.selections is empty.
   await updateVegaChartSelections();
-
-  // …and then make sure the picture actually matches those rows. See above.
-  reembedOnSettle();
 }
 
 watch(() => props.spec, updateVegaChart);
