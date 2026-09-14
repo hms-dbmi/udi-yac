@@ -778,12 +778,13 @@ describe('dashboardStore — cross-store filter propagation', () => {
     );
   });
 
-  it('filters a spec’s own second source directly rather than bridging onto the first', () => {
+  it('filters every source a spec reads — the selection’s own table and the rest by bridge', () => {
     // A survival curve stratified by a field in a joined table reads two
-    // entities. A selection on the second one has to filter *that* table:
-    // bridging it onto the primary entity would keep the subjects it matched and
-    // then re-admit all their other rows from the second table through the join —
-    // so filtering to one therapy protocol left seven protocols on the chart.
+    // entities, and both need restricting. The selection's own predicate has to
+    // land on *that* table or the inner join re-admits all the other rows the
+    // surviving subjects have — filtering to one therapy protocol left seven
+    // protocols on the chart. The other source needs the entity restriction via
+    // its FK path, which is the half a left join cannot get any other way.
     const dataPackage = createDataPackageStore();
     const child = (name: string) => ({
       name,
@@ -794,10 +795,16 @@ describe('dashboardStore — cross-store filter propagation', () => {
           { name: 'research_id', 'udi:data_type': 'nominal' },
           { name: 'protocol', 'udi:data_type': 'nominal' },
         ],
+        // `schema.foreignKeys` is the shape getEntityRelationship reads, and the
+        // shape real packages ship. A resource-level `udi:foreign_keys` resolves
+        // to nothing, which made the bridge half of this test vacuous.
+        foreignKeys: [
+          {
+            fields: ['research_id'],
+            reference: { resource: 'Patient', fields: ['research_id'] },
+          },
+        ],
       },
-      'udi:foreign_keys': [
-        { fields: 'research_id', reference: { resource: 'Patient', fields: 'research_id' } },
-      ],
     });
     dataPackage.setState({
       dataPackage: {
@@ -852,13 +859,17 @@ describe('dashboardStore — cross-store filter propagation', () => {
       .map((t) => t.filter)
       .filter(Boolean);
 
-    // Applied to Therapy itself — no bridge, no entityRelationship.
+    // The raw predicate on Therapy itself — no bridge, no entityRelationship.
     expect(filters).toContainEqual({ name: therapyUuid });
-    expect(filters).not.toContainEqual(
-      expect.objectContaining({ name: therapyUuid, source: 'Therapy' }),
-    );
-    // And targeted at that table via the transform's own in/out, which is where
-    // the grammar reads them from — inside the filter object they are ignored.
+    // …and the entity restriction bridged onto Event.
+    expect(filters).toContainEqual({
+      name: therapyUuid,
+      source: 'Therapy',
+      entityRelationship: { originKey: 'research_id', targetKey: 'research_id' },
+    });
+
+    // Each is targeted via the transform's own in/out, which is where the
+    // grammar reads them from — inside the filter object they are ignored.
     const transforms = (
       dashboard.getState().activeVisualizations.get('0-1')!.interactiveSpec as unknown as {
         transformation: Array<Record<string, unknown>>;
@@ -870,6 +881,274 @@ describe('dashboardStore — cross-store filter propagation', () => {
         in: 'Therapy',
         out: 'Therapy',
       }),
+    );
+    expect(transforms).toContainEqual(
+      expect.objectContaining({
+        filter: expect.objectContaining({ name: therapyUuid, source: 'Therapy' }),
+        in: 'Event',
+        out: 'Event',
+      }),
+    );
+    // Every filter names a raw source, never an intermediate table.
+    for (const t of transforms.filter((x) => x.filter)) {
+      expect(['Event', 'Therapy']).toContain(t.in);
+      expect(t.in).toBe(t.out);
+    }
+  });
+
+  it('restricts a left-joined censoring source and the event log it hangs off', () => {
+    // The survival bug. Every survival spec sources the patient table purely to
+    // compute `censor day`, rolls it up per subject and LEFT joins it onto the
+    // event log. Filtering only that table removes no event row at all, so the
+    // curve kept all its subjects and all its deaths while the censor ticks
+    // halved. The event log has to be restricted too.
+    const dataPackage = createDataPackageStore();
+    dataPackage.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          {
+            name: 'Patient',
+            path: 'patient.csv',
+            'udi:row_count': 5,
+            schema: {
+              fields: [
+                { name: 'research_id', 'udi:data_type': 'nominal' },
+                { name: 'age_at_diagnosis', 'udi:data_type': 'quantitative' },
+              ],
+              primaryKey: ['research_id'],
+            },
+          },
+          {
+            name: 'Event',
+            path: 'event.csv',
+            'udi:row_count': 10,
+            schema: {
+              fields: [
+                { name: 'research_id', 'udi:data_type': 'nominal' },
+                { name: 'event_type', 'udi:data_type': 'nominal' },
+              ],
+              foreignKeys: [
+                {
+                  fields: ['research_id'],
+                  reference: { resource: 'Patient', fields: ['research_id'] },
+                },
+              ],
+            },
+          },
+        ],
+      } as unknown as DataPackage,
+      loadingPhase: 'ready',
+    });
+
+    const survival = {
+      source: [
+        { name: 'Event', source: 'Event.csv' },
+        { name: 'Patient', source: 'Patient.csv' },
+      ],
+      transformation: [
+        {
+          join: { on: ['research_id', 'research_id'], kind: 'left' },
+          in: ['Event', 'Patient__by_subject'],
+          out: 'Event__cens',
+        },
+      ],
+      representation: {
+        mark: 'line',
+        mapping: [{ encoding: 'x', field: 'survival years', type: 'quantitative' }],
+      },
+    } as unknown as UDIGrammar;
+
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+    dashboard
+      .getState()
+      .addActiveVisualization(
+        0,
+        0,
+        makeSpec({ source: { name: 'Patient', source: 'Patient.csv' } }),
+        '',
+        {
+          Patient: ['age_at_diagnosis'],
+        },
+      );
+    dashboard.getState().addActiveVisualization(0, 1, survival, '', { Event: ['research_id'] });
+    dashboard.getState().setFilterAllNullValues(false);
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const patientUuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
+    const transforms = (
+      dashboard.getState().activeVisualizations.get('0-1')!.interactiveSpec as unknown as {
+        transformation: Array<Record<string, unknown>>;
+      }
+    ).transformation;
+
+    // In place on Patient, as before…
+    expect(transforms).toContainEqual(
+      expect.objectContaining({ filter: { name: patientUuid }, in: 'Patient', out: 'Patient' }),
+    );
+    // …and — the fix — bridged onto Event, which is what actually moves the curve.
+    expect(transforms).toContainEqual(
+      expect.objectContaining({
+        filter: {
+          name: patientUuid,
+          source: 'Patient',
+          entityRelationship: { originKey: 'research_id', targetKey: 'research_id' },
+        },
+        in: 'Event',
+        out: 'Event',
+      }),
+    );
+  });
+
+  it('fans a selection out to all three sources of a presence-stratified spec', () => {
+    // survival_presence reads the event log, a membership table it LEFT joins to
+    // decide "did this subject ever get radiation", and the censoring table. A
+    // selection on the membership table has to narrow the cohort, not silently
+    // move subjects between the two curves.
+    const dataPackage = createDataPackageStore();
+    const childOfPatient = (name: string, extra: string) => ({
+      name,
+      path: `${name}.csv`,
+      'udi:row_count': 10,
+      schema: {
+        fields: [
+          { name: 'research_id', 'udi:data_type': 'nominal' },
+          { name: extra, 'udi:data_type': 'quantitative' },
+        ],
+        foreignKeys: [
+          {
+            fields: ['research_id'],
+            reference: { resource: 'Patient', fields: ['research_id'] },
+          },
+        ],
+      },
+    });
+    dataPackage.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          {
+            name: 'Patient',
+            path: 'patient.csv',
+            'udi:row_count': 5,
+            schema: {
+              fields: [{ name: 'research_id', 'udi:data_type': 'nominal' }],
+              primaryKey: ['research_id'],
+            },
+          },
+          childOfPatient('Event', 'event_date'),
+          childOfPatient('Radiation', 'total_radiation_dose'),
+        ],
+      } as unknown as DataPackage,
+      loadingPhase: 'ready',
+    });
+
+    const presence = {
+      source: [
+        { name: 'Event', source: 'Event.csv' },
+        { name: 'Radiation', source: 'Radiation.csv' },
+        { name: 'Patient', source: 'Patient.csv' },
+      ],
+      transformation: [
+        {
+          join: { on: ['research_id', 'research_id'], kind: 'left' },
+          in: ['Event', 'Radiation__by_subject'],
+          out: 'Event__p',
+        },
+        {
+          join: { on: ['research_id', 'research_id'], kind: 'left' },
+          in: ['Event__p', 'Patient__by_subject'],
+          out: 'Event__cens',
+        },
+      ],
+      representation: {
+        mark: 'line',
+        mapping: [{ encoding: 'color', field: 'group', type: 'nominal' }],
+      },
+    } as unknown as UDIGrammar;
+
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+    dashboard
+      .getState()
+      .addActiveVisualization(
+        0,
+        0,
+        makeSpec({ source: { name: 'Radiation', source: 'Radiation.csv' } }),
+        '',
+        {
+          Radiation: ['total_radiation_dose'],
+        },
+      );
+    dashboard.getState().addActiveVisualization(0, 1, presence, '', { Event: ['research_id'] });
+    dashboard.getState().setFilterAllNullValues(false);
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const radUuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
+    const transforms = (
+      dashboard.getState().activeVisualizations.get('0-1')!.interactiveSpec as unknown as {
+        transformation: Array<Record<string, unknown>>;
+      }
+    ).transformation;
+    const mine = transforms.filter(
+      (t) => (t.filter as { name?: string } | undefined)?.name === radUuid,
+    );
+
+    // One per source: the raw predicate on Radiation, bridges onto the other two.
+    expect(mine).toHaveLength(3);
+    expect(mine.map((t) => t.in).sort()).toEqual(['Event', 'Patient', 'Radiation']);
+    expect(mine).toContainEqual(
+      expect.objectContaining({ filter: { name: radUuid }, in: 'Radiation', out: 'Radiation' }),
+    );
+    for (const target of ['Event', 'Patient']) {
+      expect(mine).toContainEqual(
+        expect.objectContaining({
+          filter: {
+            name: radUuid,
+            source: 'Radiation',
+            entityRelationship: { originKey: 'research_id', targetKey: 'research_id' },
+          },
+          in: target,
+          out: target,
+        }),
+      );
+    }
+  });
+
+  it('emits exactly one filter per selection for a single-source spec', () => {
+    const dataPackage = createDataPackageStore();
+    dataPackage.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          {
+            name: 'Event',
+            path: 'event.csv',
+            'udi:row_count': 10,
+            schema: { fields: [{ name: 'research_id', 'udi:data_type': 'nominal' }] },
+          },
+        ],
+      } as unknown as DataPackage,
+      loadingPhase: 'ready',
+    });
+
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+    const spec = makeSpec({ source: { name: 'Event', source: 'Event.csv' } });
+    dashboard.getState().addActiveVisualization(0, 0, spec, '', { Event: ['research_id'] });
+    dashboard.getState().setFilterAllNullValues(false);
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const uuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
+    const filters = (
+      dashboard.getState().activeVisualizations.get('0-0')!.interactiveSpec as unknown as {
+        transformation: Array<Record<string, unknown>>;
+      }
+    ).transformation.filter((t) => t.filter);
+    expect(filters).toHaveLength(1);
+    expect(filters[0]).toEqual(
+      expect.objectContaining({ filter: { name: uuid }, in: 'Event', out: 'Event' }),
     );
   });
 });

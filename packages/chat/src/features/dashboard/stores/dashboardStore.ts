@@ -626,41 +626,52 @@ export function createDashboardStore() {
         return uuidToSource.get(id) ?? validSelections[id]?.dataSourceKey ?? null;
       };
 
-      return filterIdList
-        .map((id: string): object | null => {
-          const originSourceName = getSourceName(id);
-          if (!originSourceName) return null;
-          // A spec can read several entities. When the selection is on one of
-          // them, filter THAT table — bridging it onto the primary entity instead
-          // would keep every row the surviving subjects have in the other table.
-          // Filtering a therapy protocol, say, would keep the subjects on it and
-          // then re-admit all their *other* protocols through the join.
-          //
-          // `in`/`out` are explicit on every filter so the pipeline position of
-          // one cannot change which table the next one lands on.
-          if (specSourceNames.includes(originSourceName)) {
-            return {
-              filter: { name: id },
-              in: originSourceName,
-              out: originSourceName,
-            };
+      // Every entity the spec reads gets restricted. Aiming a selection at one
+      // table cannot be right, because two different things have to happen and
+      // each only works on a particular table:
+      //
+      //   - the selection's own predicate (`protocol === 'X'`) can only be
+      //     applied to the table the selection lives on. An *inner* join needs
+      //     it, or the join re-admits every other row the surviving subjects
+      //     have — filtering to one therapy protocol left seven curves.
+      //   - the entity restriction can only reach the other tables through
+      //     their FK path. A *left* join needs it, because the right-hand table
+      //     cannot remove a left-hand row: filtering the censoring table of a
+      //     survival curve dropped the censor ticks and left the curve itself
+      //     untouched.
+      //
+      // Doing both to every source covers both, with no join-kind analysis.
+      // `in`/`out` are explicit on every filter and always name a raw source,
+      // so no filter can land on an intermediate table and their order among
+      // themselves cannot matter.
+      const targets = specSourceNames.length > 0 ? specSourceNames : [currentSourceName];
+      const uniqueTargets = Array.from(new Set(targets));
+
+      return filterIdList.flatMap((id: string): object[] => {
+        const originSourceName = getSourceName(id);
+        if (!originSourceName) return [];
+        return uniqueTargets.flatMap((target): object[] => {
+          if (target === originSourceName) {
+            return [{ filter: { name: id }, in: target, out: target }];
           }
           const er: EntityRelationship | null = dpState.getEntityRelationship(
             originSourceName,
-            currentSourceName,
+            target,
           );
-          if (!er) return null;
-          return {
-            filter: {
-              name: id,
-              source: originSourceName,
-              entityRelationship: er,
+          if (!er) return [];
+          return [
+            {
+              filter: {
+                name: id,
+                source: originSourceName,
+                entityRelationship: er,
+              },
+              in: target,
+              out: target,
             },
-            in: currentSourceName,
-            out: currentSourceName,
-          };
-        })
-        .filter((f): f is object => f !== null);
+          ];
+        });
+      });
     },
 
     updateSpecFilters: (dataFiltersStore, dataPackageStore) => {
