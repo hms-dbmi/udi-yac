@@ -54,8 +54,7 @@ export function verifyAgainstFrames(
   source: { species: string; body_mass_g: number }[],
   frames: { range: [number, number]; rows: Row[] }[],
 ): string {
-  const key = (r: Row) =>
-    `${r.species}|${r.body_mass_g}|${r.total}|${r.percentile.toFixed(9)}`;
+  const key = (r: Row) => `${r.species}|${r.body_mass_g}|${r.total}|${r.percentile.toFixed(9)}`;
   for (const [i, f] of frames.entries()) {
     const mine = computeCdf(source, f.range);
     if (mine.length !== f.rows.length) {
@@ -64,8 +63,7 @@ export function verifyAgainstFrames(
     const a = mine.map(key).sort();
     const b = f.rows.map(key).sort();
     const bad = a.findIndex((x, j) => x !== b[j]);
-    if (bad !== -1)
-      return `frame ${i}: row ${bad} differs — ${a[bad]} vs ${b[bad]}`;
+    if (bad !== -1) return `frame ${i}: row ${bad} differs — ${a[bad]} vs ${b[bad]}`;
   }
   return `matches the executor on all ${frames.length} frames`;
 }

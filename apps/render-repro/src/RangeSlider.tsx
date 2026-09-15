@@ -27,16 +27,11 @@ export function RangeSlider({
   const pct = (v: number) => ((v - min) / span) * 100;
 
   return (
-    <div
-      style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}
-    >
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
       <span style={{ minWidth: 92 }}>{label}</span>
       <div className="range">
         <div className="range__track" />
-        <div
-          className="range__fill"
-          style={{ left: `${pct(lo)}%`, right: `${100 - pct(hi)}%` }}
-        />
+        <div className="range__fill" style={{ left: `${pct(lo)}%`, right: `${100 - pct(hi)}%` }} />
         <input
           type="range"
           aria-label={`${label} minimum`}
@@ -56,14 +51,10 @@ export function RangeSlider({
           onChange={(e) => onChange([lo, Math.max(Number(e.target.value), lo)])}
         />
       </div>
-      <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 110 }}>
-        {value ? `${Math.round(lo)} – ${Math.round(hi)}` : "all"}
+      <span style={{ fontVariantNumeric: 'tabular-nums', minWidth: 110 }}>
+        {value ? `${Math.round(lo)} – ${Math.round(hi)}` : 'all'}
       </span>
-      <button
-        onClick={onClear}
-        disabled={!value}
-        style={{ fontSize: 11, padding: "2px 8px" }}
-      >
+      <button onClick={onClear} disabled={!value} style={{ fontSize: 11, padding: '2px 8px' }}>
         clear
       </button>
     </div>

@@ -37,7 +37,7 @@ button {
 .range__fill {
   background: #16a987;
 }
-.range input[type="range"] {
+.range input[type='range'] {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -46,15 +46,15 @@ button {
   background: none;
   pointer-events: none;
 }
-.range input[type="range"]::-webkit-slider-runnable-track {
+.range input[type='range']::-webkit-slider-runnable-track {
   background: none;
   height: 20px;
 }
-.range input[type="range"]::-moz-range-track {
+.range input[type='range']::-moz-range-track {
   background: none;
   height: 20px;
 }
-.range input[type="range"]::-webkit-slider-thumb {
+.range input[type='range']::-webkit-slider-thumb {
   pointer-events: auto;
   appearance: none;
   width: 14px;
@@ -65,7 +65,7 @@ button {
   border: 2px solid #16a987;
   cursor: pointer;
 }
-.range input[type="range"]::-moz-range-thumb {
+.range input[type='range']::-moz-range-thumb {
   pointer-events: auto;
   width: 14px;
   height: 14px;

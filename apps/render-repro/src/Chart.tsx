@@ -1,9 +1,5 @@
-import { useState } from "react";
-import {
-  UDIVis,
-  type DataSelections,
-  type UDIGrammar,
-} from "udi-toolkit/react";
+import { useState } from 'react';
+import { UDIVis, type DataSelections, type UDIGrammar } from 'udi-toolkit/react';
 
 /**
  * One chart, with its row count on show.
@@ -29,17 +25,17 @@ export function Chart({
   return (
     <section
       style={{
-        background: "#fff",
-        border: "1px solid #e3e3e0",
+        background: '#fff',
+        border: '1px solid #e3e3e0',
         borderRadius: 8,
         padding: 12,
         width: 560,
       }}
     >
-      <h2 style={{ fontSize: 13, margin: "0 0 8px", display: "flex", gap: 8 }}>
+      <h2 style={{ fontSize: 13, margin: '0 0 8px', display: 'flex', gap: 8 }}>
         <span>{title}</span>
-        <span style={{ marginLeft: "auto", fontWeight: 400, color: "#6b6b66" }}>
-          {rows ?? "…"} rows
+        <span style={{ marginLeft: 'auto', fontWeight: 400, color: '#6b6b66' }}>
+          {rows ?? '…'} rows
         </span>
       </h2>
       {/* A definite height, which `height: container` needs to resolve against. */}
@@ -50,7 +46,7 @@ export function Chart({
           fillContainer
           onDataReady={({ data }) => setRows(data?.length ?? 0)}
           {...(onSelectionChange ? { onSelectionChange } : {})}
-          style={{ display: "block", height: "100%", width: "100%" }}
+          style={{ display: 'block', height: '100%', width: '100%' }}
         />
       </div>
     </section>

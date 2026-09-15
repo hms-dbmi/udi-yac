@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { markRaw, ref, shallowRef, onMounted, onBeforeUnmount } from 'vue';
 import vegaEmbed from 'vega-embed';
 // `defineProps` is a compile-time macro in <script setup> — importing it
 // shadows the macro and trips TS 6's "Import declaration conflicts with
@@ -79,7 +79,21 @@ function buildVegaConfig(): Record<string, unknown> {
 }
 
 const vegaContainer = ref();
-const vegaView = ref<View | null>(null);
+// `shallowRef`, not `ref`, and the view is marked raw on the way in.
+//
+// A plain `ref` makes its value DEEPLY reactive: Vue wraps the Vega View in a
+// Proxy, and every object reached through it — datasets, tuples, scenegraph
+// items — gets wrapped too. Vega's dataflow is built on object identity: tuples
+// carry ids, marks join items to the tuples that produced them, and removals are
+// matched by identity. Hand it proxies and those comparisons stop matching, so a
+// removal fails to find the item it should delete and the mark keeps drawing it.
+//
+// That is hms-dbmi/udi-yac#34: the dataset ends up correct while the scenegraph
+// holds one stale item per facet group, from the first shrink onwards, and only
+// a re-embed clears it — because a re-embed builds a new view and new marks.
+// Nothing in the component needs the view to be reactive; it is only ever used
+// imperatively.
+const vegaView = shallowRef<View | null>(null);
 
 const errorMessage = ref();
 
@@ -154,7 +168,7 @@ function initVegaChart() {
     .then((result) => {
       errorMessage.value = null;
       const view = result.view;
-      vegaView.value = view;
+      vegaView.value = markRaw(view);
       for (const signalKey of props.signalKeys ?? []) {
         const signalKeyFormatted = formatVegaSignalKey(signalKey);
         // Vega-Lite stores per-channel ranges in separate signals

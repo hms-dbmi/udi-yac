@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   loadDataPackage,
   type DataFieldDomain,
   type DataSelections,
   type IntervalDomain,
   type UDIGrammar,
-} from "udi-toolkit/react";
-import { Chart } from "./Chart";
-import { RangeSlider } from "./RangeSlider";
-import specs from "./specs.json";
+} from 'udi-toolkit/react';
+import { Chart } from './Chart';
+import { RangeSlider } from './RangeSlider';
+import specs from './specs.json';
 
 /**
  * A minimal reproduction of hms-dbmi/udi-yac#34, outside the YAC app.
@@ -29,18 +29,18 @@ import specs from "./specs.json";
 
 /** Must match the injected `select.name`: the brush inside the chart and the
  *  slider above it are two views of one selection. */
-const MASS_FILTER = "mass-filter";
-const MASS_FIELD = "body_mass_g";
-const ENTITY = "penguins";
+const MASS_FILTER = 'mass-filter';
+const MASS_FIELD = 'body_mass_g';
+const ENTITY = 'penguins';
 /** One CSV, named the way the specs refer to it. No datapackage indirection. */
-const SOURCES = [{ name: ENTITY, url: "./data/penguins/penguins.csv" }];
+const SOURCES = [{ name: ENTITY, url: './data/penguins/penguins.csv' }];
 
 type SpecName = keyof typeof specs;
 const SPEC_LABELS: Record<SpecName, string> = {
-  survivalShaped: "Survival-shaped (5 layers, colour facet)",
-  cdfGrouped: "CDF grouped by species (template 50)",
-  kdeGrouped: "KDE grouped by species (template 72)",
-  cdfPlain: "CDF, no grouping (template 49)",
+  survivalShaped: 'Survival-shaped (5 layers, colour facet)',
+  cdfGrouped: 'CDF grouped by species (template 50)',
+  kdeGrouped: 'KDE grouped by species (template 72)',
+  cdfPlain: 'CDF, no grouping (template 49)',
 };
 
 /**
@@ -52,14 +52,14 @@ const SPEC_LABELS: Record<SpecName, string> = {
  * brushing that would produce a selection on the wrong field.
  */
 function withBrush(spec: UDIGrammar): UDIGrammar {
-  const select = { name: MASS_FILTER, how: { type: "interval", on: "x" } };
+  const select = { name: MASS_FILTER, how: { type: 'interval', on: 'x' } };
   const rep = (spec as { representation?: unknown }).representation;
   const plotsMass = (layer: unknown) => {
     const mapping = (layer as { mapping?: unknown }).mapping;
     const entries = Array.isArray(mapping) ? mapping : [mapping];
     return entries.some(
       (m) =>
-        (m as { encoding?: string })?.encoding === "x" &&
+        (m as { encoding?: string })?.encoding === 'x' &&
         (m as { field?: string })?.field === MASS_FIELD,
     );
   };
@@ -73,9 +73,7 @@ function withBrush(spec: UDIGrammar): UDIGrammar {
   const index = target === -1 ? 0 : target;
   return {
     ...spec,
-    representation: rep.map((layer, i) =>
-      i === index ? { ...(layer as object), select } : layer,
-    ),
+    representation: rep.map((layer, i) => (i === index ? { ...(layer as object), select } : layer)),
   } as UDIGrammar;
 }
 
@@ -86,10 +84,7 @@ function withFilter(spec: UDIGrammar): UDIGrammar {
   const base = (spec as { transformation?: unknown[] }).transformation ?? [];
   return {
     ...spec,
-    transformation: [
-      { filter: { name: MASS_FILTER }, in: ENTITY, out: ENTITY },
-      ...base,
-    ],
+    transformation: [{ filter: { name: MASS_FILTER }, in: ENTITY, out: ENTITY }, ...base],
   } as UDIGrammar;
 }
 
@@ -98,7 +93,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [massRange, setMassRange] = useState<[number, number] | null>(null);
   const [massDomain, setMassDomain] = useState<[number, number] | null>(null);
-  const [selected, setSelected] = useState<SpecName>("cdfGrouped");
+  const [selected, setSelected] = useState<SpecName>('cdfGrouped');
   // Bumping this remounts the chart, which re-embeds the Vega view — the same
   // thing toggling to table view and back does in YAC, and the only known way to
   // clear a stale frame. A button for it makes the bug easy to see: leave a bad
@@ -111,7 +106,7 @@ export function App() {
       // rather than from a hardcoded guess.
       onEntityDomains: (_entity: string, domains: DataFieldDomain[]) => {
         const d = domains.find((x) => x.field === MASS_FIELD);
-        if (d?.type === "interval") {
+        if (d?.type === 'interval') {
           const iv = d.domain as IntervalDomain;
           setMassDomain([iv.min, iv.max]);
         }
@@ -139,7 +134,7 @@ export function App() {
     () => ({
       [MASS_FILTER]: {
         dataSourceKey: ENTITY,
-        type: "interval",
+        type: 'interval',
         selection: massRange ? { [MASS_FIELD]: massRange } : null,
       },
     }),
@@ -149,8 +144,7 @@ export function App() {
   // The brush half of the binding: a drag inside the chart reports the whole
   // store, from which we read this one selection back into the slider.
   const handleBrush = useCallback((next: DataSelections) => {
-    const range = next[MASS_FILTER]?.selection?.[MASS_FIELD] as
-      [number, number] | undefined;
+    const range = next[MASS_FILTER]?.selection?.[MASS_FIELD] as [number, number] | undefined;
     setMassRange((prev) => {
       if (!range) return prev === null ? prev : null;
       if (prev && prev[0] === range[0] && prev[1] === range[1]) return prev;
@@ -158,28 +152,25 @@ export function App() {
     });
   }, []);
 
-  if (error)
-    return <pre style={{ padding: 16, color: "#b3261e" }}>{error}</pre>;
+  if (error) return <pre style={{ padding: 16, color: '#b3261e' }}>{error}</pre>;
   if (!ready) return <p style={{ padding: 16 }}>Loading penguins…</p>;
 
   return (
     <div style={{ padding: 16 }}>
       <header
         style={{
-          display: "flex",
-          alignItems: "baseline",
+          display: 'flex',
+          alignItems: 'baseline',
           gap: 16,
           marginBottom: 4,
         }}
       >
-        <h1 style={{ fontSize: 18, margin: 0 }}>
-          Stale-render repro — udi-yac#34
-        </h1>
+        <h1 style={{ fontSize: 18, margin: 0 }}>Stale-render repro — udi-yac#34</h1>
         <select
           aria-label="chart"
           value={selected}
           onChange={(e) => setSelected(e.target.value as SpecName)}
-          style={{ fontSize: 12, padding: "4px 6px" }}
+          style={{ fontSize: 12, padding: '4px 6px' }}
         >
           {(Object.keys(SPEC_LABELS) as SpecName[]).map((name) => (
             <option key={name} value={name}>
@@ -187,15 +178,16 @@ export function App() {
             </option>
           ))}
         </select>
+
         <button
           onClick={() => setRefreshKey((n) => n + 1)}
           title="Remount the chart, which re-embeds the Vega view"
           style={{
-            padding: "6px 12px",
+            padding: '6px 12px',
             borderRadius: 6,
-            border: "1px solid #b9b9b4",
-            background: "#fff",
-            cursor: "pointer",
+            border: '1px solid #b9b9b4',
+            background: '#fff',
+            cursor: 'pointer',
             fontSize: 12,
           }}
         >
@@ -203,7 +195,7 @@ export function App() {
         </button>
       </header>
       {massDomain && (
-        <div style={{ margin: "8px 0 4px" }}>
+        <div style={{ margin: '8px 0 4px' }}>
           <RangeSlider
             label={MASS_FIELD}
             min={massDomain[0]}
@@ -214,13 +206,10 @@ export function App() {
           />
         </div>
       )}
-      <p
-        style={{ fontSize: 12, color: "#6b6b66", marginTop: 0, maxWidth: 820 }}
-      >
-        Static spec, no agent. The slider and the chart's own brush are two
-        views of one interval selection, which a named filter in the spec
-        resolves against — the same path a YAC filter takes. Drag until a curve
-        stops matching its data, then press <strong>Re-embed</strong>: the
+      <p style={{ fontSize: 12, color: '#6b6b66', marginTop: 0, maxWidth: 820 }}>
+        Static spec, no agent. The slider and the chart's own brush are two views of one interval
+        selection, which a named filter in the spec resolves against — the same path a YAC filter
+        takes. Drag until a curve stops matching its data, then press <strong>Re-embed</strong>: the
         picture changes while the row count does not. That gap is the bug.
       </p>
       {/* One chart at a time: fewer views sharing the store is a smaller surface.
