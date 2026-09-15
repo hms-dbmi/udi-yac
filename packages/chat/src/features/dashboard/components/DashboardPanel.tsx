@@ -15,12 +15,19 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 function DashboardHeader() {
+  // Grid settings and session import both rewrite the dashboard, so they go in
+  // read-only. Download stays: reading data out is not editing.
+  const readOnly = useGlobal((s) => s.readOnly);
   return (
     <div className="flex items-center justify-between gap-2 shrink-0">
       <DataCounts />
       <div className="flex items-center gap-1.5">
-        <GridSettingsButton />
-        <SessionImportExportButton />
+        {!readOnly && (
+          <>
+            <GridSettingsButton />
+            <SessionImportExportButton />
+          </>
+        )}
         <DownloadButton />
       </div>
     </div>

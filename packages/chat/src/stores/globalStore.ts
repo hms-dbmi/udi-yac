@@ -1,5 +1,15 @@
 import { createStore } from 'zustand/vanilla';
 
+/**
+ * How the chat starts, and whether the user may change it.
+ * - `false` (default) — the normal chat + dashboard app.
+ * - `true` — starts read-only; the chat is collapsed to a rail with a button
+ *   that leaves read-only.
+ * - `'locked'` — read-only with no way out, for hosts that embed the dashboard
+ *   and do not want their users chatting at all.
+ */
+export type ReadOnlyOption = boolean | 'locked';
+
 export interface GlobalState {
   debugMode: boolean;
   isProduction: boolean;
@@ -7,6 +17,14 @@ export interface GlobalState {
   overviewOpen: boolean;
   /** Entity whose overview accordion item should be expanded, if any. */
   overviewEntity: string | null;
+  /**
+   * Read-only mode: the chat collapses to a sidebar rail and every editing
+   * control (drag, resize, rename, close, field tweak, grid settings, session
+   * import) is hidden. Cross-filtering, the table toggle and downloads stay.
+   */
+  readOnly: boolean;
+  /** Whether `readOnly` is fixed for the session. See {@link ReadOnlyOption}. */
+  readOnlyLocked: boolean;
   toggleDebugMode: () => void;
   /**
    * Open/close the Data Overview and optionally pick the entity to expand.
@@ -14,19 +32,25 @@ export interface GlobalState {
    * reopens on whatever was last looked at); pass `null` to clear it.
    */
   setOverview: (open: boolean, entity?: string | null) => void;
+  /** No-op while `readOnlyLocked` — guarded here rather than at each call site
+   *  so no caller can escape the lock. */
+  setReadOnly: (value: boolean) => void;
 }
 
-export function createGlobalStore() {
+export function createGlobalStore(readOnly: ReadOnlyOption = false) {
   return createStore<GlobalState>()((set) => ({
     debugMode: false,
     isProduction: false,
     overviewOpen: false,
     overviewEntity: null,
+    readOnly: readOnly !== false,
+    readOnlyLocked: readOnly === 'locked',
     toggleDebugMode: () => set((state) => ({ debugMode: !state.debugMode })),
     setOverview: (open, entity) =>
       set((state) => ({
         overviewOpen: open,
         overviewEntity: entity === undefined ? state.overviewEntity : entity,
       })),
+    setReadOnly: (value) => set((state) => (state.readOnlyLocked ? state : { readOnly: value })),
   }));
 }

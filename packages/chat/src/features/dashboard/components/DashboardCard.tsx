@@ -64,6 +64,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const palette = usePalette();
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
+  const readOnly = useGlobal((s) => s.readOnly);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   // Highlight when this card is hovered directly, or when the chat is pointing
   // at it (its single-viz message, or its accordion item in a multi-viz
@@ -219,7 +220,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     >
       <CardHeader className="p-1 pb-0 shrink-0">
         <div className="flex items-center w-full min-w-0 gap-0.5">
-          {!editingTitle && (
+          {!editingTitle && !readOnly && (
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -242,7 +243,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           <EditableCardTitle vizKey={vizKey} viz={viz} onEditingChange={setEditingTitle} />
           {!editingTitle && (
             <>
-              {tweakable && (
+              {tweakable && !readOnly && (
                 <Tooltip>
                   <TooltipTrigger
                     render={
@@ -380,22 +381,31 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                   </DialogContent>
                 </Dialog>
               )}
-              <span
-                aria-hidden
-                className="mx-0.5 select-none text-sm leading-none text-muted-foreground/40"
-              >
-                |
-              </span>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClose} />
-                  }
-                >
-                  <X className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent>Close</TooltipContent>
-              </Tooltip>
+              {!readOnly && (
+                <>
+                  <span
+                    aria-hidden
+                    className="mx-0.5 select-none text-sm leading-none text-muted-foreground/40"
+                  >
+                    |
+                  </span>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={handleClose}
+                        />
+                      }
+                    >
+                      <X className="h-3 w-3" />
+                    </TooltipTrigger>
+                    <TooltipContent>Close</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
             </>
           )}
         </div>

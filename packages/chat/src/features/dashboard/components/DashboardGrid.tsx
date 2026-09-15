@@ -7,7 +7,7 @@ import {
   type Layout,
 } from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
-import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
+import { useDashboard, useDashboardStore, useGlobal } from '@/app/UDIChatContext';
 import { useChatRoot } from '@/lib/chatRoot';
 import {
   DRAG_HANDLE_CLASS,
@@ -28,6 +28,7 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   const gridCols = useDashboard((s) => s.gridCols);
   const gridRowHeight = useDashboard((s) => s.gridRowHeight);
   const dashboardStore = useDashboardStore();
+  const readOnly = useGlobal((s) => s.readOnly);
   const { width, containerRef, mounted } = useContainerWidth();
 
   // On initial load, size the column count to the container via the shared
@@ -184,13 +185,15 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
             maxRows: Infinity,
           }}
           dragConfig={{
-            enabled: true,
+            enabled: !readOnly,
             bounded: false,
             handle: `.${DRAG_HANDLE_CLASS}`,
             threshold: 3,
           }}
           resizeConfig={{
-            enabled: true,
+            // Off in read-only: react-grid-layout then renders no handles at
+            // all, so the hover affordance in index.css has nothing to reveal.
+            enabled: !readOnly,
             // `e` = width (per-card: the card spans more columns, pushing/
             // wrapping neighbours). `s` = height, but height is a ROW property,
             // so dragging it resizes the whole row (see the compactor override
