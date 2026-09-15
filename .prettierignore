@@ -1,0 +1,6 @@
+# pnpm writes this file in its own style; prettier rewrites it to a different
+# one, so the pre-commit hook and the next `pnpm install` fight over it and
+# every dependency bump carries thousands of lines of pure formatting churn.
+# Let pnpm own its lockfile. (packages/chat/.prettierignore already says this,
+# but the lockfile lives at the root, where that file never applies.)
+pnpm-lock.yaml

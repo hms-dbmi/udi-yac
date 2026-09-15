@@ -21,10 +21,11 @@ overrides:
   cross-spawn: 7.0.6
   glob: 10.5.0
   postcss: 8.5.15
-  # scoped, not global: a global vite pin would also rewrite the vite 5 that
-  # chat's vitest 2 bundles internally, breaking its test transform
-  "udi-toolkit>vite": 8.1.0
-  "@quasar/app-vite>vite": 8.1.0
+  # scoped, not global: @quasar/app-vite and udi-toolkit each declare their own
+  # vite ^8 range, so pin both to the workspace vite to keep a single instance.
+  # (vitest 4 peer-deps vite ^8, so it no longer needs excluding from this pin.)
+  "udi-toolkit>vite": 8.1.1
+  "@quasar/app-vite>vite": 8.1.1
   "anymatch>picomatch": 2.3.2
   "readdirp>picomatch": 2.3.2
   "micromatch>picomatch": 2.3.2
