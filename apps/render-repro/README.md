@@ -78,6 +78,64 @@ onto the first layer: the brushed layer's x decides what the selection is keyed
 by, and the survival-shaped spec's first layer plots a lead-in column that is
 null nearly everywhere.
 
+## `/raw.html` — the same failure with the toolkit removed
+
+`pnpm dev:repro`, then open <http://localhost:5176/raw.html>.
+
+Everything the toolkit contributes is pre-computed and frozen:
+
+- `src/vega-spec.json` is the exact Vega-Lite spec `UDIVis.convertToVegaSpec`
+  produced for the grouped-CDF chart, captured from a running instance rather
+  than re-derived — so the scale domains, the brush param and the layer shape are
+  the real ones.
+- `src/cdf.ts` recomputes the rows for an arbitrary range in plain JS, so the
+  brush can drive the data here as it does in the real app. It is checked on
+  startup against `src/raw-frames.json` — 24 row sets the real Arquero executor
+  produced — and the page prints the verdict, so a divergence in the port can
+  never be mistaken for the rendering bug.
+
+What is left is vega-embed, one changeset per change, and the brush wired back to
+the data: no Vue, no custom element, no Pinia, no `UDIVis`, no `VegaLite.vue`.
+The changeset sequence mirrors `VegaLite.updateVegaChart` — remove everything,
+insert fresh row objects, then `resize().runAsync()` — and the brush/slider
+binding mirrors its `toPixelRange` / `fromPixelRange` conversions.
+
+### The result
+
+**It does not reproduce here.** The same spec, the same rows and the same
+changeset sequence, driven from both the slider and the chart's own brush, render
+correctly however hard they are pushed — while `/` misbehaves on the same data.
+
+So the cause is not Vega or Vega-Lite mishandling a changeset. It is in what the
+toolkit adds on top, and the delta between the two pages is the search space:
+
+- `UDIVis.vue` / `VegaLite.vue` and the Vue custom-element wrapper around them
+- the brush-signal save/restore that wraps the changeset in `updateVegaChart`
+- the second `runAsync` in `updateVegaChartSelections`
+- Vue reactivity driving the update, rather than one awaited call per change
+
+One caveat on how far to push that. This page applies each update discretely and
+awaits it; a real drag through the toolkit fires overlapping, un-awaited updates.
+So "raw Vega is fine" is established for a _sequence_ of changesets, not for
+_concurrent_ ones. If the cause turns out to be a race, that difference — not the
+wrapper — would be the thing that matters.
+
+### Regenerating the captured files
+
+Neither is derived at build time, so both need re-capturing if the spec or the
+pipeline changes.
+
+`vega-spec.json` — temporarily add a `console.warn(JSON.stringify(specObject))`
+to `initVegaChart` in `packages/grammar/VegaLite.vue`, rebuild the toolkit, then
+drive the custom element under jsdom from `packages/chat` (which has jsdom
+installed) and collect the dump. vega-embed itself fails under jsdom for want of
+a canvas, which does not matter: the dump happens before the embed. Revert the
+instrumentation afterwards.
+
+`raw-frames.json` — seed the penguins CSV into a `DataSourcesStore`, then call
+`getDataObject` once per filter range with the named filter bound, projecting to
+the columns the compiled spec reads.
+
 ## Using it
 
 Toggle the button repeatedly. The bug is a chart that draws something its data no longer contains —

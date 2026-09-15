@@ -125,6 +125,15 @@ importers:
       udi-toolkit:
         specifier: workspace:*
         version: link:../../packages/grammar
+      vega:
+        specifier: ^6.2.0
+        version: 6.2.0
+      vega-embed:
+        specifier: ^7.1.0
+        version: 7.1.0(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)
+      vega-lite:
+        specifier: ^6.4.3
+        version: 6.4.3(vega@6.2.0)
     devDependencies:
       '@types/node':
         specifier: ^24.12.0
