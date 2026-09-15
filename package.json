@@ -9,6 +9,7 @@
     "dev:grammar": "pnpm --filter udi-grammar-app dev",
     "dev:storybook": "pnpm --filter udi-toolkit storybook",
     "dev:template-studio": "pnpm --filter udi-template-studio dev",
+    "dev:repro": "pnpm --filter udi-render-repro dev",
     "build:toolkit": "pnpm --filter udi-toolkit build:all",
     "build:chat": "pnpm run build:toolkit && pnpm --filter udi-yac build",
     "build:chat:lib": "pnpm run build:toolkit && pnpm --filter udi-yac build:lib",

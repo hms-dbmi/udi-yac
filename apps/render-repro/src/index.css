@@ -1,0 +1,76 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light;
+}
+body {
+  margin: 0;
+  background: #f6f6f5;
+  color: #1c1c1a;
+}
+button {
+  font: inherit;
+}
+
+/* Dual-range slider.
+   Two inputs stacked over one track. The inputs themselves ignore the pointer
+   so the lower one cannot swallow clicks meant for the upper; only the thumbs
+   take it back. Their native tracks are transparent — the visible track and the
+   selected segment are drawn by the wrapper, or the lower input's own filled
+   track would paint blue across the whole width regardless of the handles. */
+.range {
+  position: relative;
+  width: 260px;
+  height: 20px;
+}
+.range__track,
+.range__fill {
+  position: absolute;
+  top: 9px;
+  height: 3px;
+  border-radius: 2px;
+}
+.range__track {
+  left: 0;
+  right: 0;
+  background: #d5d5d1;
+}
+.range__fill {
+  background: #16a987;
+}
+.range input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  background: none;
+  pointer-events: none;
+}
+.range input[type="range"]::-webkit-slider-runnable-track {
+  background: none;
+  height: 20px;
+}
+.range input[type="range"]::-moz-range-track {
+  background: none;
+  height: 20px;
+}
+.range input[type="range"]::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #16a987;
+  cursor: pointer;
+}
+.range input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #16a987;
+  cursor: pointer;
+}

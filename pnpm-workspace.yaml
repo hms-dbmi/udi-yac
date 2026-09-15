@@ -3,6 +3,7 @@ packages:
   - packages/grammar
   - apps/grammar-app
   - apps/template-studio
+  - apps/render-repro
 
 # merged from packages/chat/pnpm-workspace.yaml
 allowBuilds:
