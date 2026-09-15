@@ -9,7 +9,7 @@ pnpm dev:repro          # http://localhost:5176
 
 ## What it is
 
-Four static specs over the penguins sample package, and one button that toggles one filter.
+Four static specs over the penguins sample package, one shown at a time, and one interval filter.
 
 Three of the specs are the agent's own templates instantiated once and baked into `src/specs.json`
 (grouped CDF, grouped KDE, plain CDF — the first two are the charts named in the issue). The fourth
@@ -32,8 +32,9 @@ The two things that make a YAC filter a YAC filter:
 - the selection handed down the **`selections` prop of `UDIVis`**, which binds it into the toolkit's
   shared Pinia store, where the Arquero executor resolves the named filter against it.
 
-The filter drops a category with a point selection, mirroring the sharpest known reproduction
-("filter on vital status, remove alive, toggle back and forth").
+The filter is an interval on `body_mass_g`, two-way bound to the chart's own brush — the shape of the
+original report ("adjust the slider until the dashed rule kinks"). It applies to the chart that owns
+the brush, because chat puts a viz's own brush id in its own filter list too.
 
 ## A trap worth knowing
 
@@ -138,11 +139,11 @@ the columns the compiled spec reads.
 
 ## Using it
 
-Toggle the button repeatedly. The bug is a chart that draws something its data no longer contains —
-on the survival-shaped chart the tell is the flat rule at the right, on the CDF a line that kinks, on
-the KDE a curve that is not clipped at the bounds. Resizing the window corrects it, because the
-toolkit re-embeds on resize.
+Drag the slider, and brush inside the chart. The bug is a chart that draws something its data no
+longer contains — on the survival-shaped chart the tell is the flat rule at the right, on the CDF a
+line that kinks, on the KDE a curve that is not clipped at the bounds. The row count beside the title
+is the chart's own data, so the picture and the data can be compared directly; **Re-embed** then
+changes the picture without changing the count.
 
-If it reproduces here, the next step is to simplify: drop specs, drop layers, drop the colour facet,
-until the smallest failing case remains. If it does **not** reproduce here, the cause is upstream in
-YAC rather than in the toolkit, and that is worth just as much.
+`/` reproduces the bug. `/raw.html`, the same chart without the toolkit, does not — which is what
+localises the cause to the toolkit's own update path.
