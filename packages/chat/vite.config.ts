@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => ({
             // dist/src/index.d.ts; package.json "types" points there directly.
             include: ['src'],
             exclude: ['src/app/App.tsx', 'src/app/main.tsx'],
-            tsconfigPath: resolve(__dirname, 'tsconfig.app.json'),
+            tsconfigPath: resolve(import.meta.dirname, 'tsconfig.app.json'),
           }),
           rewriteExternalRequire(),
         ]
@@ -89,14 +89,14 @@ export default defineConfig(({ mode }) => ({
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': resolve(import.meta.dirname, './src'),
     },
   },
   build:
     mode === 'lib'
       ? {
           lib: {
-            entry: resolve(__dirname, 'src/index.ts'),
+            entry: resolve(import.meta.dirname, 'src/index.ts'),
             name: 'UDIYac',
             fileName: 'udi-yac',
             formats: ['es'] as const,
