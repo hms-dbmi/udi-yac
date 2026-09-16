@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest a new capability or an improvement to an existing one.
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Where would this live?
+      multiple: true
+      options:
+        - packages/chat (udi-yac)
+        - packages/grammar (udi-toolkit)
+        - packages/agent (udiagent)
+        - packages/grammar-py (udi-grammar-py)
+        - apps/grammar-app (demo app)
+        - Repo-wide (build, CI, tooling)
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what makes it hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should happen instead? Sketch the API, grammar spec, or UI if you have one in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, or other designs you ruled out and why.
