@@ -32,26 +32,26 @@ export function ApiKeyInput({ onSubmit }: ApiKeyInputProps) {
   );
 
   return (
-    <div className="border-t p-3">
-      <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-        <KeyRound className="h-4 w-4" />
-        <span className="text-xs">Enter your OpenAI API key to start chatting</span>
+    <div className="udi:border-t udi:p-3">
+      <div className="udi:flex udi:items-center udi:gap-2 udi:mb-2 udi:text-muted-foreground">
+        <KeyRound className="udi:h-4 udi:w-4" />
+        <span className="udi:text-xs">Enter your OpenAI API key to start chatting</span>
       </div>
-      <div className="flex gap-2">
+      <div className="udi:flex udi:gap-2">
         <input
           type="password"
           value={key}
           onChange={(e) => setKey(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="sk-..."
-          className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="udi:flex-1 udi:rounded-md udi:border udi:border-input udi:bg-background udi:px-3 udi:py-1.5 udi:text-sm udi:shadow-xs udi:placeholder:text-muted-foreground udi:focus-visible:outline-none udi:focus-visible:ring-1 udi:focus-visible:ring-ring"
         />
         <Button onClick={handleSubmit} disabled={!key.trim()} size="sm">
           Set key
         </Button>
       </div>
-      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
-      <p className="text-xs text-muted-foreground mt-1.5">
+      {error && <p className="udi:text-xs udi:text-destructive udi:mt-1">{error}</p>}
+      <p className="udi:text-xs udi:text-muted-foreground udi:mt-1.5">
         Your key is sent to the backend via the X-OpenAI-Key header and is not stored.
       </p>
     </div>

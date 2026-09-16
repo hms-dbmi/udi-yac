@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import { resolve } from 'path';
+import { createRequire } from 'node:module';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import dts from 'vite-plugin-dts';
@@ -56,6 +57,38 @@ function rewriteExternalRequire(): Plugin {
   };
 }
 
+// react-markdown -> micromark -> decode-named-character-reference ships a
+// `browser` export condition (index.dom.js) whose *module top level* runs
+// `document.createElement('i')`. A lib build resolves that condition, so
+// `import 'udi-yac'` threw "document is not defined" in a host's SSR before any
+// component rendered — and that's frozen at publish time, so consumers can't
+// work around it. Its default entry is pure JS.
+//
+// Dropping the `browser` condition wholesale would also swap vega/arquero/
+// ag-grid onto their non-browser entries, so patch just this one: CJS
+// `require.resolve` walks the same `exports` map under ["require","node"],
+// which lands on `default` -> index.js. Resolving from the importer keeps each
+// of pnpm's copies pointed at its own on-disk file. test/ssr-import.mjs guards
+// the general case.
+const DOM_UNSAFE_PKG = 'decode-named-character-reference';
+
+function resolveNonBrowserVariant(): Plugin {
+  return {
+    name: 'resolve-non-browser-variant',
+    enforce: 'pre',
+    resolveId(id, importer) {
+      if (id !== DOM_UNSAFE_PKG || !importer) return null;
+      try {
+        return createRequire(importer).resolve(id);
+      } catch {
+        // Virtual importer, or the package moved — fall through to Vite's
+        // resolver. ssr-import.mjs is what actually fails the build then.
+        return null;
+      }
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   // Lib mode uses './' so any emitted asset URL is relative to the stylesheet
   // rather than to the consuming site's root — a root-absolute `url(/assets/…)`
@@ -75,15 +108,23 @@ export default defineConfig(({ mode }) => ({
     ...(mode === 'lib'
       ? [
           dts({
-            // No insertTypesEntry: under rolldown-vite it wrote an empty
-            // `export {}` stub at dist/index.d.ts (its computed source-entry
-            // path didn't match an emitted file). The real barrel is emitted at
-            // dist/src/index.d.ts; package.json "types" points there directly.
-            include: ['src'],
-            exclude: ['src/app/App.tsx', 'src/app/main.tsx'],
+            // Colocated tests and the vitest setup file live under src/, so
+            // without these they'd ship as ~30 useless `*.test.d.ts`.
+            exclude: ['src/app/App.tsx', 'src/app/main.tsx', 'src/**/*.test.*', 'src/test/**'],
             tsconfigPath: resolve(import.meta.dirname, 'tsconfig.app.json'),
+            // Bundle every declaration into a single dist/index.d.ts. The
+            // mirrored-tree emit resolved the `@/` alias one directory too deep
+            // (`../../types/dataPackage` from dist/src/app/, which escapes
+            // dist/src), leaving several exported types unusable; a single file
+            // has no relative paths left to get wrong. `bundledPackages` inlines
+            // udi-toolkit's types, so the published d.ts names neither
+            // udi-toolkit nor its `pinia` peer — both of which we deliberately
+            // don't ship as runtime dependencies, since udi-toolkit is bundled
+            // into udi-yac.js.
+            bundleTypes: { bundledPackages: ['udi-toolkit'] },
           }),
           rewriteExternalRequire(),
+          resolveNonBrowserVariant(),
         ]
       : []),
   ],
@@ -92,6 +133,11 @@ export default defineConfig(({ mode }) => ({
       '@': resolve(import.meta.dirname, './src'),
     },
   },
+  // `public/` holds the dev/demo data packages (~19 MB, including CSVs we don't
+  // redistribute) plus SPA-only icons. Vite copies it into dist in lib mode too,
+  // and `files: ["dist"]` would then ship it all. The library reads its data
+  // package from a URL the consumer supplies, so it needs none of it.
+  publicDir: mode === 'lib' ? false : 'public',
   build:
     mode === 'lib'
       ? {

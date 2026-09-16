@@ -54,15 +54,6 @@ jobs:
           fi
           echo "Releasing udi-yac v${pkg_version}"
 
-      - name: Verify udi-toolkit dependency is published
-        run: |
-          toolkit_version=$(node -p "require('./packages/grammar/package.json').version")
-          if ! npm view "udi-toolkit@${toolkit_version}" version >/dev/null 2>&1; then
-            echo "::error::udi-toolkit@${toolkit_version} is not on npm. Release udi-toolkit first — udi-yac's workspace:* dep is rewritten to that exact version at publish time."
-            exit 1
-          fi
-          echo "udi-toolkit@${toolkit_version} is published"
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -83,6 +74,15 @@ jobs:
 
       - name: Build library
         run: pnpm --filter udi-yac build:lib
+
+      # Both guard properties of the published artifact that nothing else
+      # catches: the stylesheet must not leak into a host app, and the bundle
+      # must import without a DOM. See ci-chat.yml for the reasoning.
+      - name: Check library CSS scoping
+        run: pnpm --filter udi-yac test:css
+
+      - name: Check library imports on the server
+        run: pnpm --filter udi-yac test:ssr
 
       # --no-git-checks: the tag is checked out in detached HEAD, which pnpm's
       # default branch/cleanliness checks reject.

@@ -7,7 +7,7 @@ import { env } from '@/app/env';
  */
 function App() {
   return (
-    <div className="h-screen">
+    <div className="udi:h-screen">
       <UDIChat
         apiBaseUrl={env.apiBaseUrl}
         remotePackage={env.remotePackage}

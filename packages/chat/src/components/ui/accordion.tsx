@@ -9,7 +9,7 @@ function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
   return (
     <AccordionPrimitive.Root
       data-slot="accordion"
-      className={cn('flex flex-col', className)}
+      className={cn('udi:flex udi:flex-col', className)}
       {...props}
     />
   );
@@ -19,7 +19,7 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn('border-b last:border-b-0', className)}
+      className={cn('udi:border-b udi:last:border-b-0', className)}
       {...props}
     />
   );
@@ -39,17 +39,17 @@ function AccordionTrigger({
   headerClassName?: string;
 }) {
   return (
-    <AccordionPrimitive.Header className={cn('flex', headerClassName)}>
+    <AccordionPrimitive.Header className={cn('udi:flex', headerClassName)}>
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          'flex flex-1 items-center justify-between gap-2 py-2 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 [&[data-panel-open]>svg]:rotate-180',
+          'udi:flex udi:flex-1 udi:items-center udi:justify-between udi:gap-2 udi:py-2 udi:text-left udi:text-sm udi:font-medium udi:transition-all udi:outline-none udi:hover:underline udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:[&[data-panel-open]>svg]:rotate-180',
           className,
         )}
         {...props}
       >
         {children}
-        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform" />
+        <ChevronDownIcon className="udi:size-4 udi:shrink-0 udi:text-muted-foreground udi:transition-transform" />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   );
@@ -59,10 +59,10 @@ function AccordionContent({ className, children, ...props }: AccordionPrimitive.
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-content"
-      className={cn('overflow-hidden text-sm', className)}
+      className={cn('udi:overflow-hidden udi:text-sm', className)}
       {...props}
     >
-      <div className="pb-2">{children}</div>
+      <div className="udi:pb-2">{children}</div>
     </AccordionPrimitive.Panel>
   );
 }

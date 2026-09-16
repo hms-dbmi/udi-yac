@@ -158,7 +158,7 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   return (
     <div
       ref={containerRef}
-      className="relative w-full min-h-0 dashboard-grid-lanes"
+      className="udi:relative udi:w-full udi:min-h-0 dashboard-grid-lanes"
       style={laneStyle}
     >
       {mounted &&

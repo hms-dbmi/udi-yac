@@ -86,9 +86,9 @@ const POPPED_VIZ_INDEX = -1;
  */
 function FieldListHeader({ label }: { label: string }) {
   return (
-    <div className="sticky top-18 z-5 flex items-baseline gap-2 border-b bg-background pb-0.5 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
-      <span className="shrink-0 basis-[45%]">{label}</span>
-      <span className={cn('min-w-0 flex-1', VALUE_COLUMN_INDENT)}>Possible values</span>
+    <div className="udi:sticky udi:top-18 udi:z-5 udi:flex udi:items-baseline udi:gap-2 udi:border-b udi:bg-background udi:pb-0.5 udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
+      <span className="udi:shrink-0 udi:basis-[45%]">{label}</span>
+      <span className={cn('udi:min-w-0 udi:flex-1', VALUE_COLUMN_INDENT)}>Possible values</span>
     </div>
   );
 }
@@ -112,7 +112,10 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
   if (values.length <= 1) {
     return (
       <span
-        className={cn('min-w-0 flex-1 truncate text-muted-foreground', VALUE_COLUMN_INDENT)}
+        className={cn(
+          'udi:min-w-0 udi:flex-1 udi:truncate udi:text-muted-foreground',
+          VALUE_COLUMN_INDENT,
+        )}
         title={values.join(', ')}
       >
         {highlightMatch(values.join(', '), query)}
@@ -125,10 +128,13 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
   // children in the DOM, and a wide entity of high-cardinality columns would put
   // tens of thousands of hidden nodes on the page for nobody to read.
   return (
-    <details className="group min-w-0 flex-1" onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="flex cursor-pointer list-none items-center gap-1 text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
-        <ChevronRight className="size-3 shrink-0 transition-transform group-open:rotate-90" />
-        <span className="tabular-nums">
+    <details
+      className="udi:group udi:min-w-0 udi:flex-1"
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary className="udi:flex udi:cursor-pointer udi:list-none udi:items-center udi:gap-1 udi:text-muted-foreground udi:hover:text-foreground udi:[&::-webkit-details-marker]:hidden">
+        <ChevronRight className="udi:size-3 udi:shrink-0 udi:transition-transform udi:group-open:rotate-90" />
+        <span className="udi:tabular-nums">
           {isFiltered
             ? `${matching.length.toLocaleString()} of ${values.length.toLocaleString()} values`
             : `${values.length.toLocaleString()} values`}
@@ -136,17 +142,17 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
       </summary>
       {open && (
         <>
-          <ul className="mt-1 mb-1.5 flex flex-wrap gap-1">
+          <ul className="udi:mt-1 udi:mb-1.5 udi:flex udi:flex-wrap udi:gap-1">
             {shown.slice(0, EXPANDED_VALUE_CAP).map((value) => (
               // min-w-0 lets the flex item shrink below its content width, and
               // the badge overrides its own base h-5/shrink-0/whitespace-nowrap
               // so a long value wraps inside the chip instead of overflowing the
               // panel. wrap-anywhere breaks unbroken ids but still prefers real
               // break opportunities in multi-word values.
-              <li key={value} className="min-w-0">
+              <li key={value} className="udi:min-w-0">
                 <Badge
                   variant="secondary"
-                  className="h-auto max-w-full shrink wrap-anywhere whitespace-normal font-mono text-[10px]"
+                  className="udi:h-auto udi:max-w-full udi:shrink udi:wrap-anywhere udi:whitespace-normal udi:font-mono udi:text-[10px]"
                 >
                   {highlightMatch(value, query)}
                 </Badge>
@@ -154,7 +160,7 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
             ))}
           </ul>
           {shown.length > EXPANDED_VALUE_CAP && (
-            <p className="mb-1.5 text-[10px] text-muted-foreground">
+            <p className="udi:mb-1.5 udi:text-[10px] udi:text-muted-foreground">
               Showing the first {EXPANDED_VALUE_CAP.toLocaleString()} of{' '}
               {shown.length.toLocaleString()}.
             </p>
@@ -167,10 +173,13 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
 
 function FieldNameCell({ row, query, label }: { row: FieldRow; query: string; label?: string }) {
   const name = (
-    <span className="flex min-w-0 items-center gap-1 font-mono">
-      <span className="truncate">{highlightMatch(row.name, query)}</span>
+    <span className="udi:flex udi:min-w-0 udi:items-center udi:gap-1 udi:font-mono">
+      <span className="udi:truncate">{highlightMatch(row.name, query)}</span>
       {row.description && (
-        <Info className="size-3 shrink-0 text-muted-foreground opacity-60" aria-hidden />
+        <Info
+          className="udi:size-3 udi:shrink-0 udi:text-muted-foreground udi:opacity-60"
+          aria-hidden
+        />
       )}
     </span>
   );
@@ -181,7 +190,9 @@ function FieldNameCell({ row, query, label }: { row: FieldRow; query: string; la
   if (!row.description && !row.dataType && !hasLabel) return name;
   return (
     <Tooltip>
-      <TooltipTrigger render={<span className="flex min-w-0 cursor-help" />}>{name}</TooltipTrigger>
+      <TooltipTrigger render={<span className="udi:flex udi:min-w-0 udi:cursor-help" />}>
+        {name}
+      </TooltipTrigger>
       <FieldTooltipContent
         field={row.name}
         label={label}
@@ -197,13 +208,16 @@ function FieldList({ rows, query, entity }: { rows: FieldRow[]; query: string; e
   return (
     // Same provider settings as the chat's field chips, so hover timing matches.
     <TooltipProvider delay={150} timeout={0}>
-      <ul className="flex flex-col">
+      <ul className="udi:flex udi:flex-col">
         {rows.map((row) => (
-          <li key={row.name} className="flex items-baseline gap-2 py-0.5 text-xs">
-            <span className="flex min-w-0 shrink-0 basis-[45%] items-baseline gap-1">
+          <li
+            key={row.name}
+            className="udi:flex udi:items-baseline udi:gap-2 udi:py-0.5 udi:text-xs"
+          >
+            <span className="udi:flex udi:min-w-0 udi:shrink-0 udi:basis-[45%] udi:items-baseline udi:gap-1">
               {row.isKey && (
                 <KeyRound
-                  className="size-3 shrink-0 self-center text-muted-foreground"
+                  className="udi:size-3 udi:shrink-0 udi:self-center udi:text-muted-foreground"
                   aria-label="key field"
                 />
               )}
@@ -213,7 +227,10 @@ function FieldList({ rows, query, entity }: { rows: FieldRow[]; query: string; e
               <CategoricalValues values={row.values} query={query} />
             ) : (
               <span
-                className={cn('min-w-0 flex-1 truncate text-muted-foreground', VALUE_COLUMN_INDENT)}
+                className={cn(
+                  'udi:min-w-0 udi:flex-1 udi:truncate udi:text-muted-foreground',
+                  VALUE_COLUMN_INDENT,
+                )}
                 title={row.summary}
               >
                 {row.summary}
@@ -452,31 +469,31 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
   if (!resource) return null;
 
   return (
-    <div className="flex flex-col gap-3 pb-1">
+    <div className="udi:flex udi:flex-col udi:gap-3 udi:pb-1">
       {relationships.length > 0 && (
         <section>
-          <h4 className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+          <h4 className="udi:mb-1 udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
             Relationships
           </h4>
-          <ul className="flex flex-col gap-0.5">
+          <ul className="udi:flex udi:flex-col udi:gap-0.5">
             {relationships.map((rel, i) => (
               <li
                 key={`${rel.direction}-${rel.target}-${i}`}
-                className="flex items-baseline gap-1.5 text-xs"
+                className="udi:flex udi:items-baseline udi:gap-1.5 udi:text-xs"
               >
                 {rel.direction === 'out' ? (
-                  <ArrowRight className="size-3 shrink-0 self-center text-muted-foreground" />
+                  <ArrowRight className="udi:size-3 udi:shrink-0 udi:self-center udi:text-muted-foreground" />
                 ) : (
-                  <ArrowLeft className="size-3 shrink-0 self-center text-muted-foreground" />
+                  <ArrowLeft className="udi:size-3 udi:shrink-0 udi:self-center udi:text-muted-foreground" />
                 )}
                 <button
                   type="button"
-                  className="font-medium hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="udi:font-medium udi:hover:underline udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none"
                   onClick={() => goToEntity(rel.target)}
                 >
                   {rel.target}
                 </button>
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                <span className="udi:min-w-0 udi:flex-1 udi:truncate udi:text-muted-foreground">
                   {rel.fromField} = {rel.toField}
                   {rel.cardinality ? ` · ${rel.cardinality}` : ''}
                 </span>
@@ -494,20 +511,20 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
          * FieldListHeader at top-18. Change one and the rest must follow, so
          * this row keeps a fixed height even when the filter input is absent.
          */}
-        <div className="sticky top-9 z-10 mb-1 flex h-9 items-center justify-between gap-2 bg-background">
-          <h4 className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+        <div className="udi:sticky udi:top-9 udi:z-10 udi:mb-1 udi:flex udi:h-9 udi:items-center udi:justify-between udi:gap-2 udi:bg-background">
+          <h4 className="udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
             Fields ({totalFields})
           </h4>
           {/* Always offered: it now matches values as well as names, so it is
               useful even on an entity with only a handful of fields. */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+          <div className="udi:relative">
+            <Search className="udi:pointer-events-none udi:absolute udi:top-1/2 udi:left-2 udi:h-3 udi:w-3 udi:-translate-y-1/2 udi:text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter fields or values..."
               aria-label={`Filter ${entity} fields or values`}
-              className="h-7 w-44 pl-7 text-xs"
+              className="udi:h-7 udi:w-44 udi:pl-7 udi:text-xs"
             />
           </div>
         </div>
@@ -519,23 +536,23 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
           </div>
         )}
         {shownCategorical.length > 0 && (
-          <div className={cn(shownNumeric.length > 0 && 'mt-2')}>
+          <div className={cn(shownNumeric.length > 0 && 'udi:mt-2')}>
             <FieldListHeader label="Nominal" />
             <FieldList rows={shownCategorical} query={needle} entity={entity} />
           </div>
         )}
         {shownNumeric.length === 0 && shownCategorical.length === 0 && (
-          <p className="text-xs text-muted-foreground">No fields match “{query}”.</p>
+          <p className="udi:text-xs udi:text-muted-foreground">No fields match “{query}”.</p>
         )}
       </section>
 
       {tableSpec && (
         <section>
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <h4 className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+          <div className="udi:mb-1 udi:flex udi:items-center udi:justify-between udi:gap-2">
+            <h4 className="udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
               Rows
             </h4>
-            <div className="flex items-center gap-1">
+            <div className="udi:flex udi:items-center udi:gap-1">
               {showRows && keyFields.length > 0 && (
                 <Tooltip>
                   <TooltipTrigger
@@ -548,7 +565,9 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
                       />
                     }
                   >
-                    <Columns3 className={cn('size-3.5', showAllFields && 'text-udi-primary')} />
+                    <Columns3
+                      className={cn('udi:size-3.5', showAllFields && 'udi:text-udi-primary')}
+                    />
                   </TooltipTrigger>
                   <TooltipContent>
                     {showAllFields ? 'Show key fields only' : 'Show all fields'}
@@ -566,7 +585,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
                     />
                   }
                 >
-                  <ExternalLink className="size-3.5" />
+                  <ExternalLink className="udi:size-3.5" />
                 </TooltipTrigger>
                 <TooltipContent>
                   Open on dashboard{showRows && keyFields.length > 0 ? ' (current columns)' : ''}
@@ -575,7 +594,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
               <Button
                 variant="ghost"
                 size="xs"
-                className="text-xs"
+                className="udi:text-xs"
                 aria-expanded={showRows}
                 onClick={toggleRows}
               >
@@ -588,11 +607,11 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
               deliberately excludes the transformation so filter changes update
               the table in place instead of remounting the custom element. */}
           {showRows && (
-            <div className="h-64">
+            <div className="udi:h-64">
               {tableReady ? (
                 <UDIVis
                   key={`${entity}|${showAllFields}`}
-                  className="block h-full w-full"
+                  className="udi:block udi:h-full udi:w-full"
                   spec={tableSpec}
                   selections={dataSelections}
                   sourceResolver={sourceResolver}
@@ -600,7 +619,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
                   fillContainer
                 />
               ) : (
-                <div className="h-full animate-pulse rounded bg-muted" />
+                <div className="udi:h-full udi:animate-pulse udi:rounded udi:bg-muted" />
               )}
             </div>
           )}

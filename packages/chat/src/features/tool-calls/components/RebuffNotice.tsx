@@ -6,7 +6,7 @@ interface RebuffNoticeProps {
 
 export function RebuffNotice({ message }: RebuffNoticeProps) {
   return (
-    <div className="px-2 pb-2">
+    <div className="udi:px-2 udi:pb-2">
       <MarkdownText>{message}</MarkdownText>
     </div>
   );

@@ -41,7 +41,7 @@ export function FilterComponent({
 
   if (filterType === 'interval') {
     return (
-      <div className="space-y-3 p-2">
+      <div className="udi:space-y-3 udi:p-2">
         {allFields.map((_, idx) => (
           <IntervalFilterComponent
             key={idx}
@@ -57,7 +57,7 @@ export function FilterComponent({
 
   if (filterType === 'point') {
     return (
-      <div className="p-2">
+      <div className="udi:p-2">
         <PointFilterComponent
           dataSelection={dataSelection}
           tweakable={tweakable}

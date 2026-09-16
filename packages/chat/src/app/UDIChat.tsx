@@ -172,10 +172,10 @@ function UDIChatInner({
     // purpose — `container-type: inline-size` implies `contain: layout`, which
     // would make the root a containing block for everything useChatRoot()
     // portals into it.
-    <div className="@container/shell flex h-full w-full bg-background">
+    <div className="udi:@container/shell udi:flex udi:h-full udi:w-full udi:bg-background">
       {/* Sidebar drawer — debug mode only */}
       {debugMode && drawerOpen && (
-        <div className="w-56 shrink-0 border-r bg-background overflow-hidden flex flex-col">
+        <div className="udi:w-56 udi:shrink-0 udi:border-r udi:bg-background udi:overflow-hidden udi:flex udi:flex-col">
           <ConversationList />
         </div>
       )}
@@ -190,19 +190,19 @@ function UDIChatInner({
        */}
       <div
         className={cn(
-          'shrink-0 min-w-[300px] border-r flex flex-col overflow-hidden',
-          overviewOpen ? 'w-[400px] @min-[1200px]/shell:w-[800px]' : 'w-[400px]',
+          'udi:shrink-0 udi:min-w-[300px] udi:border-r udi:flex udi:flex-col udi:overflow-hidden',
+          overviewOpen ? 'udi:w-[400px] udi:@min-[1200px]/shell:w-[800px]' : 'udi:w-[400px]',
         )}
       >
         <ViewSwitch
           overviewOpen={overviewOpen}
           onChange={(open) => globalStore.getState().setOverview(open)}
         />
-        <div className="flex flex-1 min-h-0">
+        <div className="udi:flex udi:flex-1 udi:min-h-0">
           <div
             className={cn(
-              'flex-1 min-w-0 flex flex-col overflow-hidden',
-              overviewOpen && 'hidden @min-[1200px]/shell:flex',
+              'udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden',
+              overviewOpen && 'udi:hidden udi:@min-[1200px]/shell:flex',
             )}
           >
             <ChatPanel
@@ -222,13 +222,13 @@ function UDIChatInner({
             />
           </div>
           {overviewOpen && (
-            <div className="flex-1 min-w-0 flex flex-col overflow-hidden @min-[1200px]/shell:border-l">
+            <div className="udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden udi:@min-[1200px]/shell:border-l">
               <DataOverviewPanel />
             </div>
           )}
         </div>
       </div>
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="udi:flex-1 udi:min-w-0 udi:overflow-hidden">
         <DashboardPanel />
       </div>
     </div>
@@ -257,14 +257,14 @@ function ViewSwitch({
     <div
       role="group"
       aria-label="Sidebar view"
-      className="flex gap-1 border-b px-2 py-1.5 @min-[1200px]/shell:hidden"
+      className="udi:flex udi:gap-1 udi:border-b udi:px-2 udi:py-1.5 udi:@min-[1200px]/shell:hidden"
     >
       <Button
         variant={overviewOpen ? 'ghost' : 'secondary'}
         size="sm"
         aria-pressed={!overviewOpen}
         onClick={() => onChange(false)}
-        className="h-6 flex-1 text-xs"
+        className="udi:h-6 udi:flex-1 udi:text-xs"
       >
         Chat
       </Button>
@@ -273,7 +273,7 @@ function ViewSwitch({
         size="sm"
         aria-pressed={overviewOpen}
         onClick={() => onChange(true)}
-        className="h-6 flex-1 text-xs"
+        className="udi:h-6 udi:flex-1 udi:text-xs"
       >
         Data
       </Button>
@@ -318,7 +318,7 @@ function UDIChatValidated(props: UDIChatConfig) {
                          */}
                         <div
                           ref={rootRef}
-                          className={cn('udi-yac h-full w-full', props.className)}
+                          className={cn('udi-yac udi:h-full udi:w-full', props.className)}
                           style={props.style}
                         >
                           <UDIChatInner {...props} />

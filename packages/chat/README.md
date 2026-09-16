@@ -80,9 +80,17 @@ Embedding in another app? Two things worth knowing up front:
 - **`apiBaseUrl` accepts a same-origin path** (`/api/yac`), so agent traffic can go
   through your own reverse proxy and let your server attach auth — no CORS, no token in
   the browser. `authToken` is then unnecessary.
-- **Every style is scoped** to the root element's `udi-yac` class, so the stylesheet
-  won't touch your app's own shadcn tokens or typography. Dark mode follows a `.dark`
-  class on any ancestor (the usual shadcn convention).
+- **Every style is scoped.** Design tokens and element resets are confined to the root
+  element's `udi-yac` class, and every Tailwind utility we emit carries a `udi:` prefix
+  (`udi:flex`), so nothing collides with your own Tailwind build whichever stylesheet
+  loads last. The sheet ships no preflight, so it cannot reset your typography or box
+  model. Dark mode follows a `.dark` class on any ancestor (the usual shadcn convention).
+- **The bundle is server-safe.** `import 'udi-yac'` evaluates without a DOM, so a route
+  file that imports it does not break SSR. Rendering `<UDIChat>` still requires a
+  browser — mount it client-side.
+- **`react` and `react-dom` are the only runtime dependencies.** Everything else,
+  `udi-toolkit` included, is bundled into the published file. Types are bundled too:
+  import `UDIPalette` from `udi-yac`, not from `udi-toolkit`.
 
 ### Config Props
 

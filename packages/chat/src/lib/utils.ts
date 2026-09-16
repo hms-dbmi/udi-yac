@@ -1,5 +1,10 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+// Our utilities carry the `udi:` prefix (see src/index.css); without teaching
+// tailwind-merge about it, every class looks arbitrary and conflicting pairs
+// like `udi:px-2 udi:px-4` both survive the merge instead of the later winning.
+const twMerge = extendTailwindMerge({ prefix: 'udi' });
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

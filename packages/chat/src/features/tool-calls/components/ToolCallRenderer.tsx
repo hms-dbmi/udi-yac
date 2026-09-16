@@ -73,7 +73,7 @@ export function ToolCallRenderer({
     }
     default:
       return (
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="outline" className="udi:text-xs">
           {toolCall.name}
         </Badge>
       );
