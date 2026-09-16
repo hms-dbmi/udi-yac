@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
+import { useThemePalette } from './useThemePalette';
 import {
   UDIChatProvider,
   DownloadActionsProvider,
@@ -290,6 +291,10 @@ function UDIChatValidated(props: UDIChatConfig) {
   // scoped design tokens live) instead of to document.body, and so the
   // dashboard's drag state can be scoped to us rather than the host page.
   const rootRef = useRef<HTMLDivElement>(null);
+  // Charts and tables render inside `.udi-yac` but are drawn by Vega and
+  // ag-grid, neither of which can see our CSS — so the theme has to be handed
+  // to them as colors. `props.palette` still wins per channel.
+  const themePalette = useThemePalette(rootRef, props.palette);
   return (
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
@@ -307,7 +312,7 @@ function UDIChatValidated(props: UDIChatConfig) {
                    * existing rich state (loadingPhase, sourceFields, etc.) keeps
                    * working unchanged.
                    */}
-                  <UDIToolkitProvider palette={props.palette}>
+                  <UDIToolkitProvider palette={themePalette}>
                     <MascotProvider mascot={props.mascot}>
                       <SplashMessagesProvider messages={props.splashMessages}>
                         {/*

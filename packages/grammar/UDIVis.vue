@@ -4,6 +4,7 @@
 // conflicts with local declaration of 'defineEmits'" because Vue's
 // generated types ALSO declare it ambient. Drop the import; the macro is
 // in scope automatically.
+import type { CSSProperties } from 'vue';
 import {
   ref,
   shallowRef,
@@ -97,6 +98,14 @@ const injectedPalette = inject(UDI_PALETTE_KEY, null);
 const effectivePalette = computed(
   () => props.palette ?? injectedPalette?.value,
 );
+
+// The truncation notice's grey is fixed in the scoped stylesheet and disappears
+// on a dark surface. Hand the palette's muted color to CSS rather than restyling
+// per element; unset, the stylesheet keeps its original value.
+const chromeVars = computed<CSSProperties>(() => {
+  const muted = effectivePalette.value?.mutedText;
+  return muted != null ? { '--udi-vis-muted': muted } : {};
+});
 
 const parsedSpec = ref<ParsedUDIGrammar | null>(null);
 // Per-instance flag: true once this instance's own data sources have been
@@ -881,7 +890,7 @@ const debugVegaData = ref();
     <div class="error-message" v-if="transformError">
       {{ transformError.message }}
     </div>
-    <div class="truncation-note" v-if="truncatedInfo">
+    <div class="truncation-note" v-if="truncatedInfo" :style="chromeVars">
       Showing first
       {{ (transformedData?.length ?? truncatedInfo.cap).toLocaleString() }}
       rows (result truncated server-side)
@@ -935,7 +944,10 @@ const debugVegaData = ref();
   margin: 6px;
 }
 .truncation-note {
-  color: #757575; // muted; keep quasar vars out of the component
+  // The fallback is the value this carried before the palette gained chrome
+  // colors; on a dark surface the grey is unreadable, so a themed palette
+  // overrides it through `--udi-vis-muted` (see `chromeVars`).
+  color: var(--udi-vis-muted, #757575);
   font-size: 0.75rem;
   margin: 2px 6px;
 }
@@ -949,7 +961,7 @@ const debugVegaData = ref();
   cursor: pointer;
   text-decoration: underline;
   &:disabled {
-    color: #9e9e9e;
+    color: var(--udi-vis-muted, #9e9e9e);
     cursor: default;
     text-decoration: none;
   }
