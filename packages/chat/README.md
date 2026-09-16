@@ -79,7 +79,11 @@ Embedding in another app? Two things worth knowing up front:
 
 - **`apiBaseUrl` accepts a same-origin path** (`/api/yac`), so agent traffic can go
   through your own reverse proxy and let your server attach auth — no CORS, no token in
-  the browser. `authToken` is then unnecessary.
+  the browser. Leave `authToken` unset and the chat sends no `Authorization` header at
+  all, so there is nothing for the proxy to strip. This is the only workable shape when
+  your portal keeps its identity-provider token server-side; forward the body, the
+  `X-Conversation-Id` and `X-OpenAI-Key` request headers, and the `X-Usage-*` response
+  headers.
 - **Every style is scoped.** Design tokens and element resets are confined to the root
   element's `udi-yac` class, and every Tailwind utility we emit carries a `udi:` prefix
   (`udi:flex`), so nothing collides with your own Tailwind build whichever stylesheet
@@ -102,7 +106,7 @@ Embedding in another app? Two things worth knowing up front:
 | `dataPackage`      | `DataPackage?`       | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
 | `dataFieldDomains` | `DataFieldDomain[]?` | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
 | `fetchOptions`     | `RequestInit?`       | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
-| `authToken`        | `string?`            | JWT bearer token for API auth                                                                                                                                                                                                                    |
+| `authToken`        | `string?`            | JWT bearer token for API auth. Omit it when a backend proxy attaches the header instead; no `Authorization` header is then sent.                                                                                                                 |
 | `requireApiKey`    | `boolean?`           | Show API key input before chatting                                                                                                                                                                                                               |
 | `model`            | `string?`            | LLM model name override                                                                                                                                                                                                                          |
 | `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |

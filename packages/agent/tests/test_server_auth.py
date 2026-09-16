@@ -367,6 +367,9 @@ def test_token_signed_by_another_key_is_rejected(verify):
         pytest.param("not-a-bearer-token", id="no-bearer-prefix"),
         pytest.param("Bearer garbage", id="malformed-token"),
         pytest.param("Bearer ", id="empty-token"),
+        # The header is defaulted, not required, so an absent one lands here
+        # as a 401 rather than FastAPI's 422.
+        pytest.param("", id="missing-header"),
     ],
 )
 def test_malformed_authorization_headers_are_rejected(verify, header):
@@ -476,3 +479,13 @@ def test_insecure_dev_mode_skips_verification_entirely():
         insecure_dev_mode=True,
     )
     assert verify("Bearer anything")["dev_mode"] is True
+
+
+def test_insecure_dev_mode_does_not_require_an_authorization_header():
+    """No placeholder token needed to talk to a dev server."""
+    verify = make_verify_jwt(
+        secret_key="",
+        algorithm="HS256",
+        insecure_dev_mode=True,
+    )
+    assert verify()["dev_mode"] is True
