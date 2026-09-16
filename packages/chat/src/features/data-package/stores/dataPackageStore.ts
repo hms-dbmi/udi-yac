@@ -307,9 +307,10 @@ export function createDataPackageStore() {
     fetchRemotePackage: async (apiBaseUrl: string, packageName: string, authToken?: string) => {
       set({ loadingPhase: 'fetching', error: null });
       try {
-        const headers: Record<string, string> = {
-          Authorization: `Bearer ${authToken ?? 'dev'}`,
-        };
+        // Omitted entirely without a token — a backend proxy attaches its own.
+        const headers: Record<string, string> = authToken
+          ? { Authorization: `Bearer ${authToken}` }
+          : {};
         const response = await fetch(
           `${apiBaseUrl}/v1/yac/metadata?package=${encodeURIComponent(packageName)}`,
           { headers },

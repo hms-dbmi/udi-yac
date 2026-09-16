@@ -46,3 +46,21 @@ describe('queryLLM model handling', () => {
     expect(body(fetchMock)).not.toHaveProperty('model');
   });
 });
+
+/**
+ * A deployment can proxy the agent through its own backend and attach the
+ * portal's token there, in which case the browser has no token to send.
+ */
+describe('queryLLM auth header', () => {
+  it('sends the token when one is configured', async () => {
+    const fetchMock = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac', authToken: 'jwt-123' }, [], '{}', '[]');
+    expect(fetchMock.mock.calls[0][1].headers['Authorization']).toBe('Bearer jwt-123');
+  });
+
+  it('sends no Authorization header when there is no token', async () => {
+    const fetchMock = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac' }, [], '{}', '[]');
+    expect(fetchMock.mock.calls[0][1].headers).not.toHaveProperty('Authorization');
+  });
+});
