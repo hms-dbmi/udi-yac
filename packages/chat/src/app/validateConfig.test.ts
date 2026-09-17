@@ -123,6 +123,32 @@ describe('validateConfig', () => {
     ).toThrow(/dataFieldDomains/);
   });
 
+  it('accepts a well-formed initialSession', () => {
+    expect(() =>
+      validateConfig({
+        apiBaseUrl: 'http://localhost:8007',
+        dataPackagePath: '/data/datapackage.json',
+        initialSession: {
+          version: 1,
+          exportedAt: '2026-01-01T00:00:00.000Z',
+          conversation: { messages: [] },
+          visualizations: [],
+          layout: { items: [] },
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  it('throws on a malformed initialSession rather than letting it fail silently later', () => {
+    expect(() =>
+      validateConfig({
+        apiBaseUrl: 'http://localhost:8007',
+        dataPackagePath: '/data/datapackage.json',
+        initialSession: { version: 99, conversation: { messages: [] } },
+      }),
+    ).toThrow(/initialSession/);
+  });
+
   it('aggregates multiple errors into a single message', () => {
     let caught: Error | null = null;
     try {

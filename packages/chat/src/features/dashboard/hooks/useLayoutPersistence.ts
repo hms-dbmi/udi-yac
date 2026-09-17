@@ -39,15 +39,30 @@ function writeSnapshot(
   }
 }
 
-export function useLayoutPersistence(): void {
+interface LayoutPersistenceOptions {
+  /** Off in read-only mode: an embed's layout cannot change, so there is
+   *  nothing worth writing to the host's localStorage. Flips back on when the
+   *  user leaves read-only. */
+  enabled?: boolean;
+  /** Off when the dashboard was seeded from `initialSession`: that export
+   *  carries its own layout, and a snapshot left over from an unrelated
+   *  session must not override it. */
+  restore?: boolean;
+}
+
+export function useLayoutPersistence({
+  enabled = true,
+  restore = true,
+}: LayoutPersistenceOptions = {}): void {
   const store = useDashboardStore();
   const restoredRef = useRef(false);
 
   useEffect(() => {
+    if (!enabled) return;
     if (restoredRef.current) return;
     restoredRef.current = true;
 
-    const snapshot = readSnapshot();
+    const snapshot = restore ? readSnapshot() : null;
     if (snapshot && snapshot.ok) {
       const state = store.getState();
       const activeKeys = new Set(state.activeVisualizations.keys());
@@ -97,5 +112,5 @@ export function useLayoutPersistence(): void {
       if (timer) clearTimeout(timer);
       unsub();
     };
-  }, [store]);
+  }, [store, enabled, restore]);
 }

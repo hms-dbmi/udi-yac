@@ -10,7 +10,7 @@
  */
 import { useEffect, type ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('udi-toolkit/react', () => ({
@@ -24,6 +24,7 @@ import {
   useDashboard,
   useDashboardStore,
   useDataPackageStore,
+  useGlobalStore,
 } from '@/app/UDIChatContext';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { DashboardCard } from './DashboardCard';
@@ -69,6 +70,25 @@ function renderCard() {
   );
 }
 
+/** Publishes the global store so a test can leave read-only after mount. */
+let globalStore: ReturnType<typeof useGlobalStore>;
+function CaptureGlobalStore() {
+  const store = useGlobalStore();
+  useEffect(() => {
+    globalStore = store;
+  }, [store]);
+  return null;
+}
+
+function renderReadOnlyCard(readOnly: 'locked' | true = true) {
+  return render(
+    <UDIChatProvider readOnly={readOnly}>
+      <CaptureGlobalStore />
+      <Harness />
+    </UDIChatProvider>,
+  );
+}
+
 describe('DashboardCard — header while renaming', () => {
   it('swaps the whole button row for the title field and its accept/cancel pair', async () => {
     const user = userEvent.setup();
@@ -105,5 +125,45 @@ describe('DashboardCard — header while renaming', () => {
 
     expect(screen.getByRole('button', { name: 'Drag card' })).toBeTruthy();
     expect(screen.getByText('Cohort')).toBeTruthy();
+  });
+});
+
+describe('DashboardCard — read-only mode', () => {
+  it('drops every editing control and leaves the view controls alone', async () => {
+    renderReadOnlyCard();
+
+    // The title is still shown, just no longer a rename affordance.
+    expect(await screen.findByText('Bar chart of Count of Donors by Sex')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Rename visualization/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Drag card' })).toBeNull();
+
+    const labels = screen.getAllByRole('button').map((b) => b.textContent);
+    // Close and the tweak gear render no text, so assert on the count of what
+    // is left: the chart/table toggle and the info tooltip trigger.
+    expect(labels).toHaveLength(2);
+  });
+
+  it('brings the editing controls back when read-only is left', async () => {
+    renderReadOnlyCard();
+    await screen.findByText('Bar chart of Count of Donors by Sex');
+
+    await act(async () => {
+      globalStore.getState().setReadOnly(false);
+    });
+
+    expect(screen.getByRole('button', { name: 'Drag card' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Rename visualization/ })).toBeTruthy();
+  });
+
+  it('ignores setReadOnly(false) when locked', async () => {
+    renderReadOnlyCard('locked');
+    await screen.findByText('Bar chart of Count of Donors by Sex');
+
+    await act(async () => {
+      globalStore.getState().setReadOnly(false);
+    });
+
+    expect(globalStore.getState().readOnly).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Drag card' })).toBeNull();
   });
 });

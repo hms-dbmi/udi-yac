@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { UDIPalette } from 'udi-toolkit/react';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
+import type { ReadOnlyOption } from '@/stores/globalStore';
 
 /**
  * Signature for the optional analytics callback — deliberately untyped in
@@ -108,6 +109,36 @@ export interface UDIChatConfig {
    * scales. A spec-level per-encoding `range` still overrides it.
    */
   palette?: UDIPalette;
+  /**
+   * Start the chat in read-only mode: the chat pane collapses to a slim
+   * sidebar rail and every editing control is hidden — card drag, resize,
+   * rename, close, field tweak, grid settings and session import. What stays
+   * is everything that only reads: brushing and cross-filtering, the filter
+   * chips, the chart/table toggle, the info tooltips and Download Data.
+   *
+   * - `true` — the rail carries a button that leaves read-only and opens the
+   *   chat, so this is the *initial* mode rather than a lock.
+   * - `'locked'` — the same, with no way out. For hosts embedding the
+   *   dashboard that do not want their users chatting at all.
+   *
+   * With the chat hidden there is nothing to build a dashboard from, so a
+   * read-only embed almost always wants {@link UDIChatConfig.initialSession}
+   * too. See also the `UDIDashboard` component, which is `UDIChat` with this
+   * set.
+   */
+  readOnly?: ReadOnlyOption;
+  /**
+   * A session export to seed the dashboard (and the conversation behind it)
+   * with — the JSON written by the dashboard's `Session → Export session`
+   * action, in the {@link SessionExport} shape.
+   *
+   * Typed `unknown` so a consumer can pass `JSON.parse(file)` straight
+   * through: the value is run past `parseSessionExport`, and a malformed one
+   * throws from `validateConfig` into the surrounding ErrorBoundary rather
+   * than failing quietly. Applied once, after the data package has loaded
+   * (the cards need its field lists to become interactive).
+   */
+  initialSession?: unknown;
   className?: string;
   style?: React.CSSProperties;
 }

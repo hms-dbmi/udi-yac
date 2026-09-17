@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { MessageSquare } from 'lucide-react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
 import {
   UDIChatProvider,
@@ -9,6 +10,7 @@ import {
   SplashMessagesProvider,
   TrackerProvider,
   useConversation,
+  useConversationStore,
   useDataPackageStore,
   useDashboardStore,
   useDashboard,
@@ -24,13 +26,15 @@ import { DataOverviewPanel } from '@/features/data-package';
 import { Button } from '@/components/ui/button';
 import { extractAllUdiSpecsFromMessage } from '@/features/dashboard/stores/dashboardStore';
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
+import { parseSessionExport } from '@/features/dashboard/utils/dashboardSerialization';
+import { applySessionExport } from '@/app/applySessionExport';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { ConversationList } from '@/features/chat/components/ConversationList';
 import { useApiKey } from '@/features/chat/hooks/useApiKey';
 import { ErrorBoundary } from './ErrorBoundary';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { ChatRootProvider } from '@/lib/chatRoot';
 import type { QueryConfig } from '@/features/chat/api/completions';
@@ -49,7 +53,9 @@ function UDIChatInner({
   authToken,
   model,
   requireApiKey,
+  initialSession,
 }: UDIChatConfig) {
+  const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
@@ -62,7 +68,10 @@ function UDIChatInner({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
   const trackEvent = useTracker();
-  useLayoutPersistence();
+  const readOnly = useGlobal((s) => s.readOnly);
+  const readOnlyLocked = useGlobal((s) => s.readOnlyLocked);
+  const loadingPhase = useDataPackage((s) => s.loadingPhase);
+  useLayoutPersistence({ enabled: !readOnly, restore: initialSession == null });
 
   // Keep the store's token current. A host that refreshes the JWT must not
   // trigger a package reload: `authToken` is deliberately absent from the
@@ -97,6 +106,27 @@ function UDIChatInner({
     dataFieldDomainsProp,
     fetchOptions,
   ]);
+
+  // Seed from `initialSession`, once, after the data package is ready: the
+  // cards need its field lists to become interactive. `validateConfig` already
+  // rejected a malformed payload, so a parse failure here cannot happen — bail
+  // rather than throw from inside an effect if it somehow does.
+  const parsedInitialSession = useMemo(
+    () => (initialSession == null ? null : parseSessionExport(initialSession)),
+    [initialSession],
+  );
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (!parsedInitialSession?.ok) return;
+    if (loadingPhase !== 'ready') return;
+    seededRef.current = true;
+    applySessionExport(
+      parsedInitialSession.value,
+      { conversation: conversationStore, dashboard: dashboardStore },
+      dataPackageStore.getState().sourceFields,
+    );
+  }, [parsedInitialSession, loadingPhase, conversationStore, dashboardStore, dataPackageStore]);
 
   // Auto-activate visualizations from new assistant messages (batched to avoid O(n^2) cascade)
   useEffect(() => {
@@ -185,64 +215,117 @@ function UDIChatInner({
     // would make the root a containing block for everything useChatRoot()
     // portals into it.
     <div className="@container/shell flex h-full w-full bg-background">
-      {/* Sidebar drawer — debug mode only */}
-      {debugMode && drawerOpen && (
-        <div className="w-56 shrink-0 border-r bg-background overflow-hidden flex flex-col">
-          <ConversationList />
-        </div>
-      )}
       {/*
-       * Left region: chat and the data overview. Above 1200px both fit beside
-       * the dashboard (400 + 400 + 400), so the region doubles in width and
-       * shows them side by side. Below it, the overview takes the chat's slot
-       * and the chat is CSS-hidden rather than unmounted, so a streaming
-       * response and the message list's scroll position survive the swap.
-       * ponytail: 1200 is the one knob — inlined in the variants below because
-       * Tailwind scans source text and cannot read a constant.
+       * Read-only collapses the whole left region to a rail. One branch, rather
+       * than a per-control sweep, because the chat pane is where every writing
+       * affordance lives — the input and its `//admin` backdoor, reset, example
+       * prompts, the memory bank, the API key, closed-viz restore, and the data
+       * overview's "Open on dashboard" button. Nothing here is unmounted for
+       * good: leaving read-only re-renders the region with its state intact.
        */}
-      <div
-        className={cn(
-          'shrink-0 min-w-[300px] border-r flex flex-col overflow-hidden',
-          overviewOpen ? 'w-[400px] @min-[1200px]/shell:w-[800px]' : 'w-[400px]',
-        )}
-      >
-        <ViewSwitch
-          overviewOpen={overviewOpen}
-          onChange={(open) => globalStore.getState().setOverview(open)}
+      {readOnly ? (
+        <CollapsedChatRail
+          locked={readOnlyLocked}
+          onExit={() => {
+            globalStore.getState().setReadOnly(false);
+            trackEvent('read_only_exited', {});
+          }}
         />
-        <div className="flex flex-1 min-h-0">
-          <div
-            className={cn(
-              'flex-1 min-w-0 flex flex-col overflow-hidden',
-              overviewOpen && 'hidden @min-[1200px]/shell:flex',
-            )}
-          >
-            <ChatPanel
-              config={queryConfig}
-              needsApiKey={apiKey.needsApiKey}
-              hasApiKey={apiKey.hasApiKey}
-              userKeyQuotaExceeded={apiKey.userKeyQuotaExceeded}
-              pendingQuotaRetry={apiKey.pendingQuotaRetry}
-              onSetApiKey={apiKey.setApiKey}
-              onClearApiKey={apiKey.clearApiKey}
-              onQuotaRebuff={apiKey.onQuotaRebuff}
-              onNormalResponse={apiKey.onNormalResponse}
-              onConsumePendingRetry={apiKey.consumePendingRetry}
-              showDrawerToggle={debugMode}
-              drawerOpen={drawerOpen}
-              onToggleDrawer={() => setDrawerOpen((v) => !v)}
-            />
-          </div>
-          {overviewOpen && (
-            <div className="flex-1 min-w-0 flex flex-col overflow-hidden @min-[1200px]/shell:border-l">
-              <DataOverviewPanel />
+      ) : (
+        <>
+          {/* Sidebar drawer — debug mode only */}
+          {debugMode && drawerOpen && (
+            <div className="w-56 shrink-0 border-r bg-background overflow-hidden flex flex-col">
+              <ConversationList />
             </div>
           )}
-        </div>
-      </div>
+          {/*
+           * Left region: chat and the data overview. Above 1200px both fit beside
+           * the dashboard (400 + 400 + 400), so the region doubles in width and
+           * shows them side by side. Below it, the overview takes the chat's slot
+           * and the chat is CSS-hidden rather than unmounted, so a streaming
+           * response and the message list's scroll position survive the swap.
+           * ponytail: 1200 is the one knob — inlined in the variants below because
+           * Tailwind scans source text and cannot read a constant.
+           */}
+          <div
+            className={cn(
+              'shrink-0 min-w-[300px] border-r flex flex-col overflow-hidden',
+              overviewOpen ? 'w-[400px] @min-[1200px]/shell:w-[800px]' : 'w-[400px]',
+            )}
+          >
+            <ViewSwitch
+              overviewOpen={overviewOpen}
+              onChange={(open) => globalStore.getState().setOverview(open)}
+            />
+            <div className="flex flex-1 min-h-0">
+              <div
+                className={cn(
+                  'flex-1 min-w-0 flex flex-col overflow-hidden',
+                  overviewOpen && 'hidden @min-[1200px]/shell:flex',
+                )}
+              >
+                <ChatPanel
+                  config={queryConfig}
+                  needsApiKey={apiKey.needsApiKey}
+                  hasApiKey={apiKey.hasApiKey}
+                  userKeyQuotaExceeded={apiKey.userKeyQuotaExceeded}
+                  pendingQuotaRetry={apiKey.pendingQuotaRetry}
+                  onSetApiKey={apiKey.setApiKey}
+                  onClearApiKey={apiKey.clearApiKey}
+                  onQuotaRebuff={apiKey.onQuotaRebuff}
+                  onNormalResponse={apiKey.onNormalResponse}
+                  onConsumePendingRetry={apiKey.consumePendingRetry}
+                  showDrawerToggle={debugMode}
+                  drawerOpen={drawerOpen}
+                  onToggleDrawer={() => setDrawerOpen((v) => !v)}
+                />
+              </div>
+              {overviewOpen && (
+                <div className="flex-1 min-w-0 flex flex-col overflow-hidden @min-[1200px]/shell:border-l">
+                  <DataOverviewPanel />
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
       <div className="flex-1 min-w-0 overflow-hidden">
         <DashboardPanel />
       </div>
+    </div>
+  );
+}
+
+/**
+ * What the chat pane shrinks to in read-only mode — the same "collapsed to a
+ * rail, one button to bring it back" shape the data overview uses, so the
+ * dashboard gets the full width without the chat disappearing without trace.
+ *
+ * Under `readOnly: 'locked'` there is nothing to collapse back to, so the rail
+ * is dropped entirely and the dashboard takes the full width — a strip whose
+ * only button cannot work is worse than no strip.
+ */
+function CollapsedChatRail({ locked, onExit }: { locked: boolean; onExit: () => void }) {
+  if (locked) return null;
+  return (
+    <div className="flex w-9 shrink-0 flex-col items-center border-r bg-background pt-2">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              aria-label="Start chatting"
+              onClick={onExit}
+            />
+          }
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+        </TooltipTrigger>
+        <TooltipContent side="right">Start chatting</TooltipContent>
+      </Tooltip>
     </div>
   );
 }
@@ -305,7 +388,7 @@ function UDIChatValidated(props: UDIChatConfig) {
   return (
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
-        <UDIChatProvider>
+        <UDIChatProvider readOnly={props.readOnly}>
           <TrackerProvider onEvent={props.onEvent}>
             <DownloadActionsProvider actions={props.downloadActions}>
               <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
@@ -354,4 +437,13 @@ export function UDIChat(props: UDIChatConfig) {
       <UDIChatValidated {...props} />
     </ErrorBoundary>
   );
+}
+
+/**
+ * `UDIChat` started in read-only mode — the dashboard embed. Pass
+ * `initialSession` to give it something to show, and `readOnly="locked"` via
+ * `UDIChat` itself if the user must not be able to open the chat at all.
+ */
+export function UDIDashboard(props: Omit<UDIChatConfig, 'readOnly'>) {
+  return <UDIChat {...props} readOnly />;
 }
