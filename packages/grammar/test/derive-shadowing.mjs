@@ -1,20 +1,14 @@
 /**
- * A `derive` that reuses an existing column's name REPLACES it in Arquero — and
- * the SQL backend does not agree.
+ * A `derive` that reuses an existing column's name REPLACES it in Arquero.
  *
  * Run with: node test/derive-shadowing.mjs   (after pnpm build:toolkit)
  *
- * Found while adding parity coverage for the stratified survival templates. The
- * compiler emits a derive as `SELECT *, <expr> AS "island" FROM ...`, which leaves
- * the relation holding *two* columns called `island`; a later aggregate resolves
- * the first one, so the derived values are ignored. Arquero replaces the column, so
- * the two executors return different numbers for the same spec.
- *
- * No template does this today (verified across all 68), and the survival templates
- * deliberately derive into a fresh name for exactly this reason. This pins the
- * Arquero half of the contract so that if the SQL side is ever fixed, or a template
- * starts relying on replacement, the expectation is written down rather than
- * rediscovered from a wrong chart.
+ * Found while adding parity coverage for the stratified survival templates: the SQL
+ * compiler used to emit every derive as `SELECT *, <expr> AS "island" FROM ...`,
+ * leaving the relation holding *two* columns called `island`, and a later aggregate
+ * resolved the first one. It now spells the kept columns out when a derive
+ * shadows one, so both executors replace. This pins the Arquero half of that
+ * contract; `derive-shadowing-column` in the parity goldens pins the SQL half.
  */
 import assert from 'node:assert/strict';
 import { createPinia, setActivePinia } from 'pinia';

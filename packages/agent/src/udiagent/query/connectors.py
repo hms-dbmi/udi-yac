@@ -27,6 +27,10 @@ class Dialect:
     def median(self, column_sql: str) -> str:
         return f"MEDIAN({column_sql})"
 
+    def split(self, column_sql: str, separator_sql: str) -> str:
+        """String -> array of parts, for unnest."""
+        return f"str_split({column_sql}, {separator_sql})"
+
 
 class DuckDBDialect(Dialect):
     pass
@@ -40,6 +44,9 @@ class StarRocksDialect(Dialect):
         # ponytail: PERCENTILE_APPROX is approximate; exact medians on
         # StarRocks need a two-pass approach if precision ever matters.
         return f"PERCENTILE_APPROX({column_sql}, 0.5)"
+
+    def split(self, column_sql: str, separator_sql: str) -> str:
+        return f"split({column_sql}, {separator_sql})"
 
 
 def _normalize_value(value: Any) -> Any:

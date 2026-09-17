@@ -387,9 +387,10 @@ separate templates.
 
 The resulting cohorts overlap by design and their sizes sum to more than the subject
 count, so the groups can't be compared as if they partitioned the data. `unnest` is
-the only transformation that increases the row count, and it is **browser-mode
-only**: the SQL backend rejects it rather than silently returning a different row
-count than the Arquero reference.
+the only transformation that increases the row count. Both executors implement it —
+the SQL backend compiles it to a lateral `UNNEST` over the split column, with
+parity goldens (`unnest-multivalue`, `unnest-explicit-out`) pinning the trimming and
+empty-cell rules.
 
 Add a type suffix wherever the encoding needs one — it's what stops the model
 binding a 400-cardinality ID column to an x-axis. Resolution lives in

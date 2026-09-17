@@ -328,8 +328,15 @@ engine.run_query(
 - **median** on StarRocks is `PERCENTILE_APPROX` (approximate).
 - **rolling windows / `offset` paging** are only deterministic when ordered by
   a unique key (SQL tie order is unspecified).
-- **joins** with same-named keys use `USING`; differently-named non-key column
-  collisions error in SQL rather than auto-suffixing like Arquero (`_1`/`_2`).
+- **joins** spell their projection out instead of `SELECT *`, because both
+  halves of the naming have to be done by hand: a same-named join key is kept
+  once (from the left), and a non-key name present on both sides is renamed
+  `<name>_1` / `<name>_2` as Arquero does. `USING` is not enough — DuckDB
+  merges the key columns, StarRocks keeps both, and every later reference to
+  the key is then ambiguous.
+- **`%`** compiles to `MOD(a, b)`, never the operator: pymysql builds StarRocks
+  statements with Python `%`-formatting, so a bare `%` in the SQL raises
+  "unsupported format character".
 - **No multi-hop entity paths** — cross-entity filtering resolves direct FKs
   and shared-parent siblings only (see `sample-data/readme.md`).
 - **Row-level projection** — remote row tables still `SELECT *`; the

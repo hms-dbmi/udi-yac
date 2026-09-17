@@ -63,6 +63,12 @@ def arquero_bins(
     return (min_v, min_v + step if max_v == min_v else max_v, step)
 
 
+def _merge_columns(existing: list, added: list) -> list:
+    """Column list after a transform that appends/replaces `added`. A replaced
+    column moves to the end; order only has to be deterministic, not stable."""
+    return [c for c in existing if c not in added] + list(added)
+
+
 @dataclass
 class KdePost:
     """Instructions for the engine's Python kde pass."""
@@ -95,8 +101,11 @@ class _State:
     params: list = field(default_factory=list)
     #: logical table name -> SQL relation reference (quoted table or CTE name)
     env: dict[str, str] = field(default_factory=dict)
+    #: logical table name -> ordered column names (None when unknowable)
+    col_env: dict[str, list | None] = field(default_factory=dict)
     current: str = ""
     current_name: str | None = None
+    current_columns: list | None = None
     pending_groupby: list[str] | None = None
     order_by: list[tuple[str, str]] | None = None  # [(field, 'ASC'|'DESC')]
     counter: int = 0
@@ -163,9 +172,11 @@ class PipelineCompiler:
         st = _State()
         for src in sources:
             st.env[src["name"]] = self._table_ref(src["name"])
+            st.col_env[src["name"]] = self._physical_columns(src["name"])
         first = sources[0]["name"]
         st.current = st.env[first]
         st.current_name = first
+        st.current_columns = st.col_env[first]
 
         transforms = list(transformations or [])
         if stop_before is not None:
@@ -208,18 +219,7 @@ class PipelineCompiler:
                     groupby=list(st.pending_groupby or []),
                 )
             elif "unnest" in transform:
-                # Deliberately rejected rather than approximated. Expanding a
-                # delimited column means multiplying rows, which SQL can do
-                # (UNNEST / a split-table join) but not identically across
-                # StarRocks and DuckDB without care — and a silently different
-                # row count would break parity with the Arquero executor, which
-                # is the reference semantics. Templates using unnest are
-                # browser-mode only until this is implemented properly.
-                raise UnsupportedQueryError(
-                    "'unnest' is not supported by the SQL backend yet; it is "
-                    "implemented only by the in-browser executor. Use interactive "
-                    "(browser) mode for templates that expand multi-value columns."
-                )
+                self._compile_unnest(st, transform, out_name)
             else:
                 raise UnsupportedQueryError(
                     f"unsupported transformation: {sorted(transform.keys())}"
@@ -249,16 +249,25 @@ class PipelineCompiler:
             raise UnsupportedQueryError(f"unknown entity '{entity}'")
         return self._q(table)
 
-    def _push(self, st: _State, sql: str, logical_name: str | None) -> None:
+    def _push(
+        self,
+        st: _State,
+        sql: str,
+        logical_name: str | None,
+        columns: list | None = None,
+    ) -> None:
         st.counter += 1
         name = f"t{st.counter}"
         st.ctes.append((name, sql))
         st.current = name
+        st.current_columns = columns
         if logical_name:
             st.env[logical_name] = name
+            st.col_env[logical_name] = columns
             st.current_name = logical_name
         elif st.current_name:
             st.env[st.current_name] = name
+            st.col_env[st.current_name] = columns
 
     def _in_ref(self, st: _State, in_name: Any) -> str:
         if in_name is None:
@@ -268,6 +277,20 @@ class PipelineCompiler:
         if isinstance(in_name, str):
             return st.env.get(in_name) or self._table_ref(in_name)
         raise UnsupportedQueryError(f"invalid 'in': {in_name!r}")
+
+    def _physical_columns(self, entity: str) -> list | None:
+        """Ordered physical columns for an entity, or None when unknowable."""
+        if self.columns_of is None or entity not in self.table_map:
+            return None
+        return list(self.columns_of(entity))
+
+    def _in_columns(self, st: _State, in_name: Any) -> list | None:
+        """Ordered columns of the relation `_in_ref` would resolve to."""
+        if in_name is None:
+            return st.current_columns
+        if in_name in st.col_env:
+            return st.col_env[in_name]
+        return self._physical_columns(in_name)
 
     def _expr_ctx(
         self, agg_window: str | None = None, rank_window: str | None = None
@@ -348,7 +371,7 @@ class PipelineCompiler:
         (no columns_of hook, or the name isn't a physical entity)."""
         if self.columns_of is None or entity is None or entity not in self.table_map:
             return None
-        return self.columns_of(entity)
+        return set(self.columns_of(entity))
 
     def _named_filter_sql(self, st: _State, filt: dict, in_entity: str | None) -> str | None:
         """FilterDataSelection -> WHERE clause (or None to skip)."""
@@ -422,7 +445,12 @@ class PipelineCompiler:
                 ctx = self._expr_ctx()
                 pred = compile_expr(filt, ctx)
                 st.params.extend(ctx.params)
-            self._push(st, f"SELECT * FROM {in_ref} WHERE {pred}", out_name)
+            self._push(
+                st,
+                f"SELECT * FROM {in_ref} WHERE {pred}",
+                out_name,
+                self._in_columns(st, transform.get("in")),
+            )
             return
 
         # Named filter (FilterDataSelection)
@@ -438,7 +466,12 @@ class PipelineCompiler:
         if pred is None:
             return
         st.applied_named_filter = True
-        self._push(st, f"SELECT * FROM {in_ref} WHERE {pred}", out_name)
+        self._push(
+            st,
+            f"SELECT * FROM {in_ref} WHERE {pred}",
+            out_name,
+            self._in_columns(st, transform.get("in")),
+        )
 
     def _compile_rollup(self, st: _State, transform: dict, out_name: str | None) -> None:
         in_ref = self._in_ref(st, transform.get("in"))
@@ -467,7 +500,7 @@ class PipelineCompiler:
         sql = f"SELECT {select_list} FROM {in_ref}"
         if cols:
             sql += " GROUP BY " + ", ".join(cols)
-        self._push(st, sql, out_name)
+        self._push(st, sql, out_name, list(groups) + list(transform["rollup"]))
         st.pending_groupby = None
         st.order_by = None
         st.aggregated = True
@@ -491,6 +524,7 @@ class PipelineCompiler:
         st.order_by = order
         if transform.get("in") is not None:
             st.current = self._in_ref(st, transform["in"])
+            st.current_columns = self._in_columns(st, transform["in"])
 
     def _compile_derive(self, st: _State, transform: dict, out_name: str | None) -> None:
         in_ref = self._in_ref(st, transform.get("in"))
@@ -521,7 +555,23 @@ class PipelineCompiler:
                 st.params.extend(ctx.params)
             else:
                 raise UnsupportedQueryError(f"invalid derive expression: {expr!r}")
-        self._push(st, f"SELECT *, {', '.join(cols)} FROM {in_ref}", out_name)
+
+        in_columns = self._in_columns(st, transform.get("in"))
+        new_names = list(transform["derive"])
+        if in_columns is not None and any(n in in_columns for n in new_names):
+            # A derive that REPLACES an existing column can't use SELECT *: the
+            # name would be emitted twice and every later reference to it is
+            # then ambiguous. Spell the kept columns out instead.
+            kept = [self._q(c) for c in in_columns if c not in new_names]
+            select = ", ".join(kept + cols)
+        else:
+            select = "*, " + ", ".join(cols)
+        self._push(
+            st,
+            f"SELECT {select} FROM {in_ref}",
+            out_name,
+            None if in_columns is None else _merge_columns(in_columns, new_names),
+        )
 
     @staticmethod
     def _rolling_frame(window: list | None) -> str:
@@ -542,6 +592,43 @@ class PipelineCompiler:
         return (
             f"ROWS BETWEEN {bound(window[0], is_lower=True)} "
             f"AND {bound(window[1], is_lower=False)}"
+        )
+
+    def _compile_unnest(self, st: _State, transform: dict, out_name: str | None) -> None:
+        """One row per delimited value — the only transform that grows the row
+        count. Mirrors the Arquero executor (DataSourcesStore.ts): split on the
+        separator, trim each part, drop empty parts, so a null or empty cell
+        yields no rows at all."""
+        spec = transform["unnest"]
+        fname = spec["field"]
+        out_field = spec.get("out") or fname
+        separator = spec.get("separator", ";")
+        in_ref = self._in_ref(st, transform.get("in"))
+        in_columns = self._in_columns(st, transform.get("in"))
+
+        split_sql = self.dialect.split(f"l.{self._q(fname)}", self.dialect.placeholder)
+        value = "TRIM(u.part)"
+        if in_columns is not None:
+            kept = [f"l.{self._q(c)}" for c in in_columns if c != out_field]
+            select = ", ".join(kept + [f"{value} AS {self._q(out_field)}"])
+            columns = _merge_columns(in_columns, [out_field])
+        elif out_field != fname:
+            select = f"l.*, {value} AS {self._q(out_field)}"
+            columns = None
+        else:
+            # The default `out` overwrites the source column, which needs the
+            # column list to drop the original from the select.
+            raise UnsupportedQueryError(
+                f"unnest of '{fname}' needs the input's column list; "
+                "set an explicit 'out' or run against an introspectable backend"
+            )
+        st.params.append(separator)
+        self._push(
+            st,
+            f"SELECT {select} FROM {in_ref} l, UNNEST({split_sql}) AS u(part) "
+            f"WHERE {value} <> ''",
+            out_name,
+            columns,
         )
 
     def _compile_join(self, st: _State, transform: dict, out_name: str | None) -> None:
@@ -566,18 +653,49 @@ class PipelineCompiler:
             raise UnsupportedQueryError(f"unsupported join kind '{kind}'")
         join_kw = "LEFT JOIN" if kind == "left" else "JOIN"
 
-        if all(a == b for a, b in pairs):
-            # Same-name keys: USING merges and dedups the join columns —
-            # matches Arquero, works on both DuckDB and StarRocks/MySQL.
-            using = ", ".join(self._q(a) for a, _ in pairs)
+        left_columns = self._in_columns(st, in_names[0])
+        right_columns = self._in_columns(st, in_names[1])
+        cond = " AND ".join(f"l.{self._q(a)} = r.{self._q(b)}" for a, b in pairs)
+        # A same-named key is ONE column in Arquero, taken from the left.
+        shared_keys = [a for a, b in pairs if a == b]
+
+        if left_columns is not None and right_columns is not None:
+            # Spell the projection out rather than leaning on `SELECT *`:
+            #  - USING would dedup same-named keys on DuckDB but keep BOTH
+            #    copies on StarRocks, and every later reference to the key
+            #    then fails with "Column '<k>' is ambiguous";
+            #  - a non-key name present on both sides collides either way, and
+            #    Arquero renames those to '<name>_1' / '<name>_2'.
+            right_kept = [c for c in right_columns if c not in shared_keys]
+            collisions = set(left_columns) & set(right_kept)
+            select_parts = [
+                f"l.{self._q(c)} AS {self._q(c + '_1')}"
+                if c in collisions
+                else f"l.{self._q(c)}"
+                for c in left_columns
+            ] + [
+                f"r.{self._q(c)} AS {self._q(c + '_2')}"
+                if c in collisions
+                else f"r.{self._q(c)}"
+                for c in right_kept
+            ]
+            sql = (
+                f"SELECT {', '.join(select_parts)} "
+                f"FROM {left} l {join_kw} {right} r ON {cond}"
+            )
+            columns = [c + "_1" if c in collisions else c for c in left_columns] + [
+                c + "_2" if c in collisions else c for c in right_kept
+            ]
+        elif shared_keys and len(shared_keys) == len(pairs):
+            # No column lists to spell out: fall back to USING (correct on
+            # DuckDB, ambiguous downstream on StarRocks).
+            using = ", ".join(self._q(a) for a in shared_keys)
             sql = f"SELECT * FROM {left} l {join_kw} {right} r USING ({using})"
+            columns = None
         else:
-            # ponytail: differently-named keys keep both columns; non-key
-            # column collisions error in SQL instead of Arquero's _1/_2
-            # suffixing. Add introspected column lists if that ever bites.
-            cond = " AND ".join(f"l.{self._q(a)} = r.{self._q(b)}" for a, b in pairs)
             sql = f"SELECT * FROM {left} l {join_kw} {right} r ON {cond}"
-        self._push(st, sql, out_name)
+            columns = None
+        self._push(st, sql, out_name, columns)
         st.pending_groupby = None
         st.order_by = None
 
@@ -623,11 +741,13 @@ class PipelineCompiler:
             f"({bin_step!r} * (FLOOR(({col} - {bin_min!r}) / {bin_step!r}) + 1) "
             f"+ {bin_min!r})"
         )
+        in_columns = self._in_columns(st, transform.get("in"))
         self._push(
             st,
             f"SELECT *, {expr0} AS {self._q(start)}, {expr1} AS {self._q(end)} "
             f"FROM {in_ref}",
             out_name,
+            None if in_columns is None else _merge_columns(in_columns, [start, end]),
         )
         st.pending_groupby = [start, end]
 

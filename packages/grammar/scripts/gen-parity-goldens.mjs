@@ -59,11 +59,10 @@ const CASES = [
     // output is named after an existing column, as those templates do, which is
     // safe because a rollup emits a fresh relation of group keys plus outputs.
     //
-    // The derived input has a name of its own rather than overwriting `island`.
-    // That is not incidental: `derive` REPLACES a column in Arquero but APPENDS a
-    // duplicate in SQL (`SELECT *, ... AS "island"`), so aggregating a shadowed
-    // name reads the original and the two executors disagree. No template does
-    // that today; `test/derive-shadowing.mjs` pins the hazard.
+    // The derived input has a name of its own rather than overwriting `island`,
+    // which is how the templates are written. Shadowing is legal in both
+    // executors now — see `derive-shadowing-column` below and
+    // `test/derive-shadowing.mjs`.
     'rollup-max-nominal-conditional',
     {
       source: src('penguins'),
@@ -555,7 +554,138 @@ const CASES = [
           },
         },
         { groupby: 'stratum' },
-        { rollup: { n: { op: 'count' }, heaviest: { op: 'max', field: 'body_mass_g' } } },
+        {
+          rollup: {
+            n: { op: 'count' },
+            heaviest: { op: 'max', field: 'body_mass_g' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // A join whose key has the SAME name on both sides, with that key then used
+    // downstream. Arquero keeps one copy; SQL has to be told to, because USING
+    // dedups on DuckDB but keeps both copies on StarRocks and every later
+    // reference to the key is then ambiguous.
+    'join-same-key-then-groupby',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        { groupby: 'group_name', in: 'samples' },
+        {
+          rollup: { samples_count: { op: 'count' } },
+          in: 'samples',
+          out: 'by_group',
+        },
+        {
+          join: { on: ['group_name', 'group_name'], kind: 'left' },
+          in: ['donors', 'by_group'],
+          out: 'joined',
+        },
+        { groupby: 'group_name' },
+        {
+          rollup: {
+            donors: { op: 'count' },
+            samples_count: { op: 'max', field: 'samples_count' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // Columns present on BOTH sides of a join that are not the key: Arquero
+    // renames them '<name>_1' / '<name>_2', and SQL has to do the same or the
+    // relation holds two columns with one name. Both sides are narrowed to one
+    // group first so the cross product stays small.
+    'join-colliding-non-key-columns',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        {
+          filter: {
+            op: '==',
+            left: { field: 'group_name' },
+            right: { literal: 'Vanderbilt TMC' },
+          },
+          in: 'donors',
+          out: 'donors',
+        },
+        {
+          filter: {
+            op: '==',
+            left: { field: 'sample_category' },
+            right: { literal: 'organ' },
+          },
+          in: 'samples',
+          out: 'samples',
+        },
+        {
+          join: { on: ['group_name', 'group_name'] },
+          in: ['donors', 'samples'],
+          out: 'joined',
+        },
+        { groupby: ['mapped_consortium_1', 'sample_category'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // unnest with the default `out`, i.e. overwriting the source column — the
+    // shape every multi-value template uses. medical_history is a comma-joined
+    // list, and blank cells must expand to no rows at all.
+    'unnest-multivalue',
+    {
+      source: src('donors'),
+      transformation: [
+        { unnest: { field: 'medical_history', separator: ',' } },
+        { groupby: 'medical_history' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // unnest into a fresh column: the source column survives alongside it, and
+    // the row multiplication has to carry every other column through.
+    'unnest-explicit-out',
+    {
+      source: src('donors'),
+      transformation: [
+        {
+          unnest: {
+            field: 'medical_history',
+            separator: ',',
+            out: 'condition',
+          },
+        },
+        { groupby: ['condition', 'sex'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // A derive that REUSES an existing column's name replaces it in both
+    // executors (test/derive-shadowing.mjs pins the Arquero half). Aggregating
+    // the shadowed name afterwards is what makes the difference visible.
+    'derive-shadowing-column',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            island: {
+              if: {
+                op: '==',
+                left: { field: 'species' },
+                right: { literal: 'Adelie' },
+              },
+              then: { field: 'island' },
+              else: { literal: 'other' },
+            },
+          },
+        },
+        { groupby: 'island' },
+        { rollup: { n: { op: 'count' } } },
       ],
     },
   ],

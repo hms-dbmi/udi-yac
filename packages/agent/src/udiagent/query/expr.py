@@ -24,7 +24,6 @@ _BINARY_OPERATORS = {
     "-": "-",
     "*": "*",
     "/": "/",
-    "%": "%",
     "==": "=",
     "!=": "<>",
     ">": ">",
@@ -107,6 +106,13 @@ def compile_expr(node: Any, ctx: ExprContext) -> str:
 
     if "op" in node:
         op = node.get("op")
+        if op == "%":
+            # MOD(), not the `%` operator: pymysql builds StarRocks statements
+            # with Python %-formatting, so a literal `%` in the SQL makes
+            # mogrify raise "unsupported format character". MOD is available on
+            # both dialects and means the same thing.
+            left, right = node.get("left"), node.get("right")
+            return f"MOD({compile_expr(left, ctx)}, {compile_expr(right, ctx)})"
         sql_op = _BINARY_OPERATORS.get(op)
         if sql_op is None:
             raise UnsupportedQueryError(f"unsupported operator '{op}'")
@@ -181,8 +187,11 @@ def expr_uses_aggregate(node: Any) -> bool:
         return False
     if "agg" in node or "window" in node:
         return True
-    return any(
+    if any(
         expr_uses_aggregate(v)
         for k, v in node.items()
         if k in ("left", "right", "if", "then", "else")
-    )
+    ):
+        return True
+    parts = node.get("concat")
+    return isinstance(parts, list) and any(expr_uses_aggregate(p) for p in parts)

@@ -139,9 +139,6 @@ export interface GroupBy extends DataTransformationBase {
  * increases the row count: a row with n values becomes n rows, each carrying one
  * value and a copy of every other column. Rows whose field is null or empty are
  * dropped, since they belong to no category.
- *
- * NOTE: currently implemented by the in-browser Arquero executor only. The SQL
- * backend rejects it rather than silently returning different results.
  */
 export interface Unnest extends DataTransformationBase {
   /**

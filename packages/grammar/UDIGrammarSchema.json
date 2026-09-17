@@ -2367,7 +2367,7 @@
     },
     "Unnest": {
       "additionalProperties": false,
-      "description": "Expands a delimited multi-value field into one row per value.\n\nSome source columns hold a set rather than a scalar — `\"Spine;Brain\"` means the row belongs to both categories. Grouping on such a column treats every distinct combination as its own category, which is both wrong and unusable (a column with 22 real values can have 78 combinations). This is the only transformation that increases the row count: a row with n values becomes n rows, each carrying one value and a copy of every other column. Rows whose field is null or empty are dropped, since they belong to no category.\n\nNOTE: currently implemented by the in-browser Arquero executor only. The SQL backend rejects it rather than silently returning different results.",
+      "description": "Expands a delimited multi-value field into one row per value.\n\nSome source columns hold a set rather than a scalar — `\"Spine;Brain\"` means the row belongs to both categories. Grouping on such a column treats every distinct combination as its own category, which is both wrong and unusable (a column with 22 real values can have 78 combinations). This is the only transformation that increases the row count: a row with n values becomes n rows, each carrying one value and a copy of every other column. Rows whose field is null or empty are dropped, since they belong to no category.",
       "properties": {
         "in": {
           "description": "The name of the input table. If not specified, it assumes the output of the previous operation.",

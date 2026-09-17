@@ -3172,8 +3172,7 @@ def generate():
             "Cohort sizes overlap here, so they sum to more than the subject count — that is "
             "intended. Check the end-of-curve labels name individual values (e.g. 'Spine', "
             "'Brain') and not combined strings like 'Leptomeningeal;Spine'; if they show "
-            "combinations, unnest did not run. Requires browser (interactive) mode: the SQL "
-            "backend rejects unnest."
+            "combinations, unnest did not run."
         ),
         preview_bindings={
             "E1": "Event",
@@ -3316,10 +3315,9 @@ def generate():
         review_hint=(
             "Cohorts overlap heavily by design — expect the sizes to sum to well over the subject "
             "count. Check the labels name individual values and not combined strings like "
-            "'Leptomeningeal;Spine'; if they show combinations, unnest did not run. Requires "
-            "browser (interactive) mode: the SQL backend rejects unnest. As with the single-valued "
-            "'ever' variant, judge whether a reader could mistake these overlapping curves for a "
-            "partition."
+            "'Leptomeningeal;Spine'; if they show combinations, unnest did not run. As with the "
+            "single-valued 'ever' variant, judge whether a reader could mistake these "
+            "overlapping curves for a partition."
         ),
         preview_bindings={
             "E1": "Event",
@@ -3608,8 +3606,7 @@ def generate():
             "on one or two subjects. If that is unreadable, the template needs a cardinality "
             "limit rather than a caption. Check too that a sentinel string is not being drawn as "
             "a category: pcx has a 'Not Reported' agent, which the null filter cannot catch "
-            "because it is a value, not a null. Requires browser (interactive) mode: the SQL "
-            "backend rejects unnest."
+            "because it is a value, not a null."
         ),
         preview_bindings={
             "E1": "Event",
