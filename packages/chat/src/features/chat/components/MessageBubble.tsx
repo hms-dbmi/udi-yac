@@ -59,7 +59,7 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
     <div
       ref={bubbleRef}
       data-message
-      className={cn('flex scroll-mt-6', isUser ? 'justify-end' : 'justify-start')}
+      className={cn('udi:flex udi:scroll-mt-6', isUser ? 'udi:justify-end' : 'udi:justify-start')}
       // Single-viz messages link the whole bubble to their one card. Multi-viz
       // messages link per accordion item instead (see below), so no bubble-level
       // handler here.
@@ -68,11 +68,11 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
     >
       <div
         className={cn(
-          'max-w-[85%] min-w-0 rounded-lg px-3 py-2 wrap-break-word transition-shadow',
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted',
+          'udi:max-w-[85%] udi:min-w-0 udi:rounded-lg udi:px-3 udi:py-2 udi:wrap-break-word udi:transition-shadow',
+          isUser ? 'udi:bg-primary udi:text-primary-foreground' : 'udi:bg-muted',
           // ring-inset so the outline isn't clipped by the scroll viewport's
           // overflow-x-hidden on left-aligned (assistant) bubbles.
-          isVizHovered && 'ring-2 ring-inset ring-primary/50',
+          isVizHovered && 'udi:ring-2 udi:ring-inset udi:ring-primary/50',
         )}
       >
         {/* Message text */}
@@ -91,7 +91,7 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
         )}
 
         {toolCalls.length > 1 && (
-          <Accordion defaultValue={[0]} className="mt-1 min-w-64">
+          <Accordion defaultValue={[0]} className="udi:mt-1 udi:min-w-64">
             {toolCalls.map((tc, i) => {
               const itemKey = vizKey(messageIndex, i);
               return (
@@ -102,9 +102,12 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
                   // that card is hovered (hoveredViz is set by the card).
                   onMouseEnter={() => setChatHover(itemKey)}
                   onMouseLeave={() => setChatHover(null)}
-                  className={cn('transition-colors', hoveredViz === itemKey && 'bg-primary/10')}
+                  className={cn(
+                    'udi:transition-colors',
+                    hoveredViz === itemKey && 'udi:bg-primary/10',
+                  )}
                 >
-                  <AccordionTrigger className="text-xs">
+                  <AccordionTrigger className="udi:text-xs">
                     {TOOL_CALL_LABELS[tc.function.name] ?? tc.function.name}
                   </AccordionTrigger>
                   <AccordionContent>

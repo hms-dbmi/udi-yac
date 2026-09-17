@@ -62,15 +62,15 @@ export function ClarifyVariable({
   }, [submitted, freeText, onSelectSuggestion]);
 
   return (
-    <div className="space-y-3 p-1">
+    <div className="udi:space-y-3 udi:p-1">
       <MarkdownText>{message}</MarkdownText>
 
       {ambiguous_variables.map((variable, vIdx) => (
-        <div key={vIdx} className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">
+        <div key={vIdx} className="udi:space-y-1.5">
+          <p className="udi:text-xs udi:font-medium udi:text-muted-foreground">
             Select the correct &ldquo;{variable.query_term}&rdquo; variable:
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="udi:flex udi:flex-wrap udi:gap-1.5">
             {variable.candidates.map((candidate, cIdx) => (
               <Button
                 key={cIdx}
@@ -79,25 +79,25 @@ export function ClarifyVariable({
                 }
                 size="sm"
                 disabled={submitted}
-                className="h-auto py-1.5 px-2.5 text-left whitespace-normal max-w-full"
+                className="udi:h-auto udi:py-1.5 udi:px-2.5 udi:text-left udi:whitespace-normal udi:max-w-full"
                 onClick={() => toggleCandidate(vIdx, candidate.field_name, candidate.entity)}
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs">{candidate.field_name}</span>
+                <div className="udi:min-w-0">
+                  <div className="udi:flex udi:items-center udi:gap-1">
+                    <span className="udi:text-xs">{candidate.field_name}</span>
                     <Badge
                       variant={
                         isSelected(vIdx, candidate.field_name, candidate.entity)
                           ? 'secondary'
                           : 'outline'
                       }
-                      className="text-[10px] px-1 py-0"
+                      className="udi:text-[10px] udi:px-1 udi:py-0"
                     >
                       {candidate.entity}
                     </Badge>
                   </div>
                   {candidate.description && (
-                    <p className="text-[10px] font-normal text-muted-foreground mt-0.5">
+                    <p className="udi:text-[10px] udi:font-normal udi:text-muted-foreground udi:mt-0.5">
                       {candidate.description}
                     </p>
                   )}
@@ -108,12 +108,12 @@ export function ClarifyVariable({
         </div>
       ))}
 
-      <div className="flex items-center gap-2">
+      <div className="udi:flex udi:items-center udi:gap-2">
         <Input
           value={freeText}
           onChange={(e) => setFreeText(e.target.value)}
           placeholder="Or type your own response..."
-          className="text-xs h-8"
+          className="udi:text-xs udi:h-8"
           disabled={submitted || allSelected}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -128,13 +128,13 @@ export function ClarifyVariable({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0"
+                className="udi:h-8 udi:w-8 udi:shrink-0"
                 disabled={submitted || !freeText.trim()}
                 onClick={submitFreeText}
               />
             }
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="udi:h-3.5 udi:w-3.5" />
           </TooltipTrigger>
           <TooltipContent>Send response</TooltipContent>
         </Tooltip>

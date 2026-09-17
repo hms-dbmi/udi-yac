@@ -76,23 +76,28 @@ export function ChatHeaderBar({
   );
 
   return (
-    <div className="flex items-center justify-between px-3 py-2">
-      <div className="flex items-center gap-1">
+    <div className="udi:flex udi:items-center udi:justify-between udi:px-3 udi:py-2">
+      <div className="udi:flex udi:items-center udi:gap-1">
         {showDrawerToggle && (
           <Tooltip>
             <TooltipTrigger
               render={
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleDrawer} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="udi:h-7 udi:w-7"
+                  onClick={onToggleDrawer}
+                />
               }
             >
-              <Menu className="h-3.5 w-3.5" />
+              <Menu className="udi:h-3.5 udi:w-3.5" />
             </TooltipTrigger>
             <TooltipContent>Toggle conversations</TooltipContent>
           </Tooltip>
         )}
-        <h2 className="text-sm font-semibold">Chat</h2>
+        <h2 className="udi:text-sm udi:font-semibold">Chat</h2>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="udi:flex udi:items-center udi:gap-1">
         {/*
          * Only offered once the shell is wide enough to show chat and the data
          * overview together — below that threshold the ViewSwitch above the
@@ -104,13 +109,15 @@ export function ChatHeaderBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden h-7 w-7 @min-[1200px]/shell:inline-flex"
+                className="udi:hidden udi:h-7 udi:w-7 udi:@min-[1200px]/shell:inline-flex"
                 aria-pressed={overviewOpen}
                 onClick={() => globalStore.getState().setOverview(!overviewOpen)}
               />
             }
           >
-            <Database className={cn('h-3.5 w-3.5', overviewOpen && 'text-udi-primary')} />
+            <Database
+              className={cn('udi:h-3.5 udi:w-3.5', overviewOpen && 'udi:text-udi-primary')}
+            />
           </TooltipTrigger>
           <TooltipContent>{overviewOpen ? 'Hide data overview' : 'Data overview'}</TooltipContent>
         </Tooltip>
@@ -120,23 +127,23 @@ export function ChatHeaderBar({
               <TooltipTrigger
                 render={
                   <DialogTrigger
-                    render={<Button variant="ghost" size="icon" className="h-7 w-7" />}
+                    render={<Button variant="ghost" size="icon" className="udi:h-7 udi:w-7" />}
                   >
-                    <Lightbulb className="h-3.5 w-3.5" />
+                    <Lightbulb className="udi:h-3.5 udi:w-3.5" />
                   </DialogTrigger>
                 }
               />
               <TooltipContent>Example prompts</TooltipContent>
             </Tooltip>
-            <DialogContent className="max-w-md max-h-[70vh]">
+            <DialogContent className="udi:max-w-md udi:max-h-[70vh]">
               <DialogHeader>
-                <DialogTitle className="text-sm">Example Prompts</DialogTitle>
+                <DialogTitle className="udi:text-sm">Example Prompts</DialogTitle>
               </DialogHeader>
-              <div className="flex flex-col gap-1 overflow-y-auto max-h-[50vh]">
+              <div className="udi:flex udi:flex-col udi:gap-1 udi:overflow-y-auto udi:max-h-[50vh]">
                 {examplePrompts.map((prompt, i) => (
                   <button
                     key={i}
-                    className="text-sm text-left text-foreground hover:bg-muted rounded px-3 py-2 w-full"
+                    className="udi:text-sm udi:text-left udi:text-foreground udi:hover:bg-muted udi:rounded udi:px-3 udi:py-2 udi:w-full"
                     onClick={() => handleExampleClick(prompt)}
                     disabled={isLoading}
                   >
@@ -161,12 +168,12 @@ export function ChatHeaderBar({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="udi:h-7 udi:w-7"
                     onClick={handleSaveConversation}
                   />
                 }
               >
-                <Save className="h-3.5 w-3.5" />
+                <Save className="udi:h-3.5 udi:w-3.5" />
               </TooltipTrigger>
               <TooltipContent>Save conversation</TooltipContent>
             </Tooltip>
@@ -176,12 +183,12 @@ export function ChatHeaderBar({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="udi:h-7 udi:w-7"
                     onClick={handleExportTestCase}
                   />
                 }
               >
-                <FlaskConical className="h-3.5 w-3.5" />
+                <FlaskConical className="udi:h-3.5 udi:w-3.5" />
               </TooltipTrigger>
               <TooltipContent>Export test case</TooltipContent>
             </Tooltip>
@@ -191,12 +198,12 @@ export function ChatHeaderBar({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="udi:h-7 udi:w-7"
                     onClick={handleDownloadDataDomains}
                   />
                 }
               >
-                <Database className="h-3.5 w-3.5" />
+                <Database className="udi:h-3.5 udi:w-3.5" />
               </TooltipTrigger>
               <TooltipContent>Download data domains</TooltipContent>
             </Tooltip>
@@ -206,12 +213,12 @@ export function ChatHeaderBar({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="udi:h-7 udi:w-7"
                     onClick={handleDownloadDataSchema}
                   />
                 }
               >
-                <FileDown className="h-3.5 w-3.5" />
+                <FileDown className="udi:h-3.5 udi:w-3.5" />
               </TooltipTrigger>
               <TooltipContent>Download data schema</TooltipContent>
             </Tooltip>
@@ -221,16 +228,18 @@ export function ChatHeaderBar({
           <Tooltip>
             <TooltipTrigger
               render={
-                <DialogTrigger render={<Button variant="ghost" size="icon" className="h-7 w-7" />}>
-                  <RotateCcw className="h-3.5 w-3.5" />
+                <DialogTrigger
+                  render={<Button variant="ghost" size="icon" className="udi:h-7 udi:w-7" />}
+                >
+                  <RotateCcw className="udi:h-3.5 udi:w-3.5" />
                 </DialogTrigger>
               }
             />
             <TooltipContent>Reset conversation</TooltipContent>
           </Tooltip>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="udi:max-w-sm">
             <DialogHeader>
-              <DialogTitle className="text-sm">Reset conversation?</DialogTitle>
+              <DialogTitle className="udi:text-sm">Reset conversation?</DialogTitle>
               <DialogDescription>
                 This clears the current chat, all open visualizations, brush selections, the
                 closed-viz memory bank, and any active cross-chart filters. This cannot be undone.

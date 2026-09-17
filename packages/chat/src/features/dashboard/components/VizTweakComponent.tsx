@@ -101,15 +101,15 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   if (tweakableParams.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="udi:flex udi:items-center udi:gap-2 udi:flex-wrap">
       {tweakableParams.map((param) => (
         <Select
           key={param.encoding}
           value={param.field}
           onValueChange={(val) => handleFieldChange(param, val)}
         >
-          <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
-            <span className="text-muted-foreground mr-1">{param.encoding}:</span>
+          <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[100px] udi:text-xs">
+            <span className="udi:text-muted-foreground udi:mr-1">{param.encoding}:</span>
             <SelectValue>{fieldLabel(param.field)}</SelectValue>
           </SelectTrigger>
           <SelectContent>

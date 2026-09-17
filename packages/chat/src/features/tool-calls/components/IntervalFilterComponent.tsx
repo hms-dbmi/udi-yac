@@ -240,13 +240,13 @@ export function IntervalFilterComponent({
   const thumbRange = [clampInRange(localRange[0]), clampInRange(localRange[1])];
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5 text-sm">
+    <div className="udi:space-y-2">
+      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
         {tweakable ? (
           <>
-            <span className="text-muted-foreground">Filtering</span>
+            <span className="udi:text-muted-foreground">Filtering</span>
             <Select value={entity} onValueChange={handleEntityChange}>
-              <SelectTrigger className="h-7 w-auto min-w-[80px] text-xs">
+              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -258,7 +258,7 @@ export function IntervalFilterComponent({
               </SelectContent>
             </Select>
             <Select value={field} onValueChange={handleFieldChange}>
-              <SelectTrigger className="h-7 w-auto min-w-[80px] text-xs">
+              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -271,22 +271,27 @@ export function IntervalFilterComponent({
             </Select>
           </>
         ) : (
-          <span className="text-muted-foreground">
+          <span className="udi:text-muted-foreground">
             Filtering {entity} {field}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-1.5 text-sm">
-        <span className="font-semibold">{minText}</span>
-        <span className="text-muted-foreground">to</span>
-        <span className="font-semibold">{maxText}</span>
+      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
+        <span className="udi:font-semibold">{minText}</span>
+        <span className="udi:text-muted-foreground">to</span>
+        <span className="udi:font-semibold">{maxText}</span>
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleReset} />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="udi:h-6 udi:w-6"
+                onClick={handleReset}
+              />
             }
           >
-            <RotateCcw className="h-3 w-3" />
+            <RotateCcw className="udi:h-3 udi:w-3" />
           </TooltipTrigger>
           <TooltipContent>Reset range</TooltipContent>
         </Tooltip>
@@ -301,7 +306,7 @@ export function IntervalFilterComponent({
           onValueCommitted={handleRangeCommit}
         />
       ) : (
-        <span className="text-sm text-destructive">Error: Invalid filter.</span>
+        <span className="udi:text-sm udi:text-destructive">Error: Invalid filter.</span>
       )}
     </div>
   );

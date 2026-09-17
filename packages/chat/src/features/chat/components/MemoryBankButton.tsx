@@ -61,38 +61,46 @@ export function MemoryBankButton() {
         <Tooltip>
           <TooltipTrigger
             render={
-              <DialogTrigger render={<Button variant="ghost" size="icon" className="h-7 w-7" />}>
-                <Archive className="h-3.5 w-3.5" />
+              <DialogTrigger
+                render={<Button variant="ghost" size="icon" className="udi:h-7 udi:w-7" />}
+              >
+                <Archive className="udi:h-3.5 udi:w-3.5" />
               </DialogTrigger>
             }
           />
           <TooltipContent>Memory bank</TooltipContent>
         </Tooltip>
       )}
-      <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+      <DialogContent className="udi:sm:max-w-2xl udi:max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className="text-sm">Memory Bank</DialogTitle>
+          <DialogTitle className="udi:text-sm">Memory Bank</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-3 overflow-y-auto max-h-[50vh] [scrollbar-gutter:stable]">
+        <div className="udi:flex udi:flex-col udi:gap-3 udi:overflow-y-auto udi:max-h-[50vh] udi:[scrollbar-gutter:stable]">
           {entries.map(([key, viz]) => (
-            <div key={key} className="flex flex-col gap-1 rounded border border-border p-2">
-              <div className="flex items-center gap-2">
-                <span className="flex-1 truncate text-sm text-foreground" title={viz.userPrompt}>
+            <div
+              key={key}
+              className="udi:flex udi:flex-col udi:gap-1 udi:rounded udi:border udi:border-border udi:p-2"
+            >
+              <div className="udi:flex udi:items-center udi:gap-2">
+                <span
+                  className="udi:flex-1 udi:truncate udi:text-sm udi:text-foreground"
+                  title={viz.userPrompt}
+                >
                   {resolveVizTitle(viz, titleLabels)}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="shrink-0"
+                  className="udi:shrink-0"
                   onClick={() => handleRestore(key)}
                 >
-                  <RotateCw className="h-3 w-3" />
+                  <RotateCw className="udi:h-3 udi:w-3" />
                   Restore to dashboard
                 </Button>
               </div>
-              <div className="h-48 w-full overflow-hidden">
+              <div className="udi:h-48 udi:w-full udi:overflow-hidden">
                 <UDIVis
-                  className="block h-full w-full"
+                  className="udi:block udi:h-full udi:w-full"
                   spec={applyFieldLabels(viz.interactiveSpec, titleLabels)}
                   sourceResolver={sourceResolver}
                   palette={palette}

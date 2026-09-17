@@ -117,38 +117,38 @@ export function FilterToolbar() {
 
   if (chips.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground px-1">
+      <p className="udi:text-xs udi:text-muted-foreground udi:px-1">
         Ask in the chat or interact with visualizations to add data filters.
       </p>
     );
   }
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="udi:flex udi:items-center udi:gap-1.5 udi:flex-wrap">
       {chips.map((chip) => (
-        <div key={`${chip.id}-${chip.label}`} className="group relative inline-block">
+        <div key={`${chip.id}-${chip.label}`} className="udi:group udi:relative udi:inline-block">
           <Tooltip>
             <TooltipTrigger
               render={
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute -top-1.5 -right-1.5 z-10 h-4 w-4 rounded-full border bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="udi:absolute udi:-top-1.5 udi:-right-1.5 udi:z-10 udi:h-4 udi:w-4 udi:rounded-full udi:border udi:bg-background udi:shadow-sm udi:opacity-0 udi:group-hover:opacity-100 udi:transition-opacity"
                   onClick={() => clearFilter(chip.id)}
                 />
               }
             >
-              <X className="h-2.5 w-2.5" />
+              <X className="udi:h-2.5 udi:w-2.5" />
             </TooltipTrigger>
             <TooltipContent>Clear filter</TooltipContent>
           </Tooltip>
           <Badge
             variant="outline"
-            className="rounded-sm text-xs font-normal gap-1.5 cursor-default"
+            className="udi:rounded-sm udi:text-xs udi:font-normal udi:gap-1.5 udi:cursor-default"
             title={`${chip.dataSourceKey} - ${chip.type}`}
           >
-            <span className="font-medium">{chip.label}</span>
-            <span className="font-mono">{chip.value}</span>
+            <span className="udi:font-medium">{chip.label}</span>
+            <span className="udi:font-mono">{chip.value}</span>
           </Badge>
         </div>
       ))}

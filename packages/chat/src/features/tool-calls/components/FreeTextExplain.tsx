@@ -71,11 +71,11 @@ export function FreeTextExplain({ text }: FreeTextExplainArgs) {
   // segment boundaries.
   if (nodes.every((n) => n.kind === 'markdown')) {
     const md = nodes.map((n) => n.content).join('');
-    return <MarkdownText className="px-2 pb-2">{md}</MarkdownText>;
+    return <MarkdownText className="udi:px-2 udi:pb-2">{md}</MarkdownText>;
   }
 
   return (
-    <div className="px-2 pb-2">
+    <div className="udi:px-2 udi:pb-2">
       {nodes.map((n) => (
         <Fragment key={n.key}>
           {n.kind === 'markdown' ? (

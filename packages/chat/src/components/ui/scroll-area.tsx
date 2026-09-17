@@ -12,15 +12,15 @@ function ScrollArea({ className, children, orientation = 'vertical', ...props }:
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      className={cn('relative', className)}
+      className={cn('udi:relative', className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
         className={cn(
-          'size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1',
-          orientation === 'vertical' && 'overflow-x-hidden!',
-          orientation === 'horizontal' && 'overflow-y-hidden!',
+          'udi:size-full udi:rounded-[inherit] udi:transition-[color,box-shadow] udi:outline-none udi:focus-visible:ring-[3px] udi:focus-visible:ring-ring/50 udi:focus-visible:outline-1',
+          orientation === 'vertical' && 'udi:overflow-x-hidden!',
+          orientation === 'horizontal' && 'udi:overflow-y-hidden!',
         )}
       >
         {children}
@@ -47,14 +47,14 @@ function ScrollBar({
       data-orientation={orientation}
       orientation={orientation}
       className={cn(
-        'flex touch-none p-px transition-colors select-none data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent',
+        'udi:flex udi:touch-none udi:p-px udi:transition-colors udi:select-none udi:data-horizontal:h-2.5 udi:data-horizontal:flex-col udi:data-horizontal:border-t udi:data-horizontal:border-t-transparent udi:data-vertical:h-full udi:data-vertical:w-2.5 udi:data-vertical:border-l udi:data-vertical:border-l-transparent',
         className,
       )}
       {...props}
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
+        className="udi:relative udi:flex-1 udi:rounded-full udi:bg-border"
       />
     </ScrollAreaPrimitive.Scrollbar>
   );
