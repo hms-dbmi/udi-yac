@@ -611,6 +611,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -651,6 +658,13 @@
         "field": {
           "description": "The field to map to the encoding.",
           "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
         },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
@@ -693,6 +707,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -733,6 +754,13 @@
         "field": {
           "description": "The field to map to the encoding.",
           "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
         },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
@@ -775,6 +803,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -815,6 +850,13 @@
         "field": {
           "description": "The field to map to the encoding.",
           "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
         },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
@@ -857,6 +899,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -897,6 +946,13 @@
         "field": {
           "description": "The field to map to the encoding.",
           "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
         },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
@@ -2226,6 +2282,13 @@
         "field": {
           "description": "The field to map to the encoding.",
           "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
         },
         "mark": {
           "$ref": "#/definitions/RowMarkOptions",

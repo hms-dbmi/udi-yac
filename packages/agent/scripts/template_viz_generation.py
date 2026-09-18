@@ -157,7 +157,22 @@ def add_row(
     preview_bindings: dict | None = None,
     name_hint: str = "",
     shared_entities: list[str] | None = None,
+    title_template: str = "",
+    summary_template: str = "",
 ):
+    """Append one template row.
+
+    `title_template` and `summary_template` are the user-facing text, written in
+    the same <placeholder> vocabulary as the spec. generate_tools rewrites each
+    placeholder into a token the frontend resolves against the *live* spec, so
+    both survive a field swap in the tweak panel.
+
+    The two differ in how a placeholder bound to an aggregated encoding renders:
+    a title names what is plotted, so <F1> becomes "Average Age"; a summary
+    explains it in prose and spells the operation out itself, so <F1> becomes
+    "Age". Write summaries accordingly ("Displays the mean <F1> ..."), and never
+    repeat the operator in a title.
+    """
     spec_key_count = get_total_key_count(spec.to_dict())
     if spec_key_count <= 12:
         complexity = "simple"
@@ -211,6 +226,13 @@ def add_row(
         # same subject-level table (pcx's Patient holds both `age_at_diagnosis`
         # and `vital_status`) is otherwise unchartable.
         "shared_entities": shared_entities or [],
+        # User-facing text, in the same <placeholder> vocabulary as the spec.
+        # `title_template` names the card; `summary_template` says in one
+        # sentence what the chart shows, in place of listing every transform.
+        # generate_tools rewrites the placeholders that map to an encoding so
+        # the frontend can keep both live as fields are swapped.
+        "title_template": title_template,
+        "summary_template": summary_template,
     }
     return df
 
@@ -1552,6 +1574,8 @@ def generate():
             "preview_bindings",
             "name_hint",
             "shared_entities",
+            "title_template",
+            "summary_template",
         ]
     )
 
@@ -1581,6 +1605,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Counts entities grouped by a nominal field, displayed as a vertical bar chart.",
+        title_template="Bar chart of the number of <E> by <F>",
+        summary_template="Displays the number of <E> in each <F> category as vertical bars.",
         design_considerations="Vertical orientation chosen because category count is small (<=4), keeping x-axis labels readable.",
         tasks="Compare counts across categories; identify the most or least common category; assess the range of counts.",
     )
@@ -1607,6 +1633,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Counts entities grouped by a nominal field, displayed as a horizontal bar chart.",
+        title_template="Bar chart of the number of <E> by <F>",
+        summary_template="Displays the number of <E> in each <F> category as horizontal bars.",
         design_considerations="Horizontal orientation chosen because category count is high (>4), allowing longer labels on the y-axis.",
         tasks="Compare counts across categories; identify the most or least common category; assess the range of counts.",
     )
@@ -1637,6 +1665,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Joins two entities and counts records grouped by a field from the related entity, displayed as a vertical bar chart.",
+        title_template="Bar chart of the number of <E1> by <E2.F>",
+        summary_template="Displays the number of <E1> in each <E2.F> category as vertical bars.",
         design_considerations="Cross-entity join groups by a field not native to the counted entity. Vertical orientation for small category counts (<=4).",
         tasks="Compare counts across categories from a related entity; discover cross-entity frequency patterns.",
     )
@@ -1667,6 +1697,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Joins two entities and counts records grouped by a field from the related entity, displayed as a horizontal bar chart.",
+        title_template="Bar chart of the number of <E1> by <E2.F>",
+        summary_template="Displays the number of <E1> in each <E2.F> category as horizontal bars.",
         design_considerations="Cross-entity join with horizontal orientation for higher category counts (>4).",
         tasks="Compare counts across categories from a related entity; discover cross-entity frequency patterns.",
     )
@@ -1689,6 +1721,8 @@ def generate():
         chart_type=ChartType.BARCHART,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
         description="Shows the pre-aggregated cube measure for each category of a nominal dimension as a bar chart.",
+        title_template="Bar chart of <M> by <D:n>",
+        summary_template="Displays <M> for each <D:n> category as bars.",
         design_considerations=_CUBE_MARGINAL_NOTE,
         tasks="Compare the measure across categories; identify the most or least common category.",
         shape="data_cube",
@@ -1709,6 +1743,8 @@ def generate():
         chart_type=ChartType.BARCHART,
         task_types=[TaskType.CHARACTERIZE_DISTRIBUTION, TaskType.DETERMINE_RANGE],
         description="Shows the pre-aggregated cube measure across the values of a quantitative dimension as a bar chart.",
+        title_template="Bar chart of <M> by <D:q>",
+        summary_template="Displays <M> across the values of <D:q> as bars.",
         design_considerations=_CUBE_MARGINAL_NOTE,
         tasks="Assess how the measure is distributed across a numeric dimension.",
         shape="data_cube",
@@ -1745,6 +1781,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Joins two entities and produces a vertical stacked bar chart of counts grouped by two nominal fields.",
+        title_template="Stacked bar chart of the number of <E1> by <E1.F1> and <E2.F2>",
+        summary_template="Displays the number of <E1> in each <E1.F1> category as vertical bars, split by <E2.F2>.",
         design_considerations="Stacked bars show part-to-whole composition within each category. Vertical layout for small category counts (<=4). Color encodes the secondary grouping field from the related entity. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare group compositions across categories; identify dominant sub-groups within each bar.",
     )
@@ -1776,6 +1814,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Joins two entities and produces a horizontal stacked bar chart of counts grouped by two nominal fields.",
+        title_template="Stacked bar chart of the number of <E1> by <E2.F2> and <E1.F1>",
+        summary_template="Displays the number of <E1> in each <E2.F2> category as horizontal bars, split by <E1.F1>.",
         design_considerations="Horizontal orientation for higher category counts (>4). Color encodes the primary grouping field. Cross-entity join required. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare group compositions across categories; identify dominant sub-groups within each bar.",
     )
@@ -1801,6 +1841,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Counts entities grouped by two nominal fields, displayed as a vertical stacked bar chart.",
+        title_template="Stacked bar chart of the number of <E> by <F2> and <F1>",
+        summary_template="Displays the number of <E> in each <F2> category as vertical bars, split by <F1>.",
         design_considerations="Vertical stacked layout for small category counts (<=4). Color encodes the sub-group field; x-axis shows the primary grouping. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare group compositions across categories; identify dominant sub-groups within each bar.",
     )
@@ -1827,6 +1869,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Counts entities grouped by two nominal fields, displayed as a horizontal stacked bar chart.",
+        title_template="Stacked bar chart of the number of <E> by <F2> and <F1>",
+        summary_template="Displays the number of <E> in each <F2> category as horizontal bars, split by <F1>.",
         design_considerations="Horizontal stacked layout for higher category counts (>4). Color encodes the sub-group; stacking shows part-to-whole within each bar. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare group compositions across categories; identify dominant sub-groups within each bar.",
     )
@@ -1850,6 +1894,8 @@ def generate():
         chart_type=ChartType.STACKED_BAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the pre-aggregated cube measure by two nominal dimensions as a vertical stacked bar chart.",
+        title_template="Stacked bar chart of <M> by <D1:n> and <D2:n>",
+        summary_template="Displays <M> for each <D1:n> category as bars, split by <D2:n>.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " Color encodes the sub-group; prefer the dimension with "
             "fewer categories for color."
@@ -1884,6 +1930,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) vertical bar chart.",
+        title_template="Grouped bar chart of the number of <E> by <F2> and <F1>",
+        summary_template="Displays the number of <E> in each <F2> category as vertical bars, placed side by side for each <F1>.",
         design_considerations="Uses xOffset for side-by-side grouping, allowing direct comparison between sub-groups. Suitable for small category counts (<=4).",
         tasks="Directly compare sub-group counts within and across categories.",
     )
@@ -1910,6 +1958,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Counts entities grouped by two nominal fields, displayed as a grouped (side-by-side) horizontal bar chart.",
+        title_template="Grouped bar chart of the number of <E> by <F2> and <F1>",
+        summary_template="Displays the number of <E> in each <F2> category as horizontal bars, placed side by side for each <F1>.",
         design_considerations="Uses yOffset for side-by-side grouping in horizontal orientation. Chosen when at least one field has more than 4 categories.",
         tasks="Directly compare sub-group counts within and across categories.",
     )
@@ -1931,6 +1981,8 @@ def generate():
         chart_type=ChartType.GROUPED_BAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) bar chart.",
+        title_template="Grouped bar chart of <M> by <D1:n> and <D2:n>",
+        summary_template="Displays <M> for each <D1:n> category as bars, placed side by side for each <D2:n>.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " xOffset gives side-by-side grouping for direct comparison "
             "of the sub-group within each category."
@@ -1980,6 +2032,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Shows the relative frequency (proportion) of one nominal field within each category of another, as a vertical normalized bar chart.",
+        title_template="Normalized bar chart of <F1> within <F2>",
+        summary_template="Displays what share of the <E> in each <F2> category falls into each <F1> value, as vertical bars scaled to 100%.",
         design_considerations="Normalization computes proportions per group, enabling fair comparison across groups of different sizes. Vertical layout for small category counts (<=4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare relative proportions across categories; identify which sub-groups dominate in each group.",
     )
@@ -2021,6 +2075,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Shows the relative frequency (proportion) of one nominal field within each category of another, as a horizontal normalized bar chart.",
+        title_template="Normalized bar chart of <F1> within <F2>",
+        summary_template="Displays what share of the <E> in each <F2> category falls into each <F1> value, as horizontal bars scaled to 100%.",
         design_considerations="Normalization for proportional comparison. Horizontal layout for higher category counts (>4). Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare relative proportions across categories; identify which sub-groups dominate in each group.",
     )
@@ -2053,6 +2109,8 @@ def generate():
         chart_type=ChartType.NORMALIZED_BAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the relative proportion of one nominal dimension within each category of another as a normalized stacked bar chart.",
+        title_template="Normalized bar chart of <D2:n> within <D1:n>",
+        summary_template="Displays what share of <M> in each <D1:n> category falls into each <D2:n> value, as bars scaled to 100%.",
         design_considerations=(
             "First filters to the two-dimension marginal (expanded from the schema), then sums "
             "the measure per primary-dimension group and divides each cell by its group total to "
@@ -2066,12 +2124,15 @@ def generate():
     # Aggregate bar charts — min/max/mean/median/sum
     # ---------------------------------------------------------------
 
-    for name, op in [
-        ("minimum", Op.min),
-        ("maximum", Op.max),
-        ("average", Op.mean),
-        ("median", Op.median),
-        ("total", Op.sum),
+    # `phrase` is the plain-language reading of the aggregate for
+    # summary_template — "the smallest <F1> among the <E>" says what
+    # "minimum" does without naming the operator.
+    for name, op, phrase in [
+        ("minimum", Op.min, "the smallest <F1> among the <E>"),
+        ("maximum", Op.max, "the largest <F1> among the <E>"),
+        ("average", Op.mean, "the mean <F1> across the <E>"),
+        ("median", Op.median, "the middle <F1> value among the <E>"),
+        ("total", Op.sum, "the sum of <F1> across the <E>"),
     ]:
         named_aggregate = f"{name} <F1>"
 
@@ -2095,6 +2156,8 @@ def generate():
                 TaskType.COMPUTE_DERIVED_VALUE,
             ],
             description=f"Computes the {name} of a quantitative field for each category, displayed as a horizontal bar chart.",
+            title_template="Bar chart of <F1> by <F2>",
+            summary_template=f"Displays {phrase} in each <F2> category as horizontal bars.",
             design_considerations=f"Horizontal orientation for many categories (>4). Bar length encodes the {name} aggregate value for easy comparison.",
             tasks=f"Compare the {name} value across categories; identify which group has the highest or lowest {name}.",
         )
@@ -2119,6 +2182,8 @@ def generate():
                 TaskType.COMPUTE_DERIVED_VALUE,
             ],
             description=f"Computes the {name} of a quantitative field for each category, displayed as a vertical bar chart.",
+            title_template="Bar chart of <F1> by <F2>",
+            summary_template=f"Displays {phrase} in each <F2> category as vertical bars.",
             design_considerations=f"Vertical orientation for few categories (<=4). Bar height encodes the {name} aggregate value.",
             tasks=f"Compare the {name} value across categories; identify which group has the highest or lowest {name}.",
         )
@@ -2150,6 +2215,8 @@ def generate():
             TaskType.FIND_EXTREMUM,
         ],
         description="Plots two quantitative fields as a scatterplot to explore their relationship.",
+        title_template="Scatterplot of <F1> and <F2>",
+        summary_template="Displays a point for each <E:one>, positioned by <F1> and <F2>.",
         design_considerations="Point marks on two quantitative axes reveal correlations, clusters, and outliers. Data size capped at 100k rows for rendering performance.",
         tasks="Assess correlation between two variables; identify clusters, outliers, extremes, and the range of both variables.",
     )
@@ -2180,6 +2247,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Creates a vertical stacked bar chart of counts grouped by two nominal fields.",
+        title_template="Stacked bar chart of the number of <E> by <F1> and <F2>",
+        summary_template="Displays the number of <E> in each <F1> category as vertical bars, split by <F2>.",
         design_considerations="Vertical stacked layout for small primary category counts (<=4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare group compositions across categories; assess the overall range of counts.",
     )
@@ -2206,6 +2275,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Creates a horizontal stacked bar chart of counts grouped by two nominal fields.",
+        title_template="Stacked bar chart of the number of <E> by <F1> and <F2>",
+        summary_template="Displays the number of <E> in each <F1> category as horizontal bars, split by <F2>.",
         design_considerations="Horizontal stacked layout for higher primary category counts (>4). Color encodes the secondary field. Color is preferably mapped to the variable with fewer unique values for better discriminability.",
         tasks="Compare group compositions across categories; assess the overall range of counts.",
     )
@@ -2237,6 +2308,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Creates a pie chart showing the proportional distribution of a nominal field.",
+        title_template="Pie chart of the number of <E> by <F>",
+        summary_template="Displays the share of <E> that falls into each <F> category as slices of a circle.",
         design_considerations="Arc marks with theta encoding map proportion to angle. Suitable for fields with few categories (<8) where part-to-whole perception is the goal.",
         tasks="Assess part-to-whole proportions; identify the dominant category.",
     )
@@ -2266,6 +2339,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Creates a donut chart showing the proportional distribution of a nominal field.",
+        title_template="Donut chart of the number of <E> by <F>",
+        summary_template="Displays the share of <E> that falls into each <F> category as segments of a ring.",
         design_considerations="Donut variant with inner/outer radius creates a hollow center that can improve label readability. Suitable for few categories (<8).",
         tasks="Assess part-to-whole proportions; identify the dominant category.",
     )
@@ -2285,6 +2360,8 @@ def generate():
         chart_type=ChartType.CIRCULAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
         description="Shows the proportional cube measure for each category of a nominal dimension as a pie chart.",
+        title_template="Pie chart of <M> by <D:n>",
+        summary_template="Displays the share of <M> that falls into each <D:n> category as slices of a circle.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to angle and the renderer normalizes each "
             "slice against the total. Best for a small number of categories."
@@ -2310,6 +2387,8 @@ def generate():
         chart_type=ChartType.CIRCULAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
         description="Shows the proportional cube measure for each category of a nominal dimension as a donut chart.",
+        title_template="Donut chart of <M> by <D:n>",
+        summary_template="Displays the share of <M> that falls into each <D:n> category as segments of a ring.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to angle and the renderer normalizes each "
             "slice against the total. Best for a small number of categories."
@@ -2334,6 +2413,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Counts the total number of records in an entity and displays the result as a single-row table.",
+        title_template="Table of the number of <E>",
+        summary_template="Displays the total number of <E> as a single figure.",
         design_considerations="Simple rollup with no visual encoding beyond the count value. Useful as a quick data quality or size check.",
         tasks="Retrieve the total record count for an entity.",
     )
@@ -2354,6 +2435,8 @@ def generate():
             TaskType.FIND_EXTREMUM,
         ],
         description="Displays the raw data for an entity as a table.",
+        title_template="Table of <E>",
+        summary_template="Lists each <E:one> record with all of its fields.",
         design_considerations="No aggregation or transformation applied; shows the underlying data as-is for exploration.",
         tasks="Explore raw data; retrieve specific values; understand field values and ranges; identify anomalies and extremes.",
     )
@@ -2383,6 +2466,8 @@ def generate():
             TaskType.FIND_EXTREMUM,
         ],
         description="Joins two related entities and displays the combined data as a table.",
+        title_template="Table of <E1> and <E2>",
+        summary_template="Lists each <E1:one> record alongside the related <E2:one> records it joins to.",
         design_considerations="Cross-entity join enriches the view by combining fields from two related entities. Requires a valid foreign-key relationship.",
         tasks="Explore combined data from two related entities; retrieve specific values; identify anomalies and extremes.",
     )
@@ -2431,6 +2516,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Finds which related entity record has the highest count of associated records, displayed as a ranked table with bar indicators.",
+        title_template="Table of <E2> by the number of <E1>",
+        summary_template="Ranks each <E2:one> by how many <E1:one> records it has, with a bar in each row showing the count.",
         design_considerations="Groups by foreign key, counts, ranks, and highlights the top record with color encoding. Bar marks on the count column provide visual comparison.",
         tasks="Identify the record with the most associated entities; compare counts across records.",
     )
@@ -2473,6 +2560,8 @@ def generate():
             TaskType.RETRIEVE_VALUE,
         ],
         description="Finds the record with the largest value in a quantitative field, displayed as a ranked table with bar indicators.",
+        title_template="Table of <E> by <F>",
+        summary_template="Ranks <E> from the largest <F> down, with a bar in each row showing the value.",
         design_considerations="Sorts descending by the target field, derives a rank, and highlights the top record with color. Bar marks provide visual magnitude comparison.",
         tasks="Identify the record with the largest value; compare values across records.",
     )
@@ -2517,6 +2606,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Joins two entities, computes the maximum of a quantitative field per group, and ranks the results in a table with bar indicators.",
+        title_template="Table of <E2> by largest <E1.F>",
+        summary_template="Ranks each <E2:one> by the largest <E1.F> among its <E1:one> records, with a bar in each row showing the value.",
         design_considerations="Cross-entity join followed by group-level max aggregation. Highlights the top record with color encoding.",
         tasks="Identify which related record has the largest aggregated value; compare across groups.",
     )
@@ -2559,6 +2650,8 @@ def generate():
             TaskType.RETRIEVE_VALUE,
         ],
         description="Finds the record with the smallest value in a quantitative field, displayed as a ranked table with conditional formatting.",
+        title_template="Table of <E> by <F>",
+        summary_template="Ranks <E> from the smallest <F> up, highlighting the smallest value.",
         design_considerations="Sorts ascending by the target field, derives a rank, and highlights the top record with background color. Uses rect mark for row-level highlighting.",
         tasks="Identify the record with the smallest value; compare values across records.",
     )
@@ -2602,6 +2695,8 @@ def generate():
             TaskType.RETRIEVE_VALUE,
         ],
         description="Joins two entities, computes the minimum of a quantitative field per group, and ranks the results in a table with conditional formatting.",
+        title_template="Table of <E2> by smallest <E1.F>",
+        summary_template="Ranks each <E2:one> by the smallest <E1.F> among its <E1:one> records, highlighting the smallest value.",
         design_considerations="Cross-entity join followed by group-level min aggregation. Highlights the top record with background color via rect mark.",
         tasks="Identify which related record has the smallest aggregated value; compare across groups.",
     )
@@ -2636,6 +2731,8 @@ def generate():
             TaskType.SORT,
         ],
         description="Sorts entity records by a quantitative field and displays the result as an ordered table with in-cell bar marks.",
+        title_template="Table of <E> sorted by <F>",
+        summary_template="Lists <E> ordered by <F>, with a bar in each row showing the value.",
         design_considerations="Ordered by the quantitative field with nulls filtered out. In-cell bar marks provide visual comparison of magnitude alongside the text values.",
         tasks="View records in sorted order; compare relative magnitudes.",
     )
@@ -2660,6 +2757,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Computes the minimum and maximum of a quantitative field and displays them as a single-row table.",
+        title_template="Table of the <F> range",
+        summary_template="Displays the smallest and largest <F> across all <E> as a single row.",
         design_considerations="Simple rollup of min and max. Filters out nulls before aggregation for accuracy.",
         tasks="Determine the range of a quantitative field.",
     )
@@ -2700,6 +2799,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks.",
+        title_template="Table of the number of <E> by <F>",
+        summary_template="Lists every distinct <F> value with how many <E> have it, with a bar in each row showing the count.",
         design_considerations="Groups by the nominal field and counts occurrences, sorted descending so the bars are comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows relative frequency but not the value.",
         tasks="Determine the range (distinct values) of a nominal field; compare category frequencies.",
     )
@@ -2748,6 +2849,8 @@ def generate():
             TaskType.DETERMINE_RANGE,
         ],
         description="Computes the min and max of a quantitative field for each category of a nominal field, displayed as a table with range bar marks.",
+        title_template="Table of the <F1> range by <F2>",
+        summary_template="Lists each <F2> category with the smallest and largest <F1> among its <E>, drawn as a range bar.",
         design_considerations="Groups by nominal field, computes min/max and derived range, then orders by range descending. Uses x/x2 encoding to show the span between min and max values.",
         tasks="Compare the spread of a quantitative field across categories; identify which group has the widest or narrowest range.",
     )
@@ -2797,6 +2900,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Finds the most frequent value of a nominal field, displayed as a ranked table with bar marks and conditional formatting.",
+        title_template="Table of the number of <E> by <F>",
+        summary_template="Ranks every <F> value by how many <E> have it, highlighting the most frequent.",
         design_considerations="Groups by nominal field, counts, ranks, and highlights the top value. Combines bar marks for count comparison and background color for emphasis.",
         tasks="Identify the most frequent category; compare frequencies across all categories.",
     )
@@ -2815,6 +2920,8 @@ def generate():
         chart_type=ChartType.TABLE,
         task_types=[TaskType.RETRIEVE_VALUE, TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the grand-total cube measure as a single-row table.",
+        title_template="Table of <M>",
+        summary_template="Displays the overall <M> as a single figure.",
         design_considerations=(
             "Reads the grand-total row directly by filtering to the marginal where every "
             "dimension is empty; no aggregation is performed."
@@ -2852,6 +2959,8 @@ def generate():
         chart_type=ChartType.TABLE,
         task_types=[TaskType.DETERMINE_RANGE, TaskType.SORT, TaskType.RETRIEVE_VALUE],
         description="Lists each category of a nominal dimension with its pre-aggregated measure as a sorted table with in-cell bars.",
+        title_template="Table of <M> by <D:n>",
+        summary_template="Lists each <D:n> category with its <M>, with a bar in each row showing the value.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " Ordered by the measure descending, with the measure drawn "
             "as both an in-cell bar and a number so the value is readable and not just its length."
@@ -2898,6 +3007,8 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the cumulative distribution function (CDF) of a quantitative field as a line chart.",
+        title_template="Line chart of the <F> distribution",
+        summary_template="Displays what share of <E> fall at or below each <F> value, as a rising line.",
         design_considerations="Sorts by value, computes rolling percentile, then sorts by percentile so the line is a monotonic step. The CDF reveals the full distribution shape including median, quartiles, and tails.",
         tasks="Characterize the distribution of a variable; identify median, quartiles, and concentration of values.",
     )
@@ -2939,6 +3050,8 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the cumulative distribution of a quantitative field for each category of a nominal field, with separate lines per group.",
+        title_template="Line chart of the <F1> distribution by <F2>",
+        summary_template="Displays what share of <E> fall at or below each <F1> value, as one line per <F2> category.",
         design_considerations="Groups by the nominal field, sorts within groups, computes the per-group rolling percentile, then sorts by percentile so each line is a monotonic step. Color encodes group identity. Limited to fewer than 5 groups for readability.",
         tasks="Compare distributions across groups; identify which groups have higher or lower concentrations of values.",
     )
@@ -2962,6 +3075,8 @@ def generate():
         chart_type=ChartType.LINE,
         task_types=[TaskType.CHARACTERIZE_DISTRIBUTION, TaskType.DETERMINE_RANGE],
         description="Shows the pre-aggregated cube measure over an ordered dimension (e.g. time) as a line chart.",
+        title_template="Line chart of <M> over <D:o>",
+        summary_template="Displays how <M> changes across <D:o>, as a line.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The axis is ordered ascending; a temporal dimension is "
             "encoded as an ordered (ordinal) axis."
@@ -2988,6 +3103,11 @@ def generate():
         spec=_survival_chart(),
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(None)],
+        title_template="Survival curve for <E1>",
+        summary_template=(
+            "Plots the share of subjects in <E1> still event-free over time, from the start "
+            "event to the end event."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3055,6 +3175,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.AT_START)],
         name_hint="survival_baseline",
+        title_template="Survival curves for <E1> by <E1.F4>",
+        summary_template=(
+            "Plots one curve per <E1.F4> value, read from each subject's start event, so every subject falls in exactly one group."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3133,6 +3257,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.AT_START)],
         name_hint="survival_baseline_multivalue",
+        title_template="Survival curves for <E1> by each <E1.F4> value",
+        summary_template=(
+            "Expands the <E1.F4> list on each subject's start event, so a subject counts toward every value it listed then and the curves overlap."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3205,6 +3333,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.EVER)],
         name_hint="survival_ever",
+        title_template="Survival curves for <E1> by every <E1.F4> ever recorded",
+        summary_template=(
+            "A subject joins every group whose <E1.F4> value appears anywhere on its timeline, so the curves overlap and do not add up to the whole cohort."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3280,6 +3412,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.EVER)],
         name_hint="survival_ever_multivalue",
+        title_template="Survival curves for <E1> by every <E1.F4> value ever listed",
+        summary_template=(
+            "Expands the delimited <E1.F4> column on every event, so a subject joins each value listed at any point and the curves overlap."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3352,6 +3488,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related",
+        title_template="Survival curves for <E1> by <E2.F>",
+        summary_template=(
+            "Joins <E1> to <E2> on the subject id and plots one curve per <E2.F> value; a subject with several <E2> records joins a group for each."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3440,6 +3580,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related_numeric",
+        title_template="Survival curves for <E1> by <E2.F>",
+        summary_template=(
+            "Joins <E1> to <E2> on the subject id and cuts <E2.F> into buckets at the supplied thresholds, one curve per bucket."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3528,6 +3672,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related_multivalue",
+        title_template="Survival curves for <E1> by each <E2.F> value",
+        summary_template=(
+            "Joins <E1> to <E2> on the subject id, expands the delimited <E2.F> column, and plots one curve per value; the curves overlap."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3646,6 +3794,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.ANY_OF)],
         name_hint="survival_ever_matching",
+        title_template="Survival curves for <E1> by whether <E2.F> was ever one of the named values",
+        summary_template=(
+            "Splits subjects by whether <E2> ever records one of the named <E2.F> values for them, against everyone else."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3731,6 +3883,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.PRESENCE)],
         name_hint="survival_presence",
+        title_template="Survival curves for <E1> by presence in <E2>",
+        summary_template=(
+            "Splits subjects by whether <E2> holds a row for them at all, giving two curves that together cover the whole cohort."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3809,6 +3965,10 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.PRESENCE_2X2)],
         name_hint="survival_presence_2x2",
+        title_template="Survival curves for <E1> by presence in <E2> and <E3>",
+        summary_template=(
+            "Splits subjects four ways — <E2> only, <E3> only, both, neither — by whether each table holds a row for them."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3895,6 +4055,10 @@ def generate():
         spec=_cube_survival_chart(),
         chart_type=ChartType.LINE,
         name_hint="survival_cube",
+        title_template="Survival curve over <D1>",
+        summary_template=(
+            "Plots the share of subjects still event-free at each <D1> value, counted from the cube's measure; censored time points carry a tick."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -3964,6 +4128,10 @@ def generate():
         spec=_cube_survival_chart(stratified=True),
         chart_type=ChartType.LINE,
         name_hint="survival_cube_stratified",
+        title_template="Survival curves over <D1> by <D3>",
+        summary_template=(
+            "Plots one curve per <D3> value, showing the share still event-free at each <D1>; each subject is counted once within its own stratum."
+        ),
         task_types=[
             TaskType.CHARACTERIZE_DISTRIBUTION,
             TaskType.COMPUTE_DERIVED_VALUE,
@@ -4057,6 +4225,8 @@ def generate():
             TaskType.CORRELATE,
         ],
         description="Displays the count of entities for each combination of two nominal fields as a heatmap with labeled cells.",
+        title_template="Heatmap of the number of <E> by <F1> and <F2>",
+        summary_template="Displays the number of <E> for each pairing of <F1> and <F2>, as a grid of shaded, labelled cells.",
         design_considerations="Rect marks with quantitative color encoding show density. Overlaid text marks display exact counts. Text color adapts based on cell intensity for readability. The field with more unique values is preferably placed on the y-axis, where longer labels remain readable.",
         tasks="Identify clusters or patterns in the co-occurrence of two fields; compare counts across combinations; find correlations.",
     )
@@ -4086,6 +4256,8 @@ def generate():
                 TaskType.CORRELATE,
             ],
             description=f"Displays the {name} of a quantitative field for each combination of two nominal fields as a heatmap.",
+            title_template="Heatmap of <F1> by <F2> and <F3>",
+            summary_template=f"Displays the mean <F1> for each pairing of <F2> and <F3>, as a grid of shaded cells.",
             design_considerations=f"Uses three fields: a quantitative measure aggregated by {name}, and two nominal axes. Color encodes the aggregate value. The field with more unique values is preferably placed on the y-axis for better label readability.",
             tasks=f"Identify patterns in the {name} value across two categorical dimensions; find combinations with extreme values.",
         )
@@ -4123,6 +4295,8 @@ def generate():
         chart_type=ChartType.HEATMAP,
         task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
         description="Shows the pre-aggregated cube measure for each combination of two nominal dimensions as a labeled heatmap.",
+        title_template="Heatmap of <M> by <D1:n> and <D2:n>",
+        summary_template="Displays <M> for each pairing of <D1:n> and <D2:n>, as a grid of shaded, labelled cells.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to cell color with overlaid contrast-aware "
             "value labels. Prefer the dimension with more categories on the y-axis."
@@ -4153,6 +4327,8 @@ def generate():
             TaskType.CLUSTER,
         ],
         description="Plots two quantitative fields as a scatterplot with points colored by a nominal field to reveal group-level clusters.",
+        title_template="Scatterplot of <F1> and <F2> by <F3>",
+        summary_template="Displays a point for each <E:one>, positioned by <F1> and <F2> and coloured by <F3>.",
         design_considerations="Adds color encoding to a standard scatterplot to separate groups visually. Limited to fewer than 8 color categories for perceptual clarity.",
         tasks="Identify clusters that separate by group; assess whether the relationship between two quantitative fields differs across groups.",
     )
@@ -4184,6 +4360,8 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the distribution of a quantitative field as a histogram with automatically computed bins.",
+        title_template="Histogram of <F>",
+        summary_template="Displays how many <E> fall into each range of <F>, as adjacent bars.",
         design_considerations="Uses binby to create equal-width bins. Rect marks span from bin start to bin end on x, with count on y.",
         tasks="Characterize the shape of a distribution; identify modes, skewness, and gaps.",
     )
@@ -4214,6 +4392,8 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the distribution of a quantitative field as a smooth density curve (KDE) rendered as an area chart.",
+        title_template="Density plot of <F>",
+        summary_template="Displays where <E> concentrate across <F>, as a smooth curve.",
         design_considerations="Kernel density estimation produces a smooth curve. Area mark fills below the density line. Used for moderate cardinality (50-250) where a smooth estimate is more informative than binning.",
         tasks="Characterize the shape of a distribution; identify modes and overall density patterns.",
     )
@@ -4239,6 +4419,8 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Shows the distribution of a quantitative field as individual points along a single axis.",
+        title_template="Dot plot of <F>",
+        summary_template="Displays a point for each <E:one> along a single <F> axis.",
         design_considerations="Point marks on a single quantitative x-axis. Best for small datasets (50 or fewer values) where individual observations are meaningful and overplotting is minimal.",
         tasks="Characterize the distribution; identify individual values, clusters, and outliers.",
     )
@@ -4273,6 +4455,8 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Compares the distribution of a quantitative field across categories using overlapping density curves (KDE) with area and line marks.",
+        title_template="Density plot of <F1> by <F2>",
+        summary_template="Displays where <E> concentrate across <F1>, as one overlapping curve per <F2> category.",
         design_considerations="Per-group KDE with semi-transparent area fills and line outlines. Color encodes group identity. Limited to fewer than 4 groups to avoid excessive overlap. Opacity set to 0.25 for layering.",
         tasks="Compare distribution shapes across groups; identify shifts in central tendency or spread.",
     )
@@ -4296,6 +4480,8 @@ def generate():
             TaskType.CHARACTERIZE_DISTRIBUTION,
         ],
         description="Compares the distribution of a quantitative field across categories using dot strips, with one row per category.",
+        title_template="Dot plot of <F1> by <F2>",
+        summary_template="Displays a point for each <E:one> along <F1>, with one row per <F2> category.",
         design_considerations="Points plotted on a quantitative x-axis with nominal y-axis for group separation. Color reinforces group identity. Best for small datasets (50 or fewer values per group).",
         tasks="Compare distributions across groups; identify clusters and outliers within each group.",
     )
@@ -4348,6 +4534,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Analyzes data completeness by counting and computing the percentage of records with non-null values in a specified field.",
+        title_template="Table of <F> completeness",
+        summary_template="Displays how many <E> have a value for <F>, and what percentage of them that is.",
         design_considerations="Derives total count before filtering, then computes valid count and percentage. Percentage bar with 50% reference line provides visual context for data completeness.",
         tasks="Assess data completeness for a field; determine how many records have valid values and what proportion.",
     )
@@ -4403,6 +4591,8 @@ def generate():
             TaskType.COMPUTE_DERIVED_VALUE,
         ],
         description="Analyzes data quality by counting and computing the percentage of records with null values in a specified field.",
+        title_template="Table of missing <F> values",
+        summary_template="Displays how many <E> are missing <F>, and what percentage of them that is.",
         design_considerations="Derives null count as total minus valid count. Percentage bar shows the null proportion with a 50% reference line.",
         tasks="Assess data quality; determine how many records are missing a value and what proportion.",
     )

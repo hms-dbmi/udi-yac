@@ -7,14 +7,16 @@ reference semantics. Parity between the two is enforced by tests/goldens.
 """
 
 from .engine import QueryEngine
-from .connectors import DuckDBConnector, StarRocksConnector
-from .errors import UnsupportedQueryError
+from .connectors import DuckDBConnector, StarRocksConnector, use_db_token
+from .errors import DatabaseAuthError, UnsupportedQueryError
 from .introspect import MetadataCache, introspect
 
 __all__ = [
     "QueryEngine",
     "DuckDBConnector",
     "StarRocksConnector",
+    "use_db_token",
+    "DatabaseAuthError",
     "UnsupportedQueryError",
     "MetadataCache",
     "introspect",

@@ -34,6 +34,8 @@ export function PointFilterComponent({
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidPointFilter = useDataPackage((s) => s.isValidPointFilter);
+  const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
+  const getValueLabel = useDataPackage((s) => s.getValueLabel);
   const setDataSelection = useDataFilters((s) => s.setDataSelection);
   const trackEvent = useTracker();
 
@@ -100,22 +102,33 @@ export function PointFilterComponent({
     });
   };
 
+  // Base UI's Select fires `onValueChange` on every item press, including a
+  // press on the already-selected item — a common way to dismiss the menu.
+  // Both handlers below clear the checked values, so an unguarded re-commit
+  // would wipe the selection just from opening and closing the menu. Bail out
+  // when the value hasn't actually changed.
   const handleEntityChange = (val: string | null) => {
-    if (!val) return;
+    if (!val || val === entity) return;
+    // The field belongs to the entity being committed: keep the current one
+    // when the new entity has it, otherwise fall back to that entity's first
+    // categorical field. Only when it has none does the field carry over
+    // unchanged, leaving the widget to surface the invalid state.
+    const newFieldOptions = categoricalSourceFields?.[val] ?? [];
+    const nextField = newFieldOptions.includes(field) ? field : (newFieldOptions[0] ?? field);
     commit({
       ...dataSelection,
       dataSourceKey: val,
-      selection: field ? { [field]: [] } : {},
+      selection: nextField ? { [nextField]: [] } : {},
     });
     trackEvent('filter_entity_changed', {
       filterType: 'point',
       entity: val,
-      field,
+      field: nextField,
     });
   };
 
   const handleFieldChange = (val: string | null) => {
-    if (!val) return;
+    if (!val || val === field) return;
     commit({
       ...dataSelection,
       selection: { [val]: [] },
@@ -173,11 +186,14 @@ export function PointFilterComponent({
             return (
               <div key={f} className="space-y-1.5">
                 {allFields.length > 1 && (
-                  <div className="text-xs font-medium text-muted-foreground">{f}</div>
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {getFieldLabel(entity, f)}
+                  </div>
                 )}
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {optionsOf(f).map((value) => {
-                    const label = value == null ? '<null>' : String(value);
+                    // Display only — `value` itself still goes into the filter.
+                    const label = value == null ? '<null>' : getValueLabel(String(value));
                     const id = `${filterKey}-${f}-${value}`;
                     return (
                       <div key={value ?? '__null__'} className="flex items-center gap-2">

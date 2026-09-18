@@ -329,6 +329,55 @@ def _extract_encoding_info(spec_template: str) -> dict[str, dict]:
     return placeholder_encoding_info(spec_template)
 
 
+_ENTITY_TOKENS = {"E": "{entity}", "E1": "{entity1}", "E2": "{entity2}"}
+
+
+def _tokenize_text_template(text: str, encoding_info: dict, kind: str) -> str:
+    """Rewrite a title/summary template's <placeholders> into frontend tokens.
+
+    The frontend resolves each token against the spec it is actually rendering,
+    so the text follows a field swapped in the tweak panel:
+
+        "{entity}"   the source entity's display label ("{entity:one}" for
+                     its singular, written "<E:one>" in the template)
+        "{enc:x}"    what encoding x plots  — "Average Age" for an aggregate
+        "{field:x}"  the column behind it   — "Age" for that same aggregate
+        "{bind:F1}"  no encoding to hang it on; the runtime substitutes the
+                     literal field the model chose, and it stays static
+
+    `kind` is "title" or "summary": a title names the plotted value, a summary
+    spells the operation out in prose and wants the bare column (see add_row in
+    scripts/template_viz_generation.py).
+    """
+    if not text:
+        return text
+
+    def replace(match: re.Match) -> str:
+        ph = match.group(1)
+        base = ph.split(":")[0] if ":" in ph else ph
+        # Entities are never encodings — "<E> count" would otherwise bind <E>
+        # to the count axis.
+        if base in _ENTITY_TOKENS:
+            token = _ENTITY_TOKENS[base]
+            # `<E:one>` asks for the singular: an entity label names a table and
+            # so reads as a plural, which is wrong in "a point for each <E:one>".
+            if ph.endswith(":one"):
+                token = token[:-1] + ":one}"
+            return token
+        info = encoding_info.get(base)
+        encodings = info.get("encodings", []) if info else []
+        if not encodings:
+            return "{bind:" + base + "}"
+        encoding = encodings[0]
+        # A non-aggregated encoding plots the column directly, so both kinds
+        # resolve the same way.
+        if kind == "summary" and info.get("aggregated"):
+            return "{field:" + encoding + "}"
+        return "{enc:" + encoding + "}"
+
+    return re.sub(r'<([^>]+)>', replace, text)
+
+
 _ENCODING_LABELS = {
     "x": "x-axis",
     "y": "y-axis",
@@ -672,6 +721,7 @@ def generate(template_sources, output_path: str):
     tool_dispatch = {}
     tool_tags = {}
     tool_shared_entities = {}
+    tool_text = {}
     tool_name_set = {}
     sources_used = []
     counter = 0
@@ -705,6 +755,15 @@ def generate(template_sources, output_path: str):
             tool_defs.append(tool_def)
             tool_dispatch[tool_name] = (template_idx, param_map)
             tool_tags[tool_name] = list(template.get("tags") or default_tags)
+            encoding_info = _extract_encoding_info(spec_template)
+            tool_text[tool_name] = (
+                _tokenize_text_template(
+                    template.get("title_template", ""), encoding_info, "title"
+                ),
+                _tokenize_text_template(
+                    template.get("summary_template", ""), encoding_info, "summary"
+                ),
+            )
             tool_shared_entities[tool_name] = list(
                 template.get("shared_entities") or []
             )
@@ -720,6 +779,7 @@ def generate(template_sources, output_path: str):
         'Schema-independent: tool params are free-form strings resolved against the',
         'per-request data schema at runtime (see vis_generate._execute_generate).',
         'TOOL_TAGS maps each tool to its template tags for per-request selection.',
+        'TOOL_TEXT carries the user-facing title/summary templates.',
         '',
         'DO NOT EDIT — regenerate with: python scripts/regenerate_vis_tools.py',
         '"""',
@@ -744,6 +804,11 @@ def generate(template_sources, output_path: str):
         '# Entity keys per tool name that may share a table with another entity',
         '# (validate_bindings otherwise requires every entity to be distinct)',
         f'TOOL_SHARED_ENTITIES = {pprint.pformat(tool_shared_entities, width=120)}',
+        '',
+        '# User-facing text per tool name: (title_template, summary_template),',
+        '# with placeholders rewritten to tokens the frontend resolves against',
+        '# the live spec so both survive a field swap.',
+        f'TOOL_TEXT = {pprint.pformat(tool_text, width=120)}',
         '',
     ]
 

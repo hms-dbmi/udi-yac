@@ -31,7 +31,15 @@ const UDIVisElement = defineCustomElement(UDIVisComp, {
   },
 });
 
-customElements.define('udi-vis', UDIVisElement);
+// Guarded: this module is imported at module scope by the react-wrapper's
+// queryData/selections/loadDataPackage helpers, none of which check first. If a
+// second copy of this bundle is on the page, an unguarded define() throws
+// NotSupportedError during module evaluation and takes those helpers down with
+// it — charts keep rendering (served by the first copy) while data loading and
+// selection reset fail permanently.
+if (!customElements.get('udi-vis')) {
+  customElements.define('udi-vis', UDIVisElement);
+}
 
 // ── Data-only query API ──────────────────────────────────────────────────────
 // Provides direct access to the Arquero transformation pipeline without
