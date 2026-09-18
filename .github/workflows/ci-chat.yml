@@ -69,3 +69,8 @@ jobs:
       # retheme the host. Invisible in our own SPA, hence a build-output check.
       - name: Check library CSS scoping
         run: pnpm --filter udi-yac test:css
+
+      # Host apps import the library from SSR route modules, so the bundle must
+      # evaluate in Node without DOM globals. jsdom in vitest hides this.
+      - name: Check library imports without a DOM
+        run: pnpm --filter udi-yac test:ssr
