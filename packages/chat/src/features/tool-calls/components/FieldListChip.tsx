@@ -1,10 +1,12 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Info, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { FieldTooltipContent } from '@/components/FieldTooltipContent';
 import { useDataPackage } from '@/app/UDIChatContext';
+import { highlightMatch } from '@/utils/highlightMatch';
 
 interface FieldListChipProps {
   entity: string;
@@ -14,6 +16,7 @@ interface FieldListChipProps {
 interface FieldMeta {
   description: string;
   dataType: string;
+  label: string;
 }
 
 const DEFAULT_VISIBLE = 5;
@@ -29,6 +32,7 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const dataPackage = useDataPackage((s) => s.dataPackage);
+  const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
 
   const fieldMeta = useMemo<Record<string, FieldMeta>>(() => {
     const out: Record<string, FieldMeta> = {};
@@ -38,10 +42,11 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
       out[f.name] = {
         description: f.description ?? '',
         dataType: f['udi:data_type'] ?? '',
+        label: getFieldLabel(entity, f.name),
       };
     }
     return out;
-  }, [dataPackage, entity]);
+  }, [dataPackage, entity, getFieldLabel]);
 
   const trimmedQuery = query.trim();
   const filtered = useMemo(() => {
@@ -139,40 +144,17 @@ function FieldChip({ field, meta, highlight }: FieldChipProps) {
       <TooltipTrigger
         render={
           <Badge variant="secondary" className="max-w-[250px] cursor-default font-mono text-[10px]">
-            <span className="min-w-0 truncate">{renderHighlighted(field, highlight)}</span>
+            <span className="min-w-0 truncate">{highlightMatch(field, highlight)}</span>
             <Info className="shrink-0 opacity-60" />
           </Badge>
         }
       />
-      <TooltipContent className="max-w-sm flex-col items-start gap-1 px-3 py-2 text-xs">
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono font-medium">{field}</span>
-          {meta?.dataType && (
-            <Badge variant="outline" className="border-background/30 text-[9px] text-background">
-              {meta.dataType}
-            </Badge>
-          )}
-        </div>
-        {meta?.description && (
-          <p className="text-[11px] leading-snug text-background/80">{meta.description}</p>
-        )}
-      </TooltipContent>
+      <FieldTooltipContent
+        field={field}
+        label={meta?.label}
+        dataType={meta?.dataType}
+        description={meta?.description}
+      />
     </Tooltip>
-  );
-}
-
-function renderHighlighted(field: string, query: string): ReactNode {
-  if (!query) return field;
-  const lower = field.toLowerCase();
-  const idx = lower.indexOf(query.toLowerCase());
-  if (idx === -1) return field;
-  return (
-    <>
-      {field.slice(0, idx)}
-      <mark className="rounded-sm bg-yellow-300/70 px-0.5 text-foreground">
-        {field.slice(idx, idx + query.length)}
-      </mark>
-      {field.slice(idx + query.length)}
-    </>
   );
 }

@@ -19,6 +19,10 @@ interface SnapshotStores {
 let registered: SnapshotStores | null = null;
 
 export function registerSnapshotSource(stores: SnapshotStores): void {
+  // Skipped on the server: writing a module global during render leaks state
+  // across requests on a shared SSR server (host portals render us on Node).
+  // Nothing is lost — the session export this feeds is a client-only affordance.
+  if (typeof document === 'undefined') return;
   registered = stores;
 }
 

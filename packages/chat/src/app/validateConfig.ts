@@ -12,29 +12,47 @@ import type { UDIChatConfig } from '@/app/UDIChatConfig';
  * modes we've actually seen in practice. If a field has a bad type that React
  * itself will surface clearly, we don't duplicate that check here.
  */
+/**
+ * Accepts an absolute URL ("https://agent.example.org") or a same-origin path
+ * ("/api/yac"). The path form is what an embed behind the host app's own
+ * reverse proxy needs: the host injects auth server-side, so the browser never
+ * talks to the agent cross-origin and there is no origin to name here.
+ */
+function isValidApiBaseUrl(value: string): boolean {
+  if (value.startsWith('/')) return true;
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function validateConfig(config: UDIChatConfig): void {
   const errors: string[] = [];
 
-  // apiBaseUrl is required and must look like a URL.
+  // apiBaseUrl is required and must look like a URL or a same-origin path.
   if (!config.apiBaseUrl || typeof config.apiBaseUrl !== 'string') {
     errors.push('`apiBaseUrl` is required and must be a string (e.g. "http://localhost:8007").');
-  } else {
-    try {
-      new URL(config.apiBaseUrl);
-    } catch {
-      errors.push(
-        `\`apiBaseUrl\` is not a valid URL: ${JSON.stringify(config.apiBaseUrl)}. ` +
-          'Include the protocol (http:// or https://).',
-      );
-    }
+  } else if (!isValidApiBaseUrl(config.apiBaseUrl)) {
+    errors.push(
+      `\`apiBaseUrl\` is not a valid URL: ${JSON.stringify(config.apiBaseUrl)}. ` +
+        'Use an absolute URL including the protocol (http:// or https://), ' +
+        'or a same-origin path starting with "/" (e.g. "/api/yac").',
+    );
   }
 
-  // Exactly one data source mechanism must be provided.
+  // At least one data source mechanism must be provided. `remotePackage` counts:
+  // in server-side data mode the schema and domains come from
+  // GET /v1/yac/metadata, so there is no local package to point at (and
+  // remotePackage takes precedence over both in UDIChat).
+  const hasRemote = config.remotePackage != null && config.remotePackage !== '';
   const hasInline = config.dataPackage != null;
   const hasPath = config.dataPackagePath != null && config.dataPackagePath !== '';
-  if (!hasInline && !hasPath) {
+  if (!hasRemote && !hasInline && !hasPath) {
     errors.push(
-      'No data source provided. Pass either `dataPackage` (an inline DataPackage object) ' +
+      'No data source provided. Pass `remotePackage` (a server-side data package name), ' +
+        '`dataPackage` (an inline DataPackage object), ' +
         'or `dataPackagePath` (a URL/path to a datapackage_udi.json).',
     );
   }

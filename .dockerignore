@@ -1,0 +1,34 @@
+# Build context for packages/agent/Dockerfile is the repo root (uv workspace
+# lockfile lives here), so this must exclude the JS side of the monorepo too.
+.git
+.venv
+venv/
+node_modules
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/__pycache__
+**/*.py[co]
+**/*.egg-info/
+.pytest_cache
+.mypy_cache
+.cache
+
+# Agent-local dev artifacts
+packages/agent/out/
+packages/agent/logs/
+packages/agent/tests/
+packages/agent/notes.md
+packages/agent/*.duckdb
+**/*.log
+
+# Frontends + sample data: not part of the agent image
+apps/
+packages/chat/
+packages/grammar/
+sample-data/
+dev/
+
+.claude/
+.DS_Store

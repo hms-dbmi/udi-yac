@@ -10,6 +10,7 @@ import {
 import { createMemoryBankStore } from './memoryBankStore';
 import { createDataFiltersStore } from './dataFiltersStore';
 import { createDataPackageStore } from '@/features/data-package';
+import { resolveVizTitle } from '../utils/vizTitle';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import type { Message, ToolCall } from '@/types/messages';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
@@ -447,11 +448,20 @@ describe('template provenance', () => {
     const store = createDashboardStore();
     store
       .getState()
-      .addActiveVisualization(0, 0, makeSpec(), '', { donors: ['age_value'] }, undefined, {
-        tool: 'vis_053_line_survival',
-        toolArgs: { entity: 'Event', field4: 'organization_name' },
-        params: META.tweakable_params,
-      });
+      .addActiveVisualization(
+        0,
+        0,
+        makeSpec(),
+        '',
+        { donors: ['age_value'] },
+        undefined,
+        undefined,
+        {
+          tool: 'vis_053_line_survival',
+          toolArgs: { entity: 'Event', field4: 'organization_name' },
+          params: META.tweakable_params,
+        },
+      );
     const before = store.getState().activeVisualizations.get('0-0')!;
 
     const rebound = makeSpec({
@@ -486,7 +496,7 @@ describe('template provenance', () => {
 
   it('clearTemplateProvenance stops offering a control the agent no longer knows', () => {
     const store = createDashboardStore();
-    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null, undefined, {
+    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null, undefined, undefined, {
       tool: 'vis_053_line_survival',
       toolArgs: {},
       params: META.tweakable_params,
@@ -502,7 +512,9 @@ describe('template provenance', () => {
       toolArgs: { field4: 'organization_name' },
       params: META.tweakable_params,
     };
-    store.getState().addActiveVisualization(0, 0, makeSpec(), '', null, undefined, template);
+    store
+      .getState()
+      .addActiveVisualization(0, 0, makeSpec(), '', null, undefined, undefined, template);
     const exported = store.getState().exportDashboard();
     expect(exported.visualizations[0].template).toEqual(template);
 
@@ -1095,5 +1107,134 @@ describe('dashboardStore — setGridCols clamping', () => {
     expect(store.getState().gridCols).toBeGreaterThanOrEqual(1);
     store.getState().setGridCols(99); // above max
     expect(store.getState().gridCols).toBeLessThanOrEqual(8);
+  });
+});
+
+describe('dashboardStore — titles', () => {
+  /** count-of-donors-by-<dimension>, the shape a title actually describes. */
+  function countBy(dimension: string): UDIGrammar {
+    return makeSpec({
+      transformation: [{ groupby: dimension }, { rollup: { donor_count: { op: 'count' } } }],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'x', field: dimension, type: 'nominal' },
+          { encoding: 'y', field: 'donor_count', type: 'quantitative' },
+        ],
+      },
+    });
+  }
+
+  it('builds the displayed title from the spec, keeping any assistant title as provenance', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    const viz = store.getState().activeVisualizations.get('0-0')!;
+    expect(viz.title).toBe('Donors by Sex');
+    expect(viz.userTitle).toBeUndefined();
+    expect(resolveVizTitle(viz)).toBe('Bar chart of Count of Donors by Sex');
+  });
+
+  it('titles a card added through the batch path the same way', () => {
+    const store = createDashboardStore();
+    store
+      .getState()
+      .addActiveVisualizationBatch([
+        { index: 0, toolCallIndex: 0, spec: countBy('sex'), userPrompt: 'p', sourceFields: null },
+      ]);
+    expect(resolveVizTitle(store.getState().activeVisualizations.get('0-0')!)).toBe(
+      'Bar chart of Count of Donors by Sex',
+    );
+  });
+
+  it('setVisualizationTitle stores a trimmed rename that outranks the original', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().setVisualizationTitle('0-0', '  Cohort breakdown  ');
+    const viz = store.getState().activeVisualizations.get('0-0')!;
+    expect(viz.userTitle).toBe('Cohort breakdown');
+    expect(viz.title).toBe('Donors by Sex'); // provenance intact
+    expect(resolveVizTitle(viz)).toBe('Cohort breakdown');
+  });
+
+  it('setVisualizationTitle clears the rename on an empty value', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().setVisualizationTitle('0-0', 'Cohort breakdown');
+    store.getState().setVisualizationTitle('0-0', '   ');
+    const viz = store.getState().activeVisualizations.get('0-0')!;
+    expect(viz.userTitle).toBeUndefined();
+    expect(resolveVizTitle(viz)).toBe('Bar chart of Count of Donors by Sex');
+  });
+
+  it('setVisualizationTitle is a no-op for unknown keys and unchanged values', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    const before = store.getState().activeVisualizations;
+    store.getState().setVisualizationTitle('9-9', 'nope');
+    expect(store.getState().activeVisualizations).toBe(before);
+    store.getState().setVisualizationTitle('0-0', 'Renamed');
+    const after = store.getState().activeVisualizations;
+    store.getState().setVisualizationTitle('0-0', 'Renamed');
+    expect(store.getState().activeVisualizations).toBe(after);
+  });
+
+  it('a field swap moves the displayed title off the stale original', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().updateActiveVisualizationSpec('0-0', countBy('race'), null);
+    expect(resolveVizTitle(store.getState().activeVisualizations.get('0-0')!)).toBe(
+      'Bar chart of Count of Donors by Race',
+    );
+  });
+
+  it('a rename survives a later field swap', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().setVisualizationTitle('0-0', 'Cohort breakdown');
+    store.getState().updateActiveVisualizationSpec('0-0', countBy('race'), null);
+    expect(resolveVizTitle(store.getState().activeVisualizations.get('0-0')!)).toBe(
+      'Cohort breakdown',
+    );
+  });
+
+  it('round-trips both stored title fields through export/import', () => {
+    const store = createDashboardStore();
+    store.getState().addActiveVisualization(0, 0, countBy('sex'), 'prompt', null, 'Donors by Sex');
+    store.getState().setVisualizationTitle('0-0', 'Cohort breakdown');
+    const payload = store.getState().exportDashboard();
+    expect(payload.visualizations[0]).toMatchObject({
+      title: 'Donors by Sex',
+      userTitle: 'Cohort breakdown',
+    });
+
+    const fresh = createDashboardStore();
+    fresh.getState().importDashboard(payload, null);
+    const viz = fresh.getState().activeVisualizations.get('0-0')!;
+    expect(viz.userTitle).toBe('Cohort breakdown');
+    expect(viz.title).toBe('Donors by Sex');
+  });
+
+  it('titles an imported card from its spec, not its assistant title', () => {
+    const store = createDashboardStore();
+    store.getState().importDashboard(
+      {
+        visualizations: [
+          {
+            key: '0-0',
+            uuid: 'u1',
+            index: 0,
+            toolCallIndex: 0,
+            userPrompt: 'prompt',
+            title: 'Donors by Sex',
+            spec: countBy('race'),
+          },
+        ],
+        layout: { items: [] },
+      },
+      null,
+    );
+    const viz = store.getState().activeVisualizations.get('0-0')!;
+    expect(viz.title).toBe('Donors by Sex');
+    expect(resolveVizTitle(viz)).toBe('Bar chart of Count of Donors by Race');
   });
 });

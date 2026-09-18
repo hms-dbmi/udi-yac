@@ -49,5 +49,11 @@ jobs:
       - name: Run tests
         run: uv run pytest tests/ -v
 
+      # .env.template and the README env table are generated from ServerConfig;
+      # this is what stops them drifting apart again.
+      - name: Check generated env docs are current
+        if: matrix.package == 'agent'
+        run: uv run python scripts/gen_env_docs.py --check
+
       - name: Verify package build
         run: uv build --out-dir dist

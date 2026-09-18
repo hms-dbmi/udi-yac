@@ -7,6 +7,7 @@ Tools: 74
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
 TOOL_TAGS maps each tool to its template tags for per-request selection.
+TOOL_TEXT carries the user-facing title/summary templates.
 
 DO NOT EDIT — regenerate with: python scripts/regenerate_vis_tools.py
 """
@@ -1356,7 +1357,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes x-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes y-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1371,7 +1373,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes y-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes x-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1386,7 +1389,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes x-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes y-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1401,7 +1405,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes y-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes x-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1416,7 +1421,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes x-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes y-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1431,7 +1437,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes y-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes x-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1446,7 +1453,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes x-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes y-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1461,7 +1469,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes y-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes x-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1476,7 +1485,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes x-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes y-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1491,7 +1501,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes y-axis.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes x-axis.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -1687,7 +1698,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
-                                             'entity1_field': {'description': 'any type field.', 'type': 'string'},
+                                             'entity1_field': {'description': 'quantitative field, encodes x-axis.',
+                                                               'type': 'string'},
                                              'entity2': {'description': 'The secondary data entity (table) to join '
                                                                         'with.',
                                                          'type': 'string'}},
@@ -1747,7 +1759,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field': {'description': 'any type field.', 'type': 'string'}},
+                                             'field': {'description': 'nominal field, encodes text label.',
+                                                       'type': 'string'}},
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
@@ -1777,7 +1790,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'nominal field, encodes text label, x-axis, x2.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes text label.',
                                                         'type': 'string'}},
                               'required': ['entity', 'field1', 'field2'],
@@ -2508,7 +2522,8 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field1': {'description': 'any type field.', 'type': 'string'},
+                                             'field1': {'description': 'quantitative field, encodes color.',
+                                                        'type': 'string'},
                                              'field2': {'description': 'nominal field, encodes y-axis.',
                                                         'type': 'string'},
                                              'field3': {'description': 'nominal field, encodes x-axis.',
@@ -2645,7 +2660,9 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field': {'description': 'any type field.', 'type': 'string'}},
+                                             'field': {'description': 'nominal field, encodes text label, x-axis, '
+                                                                      'y-axis.',
+                                                       'type': 'string'}},
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
@@ -2659,7 +2676,9 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'field': {'description': 'any type field.', 'type': 'string'}},
+                                             'field': {'description': 'nominal field, encodes text label, x-axis, '
+                                                                      'y-axis.',
+                                                       'type': 'string'}},
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'}]
@@ -2951,3 +2970,215 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_071_grouped_dot_distribution': ['line_item', 'grouped_dot'],
  'vis_072_table_count_null_nonnull': ['line_item', 'table'],
  'vis_073_table_count_null': ['line_item', 'table']}
+
+
+# User-facing text per tool name: (title_template, summary_template),
+# with placeholders rewritten to tokens the frontend resolves against
+# the live spec so both survive a field swap.
+TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of {entity} by {enc:x}',
+                                         'Displays the number of {entity} in each {enc:x} category as vertical bars.'),
+ 'vis_001_barchart_count_horiz_grouped': ('Bar chart of the number of {entity} by {enc:y}',
+                                          'Displays the number of {entity} in each {enc:y} category as horizontal '
+                                          'bars.'),
+ 'vis_002_barchart_join_count_vert_grouped': ('Bar chart of the number of {entity1} by {enc:x}',
+                                              'Displays the number of {entity1} in each {enc:x} category as vertical '
+                                              'bars.'),
+ 'vis_003_barchart_join_count_horiz_grouped': ('Bar chart of the number of {entity1} by {enc:y}',
+                                               'Displays the number of {entity1} in each {enc:y} category as '
+                                               'horizontal bars.'),
+ 'vis_004_barchart_basic': ('Bar chart of {enc:y} by {enc:x}', 'Displays {enc:y} for each {enc:x} category as bars.'),
+ 'vis_005_barchart_basic': ('Bar chart of {enc:y} by {enc:x}',
+                            'Displays {enc:y} across the values of {enc:x} as bars.'),
+ 'vis_006_stacked_bar_join_count_vert_stacked_grouped': ('Stacked bar chart of the number of {entity1} by {enc:x} and '
+                                                         '{enc:color}',
+                                                         'Displays the number of {entity1} in each {enc:x} category as '
+                                                         'vertical bars, split by {enc:color}.'),
+ 'vis_007_stacked_bar_join_count_horiz_stacked_grouped': ('Stacked bar chart of the number of {entity1} by {enc:y} and '
+                                                          '{enc:color}',
+                                                          'Displays the number of {entity1} in each {enc:y} category '
+                                                          'as horizontal bars, split by {enc:color}.'),
+ 'vis_008_stacked_bar_count_vert_stacked_grouped': ('Stacked bar chart of the number of {entity} by {enc:x} and '
+                                                    '{enc:color}',
+                                                    'Displays the number of {entity} in each {enc:x} category as '
+                                                    'vertical bars, split by {enc:color}.'),
+ 'vis_009_stacked_bar_count_horiz_stacked_grouped': ('Stacked bar chart of the number of {entity} by {enc:y} and '
+                                                     '{enc:color}',
+                                                     'Displays the number of {entity} in each {enc:y} category as '
+                                                     'horizontal bars, split by {enc:color}.'),
+ 'vis_010_stacked_bar_vert_stacked': ('Stacked bar chart of {enc:y} by {enc:x} and {enc:color}',
+                                      'Displays {enc:y} for each {enc:x} category as bars, split by {enc:color}.'),
+ 'vis_011_stacked_bar_count_vert_grouped': ('Grouped bar chart of the number of {entity} by {enc:x} and {enc:xOffset}',
+                                            'Displays the number of {entity} in each {enc:x} category as vertical '
+                                            'bars, placed side by side for each {enc:xOffset}.'),
+ 'vis_012_stacked_bar_count_horiz_grouped': ('Grouped bar chart of the number of {entity} by {enc:y} and {enc:yOffset}',
+                                             'Displays the number of {entity} in each {enc:y} category as horizontal '
+                                             'bars, placed side by side for each {enc:yOffset}.'),
+ 'vis_013_stacked_bar_grouped': ('Grouped bar chart of {enc:y} by {enc:x} and {enc:xOffset}',
+                                 'Displays {enc:y} for each {enc:x} category as bars, placed side by side for each '
+                                 '{enc:xOffset}.'),
+ 'vis_014_stacked_bar_freq_vert_normalized': ('Normalized bar chart of {enc:color} within {enc:x}',
+                                              'Displays what share of the {entity} in each {enc:x} category falls into '
+                                              'each {enc:color} value, as vertical bars scaled to 100%.'),
+ 'vis_015_stacked_bar_freq_horiz_normalized': ('Normalized bar chart of {enc:color} within {enc:y}',
+                                               'Displays what share of the {entity} in each {enc:y} category falls '
+                                               'into each {enc:color} value, as horizontal bars scaled to 100%.'),
+ 'vis_016_stacked_bar_proportion_stacked_normalized': ('Normalized bar chart of {enc:color} within {enc:x}',
+                                                       'Displays what share of {bind:M} in each {enc:x} category falls '
+                                                       'into each {enc:color} value, as bars scaled to 100%.'),
+ 'vis_017_barchart_min_horiz': ('Bar chart of {enc:x} by {enc:y}',
+                                'Displays the smallest {field:x} among the {entity} in each {enc:y} category as '
+                                'horizontal bars.'),
+ 'vis_018_barchart_min_vert': ('Bar chart of {enc:y} by {enc:x}',
+                               'Displays the smallest {field:y} among the {entity} in each {enc:x} category as '
+                               'vertical bars.'),
+ 'vis_019_barchart_max_horiz': ('Bar chart of {enc:x} by {enc:y}',
+                                'Displays the largest {field:x} among the {entity} in each {enc:y} category as '
+                                'horizontal bars.'),
+ 'vis_020_barchart_max_vert': ('Bar chart of {enc:y} by {enc:x}',
+                               'Displays the largest {field:y} among the {entity} in each {enc:x} category as vertical '
+                               'bars.'),
+ 'vis_021_barchart_avg_horiz': ('Bar chart of {enc:x} by {enc:y}',
+                                'Displays the mean {field:x} across the {entity} in each {enc:y} category as '
+                                'horizontal bars.'),
+ 'vis_022_barchart_avg_vert': ('Bar chart of {enc:y} by {enc:x}',
+                               'Displays the mean {field:y} across the {entity} in each {enc:x} category as vertical '
+                               'bars.'),
+ 'vis_023_barchart_median_horiz': ('Bar chart of {enc:x} by {enc:y}',
+                                   'Displays the middle {field:x} value among the {entity} in each {enc:y} category as '
+                                   'horizontal bars.'),
+ 'vis_024_barchart_median_vert': ('Bar chart of {enc:y} by {enc:x}',
+                                  'Displays the middle {field:y} value among the {entity} in each {enc:x} category as '
+                                  'vertical bars.'),
+ 'vis_025_barchart_sum_horiz': ('Bar chart of {enc:x} by {enc:y}',
+                                'Displays the sum of {field:x} across the {entity} in each {enc:y} category as '
+                                'horizontal bars.'),
+ 'vis_026_barchart_sum_vert': ('Bar chart of {enc:y} by {enc:x}',
+                               'Displays the sum of {field:y} across the {entity} in each {enc:x} category as vertical '
+                               'bars.'),
+ 'vis_027_scatterplot_basic': ('Scatterplot of {enc:x} and {enc:y}',
+                               'Displays a point for each {entity:one}, positioned by {enc:x} and {enc:y}.'),
+ 'vis_028_stacked_bar_count_vert_stacked_grouped': ('Stacked bar chart of the number of {entity} by {enc:x} and '
+                                                    '{enc:color}',
+                                                    'Displays the number of {entity} in each {enc:x} category as '
+                                                    'vertical bars, split by {enc:color}.'),
+ 'vis_029_stacked_bar_count_horiz_stacked_grouped': ('Stacked bar chart of the number of {entity} by {enc:y} and '
+                                                     '{enc:color}',
+                                                     'Displays the number of {entity} in each {enc:y} category as '
+                                                     'horizontal bars, split by {enc:color}.'),
+ 'vis_030_circular_proportion_distribution': ('Pie chart of the number of {entity} by {enc:color}',
+                                              'Displays the share of {entity} that falls into each {enc:color} '
+                                              'category as slices of a circle.'),
+ 'vis_031_circular_proportion_distribution': ('Donut chart of the number of {entity} by {enc:color}',
+                                              'Displays the share of {entity} that falls into each {enc:color} '
+                                              'category as segments of a ring.'),
+ 'vis_032_circular_proportion': ('Pie chart of {enc:theta} by {enc:color}',
+                                 'Displays the share of {enc:theta} that falls into each {enc:color} category as '
+                                 'slices of a circle.'),
+ 'vis_033_circular_proportion': ('Donut chart of {enc:theta} by {enc:color}',
+                                 'Displays the share of {enc:theta} that falls into each {enc:color} category as '
+                                 'segments of a ring.'),
+ 'vis_034_table_count': ('Table of the number of {entity}',
+                         'Displays the total number of {entity} as a single figure.'),
+ 'vis_035_table_raw': ('Table of {entity}', 'Lists each {entity:one} record with all of its fields.'),
+ 'vis_036_table_join': ('Table of {entity1} and {entity2}',
+                        'Lists each {entity1:one} record alongside the related {entity2:one} records it joins to.'),
+ 'vis_037_table_join_count_ranked': ('Table of {entity2} by the number of {entity1}',
+                                     'Ranks each {entity2:one} by how many {entity1:one} records it has, with a bar in '
+                                     'each row showing the count.'),
+ 'vis_038_table_ranked': ('Table of {entity} by {enc:x}',
+                          'Ranks {entity} from the largest {enc:x} down, with a bar in each row showing the value.'),
+ 'vis_039_table_join_max_ranked': ('Table of {entity2} by largest {enc:x}',
+                                   'Ranks each {entity2:one} by the largest {field:x} among its {entity1:one} records, '
+                                   'with a bar in each row showing the value.'),
+ 'vis_040_table_ranked': ('Table of {entity} by {bind:F}',
+                          'Ranks {entity} from the smallest {bind:F} up, highlighting the smallest value.'),
+ 'vis_041_table_join_min_ranked': ('Table of {entity2} by smallest {bind:E1.F}',
+                                   'Ranks each {entity2:one} by the smallest {bind:E1.F} among its {entity1:one} '
+                                   'records, highlighting the smallest value.'),
+ 'vis_042_table_sorted': ('Table of {entity} sorted by {enc:x}',
+                          'Lists {entity} ordered by {enc:x}, with a bar in each row showing the value.'),
+ 'vis_043_table_min': ('Table of the {enc:text} range',
+                       'Displays the smallest and largest {field:text} across all {entity} as a single row.'),
+ 'vis_044_table_count_sorted_distinct': ('Table of the number of {entity} by {enc:text}',
+                                         'Lists every distinct {enc:text} value with how many {entity} have it, with a '
+                                         'bar in each row showing the count.'),
+ 'vis_045_table_range': ('Table of the {enc:text} range by {enc:text}',
+                         'Lists each {enc:text} category with the smallest and largest {field:text} among its '
+                         '{entity}, drawn as a range bar.'),
+ 'vis_046_table_ranked_mode': ('Table of the number of {entity} by {enc:text}',
+                               'Ranks every {enc:text} value by how many {entity} have it, highlighting the most '
+                               'frequent.'),
+ 'vis_047_table_sum': ('Table of {enc:text}', 'Displays the overall {enc:text} as a single figure.'),
+ 'vis_048_table_sorted': ('Table of {enc:x} by {enc:text}',
+                          'Lists each {enc:text} category with its {enc:x}, with a bar in each row showing the value.'),
+ 'vis_049_line_cdf': ('Line chart of the {enc:x} distribution',
+                      'Displays what share of {entity} fall at or below each {enc:x} value, as a rising line.'),
+ 'vis_050_grouped_line_cdf': ('Line chart of the {enc:x} distribution by {enc:color}',
+                              'Displays what share of {entity} fall at or below each {enc:x} value, as one line per '
+                              '{enc:color} category.'),
+ 'vis_051_line_sorted': ('Line chart of {enc:y} over {enc:x}',
+                         'Displays how {enc:y} changes across {enc:x}, as a line.'),
+ 'vis_052_line_survival': ('Survival curve for {entity1}',
+                           'Plots the share of subjects in {entity1} still event-free over time, from the start event '
+                           'to the end event.'),
+ 'vis_053_line_survival_baseline': ('Survival curves for {entity1} by {enc:color}',
+                                    "Plots one curve per {enc:color} value, read from each subject's start event, so "
+                                    'every subject falls in exactly one group.'),
+ 'vis_054_line_survival_baseline_multivalue': ('Survival curves for {entity1} by each {enc:color} value',
+                                               "Expands the {enc:color} list on each subject's start event, so a "
+                                               'subject counts toward every value it listed then and the curves '
+                                               'overlap.'),
+ 'vis_055_line_survival_ever': ('Survival curves for {entity1} by every {enc:color} ever recorded',
+                                'A subject joins every group whose {enc:color} value appears anywhere on its timeline, '
+                                'so the curves overlap and do not add up to the whole cohort.'),
+ 'vis_056_line_survival_ever_multivalue': ('Survival curves for {entity1} by every {enc:color} value ever listed',
+                                           'Expands the delimited {enc:color} column on every event, so a subject '
+                                           'joins each value listed at any point and the curves overlap.'),
+ 'vis_057_line_survival_related': ('Survival curves for {entity1} by {enc:color}',
+                                   'Joins {entity1} to {entity2} on the subject id and plots one curve per {enc:color} '
+                                   'value; a subject with several {entity2} records joins a group for each.'),
+ 'vis_058_line_survival_related_multivalue': ('Survival curves for {entity1} by each {enc:color} value',
+                                              'Joins {entity1} to {entity2} on the subject id, expands the delimited '
+                                              '{enc:color} column, and plots one curve per value; the curves overlap.'),
+ 'vis_059_line_survival_presence': ('Survival curves for {entity1} by presence in {entity2}',
+                                    'Splits subjects by whether {entity2} holds a row for them at all, giving two '
+                                    'curves that together cover the whole cohort.'),
+ 'vis_060_line_survival_presence_2x2': ('Survival curves for {entity1} by presence in {entity2} and {bind:E3}',
+                                        'Splits subjects four ways — {entity2} only, {bind:E3} only, both, neither — '
+                                        'by whether each table holds a row for them.'),
+ 'vis_061_line_survival_cube': ('Survival curve over {enc:x}',
+                                'Plots the share of subjects still event-free at each {enc:x} value, counted from the '
+                                "cube's measure; censored time points carry a tick."),
+ 'vis_062_line_survival_cube_stratified': ('Survival curves over {enc:x} by {enc:color}',
+                                           'Plots one curve per {enc:color} value, showing the share still event-free '
+                                           'at each {enc:x}; each subject is counted once within its own stratum.'),
+ 'vis_063_heatmap_count': ('Heatmap of the number of {entity} by {enc:y} and {enc:x}',
+                           'Displays the number of {entity} for each pairing of {enc:y} and {enc:x}, as a grid of '
+                           'shaded, labelled cells.'),
+ 'vis_064_heatmap_avg': ('Heatmap of {enc:color} by {enc:y} and {enc:x}',
+                         'Displays the mean {field:color} for each pairing of {enc:y} and {enc:x}, as a grid of shaded '
+                         'cells.'),
+ 'vis_065_heatmap_basic': ('Heatmap of {enc:color} by {enc:x} and {enc:y}',
+                           'Displays {enc:color} for each pairing of {enc:x} and {enc:y}, as a grid of shaded, '
+                           'labelled cells.'),
+ 'vis_066_grouped_scatter_by_color': ('Scatterplot of {enc:x} and {enc:y} by {enc:color}',
+                                      'Displays a point for each {entity:one}, positioned by {enc:x} and {enc:y} and '
+                                      'coloured by {enc:color}.'),
+ 'vis_067_histogram_distribution': ('Histogram of {bind:F}',
+                                    'Displays how many {entity} fall into each range of {bind:F}, as adjacent bars.'),
+ 'vis_068_area_density': ('Density plot of {enc:x}',
+                          'Displays where {entity} concentrate across {enc:x}, as a smooth curve.'),
+ 'vis_069_dot_distribution': ('Dot plot of {enc:x}',
+                              'Displays a point for each {entity:one} along a single {enc:x} axis.'),
+ 'vis_070_grouped_area_density': ('Density plot of {enc:x} by {enc:color}',
+                                  'Displays where {entity} concentrate across {enc:x}, as one overlapping curve per '
+                                  '{enc:color} category.'),
+ 'vis_071_grouped_dot_distribution': ('Dot plot of {enc:x} by {enc:y}',
+                                      'Displays a point for each {entity:one} along {enc:x}, with one row per {enc:y} '
+                                      'category.'),
+ 'vis_072_table_count_null_nonnull': ('Table of {enc:text} completeness',
+                                      'Displays how many {entity} have a value for {field:text}, and what percentage '
+                                      'of them that is.'),
+ 'vis_073_table_count_null': ('Table of missing {enc:text} values',
+                              'Displays how many {entity} are missing {field:text}, and what percentage of them that '
+                              'is.')}
