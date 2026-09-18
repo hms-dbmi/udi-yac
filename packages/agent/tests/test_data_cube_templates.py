@@ -310,7 +310,14 @@ def test_execute_generate_end_to_end_cube(monkeypatch):
     calls = {"selected_tool_names": None}
 
     def fake_call(
-        agent, messages, tools, config, usage=None, openai_api_key=None, req_id="-"
+        agent,
+        messages,
+        tools,
+        config,
+        usage=None,
+        openai_api_key=None,
+        req_id="-",
+        model=None,
     ):
         calls["selected_tool_names"] = {t["function"]["name"] for t in tools}
         return tool_name, tool_args

@@ -9,6 +9,7 @@ import type {
   ExportRowSet,
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
+import { humanizeFieldName } from '@/utils/humanize';
 import { httpError } from '@/utils/httpError';
 import {
   loadDataPackage,
@@ -40,6 +41,13 @@ export interface DataPackageState {
   interactiveMode: boolean;
   /** True while a remote batched query round-trip is in flight. */
   remoteQueryPending: boolean;
+  /** Current bearer token for server calls, held here rather than captured by
+   *  the remote backend so a host that refreshes the token does not force the
+   *  whole data package to be reloaded. */
+  authToken: string | undefined;
+  /** Update the token used by subsequent server calls. Cheap: the next batched
+   *  query picks it up; nothing is refetched. */
+  setAuthToken: (authToken: string | undefined) => void;
   fetchDataPackage: (path: string, fetchOptions?: RequestInit) => Promise<void>;
   /** Load a server-side package: fetches introspected metadata from
    *  GET /v1/yac/metadata and routes all queries through POST /v1/yac/query
@@ -62,6 +70,20 @@ export interface DataPackageState {
    *  fields, in schema field order. Used by the table view's "relevant
    *  fields" mode so rows stay identifiable. */
   getKeyFields: (entity: string) => string[];
+  /**
+   * Friendly display label for a column: the schema's `title` when the package
+   * author supplied one, else a humanized `name`. Display only — every spec,
+   * filter and query still keys on the raw field name.
+   */
+  getFieldLabel: (entity: string, field: string) => string;
+  /** Friendly display label for an entity: the resource's `title`, else humanized. */
+  getEntityLabel: (entity: string) => string;
+  /** Friendly display label for a categorical value, via the package-level
+   *  `udi:labels` map. Unmapped values pass through untouched. */
+  getValueLabel: (value: string) => string;
+  /** A field's declared `udi:data_type` (quantitative / ordinal / nominal).
+   *  Available straight from the schema, unlike domains, which load from CSVs. */
+  getFieldDataType: (entity: string, field: string) => string | undefined;
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
@@ -202,6 +224,9 @@ export function createDataPackageStore() {
     filteredData: new Map(),
     interactiveMode: true,
     remoteQueryPending: false,
+    authToken: undefined,
+
+    setAuthToken: (authToken: string | undefined) => set({ authToken }),
 
     getDomainForField: (entity: string, field: string) => {
       return get().dataFieldDomains.find((d) => d.entity === entity && d.field === field);
@@ -303,6 +328,26 @@ export function createDataPackageStore() {
       ];
     },
 
+    getFieldLabel: (entity: string, field: string): string => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      const title = resource?.schema?.fields?.find((f) => f.name === field)?.title;
+      return title?.trim() || humanizeFieldName(field);
+    },
+
+    getEntityLabel: (entity: string): string => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return resource?.title?.trim() || humanizeFieldName(entity);
+    },
+
+    getValueLabel: (value: string): string => {
+      return get().dataPackage?.['udi:labels']?.[value] ?? value;
+    },
+
+    getFieldDataType: (entity: string, field: string): string | undefined => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:data_type'];
+    },
+
     setFilteredData: (entity: string, data: ExportRowSet) => {
       set((state) => {
         const next = new Map(state.filteredData);
@@ -312,14 +357,20 @@ export function createDataPackageStore() {
     },
 
     fetchRemotePackage: async (apiBaseUrl: string, packageName: string, authToken?: string) => {
-      set({ loadingPhase: 'fetching', error: null });
+      // Seed the store before the first request so authHeaders() below is
+      // correct on mount, without depending on effect ordering in UDIChat.
+      set({ loadingPhase: 'fetching', error: null, authToken });
+      // Read at call time, not capture time: the host can refresh the token
+      // mid-session (setAuthToken) and every later request must carry the new
+      // one. Capturing an object here is what used to make the backend go
+      // stale until the whole package was rebuilt.
+      const authHeaders = (): Record<string, string> => ({
+        Authorization: `Bearer ${get().authToken ?? 'dev'}`,
+      });
       try {
-        const headers: Record<string, string> = {
-          Authorization: `Bearer ${authToken ?? 'dev'}`,
-        };
         const response = await fetch(
           `${apiBaseUrl}/v1/yac/metadata?package=${encodeURIComponent(packageName)}`,
-          { headers },
+          { headers: authHeaders() },
         );
         if (!response.ok) {
           throw await httpError(response);
@@ -334,7 +385,7 @@ export function createDataPackageStore() {
         const backend = await createRemoteBackend({
           url: `${apiBaseUrl}/v1/yac/query`,
           packageName,
-          headers,
+          headers: authHeaders,
         });
         backend.subscribePending((pending) => set({ remoteQueryPending: pending }));
         await setQueryBackend(backend);

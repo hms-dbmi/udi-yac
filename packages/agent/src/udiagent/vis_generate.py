@@ -150,7 +150,14 @@ def _load_examples(
 
 
 def _call_llm_with_tools(
-    agent, messages, tools, config, usage=None, openai_api_key=None, req_id="-"
+    agent,
+    messages,
+    tools,
+    config,
+    usage=None,
+    openai_api_key=None,
+    req_id="-",
+    model=None,
 ):
     """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None.
 
@@ -170,7 +177,7 @@ def _call_llm_with_tools(
         resp = _call_with_budget_guard(
             client.chat.completions.create,
             usage,
-            model=agent.gpt_model_name,
+            model=model or agent.gpt_model_name,
             messages=messages,
             tools=tools,
             tool_choice="auto",
@@ -205,6 +212,7 @@ def _call_llm(
     config,
     usage=None,
     openai_api_key=None,
+    model=None,
     op="create_visualization",
 ):
     """Call the LLM and return the raw spec string."""
@@ -217,6 +225,7 @@ def _call_llm(
         json_schema=grammar["schema_string"],
         n=config.get("n", 1),
         openai_api_key=openai_api_key,
+        model=model,
     )
     if usage is not None:
         usage.add(op, resp_usage)
@@ -644,12 +653,20 @@ def placeholder_encoding_info(spec_template):
     except (json.JSONDecodeError, TypeError):
         return info
 
-    def record(base, channel, declared_type):
-        entry = info.setdefault(base, {"encodings": [], "declared_type": None})
+    def record(base, channel, declared_type, aggregated=False):
+        entry = info.setdefault(
+            base, {"encodings": [], "declared_type": None, "aggregated": False}
+        )
         if isinstance(channel, str) and channel not in entry["encodings"]:
             entry["encodings"].append(channel)
         if declared_type and entry["declared_type"] is None:
             entry["declared_type"] = declared_type
+        # The placeholder sits inside a rollup's output name ("average <F1>")
+        # rather than being the whole field, so the encoding's own label already
+        # carries the operator. Prose that spells the operation out wants the
+        # bare column instead — see `_tokenize_text_template`.
+        if aggregated:
+            entry["aggregated"] = True
 
     reps = spec.get("representation", {})
     reps = reps if isinstance(reps, list) else [reps]
@@ -675,8 +692,11 @@ def placeholder_encoding_info(spec_template):
                         entry["encodings"].append(channel)
                     if declared_type and entry["declared_type"] is None:
                         entry["declared_type"] = declared_type
+                aggregated = re.fullmatch(PLACEHOLDER, value) is None
                 for placeholder in re.findall(PLACEHOLDER, value):
-                    record(placeholder.split(":")[0], channel, declared_type)
+                    record(
+                        placeholder.split(":")[0], channel, declared_type, aggregated
+                    )
 
     for transform in spec.get("transformation") or []:
         if not isinstance(transform, dict):
@@ -1605,6 +1625,29 @@ def _retry_turns(rejected):
     )
     return turns
 
+_BIND_TOKEN = re.compile(r"\{bind:([^}]+)\}")
+
+
+def resolve_text_templates(tool_name, bindings):
+    """The chosen template's user-facing (title, summary), ready for the client.
+
+    `{entity}` / `{enc:…}` / `{field:…}` tokens are left for the frontend to
+    resolve against the spec it is rendering, so both texts follow a field
+    swapped in the tweak panel. `{bind:…}` has no encoding to hang on (a binby
+    input, a sort-only column) and is substituted here with the column the model
+    actually chose — those fields are not swappable, so a static name is right.
+    """
+    from udiagent.generated_vis_tools import TOOL_TEXT
+
+    title, summary = TOOL_TEXT.get(tool_name, ("", ""))
+    if not title and not summary:
+        return None
+
+    def fill(text):
+        return _BIND_TOKEN.sub(lambda m: bindings.get(m.group(1), m.group(0)), text)
+
+    return {"title": fill(title), "summary": fill(summary)}
+
 
 def _execute_generate(skill, context):
     """Execute the generate skill: try function-calling tools first, fall back to LLM."""
@@ -1689,10 +1732,11 @@ def _execute_generate(skill, context):
         )
 
         openai_api_key = context.get("openai_api_key")
+        model = context.get("model")
         usage = context.get("usage")
         result = _call_llm_with_tools(
             agent, tool_messages, selected_defs, config,
-            usage=usage, openai_api_key=openai_api_key, req_id=rid,
+            usage=usage, openai_api_key=openai_api_key, req_id=rid, model=model,
         )
         # Three attempts rather than two. A rejected binding is usually one
         # argument out of fifteen — a miscased literal value, a stratifier that
@@ -1758,6 +1802,7 @@ def _execute_generate(skill, context):
                         usage=usage,
                         openai_api_key=openai_api_key,
                         req_id=rid,
+                        model=model,
                     )
                     continue
                 fallback_reason = FALLBACK_VALIDATION_FAILED
@@ -1775,6 +1820,7 @@ def _execute_generate(skill, context):
                 context["tweakable_params"] = template_tweakable_params(
                     templates[template_idx], param_map, bindings, request_schema
                 )
+                context["text_templates"] = resolve_text_templates(tool_name, bindings)
                 context["validation_retries"] = _attempt
                 logger.info(
                     "[vis %s] instantiated %s (retries=%d, tweakable_params=%d)",
@@ -1850,6 +1896,7 @@ def _execute_generate(skill, context):
         agent, gen_messages, grammar, config,
         usage=context.get("usage"),
         openai_api_key=context.get("openai_api_key"),
+        model=context.get("model"),
         op="create_visualization",
     )
     context["spec_str"] = spec_str
@@ -1908,6 +1955,7 @@ def _execute_validate(skill, context):
             agent, gen_messages, grammar, config,
             usage=context.get("usage"),
             openai_api_key=context.get("openai_api_key"),
+            model=context.get("model"),
             op="create_visualization.validate",
         )
         spec_dict, errors = _parse_and_validate(
@@ -1952,6 +2000,7 @@ def run_skills(plan, context, registry):
                 context["config"],
                 usage=context.get("usage"),
                 openai_api_key=context.get("openai_api_key"),
+                model=context.get("model"),
                 op=f"create_visualization.{skill_name}",
             )
             context["spec_str"] = spec_str
@@ -1973,6 +2022,7 @@ def generate_vis_spec(
     usage=None,
     openai_api_key=None,
     data_domains=None,
+    model=None,
 ):
     """Generate a visualization spec using the skills pipeline.
 
@@ -2008,6 +2058,7 @@ def generate_vis_spec(
         "errors": [],
         "corrections": 0,
         "openai_api_key": openai_api_key,
+        "model": model,
         "usage": usage,
         # Ties every log line from this request together. uvicorn interleaves
         # requests, so timestamps alone do not, and the value comes back in
@@ -2034,6 +2085,7 @@ def generate_vis_spec(
         # Present only when no chart could be built. The caller turns this into
         # something the reader can act on instead of rendering an empty card.
         "failure": context.get("generation_failed"),
+        "text_templates": context.get("text_templates"),
         "meta": {
             "tool_used": context.get("tool_used"),
             "tool_args": context.get("tool_args"),

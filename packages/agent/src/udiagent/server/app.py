@@ -18,7 +18,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import AuthenticationError
-from fastapi import FastAPI, Header, Depends, Request
+from fastapi import FastAPI, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -30,8 +30,11 @@ from udiagent.orchestrator import (
     build_rebuff_toolcall,
 )
 from udiagent.structured_functions import export_registry_json
+# Dependency-free (no duckdb/pymysql at module scope), unlike the connector
+# imports further down, which stay lazy because the drivers are extras.
+from udiagent.query import DatabaseAuthError, use_db_token
 from udiagent.server.config import ServerConfig
-from udiagent.server.auth import make_verify_jwt
+from udiagent.server.auth import RAW_TOKEN_CLAIM, make_verify_jwt
 from udiagent.server.models import (
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
@@ -54,21 +57,42 @@ _PACKAGE_ROOT = Path(__file__).resolve().parents[3]
 # load_dotenv() finds nothing — so UDI_QUERY_BACKENDS / OPENAI_API_KEY silently
 # wouldn't load. override=False keeps real env vars (Docker, shell) winning.
 load_dotenv(_PACKAGE_ROOT / ".env")
-_DATA_DIR = _PACKAGE_ROOT / "data"
+# Installed from a wheel there is no packages/agent/.env above site-packages, so
+# also read one from the working directory. Passed explicitly because bare
+# load_dotenv() searches upward from THIS file (site-packages), not the CWD.
+# override=False keeps the path above (and real env vars) winning where both exist.
+load_dotenv(Path.cwd() / ".env")
+
+# --- Config ---
+# Built before logging so a misconfiguration is reported immediately, and so
+# every env var in the process flows through one validated model.
+config = ServerConfig.from_env()
+
+# When installed from a wheel, _PACKAGE_ROOT lands inside site-packages, which
+# has no data/ (only src/udiagent/data is packaged) and is often read-only —
+# hence the overrides. See the deployment guide in the package README.
+_DATA_DIR = Path(config.udi_data_dir or _PACKAGE_ROOT / "data")
 
 # --- Logging setup ---
-_log_dir = _PACKAGE_ROOT / "logs"
-_log_dir.mkdir(exist_ok=True)
+_log_dir = Path(config.udi_log_dir or _PACKAGE_ROOT / "logs")
+
+_handlers: list[logging.Handler] = [logging.StreamHandler()]
+try:
+    _log_dir.mkdir(parents=True, exist_ok=True)
+    _handlers.append(
+        RotatingFileHandler(
+            _log_dir / "udi_agent.log", maxBytes=5_000_000, backupCount=3
+        )
+    )
+except OSError as exc:
+    # A read-only install must still boot — stream logs only. Set UDI_LOG_DIR
+    # to a writable path to get the rotating file back.
+    print(f"udiagent: file logging disabled ({_log_dir}: {exc})")
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    handlers=[
-        RotatingFileHandler(
-            _log_dir / "udi_agent.log", maxBytes=5_000_000, backupCount=3
-        ),
-        logging.StreamHandler(),
-    ],
+    handlers=_handlers,
 )
 
 # uvicorn's --reload watcher passes watch_filter=None, so watchfiles logs EVERY
@@ -79,13 +103,11 @@ logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-# --- Config ---
-config = ServerConfig.from_env()
-
 # --- Agent & Orchestrator ---
 agent = UDIAgent(
     gpt_model_name=config.gpt_model_name,
     openai_api_key=config.openai_api_key,
+    openai_base_url=config.openai_base_url,
     langfuse_public_key=config.langfuse_public_key,
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
@@ -106,8 +128,12 @@ app = FastAPI()
 app.state.budget_check = None
 
 
-def _usage_headers(usage: Usage | None) -> dict[str, str]:
-    """Render a ``Usage`` as the ``X-Usage-*`` header bundle for metering."""
+def _usage_headers(usage: Usage | None, model: str | None = None) -> dict[str, str]:
+    """Render a ``Usage`` as the ``X-Usage-*`` header bundle for metering.
+
+    *model* is the model the request actually ran on; it differs from the
+    server's default when a bring-your-own-key caller overrode it.
+    """
     if usage is None:
         usage = Usage()
     return {
@@ -116,7 +142,7 @@ def _usage_headers(usage: Usage | None) -> dict[str, str]:
         "X-Usage-Total-Tokens": str(usage.total_tokens),
         "X-Usage-Cached-Prompt-Tokens": str(usage.cached_prompt_tokens),
         "X-Usage-Reasoning-Tokens": str(usage.reasoning_tokens),
-        "X-Usage-Model": agent.gpt_model_name,
+        "X-Usage-Model": model or agent.gpt_model_name,
     }
 
 
@@ -132,6 +158,21 @@ async def _budget_exceeded_handler(request, exc: BudgetExceededError):
         status_code=200,
         content=[build_rebuff_toolcall(exc.message, reason="budget_exceeded")],
         headers=_usage_headers(exc.usage),
+    )
+
+
+@app.exception_handler(DatabaseAuthError)
+async def _db_auth_error_handler(request, exc: DatabaseAuthError):
+    """Surface a database identity rejection as a 403.
+
+    Raised when a JWT-passthrough backend cannot authenticate the caller to the
+    database. The message is fixed: the underlying pymysql error names the
+    principal and the host, neither of which belongs in a client response.
+    """
+    logger.warning("database rejected forwarded identity: %s", exc)
+    return JSONResponse(
+        status_code=403,
+        content={"error": "The database rejected your credentials for this dataset."},
     )
 
 
@@ -152,7 +193,11 @@ async def _openai_auth_error_handler(request, exc: AuthenticationError):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # Defaults to ["*"] — any origin. Set UDI_CORS_ORIGINS to name the hosts
+    # that embed the chat once you know them; with the wildcard, Starlette
+    # echoes back whatever Origin asked, so any site can call this server with
+    # a user's credentials.
+    allow_origins=config.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -173,6 +218,9 @@ verify_jwt = make_verify_jwt(
     config.jwt_secret_key,
     config.jwt_algorithm,
     config.insecure_dev_mode,
+    jwks_url=config.jwt_jwks_url,
+    issuer=config.jwt_issuer,
+    audience=config.jwt_audience,
 )
 
 # ---------------------------------------------------------------------------
@@ -210,7 +258,9 @@ def yac_completions(
 
     # No key from the caller and none configured server-side → actionable 401
     # instead of the RuntimeError the orchestrator would raise (a bare 500).
-    if not x_openai_key and not config.openai_api_key:
+    # A configured OPENAI_BASE_URL counts as credentialed: self-hosted backends
+    # take no key, and the agent builds a placeholder-key client for them.
+    if not x_openai_key and not config.openai_api_key and not config.openai_base_url:
         return JSONResponse(
             status_code=401,
             content={
@@ -222,11 +272,24 @@ def yac_completions(
     # Only enforce budget for users who don't bring their own key.
     budget_check = None if x_openai_key else app.state.budget_check
 
+    # A caller-supplied model is honored only alongside a caller-supplied key:
+    # whoever pays for the tokens picks the model. On the server's own key,
+    # model choice (and its cost) stays the operator's.
+    # ponytail: key ownership is the permission check here. If deployments ever
+    # need to grant model choice independently of who pays, that becomes a
+    # role/claim lookup on token_payload — see the agent README.
+    requested_model = request.model if x_openai_key else None
+    if request.model and not x_openai_key:
+        logger.info(
+            "ignoring requested model %r: no caller-supplied key", request.model
+        )
+
     result = orchestrator.run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
+        model=requested_model,
         budget_check=budget_check,
         session_id=x_conversation_id,
     )
@@ -239,7 +302,7 @@ def yac_completions(
     )
     return JSONResponse(
         content=result.tool_calls,
-        headers=_usage_headers(result.usage),
+        headers=_usage_headers(result.usage, requested_model),
     )
 
 
@@ -257,13 +320,30 @@ def _engine_from_config(spec: dict):
     from udiagent.query import DuckDBConnector, QueryEngine, StarRocksConnector
 
     backend_type = spec.get("type")
+    passthrough = bool(spec.get("jwtPassthrough"))
     if backend_type == "duckdb":
+        if passthrough:
+            raise ValueError("jwtPassthrough is not supported on duckdb (no user auth)")
         connector = DuckDBConnector(
             database=spec.get("database", ":memory:"),
             views=spec.get("views"),
         )
     elif backend_type == "starrocks":
-        connector = StarRocksConnector(**spec.get("connection", {}))
+        connection = spec.get("connection", {})
+        if passthrough and config.insecure_dev_mode and not connection.get("user"):
+            # Dev mode issues no real token, so passthrough has nothing to
+            # forward. Fail at startup rather than letting every query 403 —
+            # and never silently fall back to a shared credential, which is the
+            # exact behaviour passthrough exists to remove.
+            raise ValueError(
+                "jwtPassthrough backend needs a fallback connection.user under "
+                "INSECURE_DEV_MODE"
+            )
+        connector = StarRocksConnector(
+            **connection,
+            jwt_passthrough=passthrough,
+            principal_field=spec.get("principalField", "sub"),
+        )
     else:
         raise ValueError(f"unknown query backend type: {backend_type!r}")
     return QueryEngine(
@@ -275,30 +355,13 @@ def _engine_from_config(spec: dict):
 
 
 def _load_query_engines() -> dict:
-    raw = os.getenv("UDI_QUERY_BACKENDS")
-    if not raw:
+    # A relative path has already been tried against the package root by
+    # ServerConfig, which is also what reports an unreadable one at startup.
+    path = config.udi_query_backends
+    if not path:
         return {}
-    # A relative value also gets tried against the package root, for the same
-    # reason load_dotenv above takes an explicit path: `pnpm dev:agent` and the
-    # VS Code tasks launch from the REPO ROOT, while the seed scripts write their
-    # config next to themselves in packages/agent — so the documented
-    # `UDI_QUERY_BACKENDS=starrocks-backends.json` resolved to nothing and the
-    # server died on a bare FileNotFoundError. CWD is still tried first, so a
-    # path that already worked keeps working.
-    path = Path(raw)
-    if not path.is_absolute() and not path.exists():
-        from_package = _PACKAGE_ROOT / path
-        if from_package.exists():
-            path = from_package
-    if not path.exists():
-        raise FileNotFoundError(
-            f"UDI_QUERY_BACKENDS={raw!r} not found. Looked in {Path(raw).resolve()}"
-            + (f" and {_PACKAGE_ROOT / raw}" if not Path(raw).is_absolute() else "")
-            + ". Seed a backend first: packages/agent/scripts/seed_starrocks.py "
-            "(or seed_duckdb.py) writes this file into packages/agent/."
-        )
     engines = {}
-    for package, spec in json.loads(path.read_text()).items():
+    for package, spec in json.loads(Path(path).read_text()).items():
         try:
             engines[package] = _engine_from_config(spec)
         except Exception as exc:
@@ -328,7 +391,16 @@ def _no_backend_message(package, engines) -> str:
 
 
 app.state.query_engines = _load_query_engines()
-# package name -> MetadataCache (created lazily per configured engine)
+# (package name, principal) -> MetadataCache, created lazily. Keyed by
+# principal because dataDomains holds the actual distinct VALUES of each column
+# (introspect.py), so under per-user row policies a shared cache would serve one
+# user's data to the next. principal is None whenever the backend is not doing
+# passthrough, which collapses this back to one entry per package.
+# Bounded: unbounded per-user caches are a slow leak in a long-lived process.
+# A plain dict, not an OrderedDict: dicts are insertion-ordered, LRU needs only
+# re-insert and drop-first, and this stays a documented extension point that
+# callers can assign a bare {} to.
+_MAX_METADATA_CACHES = 32
 app.state.metadata_caches = {}
 
 
@@ -349,13 +421,24 @@ def yac_metadata(
             status_code=404,
             content={"error": _no_backend_message(package, engines)},
         )
+    token = token_payload.get(RAW_TOKEN_CLAIM)
+    principal = token_payload.get("sub") if engine.connector.jwt_passthrough else None
     caches = app.state.metadata_caches
-    if key not in caches:
+    cache_key = (key, principal)
+    if cache_key in caches:
+        caches[cache_key] = caches.pop(cache_key)  # re-insert = move to newest
+    else:
         from udiagent.query import MetadataCache
 
-        ttl = float(os.getenv("UDI_METADATA_TTL_SECONDS", "3600"))
-        caches[key] = MetadataCache(engine, package or key, ttl_seconds=ttl)
-    metadata = caches[key].refresh() if refresh else caches[key].get()
+        caches[cache_key] = MetadataCache(
+            engine, package or key, ttl_seconds=config.udi_metadata_ttl_seconds
+        )
+        while len(caches) > _MAX_METADATA_CACHES:
+            del caches[next(iter(caches))]  # oldest insertion = LRU
+
+    with use_db_token(token):
+        cache = caches[cache_key]
+        metadata = cache.refresh() if refresh else cache.get()
     return {
         "package": package or key,
         "interactive": False,
@@ -375,10 +458,11 @@ def yac_query(
             status_code=404,
             content={"error": _no_backend_message(request.package, engines)},
         )
-    results = engine.run_batch(
-        [q.model_dump() for q in request.queries],
-        request.selections,
-    )
+    with use_db_token(token_payload.get(RAW_TOKEN_CLAIM)):
+        results = engine.run_batch(
+            [q.model_dump() for q in request.queries],
+            request.selections,
+        )
     return {"results": results}
 
 
@@ -507,6 +591,7 @@ def yac_benchmark(
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
+        model=request.model if x_openai_key else None,
     )
 
     return {

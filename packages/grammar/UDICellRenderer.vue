@@ -9,7 +9,11 @@ import {
   scaleSequential,
   scaleBand,
 } from 'd3-scale';
-import { defaultRange, type ExtendedRowMapping } from './TableUtil';
+import {
+  defaultRange,
+  mappingNeedsDomain,
+  type ExtendedRowMapping,
+} from './TableUtil';
 import type { UDIPalette } from './Palette';
 import { toTableRampInterpolator, toTableCategoryColors } from './Palette';
 
@@ -141,6 +145,12 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
         `Invalid data type for field ${mapping.field}: ${typeof data}`,
       );
     }
+    // Everything from here on builds a d3 scale. Encodings with no `case` in
+    // the switch below — `text`, whose content comes from getTextValue, and
+    // `shape` — contribute no style, and computeFieldDomains skips deriving a
+    // domain for them, so bail before dereferencing one. Both sides share
+    // mappingNeedsDomain so they cannot disagree about which those are.
+    if (!mappingNeedsDomain(mapping)) continue;
     const domain = mapping.domain;
     let numberDomain: [number, number] = [0, 1];
     let stringDomain: string[] = ['unknown'];
@@ -152,6 +162,10 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
     // full extent before this).
     if (Array.isArray(domain)) {
       stringDomain = domain;
+    } else if (domain === undefined) {
+      // Unreachable via TableComponent, which throws when a scaled encoding
+      // has no domain. Keeps the [0, 1] / ['unknown'] defaults for any other
+      // caller rather than crashing the whole grid on one cell.
     } else if ('numberFields' in domain || 'categoryFields' in domain) {
       throw new Error('numberFields is not supported');
     } else if (
