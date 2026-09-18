@@ -8,20 +8,18 @@ import { UDI_PALETTE_KEY } from './paletteInjectKey';
 import type { ColDef } from 'ag-grid-community';
 import { type ParsedUDIGrammar } from './Parser';
 import type { ExtendedRowMapping } from './TableUtil';
-import { getDomainLookupKey } from './TableUtil';
+import {
+  computeFieldDomains,
+  getDomainLookupKey,
+  mappingNeedsDomain,
+} from './TableUtil';
 import UDICellRenderer from './UDICellRenderer.vue';
 defineExpose({
   UDICellRenderer,
 });
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { AgGridVue } from 'ag-grid-vue3'; // Vue Data Grid Component
-import type {
-  Domain,
-  RowLayer,
-  RowMapping,
-  NumberDomain,
-  StringDomain,
-} from './GrammarTypes';
+import type { Domain, RowLayer, RowMapping } from './GrammarTypes';
 import type { UDIPalette } from './Palette';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -128,116 +126,9 @@ const flatColumnMapping = computed<LayeredRowMapping[]>(() => {
   return flatColumnMapping;
 });
 
-function getNumberDomain(
-  data: Record<string, unknown>[],
-  fields: string | string[],
-): NumberDomain {
-  let fieldList = fields;
-  if (typeof fields === 'string') {
-    fieldList = [fields];
-  }
-  if (fieldList.length === 0) {
-    throw new Error('Field list is empty');
-  }
-
-  let min = Infinity;
-  let max = -Infinity;
-  for (const field of fieldList) {
-    for (const d of data) {
-      const value = d[field];
-      if (value === null || value === undefined) {
-        continue;
-      }
-      let numberValue: number = 0;
-      if (typeof value !== 'number') {
-        numberValue = +value;
-        console.warn(
-          // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions
-          `Value for field ${field} is not a number: ${value}. Converting to number.`,
-        );
-      } else {
-        numberValue = value;
-      }
-      if (numberValue < min) {
-        min = numberValue;
-      }
-      if (numberValue > max) {
-        max = numberValue;
-      }
-    }
-  }
-  return { min, max };
-}
-
-function getStringDomain(
-  data: Record<string, string>[],
-  fields: string | string[],
-): StringDomain {
-  let fieldList = fields;
-  if (typeof fields === 'string') {
-    fieldList = [fields];
-  }
-  if (fieldList.length === 0) {
-    throw new Error('Field list is empty');
-  }
-  const values = new Set<string>();
-  for (const field of fieldList) {
-    const valueList = data
-      .filter((d) => d[field] !== null && typeof d[field] !== 'undefined')
-      .map((d) => d[field]);
-    for (const value of valueList) {
-      values.add(value);
-    }
-  }
-  return Array.from(values);
-}
-const fieldDomains = computed<Map<string, Domain>>(() => {
-  const domainMap = new Map<string, Domain>();
-  if (!flatColumnMapping.value) return domainMap;
-  if (!props.data) return domainMap;
-
-  for (const mapping of flatColumnMapping.value) {
-    const field = mapping.field;
-    const type = mapping.type;
-    const k = getDomainLookupKey(mapping);
-    if (domainMap.has(k)) {
-      continue;
-    }
-    if (mapping.domain) {
-      if ('numberFields' in mapping.domain) {
-        const domain = getNumberDomain(props.data, mapping.domain.numberFields);
-        domainMap.set(k, domain);
-        continue;
-      } else if ('categoryFields' in mapping.domain) {
-        const domain = getStringDomain(
-          props.data,
-          mapping.domain.categoryFields,
-        );
-        domainMap.set(k, domain);
-        continue;
-      } else {
-        domainMap.set(k, mapping.domain);
-        if (Array.isArray(mapping.domain)) {
-          continue;
-        }
-        if ('min' in mapping.domain && 'max' in mapping.domain) {
-          continue;
-        }
-        // The only scenario we don't don't continue is when domain is a partial domain
-      }
-    }
-
-    if (type === 'quantitative') {
-      const domain = getNumberDomain(props.data, field);
-      const partialDomain = domainMap.get(k) ?? {};
-      domainMap.set(k, { ...domain, ...partialDomain });
-    } else if (type === 'nominal' || type === 'ordinal') {
-      const domain = getStringDomain(props.data, field);
-      domainMap.set(k, domain);
-    }
-  }
-  return domainMap;
-});
+const fieldDomains = computed<Map<string, Domain>>(() =>
+  computeFieldDomains(flatColumnMapping.value, props.data),
+);
 
 const colDefs = computed<ColDef[]>(() => {
   if (flatColumnMapping.value.length === 0) {
@@ -247,12 +138,15 @@ const colDefs = computed<ColDef[]>(() => {
   const mappingWithDomains: ExtendedRowMapping[] = flatColumnMapping.value.map(
     (mapping) => {
       const k = getDomainLookupKey(mapping);
-      if (fieldDomains.value.has(k)) {
-        const domain = fieldDomains.value.get(k);
-        return {
-          ...mapping,
-          domain: domain,
-        } as ExtendedRowMapping;
+      const domain = fieldDomains.value.get(k);
+      if (domain !== undefined) {
+        return { ...mapping, domain: domain };
+      }
+      // computeFieldDomains deliberately derives nothing for encodings that
+      // never consult a scale, so a missing domain is expected for those.
+      // Anything else missing one is a real bug and still throws.
+      if (!mappingNeedsDomain(mapping)) {
+        return { ...mapping };
       }
       throw new Error(
         `Domain not found for mapping ${JSON.stringify(mapping)}`,

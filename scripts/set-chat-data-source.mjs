@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 const abs = (p) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 const ENV = abs('packages/chat/.env.local');
+const AGENT_ENV = abs('packages/agent/.env');
 const TEMPLATE = abs('packages/chat/.env.example');
 const SAMPLE_DATA = (pkg) => abs(`sample-data/${pkg}`);
 
@@ -43,7 +44,18 @@ function setEnv(text, key, value) {
   const line = `${key}=${value}`;
   const active = new RegExp(`^${key}=.*$`, 'm');
   if (active.test(text)) return text.replace(active, line);
+  // Otherwise revive a commented-out line that already has this exact value —
+  // almost always the one a previous switch left behind. Without this, toggling
+  // between two packages appends a line every time and the file grows forever.
+  // Matching on the value (not just the key) keeps the commented examples that
+  // .env.example ships as documentation intact.
+  const sameValue = new RegExp(`^#\\s*${escapeRegExp(line)}$`, 'm');
+  if (sameValue.test(text)) return text.replace(sameValue, line);
   return text.replace(/\n*$/, '') + `\n${line}\n`;
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** Comment out any active KEY= line so it stops taking effect. */
@@ -61,11 +73,23 @@ if (remote) {
 }
 writeFileSync(ENV, env);
 
+// Browser mode needs no server-side backend, and leaving one configured keeps a
+// read-write DuckDB handle open — which then blocks the next re-seed (DuckDB
+// allows one writer per file). The seed scripts set this var; this releases it.
+if (!remote && existsSync(AGENT_ENV)) {
+  const agentEnv = readFileSync(AGENT_ENV, 'utf8');
+  const released = unsetEnv(agentEnv, 'UDI_QUERY_BACKENDS');
+  if (released !== agentEnv) {
+    writeFileSync(AGENT_ENV, released);
+    console.log('  UDI_QUERY_BACKENDS disabled in packages/agent/.env');
+  }
+}
+
 console.log(
   remote
     ? `✓ chat data source → remote package "${pkg}" (server-side query mode)\n` +
-        '  VITE_UDI_DATA_PACKAGE disabled. Make sure the agent runs with UDI_QUERY_BACKENDS\n' +
-        '  configured for this package, then restart the chat dev server to apply.'
+        '  VITE_UDI_DATA_PACKAGE disabled. The seed scripts set UDI_QUERY_BACKENDS in\n' +
+        '  packages/agent/.env; restart the agent and the chat dev server to apply.'
     : `✓ chat data source → /data/${pkg}/datapackage.json (CSV / interactive mode)\n` +
         '  VITE_UDI_REMOTE_PACKAGE disabled. Restart the chat dev server to apply.',
 );

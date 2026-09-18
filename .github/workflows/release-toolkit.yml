@@ -1,25 +1,31 @@
 name: Release udi-toolkit
 
+# Tag-triggered publish. This workflow never writes to main: the "Main Branch
+# Protection" ruleset requires every change to main to go through a pull
+# request, so the version bump lands via PR and pushing the matching tag is
+# what publishes.
+#
+# To release:
+#   1. Bump "version" in packages/grammar/package.json in a PR; merge it.
+#   2. git fetch origin main
+#      git tag udi-toolkit-v<version> origin/main && git push origin udi-toolkit-v<version>
+#
 # Publish udi-toolkit BEFORE releasing udi-yac when the toolkit version moved:
 # udi-yac's `workspace:*` dep is rewritten to the exact in-tree toolkit version
-# at publish time, so that version must exist on npm.
+# at publish time, so that version must already exist on npm. Let this run
+# finish before pushing the udi-yac tag.
+#
+# The filename is load-bearing — npm trusted publishing (OIDC) is bound to this
+# repository *and* this workflow filename. Renaming it breaks publishing.
 
 on:
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: "Version bump type"
-        required: true
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+  push:
+    tags:
+      - "udi-toolkit-v*"
 
 permissions:
-  id-token: write # Required for OIDC
-  contents: write # Required to push commits and tags
+  contents: write # Required to create the GitHub Release
+  id-token: write # Required for npm trusted publishing (OIDC)
 
 jobs:
   release:
@@ -28,7 +34,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          persist-credentials: true
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -40,10 +45,15 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      - name: Configure git
+      - name: Verify tag matches package version
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          tag_version="${GITHUB_REF_NAME#udi-toolkit-v}"
+          pkg_version=$(node -p "require('./packages/grammar/package.json').version")
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match packages/grammar/package.json version ${pkg_version}"
+            exit 1
+          fi
+          echo "Releasing udi-toolkit v${pkg_version}"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -57,26 +67,12 @@ jobs:
           node test/smoke-react.mjs
           node test/smoke-exports.mjs
 
-      - name: Bump version
-        id: bump
-        working-directory: packages/grammar
-        run: |
-          pnpm version ${{ inputs.bump }} --no-git-tag-version
-          new_version=$(node -p "require('./package.json').version")
-          echo "version=$new_version" >> "$GITHUB_OUTPUT"
-          git add package.json
-          git commit -m "chore(release): udi-toolkit-v${new_version}"
-          git tag "udi-toolkit-v${new_version}"
-
-      - name: Push commit and tag
-        run: |
-          git push origin HEAD
-          git push --tags
-
+      # --no-git-checks: the tag is checked out in detached HEAD, which pnpm's
+      # default branch/cleanliness checks reject.
       - name: Publish to npm
-        run: pnpm --filter udi-toolkit publish --access public
+        run: pnpm --filter udi-toolkit publish --access public --no-git-checks
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "udi-toolkit-v${{ steps.bump.outputs.version }}" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag

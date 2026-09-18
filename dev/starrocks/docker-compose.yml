@@ -2,7 +2,7 @@
 # Quickstart: see README.md in this directory.
 services:
   starrocks:
-    image: starrocks/allin1-ubuntu:3.3-latest
+    image: starrocks/allin1-ubuntu:3.5-latest
     container_name: udi-starrocks
     restart: unless-stopped
     ports:

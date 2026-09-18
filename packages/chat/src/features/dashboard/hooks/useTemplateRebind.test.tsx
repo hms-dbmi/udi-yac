@@ -72,7 +72,9 @@ function Harness({ children }: { children: ReactNode }) {
   const seeded = useDashboard((s) => s.activeVisualizations.size > 0);
   useEffect(() => {
     store = dashboardStore;
-    dashboardStore.getState().addActiveVisualization(0, 0, SPEC, '', null, undefined, TEMPLATE);
+    dashboardStore
+      .getState()
+      .addActiveVisualization(0, 0, SPEC, '', null, undefined, undefined, TEMPLATE);
     dataPackageStore.setState({ dataPackageString: '{"resources":[]}' });
   }, [dashboardStore, dataPackageStore]);
   return seeded ? <>{children}</> : null;

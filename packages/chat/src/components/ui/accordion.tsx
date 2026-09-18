@@ -25,9 +25,24 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
   );
 }
 
-function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.Trigger.Props) {
+function AccordionTrigger({
+  className,
+  headerClassName,
+  children,
+  ...props
+}: AccordionPrimitive.Trigger.Props & {
+  /**
+   * Applied to the wrapping `<Header>` rather than the trigger button. Lets a
+   * consumer make the header `sticky` — which has to sit on the header, since
+   * the button is a flex child of it.
+   */
+  headerClassName?: string;
+}) {
   return (
-    <AccordionPrimitive.Header data-slot="accordion-header" className="flex min-w-0 flex-1">
+    <AccordionPrimitive.Header
+      data-slot="accordion-header"
+      className={cn('flex min-w-0 flex-1', headerClassName)}
+    >
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
