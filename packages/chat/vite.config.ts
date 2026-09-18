@@ -77,11 +77,14 @@ export default defineConfig(({ mode }) => ({
           dts({
             // No insertTypesEntry: under rolldown-vite it wrote an empty
             // `export {}` stub at dist/index.d.ts (its computed source-entry
-            // path didn't match an emitted file). The real barrel is emitted at
-            // dist/src/index.d.ts; package.json "types" points there directly.
+            // path didn't match an emitted file). The barrel is emitted at
+            // dist/index.d.ts (tsconfig.app.json pins `rootDir` to src/ — see
+            // the note there); package.json "types" points there directly.
             include: ['src'],
             exclude: ['src/app/App.tsx', 'src/app/main.tsx'],
             tsconfigPath: resolve(import.meta.dirname, 'tsconfig.app.json'),
+            rollupTypes: true,
+            bundledPackages: ['udi-toolkit'],
           }),
           rewriteExternalRequire(),
         ]

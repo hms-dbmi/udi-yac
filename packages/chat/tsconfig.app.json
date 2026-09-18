@@ -16,6 +16,12 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* TS 6 defaults `rootDir` to the tsconfig directory, so declarations
+       emitted by vite-plugin-dts were named `src/app/…` while the plugin
+       resolved the `@/` alias from `src/` — every rewritten import ended up
+       one directory too high (`../../types/…`) and landed under `dist/src/`. */
+    "rootDir": "./src",
+
     /* Path aliases — `baseUrl` was deprecated in TS 6; `paths` now resolves
        relative to the tsconfig file's directory. */
     "paths": {

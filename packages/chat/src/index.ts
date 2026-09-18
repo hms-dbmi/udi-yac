@@ -2,6 +2,9 @@ import './index.css';
 
 export { UDIChat } from './app/UDIChat';
 export type { UDIChatConfig, TrackerFn } from './app/UDIChatConfig';
+// Re-exported so consumers can type a `palette` without depending on udi-toolkit,
+// which is bundled into this package rather than installed alongside it.
+export type { UDIPalette } from 'udi-toolkit/react';
 export type {
   DataPackage,
   DataPackageResource,
