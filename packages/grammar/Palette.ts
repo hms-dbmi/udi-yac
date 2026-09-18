@@ -18,6 +18,22 @@ export interface UDIPalette {
   ordinal?: DiscreteColor;
   /** Continuous color for quantitative (numeric) scales (Vega `config.range.ramp` + tables). */
   ramp?: ContinuousColor;
+  /**
+   * Chart surface color behind the plot (Vega `config.background`). Unset
+   * leaves Vega's default, an opaque white rectangle; a host rendering in dark
+   * mode typically passes its card color or `'transparent'`.
+   */
+  background?: string;
+  /**
+   * Color of chart text that is not itself a data mark: axis, legend and
+   * header labels and titles, and the chart title. Unset leaves Vega's default
+   * (black), which is unreadable on a dark surface.
+   */
+  text?: string;
+  /** Color of axis domain lines and ticks (Vega `config.axis.domainColor` / `tickColor`). */
+  axis?: string;
+  /** Color of axis grid lines (Vega `config.axis.gridColor`). */
+  grid?: string;
 }
 
 /**
@@ -61,6 +77,57 @@ export const DEFAULT_PALETTE: UDIPalette = {
   ],
   ramp: 'oranges',
 };
+
+/**
+ * Build the vega-embed `config` for a palette, falling back to DEFAULT_PALETTE
+ * per scale channel. A spec-level per-encoding `range` still wins — this only
+ * sets the scale defaults. Surface keys (`background`, `text`, `axis`, `grid`)
+ * have no default: when unset they are left out entirely so Vega's own
+ * defaults apply and existing charts are unchanged.
+ *
+ * `registerScheme` is only consulted for a function-valued `ramp` (see
+ * `toVegaRamp`).
+ */
+export function toVegaConfig(
+  palette: UDIPalette | undefined,
+  registerScheme: (fn: (t: number) => string) => string,
+): Record<string, unknown> {
+  const p = palette ?? {};
+  const markColor = p.mark ?? DEFAULT_PALETTE.mark;
+  const category = p.category ?? DEFAULT_PALETTE.category;
+  const ordinal = p.ordinal ?? DEFAULT_PALETTE.ordinal;
+  const ramp = p.ramp ?? DEFAULT_PALETTE.ramp;
+
+  const range: Record<string, unknown> = {};
+  if (category != null) range.category = toVegaRange(category);
+  if (ordinal != null) range.ordinal = toVegaRange(ordinal);
+  if (ramp != null) range.ramp = toVegaRamp(ramp, registerScheme);
+
+  const config: Record<string, unknown> = {
+    point: { shape: 'circle', filled: true },
+    range,
+  };
+  if (markColor != null) config.mark = { color: markColor };
+
+  if (p.background != null) config.background = p.background;
+
+  const axis: Record<string, string> = {};
+  if (p.text != null) {
+    axis.labelColor = p.text;
+    axis.titleColor = p.text;
+    config.legend = { labelColor: p.text, titleColor: p.text };
+    config.header = { labelColor: p.text, titleColor: p.text };
+    config.title = { color: p.text, subtitleColor: p.text };
+  }
+  if (p.axis != null) {
+    axis.domainColor = p.axis;
+    axis.tickColor = p.axis;
+  }
+  if (p.grid != null) axis.gridColor = p.grid;
+  if (Object.keys(axis).length > 0) config.axis = axis;
+
+  return config;
+}
 
 /** A Vega range definition: either an explicit color array or a scheme reference. */
 export type VegaRange = string[] | { scheme: string };

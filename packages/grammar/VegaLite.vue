@@ -18,7 +18,7 @@ import { changeset } from 'vega';
 const dataSourcesStore = useDataSourcesStore();
 import { isEmpty, debounce } from 'lodash';
 import type { UDIPalette } from './Palette';
-import { DEFAULT_PALETTE, toVegaRange, toVegaRamp } from './Palette';
+import { toVegaConfig } from './Palette';
 import { registerRampScheme } from './paletteScheme';
 
 // our type is more specific than the one from vega-embed
@@ -55,27 +55,11 @@ interface VegaLiteProps {
 
 const props = defineProps<VegaLiteProps>();
 
-// Build the vega-embed `config` object from the palette prop, falling back to
-// DEFAULT_PALETTE per channel. A spec-level per-encoding `range` still wins —
-// this only sets the scale defaults.
+// The vega-embed `config` object for the palette prop — scale defaults plus
+// the chart surface (background, text, axis and grid colors). See
+// `toVegaConfig` for the fallback rules.
 function buildVegaConfig(): Record<string, unknown> {
-  const palette = props.palette ?? {};
-  const markColor = palette.mark ?? DEFAULT_PALETTE.mark;
-  const category = palette.category ?? DEFAULT_PALETTE.category;
-  const ordinal = palette.ordinal ?? DEFAULT_PALETTE.ordinal;
-  const ramp = palette.ramp ?? DEFAULT_PALETTE.ramp;
-
-  const range: Record<string, unknown> = {};
-  if (category != null) range.category = toVegaRange(category);
-  if (ordinal != null) range.ordinal = toVegaRange(ordinal);
-  if (ramp != null) range.ramp = toVegaRamp(ramp, registerRampScheme);
-
-  const config: Record<string, unknown> = {
-    point: { shape: 'circle', filled: true },
-    range,
-  };
-  if (markColor != null) config.mark = { color: markColor };
-  return config;
+  return toVegaConfig(props.palette, registerRampScheme);
 }
 
 const vegaContainer = ref();
