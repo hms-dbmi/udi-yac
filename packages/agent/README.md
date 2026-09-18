@@ -310,7 +310,21 @@ Local dev instance: [`dev/starrocks/README.md`](../../dev/starrocks/README.md).
 
 ### Docker
 
-**Build from the repo root**, not from `packages/agent`: `uv.lock` is the uv
+Every `udiagent-vX.Y.Z` release also publishes a multi-arch (amd64/arm64)
+image to GitHub Container Registry, so a deployment does not need a checkout
+of this repo:
+
+```bash
+docker pull ghcr.io/hms-dbmi/udiagent:0.3.0     # or :0.3, :latest
+docker run -p 8007:80 --env-file packages/agent/.env ghcr.io/hms-dbmi/udiagent:0.3.0
+```
+
+`:edge` is the current `main` when someone runs the
+[`publish-agent-image.yml`](../../.github/workflows/publish-agent-image.yml)
+workflow by hand. The image is the same Dockerfile as below, with the `server`,
+`langfuse`, `duckdb` and `starrocks` extras.
+
+To build it yourself, **build from the repo root**, not from `packages/agent`: `uv.lock` is the uv
 workspace lockfile and lives at the root (see root `pyproject.toml`
 `[tool.uv.workspace]`). The `.dockerignore` at the root keeps the JS half of the
 monorepo out of the build context.
@@ -320,9 +334,9 @@ docker build -f packages/agent/Dockerfile -t udiagent .   # from the repo root
 docker run -p 8007:80 --env-file packages/agent/.env udiagent
 ```
 
-The image installs the `server` + `langfuse` extras. Add `--extra duckdb` /
-`--extra starrocks` to both `uv sync` lines if the deployment serves
-[server-side query backends](#server-side-query-backends).
+The image installs the `server`, `langfuse`, `duckdb` and `starrocks` extras,
+so it can serve [server-side query backends](#server-side-query-backends)
+without a rebuild.
 
 ## Deployment Guide
 
@@ -330,14 +344,15 @@ Step-by-step for standing the agent up as a server on a fresh host. There are
 two supported ways to get the code onto the host — pick one, then follow the
 shared steps:
 
-|                     | **Path A** — container from source                                | **Path B** — `udiagent[server]` from PyPI                           |
-| ------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Use when            | deploying a branch or unreleased code; want the exact pinned deps | deploying a released version; no repo checkout; own process manager |
-| Host needs          | Docker + a clone of this repo                                     | Python ≥ 3.12 and `pip`/`uv`                                        |
-| Dependency versions | exact, from the workspace `uv.lock`                               | resolved at install time from `pyproject.toml` ranges               |
-| Process supervision | `--restart unless-stopped`                                        | yours (systemd unit below)                                          |
-| Dev-data endpoints  | work out of the box                                               | need `UDI_DATA_DIR` (step 3B)                                       |
-| CI deploy           | [`deploy-agent.yml`](../../.github/workflows/deploy-agent.yml)    | —                                                                   |
+|                     | **Path A** — container from source                                              | **Path B** — `udiagent[server]` from PyPI                           |
+| ------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Use when            | deploying a branch or unreleased code; want the exact pinned deps               | deploying a released version; no repo checkout; own process manager |
+| Host needs          | Docker + a clone of this repo                                                   | Python ≥ 3.12 and `pip`/`uv`                                        |
+| Dependency versions | exact, from the workspace `uv.lock`                                             | resolved at install time from `pyproject.toml` ranges               |
+| Process supervision | `--restart unless-stopped`                                                      | yours (systemd unit below)                                          |
+| Dev-data endpoints  | work out of the box                                                             | need `UDI_DATA_DIR` (step 3B)                                       |
+| CI deploy           | [`deploy-agent.yml`](../../.github/workflows/deploy-agent.yml)                  | —                                                                   |
+| Published image     | `ghcr.io/hms-dbmi/udiagent` (see [Docker](#docker)) — skips the clone and build | —                                                                   |
 
 Steps 1–2 and 4–5 apply to both, step 3 splits, step 6 is Path A only, step 7
 is client-side.

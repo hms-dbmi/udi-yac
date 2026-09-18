@@ -1,0 +1,84 @@
+name: Publish udiagent image to GHCR
+
+# Builds packages/agent/Dockerfile and pushes it to
+# ghcr.io/<owner>/udiagent, so deployments can pull a released image
+# instead of cloning the repo and building from source (deploy-agent.yml).
+#
+# Fires for the same event as release-agent.yml (a GitHub Release tagged
+# udiagent-vX.Y.Z), so a release publishes the wheel and the image
+# together. The tag must match packages/agent/pyproject.toml, as the npm
+# release workflows require for their packages. `workflow_dispatch` builds
+# the current ref as an `edge` image for trying unreleased code.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/udiagent
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'udiagent-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve image tags
+        id: tags
+        run: |
+          pkg_version=$(python3 -c "import tomllib; print(tomllib.load(open('packages/agent/pyproject.toml','rb'))['project']['version'])")
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+            tag_version="${GITHUB_REF_NAME#udiagent-v}"
+            if [ "$tag_version" != "$pkg_version" ]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match packages/agent/pyproject.toml version ${pkg_version}"
+              exit 1
+            fi
+            major_minor="${pkg_version%.*}"
+            tags="${IMAGE}:${pkg_version},${IMAGE}:${major_minor},${IMAGE}:latest"
+            echo "Publishing udiagent v${pkg_version}"
+          else
+            tags="${IMAGE}:edge,${IMAGE}:sha-${GITHUB_SHA::7}"
+            echo "Publishing unreleased build ${GITHUB_SHA::7} as edge"
+          fi
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+          echo "version=${pkg_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # arm64 is built under QEMU emulation. The Dockerfile only installs
+      # pre-built wheels via uv, so this is slow but not fragile; drop the
+      # platform if it ever becomes a problem.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          # Context is the repo root: uv.lock is the workspace lockfile (see
+          # the Dockerfile and deploy-agent.yml).
+          context: .
+          file: packages/agent/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.tags.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=MIT
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
