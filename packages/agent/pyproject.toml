@@ -1,6 +1,6 @@
 [project]
 name = "udiagent"
-version = "0.2.7"
+version = "0.3.0"
 description = "UDI Agent: LLM-powered data visualization orchestration library"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,8 +18,11 @@ langfuse = [
 ]
 server = [
     "fastapi[standard]>=0.128.0",
-    "python-jose>=3.5.0",
+    "python-jose[cryptography]>=3.5.0",
     "python-dotenv>=1.0.0",
+    # Already pulled in by fastapi[standard]; declared because ServerConfig
+    # imports it directly.
+    "pydantic-settings>=2.0",
 ]
 benchmark = [
     "datasets>=4.5.0",
@@ -39,6 +42,7 @@ starrocks = [
 test = [
     "pytest>=8.0.0",
     "duckdb>=1.0.0",
+    "cryptography>=42.0.0",
 ]
 all = [
     "udiagent[langfuse,server,benchmark,codegen,starrocks,duckdb]",

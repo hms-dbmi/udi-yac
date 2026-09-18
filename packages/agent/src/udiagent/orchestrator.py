@@ -180,6 +180,7 @@ class Orchestrator:
         data_schema: str,
         data_domains: str,
         openai_api_key: str | None = None,
+        model: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
         session_id: str | None = None,
     ) -> OrchestratorResult:
@@ -208,6 +209,7 @@ class Orchestrator:
                 data_schema,
                 data_domains,
                 openai_api_key=openai_api_key,
+                model=model,
                 budget_check=budget_check,
             )
 
@@ -217,6 +219,7 @@ class Orchestrator:
         data_schema: str,
         data_domains: str,
         openai_api_key: str | None = None,
+        model: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
     ) -> OrchestratorResult:
         usage = Usage()
@@ -238,6 +241,7 @@ class Orchestrator:
                 data_domains,
                 usage,
                 openai_api_key=openai_api_key,
+                model=model,
                 budget_check=budget_check,
             )
         except BudgetExceededError as err:
@@ -266,6 +270,7 @@ class Orchestrator:
         data_domains,
         usage,
         openai_api_key=None,
+        model=None,
     ):
         description = tool_args.get("description", "")
         if description:
@@ -283,11 +288,8 @@ class Orchestrator:
             usage=usage,
             openai_api_key=openai_api_key,
             data_domains=data_domains,
+            model=model,
         )
-
-        title = tool_args.get("title", "")
-        if title:
-            result["arguments"]["title"] = title
 
         return result
 
@@ -299,6 +301,7 @@ class Orchestrator:
         data_domains,
         usage,
         openai_api_key=None,
+        model=None,
     ):
         available_capabilities = [
             f"{t['function']['name']}: {t['function']['description']}"
@@ -324,7 +327,7 @@ class Orchestrator:
             resp = _call_with_budget_guard(
                 gpt_client.chat.completions.create,
                 usage,
-                model=self.agent.gpt_model_name,
+                model=model or self.agent.gpt_model_name,
                 messages=msgs,
                 temperature=0.0,
                 max_completion_tokens=1024,
@@ -356,6 +359,7 @@ class Orchestrator:
         data_domains,
         usage,
         openai_api_key=None,
+        model=None,
     ):
         available_tools = "\n".join(
             f"- {t['function']['name']}: {t['function']['description']}"
@@ -383,7 +387,7 @@ class Orchestrator:
             resp = _call_with_budget_guard(
                 gpt_client.chat.completions.create,
                 usage,
-                model=self.agent.gpt_model_name,
+                model=model or self.agent.gpt_model_name,
                 messages=msgs,
                 temperature=0.0,
                 max_completion_tokens=1024,
@@ -431,6 +435,7 @@ class Orchestrator:
         data_domains,
         usage,
         openai_api_key=None,
+        model=None,
     ):
         try:
             schema_raw = (
@@ -473,6 +478,7 @@ class Orchestrator:
         data_domains,
         usage,
         openai_api_key=None,
+        model=None,
     ):
         filter_obj = {
             "filterType": tool_args["filterType"],
@@ -500,6 +506,7 @@ class Orchestrator:
         data_domains,
         usage,
         openai_api_key=None,
+        model=None,
         budget_check: Callable[["Usage"], str | None] | None = None,
     ):
         msgs = normalize_tool_calls(copy.deepcopy(messages))
@@ -515,7 +522,7 @@ class Orchestrator:
         resp = _call_with_budget_guard(
             gpt_client.chat.completions.create,
             usage,
-            model=self.agent.gpt_model_name,
+            model=model or self.agent.gpt_model_name,
             messages=msgs,
             tools=self.tools,
             tool_choice="required",
@@ -566,6 +573,7 @@ class Orchestrator:
                 data_domains,
                 usage,
                 openai_api_key=openai_api_key,
+                model=model,
             )
             tool_calls.append(result)
 

@@ -57,7 +57,12 @@ function rewriteExternalRequire(): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
-  base: mode === 'lib' ? '/' : (process.env.VITE_BASE ?? '/'),
+  // Lib mode uses './' so any emitted asset URL is relative to the stylesheet
+  // rather than to the consuming site's root — a root-absolute `url(/assets/…)`
+  // would resolve against the *host's* origin and 404. Today nothing depends on
+  // this (lib mode inlines the Geist woff2 files as data URIs), but it makes the
+  // property hold by construction rather than by accident of the inline limit.
+  base: mode === 'lib' ? './' : (process.env.VITE_BASE ?? '/'),
   // react-draggable@4.7.0 reads unguarded `process.env.DRAGGABLE_DEBUG`, which
   // throws `process is not defined` in the browser (drag/resize dies on
   // mousedown). Vite only auto-replaces NODE_ENV, so stub this one out.
@@ -76,7 +81,7 @@ export default defineConfig(({ mode }) => ({
             // dist/src/index.d.ts; package.json "types" points there directly.
             include: ['src'],
             exclude: ['src/app/App.tsx', 'src/app/main.tsx'],
-            tsconfigPath: resolve(__dirname, 'tsconfig.app.json'),
+            tsconfigPath: resolve(import.meta.dirname, 'tsconfig.app.json'),
           }),
           rewriteExternalRequire(),
         ]
@@ -84,14 +89,14 @@ export default defineConfig(({ mode }) => ({
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': resolve(import.meta.dirname, './src'),
     },
   },
   build:
     mode === 'lib'
       ? {
           lib: {
-            entry: resolve(__dirname, 'src/index.ts'),
+            entry: resolve(import.meta.dirname, 'src/index.ts'),
             name: 'UDIYac',
             fileName: 'udi-yac',
             formats: ['es'] as const,
