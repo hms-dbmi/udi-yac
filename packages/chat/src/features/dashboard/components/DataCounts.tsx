@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Users, FlaskConical, Table2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useQueryData, type QueryDataSpec } from 'udi-toolkit/react';
 import type { DataTransformation } from 'udi-toolkit';
 import {
@@ -9,22 +9,11 @@ import {
   useDataFiltersStore,
   useDataPackageStore,
   useEntityIcons,
+  useGlobalStore,
 } from '@/app/UDIChatContext';
 import { joinDataPath } from '@/features/data-package';
+import { DEFAULT_ENTITY_ICONS, FALLBACK_ENTITY_ICON } from '@/utils/entityIcons';
 import type { EntityIconMap } from '../types';
-
-const DEFAULT_ENTITY_ICONS: EntityIconMap = {
-  donors: Users,
-  donor: Users,
-  subject: Users,
-  subjects: Users,
-  samples: FlaskConical,
-  sample: FlaskConical,
-  biosample: FlaskConical,
-  biosamples: FlaskConical,
-  dataset: Table2,
-  datasets: Table2,
-};
 
 interface EntityChip {
   id: string;
@@ -42,6 +31,7 @@ export function DataCounts() {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataFiltersStore = useDataFiltersStore();
   const dataPackageStore = useDataPackageStore();
+  const globalStore = useGlobalStore();
 
   const [filteredCounts, setFilteredCounts] = useState<Record<string, number>>({});
 
@@ -62,7 +52,7 @@ export function DataCounts() {
           id: name,
           label: name,
           totalCount,
-          Icon: mergedIcons[name] ?? Table2,
+          Icon: mergedIcons[name] ?? FALLBACK_ENTITY_ICON,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
@@ -239,10 +229,13 @@ export function DataCounts() {
         const isFiltered =
           domainsReady && hasFilters && filtered != null && filtered !== chip.totalCount;
         return (
-          <div
+          <button
             key={chip.id}
-            className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5"
-            title={chip.label}
+            type="button"
+            onClick={() => globalStore.getState().setOverview(true, chip.id)}
+            title={`${chip.label} — open data overview`}
+            aria-label={`${chip.label}: ${chip.totalCount.toLocaleString()} rows. Open data overview.`}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             <chip.Icon className="h-5 w-5 text-muted-foreground shrink-0" />
             <div className="flex flex-col items-center text-center leading-tight">
@@ -261,7 +254,7 @@ export function DataCounts() {
               </div>
               <span className="text-[11px] text-muted-foreground">{chip.label}</span>
             </div>
-          </div>
+          </button>
         );
       })}
     </div>

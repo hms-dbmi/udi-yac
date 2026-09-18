@@ -25,9 +25,9 @@ export const GRID_MARGIN: readonly [number, number] = [8, 8];
 
 export const DRAG_HANDLE_CLASS = 'dashboard-card-drag';
 
-// Toggled on document.body while a card is being dragged or resized.
-// Paired with a CSS rule that disables text selection across the page —
-// see `body.${GRID_INTERACTING_CLASS}` in src/index.css.
+// Toggled on UDIChat's root element while a card is being dragged or resized.
+// Paired with CSS rules that disable text selection and suppress tooltips
+// within the chat — see `.udi-yac.${GRID_INTERACTING_CLASS}` in src/index.css.
 export const GRID_INTERACTING_CLASS = 'udi-grid-interacting';
 
 export function clampGridCols(n: number): number {

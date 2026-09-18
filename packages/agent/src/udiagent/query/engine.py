@@ -16,7 +16,7 @@ import logging
 from typing import Any
 
 from .compiler import PipelineCompiler, ends_in_rollup
-from .errors import UnsupportedQueryError
+from .errors import DatabaseAuthError, UnsupportedQueryError
 from .kde import gaussian_kde
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,12 @@ class QueryEngine:
                 )
             except UnsupportedQueryError as error:
                 results[viz_id] = {"error": str(error)}
+            except DatabaseAuthError:
+                # A credential problem is not a chart-shaped error: it fails the
+                # whole request with a 403 rather than being reported per-viz
+                # inside a 200 (which would also echo the DB message to the
+                # client). Must stay ahead of the broad catch below.
+                raise
             except Exception as error:  # noqa: BLE001 - one bad spec (e.g. a
                 # SQL error from an unexpected column) must not sink the batch.
                 logger.exception("query failed for viz %s", viz_id)

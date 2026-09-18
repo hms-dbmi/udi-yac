@@ -23,4 +23,27 @@ describe('globalStore', () => {
     expect(a.getState().debugMode).toBe(true);
     expect(b.getState().debugMode).toBe(false);
   });
+
+  it('setOverview opens with an entity and closes without clearing it', () => {
+    const store = createGlobalStore();
+    expect(store.getState().overviewOpen).toBe(false);
+    expect(store.getState().overviewEntity).toBeNull();
+
+    store.getState().setOverview(true, 'datasets');
+    expect(store.getState().overviewOpen).toBe(true);
+    expect(store.getState().overviewEntity).toBe('datasets');
+
+    // Closing keeps the entity so reopening lands where the user left off.
+    store.getState().setOverview(false);
+    expect(store.getState().overviewOpen).toBe(false);
+    expect(store.getState().overviewEntity).toBe('datasets');
+  });
+
+  it('setOverview clears the entity only when passed null', () => {
+    const store = createGlobalStore();
+    store.getState().setOverview(true, 'donors');
+    store.getState().setOverview(true, null);
+    expect(store.getState().overviewEntity).toBeNull();
+    expect(store.getState().overviewOpen).toBe(true);
+  });
 });

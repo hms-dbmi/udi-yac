@@ -1,6 +1,6 @@
 {
   "name": "udi-yac",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "React implementation of the Universal Discovery Interface (UDI) chat — natural-language querying and visualization of biomedical datasets. Publishable as a library (`UDIChat` component) or as a standalone SPA.",
   "keywords": [
     "udi",
@@ -56,6 +56,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:css": "node test/no-global-css-leaks.mjs",
     "test:watch": "vitest",
     "preview": "vite preview"
   },
@@ -70,8 +71,6 @@
     "jszip": "^3.10.1",
     "lucide-react": "^1.7.0",
     "lz-string": "^1.5.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
     "react-grid-layout": "^2.2.3",
     "react-markdown": "^10.1.0",
     "react-resizable": "^4.0.1",
@@ -101,13 +100,15 @@
     "jsdom": "^25.0.1",
     "lint-staged": "^16.4.0",
     "prettier": "^3.4.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.57.0",
     "vega": "^6.2.0",
     "vega-embed": "^7.1.0",
-    "vite": "^8.0.1",
+    "vite": "^8.3.0",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^2.1.8"
+    "vitest": "^5.0.0"
   }
 }

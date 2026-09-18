@@ -19,14 +19,12 @@ docker compose -f dev/starrocks/docker-compose.yml up -d
 # 2. Seed it (waits for readiness automatically). From packages/agent:
 uv run --extra starrocks python scripts/seed_starrocks.py   # seeds sample-data/penguins -> database `penguins`
 
-# 3. Point the agent + chat at it. Include BOTH extras: `server` provides the
-#    fastapi CLI, `starrocks` the pymysql driver — `uv run` prunes any extra
-#    you don't name, so a bare `uv run fastapi` errors with "Failed to spawn:
-#    fastapi". (Run from packages/agent, or add `--project packages/agent`.)
-UDI_QUERY_BACKENDS=$(pwd)/starrocks-backends.json INSECURE_DEV_MODE=1 \
-  uv run --extra server --extra starrocks fastapi dev src/udiagent/server/app.py --port 8007
-# and in packages/chat/.env.local:
-#   VITE_UDI_REMOTE_PACKAGE=penguins
+# 3. Point the chat at it. Seeding already wrote UDI_QUERY_BACKENDS into
+#    packages/agent/.env, so the agent needs no env prefix.
+node scripts/set-chat-data-source.mjs penguins --remote   # VITE_UDI_REMOTE_PACKAGE=penguins
+
+# 4. Start the stack (or the "Dev: chat + agent" VS Code task).
+pnpm dev:agent
 pnpm dev:chat
 ```
 
@@ -74,6 +72,38 @@ cd packages/agent
 UDI_STARROCKS_TEST=1 uv run pytest tests/test_query_parity.py -v
 ```
 
+## JWT authentication (per-user database access)
+
+The compose file pins **3.5**, which is the first StarRocks release with JWT
+authentication. That is what lets the agent forward each caller's own token to
+the database instead of sharing one service credential — see
+[_Per-user database authentication_](../../packages/agent/src/udiagent/query/README.md#31a-per-user-database-authentication-jwt-passthrough).
+
+`setup_jwt_auth.py` stands in for an identity provider: it generates a throwaway
+RSA key, publishes it as a JWKS inside the container, and creates two users —
+`alice`, granted the tables, and `bob`, authenticated but granted nothing — so
+per-user authorization is observable rather than merely configured.
+
+```bash
+# Seed the database the JWT users are granted on
+cd packages/agent && uv run --extra starrocks python scripts/seed_starrocks.py \
+    ../../sample-data/penguins --database udi_jwt_spike
+
+# Provision the JWKS and the two users
+cd ../.. && uv run --project packages/agent python dev/starrocks/setup_jwt_auth.py
+
+# Live test: alice reads, bob is refused BY STARROCKS
+cd packages/agent
+UDI_STARROCKS_JWT_TEST=1 uv run pytest tests/test_query_parity.py -k jwt -v
+
+# Mint a token by hand (e.g. to curl the agent)
+uv run python ../../dev/starrocks/setup_jwt_auth.py --token alice
+```
+
+The key and JWKS land in `dev/starrocks/.jwt/`, which is gitignored. Wiping the
+container volume also drops the users and the JWKS, so re-run the script after
+a `down -v`.
+
 ## Housekeeping
 
 ```bash
@@ -83,3 +113,7 @@ mysql -h127.0.0.1 -P9030 -uroot                                # poke around
 ```
 
 FE web UI: http://localhost:8030 (user `root`, empty password).
+
+Upgrading the pinned image across a major version (e.g. the 3.3 → 3.5 bump that
+JWT auth required) is not an in-place operation on a dev volume: run `down -v`
+and re-seed rather than trusting the old volume to migrate.
