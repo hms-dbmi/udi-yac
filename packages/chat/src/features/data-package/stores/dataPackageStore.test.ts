@@ -147,10 +147,18 @@ describe('dataPackageStore — domain lookups and validators', () => {
     });
   });
 
-  it('isValidIntervalFilter returns "no" when the field has no domain', async () => {
+  it('isValidIntervalFilter returns "no" when the field is not in the schema', async () => {
     const store = createDataPackageStore();
     await store.getState().setDataPackage(makePackage(), domains);
     expect(store.getState().isValidIntervalFilter('donors', 'missing')).toEqual({ isValid: 'no' });
+  });
+
+  it('isValidIntervalFilter returns "unknown" for an interval filter on a categorical field', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidIntervalFilter('donors', 'organ')).toEqual({
+      isValid: 'unknown',
+    });
   });
 
   it('isValidPointFilter validates every value against the categorical domain', async () => {
@@ -168,6 +176,52 @@ describe('dataPackageStore — domain lookups and validators', () => {
     const store = createDataPackageStore();
     expect(store.getState().isValidPointFilter('donors', 'organ', ['heart'])).toEqual({
       isValid: 'unknown',
+    });
+  });
+
+  // A field can be perfectly real yet carry no domain: remote packages omit
+  // categorical domains above 80 distinct values (introspect.py). Calling that
+  // "invalid" made every such filter vanish from the chat without a trace.
+  it('isValidPointFilter returns "unknown" when the field is in the schema but has no domain', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), []);
+    expect(store.getState().isValidPointFilter('donors', 'organ', ['heart'])).toEqual({
+      isValid: 'unknown',
+    });
+  });
+
+  it('isValidPointFilter returns "no" for a field that is not in the schema', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidPointFilter('donors', 'ghost', ['x'])).toEqual({
+      isValid: 'no',
+    });
+  });
+
+  it('isValidPointFilter returns "no" for an unknown entity', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidPointFilter('ghosts', 'organ', ['heart'])).toEqual({
+      isValid: 'no',
+    });
+  });
+
+  it('isValidPointFilter returns "unknown" for a point filter on a quantitative field', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidPointFilter('donors', 'age_value', ['5'])).toEqual({
+      isValid: 'unknown',
+    });
+  });
+
+  // Clearing the widget commits [], and the agent defaults an omitted
+  // pointValues to [""]. Neither may flip a live widget into an error.
+  it('isValidPointFilter treats empty and blank-only requests as valid', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidPointFilter('donors', 'organ', [])).toEqual({ isValid: 'yes' });
+    expect(store.getState().isValidPointFilter('donors', 'organ', [''])).toEqual({
+      isValid: 'yes',
     });
   });
 });

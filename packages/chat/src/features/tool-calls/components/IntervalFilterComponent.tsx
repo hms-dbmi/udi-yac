@@ -34,19 +34,25 @@ function formatNumber(n: number): string {
 }
 
 /**
- * Full extent of an (entity, field) interval domain. Fields with no domain, or
- * a non-interval one, fall back to a neutral 0-100 — the widget renders
- * "Error: Invalid filter." for those anyway.
+ * Full extent of an (entity, field) interval domain, and whether that extent is
+ * real. A slider needs a real track: with no interval domain the 0-100 below is
+ * invented, and dragging it would commit a range that genuinely filters — e.g.
+ * `file_size BETWEEN 0 AND 100` on a column that runs to 4.1e9. Callers gate the
+ * slider on `hasRange` rather than on the validator, which admits unverifiable
+ * fields. `Number.isFinite` also catches all-null columns, which the domain
+ * worker reports as {min: Infinity, max: -Infinity}.
  */
 function intervalExtent(
   getDomainForField: (entity: string, field: string) => DataFieldDomain | undefined,
   entity: string,
   field: string,
-): { min: number; max: number } {
+): { min: number; max: number; hasRange: boolean } {
   const domain = getDomainForField(entity, field);
-  if (!domain || domain.type !== 'interval') return { min: 0, max: 100 };
-  const { min, max } = domain.domain as { min: number; max: number };
-  return { min, max };
+  const iv = domain?.type === 'interval' ? (domain.domain as { min: number; max: number }) : null;
+  if (!iv || !Number.isFinite(iv.min) || !Number.isFinite(iv.max)) {
+    return { min: 0, max: 100, hasRange: false };
+  }
+  return { min: iv.min, max: iv.max, hasRange: true };
 }
 
 export function IntervalFilterComponent({
@@ -227,7 +233,7 @@ export function IntervalFilterComponent({
   );
 
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
-  const isValid = isValidIntervalFilter(entity, field).isValid === 'yes';
+  const isValid = isValidIntervalFilter(entity, field).isValid !== 'no' && rangeMinMax.hasRange;
 
   const minText = localRange[0] <= rangeMinMax.min ? 'min' : formatNumber(localRange[0]);
   const maxText = localRange[1] >= rangeMinMax.max ? 'max' : formatNumber(localRange[1]);
@@ -300,8 +306,12 @@ export function IntervalFilterComponent({
           onValueChange={handleRangeChange}
           onValueCommitted={handleRangeCommit}
         />
-      ) : (
+      ) : rangeMinMax.hasRange ? (
         <span className="text-sm text-destructive">Error: Invalid filter.</span>
+      ) : (
+        <span className="text-sm text-muted-foreground">
+          Range unavailable for {field} — showing the requested bounds only.
+        </span>
       )}
     </div>
   );
