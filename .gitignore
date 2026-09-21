@@ -30,3 +30,4 @@ packages/agent/*.duckdb
 # scratch state is not.
 .claude/worktrees/
 .claude/settings.local.json
+.claude/todo
