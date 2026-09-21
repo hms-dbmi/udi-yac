@@ -9,8 +9,10 @@ export { VizTweakComponent } from './components/VizTweakComponent';
 export {
   createDashboardStore,
   extractAllUdiSpecsFromMessage,
+  parseTemplateProvenance,
   type DashboardState,
   type ActiveVisualization,
+  type TemplateProvenance,
 } from './stores/dashboardStore';
 
 export {

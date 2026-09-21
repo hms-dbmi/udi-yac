@@ -3,6 +3,7 @@ import type {
   DataFieldDomain,
   DataPackage,
   CategoricalDomain,
+  IntervalDomain,
   ValidStatus,
   EntityRelationship,
   ExportRowSet,
@@ -40,6 +41,13 @@ export interface DataPackageState {
   interactiveMode: boolean;
   /** True while a remote batched query round-trip is in flight. */
   remoteQueryPending: boolean;
+  /** Current bearer token for server calls, held here rather than captured by
+   *  the remote backend so a host that refreshes the token does not force the
+   *  whole data package to be reloaded. */
+  authToken: string | undefined;
+  /** Update the token used by subsequent server calls. Cheap: the next batched
+   *  query picks it up; nothing is refetched. */
+  setAuthToken: (authToken: string | undefined) => void;
   fetchDataPackage: (path: string, fetchOptions?: RequestInit) => Promise<void>;
   /** Load a server-side package: fetches introspected metadata from
    *  GET /v1/yac/metadata and routes all queries through POST /v1/yac/query
@@ -79,6 +87,21 @@ export interface DataPackageState {
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
+/**
+ * A domain as it is sent to the agent: the toolkit's shape plus the true
+ * `distinct` count, and `omitted` when the values were left out for size. The
+ * count is what stops a shortened list reading as a complete one.
+ */
+interface SentCategoricalDomain {
+  values: string[];
+  distinct: number;
+  omitted?: boolean;
+}
+
+type SentFieldDomain = Omit<DataFieldDomain, 'domain'> & {
+  domain: IntervalDomain | SentCategoricalDomain;
+};
+
 function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
   if (!data?.resources || !Array.isArray(data.resources)) return data;
   const clone = jsonClone(data);
@@ -92,10 +115,36 @@ function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
   return clone;
 }
 
-function removeLongDomains(data: DataFieldDomain[], threshold = 80): DataFieldDomain[] {
-  return data.filter(
-    (d) => d.type === 'interval' || (d.domain as CategoricalDomain).values.length < threshold,
-  );
+/**
+ * Values we are willing to put on the wire for one column.
+ *
+ * Above this a column is an identifier or a date — research_id, surgery_date —
+ * and enumerating it helps nobody, so we send the count alone. Below it we send
+ * every value, because these are the columns a user names ("which chemo
+ * agents?") and the agent has no other way to reach them.
+ */
+const DOMAIN_VALUE_CAP = 250;
+
+/**
+ * Cap each column's value list. Never drop a column.
+ *
+ * This used to `filter` out any categorical domain with 80 or more values,
+ * which deleted 19 of 51 fields on the pcx package — and Patient Agents, whose
+ * every column is high-cardinality, disappeared from the payload entirely. The
+ * orchestrator reads this to decide what exists, so it told the user that table
+ * did not exist. Whatever is trimmed here must stay visible as a named column
+ * with an honest count; `simplify_data_domains` renders that, and the agent's
+ * `ListFieldValues` tool fetches the rest.
+ */
+function capLongDomains(data: DataFieldDomain[]): SentFieldDomain[] {
+  return data.map((d) => {
+    if (d.type === 'interval') return d as SentFieldDomain;
+    const values = (d.domain as CategoricalDomain).values;
+    if (values.length <= DOMAIN_VALUE_CAP) {
+      return { ...d, domain: { values, distinct: values.length } };
+    }
+    return { ...d, domain: { values: [], distinct: values.length, omitted: true } };
+  });
 }
 
 function computeSourceFields(dp: DataPackage | null): Record<string, string[]> | null {
@@ -156,7 +205,7 @@ function computeDataPackageString(dp: DataPackage | null): string {
 
 function computeDataDomainsString(domains: DataFieldDomain[]): string {
   if (domains.length === 0) return '';
-  return JSON.stringify(removeLongDomains(domains));
+  return JSON.stringify(capLongDomains(domains));
 }
 
 export function createDataPackageStore() {
@@ -175,6 +224,9 @@ export function createDataPackageStore() {
     filteredData: new Map(),
     interactiveMode: true,
     remoteQueryPending: false,
+    authToken: undefined,
+
+    setAuthToken: (authToken: string | undefined) => set({ authToken }),
 
     getDomainForField: (entity: string, field: string) => {
       return get().dataFieldDomains.find((d) => d.entity === entity && d.field === field);
@@ -305,14 +357,20 @@ export function createDataPackageStore() {
     },
 
     fetchRemotePackage: async (apiBaseUrl: string, packageName: string, authToken?: string) => {
-      set({ loadingPhase: 'fetching', error: null });
+      // Seed the store before the first request so authHeaders() below is
+      // correct on mount, without depending on effect ordering in UDIChat.
+      set({ loadingPhase: 'fetching', error: null, authToken });
+      // Read at call time, not capture time: the host can refresh the token
+      // mid-session (setAuthToken) and every later request must carry the new
+      // one. Capturing an object here is what used to make the backend go
+      // stale until the whole package was rebuilt.
+      const authHeaders = (): Record<string, string> => ({
+        Authorization: `Bearer ${get().authToken ?? 'dev'}`,
+      });
       try {
-        const headers: Record<string, string> = {
-          Authorization: `Bearer ${authToken ?? 'dev'}`,
-        };
         const response = await fetch(
           `${apiBaseUrl}/v1/yac/metadata?package=${encodeURIComponent(packageName)}`,
-          { headers },
+          { headers: authHeaders() },
         );
         if (!response.ok) {
           throw await httpError(response);
@@ -327,7 +385,7 @@ export function createDataPackageStore() {
         const backend = await createRemoteBackend({
           url: `${apiBaseUrl}/v1/yac/query`,
           packageName,
-          headers,
+          headers: authHeaders,
         });
         backend.subscribePending((pending) => set({ remoteQueryPending: pending }));
         await setQueryBackend(backend);

@@ -34,7 +34,11 @@ for (const [name, file] of Object.entries(SOURCES)) {
 }
 
 const src = (name) => ({ name, source: SOURCES[name] });
-const notNull = (f) => ({ op: '!=', left: { field: f }, right: { literal: null } });
+const notNull = (f) => ({
+  op: '!=',
+  left: { field: f },
+  right: { literal: null },
+});
 
 // [name, {source, transformation}, selections?, displayDataOnly?]
 const CASES = [
@@ -45,6 +49,59 @@ const CASES = [
       transformation: [
         { groupby: 'species' },
         { rollup: { count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // Carrying a *nominal* value through a rollup, which the stratified survival
+    // templates rest on: the aggregate has to return the string itself, and one
+    // group is deliberately all-null so the empty case is covered too. The rollup
+    // output is named after an existing column, as those templates do, which is
+    // safe because a rollup emits a fresh relation of group keys plus outputs.
+    //
+    // The derived input has a name of its own rather than overwriting `island`,
+    // which is how the templates are written. Shadowing is legal in both
+    // executors now — see `derive-shadowing-column` below and
+    // `test/derive-shadowing.mjs`.
+    'rollup-max-nominal-conditional',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            'adelie island': {
+              if: {
+                op: '==',
+                left: { field: 'species' },
+                right: { literal: 'Adelie' },
+              },
+              then: { field: 'island' },
+              else: { literal: null },
+            },
+          },
+        },
+        { groupby: 'species' },
+        { rollup: { island: { op: 'max', field: 'adelie island' } } },
+      ],
+    },
+  ],
+  [
+    // Broadcast an aggregate onto every row, then re-group by a finer key — the
+    // shape that lets one subject's span reach several groups.
+    'regroup-after-broadcast-derive',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        { groupby: 'species' },
+        { derive: { 'species max': { agg: 'max', field: 'body_mass_g' } } },
+        { groupby: ['species', 'island'] },
+        {
+          rollup: {
+            hi: { op: 'max', field: 'species max' },
+            n: { op: 'count' },
+          },
+        },
       ],
     },
   ],
@@ -86,8 +143,16 @@ const CASES = [
         {
           filter: {
             op: '&&',
-            left: { op: '>', left: { field: 'bill_length_mm' }, right: { literal: 45 } },
-            right: { op: '==', left: { field: 'sex' }, right: { literal: 'MALE' } },
+            left: {
+              op: '>',
+              left: { field: 'bill_length_mm' },
+              right: { literal: 45 },
+            },
+            right: {
+              op: '==',
+              left: { field: 'sex' },
+              right: { literal: 'MALE' },
+            },
           },
         },
         { groupby: 'species' },
@@ -111,9 +176,17 @@ const CASES = [
         },
         {
           derive: {
-            ratio: { op: '/', left: { field: 'mass' }, right: { field: 'flipper' } },
+            ratio: {
+              op: '/',
+              left: { field: 'mass' },
+              right: { field: 'flipper' },
+            },
             size: {
-              if: { op: '>', left: { field: 'mass' }, right: { literal: 1_000_000 } },
+              if: {
+                op: '>',
+                left: { field: 'mass' },
+                right: { literal: 1_000_000 },
+              },
               then: { literal: 'big' },
               else: { literal: 'small' },
             },
@@ -217,6 +290,59 @@ const CASES = [
             },
           },
         },
+      ],
+    },
+  ],
+  [
+    // The shape the presence-stratified survival templates rest on: reduce the
+    // second table to one row per key, LEFT join so the unmatched keep a null
+    // marker, and turn that null into a label. An inner join cannot express this
+    // — it drops exactly the rows whose answer is "no" — so the executors have to
+    // agree on both the left join and on `in`/`out` naming a reduction of a table
+    // that is not the pipeline's current one.
+    'left-join-presence-marker',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        // Narrowed to a category only 18 of the 266 donors have, so the
+        // unmatched majority actually exercises the null-marker branch. Every
+        // donor has *some* sample, which would leave the "no" group empty and
+        // pin nothing.
+        {
+          filter: {
+            op: '==',
+            left: { field: 'sample_category' },
+            right: { literal: 'suspension' },
+          },
+          in: 'samples',
+          out: 'samples',
+        },
+        { groupby: 'donor.hubmap_id', in: 'samples' },
+        {
+          rollup: { marker: { op: 'count' } },
+          in: 'samples',
+          out: 'samples_by_donor',
+        },
+        {
+          join: { on: ['hubmap_id', 'donor.hubmap_id'], kind: 'left' },
+          in: ['donors', 'samples_by_donor'],
+          out: 'donors_p',
+        },
+        {
+          derive: {
+            group: {
+              if: {
+                op: '!=',
+                left: { field: 'marker' },
+                right: { literal: null },
+              },
+              then: { literal: 'has samples' },
+              else: { literal: 'no samples' },
+            },
+          },
+        },
+        { groupby: ['group', 'sex'] },
+        { rollup: { n: { op: 'count' } } },
       ],
     },
   ],
@@ -359,6 +485,209 @@ const CASES = [
       },
     },
     false, // displayDataOnly: force the extent pass
+  ],
+  [
+    // A dynamic stratification grouping, nominal: values combined into named
+    // strata by a chain of `==` under `||`, with everything unclaimed falling to
+    // an Other label. This is exactly what `udiagent.stratify.grouping_expr`
+    // emits, and it has to mean the same thing in both executors — a grouped
+    // survival curve computes its strata in a derive and then groups by them.
+    'derive-nominal-grouping',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '||',
+                left: {
+                  op: '==',
+                  left: { field: 'species' },
+                  right: { literal: 'Adelie' },
+                },
+                right: {
+                  op: '==',
+                  left: { field: 'species' },
+                  right: { literal: 'Gentoo' },
+                },
+              },
+              then: { literal: 'Adelie or Gentoo' },
+              else: { literal: 'Other' },
+            },
+          },
+        },
+        { groupby: 'stratum' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // The same, quantitative: ascending `<` tests, so the first that passes is
+    // the right bucket and the final else is everything at or above the last
+    // cut. Half-open on the right in both executors, or a subject at exactly the
+    // threshold lands in a different curve depending on where the query ran.
+    'derive-quantitative-grouping',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '<',
+                left: { field: 'body_mass_g' },
+                right: { literal: 3500 },
+              },
+              then: { literal: '< 3500' },
+              else: {
+                if: {
+                  op: '<',
+                  left: { field: 'body_mass_g' },
+                  right: { literal: 4500 },
+                },
+                then: { literal: '3500-4500' },
+                else: { literal: '>= 4500' },
+              },
+            },
+          },
+        },
+        { groupby: 'stratum' },
+        {
+          rollup: {
+            n: { op: 'count' },
+            heaviest: { op: 'max', field: 'body_mass_g' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // A join whose key has the SAME name on both sides, with that key then used
+    // downstream. Arquero keeps one copy; SQL has to be told to, because USING
+    // dedups on DuckDB but keeps both copies on StarRocks and every later
+    // reference to the key is then ambiguous.
+    'join-same-key-then-groupby',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        { groupby: 'group_name', in: 'samples' },
+        {
+          rollup: { samples_count: { op: 'count' } },
+          in: 'samples',
+          out: 'by_group',
+        },
+        {
+          join: { on: ['group_name', 'group_name'], kind: 'left' },
+          in: ['donors', 'by_group'],
+          out: 'joined',
+        },
+        { groupby: 'group_name' },
+        {
+          rollup: {
+            donors: { op: 'count' },
+            samples_count: { op: 'max', field: 'samples_count' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // Columns present on BOTH sides of a join that are not the key: Arquero
+    // renames them '<name>_1' / '<name>_2', and SQL has to do the same or the
+    // relation holds two columns with one name. Both sides are narrowed to one
+    // group first so the cross product stays small.
+    'join-colliding-non-key-columns',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        {
+          filter: {
+            op: '==',
+            left: { field: 'group_name' },
+            right: { literal: 'Vanderbilt TMC' },
+          },
+          in: 'donors',
+          out: 'donors',
+        },
+        {
+          filter: {
+            op: '==',
+            left: { field: 'sample_category' },
+            right: { literal: 'organ' },
+          },
+          in: 'samples',
+          out: 'samples',
+        },
+        {
+          join: { on: ['group_name', 'group_name'] },
+          in: ['donors', 'samples'],
+          out: 'joined',
+        },
+        { groupby: ['mapped_consortium_1', 'sample_category'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // unnest with the default `out`, i.e. overwriting the source column — the
+    // shape every multi-value template uses. medical_history is a comma-joined
+    // list, and blank cells must expand to no rows at all.
+    'unnest-multivalue',
+    {
+      source: src('donors'),
+      transformation: [
+        { unnest: { field: 'medical_history', separator: ',' } },
+        { groupby: 'medical_history' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // unnest into a fresh column: the source column survives alongside it, and
+    // the row multiplication has to carry every other column through.
+    'unnest-explicit-out',
+    {
+      source: src('donors'),
+      transformation: [
+        {
+          unnest: {
+            field: 'medical_history',
+            separator: ',',
+            out: 'condition',
+          },
+        },
+        { groupby: ['condition', 'sex'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // A derive that REUSES an existing column's name replaces it in both
+    // executors (test/derive-shadowing.mjs pins the Arquero half). Aggregating
+    // the shadowed name afterwards is what makes the difference visible.
+    'derive-shadowing-column',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            island: {
+              if: {
+                op: '==',
+                left: { field: 'species' },
+                right: { literal: 'Adelie' },
+              },
+              then: { field: 'island' },
+              else: { literal: 'other' },
+            },
+          },
+        },
+        { groupby: 'island' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
   ],
 ];
 

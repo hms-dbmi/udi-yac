@@ -6,6 +6,7 @@ import {
   DownloadButtonLabelProvider,
   EntityIconsProvider,
   MascotProvider,
+  ApiConfigProvider,
   SplashMessagesProvider,
   TrackerProvider,
   useConversation,
@@ -22,7 +23,7 @@ import {
 } from '@/app/UDIChatContext';
 import { DataOverviewPanel } from '@/features/data-package';
 import { Button } from '@/components/ui/button';
-import { extractAllUdiSpecsFromMessage } from '@/features/dashboard/stores/dashboardStore';
+import { extractAllUdiSpecsFromMessage, type TemplateProvenance } from '@/features/dashboard';
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
@@ -64,6 +65,14 @@ function UDIChatInner({
   const trackEvent = useTracker();
   useLayoutPersistence();
 
+  // Keep the store's token current. A host that refreshes the JWT must not
+  // trigger a package reload: `authToken` is deliberately absent from the
+  // loader effect's deps below, and the remote query backend re-reads the token
+  // from the store on every request instead of capturing it.
+  useEffect(() => {
+    dataPackageStore.getState().setAuthToken(authToken);
+  }, [dataPackageStore, authToken]);
+
   // Load data package on mount
   useEffect(() => {
     if (remotePackage) {
@@ -75,11 +84,15 @@ function UDIChatInner({
     } else if (dataPackagePath) {
       dataPackageStore.getState().fetchDataPackage(dataPackagePath, fetchOptions);
     }
+    // authToken is intentionally excluded from the deps below: reloading the
+    // whole package on every token refresh is exactly the bug this avoids. The
+    // effect above keeps the store's copy in sync, and the remote backend reads
+    // it from there per request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     dataPackageStore,
     remotePackage,
     apiBaseUrl,
-    authToken,
     dataPackagePath,
     dataPackageProp,
     dataFieldDomainsProp,
@@ -97,6 +110,7 @@ function UDIChatInner({
       userPrompt: string;
       sourceFields: Record<string, string[]> | null;
       title?: string;
+      template?: TemplateProvenance;
       titleTemplate?: string;
       summaryTemplate?: string;
     }> = [];
@@ -104,7 +118,14 @@ function UDIChatInner({
       const message = messages[i];
       if (message.role !== 'assistant') continue;
       const specs = extractAllUdiSpecsFromMessage(message);
-      for (const { spec, toolCallIndex, title, titleTemplate, summaryTemplate } of specs) {
+      for (const {
+        spec,
+        toolCallIndex,
+        title,
+        titleTemplate,
+        summaryTemplate,
+        template,
+      } of specs) {
         const key = state.vizKey(i, toolCallIndex);
         if (state.activeVisualizations.has(key)) continue;
         if (mbState.closedVisualizations.has(key)) continue;
@@ -122,6 +143,7 @@ function UDIChatInner({
           title,
           titleTemplate,
           summaryTemplate,
+          template,
         });
       }
     }
@@ -200,6 +222,12 @@ function UDIChatInner({
         />
         <div className="udi:flex udi:flex-1 udi:min-h-0">
           <div
+            // A popover opened from a chart *in the chat* aligns its left edge
+            // to this column rather than to its trigger, which sits indented
+            // inside a bubble — 320px starting there would spill over the
+            // dashboard. Found with `closest()` from the trigger, so no ref or
+            // context is needed.
+            data-udi-chat-column=""
             className={cn(
               'udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden',
               overviewOpen && 'udi:hidden udi:@min-[1200px]/shell:flex',
@@ -294,42 +322,44 @@ function UDIChatValidated(props: UDIChatConfig) {
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
         <UDIChatProvider>
-          <TrackerProvider onEvent={props.onEvent}>
-            <DownloadActionsProvider actions={props.downloadActions}>
-              <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
-                <EntityIconsProvider icons={props.entityIcons}>
-                  {/*
-                   * UDIToolkitProvider supersedes the previous local PaletteProvider:
-                   * it ships in udi-toolkit/react, sets palette on the React
-                   * Context that <UDIVis> already reads, and (optionally) auto-
-                   * loads a data package. We only use the palette half here —
-                   * the data package is still owned by dataPackageStore so the
-                   * existing rich state (loadingPhase, sourceFields, etc.) keeps
-                   * working unchanged.
-                   */}
-                  <UDIToolkitProvider palette={props.palette}>
-                    <MascotProvider mascot={props.mascot}>
-                      <SplashMessagesProvider messages={props.splashMessages}>
-                        {/*
-                         * The `udi-yac` class is the scope for every design token
-                         * and element reset in index.css. Without it nothing is
-                         * styled — and with the tokens on :root instead, mounting
-                         * us inside a shadcn host would retheme that host's pages.
-                         */}
-                        <div
-                          ref={rootRef}
-                          className={cn('udi-yac udi:h-full udi:w-full', props.className)}
-                          style={props.style}
-                        >
-                          <UDIChatInner {...props} />
-                        </div>
-                      </SplashMessagesProvider>
-                    </MascotProvider>
-                  </UDIToolkitProvider>
-                </EntityIconsProvider>
-              </DownloadButtonLabelProvider>
-            </DownloadActionsProvider>
-          </TrackerProvider>
+          <ApiConfigProvider apiBaseUrl={props.apiBaseUrl} authToken={props.authToken}>
+            <TrackerProvider onEvent={props.onEvent}>
+              <DownloadActionsProvider actions={props.downloadActions}>
+                <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
+                  <EntityIconsProvider icons={props.entityIcons}>
+                    {/*
+                     * UDIToolkitProvider supersedes the previous local PaletteProvider:
+                     * it ships in udi-toolkit/react, sets palette on the React
+                     * Context that <UDIVis> already reads, and (optionally) auto-
+                     * loads a data package. We only use the palette half here —
+                     * the data package is still owned by dataPackageStore so the
+                     * existing rich state (loadingPhase, sourceFields, etc.) keeps
+                     * working unchanged.
+                     */}
+                    <UDIToolkitProvider palette={props.palette}>
+                      <MascotProvider mascot={props.mascot}>
+                        <SplashMessagesProvider messages={props.splashMessages}>
+                          {/*
+                           * The `udi-yac` class is the scope for every design token
+                           * and element reset in index.css. Without it nothing is
+                           * styled — and with the tokens on :root instead, mounting
+                           * us inside a shadcn host would retheme that host's pages.
+                           */}
+                          <div
+                            ref={rootRef}
+                            className={cn('udi-yac h-full w-full', props.className)}
+                            style={props.style}
+                          >
+                            <UDIChatInner {...props} />
+                          </div>
+                        </SplashMessagesProvider>
+                      </MascotProvider>
+                    </UDIToolkitProvider>
+                  </EntityIconsProvider>
+                </DownloadButtonLabelProvider>
+              </DownloadActionsProvider>
+            </TrackerProvider>
+          </ApiConfigProvider>
         </UDIChatProvider>
       </ChatRootProvider>
     </TooltipProvider>

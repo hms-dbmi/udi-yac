@@ -1,5 +1,24 @@
 {
   "version": "2.0.0",
+
+  // Run tasks through an INTERACTIVE shell.
+  //
+  // A `type: "shell"` task runs `zsh -c "<command>"`, which is neither login nor
+  // interactive, so zsh sources only ~/.zshenv — and a machine that puts its
+  // tools on PATH from ~/.zshrc (where `uv`'s installer and most version
+  // managers write) hands the task a PATH without them. The task then dies on
+  // `uv: command not found` while the exact same line works in the integrated
+  // terminal, which IS interactive. `-i` sources ~/.zshrc so tasks see the same
+  // PATH the developer does, whatever their install locations.
+  //
+  // Scoped per-platform: `-ic` is right for zsh/bash but not for PowerShell.
+  // The cost is that each task run sources your whole interactive config, so
+  // anything noisy in it (version-manager warnings, conda banners) shows up in
+  // the task output. If you would rather not pay that, the alternative is to
+  // move the PATH exports out of ~/.zshrc into ~/.zshenv, which every zsh reads.
+  "osx": { "options": { "shell": { "args": ["-ic"] } } },
+  "linux": { "options": { "shell": { "args": ["-ic"] } } },
+
   "tasks": [
     {
       "label": "Setup dev environment",
@@ -31,6 +50,15 @@
         "group": "dev",
         "panel": "dedicated"
       }
+    },
+    {
+      "label": "Dev: template studio",
+      "detail": "Visualization template review tool (http://localhost:5175)",
+      "type": "shell",
+      "command": "pnpm --filter udi-template-studio dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "group": "dev", "panel": "dedicated" }
     },
     {
       "label": "Dev: grammar app",
@@ -79,10 +107,18 @@
       }
     },
     {
+      "label": "Data: Prune pcx demographics",
+      "detail": "Drop demographics rows for patients absent from the patient table (the source export ships a whole registry: 2571 rows for 69 patients). Idempotent. Must run BEFORE generating the datapackage so cardinalities and domains describe the cohort.",
+      "type": "shell",
+      "command": "python3 scripts/prune_orphan_rows.py sample-data/pcx/pcx_30_demographics_deid.csv sample-data/pcx/pcx_30_patient_level_deid.csv --key research_id",
+      "problemMatcher": [],
+      "presentation": { "group": "data", "panel": "dedicated" }
+    },
+    {
       "label": "Data: Generate pcx datapackage",
       "detail": "Regenerate sample-data/pcx/datapackage.json from the CSVs (stdlib only). For another dataset, run scripts/gen_datapackage.py directly.",
       "type": "shell",
-      "command": "python3 scripts/gen_datapackage.py sample-data/pcx --strip pcx_30_ --strip _level_deid",
+      "command": "python3 scripts/gen_datapackage.py sample-data/pcx --strip pcx_30_ --strip _level_deid --strip _deid",
       "problemMatcher": [],
       "presentation": {
         "group": "data",
@@ -93,6 +129,10 @@
       "label": "Data: Seed StarRocks (pcx)",
       "detail": "Load sample-data/pcx into StarRocks as package `pcx` and write packages/agent/starrocks-backends.json (waits for the container to be ready)",
       "type": "shell",
+      // The directory is named explicitly. The script's own default is
+      // sample-data/penguins, so omitting it seeded `penguins` under a task
+      // labelled pcx — and a chat set to VITE_UDI_REMOTE_PACKAGE=pcx then asked
+      // for a package the agent had never been given.
       "command": "uv run --project packages/agent --extra starrocks python packages/agent/scripts/seed_starrocks.py sample-data/pcx",
       "problemMatcher": [],
       "presentation": {
@@ -105,6 +145,7 @@
       "detail": "Start StarRocks, regenerate the pcx datapackage, then seed the database \u2014 one-click refresh after editing sample-data/pcx",
       "dependsOn": [
         "Data: Start StarRocks",
+        "Data: Prune pcx demographics",
         "Data: Generate pcx datapackage",
         "Data: Seed StarRocks (pcx)"
       ],
@@ -115,6 +156,7 @@
       "label": "Data: Seed DuckDB (pcx)",
       "detail": "Seed sample-data/pcx into a local packages/agent/pcx.duckdb file as package `pcx` + merge into duckdb-backends.json \u2014 no container needed. Stop the agent before re-seeding.",
       "type": "shell",
+      // Explicit for the same reason as the StarRocks task above.
       "command": "uv run --project packages/agent --extra duckdb python packages/agent/scripts/seed_duckdb.py sample-data/pcx",
       "problemMatcher": [],
       "presentation": {
@@ -126,6 +168,7 @@
       "label": "Data: Regenerate + seed pcx (DuckDB)",
       "detail": "Regenerate the pcx datapackage, then seed a local DuckDB file \u2014 zero-infrastructure alternative to StarRocks (no Docker)",
       "dependsOn": [
+        "Data: Prune pcx demographics",
         "Data: Generate pcx datapackage",
         "Data: Seed DuckDB (pcx)"
       ],
@@ -134,9 +177,11 @@
     },
     {
       "label": "Data: Use penguins (remote/DuckDB)",
-      "detail": "One-click server-side (remote) setup with the bundled penguins package: seed it into a local packages/agent/penguins.duckdb (+ duckdb-backends.json) and point the chat at it (VITE_UDI_REMOTE_PACKAGE=penguins). Then run 'Dev: chat + agent'. Stop the agent before re-seeding.",
+      "detail": "One-click server-side (remote) setup with the bundled penguins package: seed it into a local packages/agent/penguins.duckdb (+ duckdb-backends.json) and point the chat at it (VITE_UDI_REMOTE_PACKAGE=penguins). Then run 'Dev: chat + agent'. Stop the agent before re-seeding. NOTE: writes packages/chat/.env.local, which takes precedence over .env — if you keep your settings in .env, they stop taking effect until you edit or delete .env.local.",
       "type": "shell",
-      "command": "uv run --project packages/agent --extra duckdb python packages/agent/scripts/seed_duckdb.py && node scripts/set-chat-data-source.mjs penguins --remote",
+      // Names its dataset too, so the two seed tasks read the same way and
+      // neither depends on what the script defaults to.
+      "command": "uv run --project packages/agent --extra duckdb python packages/agent/scripts/seed_duckdb.py sample-data/penguins && node scripts/set-chat-data-source.mjs penguins --remote",
       "problemMatcher": [],
       "presentation": {
         "group": "data",
@@ -182,7 +227,7 @@
     },
     {
       "label": "Data: Use HuBMAP (CSV, browser mode)",
-      "detail": "Reset the chat to the bundled HuBMAP CSV dumps in interactive (browser) mode \u2014 points VITE_UDI_DATA_PACKAGE at /data/hubmap and disables VITE_UDI_REMOTE_PACKAGE in packages/chat/.env.local. Restart the agent and chat dev servers after. (The underlying script takes a package arg, e.g. `pcx`, for other bundled sources.)",
+      "detail": "Reset the chat to the bundled HuBMAP CSV dumps in interactive (browser) mode — points VITE_UDI_DATA_PACKAGE at /data/hubmap and disables VITE_UDI_REMOTE_PACKAGE in packages/chat/.env.local. Restart the agent and chat dev servers after. (The underlying script takes a package arg, e.g. `pcx`, for other bundled sources.) NOTE: .env.local takes precedence over .env — settings kept in .env stop taking effect once this file exists.",
       "type": "shell",
       "command": "node scripts/set-chat-data-source.mjs hubmap",
       "problemMatcher": [],

@@ -18,7 +18,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import AuthenticationError
-from fastapi import FastAPI, Header, Depends, Request
+from fastapi import FastAPI, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -30,12 +30,17 @@ from udiagent.orchestrator import (
     build_rebuff_toolcall,
 )
 from udiagent.structured_functions import export_registry_json
+# Dependency-free (no duckdb/pymysql at module scope), unlike the connector
+# imports further down, which stay lazy because the drivers are extras.
+from udiagent.query import DatabaseAuthError, use_db_token
 from udiagent.server.config import ServerConfig
-from udiagent.server.auth import make_verify_jwt
+from udiagent.server.auth import RAW_TOKEN_CLAIM, make_verify_jwt
 from udiagent.server.models import (
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
     YACQueryRequest,
+    YACVisInstantiateRequest,
+    YACVisInstantiateResponse,
 )
 
 # ---------------------------------------------------------------------------
@@ -153,6 +158,21 @@ async def _budget_exceeded_handler(request, exc: BudgetExceededError):
         status_code=200,
         content=[build_rebuff_toolcall(exc.message, reason="budget_exceeded")],
         headers=_usage_headers(exc.usage),
+    )
+
+
+@app.exception_handler(DatabaseAuthError)
+async def _db_auth_error_handler(request, exc: DatabaseAuthError):
+    """Surface a database identity rejection as a 403.
+
+    Raised when a JWT-passthrough backend cannot authenticate the caller to the
+    database. The message is fixed: the underlying pymysql error names the
+    principal and the host, neither of which belongs in a client response.
+    """
+    logger.warning("database rejected forwarded identity: %s", exc)
+    return JSONResponse(
+        status_code=403,
+        content={"error": "The database rejected your credentials for this dataset."},
     )
 
 
@@ -300,13 +320,30 @@ def _engine_from_config(spec: dict):
     from udiagent.query import DuckDBConnector, QueryEngine, StarRocksConnector
 
     backend_type = spec.get("type")
+    passthrough = bool(spec.get("jwtPassthrough"))
     if backend_type == "duckdb":
+        if passthrough:
+            raise ValueError("jwtPassthrough is not supported on duckdb (no user auth)")
         connector = DuckDBConnector(
             database=spec.get("database", ":memory:"),
             views=spec.get("views"),
         )
     elif backend_type == "starrocks":
-        connector = StarRocksConnector(**spec.get("connection", {}))
+        connection = spec.get("connection", {})
+        if passthrough and config.insecure_dev_mode and not connection.get("user"):
+            # Dev mode issues no real token, so passthrough has nothing to
+            # forward. Fail at startup rather than letting every query 403 —
+            # and never silently fall back to a shared credential, which is the
+            # exact behaviour passthrough exists to remove.
+            raise ValueError(
+                "jwtPassthrough backend needs a fallback connection.user under "
+                "INSECURE_DEV_MODE"
+            )
+        connector = StarRocksConnector(
+            **connection,
+            jwt_passthrough=passthrough,
+            principal_field=spec.get("principalField", "sub"),
+        )
     else:
         raise ValueError(f"unknown query backend type: {backend_type!r}")
     return QueryEngine(
@@ -318,6 +355,8 @@ def _engine_from_config(spec: dict):
 
 
 def _load_query_engines() -> dict:
+    # A relative path has already been tried against the package root by
+    # ServerConfig, which is also what reports an unreadable one at startup.
     path = config.udi_query_backends
     if not path:
         return {}
@@ -352,7 +391,16 @@ def _no_backend_message(package, engines) -> str:
 
 
 app.state.query_engines = _load_query_engines()
-# package name -> MetadataCache (created lazily per configured engine)
+# (package name, principal) -> MetadataCache, created lazily. Keyed by
+# principal because dataDomains holds the actual distinct VALUES of each column
+# (introspect.py), so under per-user row policies a shared cache would serve one
+# user's data to the next. principal is None whenever the backend is not doing
+# passthrough, which collapses this back to one entry per package.
+# Bounded: unbounded per-user caches are a slow leak in a long-lived process.
+# A plain dict, not an OrderedDict: dicts are insertion-ordered, LRU needs only
+# re-insert and drop-first, and this stays a documented extension point that
+# callers can assign a bare {} to.
+_MAX_METADATA_CACHES = 32
 app.state.metadata_caches = {}
 
 
@@ -373,14 +421,24 @@ def yac_metadata(
             status_code=404,
             content={"error": _no_backend_message(package, engines)},
         )
+    token = token_payload.get(RAW_TOKEN_CLAIM)
+    principal = token_payload.get("sub") if engine.connector.jwt_passthrough else None
     caches = app.state.metadata_caches
-    if key not in caches:
+    cache_key = (key, principal)
+    if cache_key in caches:
+        caches[cache_key] = caches.pop(cache_key)  # re-insert = move to newest
+    else:
         from udiagent.query import MetadataCache
 
-        caches[key] = MetadataCache(
+        caches[cache_key] = MetadataCache(
             engine, package or key, ttl_seconds=config.udi_metadata_ttl_seconds
         )
-    metadata = caches[key].refresh() if refresh else caches[key].get()
+        while len(caches) > _MAX_METADATA_CACHES:
+            del caches[next(iter(caches))]  # oldest insertion = LRU
+
+    with use_db_token(token):
+        cache = caches[cache_key]
+        metadata = cache.refresh() if refresh else cache.get()
     return {
         "package": package or key,
         "interactive": False,
@@ -400,11 +458,126 @@ def yac_query(
             status_code=404,
             content={"error": _no_backend_message(request.package, engines)},
         )
-    results = engine.run_batch(
-        [q.model_dump() for q in request.queries],
-        request.selections,
-    )
+    with use_db_token(token_payload.get(RAW_TOKEN_CLAIM)):
+        results = engine.run_batch(
+            [q.model_dump() for q in request.queries],
+            request.selections,
+        )
     return {"results": results}
+
+
+@app.post("/v1/yac/vis_instantiate", response_model=YACVisInstantiateResponse)
+def yac_vis_instantiate(
+    request: YACVisInstantiateRequest,
+    token_payload: dict = Depends(verify_jwt),
+):
+    """Re-instantiate a template-generated visualization with new bindings.
+
+    This is what lets a client change *which field* a generated chart splits by
+    without rewriting the finished spec. Rewriting is the tempting approach and
+    it does not hold: a template's bindings can appear in transformations the
+    renamer has to know about one by one (a groupby entry, a derive expression,
+    a heading), so every new grammar feature silently falls outside it. Resolving
+    the template again is exact by construction, and placeholder resolution lives
+    in exactly one place (``udiagent.vis_generate``).
+
+    No LLM call, so — unlike /v1/yac/completions — no OpenAI key is required and
+    nothing is metered.
+    """
+    from udiagent.vis_generate import (
+        _load_generated_tools,
+        _parse_request_schema,
+        instantiate_template,
+        shared_entities_for,
+        template_tweakable_params,
+        unbound_placeholders,
+        validate_bindings,
+    )
+
+    generated = _load_generated_tools()
+    if generated is None:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "code": "templates_unavailable",
+                "error": "This agent has no generated visualization templates.",
+            },
+        )
+    _tool_defs, tool_dispatch, templates, _tool_tags = generated
+
+    entry = tool_dispatch.get(request.tool)
+    if entry is None:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "code": "unknown_template",
+                "error": (
+                    f"Unknown visualization template '{request.tool}'. The agent's "
+                    "templates may have changed since this chart was created."
+                ),
+            },
+        )
+    template_idx, param_map = entry
+    spec_template = templates[template_idx]
+
+    schema = _parse_request_schema(request.dataSchema)
+    if not schema.get("entities"):
+        # _parse_request_schema degrades to an empty schema by design, which
+        # would validate nothing and instantiate an unusable spec.
+        return JSONResponse(
+            status_code=400,
+            content={
+                "code": "bad_schema",
+                "error": "dataSchema has no entities; send the data package descriptor.",
+            },
+        )
+
+    bindings = {
+        param_map[k]: v for k, v in request.toolArgs.items() if k in param_map
+    }
+
+    missing = unbound_placeholders(spec_template, param_map, bindings)
+    if missing:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "code": "missing_bindings",
+                "error": (
+                    "Missing bindings for this template: " + ", ".join(missing)
+                ),
+                "errors": missing,
+            },
+        )
+
+    errors = validate_bindings(
+        spec_template, bindings, schema, shared_entities=shared_entities_for(request.tool)
+    )
+    if errors:
+        # errors[0] is already reader-grade prose naming the valid alternatives.
+        return JSONResponse(
+            status_code=422,
+            content={"code": "invalid_bindings", "error": errors[0], "errors": errors},
+        )
+
+    try:
+        spec = instantiate_template(spec_template, bindings, schema)
+    except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+        logger.warning("vis_instantiate failed for %s: %s", request.tool, exc)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "code": "instantiate_failed",
+                "error": f"Could not build a spec from template '{request.tool}'.",
+            },
+        )
+
+    return {
+        "spec": spec,
+        "toolArgs": {k: v for k, v in request.toolArgs.items() if k in param_map},
+        "params": template_tweakable_params(
+            spec_template, param_map, bindings, schema
+        ),
+    }
 
 
 @app.post("/v1/yac/benchmark")

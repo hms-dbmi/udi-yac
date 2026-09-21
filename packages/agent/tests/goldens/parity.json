@@ -60,6 +60,194 @@
       }
     },
     {
+      "name": "rollup-max-nominal-conditional",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "derive": {
+              "adelie island": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "species"
+                  },
+                  "right": {
+                    "literal": "Adelie"
+                  }
+                },
+                "then": {
+                  "field": "island"
+                },
+                "else": {
+                  "literal": null
+                }
+              }
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "rollup": {
+              "island": {
+                "op": "max",
+                "field": "adelie island"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "island": "Torgersen"
+          },
+          {
+            "species": "Chinstrap"
+          },
+          {
+            "species": "Gentoo"
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "island": "Torgersen"
+          },
+          {
+            "species": "Chinstrap"
+          },
+          {
+            "species": "Gentoo"
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "regroup-after-broadcast-derive",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "groupby": "species"
+          },
+          {
+            "derive": {
+              "species max": {
+                "agg": "max",
+                "field": "body_mass_g"
+              }
+            }
+          },
+          {
+            "groupby": ["species", "island"]
+          },
+          {
+            "rollup": {
+              "hi": {
+                "op": "max",
+                "field": "species max"
+              },
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "species": "Adelie",
+            "island": "Torgersen",
+            "hi": 4775,
+            "n": 51
+          },
+          {
+            "species": "Adelie",
+            "island": "Biscoe",
+            "hi": 4775,
+            "n": 44
+          },
+          {
+            "species": "Adelie",
+            "island": "Dream",
+            "hi": 4775,
+            "n": 56
+          },
+          {
+            "species": "Chinstrap",
+            "island": "Dream",
+            "hi": 4800,
+            "n": 68
+          },
+          {
+            "species": "Gentoo",
+            "island": "Biscoe",
+            "hi": 6300,
+            "n": 123
+          }
+        ],
+        "allData": [
+          {
+            "species": "Adelie",
+            "island": "Torgersen",
+            "hi": 4775,
+            "n": 51
+          },
+          {
+            "species": "Adelie",
+            "island": "Biscoe",
+            "hi": 4775,
+            "n": 44
+          },
+          {
+            "species": "Adelie",
+            "island": "Dream",
+            "hi": 4775,
+            "n": 56
+          },
+          {
+            "species": "Chinstrap",
+            "island": "Dream",
+            "hi": 4800,
+            "n": 68
+          },
+          {
+            "species": "Gentoo",
+            "island": "Biscoe",
+            "hi": 6300,
+            "n": 123
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "rollup-numeric-aggs",
       "spec": {
         "source": {
@@ -915,6 +1103,137 @@
       }
     },
     {
+      "name": "left-join-presence-marker",
+      "spec": {
+        "source": [
+          {
+            "name": "donors",
+            "source": "donors.csv"
+          },
+          {
+            "name": "samples",
+            "source": "samples.csv"
+          }
+        ],
+        "transformation": [
+          {
+            "filter": {
+              "op": "==",
+              "left": {
+                "field": "sample_category"
+              },
+              "right": {
+                "literal": "suspension"
+              }
+            },
+            "in": "samples",
+            "out": "samples"
+          },
+          {
+            "groupby": "donor.hubmap_id",
+            "in": "samples"
+          },
+          {
+            "rollup": {
+              "marker": {
+                "op": "count"
+              }
+            },
+            "in": "samples",
+            "out": "samples_by_donor"
+          },
+          {
+            "join": {
+              "on": ["hubmap_id", "donor.hubmap_id"],
+              "kind": "left"
+            },
+            "in": ["donors", "samples_by_donor"],
+            "out": "donors_p"
+          },
+          {
+            "derive": {
+              "group": {
+                "if": {
+                  "op": "!=",
+                  "left": {
+                    "field": "marker"
+                  },
+                  "right": {
+                    "literal": null
+                  }
+                },
+                "then": {
+                  "literal": "has samples"
+                },
+                "else": {
+                  "literal": "no samples"
+                }
+              }
+            }
+          },
+          {
+            "groupby": ["group", "sex"]
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "group": "has samples",
+            "sex": "Female",
+            "n": 8
+          },
+          {
+            "group": "has samples",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "group": "no samples",
+            "sex": "Male",
+            "n": 92
+          },
+          {
+            "group": "no samples",
+            "sex": "Female",
+            "n": 156
+          }
+        ],
+        "allData": [
+          {
+            "group": "has samples",
+            "sex": "Female",
+            "n": 8
+          },
+          {
+            "group": "has samples",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "group": "no samples",
+            "sex": "Male",
+            "n": 92
+          },
+          {
+            "group": "no samples",
+            "sex": "Female",
+            "n": 156
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "join-rollup",
       "spec": {
         "source": [
@@ -1389,6 +1708,1679 @@
           }
         ],
         "isSubset": true
+      }
+    },
+    {
+      "name": "derive-nominal-grouping",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "derive": {
+              "stratum": {
+                "if": {
+                  "op": "||",
+                  "left": {
+                    "op": "==",
+                    "left": {
+                      "field": "species"
+                    },
+                    "right": {
+                      "literal": "Adelie"
+                    }
+                  },
+                  "right": {
+                    "op": "==",
+                    "left": {
+                      "field": "species"
+                    },
+                    "right": {
+                      "literal": "Gentoo"
+                    }
+                  }
+                },
+                "then": {
+                  "literal": "Adelie or Gentoo"
+                },
+                "else": {
+                  "literal": "Other"
+                }
+              }
+            }
+          },
+          {
+            "groupby": "stratum"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "stratum": "Adelie or Gentoo",
+            "n": 276
+          },
+          {
+            "stratum": "Other",
+            "n": 68
+          }
+        ],
+        "allData": [
+          {
+            "stratum": "Adelie or Gentoo",
+            "n": 276
+          },
+          {
+            "stratum": "Other",
+            "n": 68
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "derive-quantitative-grouping",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "derive": {
+              "stratum": {
+                "if": {
+                  "op": "<",
+                  "left": {
+                    "field": "body_mass_g"
+                  },
+                  "right": {
+                    "literal": 3500
+                  }
+                },
+                "then": {
+                  "literal": "< 3500"
+                },
+                "else": {
+                  "if": {
+                    "op": "<",
+                    "left": {
+                      "field": "body_mass_g"
+                    },
+                    "right": {
+                      "literal": 4500
+                    }
+                  },
+                  "then": {
+                    "literal": "3500-4500"
+                  },
+                  "else": {
+                    "literal": ">= 4500"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "groupby": "stratum"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              },
+              "heaviest": {
+                "op": "max",
+                "field": "body_mass_g"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "stratum": "3500-4500",
+            "n": 153,
+            "heaviest": 4475
+          },
+          {
+            "stratum": "< 3500",
+            "n": 71,
+            "heaviest": 3475
+          },
+          {
+            "stratum": ">= 4500",
+            "n": 118,
+            "heaviest": 6300
+          }
+        ],
+        "allData": [
+          {
+            "stratum": "3500-4500",
+            "n": 153,
+            "heaviest": 4475
+          },
+          {
+            "stratum": "< 3500",
+            "n": 71,
+            "heaviest": 3475
+          },
+          {
+            "stratum": ">= 4500",
+            "n": 118,
+            "heaviest": 6300
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "join-same-key-then-groupby",
+      "spec": {
+        "source": [
+          {
+            "name": "donors",
+            "source": "donors.csv"
+          },
+          {
+            "name": "samples",
+            "source": "samples.csv"
+          }
+        ],
+        "transformation": [
+          {
+            "groupby": "group_name",
+            "in": "samples"
+          },
+          {
+            "rollup": {
+              "samples_count": {
+                "op": "count"
+              }
+            },
+            "in": "samples",
+            "out": "by_group"
+          },
+          {
+            "join": {
+              "on": ["group_name", "group_name"],
+              "kind": "left"
+            },
+            "in": ["donors", "by_group"],
+            "out": "joined"
+          },
+          {
+            "groupby": "group_name"
+          },
+          {
+            "rollup": {
+              "donors": {
+                "op": "count"
+              },
+              "samples_count": {
+                "op": "max",
+                "field": "samples_count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "group_name": "Vanderbilt TMC",
+            "donors": 57,
+            "samples_count": 531
+          },
+          {
+            "group_name": "TMC - University of Pennsylvania",
+            "donors": 7,
+            "samples_count": 249
+          },
+          {
+            "group_name": "University of California San Diego TMC",
+            "donors": 40,
+            "samples_count": 274
+          },
+          {
+            "group_name": "University of Florida TMC",
+            "donors": 15,
+            "samples_count": 225
+          },
+          {
+            "group_name": "Stanford TMC",
+            "donors": 11,
+            "samples_count": 201
+          },
+          {
+            "group_name": "General Electric RTI",
+            "donors": 12,
+            "samples_count": 336
+          },
+          {
+            "group_name": "TTD - University of San Diego and City of Hope",
+            "donors": 14,
+            "samples_count": 42
+          },
+          {
+            "group_name": "Stanford RTI",
+            "donors": 66,
+            "samples_count": 277
+          },
+          {
+            "group_name": "California Institute of Technology TMC",
+            "donors": 12,
+            "samples_count": 59
+          },
+          {
+            "group_name": "TMC - University of Connecticut",
+            "donors": 6,
+            "samples_count": 18
+          },
+          {
+            "group_name": "University of Rochester Medical Center TMC",
+            "donors": 2,
+            "samples_count": 33
+          },
+          {
+            "group_name": "TMC - University of California San Diego focusing on female reproduction",
+            "donors": 16,
+            "samples_count": 88
+          },
+          {
+            "group_name": "TC - University of Florida",
+            "donors": 2,
+            "samples_count": 6
+          },
+          {
+            "group_name": "TTD - Penn State University and Columbia University",
+            "donors": 1,
+            "samples_count": 2
+          },
+          {
+            "group_name": "EXT - Human Cell Atlas",
+            "donors": 5,
+            "samples_count": 10
+          }
+        ],
+        "allData": [
+          {
+            "group_name": "Vanderbilt TMC",
+            "donors": 57,
+            "samples_count": 531
+          },
+          {
+            "group_name": "TMC - University of Pennsylvania",
+            "donors": 7,
+            "samples_count": 249
+          },
+          {
+            "group_name": "University of California San Diego TMC",
+            "donors": 40,
+            "samples_count": 274
+          },
+          {
+            "group_name": "University of Florida TMC",
+            "donors": 15,
+            "samples_count": 225
+          },
+          {
+            "group_name": "Stanford TMC",
+            "donors": 11,
+            "samples_count": 201
+          },
+          {
+            "group_name": "General Electric RTI",
+            "donors": 12,
+            "samples_count": 336
+          },
+          {
+            "group_name": "TTD - University of San Diego and City of Hope",
+            "donors": 14,
+            "samples_count": 42
+          },
+          {
+            "group_name": "Stanford RTI",
+            "donors": 66,
+            "samples_count": 277
+          },
+          {
+            "group_name": "California Institute of Technology TMC",
+            "donors": 12,
+            "samples_count": 59
+          },
+          {
+            "group_name": "TMC - University of Connecticut",
+            "donors": 6,
+            "samples_count": 18
+          },
+          {
+            "group_name": "University of Rochester Medical Center TMC",
+            "donors": 2,
+            "samples_count": 33
+          },
+          {
+            "group_name": "TMC - University of California San Diego focusing on female reproduction",
+            "donors": 16,
+            "samples_count": 88
+          },
+          {
+            "group_name": "TC - University of Florida",
+            "donors": 2,
+            "samples_count": 6
+          },
+          {
+            "group_name": "TTD - Penn State University and Columbia University",
+            "donors": 1,
+            "samples_count": 2
+          },
+          {
+            "group_name": "EXT - Human Cell Atlas",
+            "donors": 5,
+            "samples_count": 10
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "join-colliding-non-key-columns",
+      "spec": {
+        "source": [
+          {
+            "name": "donors",
+            "source": "donors.csv"
+          },
+          {
+            "name": "samples",
+            "source": "samples.csv"
+          }
+        ],
+        "transformation": [
+          {
+            "filter": {
+              "op": "==",
+              "left": {
+                "field": "group_name"
+              },
+              "right": {
+                "literal": "Vanderbilt TMC"
+              }
+            },
+            "in": "donors",
+            "out": "donors"
+          },
+          {
+            "filter": {
+              "op": "==",
+              "left": {
+                "field": "sample_category"
+              },
+              "right": {
+                "literal": "organ"
+              }
+            },
+            "in": "samples",
+            "out": "samples"
+          },
+          {
+            "join": {
+              "on": ["group_name", "group_name"]
+            },
+            "in": ["donors", "samples"],
+            "out": "joined"
+          },
+          {
+            "groupby": ["mapped_consortium_1", "sample_category"]
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "mapped_consortium_1": "HuBMAP",
+            "sample_category": "organ",
+            "n": 3249
+          }
+        ],
+        "allData": [
+          {
+            "mapped_consortium_1": "HuBMAP",
+            "sample_category": "organ",
+            "n": 3249
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "unnest-multivalue",
+      "spec": {
+        "source": {
+          "name": "donors",
+          "source": "donors.csv"
+        },
+        "transformation": [
+          {
+            "unnest": {
+              "field": "medical_history",
+              "separator": ","
+            }
+          },
+          {
+            "groupby": "medical_history"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "medical_history": "Hypertension",
+            "n": 39
+          },
+          {
+            "medical_history": "Hyperlipidimia",
+            "n": 9
+          },
+          {
+            "medical_history": "Cardiac Arrest",
+            "n": 15
+          },
+          {
+            "medical_history": "Heart failure with reduced ejection fraction",
+            "n": 2
+          },
+          {
+            "medical_history": "Coronary Artery Disease",
+            "n": 20
+          },
+          {
+            "medical_history": "Cancer",
+            "n": 19
+          },
+          {
+            "medical_history": "Tonsillitis",
+            "n": 1
+          },
+          {
+            "medical_history": "Type 2 Diabetes Mellitus",
+            "n": 11
+          },
+          {
+            "medical_history": "Tourette's Syndrome",
+            "n": 1
+          },
+          {
+            "medical_history": "Depression",
+            "n": 5
+          },
+          {
+            "medical_history": "Renal Mass",
+            "n": 1
+          },
+          {
+            "medical_history": "Fibroadenoma of Breast",
+            "n": 1
+          },
+          {
+            "medical_history": "Migraine",
+            "n": 1
+          },
+          {
+            "medical_history": "Lupus",
+            "n": 1
+          },
+          {
+            "medical_history": "Liver failure",
+            "n": 2
+          },
+          {
+            "medical_history": "Brain cancer",
+            "n": 1
+          },
+          {
+            "medical_history": "Asthma",
+            "n": 4
+          },
+          {
+            "medical_history": "Chronic Obstructive Lung Disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Obstructive sleep apnea",
+            "n": 1
+          },
+          {
+            "medical_history": "Salpingectomy",
+            "n": 11
+          },
+          {
+            "medical_history": "Cesarian section",
+            "n": 11
+          },
+          {
+            "medical_history": "Gestational diabetes mellitus class A1",
+            "n": 3
+          },
+          {
+            "medical_history": "Traumatic brain injury",
+            "n": 1
+          },
+          {
+            "medical_history": "Seizures",
+            "n": 2
+          },
+          {
+            "medical_history": "Gastrointestinal disease",
+            "n": 6
+          },
+          {
+            "medical_history": "Eating Disorder",
+            "n": 1
+          },
+          {
+            "medical_history": "Coronary Heart Disease",
+            "n": 2
+          },
+          {
+            "medical_history": "Gonorrhea",
+            "n": 1
+          },
+          {
+            "medical_history": "Kidney cancer",
+            "n": 5
+          },
+          {
+            "medical_history": "Hypothyroidism",
+            "n": 1
+          },
+          {
+            "medical_history": "Intrauterine growth retardation",
+            "n": 1
+          },
+          {
+            "medical_history": "Benign Hemangioma",
+            "n": 1
+          },
+          {
+            "medical_history": "Type 1 Diabetes Mellitus",
+            "n": 3
+          },
+          {
+            "medical_history": "Gastroesophageal reflux disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Ovarian cancer",
+            "n": 1
+          },
+          {
+            "medical_history": "Breast cancer",
+            "n": 1
+          },
+          {
+            "medical_history": "Pre-eclampsia",
+            "n": 5
+          },
+          {
+            "medical_history": "Gestational diabetes mellitus",
+            "n": 1
+          },
+          {
+            "medical_history": "Vasa previa",
+            "n": 1
+          },
+          {
+            "medical_history": "Meningitis",
+            "n": 1
+          },
+          {
+            "medical_history": "Diabetic ketoacidosis",
+            "n": 1
+          },
+          {
+            "medical_history": "Sepsis due to E. coli",
+            "n": 1
+          },
+          {
+            "medical_history": "Urinary Tract Infection",
+            "n": 1
+          },
+          {
+            "medical_history": "Pyelonephritis",
+            "n": 1
+          },
+          {
+            "medical_history": "Chronic Low Back Pain",
+            "n": 1
+          },
+          {
+            "medical_history": "Discitis",
+            "n": 1
+          },
+          {
+            "medical_history": "Osteomyelitis",
+            "n": 1
+          },
+          {
+            "medical_history": "Abscess of Bartholin's gland",
+            "n": 1
+          },
+          {
+            "medical_history": "COVID-19",
+            "n": 1
+          },
+          {
+            "medical_history": "Chlamydia",
+            "n": 1
+          },
+          {
+            "medical_history": "Autistic disorder",
+            "n": 1
+          }
+        ],
+        "allData": [
+          {
+            "medical_history": "Hypertension",
+            "n": 39
+          },
+          {
+            "medical_history": "Hyperlipidimia",
+            "n": 9
+          },
+          {
+            "medical_history": "Cardiac Arrest",
+            "n": 15
+          },
+          {
+            "medical_history": "Heart failure with reduced ejection fraction",
+            "n": 2
+          },
+          {
+            "medical_history": "Coronary Artery Disease",
+            "n": 20
+          },
+          {
+            "medical_history": "Cancer",
+            "n": 19
+          },
+          {
+            "medical_history": "Tonsillitis",
+            "n": 1
+          },
+          {
+            "medical_history": "Type 2 Diabetes Mellitus",
+            "n": 11
+          },
+          {
+            "medical_history": "Tourette's Syndrome",
+            "n": 1
+          },
+          {
+            "medical_history": "Depression",
+            "n": 5
+          },
+          {
+            "medical_history": "Renal Mass",
+            "n": 1
+          },
+          {
+            "medical_history": "Fibroadenoma of Breast",
+            "n": 1
+          },
+          {
+            "medical_history": "Migraine",
+            "n": 1
+          },
+          {
+            "medical_history": "Lupus",
+            "n": 1
+          },
+          {
+            "medical_history": "Liver failure",
+            "n": 2
+          },
+          {
+            "medical_history": "Brain cancer",
+            "n": 1
+          },
+          {
+            "medical_history": "Asthma",
+            "n": 4
+          },
+          {
+            "medical_history": "Chronic Obstructive Lung Disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Obstructive sleep apnea",
+            "n": 1
+          },
+          {
+            "medical_history": "Salpingectomy",
+            "n": 11
+          },
+          {
+            "medical_history": "Cesarian section",
+            "n": 11
+          },
+          {
+            "medical_history": "Gestational diabetes mellitus class A1",
+            "n": 3
+          },
+          {
+            "medical_history": "Traumatic brain injury",
+            "n": 1
+          },
+          {
+            "medical_history": "Seizures",
+            "n": 2
+          },
+          {
+            "medical_history": "Gastrointestinal disease",
+            "n": 6
+          },
+          {
+            "medical_history": "Eating Disorder",
+            "n": 1
+          },
+          {
+            "medical_history": "Coronary Heart Disease",
+            "n": 2
+          },
+          {
+            "medical_history": "Gonorrhea",
+            "n": 1
+          },
+          {
+            "medical_history": "Kidney cancer",
+            "n": 5
+          },
+          {
+            "medical_history": "Hypothyroidism",
+            "n": 1
+          },
+          {
+            "medical_history": "Intrauterine growth retardation",
+            "n": 1
+          },
+          {
+            "medical_history": "Benign Hemangioma",
+            "n": 1
+          },
+          {
+            "medical_history": "Type 1 Diabetes Mellitus",
+            "n": 3
+          },
+          {
+            "medical_history": "Gastroesophageal reflux disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Ovarian cancer",
+            "n": 1
+          },
+          {
+            "medical_history": "Breast cancer",
+            "n": 1
+          },
+          {
+            "medical_history": "Pre-eclampsia",
+            "n": 5
+          },
+          {
+            "medical_history": "Gestational diabetes mellitus",
+            "n": 1
+          },
+          {
+            "medical_history": "Vasa previa",
+            "n": 1
+          },
+          {
+            "medical_history": "Meningitis",
+            "n": 1
+          },
+          {
+            "medical_history": "Diabetic ketoacidosis",
+            "n": 1
+          },
+          {
+            "medical_history": "Sepsis due to E. coli",
+            "n": 1
+          },
+          {
+            "medical_history": "Urinary Tract Infection",
+            "n": 1
+          },
+          {
+            "medical_history": "Pyelonephritis",
+            "n": 1
+          },
+          {
+            "medical_history": "Chronic Low Back Pain",
+            "n": 1
+          },
+          {
+            "medical_history": "Discitis",
+            "n": 1
+          },
+          {
+            "medical_history": "Osteomyelitis",
+            "n": 1
+          },
+          {
+            "medical_history": "Abscess of Bartholin's gland",
+            "n": 1
+          },
+          {
+            "medical_history": "COVID-19",
+            "n": 1
+          },
+          {
+            "medical_history": "Chlamydia",
+            "n": 1
+          },
+          {
+            "medical_history": "Autistic disorder",
+            "n": 1
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "unnest-explicit-out",
+      "spec": {
+        "source": {
+          "name": "donors",
+          "source": "donors.csv"
+        },
+        "transformation": [
+          {
+            "unnest": {
+              "field": "medical_history",
+              "separator": ",",
+              "out": "condition"
+            }
+          },
+          {
+            "groupby": ["condition", "sex"]
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "condition": "Hypertension",
+            "sex": "Female",
+            "n": 19
+          },
+          {
+            "condition": "Hyperlipidimia",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Hypertension",
+            "sex": "Male",
+            "n": 20
+          },
+          {
+            "condition": "Cardiac Arrest",
+            "sex": "Male",
+            "n": 6
+          },
+          {
+            "condition": "Heart failure with reduced ejection fraction",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Coronary Artery Disease",
+            "sex": "Female",
+            "n": 10
+          },
+          {
+            "condition": "Cardiac Arrest",
+            "sex": "Female",
+            "n": 9
+          },
+          {
+            "condition": "Cancer",
+            "sex": "Male",
+            "n": 9
+          },
+          {
+            "condition": "Tonsillitis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Coronary Artery Disease",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "condition": "Type 2 Diabetes Mellitus",
+            "sex": "Female",
+            "n": 9
+          },
+          {
+            "condition": "Tourette's Syndrome",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Depression",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Cancer",
+            "sex": "Female",
+            "n": 10
+          },
+          {
+            "condition": "Hyperlipidimia",
+            "sex": "Male",
+            "n": 5
+          },
+          {
+            "condition": "Renal Mass",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Depression",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Fibroadenoma of Breast",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Migraine",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Lupus",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Liver failure",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Brain cancer",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Asthma",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Chronic Obstructive Lung Disease",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Obstructive sleep apnea",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Salpingectomy",
+            "sex": "Female",
+            "n": 11
+          },
+          {
+            "condition": "Cesarian section",
+            "sex": "Female",
+            "n": 11
+          },
+          {
+            "condition": "Gestational diabetes mellitus class A1",
+            "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Traumatic brain injury",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Seizures",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Gastrointestinal disease",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Seizures",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Eating Disorder",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Coronary Heart Disease",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Gonorrhea",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Kidney cancer",
+            "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Hypothyroidism",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Intrauterine growth retardation",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Gastrointestinal disease",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Benign Hemangioma",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Kidney cancer",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Type 1 Diabetes Mellitus",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Type 1 Diabetes Mellitus",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Gastroesophageal reflux disease",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Ovarian cancer",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Breast cancer",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Pre-eclampsia",
+            "sex": "Female",
+            "n": 5
+          },
+          {
+            "condition": "Gestational diabetes mellitus",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Vasa previa",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Type 2 Diabetes Mellitus",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Meningitis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Diabetic ketoacidosis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Sepsis due to E. coli",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Urinary Tract Infection",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Pyelonephritis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Chronic Low Back Pain",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Discitis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Osteomyelitis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Abscess of Bartholin's gland",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "COVID-19",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Chlamydia",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Autistic disorder",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Heart failure with reduced ejection fraction",
+            "sex": "Female",
+            "n": 1
+          }
+        ],
+        "allData": [
+          {
+            "condition": "Hypertension",
+            "sex": "Female",
+            "n": 19
+          },
+          {
+            "condition": "Hyperlipidimia",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Hypertension",
+            "sex": "Male",
+            "n": 20
+          },
+          {
+            "condition": "Cardiac Arrest",
+            "sex": "Male",
+            "n": 6
+          },
+          {
+            "condition": "Heart failure with reduced ejection fraction",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Coronary Artery Disease",
+            "sex": "Female",
+            "n": 10
+          },
+          {
+            "condition": "Cardiac Arrest",
+            "sex": "Female",
+            "n": 9
+          },
+          {
+            "condition": "Cancer",
+            "sex": "Male",
+            "n": 9
+          },
+          {
+            "condition": "Tonsillitis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Coronary Artery Disease",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "condition": "Type 2 Diabetes Mellitus",
+            "sex": "Female",
+            "n": 9
+          },
+          {
+            "condition": "Tourette's Syndrome",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Depression",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Cancer",
+            "sex": "Female",
+            "n": 10
+          },
+          {
+            "condition": "Hyperlipidimia",
+            "sex": "Male",
+            "n": 5
+          },
+          {
+            "condition": "Renal Mass",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Depression",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Fibroadenoma of Breast",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Migraine",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Lupus",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Liver failure",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Brain cancer",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Asthma",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Chronic Obstructive Lung Disease",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Obstructive sleep apnea",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Salpingectomy",
+            "sex": "Female",
+            "n": 11
+          },
+          {
+            "condition": "Cesarian section",
+            "sex": "Female",
+            "n": 11
+          },
+          {
+            "condition": "Gestational diabetes mellitus class A1",
+            "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Traumatic brain injury",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Seizures",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Gastrointestinal disease",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Seizures",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Eating Disorder",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Coronary Heart Disease",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Gonorrhea",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Kidney cancer",
+            "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Hypothyroidism",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Intrauterine growth retardation",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Gastrointestinal disease",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Benign Hemangioma",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Kidney cancer",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Type 1 Diabetes Mellitus",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Type 1 Diabetes Mellitus",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Gastroesophageal reflux disease",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Ovarian cancer",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Breast cancer",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Pre-eclampsia",
+            "sex": "Female",
+            "n": 5
+          },
+          {
+            "condition": "Gestational diabetes mellitus",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Vasa previa",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Type 2 Diabetes Mellitus",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Meningitis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Diabetic ketoacidosis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Sepsis due to E. coli",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Urinary Tract Infection",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Pyelonephritis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Chronic Low Back Pain",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Discitis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Osteomyelitis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Abscess of Bartholin's gland",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "COVID-19",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Chlamydia",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Autistic disorder",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Heart failure with reduced ejection fraction",
+            "sex": "Female",
+            "n": 1
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
+      "name": "derive-shadowing-column",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "derive": {
+              "island": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "species"
+                  },
+                  "right": {
+                    "literal": "Adelie"
+                  }
+                },
+                "then": {
+                  "field": "island"
+                },
+                "else": {
+                  "literal": "other"
+                }
+              }
+            }
+          },
+          {
+            "groupby": "island"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "island": "Torgersen",
+            "n": 52
+          },
+          {
+            "island": "Biscoe",
+            "n": 44
+          },
+          {
+            "island": "Dream",
+            "n": 56
+          },
+          {
+            "island": "other",
+            "n": 192
+          }
+        ],
+        "allData": [
+          {
+            "island": "Torgersen",
+            "n": 52
+          },
+          {
+            "island": "Biscoe",
+            "n": 44
+          },
+          {
+            "island": "Dream",
+            "n": 56
+          },
+          {
+            "island": "other",
+            "n": 192
+          }
+        ],
+        "isSubset": false
       }
     }
   ]

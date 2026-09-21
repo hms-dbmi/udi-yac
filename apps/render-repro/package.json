@@ -1,0 +1,36 @@
+{
+  "name": "udi-render-repro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dev-only minimal reproduction of the stale-render bug (hms-dbmi/udi-yac#34), outside the YAC app.",
+  "scripts": {
+    "sync-data": "node ../../scripts/copy-sample-data.mjs public/data",
+    "dev": "pnpm run sync-data && vite",
+    "build": "pnpm run sync-data && tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "preview": "vite preview"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,md,html,yaml,yml}": "prettier --write"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "udi-toolkit": "workspace:*",
+    "vega": "^6.2.0",
+    "vega-embed": "^7.1.0",
+    "vega-lite": "^6.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.1"
+  }
+}
