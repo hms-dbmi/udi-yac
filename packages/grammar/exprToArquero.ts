@@ -52,7 +52,8 @@ export function isExpr(value: unknown): value is Expr {
     ('op' in v && 'left' in v && 'right' in v) ||
     'if' in v ||
     'agg' in v ||
-    'window' in v
+    'window' in v ||
+    'concat' in v
   );
 }
 
@@ -112,6 +113,16 @@ export function exprToArquero(expr: Expr): string {
       throw new Error(`Expr: aggregate '${expr.agg}' requires a field`);
     }
     return `${expr.agg}(${fieldRef(expr.field)})`;
+  }
+
+  if ('concat' in expr) {
+    if (!Array.isArray(expr.concat) || expr.concat.length === 0) {
+      throw new Error('Expr: concat requires a non-empty array of parts');
+    }
+    // Lead with '' so JS uses string concatenation even when every part is a
+    // number, and parenthesise each part so operator precedence can't reorder.
+    const parts = expr.concat.map((part) => `(${exprToArquero(part)})`);
+    return `('' + ${parts.join(' + ')})`;
   }
 
   if ('window' in expr) {

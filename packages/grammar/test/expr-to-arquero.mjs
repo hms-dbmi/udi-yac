@@ -110,3 +110,26 @@ for (const bad of [
 }
 
 console.log('expr-to-arquero: all assertions passed');
+
+// --- concat ------------------------------------------------------------------
+// A text mark draws one field, so a label combining values has to be assembled
+// into a single column first.
+assert.equal(
+  exprToArquero({
+    concat: [{ field: 'org' }, { literal: ' ' }, { field: 'pct' }, { literal: '%' }],
+  }),
+  `('' + (d['org']) + (" ") + (d['pct']) + ("%"))`,
+  'concat should stringify and join its parts in order',
+);
+// Leading '' matters: without it JS would add two numbers instead of joining them.
+assert.match(
+  exprToArquero({ concat: [{ field: 'a' }, { field: 'b' }] }),
+  /^\('' \+/,
+  'concat must force string semantics even when every part is numeric',
+);
+assert.throws(
+  () => exprToArquero({ concat: [] }),
+  /non-empty/,
+  'an empty concat is a spec error, not an empty string',
+);
+console.log('expr-to-arquero: concat assertions passed');

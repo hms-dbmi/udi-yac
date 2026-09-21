@@ -8,6 +8,12 @@ Two mutually exclusive modes:
   host portal's identity provider (Keycloak, Globus, Auth0, Entra) and verified
   against its published keys. The embedded chat forwards the portal's token via
   its ``authToken`` config; nothing else in the request path changes.
+
+The verified payload also carries the raw compact token under
+``RAW_TOKEN_CLAIM``, so a query backend configured for JWT passthrough can
+forward it to the database and let *that* authenticate the user (see
+``udiagent/query/README.md``). Handlers that never touch a database simply
+ignore the extra key.
 """
 
 import time
@@ -21,6 +27,10 @@ _JWKS_TTL_SECONDS = 300
 # the floor between such refreshes, so a stream of unrecognized tokens can't be
 # used to hammer the provider.
 _JWKS_MIN_REFRESH_SECONDS = 10
+
+# Key under which `verify_jwt` returns the raw compact JWT alongside the decoded
+# claims. Namespaced so it cannot collide with a real registered claim.
+RAW_TOKEN_CLAIM = "udi:token"
 
 
 def make_verify_jwt(
@@ -102,6 +112,10 @@ def make_verify_jwt(
                 audience=audience or None,
                 issuer=issuer or None,
             )
+            # Set AFTER decode so a token carrying a literal "udi:token" claim
+            # can't inject a different one. Downstream, the query layer forwards
+            # this to StarRocks for per-user database auth (see query/README.md).
+            payload[RAW_TOKEN_CLAIM] = token
             return payload
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid or expired token")

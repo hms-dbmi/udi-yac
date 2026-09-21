@@ -1,4 +1,5 @@
 import type { UDIGrammar } from 'udi-toolkit/react';
+import type { TemplateProvenance } from '../stores/dashboardStore';
 import {
   collectLockedFields,
   collectGroupbyFields,
@@ -35,13 +36,33 @@ function resolveSourceName(spec: UDIGrammar): string | null {
  *
  * The option-list maps may be null (e.g. hasTweakableFields only needs to know
  * whether any param exists); in that case options come back empty.
+ *
+ * A spec the agent generated from a template takes a different path entirely —
+ * see `templateParams` below.
  */
 export function computeTweakableParams(
   spec: UDIGrammar,
   sourceFields: FieldMap,
   quantitativeSourceFields: FieldMap,
   categoricalSourceFields: FieldMap,
+  template?: TemplateProvenance,
 ): TweakableParam[] {
+  // A template-generated spec is re-bound, not rewritten, so its parameters come
+  // from the template rather than from reading the spec back. The two modes are
+  // exclusive on purpose: a heuristic rewrite would make the spec diverge from
+  // its own instantiation, after which a re-bind would silently discard that
+  // edit. Mode exclusivity keeps "this spec is exactly its instantiation" true
+  // without a dirty flag.
+  if (template && template.params.length > 0) {
+    return templateParams(
+      template,
+      spec,
+      sourceFields,
+      quantitativeSourceFields,
+      categoricalSourceFields,
+    );
+  }
+
   if (!spec.representation) return [];
   const sourceName = resolveSourceName(spec);
   if (!sourceName) return [];
@@ -84,6 +105,7 @@ export function computeTweakableParams(
         params.push({
           field: rollup.field,
           encoding,
+          label: encoding,
           options: quant,
           kind: 'measure',
           outputKey: field,
@@ -98,11 +120,12 @@ export function computeTweakableParams(
 
       seen.add(encoding);
       if (groupbyFields.has(field)) {
-        params.push({ field, encoding, options: categorical, kind: 'dimension' });
+        params.push({ field, encoding, label: encoding, options: categorical, kind: 'dimension' });
       } else {
         params.push({
           field,
           encoding,
+          label: encoding,
           options: m.type === 'quantitative' ? quant : categorical,
           kind: 'field',
         });
@@ -111,6 +134,66 @@ export function computeTweakableParams(
   }
 
   return params;
+}
+
+/**
+ * Controls for the parameters of the template a chart was generated from.
+ *
+ * The agent decides *which* parameters are offerable (it holds the template);
+ * this only turns each descriptor into a control. Options come from the
+ * descriptor's own entity, since a join template binds fields on two different
+ * entities and only one of them is the spec's first source.
+ */
+function templateParams(
+  template: TemplateProvenance,
+  spec: UDIGrammar,
+  sourceFields: FieldMap,
+  quantitativeSourceFields: FieldMap,
+  categoricalSourceFields: FieldMap,
+): TweakableParam[] {
+  const fallbackEntity = resolveSourceName(spec);
+  return template.params.map((descriptor) => {
+    const entity = descriptor.entity ?? fallbackEntity;
+
+    // A grouping is not a field swap: its value is the grouping itself, and the
+    // control it needs is decided by the type of the column it cuts rather than
+    // by a list of columns to choose among.
+    if (descriptor.kind === 'grouping') {
+      return {
+        kind: 'grouping' as const,
+        value: descriptor.value,
+        label: descriptor.label || 'groups',
+        param: descriptor.param,
+        placeholder: descriptor.placeholder,
+        stratifier: descriptor.field ?? '',
+        stratifierType: descriptor.fieldType ?? null,
+        entity: entity ?? null,
+      };
+    }
+
+    // Every other parameter binds a column, so its value is a column name. The
+    // guard is for the type only — the agent never sends an object here.
+    const value = typeof descriptor.value === 'string' ? descriptor.value : '';
+    const byType =
+      descriptor.type === 'quantitative'
+        ? quantitativeSourceFields
+        : descriptor.type === 'nominal' || descriptor.type === 'ordinal'
+          ? categoricalSourceFields
+          : sourceFields;
+    const options = (entity ? byType?.[entity] : undefined) ?? [];
+    // The bound field always appears, even when the schema's declared type
+    // disagrees with the template's requirement — a Select whose value is absent
+    // from its items renders blank, which reads as a broken control.
+    const withCurrent = options.includes(value) ? options : [value, ...options];
+    return {
+      kind: 'binding' as const,
+      field: value,
+      label: descriptor.label,
+      options: withCurrent,
+      param: descriptor.param,
+      placeholder: descriptor.placeholder,
+    };
+  });
 }
 
 /**
@@ -126,6 +209,7 @@ export function computeTweakableParams(
 export function hasTweakableFields(
   spec: UDIGrammar,
   sourceFields: Record<string, string[]> | null,
+  template?: TemplateProvenance,
 ): boolean {
-  return computeTweakableParams(spec, sourceFields, null, null).length > 0;
+  return computeTweakableParams(spec, sourceFields, null, null, template).length > 0;
 }

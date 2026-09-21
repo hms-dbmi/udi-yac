@@ -39,7 +39,10 @@ function AccordionTrigger({
   headerClassName?: string;
 }) {
   return (
-    <AccordionPrimitive.Header className={cn('flex', headerClassName)}>
+    <AccordionPrimitive.Header
+      data-slot="accordion-header"
+      className={cn('flex min-w-0 flex-1', headerClassName)}
+    >
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(

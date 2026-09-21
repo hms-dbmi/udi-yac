@@ -1,0 +1,540 @@
+{
+  "survivalShaped": {
+    "source": {
+      "name": "penguins",
+      "source": "./data/penguins/penguins.csv"
+    },
+    "transformation": [
+      {
+        "filter": {
+          "op": "!=",
+          "left": {
+            "field": "body_mass_g"
+          },
+          "right": {
+            "literal": null
+          }
+        }
+      },
+      {
+        "groupby": "species"
+      },
+      {
+        "orderby": {
+          "field": "body_mass_g",
+          "order": "asc"
+        }
+      },
+      {
+        "derive": {
+          "total": {
+            "agg": "count"
+          }
+        }
+      },
+      {
+        "derive": {
+          "percent": {
+            "rolling": {
+              "expression": {
+                "op": "*",
+                "left": {
+                  "op": "/",
+                  "left": {
+                    "agg": "count"
+                  },
+                  "right": {
+                    "field": "total"
+                  }
+                },
+                "right": {
+                  "literal": 100
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "derive": {
+          "cohort end": {
+            "agg": "max",
+            "field": "body_mass_g"
+          },
+          "final percent": {
+            "agg": "max",
+            "field": "percent"
+          },
+          "first mass": {
+            "agg": "min",
+            "field": "body_mass_g"
+          }
+        }
+      },
+      {
+        "derive": {
+          "rule x": {
+            "if": {
+              "op": "==",
+              "left": {
+                "window": "rank"
+              },
+              "right": {
+                "literal": 1
+              }
+            },
+            "then": {
+              "field": "cohort end"
+            },
+            "else": {
+              "literal": null
+            }
+          }
+        }
+      },
+      {
+        "derive": {
+          "lead x": {
+            "if": {
+              "op": "==",
+              "left": {
+                "window": "rank"
+              },
+              "right": {
+                "literal": 1
+              }
+            },
+            "then": {
+              "literal": 2500
+            },
+            "else": {
+              "literal": null
+            }
+          },
+          "lead y": {
+            "literal": 0
+          }
+        }
+      },
+      {
+        "derive": {
+          "drop x": {
+            "if": {
+              "op": "==",
+              "left": {
+                "window": "rank"
+              },
+              "right": {
+                "literal": 1
+              }
+            },
+            "then": {
+              "field": "first mass"
+            },
+            "else": {
+              "literal": null
+            }
+          },
+          "drop y": {
+            "if": {
+              "op": "==",
+              "left": {
+                "window": "rank"
+              },
+              "right": {
+                "literal": 1
+              }
+            },
+            "then": {
+              "literal": 0
+            },
+            "else": {
+              "literal": null
+            }
+          }
+        }
+      },
+      {
+        "orderby": {
+          "field": "percent",
+          "order": "asc"
+        }
+      }
+    ],
+    "representation": [
+      {
+        "mark": "line",
+        "mapping": [
+          {
+            "encoding": "x",
+            "field": "lead x",
+            "type": "quantitative",
+            "title": "body mass (g)",
+            "domain": {
+              "min": 2500
+            }
+          },
+          {
+            "encoding": "y",
+            "field": "lead y",
+            "type": "quantitative",
+            "domain": {
+              "min": 0,
+              "max": 100
+            }
+          },
+          {
+            "encoding": "color",
+            "field": "species",
+            "type": "nominal",
+            "omitLegend": true
+          }
+        ]
+      },
+      {
+        "mark": "line",
+        "mapping": [
+          {
+            "encoding": "x",
+            "field": "drop x",
+            "type": "quantitative",
+            "title": "body mass (g)",
+            "domain": {
+              "min": 2500
+            }
+          },
+          {
+            "encoding": "y",
+            "field": "drop y",
+            "type": "quantitative",
+            "domain": {
+              "min": 0,
+              "max": 100
+            }
+          },
+          {
+            "encoding": "color",
+            "field": "species",
+            "type": "nominal",
+            "omitLegend": true
+          }
+        ]
+      },
+      {
+        "mark": "line",
+        "mapping": [
+          {
+            "encoding": "x",
+            "field": "body_mass_g",
+            "type": "quantitative",
+            "title": "body mass (g)",
+            "domain": {
+              "min": 2500
+            }
+          },
+          {
+            "encoding": "y",
+            "field": "percent",
+            "type": "quantitative",
+            "domain": {
+              "min": 0,
+              "max": 100
+            }
+          },
+          {
+            "encoding": "color",
+            "field": "species",
+            "type": "nominal",
+            "omitLegend": true
+          }
+        ],
+        "interpolate": "step-after"
+      },
+      {
+        "mark": "line",
+        "mapping": [
+          {
+            "encoding": "x",
+            "field": "rule x",
+            "type": "quantitative",
+            "title": "body mass (g)",
+            "domain": {
+              "min": 2500
+            }
+          },
+          {
+            "encoding": "y",
+            "field": "final percent",
+            "type": "quantitative",
+            "domain": {
+              "min": 0,
+              "max": 100
+            }
+          },
+          {
+            "encoding": "color",
+            "field": "species",
+            "type": "nominal",
+            "omitLegend": true
+          }
+        ]
+      },
+      {
+        "mark": "point",
+        "mapping": [
+          {
+            "encoding": "x",
+            "field": "body_mass_g",
+            "type": "quantitative",
+            "title": "body mass (g)",
+            "domain": {
+              "min": 2500
+            }
+          },
+          {
+            "encoding": "y",
+            "field": "percent",
+            "type": "quantitative",
+            "domain": {
+              "min": 0,
+              "max": 100
+            }
+          },
+          {
+            "encoding": "color",
+            "field": "species",
+            "type": "nominal",
+            "omitLegend": true
+          }
+        ]
+      }
+    ]
+  },
+  "cdfGrouped": {
+    "source": {
+      "name": "penguins",
+      "source": "./data/penguins/penguins.csv"
+    },
+    "transformation": [
+      {
+        "filter": {
+          "op": "!=",
+          "left": {
+            "field": "body_mass_g"
+          },
+          "right": {
+            "literal": null
+          }
+        }
+      },
+      {
+        "groupby": "species"
+      },
+      {
+        "orderby": {
+          "field": "body_mass_g",
+          "order": "asc"
+        }
+      },
+      {
+        "derive": {
+          "total": {
+            "agg": "count"
+          }
+        }
+      },
+      {
+        "derive": {
+          "percentile": {
+            "rolling": {
+              "expression": {
+                "op": "/",
+                "left": {
+                  "agg": "count"
+                },
+                "right": {
+                  "field": "total"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "orderby": {
+          "field": "percentile",
+          "order": "asc"
+        }
+      }
+    ],
+    "representation": {
+      "mark": "line",
+      "mapping": [
+        {
+          "encoding": "x",
+          "field": "body_mass_g",
+          "type": "quantitative"
+        },
+        {
+          "encoding": "y",
+          "field": "percentile",
+          "type": "quantitative"
+        },
+        {
+          "encoding": "color",
+          "field": "species",
+          "type": "nominal"
+        }
+      ]
+    }
+  },
+  "kdeGrouped": {
+    "source": {
+      "name": "penguins",
+      "source": "./data/penguins/penguins.csv"
+    },
+    "transformation": [
+      {
+        "filter": {
+          "op": "!=",
+          "left": {
+            "field": "body_mass_g"
+          },
+          "right": {
+            "literal": null
+          }
+        }
+      },
+      {
+        "groupby": "species"
+      },
+      {
+        "kde": {
+          "field": "body_mass_g",
+          "output": {
+            "sample": "body_mass_g",
+            "density": "density"
+          }
+        }
+      }
+    ],
+    "representation": [
+      {
+        "mark": "area",
+        "mapping": [
+          {
+            "encoding": "x",
+            "field": "body_mass_g",
+            "type": "quantitative"
+          },
+          {
+            "encoding": "color",
+            "field": "species",
+            "type": "nominal"
+          },
+          {
+            "encoding": "y",
+            "field": "density",
+            "type": "quantitative",
+            "domainWhenFiltered": "filtered"
+          },
+          {
+            "encoding": "opacity",
+            "value": 0.25
+          }
+        ]
+      },
+      {
+        "mark": "line",
+        "mapping": [
+          {
+            "encoding": "x",
+            "field": "body_mass_g",
+            "type": "quantitative"
+          },
+          {
+            "encoding": "color",
+            "field": "species",
+            "type": "nominal"
+          },
+          {
+            "encoding": "y",
+            "field": "density",
+            "type": "quantitative",
+            "domainWhenFiltered": "filtered"
+          }
+        ]
+      }
+    ]
+  },
+  "cdfPlain": {
+    "source": {
+      "name": "penguins",
+      "source": "./data/penguins/penguins.csv"
+    },
+    "transformation": [
+      {
+        "filter": {
+          "op": "!=",
+          "left": {
+            "field": "body_mass_g"
+          },
+          "right": {
+            "literal": null
+          }
+        }
+      },
+      {
+        "orderby": {
+          "field": "body_mass_g",
+          "order": "asc"
+        }
+      },
+      {
+        "derive": {
+          "total": {
+            "agg": "count"
+          }
+        }
+      },
+      {
+        "derive": {
+          "percentile": {
+            "rolling": {
+              "expression": {
+                "op": "/",
+                "left": {
+                  "agg": "count"
+                },
+                "right": {
+                  "field": "total"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "orderby": {
+          "field": "percentile",
+          "order": "asc"
+        }
+      }
+    ],
+    "representation": {
+      "mark": "line",
+      "mapping": [
+        {
+          "encoding": "x",
+          "field": "body_mass_g",
+          "type": "quantitative"
+        },
+        {
+          "encoding": "y",
+          "field": "percentile",
+          "type": "quantitative"
+        }
+      ]
+    }
+  }
+}

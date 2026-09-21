@@ -68,8 +68,11 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
         conversationStore.getState().addMessage({
           role: 'assistant',
           content: '',
+          // `meta` carries the template provenance a RenderVisualization was
+          // built from, which is what makes the chart re-bindable later. It is
+          // stripped again before the transcript goes back to the model.
           tool_calls: toolCalls.map((tc) => ({
-            function: { name: tc.name, arguments: tc.arguments },
+            function: { name: tc.name, arguments: tc.arguments, meta: tc.meta },
           })),
         });
 

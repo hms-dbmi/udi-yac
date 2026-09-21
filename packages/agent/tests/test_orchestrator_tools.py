@@ -67,9 +67,12 @@ def test_bind_tokens_resolve_to_the_chosen_column():
     """A placeholder with no encoding (a binby input) is filled in server-side."""
     from udiagent.vis_generate import resolve_text_templates
 
-    text = resolve_text_templates(
-        "vis_056_histogram_distribution", {"E": "donors", "F": "age_value"}
-    )
+    from udiagent.generated_vis_tools import TOOL_DISPATCH
+
+    # By suffix: the name embeds a positional index, so inserting a template
+    # ahead of this one renumbers it.
+    tool = next(n for n in TOOL_DISPATCH if n.endswith("_histogram_distribution"))
+    text = resolve_text_templates(tool, {"E": "donors", "F": "age_value"})
     assert text["title"] == "Histogram of age_value"
     assert "{bind:" not in text["summary"]
 

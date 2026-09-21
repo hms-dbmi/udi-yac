@@ -503,7 +503,13 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     // (UDIVis) will retry when tablesVersion bumps. Previously this only
     // checked size === 0, which let partial-data transformations run when
     // some-but-not-all sources had arrived.
-    if (namedTables.size !== keys.length) return null;
+    //
+    // Counted against the DISTINCT keys, because the map is keyed by name: a
+    // spec may legitimately list one table twice (a template naming the same
+    // entity for two roles), and comparing against `keys.length` read that
+    // collapsed duplicate as a source still loading. The chart then waited
+    // forever on a table it already had, and rendered blank with no error.
+    if (namedTables.size !== new Set(keys).size) return null;
 
     const { data: dataTable, containsNamedFilter } = PerformDataTransformations(
       namedTables,
@@ -613,9 +619,15 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
               : {}),
           });
 
-          if (mappedFilter) {
-            currentTable.table = inTable.filter(mappedFilter).reify();
-          }
+          // A named filter with no active selection is a pass-through, and it has
+          // to forward its INPUT table explicitly. Leaving `currentTable.table`
+          // alone only looked right while every filter was implicitly operating on
+          // it; with an explicit `in`, the untouched table then gets published
+          // under this transform's `out` — handing the next step an unrelated
+          // table under the name it asked for.
+          currentTable.table = mappedFilter
+            ? inTable.filter(mappedFilter).reify()
+            : inTable;
         }
       } else if ('groupby' in transform) {
         const inTable = getInTable(transform.in);
@@ -624,6 +636,35 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         } else {
           currentTable.table = inTable.groupby(transform.groupby);
         }
+      } else if ('unnest' in transform) {
+        const inTable = getInTable(transform.in);
+        const {
+          field,
+          separator = ';',
+          out = transform.unnest.field,
+        } = transform.unnest;
+
+        // Split on the separator, trimming whitespace so "a; b" and "a;b" agree,
+        // then unroll the resulting array into one row per value. Null/empty
+        // cells become an empty array and unroll away, which is what we want:
+        // a row with no value belongs to no category.
+        const splitInto = escape((d: Record<string, unknown>) => {
+          const raw = d[field];
+          if (raw === null || raw === undefined) return [];
+          // Only a string can hold a delimited set. Any other cell type is a
+          // single value already, so it passes through as itself rather than as
+          // a stringified copy of itself.
+          if (typeof raw !== 'string') return [raw];
+          return raw
+            .split(separator)
+            .map((part) => part.trim())
+            .filter((part) => part.length > 0);
+        });
+
+        currentTable.table = inTable
+          .derive({ [out]: splitInto })
+          .unroll(out)
+          .reify();
       } else if ('binby' in transform) {
         const inTable = getInTable(transform.in);
         const { field, bins = 10, nice = true } = transform.binby;
@@ -689,18 +730,19 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         } else {
           orderbyList = transform.orderby;
         }
-        const orderKeys: OrderKey[] = orderbyList.map((orderby) => {
-          let orderKey: OrderKey;
-          if (typeof orderby !== 'string') {
-            const dir = orderby.order;
-            orderKey = orderby.field;
-            if (dir === 'desc') {
-              orderKey = desc(orderKey);
-            }
-          } else {
-            orderKey = orderby;
-          }
-          return orderKey;
+        // A DirectionalOrder may name several fields at once (grammar-py's
+        // `.orderby([a, b])` emits that shape, and the SQL compiler expands it),
+        // so flatten before applying the direction to each.
+        // The type argument goes on `flatMap`, not on the result: annotating the
+        // result makes TS resolve the callback's return against `OrderKey`'s
+        // first member (a plain column name), which rejects the `desc(...)`
+        // wrapper objects the descending branch returns.
+        const orderKeys = orderbyList.flatMap<OrderKey>((orderby) => {
+          if (typeof orderby === 'string') return [orderby];
+          const fields = Array.isArray(orderby.field)
+            ? orderby.field
+            : [orderby.field];
+          return orderby.order === 'desc' ? fields.map((f) => desc(f)) : fields;
         });
         currentTable.table = inTable.orderby(orderKeys);
       } else if ('derive' in transform) {
@@ -729,11 +771,14 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         if (!leftTable || !rightTable) {
           throw new Error('join table not found');
         }
+        // `left` keeps unmatched rows of the first table, nulling the second's
+        // columns — which is what a question about absence needs.
+        const joinFn = transform.join.kind === 'left' ? 'join_left' : 'join';
         if (
           typeof transform.join.on === 'string' ||
           transform.join.on.every((x) => typeof x === 'string')
         ) {
-          currentTable.table = leftTable.join(rightTable, transform.join.on);
+          currentTable.table = leftTable[joinFn](rightTable, transform.join.on);
         } else {
           const [leftMultiKeys, rightMultiKeys] = transform.join.on;
           if (leftMultiKeys.length !== rightMultiKeys.length) {
@@ -755,7 +800,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
                   $.leftMultiKeys.map((k) => d[k]).join('¶'),
               ),
             })
-            .join(
+            [joinFn](
               rightTable
                 .params({
                   rightMultiKeys: transform.join.on[1],

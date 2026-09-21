@@ -41,6 +41,10 @@ export { exprToArquero, isExpr } from './exprToArquero';
 // Plain-language summary of a spec's transformation pipeline (for info tooltips)
 export { describeTransformations } from './describeTransformations';
 
+// Label collision avoidance (what a text layer's `avoidOverlap` runs)
+export { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
+export type { LabelRow } from './labelLayout';
+
 // Query backend seam (local Arquero vs remote /v1/yac/query)
 export {
   setQueryBackend,

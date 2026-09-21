@@ -1,0 +1,1714 @@
+"""A stratified survival curve must agree with the unstratified one.
+
+The bug these pin: the stratifier is an *event-level* column, so grouping by
+``[subject, stratifier]`` makes each (subject, value) pair its own row. A pair with
+a start event and no end event reads as censored; a pair with an end and no start
+is dropped by the null filter. A subject whose value changed between the two
+events is therefore counted as neither, and its death disappears — the symptom
+being every stratum sitting *above* the pooled curve, which no weighted average
+can do. On the pcx event log that lost 24 of 34 deaths.
+
+Two readings of a time-varying stratifier ship as separate templates, and they are
+pinned by opposite invariants: the baseline reading must reconcile with the pooled
+curve, the "ever recorded" reading must not.
+
+Runs the real templates through the real SQL compiler against DuckDB. No LLM.
+"""
+
+import json
+import pathlib
+import tempfile
+
+import pytest
+
+from udiagent.query import DuckDBConnector, QueryEngine
+from udiagent.schema import parse_schema_from_dict
+from udiagent.vis_generate import (
+    _load_generated_tools,
+    instantiate_template,
+    shared_entities_for,
+    validate_bindings,
+)
+
+# One row per event. Every subject earns its place:
+#   s1  stratifier FLIPS between start and death — the bug. Baseline arm A.
+#   s2  concordant death, the control.
+#   s3  censored: a start and a later visit, no death.
+#   s4  no stratifier value at baseline, and dies. Its only value ('C') lives on
+#       the death row, so it is also the miniature of pcx's "Unavailable" stratum:
+#       a group whose every member is dead by construction.
+#   s5  two values across its timeline, censored — the overlap case for "ever".
+#   s6  a death with no start event at all: must be dropped by both readings.
+_EVENTS = """subject,event,day,arm
+s1,start,0,A
+s1,death,10,B
+s2,start,0,A
+s2,visit,5,A
+s2,death,20,A
+s3,start,0,B
+s3,visit,30,B
+s4,start,0,
+s4,death,40,C
+s5,start,0,B
+s5,visit,7,A
+s6,death,15,A
+"""
+
+# Subject-level censoring: who was still event-free when follow-up stopped, and
+# when. s3 and s5 are the censored subjects, so they are the only two that should
+# earn a tick. s6 is deliberately absent, to prove a subject the censoring table
+# never mentions still reaches the curve.
+_PATIENTS = """subject,status,asof
+s1,deceased,10
+s2,deceased,20
+s3,alive,60
+s4,deceased,40
+s5,alive,90
+"""
+
+#: Written once for the module. Structural tests only read the schema; the DuckDB
+#: ones need a real file, and one shared path keeps both honest about the same data.
+_CENSOR_DIR = pathlib.Path(tempfile.mkdtemp(prefix="udi-censor-"))
+_CENSOR_CSV = _CENSOR_DIR / "patients.csv"
+_CENSOR_CSV.write_text(_PATIENTS)
+
+
+def _censor_resource():
+    return {
+        "name": "patients",
+        "path": str(_CENSOR_CSV),
+        "udi:row_count": 5,
+        "schema": {
+            "fields": [
+                {"name": "subject", "udi:data_type": "nominal"},
+                {"name": "status", "udi:data_type": "nominal"},
+                {"name": "asof", "udi:data_type": "quantitative"},
+            ]
+        },
+    }
+
+
+_ARGS = {
+    "entity1": "events",
+    "entity1_field1": "subject",
+    "entity1_field2": "event",
+    "entity1_field3": "day",
+    "value1": "start",
+    "value2": "death",
+    "value3": "alive",
+}
+
+#: The censoring table's entity number differs per template — it takes whatever
+#: the stratifier left free — so its args are keyed off the tool's own parameter
+#: map rather than hardcoded. It is the only entity besides the event log that
+#: binds a second and third field.
+def _censor_args(param_map):
+    for n in (2, 3, 4):
+        if f"entity{n}_field3" in param_map:
+            return {
+                f"entity{n}": "patients",
+                f"entity{n}_field1": "subject",
+                f"entity{n}_field2": "status",
+                f"entity{n}_field3": "asof",
+            }
+    return {}
+
+
+@pytest.fixture()
+def survival(tmp_path):
+    """Run a survival template against the synthetic log, in DuckDB."""
+    csv = tmp_path / "events.csv"
+    csv.write_text(_EVENTS)
+    patients = _CENSOR_CSV
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "events",
+                    "path": str(csv),
+                    "udi:row_count": 12,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "event", "udi:data_type": "nominal"},
+                            {"name": "day", "udi:data_type": "quantitative"},
+                            {"name": "arm", "udi:data_type": "nominal"},
+                        ]
+                    },
+                },
+                _censor_resource(),
+            ],
+        }
+    )
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    engine = QueryEngine(
+        DuckDBConnector(views={"events": str(csv), "patients": str(_CENSOR_CSV)}),
+        table_map={"events": "events", "patients": "patients"},
+    )
+
+    def run(suffix, stratify=True, grouping=None):
+        # By name suffix, not index: inserting a template renumbers every later one.
+        tool = next(n for n in dispatch if n.endswith(suffix))
+        idx, param_map = dispatch[tool]
+        args = dict(_ARGS)
+        args.update(_censor_args(param_map))
+        if stratify:
+            args["entity1_field4"] = "arm"
+        if grouping is not None:
+            args["grouping"] = grouping
+        args.update(_censor_args(param_map))
+        bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+        spec = instantiate_template(templates[idx], bindings, schema)
+        result = engine.run_query(
+            source=spec["source"], transformation=spec["transformation"]
+        )
+        return result["displayData"]
+
+    return run
+
+
+def _cohorts(rows, stratum):
+    """{stratum value: (subjects, deaths)} — both are per-group constants."""
+    out = {}
+    for row in rows:
+        out.setdefault(row[stratum], (row["subjects"], row["deaths"]))
+    return out
+
+
+def test_baseline_stratification_reconciles_with_the_pooled_curve(survival):
+    pooled = survival("_line_survival", stratify=False)[0]
+    # s6 has no start event and is excluded; s4 has no stratifier value but is
+    # still part of the whole cohort.
+    assert (pooled["subjects"], pooled["deaths"]) == (5, 3)
+
+    cohorts = _cohorts(survival("_line_survival_baseline"), "stratum")
+
+    # The assertion that fails on the per-event pipeline: it credited arm A with
+    # only one death, because s1's death landed on a row (s1, B) that had no start
+    # event and was dropped.
+    assert cohorts == {"A": (2, 2), "B": (2, 0)}
+
+    # Every subject is placed once, so the groups partition the cohort — minus
+    # only s4, which has no value at baseline and cannot be placed anywhere.
+    assert sum(n for n, _ in cohorts.values()) == pooled["subjects"] - 1
+    assert sum(d for _, d in cohorts.values()) == pooled["deaths"] - 1
+
+    # And the naive form is false here, deliberately. "Strata sum to the pooled
+    # total" holds only when every subject has a baseline value — true of pcx, not
+    # true in general — so asserting it would encode a coincidence.
+    assert sum(d for _, d in cohorts.values()) != pooled["deaths"]
+
+
+@pytest.mark.parametrize(
+    "suffix", ["_line_survival_baseline", "_line_survival_ever"]
+)
+def test_a_missing_value_is_excluded_rather_than_made_into_a_stratum(survival, suffix):
+    """Neither reading may turn "no value recorded" into a category.
+
+    Under the baseline reading s4 leaves the cohort entirely (it has nothing to be
+    placed by). Under "ever" it stays, in group C only — dropping its null-valued
+    row must not also drop the start event that row carried, which is why that
+    filter sits after the span is broadcast rather than before.
+    """
+    cohorts = _cohorts(survival(suffix), "stratum")
+    assert None not in cohorts
+    if suffix.endswith("_baseline"):
+        # s4's only value lives on its death row and must not leak in from there.
+        assert "C" not in cohorts
+    else:
+        assert cohorts["C"] == (1, 1)
+
+
+def test_a_stratum_with_no_deaths_stays_flat_and_unlabelled(survival):
+    rows = [r for r in survival("_line_survival_baseline") if r["stratum"] == "B"]
+    assert rows, "arm B should render"
+    assert all(r["final percentage"] == 100 for r in rows)
+    # No final value to report, so the rule and its label are suppressed.
+    assert all(r["label year"] is None for r in rows)
+
+
+def test_ever_recorded_stratification_overlaps_and_must_not_reconcile(survival):
+    pooled = survival("_line_survival", stratify=False)[0]
+    cohorts = _cohorts(survival("_line_survival_ever"), "stratum")
+
+    # s1 -> A and B; s2 -> A; s4 -> C; s5 -> A and B; s3 -> B.
+    assert cohorts == {"A": (3, 2), "B": (3, 1), "C": (1, 1)}
+
+    # The opposite invariant to the baseline reading, asserted so that nobody
+    # "fixes" it: membership overlaps, so a subject is counted in several groups
+    # and s1's single death is attributed twice.
+    assert sum(n for n, _ in cohorts.values()) > pooled["subjects"]
+    assert sum(d for _, d in cohorts.values()) > pooled["deaths"]
+
+
+def test_ever_recorded_stratification_keeps_its_immortal_time_artefact(survival):
+    """Pinned deliberately: this is a property of the definition, not a defect.
+
+    Arm C exists only on a death row, so membership in it implies death and the
+    curve is flat at 0% by construction. It is documented in the template's design
+    considerations; if it ever silently disappears, that documentation is wrong.
+    """
+    rows = [r for r in survival("_line_survival_ever") if r["stratum"] == "C"]
+    assert rows
+    assert all(r["final percentage"] == 0 for r in rows)
+
+
+def _survival_spec(
+    suffix,
+    stratifier="tumor_locations",
+    stratifier_type="nominal",
+    grouping=None,
+):
+    """Instantiate a survival template without executing it."""
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith(suffix))
+    idx, param_map = dispatch[tool]
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "events",
+                    "path": "events.csv",
+                    "udi:row_count": 10,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "event", "udi:data_type": "nominal"},
+                            {"name": "day", "udi:data_type": "quantitative"},
+                            {"name": stratifier, "udi:data_type": stratifier_type},
+                        ]
+                    },
+                },
+                _censor_resource(),
+            ],
+        }
+    )
+    args = {**_ARGS, "entity1_field4": stratifier}
+    args.update(_censor_args(param_map))
+    bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+    if grouping is not None:
+        bindings["GROUP"] = grouping
+    return instantiate_template(templates[idx], bindings, schema)
+
+
+def _colour_mappings(spec):
+    """Every colour mapping in a spec, across all layers."""
+    found = []
+    for layer in spec["representation"]:
+        mapping = layer.get("mapping")
+        for entry in mapping if isinstance(mapping, list) else [mapping]:
+            if isinstance(entry, dict) and entry.get("encoding") == "color":
+                found.append(entry)
+    return found
+
+
+def _transform_index(spec, kind):
+    return next(i for i, t in enumerate(spec["transformation"]) if kind in t)
+
+
+def _subject_rollup(spec):
+    """The rollup that reduces events to one row per subject.
+
+    Not simply the first rollup: the censoring join reduces its own table to one
+    row per subject before this one, so position no longer identifies it. The
+    span outputs do.
+    """
+    return next(
+        t["rollup"]
+        for t in spec["transformation"]
+        if "rollup" in t and "start day" in t["rollup"]
+    )
+
+
+def _subject_rollup_index(spec):
+    return next(
+        i
+        for i, t in enumerate(spec["transformation"])
+        if "rollup" in t and "start day" in t["rollup"]
+    )
+
+
+@pytest.mark.parametrize(
+    "suffix, unnest_before_rollup",
+    [
+        # Baseline expands the rollup's own output: one row per subject already,
+        # nothing counted yet, so it multiplies nothing — and the values come from
+        # the start event alone, which is what "at baseline" means.
+        ("_line_survival_baseline_multivalue", False),
+        # "Ever" expands the event rows, so membership is read from every event.
+        ("_line_survival_ever_multivalue", True),
+    ],
+)
+def test_multi_value_unnest_sits_on_the_right_side_of_the_rollup(
+    suffix, unnest_before_rollup
+):
+    """The SQL backend rejects `unnest`, so this is asserted structurally.
+
+    Which side of the rollup the expansion happens on *is* the difference between
+    the two readings, so it is the one thing that must not drift.
+    """
+    spec = _survival_spec(suffix)
+    unnest = _transform_index(spec, "unnest")
+    rollup = _subject_rollup_index(spec)
+    assert (unnest < rollup) is unnest_before_rollup
+
+    config = next(t for t in spec["transformation"] if "unnest" in t)["unnest"]
+    assert config["field"] == "tumor_locations"
+    assert config["separator"] == ";"
+
+
+@pytest.mark.parametrize(
+    "suffix",
+    ["_line_survival_baseline", "_line_survival_baseline_multivalue"],
+)
+def test_the_baseline_stratifier_is_aggregated_but_only_ever_drawn_as_a_category(
+    suffix,
+):
+    """Carrying a nominal column through a rollup is new, so pin it positively.
+
+    The template aggregates it with `max` over a derived column, which puts it out
+    of reach of the syntactic guard in test_template_type_constraints.py (that only
+    inspects a rollup whose `field` is a bare placeholder). This asserts what that
+    guard would have: the column is a category, never a quantity.
+    """
+    spec = _survival_spec(suffix)
+    rollup = _subject_rollup(spec)
+    assert rollup["tumor_locations"] == {"op": "max", "field": "baseline stratum"}
+
+    channels = {
+        mapping["encoding"]
+        for layer in spec["representation"]
+        for mapping in layer["mapping"]
+        if mapping.get("field") == "stratum"
+    }
+    assert channels == {"color"}
+
+
+def test_survival_tool_names_distinguish_the_two_readings():
+    """Names come from an explicit hint, not from keywords in the description.
+
+    Derived names would collide here — every one of these descriptions shares the
+    same vocabulary — and a description that mentions its sibling ("prefer the
+    baseline variant when...") would inherit that sibling's suffix.
+    """
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, _templates, _tags = generated
+    suffixes = {n.split("_line_", 1)[1] for n in dispatch if "survival" in n}
+    assert suffixes == {
+        "survival",
+        "survival_baseline",
+        "survival_baseline_multivalue",
+        "survival_ever",
+        "survival_ever_multivalue",
+        "survival_related",
+        "survival_related_multivalue",
+        # The related stratifier read as a NUMBER and cut into buckets, rather
+        # than taken as categories.
+        "survival_related_numeric",
+        "survival_presence",
+        "survival_presence_2x2",
+        # Presence of a SUBSET of that table, which is a different question.
+        "survival_ever_matching",
+        # Built from a pre-aggregated cube rather than an event log.
+        "survival_cube",
+        "survival_cube_stratified",
+    }
+
+
+def test_every_stratified_survival_template_names_its_reading():
+    """The prose has to say which question the chart answers.
+
+    Two templates whose numbers legitimately differ are only safe if the model and
+    the reviewer can tell which is which, so this pins that the distinguishing
+    words survive an edit to the descriptions.
+    """
+    path = (
+        __import__("pathlib")
+        .Path(__file__)
+        .parents[1]
+        / "src/udiagent/data/skills/template_visualizations.json"
+    )
+    templates = json.loads(path.read_text())
+    by_hint = {t["name_hint"]: t for t in templates if t.get("name_hint")}
+
+    for hint in ("survival_baseline", "survival_baseline_multivalue"):
+        text = by_hint[hint]["description"].lower()
+        assert "start event" in text
+        # "ever recorded", not the bare word: "every value it listed" is fine.
+        assert "ever recorded" not in text, "the baseline variant must not claim the other"
+
+    for hint in ("survival_ever", "survival_ever_multivalue"):
+        assert "ever recorded" in by_hint[hint]["description"].lower()
+
+    # Every reading that defines membership from events after the clock starts —
+    # including the cross-table one, where a protocol may begin after diagnosis —
+    # must say that the cohorts overlap and name the bias it introduces.
+    for hint in (
+        "survival_ever",
+        "survival_ever_multivalue",
+        "survival_related",
+        "survival_related_multivalue",
+    ):
+        template = by_hint[hint]
+        assert "overlap" in template["description"].lower()
+        assert "immortal-time" in template["design_considerations"].lower()
+
+    # The presence readings share that bias — treatment follows diagnosis, so a
+    # subject had to survive to be treated at all — but not the overlap: they
+    # partition the cohort, and saying otherwise would send the model to the wrong
+    # variant for a question that wants groups adding up.
+    for hint in ("survival_presence", "survival_presence_2x2"):
+        template = by_hint[hint]
+        assert "partition" in template["description"].lower()
+        assert "overlap" not in template["description"].lower()
+        assert "immortal-time" in template["design_considerations"].lower()
+
+
+@pytest.mark.parametrize(
+    "suffix",
+    [
+        "_line_survival",
+        "_line_survival_baseline",
+        "_line_survival_baseline_multivalue",
+        "_line_survival_ever",
+        "_line_survival_ever_multivalue",
+        "_line_survival_related",
+        "_line_survival_related_multivalue",
+    ],
+)
+def test_survival_curves_are_drawn_as_steps_on_a_year_axis(suffix):
+    """Both are corrections to how the curve reads, not to what it computes.
+
+    A survival curve is a step function — the fraction alive holds constant between
+    deaths — so a sloped segment draws a decline nobody observed and invites the eye
+    to read off a value at a time when none was measured. Steps also make the curve
+    visibly non-increasing, which is the property a reader checks it against.
+
+    And the axis is years: an event log stores a day offset, but nobody converts
+    "548 days" in their head, and a day axis over a multi-year cohort labels every
+    200th day.
+    """
+    spec = _related_spec(suffix) if "related" in suffix else _survival_spec(suffix)
+
+    curve = next(
+        layer
+        for layer in spec["representation"]
+        if any(m.get("field") == "survival years" for m in layer["mapping"])
+    )
+    assert curve["interpolate"] == "step-after"
+
+    # Nothing is still positioned in days, and every axis says so.
+    x_fields = {
+        m["field"]
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m["encoding"] == "x"
+    }
+    assert not any(f.endswith("day") for f in x_fields), x_fields
+    titles = {
+        m.get("title")
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m["encoding"] == "x"
+    }
+    assert titles == {"survival years"}
+
+
+def _related_spec(suffix="_line_survival_related", stratifier="protocol"):
+    """A cross-table variant, bound against a two-table schema."""
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith(suffix))
+    idx, param_map = dispatch[tool]
+
+    def table(name, fields):
+        return {
+            "name": name,
+            "path": f"{name}.csv",
+            "udi:row_count": 10,
+            "schema": {
+                "fields": [
+                    {"name": f, "udi:data_type": t} for f, t in fields
+                ]
+            },
+        }
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                table(
+                    "events",
+                    [
+                        ("subject", "nominal"),
+                        ("event", "nominal"),
+                        ("day", "quantitative"),
+                    ],
+                ),
+                table("therapy", [("subject", "nominal"), (stratifier, "nominal")]),
+                _censor_resource(),
+            ],
+        }
+    )
+    args = {
+        "entity1": "events",
+        "entity2": "therapy",
+        "entity1_field1": "subject",
+        "entity1_field2": "event",
+        "entity1_field3": "day",
+        "entity2_field1": "subject",
+        "entity2_field": stratifier,
+        "value1": "start",
+        "value2": "death",
+    }
+    args.update(_censor_args(param_map))
+    bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+    assert validate_bindings(templates[idx], bindings, schema) == []
+    return instantiate_template(templates[idx], bindings, schema)
+
+
+def test_cross_table_stratifier_joins_on_the_keys_it_binds():
+    """Sibling tables have no relationship to follow, so the template names the keys.
+
+    The tables a stratifier lives in are usually siblings of the event log — both
+    hang off a patient table — so there is no direct relationship between them. What
+    they do share is the subject identifier, which is all the join needs, and taking
+    it as a binding keeps the template usable on any such pair.
+    """
+    spec = _related_spec()
+    assert [src["name"] for src in spec["source"]] == [
+        "events",
+        "therapy",
+        "patients",
+    ]
+
+    join = next(t for t in spec["transformation"] if "join" in t)
+    assert join["join"]["on"] == ["subject", "subject"]
+    assert join["in"] == ["events", "therapy"]
+
+    # The stratifier comes from the joined table and is drawn as a category.
+    channels = {
+        m["encoding"]
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m.get("field") == "stratum"
+    }
+    assert channels == {"color"}
+
+    # The join must precede the per-subject rollup, or the stratifier isn't there
+    # to group by.
+    assert _transform_index(spec, "join") < _subject_rollup_index(spec)
+
+
+def test_cross_table_survival_reads_membership_and_overlaps(tmp_path):
+    """One subject, two protocols: it joins both groups and its death counts twice."""
+    events = tmp_path / "events.csv"
+    events.write_text(
+        "subject,event,day\ns1,start,0\ns1,death,365\ns2,start,0\ns2,death,730\n"
+    )
+    therapy = tmp_path / "therapy.csv"
+    # s1 is on two protocols; s2 on one; s3 has no events at all.
+    therapy.write_text(
+        "subject,protocol\ns1,A\ns1,B\ns2,A\ns3,C\n"
+    )
+    generated = _load_generated_tools()
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith("_line_survival_related"))
+    idx, param_map = dispatch[tool]
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "events",
+                    "path": str(events),
+                    "udi:row_count": 4,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "event", "udi:data_type": "nominal"},
+                            {"name": "day", "udi:data_type": "quantitative"},
+                        ]
+                    },
+                },
+                {
+                    "name": "therapy",
+                    "path": str(therapy),
+                    "udi:row_count": 4,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "protocol", "udi:data_type": "nominal"},
+                        ]
+                    },
+                },
+                _censor_resource(),
+            ],
+        }
+    )
+    args = {
+        "entity1": "events",
+        "entity2": "therapy",
+        "entity1_field1": "subject",
+        "entity1_field2": "event",
+        "entity1_field3": "day",
+        "entity2_field1": "subject",
+        "entity2_field": "protocol",
+        "value1": "start",
+        "value2": "death",
+    }
+    args.update(_censor_args(param_map))
+    bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+    spec = instantiate_template(templates[idx], bindings, schema)
+
+    engine = QueryEngine(
+        DuckDBConnector(
+            views={
+                "events": str(events),
+                "therapy": str(therapy),
+                "patients": str(_CENSOR_CSV),
+            }
+        ),
+        table_map={"events": "events", "therapy": "therapy", "patients": "patients"},
+    )
+    rows = engine.run_query(
+        source=spec["source"], transformation=spec["transformation"]
+    )["displayData"]
+    cohorts = _cohorts(rows, "stratum")
+
+    # A: s1 and s2. B: s1 alone. C: s3 has no events, so it never reaches the curve.
+    assert cohorts == {"A": (2, 2), "B": (1, 1)}
+    # s1's single death is attributed to both of its protocols — the overlap this
+    # reading is built on, and the reason it cannot reconcile with a pooled curve.
+    assert sum(d for _, d in cohorts.values()) == 3
+
+    # The join duplicates event rows per related record; the spans must survive it.
+    years = {r["stratum"]: r["survival years"] for r in rows if r["died"] == 1}
+    assert round(years["B"], 2) == round(365 / 365.25, 2)
+
+
+def test_cross_table_multi_value_expands_the_joined_rows_before_the_rollup():
+    """Where the expansion sits is what separates this template from its siblings.
+
+    On the joined rows and *before* the per-subject rollup, so membership is read
+    from every value on every related record. After the rollup it would read the
+    list off whichever single row the rollup happened to keep — which is not the
+    baseline reading either, because a related table has no start event to be a
+    baseline. Asserted structurally, since the SQL backend rejects `unnest`.
+    """
+    spec = _related_spec("_line_survival_related_multivalue", stratifier="agents")
+
+    unnest = _transform_index(spec, "unnest")
+    assert _transform_index(spec, "join") < unnest < _subject_rollup_index(spec)
+
+    config = next(t for t in spec["transformation"] if "unnest" in t)["unnest"]
+    assert config["field"] == "agents"
+    assert config["separator"] == ";"
+
+    # The expanded column is what the curves are split by, and it is only ever
+    # drawn as a category.
+    channels = {
+        m["encoding"]
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m.get("field") == "stratum"
+    }
+    assert channels == {"color"}
+
+    # And the single-valued cross-table variant must not have picked up an
+    # expansion: the two differ by exactly this transform.
+    assert not any("unnest" in t for t in _related_spec()["transformation"])
+
+
+@pytest.mark.parametrize("subset", [None, ("s1",), ("s2",), ("s3",), ("s4",), ("s6",)])
+def test_a_survival_curve_never_rises_however_the_data_is_filtered(tmp_path, subset):
+    """Survival cannot increase — and a filter must not be able to make it look so.
+
+    Reported from YAC: curves appearing to slope upward when a filter was applied.
+    A filter reaches these templates as a row subset prepended to the pipeline, and
+    the cumulative-deaths construction is monotone for *any* subset, so this pins
+    that property directly rather than trusting the arithmetic to stay that way.
+
+    The rendering is what actually reaches a reader, so `step-after` is the other
+    half of the answer: a staircase can only go right or down, which is why the
+    curve now says so structurally instead of relying on the numbers alone.
+    """
+    csv = tmp_path / "events.csv"
+    csv.write_text(_EVENTS)
+    patients = _CENSOR_CSV
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "events",
+                    "path": str(csv),
+                    "udi:row_count": 12,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "event", "udi:data_type": "nominal"},
+                            {"name": "day", "udi:data_type": "quantitative"},
+                            {"name": "arm", "udi:data_type": "nominal"},
+                        ]
+                    },
+                },
+                _censor_resource(),
+            ],
+        }
+    )
+    generated = _load_generated_tools()
+    _defs, dispatch, templates, _tags = generated
+    engine = QueryEngine(
+        DuckDBConnector(views={"events": str(csv), "patients": str(_CENSOR_CSV)}),
+        table_map={"events": "events", "patients": "patients"},
+    )
+
+    for suffix in ("_line_survival", "_line_survival_baseline", "_line_survival_ever"):
+        tool = next(n for n in dispatch if n.endswith(suffix))
+        idx, param_map = dispatch[tool]
+        args = dict(_ARGS)
+        args.update(_censor_args(param_map))
+        if suffix != "_line_survival":
+            args["entity1_field4"] = "arm"
+        args.update(_censor_args(param_map))
+        bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+        spec = instantiate_template(templates[idx], bindings, schema)
+
+        pipeline = list(spec["transformation"])
+        if subset is not None:
+            # How a cross-card selection reaches the chart: a row filter, prepended
+            # ahead of the whole pipeline, so every count is recomputed on the
+            # subset. One `==` per case — the SQL backend has no `or`, and a
+            # single-subject cohort is the harshest case for the construction
+            # anyway (n=1 means every step is the whole axis).
+            pipeline = [
+                {
+                    "filter": {
+                        "op": "==",
+                        "left": {"field": "subject"},
+                        "right": {"literal": subset[0]},
+                    }
+                }
+            ] + pipeline
+
+        rows = engine.run_query(source=spec["source"], transformation=pipeline)[
+            "displayData"
+        ]
+        by_group = {}
+        for row in rows:
+            key = row.get("stratum")
+            by_group.setdefault(key, []).append(
+                (row["survival years"], row["survival percentage"])
+            )
+        for key, points in by_group.items():
+            ordered = sorted(set(points))
+            for (_, before), (_, after) in zip(ordered, ordered[1:]):
+                assert after <= before + 1e-9, (
+                    f"{suffix} group {key!r} rises: {before} -> {after}"
+                )
+
+
+# ---------------------------------------------------------------------------
+# Stratifying by PRESENCE in another table
+# ---------------------------------------------------------------------------
+
+# Presence has no column to read, so the fixtures are table memberships instead.
+#   p1  radiation only, dies at day 365.
+#   p2  surgery only, dies at day 730.
+#   p3  both, censored.
+#   p4  a death with no start event: dropped, as in the other readings.
+#   p9  radiation but no events at all: never reaches the curve.
+# p1 has TWO radiation rows, which is the case that separates "did this subject
+# appear" from "how many times" — a join that did not reduce first would count it
+# twice and inflate its group.
+_PRESENCE_EVENTS = (
+    "subject,event,day\n"
+    "p1,start,0\np1,death,365\n"
+    "p2,start,0\np2,death,730\n"
+    "p3,start,0\np3,visit,30\n"
+    "p4,death,15\n"
+)
+_RADIATION = "subject,site\np1,head\np1,spine\np3,head\np9,head\n"
+_SURGERY = "subject,extent\np2,gross\np3,partial\n"
+
+
+@pytest.fixture()
+def presence(tmp_path):
+    """Run a presence survival template against three tiny tables, in DuckDB."""
+    files = {
+        "events": _PRESENCE_EVENTS,
+        "radiation": _RADIATION,
+        "surgery": _SURGERY,
+    }
+    paths = {}
+    for name, text in files.items():
+        path = tmp_path / f"{name}.csv"
+        path.write_text(text)
+        paths[name] = str(path)
+
+    def resource(name, fields):
+        return {
+            "name": name,
+            "path": paths[name],
+            "udi:row_count": files[name].count("\n") - 1,
+            "schema": {
+                "fields": [{"name": f, "udi:data_type": t} for f, t in fields]
+            },
+        }
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                resource(
+                    "events",
+                    [
+                        ("subject", "nominal"),
+                        ("event", "nominal"),
+                        ("day", "quantitative"),
+                    ],
+                ),
+                resource("radiation", [("subject", "nominal"), ("site", "nominal")]),
+                resource("surgery", [("subject", "nominal"), ("extent", "nominal")]),
+                _censor_resource(),
+            ],
+        }
+    )
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    paths["patients"] = str(_CENSOR_CSV)
+    engine = QueryEngine(DuckDBConnector(views=paths), table_map={n: n for n in paths})
+
+    def run(suffix, cross=False, rows=True, grouping=None):
+        tool = next(n for n in dispatch if n.endswith(suffix))
+        idx, param_map = dispatch[tool]
+        args = {
+            "entity1": "events",
+            "entity2": "radiation",
+            "entity1_field1": "subject",
+            "entity1_field2": "event",
+            "entity1_field3": "day",
+            "entity2_field1": "subject",
+            "value1": "start",
+            "value2": "death",
+        }
+        if cross:
+            args["entity3"] = "surgery"
+            args["entity3_field1"] = "subject"
+        if grouping is not None:
+            # The membership reading names its column and its value sets
+            # together: the grouping IS the predicate.
+            args["entity2_field"] = "site"
+            args["grouping"] = grouping
+        args.update(_censor_args(param_map))
+        bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+        assert validate_bindings(templates[idx], bindings, schema) == []
+        spec = instantiate_template(templates[idx], bindings, schema)
+        if not rows:
+            return spec
+        return engine.run_query(
+            source=spec["source"], transformation=spec["transformation"]
+        )["displayData"]
+
+    return run
+
+
+def test_presence_stratification_names_no_field_from_the_second_table(presence):
+    """The whole point: the stratifier is membership, not a column.
+
+    A template that needed a column would be unusable on the tables this is for —
+    "did the patient get radiation" is answered by the existence of a row, and any
+    column picked to stand in for it could be null on exactly the rows that matter.
+    """
+    spec = presence("_line_survival_presence", rows=False)
+    assert [src["name"] for src in spec["source"]] == [
+        "events",
+        "radiation",
+        "patients",
+    ]
+
+    # `site` is the only other column radiation has, and it must appear nowhere.
+    assert "site" not in json.dumps(spec)
+
+    join = next(t for t in spec["transformation"] if "join" in t)
+    # LEFT, or the subjects answering "no" are the ones dropped.
+    assert join["join"]["kind"] == "left"
+    assert join["join"]["on"] == ["subject", "subject"]
+
+    # The reduction must precede the join: it is what makes the answer boolean
+    # rather than once per record, and what stops the join multiplying events.
+    assert _transform_index(spec, "rollup") < _transform_index(spec, "join")
+
+    # Membership is drawn as a category and nothing else.
+    channels = {
+        m["encoding"]
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m.get("field") == "group"
+    }
+    assert channels == {"color"}
+
+
+def test_presence_stratification_partitions_the_cohort(presence):
+    """Two curves, and unlike the other cross-table reading they add up.
+
+    p1 and p3 are in radiation, p2 is not, p4 has no start event and p9 no events.
+    p1's two radiation rows must count once — an unreduced join would put it in the
+    group twice and break the reconciliation this reading is chosen for.
+    """
+    rows = presence("_line_survival_presence")
+    cohorts = _cohorts(rows, "group")
+    assert cohorts == {"radiation": (2, 1), "No radiation": (1, 1)}
+
+    # Three subjects reach the curve (p4 has no start, p9 no events), and both
+    # deaths are attributed exactly once — the reconciliation this reading exists
+    # for, and what separates it from the related-field variant.
+    assert sum(n for n, _ in cohorts.values()) == 3
+    assert sum(d for _, d in cohorts.values()) == 2
+
+    # Labelled by the table, not by yes/no, so a legend reads on its own.
+    assert {row["group"] for row in rows} == {"radiation", "No radiation"}
+
+
+def test_presence_2x2_crosses_two_tables_into_one_group_each(presence):
+    """Four cells, each subject in exactly one — still a partition.
+
+    An absent cell is legitimate: nobody here has neither, so 'Neither' does not
+    render. That is pinned because the alternative failure — a subject silently
+    landing in two cells — looks the same from a distance.
+    """
+    cohorts = _cohorts(presence("_line_survival_presence_2x2", cross=True), "group")
+    assert cohorts == {
+        "radiation only": (1, 1),
+        "surgery only": (1, 1),
+        "radiation + surgery": (1, 0),
+    }
+    assert "Neither" not in cohorts
+    assert sum(n for n, _ in cohorts.values()) == 3
+    assert sum(d for _, d in cohorts.values()) == 2
+
+
+def test_presence_2x2_left_joins_both_tables(presence):
+    """Two LEFT joins, or a cell is unreachable.
+
+    With an inner join on either side the 'only' cells collapse: a subject absent
+    from one table would be dropped rather than labelled, and the chart would show
+    just the 'both' cell while looking perfectly plausible.
+    """
+    spec = presence("_line_survival_presence_2x2", cross=True, rows=False)
+    assert [src["name"] for src in spec["source"]] == [
+        "events",
+        "radiation",
+        "surgery",
+        "patients",
+    ]
+    joins = [t for t in spec["transformation"] if "join" in t]
+    # Three, not two: the two membership joins plus the censoring one. All left,
+    # for the same reason — an inner join would drop the subjects that answer
+    # "no", and would drop the ones the censoring table never mentions.
+    assert len(joins) == 3
+    assert all(j["join"]["kind"] == "left" for j in joins)
+    # Neither extra table contributes a column.
+    assert "site" not in json.dumps(spec) and "extent" not in json.dumps(spec)
+
+
+def test_presence_survival_curves_never_rise(presence):
+    """The monotonicity property, on the readings added after it was pinned."""
+    for suffix, cross in (
+        ("_line_survival_presence", False),
+        ("_line_survival_presence_2x2", True),
+    ):
+        by_group = {}
+        for row in presence(suffix, cross=cross):
+            by_group.setdefault(row["group"], []).append(
+                (row["survival years"], row["survival percentage"])
+            )
+        for key, points in by_group.items():
+            ordered = sorted(set(points))
+            for (_, before), (_, after) in zip(ordered, ordered[1:]):
+                assert after <= before + 1e-9, (
+                    f"{suffix} group {key!r} rises: {before} -> {after}"
+                )
+
+
+
+# ---------------------------------------------------------------------------
+# Dynamic stratification: grouping the stratifier's values into strata
+# ---------------------------------------------------------------------------
+
+
+def test_an_absent_grouping_leaves_the_curves_exactly_as_they_were(survival):
+    """The default must stay the default.
+
+    Every stratified chart that existed before groupings did resolves through the
+    same `<GROUP:…>` placeholder now, so the identity case has to be pinned
+    directly: pass no grouping and the strata are still the stratifier's own
+    values, with the same cohorts and the same deaths.
+    """
+    ungrouped = _cohorts(survival("_line_survival_baseline"), "stratum")
+    explicitly_none = _cohorts(
+        survival("_line_survival_baseline", grouping=""), "stratum"
+    )
+    assert ungrouped == explicitly_none == {"A": (2, 2), "B": (2, 0)}
+
+
+def test_a_nominal_grouping_merges_values_into_one_stratum(survival):
+    """Two arms combined into one curve, which is the whole point of the feature.
+
+    The merged cohort must be the SUM of the two it replaces — a subject counted
+    once, not once per value it matched — which is what places the grouping
+    before the per-subject reduction rather than after it.
+    """
+    grouped = _cohorts(
+        survival(
+            "_line_survival_baseline",
+            grouping=json.dumps(
+                {
+                    "type": "nominal",
+                    "groups": [{"label": "A or B", "values": ["A", "B"]}],
+                    "other": None,
+                }
+            ),
+        ),
+        "stratum",
+    )
+    assert grouped == {"A or B": (4, 2)}
+
+
+def test_unassigned_values_pool_into_other_or_leave_the_chart(survival):
+    """The two answers for a value no group claims, both of them expressible."""
+    pooled = _cohorts(
+        survival(
+            "_line_survival_baseline",
+            grouping=json.dumps(
+                {
+                    "type": "nominal",
+                    "groups": [{"label": "Arm A", "values": ["A"]}],
+                    "other": "Everyone else",
+                }
+            ),
+        ),
+        "stratum",
+    )
+    assert pooled == {"Arm A": (2, 2), "Everyone else": (2, 0)}
+
+    dropped = _cohorts(
+        survival(
+            "_line_survival_baseline",
+            grouping=json.dumps(
+                {
+                    "type": "nominal",
+                    "groups": [{"label": "Arm A", "values": ["A"]}],
+                    "other": None,
+                }
+            ),
+        ),
+        "stratum",
+    )
+    assert dropped == {"Arm A": (2, 2)}
+
+
+def test_grouping_an_overlapping_reading_counts_a_subject_once_per_stratum(survival):
+    """Two values in one bucket must not put the subject in it twice.
+
+    Under the "ever" reading a subject joins a group for each value it ever had,
+    so s1 and s5 are in both A and B. Merge A and B and each of them belongs to
+    the merged group once — the grouping is applied before the (subject, stratum)
+    grouping precisely so the duplicate collapses there.
+    """
+    separate = _cohorts(survival("_line_survival_ever"), "stratum")
+    assert separate["A"][0] == 3 and separate["B"][0] == 3
+
+    merged = _cohorts(
+        survival(
+            "_line_survival_ever",
+            grouping=json.dumps(
+                {
+                    "type": "nominal",
+                    "groups": [{"label": "A or B", "values": ["A", "B"]}],
+                    "other": None,
+                }
+            ),
+        ),
+        "stratum",
+    )
+    # s1, s2, s3, s5 — four distinct subjects, not the six the two cohorts
+    # would add to. s4 is in C only and the grouping drops it.
+    assert merged == {"A or B": (4, 2)}
+
+
+def test_a_grouped_curve_still_never_rises(survival):
+    """The monotonicity invariant, on the path that computes strata in a derive."""
+    rows = survival(
+        "_line_survival_baseline",
+        grouping=json.dumps(
+            {
+                "type": "nominal",
+                "groups": [{"label": "Arm A", "values": ["A"]}],
+                "other": "Everyone else",
+            }
+        ),
+    )
+    by_group = {}
+    for row in rows:
+        by_group.setdefault(row["stratum"], []).append(
+            (row["survival years"], row["survival percentage"])
+        )
+    assert set(by_group) == {"Arm A", "Everyone else"}
+    for key, points in by_group.items():
+        ordered = sorted(set(points))
+        for (_, before), (_, after) in zip(ordered, ordered[1:]):
+            assert after <= before + 1e-9, f"group {key!r} rises: {before} -> {after}"
+
+
+def _numeric_related(grouping=None, stratifier_type="quantitative"):
+    """Bind the numeric cross-table variant; return (errors, spec_or_None)."""
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith("_line_survival_related_numeric"))
+    idx, param_map = dispatch[tool]
+
+    def table(name, fields):
+        return {
+            "name": name,
+            "path": f"{name}.csv",
+            "udi:row_count": 10,
+            "schema": {"fields": [{"name": f, "udi:data_type": t} for f, t in fields]},
+        }
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                table(
+                    "events",
+                    [
+                        ("subject", "nominal"),
+                        ("event", "nominal"),
+                        ("day", "quantitative"),
+                    ],
+                ),
+                table("demographics", [("subject", "nominal"), ("age", stratifier_type)]),
+                _censor_resource(),
+            ],
+        }
+    )
+    args = {
+        "entity1": "events",
+        "entity2": "demographics",
+        "entity1_field1": "subject",
+        "entity1_field2": "event",
+        "entity1_field3": "day",
+        "entity2_field1": "subject",
+        "entity2_field": "age",
+        "value1": "start",
+        "value2": "death",
+    }
+    if grouping is not None:
+        args["grouping"] = grouping
+    args.update(_censor_args(param_map))
+    bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+    errors = validate_bindings(templates[idx], bindings, schema)
+    if errors:
+        return errors, None
+    return [], instantiate_template(templates[idx], bindings, schema)
+
+
+def test_a_continuous_stratifier_without_cut_points_is_refused():
+    """One curve per distinct age is not a chart, and nothing else catches it.
+
+    The cardinality cap only looks at nominal and ordinal fields, so a numeric
+    stratifier would sail past it and draw a thousand curves of one subject each.
+    """
+    errors, spec = _numeric_related()
+    assert spec is None
+    assert "quantitative" in errors[0] and "cuts" in errors[0]
+
+
+def test_cut_points_become_a_nested_conditional_over_the_bound_field():
+    _errors, spec = _numeric_related(
+        grouping=json.dumps({"type": "quantitative", "cuts": [50, 65]})
+    )
+    stratum = next(
+        t["derive"]["stratum"]
+        for t in spec["transformation"]
+        if "derive" in t and "stratum" in t["derive"]
+    )
+    # Ascending tests, so the first one that passes is the right bucket, and the
+    # final else is everything at or above the last cut.
+    assert stratum["if"] == {
+        "op": "<",
+        "left": {"field": "age"},
+        "right": {"literal": 50},
+    }
+    assert stratum["then"] == {"literal": "< 50"}
+    assert stratum["else"]["then"] == {"literal": "50–65"}
+    assert stratum["else"]["else"] == {"literal": "≥ 65"}
+
+    # And it is a structured Expr, not an Arquero string — the SQL compiler
+    # rejects those, so this is what makes the template run server-side.
+    assert "d[" not in json.dumps(stratum)
+
+
+def test_the_numeric_variant_still_splits_by_the_derived_column():
+    _errors, spec = _numeric_related(
+        grouping=json.dumps({"type": "quantitative", "cuts": [65]})
+    )
+    groupbys = [t["groupby"] for t in spec["transformation"] if "groupby" in t]
+    assert ["subject", "stratum"] in groupbys
+    colours = {
+        m["field"]
+        for layer in spec["representation"]
+        for m in layer["mapping"]
+        if m["encoding"] == "color"
+    }
+    assert colours == {"stratum"}
+
+
+def test_cutting_a_nominal_field_at_numbers_is_refused():
+    """Comparing a string against a number raises nowhere; it just lumps
+    every row into one bucket, so it has to be caught before instantiation."""
+    errors, spec = _numeric_related(
+        grouping=json.dumps({"type": "quantitative", "cuts": [65]}),
+        stratifier_type="nominal",
+    )
+    assert spec is None
+    assert any("nominal" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# One table, two roles
+# ---------------------------------------------------------------------------
+
+#: A subject-level table carrying BOTH the numeric stratifier and the censoring
+#: status. This is pcx's `Patient` in miniature — `age_at_diagnosis` next to
+#: `vital_status` / `vital_status_date` — and it is the shape that made "survival
+#: stratified by age at diagnosis" unanswerable: every entity had to be a
+#: different table, so the censoring source was bound to some other table whose
+#: status column held none of the values the template compares against.
+_SUBJECTS = """subject,age_days,status,asof
+s1,200,deceased,300
+s2,1500,deceased,2000
+s3,400,alive,1800
+s4,2000,deceased,900
+s5,3000,alive,2500
+"""
+
+_SPAN_EVENTS = """subject,event,day
+s1,start,0
+s1,death,300
+s2,start,0
+s2,death,2000
+s3,start,0
+s4,start,0
+s4,death,900
+s5,start,0
+"""
+
+
+def _one_table_args(param_map, table):
+    """Bind the stratifier and the censoring source to the same table."""
+    args = {
+        "entity1": "events",
+        "entity1_field1": "subject",
+        "entity1_field2": "event",
+        "entity1_field3": "day",
+        "entity2": table,
+        "entity2_field1": "subject",
+        "entity2_field": "age_days",
+        "entity3": table,
+        "entity3_field1": "subject",
+        "entity3_field2": "status",
+        "entity3_field3": "asof",
+        "value1": "start",
+        "value2": "death",
+        "value3": "alive",
+        "grouping": json.dumps({"type": "quantitative", "cuts": [1095]}),
+    }
+    return {param_map[k]: v for k, v in args.items() if k in param_map}
+
+
+def test_the_censoring_source_may_be_the_stratifier_s_own_table(tmp_path):
+    """The whole point of `shared_entities`, end to end through DuckDB.
+
+    Distinctness is still the default — it stops a template crossing a table with
+    itself — but the censoring source is not crossed with anything: it is read for
+    one per-subject fact and left-joined. A template says so, and this is what
+    that permission buys.
+    """
+    events = tmp_path / "events.csv"
+    events.write_text(_SPAN_EVENTS)
+    subjects = tmp_path / "subjects.csv"
+    subjects.write_text(_SUBJECTS)
+
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "events",
+                    "path": str(events),
+                    "udi:row_count": 8,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "event", "udi:data_type": "nominal"},
+                            {"name": "day", "udi:data_type": "quantitative"},
+                        ]
+                    },
+                },
+                {
+                    "name": "subjects",
+                    "path": str(subjects),
+                    "udi:row_count": 5,
+                    "schema": {
+                        "fields": [
+                            {"name": "subject", "udi:data_type": "nominal"},
+                            {"name": "age_days", "udi:data_type": "quantitative"},
+                            {"name": "status", "udi:data_type": "nominal"},
+                            {"name": "asof", "udi:data_type": "quantitative"},
+                        ]
+                    },
+                },
+            ],
+        }
+    )
+
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith("_line_survival_related_numeric"))
+    idx, param_map = dispatch[tool]
+    bindings = _one_table_args(param_map, "subjects")
+
+    assert validate_bindings(templates[idx], bindings, schema) == [
+        "entity2 and entity3 cannot be the same ('subjects')"
+    ], "the default is still distinctness"
+    assert (
+        validate_bindings(
+            templates[idx], bindings, schema, None, shared_entities_for(tool)
+        )
+        == []
+    )
+
+    spec = instantiate_template(templates[idx], bindings, schema)
+
+    # One table, named once. The template declares a source per role, so both
+    # roles resolving to `subjects` used to emit it twice — which the browser
+    # executor, keying its loaded tables by name, read as a source still
+    # loading, so the chart waited on a table it already had and never rendered.
+    assert [src["name"] for src in spec["source"]] == ["events", "subjects"]
+
+    engine = QueryEngine(
+        DuckDBConnector(views={"events": str(events), "subjects": str(subjects)}),
+        table_map={"events": "events", "subjects": "subjects"},
+    )
+    rows = engine.run_query(
+        source=spec["source"], transformation=spec["transformation"]
+    )["displayData"]
+
+    # s1 (200) and s3 (400) under the cut, s2/s4/s5 at or over it; the deaths are
+    # s1 below and s2, s4 above. A chart, not just a spec that validated.
+    assert _cohorts(rows, "stratum") == {"< 1095": (2, 1), "≥ 1095": (3, 2)}
+
+
+def test_only_the_entities_a_template_names_may_be_shared():
+    """The exemption is per template and per entity, not a blanket relaxation.
+
+    The 2x2 presence template crosses two tables' membership: bind both sides to
+    one table and every subject lands in the same corner of the cross, which is
+    exactly the degenerate chart the distinctness rule exists to prevent.
+    """
+    generated = _load_generated_tools()
+    assert generated is not None
+    _defs, dispatch, _templates, _tags = generated
+    for suffix, shared in (
+        ("_line_survival_related_numeric", ["E3"]),
+        ("_line_survival_presence_2x2", ["E4"]),
+        ("_line_survival", ["E2"]),
+    ):
+        tool = next(n for n in dispatch if n.endswith(suffix))
+        assert list(shared_entities_for(tool)) == shared, tool
+
+    # A template that declares nothing gets nothing.
+    plain = next(n for n in dispatch if n.endswith("_barchart_count_vert_grouped"))
+    assert shared_entities_for(plain) == ()
+
+
+# ---------------------------------------------------------------------------
+# Membership of a VALUE SET: "ever received methotrexate" vs everyone else
+# ---------------------------------------------------------------------------
+#
+# The radiation fixture already holds every case this reading has to get right:
+#   p1  head AND spine — a matching row and a non-matching one, the overlap case
+#   p2  no radiation row at all — absent, and still part of "everyone else"
+#   p3  head only
+#   p9  head, but no events — never reaches the curve
+# Cohort from the event log is p1, p2, p3 (p4 has a death and no start).
+
+_HEAD = json.dumps(
+    {"type": "nominal", "groups": [{"label": "Head", "values": ["head"]}],
+     "other": "No head"}
+)
+
+
+def test_membership_curves_partition_the_cohort(presence):
+    """The invariant the whole template exists for.
+
+    Reading the related table row by row — which is what the related-field
+    variant does for its own question — puts p1 in both curves, because it has a
+    matching row and a non-matching one. Then the cohorts sum to more than the
+    cohort. On pcx that failure is total: every methotrexate patient also
+    received something else, so the comparison curve would hold the entire
+    treated group and the chart would look perfectly reasonable.
+    """
+    pooled = presence("_line_survival", rows=True)[0]
+    cohorts = _cohorts(presence("_line_survival_ever_matching", grouping=_HEAD), "stratum")
+
+    assert cohorts == {"Head": (2, 1), "No head": (1, 1)}
+    assert sum(n for n, _ in cohorts.values()) == pooled["subjects"]
+    assert sum(d for _, d in cohorts.values()) == pooled["deaths"]
+
+
+def test_a_subject_with_a_matching_and_a_non_matching_row_is_counted_once(presence):
+    """p1 has head and spine. It belongs in Head, and only in Head."""
+    rows = presence("_line_survival_ever_matching", grouping=_HEAD)
+    strata = {r["stratum"] for r in rows}
+    assert strata == {"Head", "No head"}
+    # Two subjects match, and p1 is one of them — not three across two curves.
+    assert _cohorts(rows, "stratum")["Head"][0] == 2
+
+
+def test_a_subject_absent_from_the_table_joins_the_comparison_group(presence):
+    """p2 has no radiation row at all. "Everyone else" has to include it, or the
+    chart quietly compares one treatment against another rather than against the
+    untreated — on pcx that is 249 subjects."""
+    cohorts = _cohorts(presence("_line_survival_ever_matching", grouping=_HEAD), "stratum")
+    assert cohorts["No head"] == (1, 1)
+
+
+def test_the_first_named_group_wins_a_subject_that_matches_two(presence):
+    """p1 is head AND spine. Declaration order decides, so it is drawn once, in
+    the group the reader was told about first."""
+    both = json.dumps(
+        {
+            "type": "nominal",
+            "groups": [
+                {"label": "Head", "values": ["head"]},
+                {"label": "Spine", "values": ["spine"]},
+            ],
+            "other": "Neither",
+        }
+    )
+    cohorts = _cohorts(presence("_line_survival_ever_matching", grouping=both), "stratum")
+    assert cohorts["Head"][0] == 2          # p1 and p3
+    assert "Spine" not in cohorts           # p1's only spine row lost to Head
+    assert cohorts["Neither"] == (1, 1)     # p2
+
+
+def test_membership_reduces_before_it_labels(presence):
+    """Structural, so the ordering cannot regress silently: the tag is rolled up
+    per subject BEFORE the join that carries it onto the event rows."""
+    spec = presence("_line_survival_ever_matching", grouping=_HEAD, rows=False)
+    steps = spec["transformation"]
+    rollup = next(
+        i for i, s in enumerate(steps)
+        if "rollup" in s and "membership tag" in s["rollup"]
+    )
+    join = next(
+        i for i, s in enumerate(steps)
+        if "join" in s and s.get("out") == "events__p"
+    )
+    assert rollup < join, "the tag must be one per subject before it is joined on"
+    assert steps[join]["join"]["kind"] == "left"
+
+
+def test_a_membership_template_without_a_grouping_is_refused():
+    """Without value sets it is the presence template with extra steps, and the
+    model has been reaching for presence when it wanted this."""
+    generated = _load_generated_tools()
+    _defs, dispatch, templates, _tags = generated
+    tool = next(n for n in dispatch if n.endswith("_line_survival_ever_matching"))
+    idx, param_map = dispatch[tool]
+    schema = parse_schema_from_dict(
+        {
+            "udi:path": "",
+            "resources": [
+                {
+                    "name": "events",
+                    "path": "events.csv",
+                    "udi:row_count": 10,
+                    "schema": {"fields": [
+                        {"name": "subject", "udi:data_type": "nominal"},
+                        {"name": "event", "udi:data_type": "nominal"},
+                        {"name": "day", "udi:data_type": "quantitative"},
+                    ]},
+                },
+                {
+                    "name": "radiation",
+                    "path": "radiation.csv",
+                    "udi:row_count": 4,
+                    "schema": {"fields": [
+                        {"name": "subject", "udi:data_type": "nominal"},
+                        {"name": "site", "udi:data_type": "nominal"},
+                    ]},
+                },
+                _censor_resource(),
+            ],
+        }
+    )
+    args = {
+        "entity1": "events", "entity1_field1": "subject",
+        "entity1_field2": "event", "entity1_field3": "day",
+        "entity2": "radiation", "entity2_field1": "subject", "entity2_field": "site",
+        "value1": "start", "value2": "death",
+    }
+    args.update(_censor_args(param_map))
+    bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
+    errors = validate_bindings(
+        templates[idx], bindings, schema,
+        shared_entities=shared_entities_for(tool),
+    )
+    assert any("needs a grouping" in e for e in errors), errors
+
+    # And cut points are the wrong kind of question for a column of names.
+    bindings["GROUP"] = {"type": "quantitative", "cuts": [5]}
+    errors = validate_bindings(
+        templates[idx], bindings, schema,
+        shared_entities=shared_entities_for(tool),
+    )
+    assert any("nominal grouping" in e for e in errors), errors
+
+
+# ---------------------------------------------------------------------------
+# The colour scale: pinned to the strata, and ordered when the strata are
+# ---------------------------------------------------------------------------
+
+
+def test_a_grouped_curve_names_its_colour_domain_in_bucket_order():
+    """Otherwise the renderer infers the domain from the row order.
+
+    It computes a missing categorical domain as the values in the order the rows
+    happen to mention them, and assigns colours by position in that array. A
+    survival table is ordered by time, so "first stratum" is "the group holding
+    the earliest event" — move a cut point and every curve changes colour for no
+    reason the reader can see.
+    """
+    spec = _survival_spec(
+        "_line_survival_baseline",
+        stratifier="age",
+        stratifier_type="quantitative",
+        grouping={"type": "quantitative", "cuts": [2000, 2010]},
+    )
+    colours = _colour_mappings(spec)
+    assert colours, "the stratified template should colour by stratum"
+    for mapping in colours:
+        assert mapping["field"] == "stratum"
+        # Low to high, not the order the data happens to mention them.
+        assert mapping["domain"] == ["< 2000", "2000–2010", "≥ 2010"]
+
+
+def test_moving_a_cut_point_does_not_permute_the_colour_domain():
+    """The reported symptom: colours reshuffling while a threshold is dragged."""
+    before = _colour_mappings(
+        _survival_spec(
+            "_line_survival_baseline",
+            stratifier="age",
+            stratifier_type="quantitative",
+            grouping={"type": "quantitative", "cuts": [2000, 2010]},
+        )
+    )[0]["domain"]
+    after = _colour_mappings(
+        _survival_spec(
+            "_line_survival_baseline",
+            stratifier="age",
+            stratifier_type="quantitative",
+            grouping={"type": "quantitative", "cuts": [2006, 2010]},
+        )
+    )[0]["domain"]
+    # The middle bucket's bounds move, but each bucket keeps its position — so
+    # each keeps its colour.
+    assert before == ["< 2000", "2000–2010", "≥ 2010"]
+    assert after == ["< 2006", "2006–2010", "≥ 2010"]
+
+
+def test_numeric_buckets_are_ordinal_and_named_groups_are_not():
+    """`< 50` really is below `50–65`; "White" and "Other" are not a spectrum."""
+    numeric = _colour_mappings(
+        _survival_spec(
+            "_line_survival_baseline",
+            stratifier="age",
+            stratifier_type="quantitative",
+            grouping={"type": "quantitative", "cuts": [65]},
+        )
+    )
+    for mapping in numeric:
+        assert mapping["type"] == "ordinal"
+        assert mapping["domain"] == ["< 65", "≥ 65"]
+
+    named = _colour_mappings(
+        _survival_spec(
+            "_line_survival_baseline",
+            grouping={
+                "type": "nominal",
+                "groups": [{"label": "Frontal", "values": ["frontal"]}],
+                "other": "Other",
+            },
+        )
+    )
+    for mapping in named:
+        assert mapping["type"] == "nominal"
+        # Other is a stratum, and it is drawn last.
+        assert mapping["domain"] == ["Frontal", "Other"]
+
+
+def test_an_ungrouped_curve_leaves_the_colour_scale_alone():
+    """Its strata are the field's raw values, which live in the data, not here.
+
+    Naming a domain we cannot know would be worse than leaving it: the renderer
+    would draw only the values we guessed.
+    """
+    for mapping in _colour_mappings(_survival_spec("_line_survival_baseline")):
+        assert "domain" not in mapping
+        assert mapping["type"] == "nominal"
+
+
+def test_a_presence_curve_names_its_two_strata_from_the_table_it_joined(presence):
+    """Presence labels are literals, so the template can name them outright.
+
+    These carry no grouping payload, so the instantiation-time helper cannot
+    reach them — the domain is declared in the template and resolved by the
+    ordinary placeholder pass. Nominal, not ordinal: presence is not a spectrum.
+    """
+    colours = _colour_mappings(presence("_line_survival_presence", rows=False))
+    assert colours
+    for mapping in colours:
+        assert mapping["field"] == "group"
+        assert mapping["type"] == "nominal"
+        assert mapping["domain"] == ["radiation", "No radiation"]
+
+
+def test_a_2x2_presence_curve_names_all_four_cells(presence):
+    colours = _colour_mappings(
+        presence("_line_survival_presence_2x2", cross=True, rows=False)
+    )
+    assert colours
+    for mapping in colours:
+        assert mapping["domain"] == [
+            "radiation + surgery",
+            "radiation only",
+            "surgery only",
+            "Neither",
+        ]

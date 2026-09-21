@@ -476,3 +476,40 @@ def test_insecure_dev_mode_skips_verification_entirely():
         insecure_dev_mode=True,
     )
     assert verify("Bearer anything")["dev_mode"] is True
+
+
+# ---------------------------------------------------------------------------
+# Raw token carry-through
+#
+# The query layer forwards the caller's own token to StarRocks so the database
+# authenticates each user itself, so verify_jwt has to hand back the compact
+# token and not just the decoded claims.
+# ---------------------------------------------------------------------------
+
+
+def test_verified_payload_carries_the_raw_token(verify):
+    token = _sign(IDP_KEY)
+    payload = verify(f"Bearer {token}")
+    assert payload[auth.RAW_TOKEN_CLAIM] == token
+
+
+def test_a_token_cannot_forge_the_raw_token_claim(verify):
+    """The claim is written after decode, so a hostile token can't inject one."""
+    token = _sign(IDP_KEY, **{auth.RAW_TOKEN_CLAIM: "attacker-supplied"})
+    payload = verify(f"Bearer {token}")
+    assert payload[auth.RAW_TOKEN_CLAIM] == token
+
+
+def test_dev_mode_carries_no_raw_token():
+    """Dev mode skips verification, so there is no token to forward — and a
+    passthrough backend must refuse rather than fall back to a shared login."""
+    verify_dev = make_verify_jwt(
+        secret_key="", algorithm="HS256", insecure_dev_mode=True
+    )
+    assert auth.RAW_TOKEN_CLAIM not in verify_dev("Bearer dev")
+
+
+def test_rejected_tokens_never_reach_the_database(verify):
+    with pytest.raises(HTTPException) as exc:
+        verify(f"Bearer {_sign(OTHER_KEY)}")
+    assert exc.value.status_code == 401
