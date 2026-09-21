@@ -57,6 +57,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:css": "node test/no-global-css-leaks.mjs",
+    "test:ssr": "node test/ssr-import.mjs",
     "test:watch": "vitest",
     "preview": "vite preview"
   },
@@ -91,6 +92,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "decode-named-character-reference": "^1.3.0",
     "eslint": "^9.39.4",
     "eslint-plugin-project-structure": "^3.14.3",
     "eslint-plugin-react-hooks": "^7.0.1",

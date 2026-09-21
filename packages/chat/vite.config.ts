@@ -1,4 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
+import { createRequire } from 'node:module';
 import { resolve } from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -56,6 +57,17 @@ function rewriteExternalRequire(): Plugin {
   };
 }
 
+// `decode-named-character-reference` (via react-markdown) ships a `browser`
+// export that calls `document.createElement` at module scope. The lib build
+// inlines it, so `import 'udi-yac'` threw `document is not defined` during SSR
+// before anything rendered — frozen at publish time, unfixable downstream. Its
+// `default` export (a lookup table) works in every runtime, so resolve to that
+// the way Node would: through the `default` condition, not `browser`. It is a
+// declared devDependency for this reason — resolving a transitive dependency
+// from here would only work while pnpm hoists it.
+const universalDecodeNamedCharacterReference = () =>
+  createRequire(import.meta.url).resolve('decode-named-character-reference');
+
 export default defineConfig(({ mode }) => ({
   // Lib mode uses './' so any emitted asset URL is relative to the stylesheet
   // rather than to the consuming site's root — a root-absolute `url(/assets/…)`
@@ -88,9 +100,17 @@ export default defineConfig(({ mode }) => ({
       : []),
   ],
   resolve: {
-    alias: {
-      '@': resolve(import.meta.dirname, './src'),
-    },
+    alias: [
+      { find: '@', replacement: resolve(import.meta.dirname, './src') },
+      ...(mode === 'lib'
+        ? [
+            {
+              find: /^decode-named-character-reference$/,
+              replacement: universalDecodeNamedCharacterReference(),
+            },
+          ]
+        : []),
+    ],
   },
   build:
     mode === 'lib'
