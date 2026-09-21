@@ -7,7 +7,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  useApiConfig,
   useDataPackage,
+  useDashboard,
   useDashboardStore,
   useDataFiltersStore,
   useDataPackageStore,
@@ -16,6 +18,8 @@ import {
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { swapPlainField, swapDimensionField, swapMeasureField } from '@/utils/specMutations';
 import { computeTweakableParams } from '../utils/tweakability';
+import { useTemplateRebind } from '../hooks/useTemplateRebind';
+import { StratifierGroupingControl } from './StratifierGroupingControl';
 import type { TweakableParam } from './VizTweakComponent.types';
 
 interface VizTweakComponentProps {
@@ -33,11 +37,34 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   const dataFiltersStore = useDataFiltersStore();
   const dataPackageStore = useDataPackageStore();
   const trackEvent = useTracker();
+  const apiConfig = useApiConfig();
+
+  const vizKey = `${messageIndex}-${toolCallIndex}`;
+  // Subscribed rather than passed in, so the panel reflects the bindings a
+  // re-bind just accepted.
+  const viz = useDashboard((s) => s.activeVisualizations.get(vizKey));
+  const template = viz?.template;
+
+  const { rebind, pendingParam, error } = useTemplateRebind(vizKey, template);
 
   const tweakableParams = useMemo<TweakableParam[]>(
     () =>
-      computeTweakableParams(spec, sourceFields, quantitativeSourceFields, categoricalSourceFields),
-    [spec, sourceFields, quantitativeSourceFields, categoricalSourceFields],
+      computeTweakableParams(
+        spec,
+        sourceFields,
+        quantitativeSourceFields,
+        categoricalSourceFields,
+        // Without a reachable agent a re-bind cannot happen, so don't offer one.
+        apiConfig.apiBaseUrl ? template : undefined,
+      ),
+    [
+      spec,
+      sourceFields,
+      quantitativeSourceFields,
+      categoricalSourceFields,
+      template,
+      apiConfig.apiBaseUrl,
+    ],
   );
 
   // Display only: the Select's value and every option value stay raw field
@@ -57,6 +84,14 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   const handleFieldChange = useCallback(
     (param: TweakableParam, newField: string | null) => {
       if (!newField) return;
+      if (param.kind === 'binding') {
+        void rebind(param.param, newField);
+        return;
+      }
+      // A grouping never reaches here — it has its own control, not a dropdown —
+      // but the union includes it, and the spec-rewrite branches below are all
+      // keyed on an `encoding` it does not have.
+      if (param.kind === 'grouping') return;
       let updatedSpec: UDIGrammar;
       switch (param.kind) {
         case 'dimension':
@@ -80,7 +115,6 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       // not found, etc.). Skip the store update in that case.
       if (updatedSpec === spec) return;
 
-      const vizKey = dashboardStore.getState().vizKey(messageIndex, toolCallIndex);
       dashboardStore.getState().updateActiveVisualizationSpec(vizKey, updatedSpec, sourceFields);
       // Reapply filter transformations to the updated spec (null filters, named filters)
       dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
@@ -91,36 +125,64 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
       dashboardStore,
       dataFiltersStore,
       dataPackageStore,
-      messageIndex,
-      toolCallIndex,
+      rebind,
+      vizKey,
       sourceFields,
       trackEvent,
     ],
   );
 
+  // A chart that isn't on the dashboard has nothing to update: the store keys
+  // tweaks by viz, so offering controls here would be offering dead ones.
+  if (!viz) return null;
   if (tweakableParams.length === 0) return null;
 
   return (
-    <div className="udi:flex udi:items-center udi:gap-2 udi:flex-wrap">
-      {tweakableParams.map((param) => (
-        <Select
-          key={param.encoding}
-          value={param.field}
-          onValueChange={(val) => handleFieldChange(param, val)}
-        >
-          <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[100px] udi:text-xs">
-            <span className="udi:text-muted-foreground udi:mr-1">{param.encoding}:</span>
-            <SelectValue>{fieldLabel(param.field)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {param.options.map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {fieldLabel(opt)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ))}
+    <div className="udi:flex udi:flex-col udi:gap-1">
+      <div className="udi:flex udi:items-center udi:gap-2 udi:flex-wrap">
+        {tweakableParams.map((param) =>
+          param.kind === 'grouping' ? (
+            <StratifierGroupingControl
+              key={param.param}
+              param={param}
+              disabled={pendingParam !== null}
+              onApply={(serialized) => {
+                void rebind(param.param, serialized);
+                trackEvent('visualization_tweaked', {
+                  encoding: param.param,
+                  kind: 'grouping',
+                });
+              }}
+            />
+          ) : (
+            <Select
+              key={param.kind === 'binding' ? param.param : param.encoding}
+              value={param.field}
+              // A re-bind replaces the whole spec, so a second concurrent edit
+              // would be applied to a chart that is about to be replaced.
+              disabled={pendingParam !== null}
+              onValueChange={(val) => handleFieldChange(param, val)}
+            >
+              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[100px] udi:text-xs">
+                <span className="udi:text-muted-foreground udi:mr-1">{param.label}:</span>
+                <SelectValue>{fieldLabel(param.field)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {param.options.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {fieldLabel(opt)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ),
+        )}
+      </div>
+      {error && (
+        <p role="status" className="udi:text-xs udi:text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

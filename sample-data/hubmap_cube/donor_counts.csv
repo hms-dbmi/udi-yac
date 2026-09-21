@@ -1,0 +1,368 @@
+sex,race,cause_of_death,age_group,age_years,donor_count
+,,,,,499
+Female,,,,,282
+Male,,,,,209
+Unknown,,,,,8
+,American Indian or Alaska native,,,,2
+,Asian,,,,25
+,Black or African American,,,,108
+,Native Hawaiian or Other Pacific Islander,,,,1
+,Other Race,,,,5
+,Unknown,,,,79
+,White,,,,279
+,,Anoxia,,,28
+,,Asphyxiation,,,2
+,,Cardiovascular,,,3
+,,Cerebral edema,,,2
+,,Cerebrovascular accident,,,20
+,,Gunshot wound,,,2
+,,Head trauma,,,23
+,,Traumatic injury,,,3
+,,,00-9,,29
+,,,10-19,,32
+,,,20-29,,88
+,,,30-39,,90
+,,,40-49,,57
+,,,50-59,,78
+,,,60-69,,70
+,,,70-79,,43
+,,,80-89,,10
+,,,90-99,,2
+,,,,0,21
+,,,,10,7
+,,,,15,13
+,,,,20,35
+,,,,25,48
+,,,,30,44
+,,,,35,46
+,,,,40,38
+,,,,45,28
+,,,,5,7
+,,,,50,24
+,,,,55,48
+,,,,60,32
+,,,,65,44
+,,,,70,26
+,,,,75,19
+,,,,80,14
+,,,,85,3
+,,,,90,2
+Female,American Indian or Alaska native,,,,1
+Female,Asian,,,,19
+Female,Black or African American,,,,58
+Female,Native Hawaiian or Other Pacific Islander,,,,1
+Female,Other Race,,,,4
+Female,Unknown,,,,48
+Female,White,,,,151
+Male,American Indian or Alaska native,,,,1
+Male,Asian,,,,6
+Male,Black or African American,,,,49
+Male,Other Race,,,,1
+Male,Unknown,,,,26
+Male,White,,,,126
+Unknown,Black or African American,,,,1
+Unknown,Unknown,,,,5
+Unknown,White,,,,2
+Female,,Anoxia,,,17
+Female,,Cardiovascular,,,3
+Female,,Cerebral edema,,,2
+Female,,Cerebrovascular accident,,,7
+Female,,Head trauma,,,4
+Male,,Anoxia,,,11
+Male,,Asphyxiation,,,2
+Male,,Cerebrovascular accident,,,13
+Male,,Gunshot wound,,,2
+Male,,Head trauma,,,19
+Male,,Traumatic injury,,,3
+Female,,,00-9,,18
+Female,,,10-19,,11
+Female,,,20-29,,62
+Female,,,30-39,,65
+Female,,,40-49,,30
+Female,,,50-59,,37
+Female,,,60-69,,32
+Female,,,70-79,,21
+Female,,,80-89,,5
+Female,,,90-99,,1
+Male,,,00-9,,6
+Male,,,10-19,,21
+Male,,,20-29,,26
+Male,,,30-39,,25
+Male,,,40-49,,26
+Male,,,50-59,,40
+Male,,,60-69,,37
+Male,,,70-79,,22
+Male,,,80-89,,5
+Male,,,90-99,,1
+Unknown,,,00-9,,5
+Unknown,,,40-49,,1
+Unknown,,,50-59,,1
+Unknown,,,60-69,,1
+Female,,,,0,13
+Female,,,,10,3
+Female,,,,15,5
+Female,,,,20,16
+Female,,,,25,35
+Female,,,,30,33
+Female,,,,35,36
+Female,,,,40,25
+Female,,,,45,13
+Female,,,,5,5
+Female,,,,50,10
+Female,,,,55,24
+Female,,,,60,14
+Female,,,,65,19
+Female,,,,70,6
+Female,,,,75,16
+Female,,,,80,7
+Female,,,,85,1
+Female,,,,90,1
+Male,,,,0,3
+Male,,,,10,4
+Male,,,,15,8
+Male,,,,20,19
+Male,,,,25,13
+Male,,,,30,11
+Male,,,,35,10
+Male,,,,40,12
+Male,,,,45,15
+Male,,,,5,2
+Male,,,,50,14
+Male,,,,55,24
+Male,,,,60,17
+Male,,,,65,24
+Male,,,,70,20
+Male,,,,75,3
+Male,,,,80,7
+Male,,,,85,2
+Male,,,,90,1
+Unknown,,,,0,5
+Unknown,,,,40,1
+Unknown,,,,60,1
+Unknown,,,,65,1
+,Black or African American,Anoxia,,,7
+,Black or African American,Cardiovascular,,,1
+,Black or African American,Cerebrovascular accident,,,5
+,Black or African American,Head trauma,,,7
+,Other Race,Cerebrovascular accident,,,2
+,Unknown,Asphyxiation,,,1
+,Unknown,Gunshot wound,,,1
+,Unknown,Head trauma,,,2
+,Unknown,Traumatic injury,,,1
+,White,Anoxia,,,21
+,White,Asphyxiation,,,1
+,White,Cardiovascular,,,2
+,White,Cerebral edema,,,2
+,White,Cerebrovascular accident,,,13
+,White,Gunshot wound,,,1
+,White,Head trauma,,,14
+,White,Traumatic injury,,,2
+,American Indian or Alaska native,,30-39,,1
+,American Indian or Alaska native,,40-49,,1
+,Asian,,00-9,,2
+,Asian,,10-19,,5
+,Asian,,20-29,,3
+,Asian,,30-39,,9
+,Asian,,40-49,,2
+,Asian,,50-59,,2
+,Asian,,70-79,,1
+,Asian,,80-89,,1
+,Black or African American,,00-9,,4
+,Black or African American,,10-19,,10
+,Black or African American,,20-29,,30
+,Black or African American,,30-39,,13
+,Black or African American,,40-49,,9
+,Black or African American,,50-59,,21
+,Black or African American,,60-69,,13
+,Black or African American,,70-79,,5
+,Black or African American,,80-89,,3
+,Native Hawaiian or Other Pacific Islander,,30-39,,1
+,Other Race,,20-29,,2
+,Other Race,,30-39,,1
+,Other Race,,40-49,,1
+,Other Race,,50-59,,1
+,Unknown,,00-9,,17
+,Unknown,,10-19,,5
+,Unknown,,20-29,,16
+,Unknown,,30-39,,25
+,Unknown,,40-49,,6
+,Unknown,,50-59,,3
+,Unknown,,60-69,,4
+,Unknown,,70-79,,2
+,Unknown,,80-89,,1
+,White,,00-9,,6
+,White,,10-19,,12
+,White,,20-29,,37
+,White,,30-39,,40
+,White,,40-49,,38
+,White,,50-59,,51
+,White,,60-69,,53
+,White,,70-79,,35
+,White,,80-89,,5
+,White,,90-99,,2
+,American Indian or Alaska native,,,40,1
+,American Indian or Alaska native,,,45,1
+,Asian,,,10,1
+,Asian,,,15,3
+,Asian,,,20,1
+,Asian,,,25,3
+,Asian,,,30,1
+,Asian,,,35,6
+,Asian,,,40,3
+,Asian,,,5,2
+,Asian,,,50,3
+,Asian,,,75,1
+,Asian,,,80,1
+,Black or African American,,,0,1
+,Black or African American,,,10,3
+,Black or African American,,,15,3
+,Black or African American,,,20,12
+,Black or African American,,,25,18
+,Black or African American,,,30,9
+,Black or African American,,,35,9
+,Black or African American,,,40,3
+,Black or African American,,,45,3
+,Black or African American,,,5,2
+,Black or African American,,,50,6
+,Black or African American,,,55,14
+,Black or African American,,,60,7
+,Black or African American,,,65,10
+,Black or African American,,,70,3
+,Black or African American,,,75,1
+,Black or African American,,,80,4
+,Native Hawaiian or Other Pacific Islander,,,35,1
+,Other Race,,,25,2
+,Other Race,,,30,1
+,Other Race,,,40,1
+,Other Race,,,55,1
+,Unknown,,,0,16
+,Unknown,,,10,1
+,Unknown,,,15,2
+,Unknown,,,20,6
+,Unknown,,,25,9
+,Unknown,,,30,10
+,Unknown,,,35,9
+,Unknown,,,40,12
+,Unknown,,,45,3
+,Unknown,,,5,1
+,Unknown,,,55,2
+,Unknown,,,60,2
+,Unknown,,,65,2
+,Unknown,,,70,3
+,Unknown,,,85,1
+,White,,,0,4
+,White,,,10,2
+,White,,,15,5
+,White,,,20,16
+,White,,,25,16
+,White,,,30,23
+,White,,,35,21
+,White,,,40,18
+,White,,,45,21
+,White,,,5,2
+,White,,,50,15
+,White,,,55,31
+,White,,,60,23
+,White,,,65,32
+,White,,,70,20
+,White,,,75,17
+,White,,,80,9
+,White,,,85,2
+,White,,,90,2
+,,Anoxia,10-19,,3
+,,Anoxia,20-29,,7
+,,Anoxia,30-39,,5
+,,Anoxia,40-49,,4
+,,Anoxia,50-59,,6
+,,Anoxia,60-69,,3
+,,Asphyxiation,10-19,,2
+,,Cardiovascular,00-9,,1
+,,Cardiovascular,30-39,,2
+,,Cerebral edema,20-29,,1
+,,Cerebral edema,40-49,,1
+,,Cerebrovascular accident,00-9,,1
+,,Cerebrovascular accident,20-29,,2
+,,Cerebrovascular accident,30-39,,3
+,,Cerebrovascular accident,40-49,,5
+,,Cerebrovascular accident,50-59,,6
+,,Cerebrovascular accident,60-69,,2
+,,Cerebrovascular accident,70-79,,1
+,,Gunshot wound,20-29,,1
+,,Gunshot wound,40-49,,1
+,,Head trauma,00-9,,1
+,,Head trauma,10-19,,8
+,,Head trauma,20-29,,7
+,,Head trauma,30-39,,1
+,,Head trauma,40-49,,1
+,,Head trauma,50-59,,4
+,,Head trauma,60-69,,1
+,,Traumatic injury,20-29,,2
+,,Traumatic injury,30-39,,1
+,,Anoxia,,10,1
+,,Anoxia,,15,1
+,,Anoxia,,20,2
+,,Anoxia,,25,4
+,,Anoxia,,30,4
+,,Anoxia,,35,3
+,,Anoxia,,45,3
+,,Anoxia,,50,2
+,,Anoxia,,55,5
+,,Anoxia,,60,2
+,,Anoxia,,65,1
+,,Asphyxiation,,15,2
+,,Cardiovascular,,0,1
+,,Cardiovascular,,30,1
+,,Cardiovascular,,35,1
+,,Cerebral edema,,25,1
+,,Cerebral edema,,45,1
+,,Cerebrovascular accident,,0,1
+,,Cerebrovascular accident,,25,2
+,,Cerebrovascular accident,,35,2
+,,Cerebrovascular accident,,40,3
+,,Cerebrovascular accident,,45,3
+,,Cerebrovascular accident,,50,1
+,,Cerebrovascular accident,,55,3
+,,Cerebrovascular accident,,60,3
+,,Cerebrovascular accident,,65,1
+,,Cerebrovascular accident,,80,1
+,,Gunshot wound,,20,1
+,,Gunshot wound,,50,1
+,,Head trauma,,10,2
+,,Head trauma,,15,2
+,,Head trauma,,20,9
+,,Head trauma,,25,2
+,,Head trauma,,30,1
+,,Head trauma,,40,1
+,,Head trauma,,45,1
+,,Head trauma,,55,3
+,,Head trauma,,60,1
+,,Head trauma,,65,1
+,,Traumatic injury,,25,2
+,,Traumatic injury,,30,1
+,,,00-9,0,21
+,,,00-9,10,1
+,,,00-9,5,7
+,,,10-19,10,6
+,,,10-19,15,13
+,,,10-19,20,13
+,,,20-29,20,22
+,,,20-29,25,48
+,,,20-29,30,18
+,,,30-39,30,26
+,,,30-39,35,46
+,,,30-39,40,18
+,,,40-49,40,20
+,,,40-49,45,28
+,,,40-49,50,9
+,,,50-59,50,15
+,,,50-59,55,48
+,,,50-59,60,15
+,,,60-69,60,17
+,,,60-69,65,44
+,,,60-69,70,9
+,,,70-79,70,17
+,,,70-79,75,19
+,,,70-79,80,7
+,,,80-89,80,7
+,,,80-89,85,3
+,,,90-99,90,2

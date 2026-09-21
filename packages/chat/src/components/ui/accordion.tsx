@@ -39,7 +39,10 @@ function AccordionTrigger({
   headerClassName?: string;
 }) {
   return (
-    <AccordionPrimitive.Header className={cn('udi:flex', headerClassName)}>
+    <AccordionPrimitive.Header
+      data-slot="accordion-header"
+      className={cn('udi:flex udi:min-w-0 udi:flex-1', headerClassName)}
+    >
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(

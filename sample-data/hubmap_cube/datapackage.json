@@ -1,0 +1,83 @@
+{
+  "name": "hubmap_donor_cube",
+  "title": "HuBMAP donor counts (pre-aggregated cube)",
+  "description": "Marginal cube derived from sample-data/hubmap/donors.tsv by scripts/gen-cube-sample-data.mjs. Each row is a pre-aggregated count; a null dimension means the row aggregates over that dimension. Generated for the template studio so data_cube-tagged templates have data to render against.",
+  "udi:name": "hubmap_donor_cube",
+  "udi:path": "./data/hubmap_cube/",
+  "resources": [
+    {
+      "name": "donor_counts",
+      "path": "donor_counts.csv",
+      "type": "table",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "scheme": "file",
+      "udi:row_count": 367,
+      "udi:column_count": 6,
+      "udi:cube": true,
+      "udi:measures": [
+        "donor_count"
+      ],
+      "udi:dimensions": [
+        "sex",
+        "race",
+        "cause_of_death",
+        "age_group",
+        "age_years"
+      ],
+      "schema": {
+        "fields": [
+          {
+            "name": "sex",
+            "type": "string",
+            "description": "Cube dimension: donor sex. Null when the row aggregates over this dimension.",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 3,
+            "udi:unique": false
+          },
+          {
+            "name": "race",
+            "type": "string",
+            "description": "Cube dimension: donor race. Null when the row aggregates over this dimension.",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 7,
+            "udi:unique": false
+          },
+          {
+            "name": "cause_of_death",
+            "type": "string",
+            "description": "Cube dimension: donor cause of death. Null when the row aggregates over this dimension.",
+            "udi:data_type": "nominal",
+            "udi:cardinality": 8,
+            "udi:unique": false
+          },
+          {
+            "name": "age_group",
+            "type": "string",
+            "description": "Cube dimension: donor age group. Null when the row aggregates over this dimension.",
+            "udi:data_type": "ordinal",
+            "udi:cardinality": 10,
+            "udi:unique": false
+          },
+          {
+            "name": "age_years",
+            "type": "number",
+            "description": "Cube dimension: donor age years. Null when the row aggregates over this dimension.",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 19,
+            "udi:unique": false
+          },
+          {
+            "name": "donor_count",
+            "type": "integer",
+            "description": "Pre-aggregated count of donors matching this row’s dimensions.",
+            "udi:data_type": "quantitative",
+            "udi:cardinality": 60,
+            "udi:unique": false
+          }
+        ]
+      }
+    }
+  ]
+}

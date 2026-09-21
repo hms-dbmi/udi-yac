@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in the monorepo does not work as expected.
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which part of the monorepo is affected?
+      multiple: true
+      options:
+        - packages/chat (udi-yac)
+        - packages/grammar (udi-toolkit)
+        - packages/agent (udiagent)
+        - packages/grammar-py (udi-grammar-py)
+        - apps/grammar-app (demo app)
+        - Repo-wide (build, CI, tooling)
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you expected, and what you got instead. Include the full error message if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. pnpm setup
+        2. pnpm dev:chat
+        3. Ask "..." in the chat panel
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment
+      description: Anything relevant — OS, Node/pnpm/Python/uv versions, browser, commit SHA or released version, data package in use (bundled HuBMAP CSVs vs. a remote StarRocks/DuckDB backend).
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or grammar spec
+      description: Console output, server logs, screenshots, or the UDI grammar spec that triggered the problem. Redact tokens and any private data first.

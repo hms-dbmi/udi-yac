@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { Crosshair } from 'lucide-react';
 import type { Message } from '@/types/messages';
 import { ToolCallRenderer } from '@/features/tool-calls';
 import {
@@ -9,6 +9,9 @@ import {
 } from '@/components/ui/accordion';
 import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
 import { MarkdownText } from '@/components/MarkdownText';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useJumpTarget } from '@/hooks/useJumpTarget';
 import { cn } from '@/lib/utils';
 
 interface MessageBubbleProps {
@@ -27,7 +30,11 @@ const TOOL_CALL_LABELS: Record<string, string> = {
 
 export function MessageBubble({ message, messageIndex, onSelectSuggestion }: MessageBubbleProps) {
   const vizKey = useDashboard((s) => s.vizKey);
-  const isActive = useDashboard((s) => s.isActive);
+  // Subscribe to the map (not the `isActive` selector, whose function identity
+  // never changes) so opening or closing a card re-renders this bubble — the
+  // jump buttons below only make sense while the card is on the dashboard.
+  const activeVisualizations = useDashboard((s) => s.activeVisualizations);
+  const isActive = (key: string) => activeVisualizations.has(key);
   const dashboardStore = useDashboardStore();
   // Highlight this bubble while a dashboard card it produced is hovered. The
   // hovered value is a vizKey `${messageIndex}-${toolCallIndex}`, and one
@@ -41,25 +48,30 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
 
   // The chat→card hover is per-visualization: a single-tool-call message links
   // its whole bubble to its one card; a multi-tool-call message links each
-  // accordion item to its own card (below), so hovering an item scrolls to
+  // accordion item to its own card (below), so hovering an item highlights
   // exactly that visualization.
   const singleVizKey = toolCalls.length === 1 ? vizKey(messageIndex, 0) : null;
   const setChatHover = (key: string | null) =>
     dashboardStore.getState().setHoveredMessageVizKey(key);
+  const jumpToViz = (key: string) => dashboardStore.getState().requestJumpToVisualization(key);
 
-  // Scroll this message into view when a card it produced is hovered.
-  // `block: 'nearest'` is a no-op when it's already visible, so it only nudges
-  // the chat when the message is off-screen; `scroll-mt-6` keeps it off the top.
-  const bubbleRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (isVizHovered) bubbleRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [isVizHovered]);
+  // "Show message in chat" pressed on one of the cards this message produced —
+  // any of them reveals the same bubble, so match on the message-index prefix.
+  const jump = useDashboard((s) => s.jumpToMessage);
+  const isJumpTarget = jump != null && jump.key.startsWith(`${messageIndex}-`);
+  const { ref: bubbleRef, flashing } = useJumpTarget<HTMLDivElement>(
+    isJumpTarget ? jump.nonce : null,
+  );
+
+  // Only offer the jump when the card is actually on the dashboard: a closed
+  // visualization has nothing to scroll to.
+  const showSingleJump = singleVizKey != null && isActive(singleVizKey);
 
   return (
     <div
       ref={bubbleRef}
       data-message
-      className={cn('udi:flex udi:scroll-mt-6', isUser ? 'udi:justify-end' : 'udi:justify-start')}
+      className={cn('udi:flex', isUser ? 'udi:justify-end' : 'udi:justify-start')}
       // Single-viz messages link the whole bubble to their one card. Multi-viz
       // messages link per accordion item instead (see below), so no bubble-level
       // handler here.
@@ -68,13 +80,25 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
     >
       <div
         className={cn(
-          'udi:max-w-[85%] udi:min-w-0 udi:rounded-lg udi:px-3 udi:py-2 udi:wrap-break-word udi:transition-shadow',
+          'udi:group/bubble udi:relative udi:max-w-[85%] udi:min-w-0 udi:rounded-lg udi:px-3 udi:py-2 udi:wrap-break-word udi:transition-shadow',
           isUser ? 'udi:bg-primary udi:text-primary-foreground' : 'udi:bg-muted',
           // ring-inset so the outline isn't clipped by the scroll viewport's
           // overflow-x-hidden on left-aligned (assistant) bubbles.
-          isVizHovered && 'udi:ring-2 udi:ring-inset udi:ring-primary/50',
+          (isVizHovered || flashing) && 'udi:ring-2 udi:ring-inset udi:ring-primary/50',
+          // Room for the corner jump button so it doesn't sit on the text.
+          showSingleJump && 'udi:pr-8',
         )}
       >
+        {/* Jump to this message's visualization. Corner-anchored and revealed
+            on hover (or keyboard focus) so it stays out of the way of the
+            message text. Multi-viz messages get one button per accordion item
+            instead, since the bubble maps to several cards. */}
+        {showSingleJump && (
+          <JumpToVizButton
+            className="udi:absolute udi:top-1 udi:right-1 udi:opacity-0 udi:transition-opacity udi:group-hover/bubble:opacity-100 udi:focus-visible:opacity-100"
+            onClick={() => jumpToViz(singleVizKey)}
+          />
+        )}
         {/* Message text */}
         {message.content && <MarkdownText>{message.content}</MarkdownText>}
 
@@ -98,7 +122,7 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
                 <AccordionItem
                   key={i}
                   value={i}
-                  // Hovering an item scrolls to its card; the item tints when
+                  // Hovering an item highlights its card; the item tints when
                   // that card is hovered (hoveredViz is set by the card).
                   onMouseEnter={() => setChatHover(itemKey)}
                   onMouseLeave={() => setChatHover(null)}
@@ -107,9 +131,12 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
                     hoveredViz === itemKey && 'udi:bg-primary/10',
                   )}
                 >
-                  <AccordionTrigger className="udi:text-xs">
-                    {TOOL_CALL_LABELS[tc.function.name] ?? tc.function.name}
-                  </AccordionTrigger>
+                  <div className="udi:flex udi:items-center udi:gap-0.5">
+                    <AccordionTrigger className="udi:text-xs">
+                      {TOOL_CALL_LABELS[tc.function.name] ?? tc.function.name}
+                    </AccordionTrigger>
+                    {isActive(itemKey) && <JumpToVizButton onClick={() => jumpToViz(itemKey)} />}
+                  </div>
                   <AccordionContent>
                     <ToolCallRenderer
                       toolCall={tc.function}
@@ -127,5 +154,28 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
         )}
       </div>
     </div>
+  );
+}
+
+/** Shared "show visualization in dashboard" affordance — the chat-side twin of
+ *  the dashboard card's "show message in chat" toolbar button. */
+function JumpToVizButton({ onClick, className }: { onClick: () => void; className?: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn('udi:h-6 udi:w-6 udi:shrink-0', className)}
+            aria-label="Show visualization in dashboard"
+            onClick={onClick}
+          />
+        }
+      >
+        <Crosshair className="udi:h-3 udi:w-3" />
+      </TooltipTrigger>
+      <TooltipContent>Show visualization in dashboard</TooltipContent>
+    </Tooltip>
   );
 }

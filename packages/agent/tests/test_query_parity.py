@@ -79,10 +79,38 @@ def _canon_value(value):
     return value
 
 
+def _sort_key(row):
+    """Total order over canonicalized rows, tolerating mixed and null values.
+
+    Sorting the raw tuples raises as soon as a column is nullable — `None < "a"`
+    is a TypeError — so compare on the type name first and the repr second. Only
+    used to make the comparison order-independent; the equality check itself is
+    still on the values.
+    """
+    return tuple((type(v).__name__, repr(v)) for _, v in row)
+
+
 def _canon_rows(rows):
-    """Order-independent, tolerance-normalized canonical form."""
+    """Order-independent, tolerance-normalized canonical form.
+
+    Null-valued keys are dropped rather than compared. The two executors represent
+    "no value" differently at the edges — an all-null Arquero aggregate yields
+    `undefined`, which JSON omits, where SQL emits an explicit NULL — and
+    everything downstream (scales, filters, marks) treats absent and null alike.
+    Comparing them would fail on a distinction no chart can observe.
+    """
     return sorted(
-        tuple(sorted((k, _canon_value(v)) for k, v in row.items())) for row in rows
+        (
+            tuple(
+                sorted(
+                    (k, _canon_value(v))
+                    for k, v in row.items()
+                    if _canon_value(v) is not None
+                )
+            )
+            for row in rows
+        ),
+        key=_sort_key,
     )
 
 
@@ -371,3 +399,93 @@ def test_kde_structural():
         step = pts[1][0] - pts[0][0]
         integral = sum(d for _, d in pts) * step
         assert 0.9 < integral < 1.1
+
+
+# ---------------------------------------------------------------------------
+# JWT passthrough against a live StarRocks (>= 3.5).
+#
+# Separate opt-in from UDI_STARROCKS_TEST: it needs the JWT users provisioned,
+# which the parity leg does not.
+#
+#   python dev/starrocks/setup_jwt_auth.py
+#   UDI_STARROCKS_JWT_TEST=1 uv run pytest tests/test_query_parity.py -k jwt
+# ---------------------------------------------------------------------------
+
+_JWT_ENABLED = os.getenv("UDI_STARROCKS_JWT_TEST") == "1"
+_jwt_only = pytest.mark.skipif(
+    not _JWT_ENABLED, reason="set UDI_STARROCKS_JWT_TEST=1 (see dev/starrocks/README.md)"
+)
+
+
+@pytest.fixture(scope="module")
+def jwt_setup():
+    """The provisioning helper, imported from dev/ rather than duplicated."""
+    import importlib.util
+
+    path = _REPO_ROOT / "dev" / "starrocks" / "setup_jwt_auth.py"
+    spec = importlib.util.spec_from_file_location("setup_jwt_auth", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if not module.KEY_PATH.exists():
+        pytest.skip(f"run `python {path}` first")
+    return module
+
+
+@pytest.fixture(scope="module")
+def jwt_connector(jwt_setup):
+    from udiagent.query.connectors import StarRocksConnector
+
+    args = _starrocks_conn_args()
+    return StarRocksConnector(
+        host=args["host"],
+        port=args["port"],
+        database=jwt_setup.DATABASE,
+        jwt_passthrough=True,
+        principal_field=jwt_setup.PRINCIPAL_FIELD,
+    )
+
+
+@_jwt_only
+def test_jwt_passthrough_authenticates_as_the_token_subject(jwt_setup, jwt_connector):
+    """The database sees the end user, not a shared service account."""
+    from udiagent.query import use_db_token
+
+    with use_db_token(jwt_setup.mint("alice")):
+        rows = jwt_connector.execute("SELECT current_user() AS who")
+    assert rows[0]["who"].startswith("'alice'@")
+
+
+@_jwt_only
+def test_jwt_passthrough_enforces_per_user_grants(jwt_setup, jwt_connector):
+    """alice is granted the table, bob is authenticated but granted nothing.
+
+    This is the whole point of passthrough: the refusal comes from StarRocks,
+    not from anything this process decided.
+    """
+    from udiagent.query import DatabaseAuthError, use_db_token
+
+    with use_db_token(jwt_setup.mint("alice")):
+        assert jwt_connector.execute("SELECT COUNT(*) AS n FROM penguins")[0]["n"] > 0
+
+    with use_db_token(jwt_setup.mint("bob")):
+        with pytest.raises(DatabaseAuthError):
+            jwt_connector.execute("SELECT COUNT(*) AS n FROM penguins")
+
+
+@_jwt_only
+def test_jwt_passthrough_rejects_an_expired_token(jwt_setup, jwt_connector):
+    from udiagent.query import DatabaseAuthError, use_db_token
+
+    with use_db_token(jwt_setup.mint("alice", ttl=-60)):
+        with pytest.raises(DatabaseAuthError, match="expired"):
+            jwt_connector.execute("SELECT 1 AS n")
+
+
+@_jwt_only
+def test_jwt_passthrough_caches_one_connection_per_principal(jwt_setup, jwt_connector):
+    from udiagent.query import use_db_token
+
+    for _ in range(2):
+        with use_db_token(jwt_setup.mint("alice")):
+            jwt_connector.execute("SELECT 1 AS n")
+    assert list(jwt_connector._conns) == ["alice"]
