@@ -302,8 +302,7 @@ Consumer entries are merged on top of the built-in icons (`donors`, `samples`, `
 Pass `palette` on `UDIChatConfig` to set the default colors used by every chart and table (dashboard cards, chat-message previews, and the memory bank). A spec-level per-encoding `range` still overrides the palette.
 
 ```tsx
-import { UDIChat } from 'udi-yac';
-import type { UDIPalette } from 'udi-toolkit/react';
+import { UDIChat, type UDIPalette } from 'udi-yac';
 import { interpolateViridis } from 'd3-scale-chromatic';
 
 const palette: UDIPalette = {
