@@ -347,7 +347,7 @@ function UDIChatValidated(props: UDIChatConfig) {
                            */}
                           <div
                             ref={rootRef}
-                            className={cn('udi-yac h-full w-full', props.className)}
+                            className={cn('udi-yac udi:h-full udi:w-full', props.className)}
                             style={props.style}
                           >
                             <UDIChatInner {...props} />

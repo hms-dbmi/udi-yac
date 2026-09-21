@@ -221,8 +221,8 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       className={cn(
         // py-2/gap-2 override the shared Card defaults (py-4/gap-4) to give the
         // visualization more room — the dominant vertical chrome inside a card.
-        'relative transition-shadow h-full flex flex-col min-h-0 py-2 gap-2',
-        (isHovered || flashing) && 'ring-3 ring-primary/40',
+        'udi:relative udi:transition-shadow udi:h-full udi:flex udi:flex-col udi:min-h-0 udi:py-2 udi:gap-2',
+        (isHovered || flashing) && 'udi:ring-3 udi:ring-primary/40',
       )}
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
@@ -258,13 +258,13 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="udi:h-6 udi:w-6"
                       aria-label="Show message in chat"
                       onClick={() => dashboardStore.getState().requestJumpToMessage(vizKey)}
                     />
                   }
                 >
-                  <Crosshair className="h-3 w-3" />
+                  <Crosshair className="udi:h-3 udi:w-3" />
                 </TooltipTrigger>
                 <TooltipContent>Show message in chat</TooltipContent>
               </Tooltip>

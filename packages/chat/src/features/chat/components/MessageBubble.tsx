@@ -71,7 +71,7 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
     <div
       ref={bubbleRef}
       data-message
-      className={cn('flex', isUser ? 'justify-end' : 'justify-start')}
+      className={cn('udi:flex', isUser ? 'udi:justify-end' : 'udi:justify-start')}
       // Single-viz messages link the whole bubble to their one card. Multi-viz
       // messages link per accordion item instead (see below), so no bubble-level
       // handler here.
@@ -80,13 +80,13 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
     >
       <div
         className={cn(
-          'group/bubble relative max-w-[85%] min-w-0 rounded-lg px-3 py-2 wrap-break-word transition-shadow',
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted',
+          'udi:group/bubble udi:relative udi:max-w-[85%] udi:min-w-0 udi:rounded-lg udi:px-3 udi:py-2 udi:wrap-break-word udi:transition-shadow',
+          isUser ? 'udi:bg-primary udi:text-primary-foreground' : 'udi:bg-muted',
           // ring-inset so the outline isn't clipped by the scroll viewport's
           // overflow-x-hidden on left-aligned (assistant) bubbles.
-          (isVizHovered || flashing) && 'ring-2 ring-inset ring-primary/50',
+          (isVizHovered || flashing) && 'udi:ring-2 udi:ring-inset udi:ring-primary/50',
           // Room for the corner jump button so it doesn't sit on the text.
-          showSingleJump && 'pr-8',
+          showSingleJump && 'udi:pr-8',
         )}
       >
         {/* Jump to this message's visualization. Corner-anchored and revealed
@@ -95,7 +95,7 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
             instead, since the bubble maps to several cards. */}
         {showSingleJump && (
           <JumpToVizButton
-            className="absolute top-1 right-1 opacity-0 transition-opacity group-hover/bubble:opacity-100 focus-visible:opacity-100"
+            className="udi:absolute udi:top-1 udi:right-1 udi:opacity-0 udi:transition-opacity udi:group-hover/bubble:opacity-100 udi:focus-visible:opacity-100"
             onClick={() => jumpToViz(singleVizKey)}
           />
         )}
@@ -131,8 +131,8 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
                     hoveredViz === itemKey && 'udi:bg-primary/10',
                   )}
                 >
-                  <div className="flex items-center gap-0.5">
-                    <AccordionTrigger className="text-xs">
+                  <div className="udi:flex udi:items-center udi:gap-0.5">
+                    <AccordionTrigger className="udi:text-xs">
                       {TOOL_CALL_LABELS[tc.function.name] ?? tc.function.name}
                     </AccordionTrigger>
                     {isActive(itemKey) && <JumpToVizButton onClick={() => jumpToViz(itemKey)} />}
@@ -167,13 +167,13 @@ function JumpToVizButton({ onClick, className }: { onClick: () => void; classNam
           <Button
             variant="ghost"
             size="icon"
-            className={cn('h-6 w-6 shrink-0', className)}
+            className={cn('udi:h-6 udi:w-6 udi:shrink-0', className)}
             aria-label="Show visualization in dashboard"
             onClick={onClick}
           />
         }
       >
-        <Crosshair className="h-3 w-3" />
+        <Crosshair className="udi:h-3 udi:w-3" />
       </TooltipTrigger>
       <TooltipContent>Show visualization in dashboard</TooltipContent>
     </Tooltip>
