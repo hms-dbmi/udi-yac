@@ -18,3 +18,16 @@ export {
   hasStructuredReferences,
   type StructuredTextSegment,
 } from './utils/structuredTextParser';
+
+export {
+  diagnoseFilter,
+  normalizePointValues,
+  type FilterProbe,
+  type FilterDiagnosis,
+  type FilterDiagnosisContext,
+  type ValueSuggestion,
+  type FieldSuggestion,
+} from './utils/filterDiagnosis';
+
+// Domain formatting shared with the filter notice's value picker.
+export { categoricalValues, formatIntervalDomain } from './utils/entityOverview';
