@@ -62,7 +62,14 @@ export const CategoricalCustomColors = {
   args: {
     spec: categoricalSpec,
     palette: {
-      category: ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02'],
+      category: [
+        '#1b9e77',
+        '#d95f02',
+        '#7570b3',
+        '#e7298a',
+        '#66a61e',
+        '#e6ab02',
+      ],
     },
   },
 };
@@ -130,6 +137,55 @@ export const ContinuousFunctionRamp = {
     spec: heatmapSpec,
     palette: { ramp: (t: number) => interpolateViridis(t) },
   },
+};
+
+// ── Chart surface ───────────────────────────────────────────────────────────
+
+/**
+ * A host rendering in dark mode: the data marks already followed the palette,
+ * but the plot itself stayed a white rectangle with black axes. `background`,
+ * `text`, `axis` and `grid` theme everything that is not a data mark. The
+ * story wraps the chart in a dark container so the surface can be judged
+ * against the host color it would sit on.
+ */
+export const DarkSurface = {
+  args: {
+    spec: categoricalSpec,
+    palette: {
+      background: '#0b1220',
+      text: '#e5e7eb',
+      axis: '#6b7280',
+      grid: '#1f2937',
+    },
+  },
+  decorators: [
+    () => ({
+      template: '<div style="background:#0b1220;padding:16px"><story /></div>',
+    }),
+  ],
+};
+
+/**
+ * `background: 'transparent'` lets the host's own surface show through, which
+ * is the right choice when the chart sits on a card whose color the host
+ * controls (and may change at runtime, e.g. on a theme toggle).
+ */
+export const TransparentSurface = {
+  args: {
+    spec: categoricalSpec,
+    palette: {
+      background: 'transparent',
+      text: '#e5e7eb',
+      axis: '#9ca3af',
+      grid: '#374151',
+    },
+  },
+  decorators: [
+    () => ({
+      template:
+        '<div style="background:linear-gradient(135deg,#111827,#1f2937);padding:16px"><story /></div>',
+    }),
+  ],
 };
 
 // ── Table renderer ──────────────────────────────────────────────────────────

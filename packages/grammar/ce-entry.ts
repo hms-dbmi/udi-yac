@@ -201,7 +201,7 @@ export function getDataSelections(): DataSelections {
 }
 
 export { UDIVisElement };
-export { DEFAULT_PALETTE } from './Palette';
+export { DEFAULT_PALETTE, toVegaConfig } from './Palette';
 export type { UDIGrammar, DataSelections };
 export type { UDIPalette, ContinuousColor, DiscreteColor } from './Palette';
 export type {

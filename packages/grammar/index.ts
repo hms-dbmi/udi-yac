@@ -32,7 +32,7 @@ export { UDI_PALETTE_KEY } from './paletteInjectKey';
 export type { SourceSpec, LoadDataPackageOptions } from './loadDataPackage';
 
 // Color palette API
-export { DEFAULT_PALETTE } from './Palette';
+export { DEFAULT_PALETTE, toVegaConfig } from './Palette';
 export type { UDIPalette, ContinuousColor, DiscreteColor } from './Palette';
 
 // Expression AST compiler (Expr -> Arquero expression string)

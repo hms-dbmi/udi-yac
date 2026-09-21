@@ -321,6 +321,19 @@ const palette: UDIPalette = {
 
 The `category`/`ordinal` fields accept a color array or a Vega scheme name. The `ramp` accepts a scheme name, a color array, or an interpolator function. Note: in the **table** renderer, function and array ramps are honored, while a bare scheme-name ramp falls back to the default (scheme names apply fully to Vega charts).
 
+The palette also themes the **chart surface** — everything in a Vega chart that is not a data mark. A host rendering in dark mode needs this, since the marks follow the palette but the plot would otherwise stay a white rectangle with black axes:
+
+```tsx
+const palette: UDIPalette = {
+  background: 'transparent', // plot background; `'transparent'` shows the card through
+  text: '#e5e7eb', // axis, legend and header labels/titles, chart title
+  axis: '#6b7280', // axis domain lines and ticks
+  grid: '#1f2937', // grid lines
+};
+```
+
+Each key is optional and, when omitted, leaves Vega's default in place.
+
 ### Custom mascot
 
 The empty-dashboard welcome splash renders a YAC mascot by default. Consumers can replace it or hide it via the `mascot` prop on `UDIChatConfig`:
