@@ -1,4 +1,17 @@
-@import 'tailwindcss';
+/* Tailwind is imported in pieces, not as the `tailwindcss` barrel, so that
+   preflight is left out: its `html, :host` and `*, ::before, ::after` rules are
+   unscopeable, and in a host app they reset that host's typography and box
+   model. The subset we actually depend on is vendored under `.udi-yac` in the
+   `@layer base` block below.
+
+   `prefix(udi)` namespaces every generated utility (`udi:flex`) and every theme
+   variable (`--udi-color-*`). Without it our utilities collide with a host's own
+   Tailwind build at identical specificity in the same layer, and whichever
+   stylesheet loads last silently wins — which is how a host's `.px-4` came to
+   override our `md:px-6`. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(udi);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(udi);
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
@@ -165,10 +178,232 @@
 @layer base {
   .udi-yac,
   .udi-yac * {
-    @apply border-border outline-ring/50;
+    @apply udi:border-border udi:outline-ring/50;
   }
   .udi-yac {
-    @apply bg-background font-sans text-foreground;
+    @apply udi:bg-background udi:font-sans udi:text-foreground;
+  }
+
+  /*
+   * Tailwind's preflight, vendored and scoped to `.udi-yac`.
+   *
+   * We don't import `tailwindcss/preflight.css` (see the top of this file):
+   * it targets `html`, `:host`, `*` and `::before`/`::after` globally, so in a
+   * host app it resets that host's typography, box model and form controls —
+   * exactly the regression a host measured as its body font changing. But our
+   * shadcn components assume preflight (zeroed margins, `border-box`, the
+   * `border: 0 solid` that makes `border-*` utilities mean *width only*, and
+   * `font: inherit` on form controls), so the reset still has to exist inside
+   * our subtree.
+   *
+   * This is a copy of tailwindcss@4's preflight.css with every selector scoped.
+   * Two deliberate omissions: the `html` font-family/font-feature-settings
+   * block (`.udi-yac` gets `font-sans` above instead) and `[hidden]`'s
+   * `!important`, which is unchanged from the browser default anyway.
+   * Re-check this block when bumping Tailwind's major version.
+   */
+  .udi-yac,
+  .udi-yac * {
+    &,
+    &::after,
+    &::before,
+    &::backdrop,
+    &::file-selector-button {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border: 0 solid;
+    }
+  }
+
+  .udi-yac {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .udi-yac hr {
+    height: 0;
+    color: inherit;
+    border-top-width: 1px;
+  }
+
+  .udi-yac abbr:where([title]) {
+    -webkit-text-decoration: underline dotted;
+    text-decoration: underline dotted;
+  }
+
+  .udi-yac :is(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  .udi-yac a {
+    color: inherit;
+    -webkit-text-decoration: inherit;
+    text-decoration: inherit;
+  }
+
+  .udi-yac :is(b, strong) {
+    font-weight: bolder;
+  }
+
+  .udi-yac :is(code, kbd, samp, pre) {
+    font-family: var(
+      --udi-font-mono,
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      'Liberation Mono',
+      'Courier New',
+      monospace
+    );
+    font-size: 1em;
+  }
+
+  .udi-yac small {
+    font-size: 80%;
+  }
+
+  .udi-yac :is(sub, sup) {
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+
+  .udi-yac sub {
+    bottom: -0.25em;
+  }
+
+  .udi-yac sup {
+    top: -0.5em;
+  }
+
+  .udi-yac table {
+    text-indent: 0;
+    border-color: inherit;
+    border-collapse: collapse;
+  }
+
+  .udi-yac :-moz-focusring {
+    outline: auto;
+  }
+
+  .udi-yac progress {
+    vertical-align: baseline;
+  }
+
+  .udi-yac summary {
+    display: list-item;
+  }
+
+  .udi-yac :is(ol, ul, menu) {
+    list-style: none;
+  }
+
+  .udi-yac :is(img, svg, video, canvas, audio, iframe, embed, object) {
+    display: block;
+    vertical-align: middle;
+  }
+
+  .udi-yac :is(img, video) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .udi-yac :is(button, input, select, optgroup, textarea),
+  .udi-yac ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
+  }
+
+  .udi-yac :where(select:is([multiple], [size])) optgroup {
+    font-weight: bolder;
+  }
+
+  .udi-yac :where(select:is([multiple], [size])) optgroup option {
+    padding-inline-start: 20px;
+  }
+
+  .udi-yac ::file-selector-button {
+    margin-inline-end: 4px;
+  }
+
+  .udi-yac ::placeholder {
+    opacity: 1;
+  }
+
+  @supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
+    .udi-yac ::placeholder {
+      color: color-mix(in oklab, currentcolor 50%, transparent);
+    }
+  }
+
+  .udi-yac textarea {
+    resize: vertical;
+  }
+
+  .udi-yac ::-webkit-search-decoration {
+    -webkit-appearance: none;
+  }
+
+  .udi-yac ::-webkit-date-and-time-value {
+    min-height: 1lh;
+    text-align: inherit;
+  }
+
+  .udi-yac ::-webkit-datetime-edit {
+    display: inline-flex;
+  }
+
+  .udi-yac ::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+
+  .udi-yac
+    :is(
+      ::-webkit-datetime-edit,
+      ::-webkit-datetime-edit-year-field,
+      ::-webkit-datetime-edit-month-field,
+      ::-webkit-datetime-edit-day-field,
+      ::-webkit-datetime-edit-hour-field,
+      ::-webkit-datetime-edit-minute-field,
+      ::-webkit-datetime-edit-second-field,
+      ::-webkit-datetime-edit-millisecond-field,
+      ::-webkit-datetime-edit-meridiem-field
+    ) {
+    padding-block: 0;
+  }
+
+  .udi-yac ::-webkit-calendar-picker-indicator {
+    line-height: 1;
+  }
+
+  .udi-yac :-moz-ui-invalid {
+    box-shadow: none;
+  }
+
+  .udi-yac :is(button, input:where([type='button'], [type='reset'], [type='submit'])),
+  .udi-yac ::file-selector-button {
+    appearance: button;
+  }
+
+  .udi-yac :is(::-webkit-inner-spin-button, ::-webkit-outer-spin-button) {
+    height: auto;
+  }
+
+  .udi-yac [hidden]:where(:not([hidden='until-found'])) {
+    display: none;
   }
 }
 

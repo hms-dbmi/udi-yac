@@ -135,9 +135,9 @@ export function DownloadButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" />}
+        render={<Button variant="outline" size="sm" className="udi:h-7 udi:text-xs udi:gap-1.5" />}
       >
-        <Download className="h-3.5 w-3.5" />
+        <Download className="udi:h-3.5 udi:w-3.5" />
         {buttonLabel}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

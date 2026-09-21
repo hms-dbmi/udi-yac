@@ -221,14 +221,14 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       className={cn(
         // py-2/gap-2 override the shared Card defaults (py-4/gap-4) to give the
         // visualization more room — the dominant vertical chrome inside a card.
-        'relative transition-shadow h-full flex flex-col min-h-0 py-2 gap-2',
-        (isHovered || flashing) && 'ring-3 ring-primary/40',
+        'udi:relative udi:transition-shadow udi:h-full udi:flex udi:flex-col udi:min-h-0 udi:py-2 udi:gap-2',
+        (isHovered || flashing) && 'udi:ring-3 udi:ring-primary/40',
       )}
       onMouseEnter={() => dashboardStore.getState().setHoveredVisualizationIndex(vizKey)}
       onMouseLeave={() => dashboardStore.getState().setHoveredVisualizationIndex(null)}
     >
-      <CardHeader className="p-1 pb-0 shrink-0">
-        <div className="flex items-center w-full min-w-0 gap-0.5">
+      <CardHeader className="udi:p-1 udi:pb-0 udi:shrink-0">
+        <div className="udi:flex udi:items-center udi:w-full udi:min-w-0 udi:gap-0.5">
           {!editingTitle && (
             <Tooltip>
               <TooltipTrigger
@@ -237,14 +237,14 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      'h-6 w-6 cursor-grab active:cursor-grabbing touch-none',
+                      'udi:h-6 udi:w-6 udi:cursor-grab udi:active:cursor-grabbing udi:touch-none',
                       DRAG_HANDLE_CLASS,
                     )}
                     aria-label="Drag card"
                   />
                 }
               >
-                <GripVertical className="h-3 w-3 text-muted-foreground" />
+                <GripVertical className="udi:h-3 udi:w-3 udi:text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent>Drag to reorder card</TooltipContent>
             </Tooltip>
@@ -258,13 +258,13 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="udi:h-6 udi:w-6"
                       aria-label="Show message in chat"
                       onClick={() => dashboardStore.getState().requestJumpToMessage(vizKey)}
                     />
                   }
                 >
-                  <Crosshair className="h-3 w-3" />
+                  <Crosshair className="udi:h-3 udi:w-3" />
                 </TooltipTrigger>
                 <TooltipContent>Show message in chat</TooltipContent>
               </Tooltip>
@@ -275,12 +275,12 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="udi:h-6 udi:w-6"
                         onClick={() => setShowTweak((v) => !v)}
                       />
                     }
                   >
-                    <Settings2 className="h-3 w-3" />
+                    <Settings2 className="udi:h-3 udi:w-3" />
                   </TooltipTrigger>
                   <TooltipContent>Tweak fields</TooltipContent>
                 </Tooltip>
@@ -291,12 +291,16 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="udi:h-6 udi:w-6"
                       onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
                     />
                   }
                 >
-                  {isTableView ? <BarChart3 className="h-3 w-3" /> : <Table2 className="h-3 w-3" />}
+                  {isTableView ? (
+                    <BarChart3 className="udi:h-3 udi:w-3" />
+                  ) : (
+                    <Table2 className="udi:h-3 udi:w-3" />
+                  )}
                 </TooltipTrigger>
                 <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
               </Tooltip>
@@ -307,12 +311,12 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className={cn('h-6 w-6', showAllFields && 'text-primary')}
+                        className={cn('udi:h-6 udi:w-6', showAllFields && 'udi:text-primary')}
                         onClick={() => setShowAllFields((v) => !v)}
                       />
                     }
                   >
-                    <Columns3 className="h-3 w-3" />
+                    <Columns3 className="udi:h-3 udi:w-3" />
                   </TooltipTrigger>
                   <TooltipContent>
                     {showAllFields ? 'Show relevant fields only' : 'Show all fields'}
@@ -322,18 +326,20 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
               {(summary || transformSteps.length > 0) && (
                 <Tooltip>
                   <TooltipTrigger
-                    render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
+                    render={<Button variant="ghost" size="icon" className="udi:h-6 udi:w-6" />}
                   >
-                    <Info className="h-3 w-3 text-muted-foreground" />
+                    <Info className="udi:h-3 udi:w-3 udi:text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <div className="max-w-xs">
-                      {summary && <p className="mb-1">{summary}</p>}
+                    <div className="udi:max-w-xs">
+                      {summary && <p className="udi:mb-1">{summary}</p>}
                       {transformSteps.length > 0 && (
                         <>
-                          {summary && <div className="my-1.5 border-t border-current/20" />}
-                          <p className="font-medium mb-1">Transformations</p>
-                          <ol className="list-decimal pl-4 space-y-0.5">
+                          {summary && (
+                            <div className="udi:my-1.5 udi:border-t udi:border-current/20" />
+                          )}
+                          <p className="udi:font-medium udi:mb-1">Transformations</p>
+                          <ol className="udi:list-decimal udi:pl-4 udi:space-y-0.5">
                             {transformSteps.map((step, i) => (
                               <li key={i}>{step}</li>
                             ))}
@@ -350,35 +356,37 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                     <TooltipTrigger
                       render={
                         <DialogTrigger
-                          render={<Button variant="ghost" size="icon" className="h-6 w-6" />}
+                          render={
+                            <Button variant="ghost" size="icon" className="udi:h-6 udi:w-6" />
+                          }
                         >
-                          <Code2 className="h-3 w-3" />
+                          <Code2 className="udi:h-3 udi:w-3" />
                         </DialogTrigger>
                       }
                     />
                     <TooltipContent>View spec</TooltipContent>
                   </Tooltip>
-                  <DialogContent className="max-w-2xl max-h-[80vh]">
+                  <DialogContent className="udi:max-w-2xl udi:max-h-[80vh]">
                     <DialogHeader>
-                      <DialogTitle className="text-sm">UDI Grammar Spec</DialogTitle>
+                      <DialogTitle className="udi:text-sm">UDI Grammar Spec</DialogTitle>
                     </DialogHeader>
-                    <div className="relative">
-                      <div className="flex gap-1 absolute top-1 right-1">
+                    <div className="udi:relative">
+                      <div className="udi:flex udi:gap-1 udi:absolute udi:top-1 udi:right-1">
                         <Tooltip>
                           <TooltipTrigger
                             render={
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="udi:h-7 udi:w-7"
                                 onClick={handleCopySpec}
                               />
                             }
                           >
                             {copied ? (
-                              <Check className="h-3.5 w-3.5 text-green-600" />
+                              <Check className="udi:h-3.5 udi:w-3.5 udi:text-green-600" />
                             ) : (
-                              <Copy className="h-3.5 w-3.5" />
+                              <Copy className="udi:h-3.5 udi:w-3.5" />
                             )}
                           </TooltipTrigger>
                           <TooltipContent>{copied ? 'Copied' : 'Copy spec'}</TooltipContent>
@@ -389,17 +397,17 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="udi:h-7 udi:w-7"
                                 onClick={() => window.open(specEditorUrl, '_blank')}
                               />
                             }
                           >
-                            <ExternalLink className="h-3.5 w-3.5" />
+                            <ExternalLink className="udi:h-3.5 udi:w-3.5" />
                           </TooltipTrigger>
                           <TooltipContent>Open in UDI Grammar Editor</TooltipContent>
                         </Tooltip>
                       </div>
-                      <pre className="text-xs overflow-auto max-h-[60vh] bg-muted p-3 rounded-md">
+                      <pre className="udi:text-xs udi:overflow-auto udi:max-h-[60vh] udi:bg-muted udi:p-3 udi:rounded-md">
                         {specJson}
                       </pre>
                     </div>
@@ -408,17 +416,22 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
               )}
               <span
                 aria-hidden
-                className="mx-0.5 select-none text-sm leading-none text-muted-foreground/40"
+                className="udi:mx-0.5 udi:select-none udi:text-sm udi:leading-none udi:text-muted-foreground/40"
               >
                 |
               </span>
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClose} />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="udi:h-6 udi:w-6"
+                      onClick={handleClose}
+                    />
                   }
                 >
-                  <X className="h-3 w-3" />
+                  <X className="udi:h-3 udi:w-3" />
                 </TooltipTrigger>
                 <TooltipContent>Close</TooltipContent>
               </Tooltip>
@@ -427,7 +440,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
         </div>
       </CardHeader>
       {showTweak && (
-        <div className="px-2 pt-1">
+        <div className="udi:px-2 udi:pt-1">
           <VizTweakComponent
             spec={viz.spec}
             messageIndex={viz.index}
@@ -435,21 +448,21 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           />
         </div>
       )}
-      <CardContent className="relative p-1 flex-1 min-h-0 overflow-hidden">
+      <CardContent className="udi:relative udi:p-1 udi:flex-1 udi:min-h-0 udi:overflow-hidden">
         {remoteQueryPending && (
           // Non-blocking corner indicator: the chart stays visible and
           // interactive in its current state while the round-trip is in
           // flight. Delay-shown (300ms, backwards fill keeps it invisible
           // during the delay) so fast responses cause no visual change.
           <div
-            className="pointer-events-none absolute top-1 right-1 z-10 animate-in fade-in duration-150"
+            className="udi:pointer-events-none udi:absolute udi:top-1 udi:right-1 udi:z-10 udi:animate-in udi:fade-in udi:duration-150"
             style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}
           >
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Loader2 className="udi:h-4 udi:w-4 udi:animate-spin udi:text-muted-foreground" />
           </div>
         )}
         <UDIVis
-          className="block h-full w-full"
+          className="udi:block udi:h-full udi:w-full"
           key={`${isTableView ? `table-${specKey}` : specKey}-${brushResetKey}`}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}

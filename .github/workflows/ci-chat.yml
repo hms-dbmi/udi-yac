@@ -65,7 +65,13 @@ jobs:
         run: pnpm --filter udi-yac build:lib
 
       # The library is embedded in host apps that are themselves Tailwind v4 +
-      # shadcn, so a token or element reset escaping to :root/html/body would
-      # retheme the host. Invisible in our own SPA, hence a build-output check.
+      # shadcn, so a token, element reset or unprefixed utility escaping our
+      # subtree would retheme the host. Invisible in our own SPA, hence a
+      # build-output check.
       - name: Check library CSS scoping
         run: pnpm --filter udi-yac test:css
+
+      # Hosts import the package from a server-rendered route, where a
+      # dependency touching `document` at module scope takes the route down.
+      - name: Check library imports on the server
+        run: pnpm --filter udi-yac test:ssr

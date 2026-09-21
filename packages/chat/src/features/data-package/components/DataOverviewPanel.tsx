@@ -39,7 +39,7 @@ interface SchemaTreeRowsProps {
 
 function SchemaTreeRows({ nodes, icons, selected, onSelect, depth }: SchemaTreeRowsProps) {
   return (
-    <ul className={cn('flex flex-col', depth > 0 && 'pl-3')}>
+    <ul className={cn('udi:flex udi:flex-col', depth > 0 && 'udi:pl-3')}>
       {nodes.map((node, i) => {
         const Icon = icons[node.name] ?? FALLBACK_ENTITY_ICON;
         const isLast = i === nodes.length - 1;
@@ -50,22 +50,25 @@ function SchemaTreeRows({ nodes, icons, selected, onSelect, depth }: SchemaTreeR
               onClick={() => onSelect(node.name)}
               aria-label={`${node.name}, ${node.rowCount.toLocaleString()} rows`}
               className={cn(
-                'flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-xs hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
-                selected === node.name && 'bg-accent font-medium text-udi-primary',
+                'udi:flex udi:w-full udi:items-center udi:gap-1 udi:rounded udi:px-1 udi:py-0.5 udi:text-left udi:text-xs udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
+                selected === node.name && 'udi:bg-accent udi:font-medium udi:text-udi-primary',
               )}
             >
               {depth > 0 && (
-                <span aria-hidden className="shrink-0 font-mono text-muted-foreground/60">
+                <span
+                  aria-hidden
+                  className="udi:shrink-0 udi:font-mono udi:text-muted-foreground/60"
+                >
                   {isLast ? '└─' : '├─'}
                 </span>
               )}
-              <Icon className="size-3 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">{node.name}</span>
+              <Icon className="udi:size-3 udi:shrink-0 udi:text-muted-foreground" />
+              <span className="udi:min-w-0 udi:flex-1 udi:truncate">{node.name}</span>
               {/* Fixed-width cardinality keeps the counts in a column of their own. */}
-              <span className="w-7 shrink-0 text-right text-[10px] text-muted-foreground">
+              <span className="udi:w-7 udi:shrink-0 udi:text-right udi:text-[10px] udi:text-muted-foreground">
                 {node.cardinality ? shortCardinality(node.cardinality) : ''}
               </span>
-              <span className="shrink-0 tabular-nums text-muted-foreground">
+              <span className="udi:shrink-0 udi:tabular-nums udi:text-muted-foreground">
                 {node.rowCount.toLocaleString()}
               </span>
             </button>
@@ -110,7 +113,7 @@ interface JoinListProps {
  */
 function JoinList({ groups, icons, selected, onSelect }: JoinListProps) {
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="udi:flex udi:flex-col udi:gap-1">
       {groups.map((group) => {
         const Icon = icons[group.entity] ?? FALLBACK_ENTITY_ICON;
         return (
@@ -120,17 +123,17 @@ function JoinList({ groups, icons, selected, onSelect }: JoinListProps) {
               onClick={() => onSelect(group.entity)}
               aria-label={`${group.entity}, ${group.rowCount.toLocaleString()} rows`}
               className={cn(
-                'flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-xs hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
-                selected === group.entity && 'bg-accent font-medium text-udi-primary',
+                'udi:flex udi:w-full udi:items-center udi:gap-1 udi:rounded udi:px-1 udi:py-0.5 udi:text-left udi:text-xs udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
+                selected === group.entity && 'udi:bg-accent udi:font-medium udi:text-udi-primary',
               )}
             >
-              <Icon className="size-3 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">{group.entity}</span>
-              <span className="shrink-0 tabular-nums text-muted-foreground">
+              <Icon className="udi:size-3 udi:shrink-0 udi:text-muted-foreground" />
+              <span className="udi:min-w-0 udi:flex-1 udi:truncate">{group.entity}</span>
+              <span className="udi:shrink-0 udi:tabular-nums udi:text-muted-foreground">
                 {group.rowCount.toLocaleString()}
               </span>
             </button>
-            <ul className="flex flex-col">
+            <ul className="udi:flex udi:flex-col">
               {group.edges.map((edge) => (
                 <li key={`${edge.from}|${edge.to}`}>
                   <button
@@ -141,13 +144,13 @@ function JoinList({ groups, icons, selected, onSelect }: JoinListProps) {
                     // that entity's accordion trigger.
                     aria-label={`${edge.from} joins ${edge.to}`}
                     className={cn(
-                      'flex w-full items-center gap-1 rounded py-0.5 pl-4 text-left text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
-                      selected === edge.to && 'text-udi-primary',
+                      'udi:flex udi:w-full udi:items-center udi:gap-1 udi:rounded udi:py-0.5 udi:pl-4 udi:text-left udi:text-[11px] udi:text-muted-foreground udi:hover:bg-accent udi:hover:text-foreground udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
+                      selected === edge.to && 'udi:text-udi-primary',
                     )}
                   >
                     <span aria-hidden>→</span>
-                    <span className="min-w-0 flex-1 truncate">{edge.to}</span>
-                    <span className="w-7 shrink-0 text-right text-[10px]">
+                    <span className="udi:min-w-0 udi:flex-1 udi:truncate">{edge.to}</span>
+                    <span className="udi:w-7 udi:shrink-0 udi:text-right udi:text-[10px]">
                       {edge.cardinality ? shortCardinality(edge.cardinality) : ''}
                     </span>
                   </button>
@@ -195,8 +198,8 @@ function SchemaMap({ dataPackage, icons, selected, onSelect }: SchemaMapProps) {
   if (groups.length === 0) return null;
 
   return (
-    <div className="px-3 py-2">
-      <h3 className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+    <div className="udi:px-3 udi:py-2">
+      <h3 className="udi:mb-1 udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
         Relationships
       </h3>
       {isHierarchy ? (
@@ -262,33 +265,33 @@ export function DataOverviewPanel() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between px-3 py-2">
-        <h2 className="text-sm font-semibold">Data</h2>
+    <div className="udi:flex udi:h-full udi:min-h-0 udi:flex-col">
+      <div className="udi:flex udi:items-center udi:justify-between udi:px-3 udi:py-2">
+        <h2 className="udi:text-sm udi:font-semibold">Data</h2>
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7"
+          className="udi:h-7 udi:w-7"
           onClick={close}
           aria-label="Close data overview"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="udi:h-3.5 udi:w-3.5" />
         </Button>
       </div>
 
       {loadingPhase === 'error' ? (
-        <div className="mx-3 flex items-start gap-1.5 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        <div className="udi:mx-3 udi:flex udi:items-start udi:gap-1.5 udi:rounded-md udi:border udi:border-destructive/40 udi:bg-destructive/5 udi:px-2.5 udi:py-1.5 udi:text-xs udi:text-destructive">
+          <AlertCircle className="udi:mt-0.5 udi:h-4 udi:w-4 udi:shrink-0" />
           <span>Couldn't load data package{loadError ? `: ${loadError}` : '.'}</span>
         </div>
       ) : entityNames.length === 0 ? (
-        <div className="flex flex-col gap-2 px-3">
+        <div className="udi:flex udi:flex-col udi:gap-2 udi:px-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-8 animate-pulse rounded bg-muted" />
+            <div key={i} className="udi:h-8 udi:animate-pulse udi:rounded udi:bg-muted" />
           ))}
         </div>
       ) : (
-        <ScrollArea className="min-h-0 flex-1">
+        <ScrollArea className="udi:min-h-0 udi:flex-1">
           <SchemaMap
             dataPackage={dataPackage}
             icons={icons}
@@ -296,7 +299,7 @@ export function DataOverviewPanel() {
             onSelect={select}
           />
           <Accordion
-            className="gap-3 border-t px-3 pb-3"
+            className="udi:gap-3 udi:border-t udi:px-3 udi:pb-3"
             value={expanded}
             onValueChange={(value) => setExpanded(value as string[])}
           >
@@ -311,13 +314,13 @@ export function DataOverviewPanel() {
                    * Fields bar keys off (`top-9`).
                    */}
                   <AccordionTrigger
-                    className="h-9"
-                    headerClassName="sticky top-0 z-20 bg-background"
+                    className="udi:h-9"
+                    headerClassName="udi:sticky udi:top-0 udi:z-20 udi:bg-background"
                   >
-                    <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                      <Icon className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{name}</span>
-                      <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground">
+                    <span className="udi:flex udi:min-w-0 udi:flex-1 udi:items-center udi:gap-1.5">
+                      <Icon className="udi:size-4 udi:shrink-0 udi:text-muted-foreground" />
+                      <span className="udi:truncate">{name}</span>
+                      <span className="udi:shrink-0 udi:text-xs udi:font-normal udi:tabular-nums udi:text-muted-foreground">
                         {(rowCounts.get(name) ?? 0).toLocaleString()}
                       </span>
                     </span>
@@ -328,7 +331,7 @@ export function DataOverviewPanel() {
                    * containing block for `position: sticky`, which would pin the
                    * Fields bar to the panel instead of the scroll viewport.
                    */}
-                  <AccordionContent className="overflow-visible">
+                  <AccordionContent className="udi:overflow-visible">
                     <EntityOverview entity={name} />
                   </AccordionContent>
                 </AccordionItem>

@@ -56,7 +56,7 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
   }, [fields, trimmedQuery]);
 
   if (fields.length === 0) {
-    return <span className="text-xs text-muted-foreground">(no fields)</span>;
+    return <span className="udi:text-xs udi:text-muted-foreground">(no fields)</span>;
   }
 
   const visible = expanded ? filtered : filtered.slice(0, DEFAULT_VISIBLE);
@@ -64,48 +64,48 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
   const hasMore = hiddenCount > 0;
 
   return (
-    <div className="my-2 rounded border bg-background/50 p-2">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="udi:my-2 udi:rounded udi:border udi:bg-background/50 udi:p-2">
+      <div className="udi:mb-1.5 udi:flex udi:items-center udi:justify-between udi:gap-2">
+        <span className="udi:text-[10px] udi:font-medium udi:uppercase udi:tracking-wider udi:text-muted-foreground">
           {entity ? `${entity} fields` : 'Fields'} ({fields.length})
         </span>
         {hasMore && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-5 gap-1 px-1.5 text-[10px]"
+            className="udi:h-5 udi:gap-1 udi:px-1.5 udi:text-[10px]"
             onClick={() => setExpanded((v) => !v)}
           >
             {expanded ? (
               <>
-                <ChevronUp className="h-3 w-3" />
+                <ChevronUp className="udi:h-3 udi:w-3" />
                 Show less
               </>
             ) : (
               <>
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="udi:h-3 udi:w-3" />
                 Show all
               </>
             )}
           </Button>
         )}
       </div>
-      <div className="relative mb-2">
-        <Search className="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+      <div className="udi:relative udi:mb-2">
+        <Search className="udi:pointer-events-none udi:absolute udi:top-1/2 udi:left-2 udi:h-3 udi:w-3 udi:-translate-y-1/2 udi:text-muted-foreground" />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter fields..."
-          className="h-7 pl-7 text-xs"
+          className="udi:h-7 udi:pl-7 udi:text-xs"
         />
       </div>
       <TooltipProvider delay={150} timeout={0}>
-        <div className="flex flex-wrap gap-1">
+        <div className="udi:flex udi:flex-wrap udi:gap-1">
           {visible.map((field) => (
             <FieldChip key={field} field={field} meta={fieldMeta[field]} highlight={trimmedQuery} />
           ))}
           {filtered.length === 0 && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="udi:text-[10px] udi:text-muted-foreground">
               No fields match {`"${query}"`}.
             </span>
           )}
@@ -121,7 +121,7 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
                   setExpanded(true);
                 }
               }}
-              className="cursor-pointer text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="udi:cursor-pointer udi:text-[10px] udi:text-muted-foreground udi:hover:bg-muted udi:hover:text-foreground"
             >
               +{hiddenCount} more
             </Badge>
@@ -143,9 +143,12 @@ function FieldChip({ field, meta, highlight }: FieldChipProps) {
     <Tooltip>
       <TooltipTrigger
         render={
-          <Badge variant="secondary" className="max-w-[250px] cursor-default font-mono text-[10px]">
-            <span className="min-w-0 truncate">{highlightMatch(field, highlight)}</span>
-            <Info className="shrink-0 opacity-60" />
+          <Badge
+            variant="secondary"
+            className="udi:max-w-[250px] udi:cursor-default udi:font-mono udi:text-[10px]"
+          >
+            <span className="udi:min-w-0 udi:truncate">{highlightMatch(field, highlight)}</span>
+            <Info className="udi:shrink-0 udi:opacity-60" />
           </Badge>
         }
       />

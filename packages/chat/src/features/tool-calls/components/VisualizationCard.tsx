@@ -52,12 +52,14 @@ export function VisualizationCard({
 
   if (isClosed) {
     return (
-      <div className="py-1">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs">
+      <div className="udi:py-1">
+        <div className="udi:flex udi:items-center udi:gap-2">
+          <Badge variant="secondary" className="udi:text-xs">
             Visualization removed by user
           </Badge>
-          {title && <span className="text-xs text-muted-foreground truncate">{title}</span>}
+          {title && (
+            <span className="udi:text-xs udi:text-muted-foreground udi:truncate">{title}</span>
+          )}
         </div>
       </div>
     );
@@ -65,15 +67,17 @@ export function VisualizationCard({
 
   if (isActive) {
     return (
-      <div className="py-1">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs">
+      <div className="udi:py-1">
+        <div className="udi:flex udi:items-center udi:gap-2">
+          <Badge variant="secondary" className="udi:text-xs">
             Visualization added:
           </Badge>
-          {title && <span className="text-xs text-muted-foreground truncate">{title}</span>}
+          {title && (
+            <span className="udi:text-xs udi:text-muted-foreground udi:truncate">{title}</span>
+          )}
         </div>
         {messageIndex != null && toolCallIndex != null && (
-          <div className="mt-1">
+          <div className="udi:mt-1">
             <VizTweakComponent
               spec={currentSpec}
               messageIndex={messageIndex}
@@ -88,13 +92,13 @@ export function VisualizationCard({
   }
 
   return (
-    <div className="py-1">
-      {title && <p className="text-xs font-medium mb-1">{title}</p>}
-      <div className="w-full max-w-[300px]">
+    <div className="udi:py-1">
+      {title && <p className="udi:text-xs udi:font-medium udi:mb-1">{title}</p>}
+      <div className="udi:w-full udi:max-w-[300px]">
         <UDIVis spec={displaySpec} sourceResolver={sourceResolver} palette={palette} />
       </div>
       {messageIndex != null && toolCallIndex != null && (
-        <div className="mt-1">
+        <div className="udi:mt-1">
           <VizTweakComponent
             spec={currentSpec}
             messageIndex={messageIndex}
