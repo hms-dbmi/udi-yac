@@ -18,6 +18,25 @@ export interface UDIPalette {
   ordinal?: DiscreteColor;
   /** Continuous color for quantitative (numeric) scales (Vega `config.range.ramp` + tables). */
   ramp?: ContinuousColor;
+
+  /*
+   * Chrome: the colors of everything that isn't data. Without these a chart
+   * keeps Vega's built-in light defaults — a white plot with black axes — no
+   * matter what the surrounding app's theme is, and there is no way to reach
+   * them from outside. Each is optional and falls back to the previous
+   * hard-coded value, so an existing palette renders unchanged.
+   */
+
+  /** Plot and table background. `'transparent'` inherits the surrounding card. */
+  background?: string;
+  /** Axis domain lines and ticks. */
+  axis?: string;
+  /** Gridlines, the plot frame, and table rules. */
+  grid?: string;
+  /** Tick labels, axis and legend titles, table text. */
+  text?: string;
+  /** De-emphasised text: empty cells, truncation notices. */
+  mutedText?: string;
 }
 
 /**
@@ -40,6 +59,16 @@ export type DiscreteColor = string[] | string;
  */
 export const DEFAULT_PALETTE: UDIPalette = {
   mark: '#E6A01A',
+  // Vega's own light defaults, made explicit so a consumer can see what they
+  // are overriding; the muted value matches what UDICellRenderer hard-coded.
+  // `background` is the one departure: Vega defaults to opaque white, which
+  // punches a bright rectangle into a dark host, and inheriting the card is
+  // identical on the white surface we had before.
+  background: 'transparent',
+  axis: '#888',
+  grid: '#ddd',
+  text: '#000',
+  mutedText: '#5e5e5e',
   // A *named* scheme rather than an array of stops, because the two are not
   // interchangeable here: Vega hands `range.ordinal[i]` to the i-th domain
   // entry, so a five-stop array on a three-bucket chart would use the first

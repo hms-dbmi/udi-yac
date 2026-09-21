@@ -310,8 +310,7 @@ Consumer entries are merged on top of the built-in icons (`donors`, `samples`, `
 Pass `palette` on `UDIChatConfig` to set the default colors used by every chart and table (dashboard cards, chat-message previews, and the memory bank). A spec-level per-encoding `range` still overrides the palette.
 
 ```tsx
-import { UDIChat } from 'udi-yac';
-import type { UDIPalette } from 'udi-toolkit/react';
+import { UDIChat, type UDIPalette } from 'udi-yac';
 import { interpolateViridis } from 'd3-scale-chromatic';
 
 const palette: UDIPalette = {
@@ -328,6 +327,20 @@ const palette: UDIPalette = {
 ```
 
 The `category`/`ordinal` fields accept a color array or a Vega scheme name. The `ramp` accepts a scheme name, a color array, or an interpolator function. Note: in the **table** renderer, function and array ramps are honored, while a bare scheme-name ramp falls back to the default (scheme names apply fully to Vega charts).
+
+#### Chart chrome follows your theme automatically
+
+Everything above colors the _data_. The surrounding chrome — plot background, axis lines, gridlines, tick labels, table text — is derived from the design tokens in effect on the chat root (`--foreground`, `--muted-foreground`, `--border`), and re-read whenever a `dark` class is toggled on any ancestor. So charts and tables follow light/dark mode, and follow your own token overrides, with no configuration.
+
+Supply any of these to take over a channel; each one you set wins, and the rest stay theme-derived:
+
+| Field        | Controls                                                      |
+| ------------ | ------------------------------------------------------------- |
+| `background` | Plot and table background. `'transparent'` inherits the card. |
+| `axis`       | Axis domain lines and ticks.                                  |
+| `grid`       | Gridlines, the plot frame, and table rules.                   |
+| `text`       | Tick labels, axis and legend titles, table text.              |
+| `mutedText`  | Empty cells and truncation notices.                           |
 
 ### Custom mascot
 
