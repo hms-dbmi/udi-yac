@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { markRaw, ref, shallowRef, onMounted, onBeforeUnmount } from 'vue';
 import vegaEmbed from 'vega-embed';
 // `defineProps` is a compile-time macro in <script setup> — importing it
 // shadows the macro and trips TS 6's "Import declaration conflicts with
@@ -99,7 +99,21 @@ function buildVegaConfig(): Record<string, unknown> {
 }
 
 const vegaContainer = ref();
-const vegaView = ref<View | null>(null);
+// `shallowRef`, not `ref`, and the view is marked raw on the way in.
+//
+// A plain `ref` makes its value DEEPLY reactive: Vue wraps the Vega View in a
+// Proxy, and every object reached through it — datasets, tuples, scenegraph
+// items — gets wrapped too. Vega's dataflow is built on object identity: tuples
+// carry ids, marks join items to the tuples that produced them, and removals are
+// matched by identity. Hand it proxies and those comparisons stop matching, so a
+// removal fails to find the item it should delete and the mark keeps drawing it.
+//
+// That is hms-dbmi/udi-yac#34: the dataset ends up correct while the scenegraph
+// holds one stale item per facet group, from the first shrink onwards, and only
+// a re-embed clears it — because a re-embed builds a new view and new marks.
+// Nothing in the component needs the view to be reactive; it is only ever used
+// imperatively.
+const vegaView = shallowRef<View | null>(null);
 
 const errorMessage = ref();
 
@@ -130,6 +144,26 @@ function formatVegaSignalKey(raw: string): string {
   return raw.replace(/-/g, '_');
 }
 
+//: The spec the running view was compiled from, with `data.values` stripped.
+//
+// Everything except the rows — scale domains, encodings, mark config, layer
+// list — is baked in when the view is compiled, and a data changeset cannot
+// change any of it. So a build whose spec differs structurally needs a fresh
+// embed; applying only its data would leave the chart drawing new rows through
+// the old spec, which is the "stale until I toggle table view and back" class of
+// bug (toggling unmounts the view, forcing the re-embed by accident).
+let embeddedSpecShape: string | null = null;
+
+/** The part of a spec a changeset cannot update. */
+function specShape(specObject: VegaSpecShim): string {
+  const { data, ...rest } = specObject as Record<string, unknown> & {
+    data?: { values?: unknown };
+  };
+  const dataWithoutRows = { ...(data ?? {}) };
+  delete dataWithoutRows.values;
+  return JSON.stringify({ ...rest, data: dataWithoutRows });
+}
+
 function initVegaChart() {
   // console.log('UDI-VIS: initialized chart');
   // console.log('init vega chart');
@@ -142,6 +176,7 @@ function initVegaChart() {
   widthIsContainer = specMaybeSized.width === 'container';
   heightIsContainer = specMaybeSized.height === 'container';
 
+  embeddedSpecShape = specShape(specObject);
   if (specObject.data && specObject.data.values) {
     delete specObject.data.values;
   }
@@ -153,7 +188,7 @@ function initVegaChart() {
     .then((result) => {
       errorMessage.value = null;
       const view = result.view;
-      vegaView.value = view;
+      vegaView.value = markRaw(view);
       for (const signalKey of props.signalKeys ?? []) {
         const signalKeyFormatted = formatVegaSignalKey(signalKey);
         // Vega-Lite stores per-channel ranges in separate signals
@@ -357,6 +392,19 @@ async function updateVegaChart() {
   if (!vegaView.value) return;
   const { success, specObject } = parseSpec();
   if (!success || isEmpty(specObject)) return;
+
+  // Only the rows can be swapped in place. Anything else — a scale domain that
+  // moved because a filter changed the data extent, a field an encoding now
+  // points at — has to be recompiled, or the view keeps drawing the new data
+  // through the old spec. The changeset path below stays the fast one for the
+  // case it was built for: a brush, where only the rows change.
+  if (specShape(specObject) !== embeddedSpecShape) {
+    vegaView.value.finalize();
+    vegaView.value = null;
+    // Re-applies props.selections itself, as the resize re-embed does.
+    initVegaChart();
+    return;
+  }
 
   // For a brush that has an EXTERNAL selection (props.selections — e.g. the
   // chat adjustment widget / filter chips mirror brushes there), that

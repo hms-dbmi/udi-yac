@@ -8,12 +8,15 @@ comes from the per-request ``data_schema`` (not a schema baked into
 """
 
 import json
+import re
 
 from udiagent.schema import parse_schema_from_dict
 from udiagent.vis_generate import (
+    _encoded_placeholders,
     _parse_request_schema,
     _load_generated_tools,
     instantiate_template,
+    template_tweakable_params,
     validate_bindings,
 )
 
@@ -196,3 +199,95 @@ def test_hubmap_still_resolves_from_request_schema():
             assert spec["source"]["source"].startswith(raw["udi:path"])
             return
     raise AssertionError("no HuBMAP entity produced a valid single-entity binding")
+
+
+def test_tweakable_params_only_expose_encoded_field_parameters():
+    """Every template's re-bindable parameters, swept.
+
+    Three invariants, each of which a newly authored template could break
+    silently: a descriptor must name a real parameter of its own tool (a
+    template can encode something that is not a parameter at all — a cube's
+    ``<M>`` measure comes from the schema), it must be drawn on some channel
+    (structural plumbing like a subject id is not a knob a reader can see the
+    effect of), and it must not be an entity or a literal value (re-sourcing a
+    chart or changing which values it filters on is not a "tweak").
+    """
+    generated = _load_generated_tools()
+    assert generated is not None
+    _tool_defs, tool_dispatch, templates, tool_tags = generated
+
+    exposed = {}
+    for name, (idx, param_map) in tool_dispatch.items():
+        template = templates[idx]
+        # Bind every parameter to a stand-in: the descriptors only need the
+        # binding to exist, and this keeps the sweep schema-free.
+        bindings = {ph: f"col_{ph}" for ph in param_map.values()}
+        params = template_tweakable_params(template, param_map, bindings, {})
+        exposed[name] = [p["param"] for p in params]
+
+        encoded = _encoded_placeholders(template)
+        for p in params:
+            assert p["param"] in param_map, f"{name}: {p['param']} is not a parameter"
+            assert param_map[p["param"]] == p["placeholder"]
+            assert p["placeholder"] in encoded, f"{name}: {p['placeholder']} not encoded"
+            assert not re.fullmatch(
+                r"E\d*|V\d*", p["placeholder"]
+            ), f"{name}: exposes entity/value {p['placeholder']}"
+            assert p["encodings"], f"{name}: {p['param']} has no channel"
+            assert p["label"]
+
+    # The survival curves: every stratified variant offers the stratifier and
+    # nothing else, and the unstratified one offers nothing at all (correct — its
+    # axes are columns the template derives). Keyed by suffix rather than by index,
+    # because inserting a template renumbers every later one.
+    survival = {
+        name.split("_line_", 1)[1]: params
+        for name, params in exposed.items()
+        if "survival" in name
+    }
+    assert survival == {
+        "survival": [],
+        # The stratifier sits on the event log, which is now the first side of a
+        # join in every variant (the censoring table is the other), so it is
+        # spelled entity1_field4 rather than field4.
+        # Each also offers the grouping that cuts that stratifier into strata —
+        # the one parameter offered whether or not it is bound, since ungrouped
+        # is a state of that control rather than the absence of one.
+        "survival_baseline": ["entity1_field4", "grouping"],
+        "survival_baseline_multivalue": ["entity1_field4", "grouping"],
+        "survival_ever": ["entity1_field4", "grouping"],
+        "survival_ever_multivalue": ["entity1_field4", "grouping"],
+        # The cross-table variants' stratifier lives on the joined entity.
+        "survival_related": ["entity2_field", "grouping"],
+        "survival_related_multivalue": ["entity2_field", "grouping"],
+        # Same shape, but the related value is a number cut at thresholds.
+        "survival_related_numeric": ["entity2_field", "grouping"],
+        # And the same pair again for membership of a value set: the column
+        # being tested, and the sets that define a match.
+        "survival_ever_matching": ["entity2_field", "grouping"],
+        # The presence variants offer nothing, and that is the honest answer: what
+        # separates their curves is which *table* the subject appears in, and the
+        # tweak dropdowns re-bind fields only. Offering the joined subject-id key
+        # would be worse than offering nothing — changing it does not change what
+        # the chart asks, it just breaks the join.
+        # The cube curves bind their axes as dimensions rather than deriving
+        # them, so the time dimension is an encoded field and shows up here.
+        # Re-binding it is offered only among quantitative dimensions, which is
+        # the same latitude every other tweakable field gets.
+        "survival_cube": ["dimension1"],
+        "survival_cube_stratified": ["dimension1", "dimension3"],
+        "survival_presence": [],
+        "survival_presence_2x2": [],
+    }
+
+    # A cube heatmap offers its dimensions but never the measure.
+    heatmap = next(
+        params
+        for name, params in exposed.items()
+        if name.endswith("_heatmap_basic") and "data_cube" in tool_tags.get(name, [])
+    )
+    assert heatmap == ["dimension1", "dimension2"]
+
+    # Most templates offer something; a silent drop to zero everywhere would
+    # otherwise pass every assertion above.
+    assert sum(1 for v in exposed.values() if v) > len(exposed) // 2

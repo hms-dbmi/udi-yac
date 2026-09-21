@@ -20,6 +20,8 @@ from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+_PACKAGE_ROOT = Path(__file__).resolve().parents[3]
+
 # Signature algorithms python-jose can actually verify, canonical spelling
 # keyed by uppercase form so a lowercased env value still resolves to the
 # spelling jose matches the token header against. It has no PS* or EdDSA
@@ -174,7 +176,9 @@ class ServerConfig(BaseSettings):
         description=(
             "Path to a JSON file mapping package names to StarRocks/DuckDB "
             "connections, served via `/v1/yac/query` and `/v1/yac/metadata`. "
-            "Written by the seed scripts — see `dev/duckdb/README.md`."
+            "Written by the seed scripts — see `dev/duckdb/README.md`. A "
+            "relative path is tried against the working directory first, then "
+            "against `packages/agent`, where the seed scripts write it."
         ),
     )
     udi_metadata_ttl_seconds: float = Field(
@@ -221,6 +225,28 @@ class ServerConfig(BaseSettings):
         """
         value = value.strip()
         return _SIGNATURE_ALGORITHMS.get(value.upper(), value)
+
+    @field_validator("udi_query_backends", mode="after")
+    @classmethod
+    def _resolve_backends_path(cls, value: str | None) -> str | None:
+        """Fall back to the package root for a relative path.
+
+        `pnpm dev:agent` and the VS Code tasks launch from the REPO ROOT, while
+        the seed scripts write their config next to themselves in
+        packages/agent — so the documented
+        `UDI_QUERY_BACKENDS=duckdb-backends.json` resolved to nothing and the
+        server died before `_check_consistency` could say why. The working
+        directory is still tried first, so a path that already worked keeps
+        working.
+        """
+        if not value:
+            return value
+        path = Path(value)
+        if not path.is_absolute() and not path.exists():
+            from_package = _PACKAGE_ROOT / path
+            if from_package.is_file():
+                return str(from_package)
+        return value
 
     @field_validator("*", mode="before")
     @classmethod

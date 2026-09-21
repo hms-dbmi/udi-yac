@@ -16,7 +16,7 @@ import logging
 from typing import Any
 
 from .compiler import PipelineCompiler, ends_in_rollup
-from .errors import UnsupportedQueryError
+from .errors import DatabaseAuthError, UnsupportedQueryError
 from .kde import gaussian_kde
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class QueryEngine:
         self.table_map = table_map
         self.row_cap = row_cap
         self.entity_schemas = entity_schemas or {}
-        self._columns_cache: dict[str, set] = {}
+        self._columns_cache: dict[str, list] = {}
 
     # ── public API ───────────────────────────────────────────────────────────
 
@@ -71,6 +71,12 @@ class QueryEngine:
                 )
             except UnsupportedQueryError as error:
                 results[viz_id] = {"error": str(error)}
+            except DatabaseAuthError:
+                # A credential problem is not a chart-shaped error: it fails the
+                # whole request with a 403 rather than being reported per-viz
+                # inside a 200 (which would also echo the DB message to the
+                # client). Must stay ahead of the broad catch below.
+                raise
             except Exception as error:  # noqa: BLE001 - one bad spec (e.g. a
                 # SQL error from an unexpected column) must not sink the batch.
                 logger.exception("query failed for viz %s", viz_id)
@@ -123,15 +129,17 @@ class QueryEngine:
 
     # ── internals ────────────────────────────────────────────────────────────
 
-    def _columns_of(self, entity: str) -> set:
-        """Cached physical column names for an entity (DESCRIBE)."""
+    def _columns_of(self, entity: str) -> list:
+        """Cached physical column names for an entity, in table order
+        (DESCRIBE). Order matters: the compiler emits explicit select lists
+        from it, so a set would make the generated SQL nondeterministic."""
         if entity not in self._columns_cache:
             from .introspect import _describe
 
             table = self.table_map[entity]
-            self._columns_cache[entity] = {
+            self._columns_cache[entity] = [
                 name for name, _ in _describe(self.connector, table)
-            }
+            ]
         return self._columns_cache[entity]
 
     def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], bool]:

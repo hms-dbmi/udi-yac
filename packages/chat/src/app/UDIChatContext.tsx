@@ -137,6 +137,44 @@ export function useDownloadActions(): readonly DownloadAction[] {
 }
 
 // ---------------------------------------------------------------------------
+// Agent API configuration
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the agent lives, for the few components that call it outside the chat
+ * turn — re-binding a generated visualization, for one. A context rather than
+ * props because those components render in two unrelated trees (a dashboard card
+ * and a chat message), and neither owns the config.
+ *
+ * The default has no base URL, which reads as "the agent is not reachable from
+ * here": callers then hide the controls that would need it, so a component under
+ * test needs no provider.
+ */
+export interface ApiConfig {
+  apiBaseUrl: string;
+  authToken?: string;
+}
+
+const ApiConfigContext = createContext<ApiConfig>({ apiBaseUrl: '' });
+
+export function ApiConfigProvider({
+  apiBaseUrl,
+  authToken,
+  children,
+}: {
+  apiBaseUrl: string;
+  authToken?: string | undefined;
+  children: ReactNode;
+}) {
+  const value = useMemo(() => ({ apiBaseUrl, authToken }), [apiBaseUrl, authToken]);
+  return <ApiConfigContext.Provider value={value}>{children}</ApiConfigContext.Provider>;
+}
+
+export function useApiConfig(): ApiConfig {
+  return useContext(ApiConfigContext);
+}
+
+// ---------------------------------------------------------------------------
 // Consumer-provided Download button label
 // ---------------------------------------------------------------------------
 

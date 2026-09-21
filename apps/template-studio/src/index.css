@@ -1,0 +1,122 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-udi-primary: #57b4e9;
+  --color-udi-gray-100: #eff3f5;
+  --color-udi-gray-300: #cad5da;
+  --color-udi-gray-800: #384853;
+}
+
+body {
+  margin: 0;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+
+/* The <udi-vis> custom element uses shadowRoot: false, so Vue's *scoped*
+   component styles are never injected into the document. The CE internals
+   depend on them for layout, so the critical rules have to be restated here
+   unscoped — same approach (and same reason) as packages/chat/src/index.css.
+
+   Without the .vega-chart-container rule below, that div stays
+   `display: inline-block; height: 0`, Vega's `width/height: 'container'`
+   sizing reads 0, and every chart renders as a 0x0 SVG — visible as a
+   completely blank card. */
+udi-vis {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* VegaLite.vue .vega-chart-container */
+udi-vis .vega-chart-container {
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+}
+
+/* TableComponent.vue mounts ag-grid, which also needs a definite height. */
+udi-vis .table-container,
+udi-vis .ag-root-wrapper {
+  height: 100%;
+}
+
+/* UDICellRenderer.vue's in-cell marks (the bar/rect/point/line drawn inside a
+   table cell) have the same scoped-style problem as the chart container, and it
+   is even easier to miss: the marks ARE emitted, with correct inline `width` and
+   `background-color` from the spec, but without `.pos-absolute`'s positioning and
+   the mark's `height: 100%` every one of them collapses to zero height. The table
+   then looks like a plain text table and the marks appear simply unimplemented.
+
+   Mirrors the scoped block in UDICellRenderer.vue; the spec's inline styles still
+   win over the colour/size defaults here. */
+udi-vis .cell-container {
+  position: relative;
+  width: 100%;
+  /* 2px breathing room top and bottom, per the component. */
+  height: calc(100% - 4px);
+  top: 2px;
+}
+
+udi-vis .cell-container .pos-absolute {
+  position: absolute;
+}
+
+udi-vis .cell-container .text {
+  color: black;
+  top: 50%;
+  transform: translateY(-50%);
+  line-height: 1;
+}
+
+udi-vis .cell-container .bar,
+udi-vis .cell-container .rect {
+  background-color: rgb(198, 207, 216);
+  width: 100%;
+  height: 100%;
+  bottom: 0;
+}
+
+udi-vis .cell-container .point {
+  background-color: rgb(198, 207, 216);
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+udi-vis .cell-container .line {
+  border-color: rgb(198, 207, 216);
+  border-style: solid;
+  border-width: 1px;
+  width: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+udi-vis .cell-container .empty-cell {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1;
+  color: rgb(94, 94, 94);
+}
+
+/* Let the browser skip style, layout and paint for cards that are scrolled out
+   of view. This is complementary to the JS-side chart virtualization: that stops
+   Vega from *mounting*, this stops the browser from *rendering* the rest of the
+   card. `contain-intrinsic-size` supplies a placeholder size for skipped cards
+   so the scrollbar stays stable instead of jumping as they come into view. */
+.template-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 460px;
+}

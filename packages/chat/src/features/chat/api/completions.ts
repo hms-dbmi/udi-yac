@@ -1,4 +1,4 @@
-import type { Message } from '@/types/messages';
+import type { Message, ToolCallMeta } from '@/types/messages';
 import { httpError } from '@/utils/httpError';
 
 export interface QueryConfig {
@@ -58,6 +58,8 @@ function constructQueryBody(
 export interface ToolCallResponse {
   name: string;
   arguments: Record<string, unknown>;
+  /** Agent-side provenance (template + bindings); see ToolCallMeta. */
+  meta?: ToolCallMeta;
 }
 
 /** Per-request token usage, parsed from the server's `X-Usage-*` headers. */
