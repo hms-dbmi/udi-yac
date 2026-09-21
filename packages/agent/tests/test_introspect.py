@@ -17,7 +17,7 @@ def engine():
     connector = DuckDBConnector(
         views={
             "penguins": str(_SAMPLE / "penguins.csv"),
-            "donors": str(_SAMPLE / "donors.csv"),
+            "donors": str(_SAMPLE / "hubmap" / "donors.tsv"),
         }
     )
     return QueryEngine(connector, table_map={"penguins": "penguins", "donors": "donors"})

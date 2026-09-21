@@ -1,6 +1,6 @@
 sex,race,cause_of_death,age_group,age_years,donor_count
-,,,,,499
-Female,,,,,282
+,,,,,501
+Female,,,,,284
 Male,,,,,209
 Unknown,,,,,8
 ,American Indian or Alaska native,,,,2
@@ -8,21 +8,21 @@ Unknown,,,,,8
 ,Black or African American,,,,108
 ,Native Hawaiian or Other Pacific Islander,,,,1
 ,Other Race,,,,5
-,Unknown,,,,79
-,White,,,,279
+,Unknown,,,,80
+,White,,,,280
 ,,Anoxia,,,28
 ,,Asphyxiation,,,2
 ,,Cardiovascular,,,3
 ,,Cerebral edema,,,2
-,,Cerebrovascular accident,,,20
+,,Cerebrovascular accident,,,21
 ,,Gunshot wound,,,2
-,,Head trauma,,,23
+,,Head trauma,,,24
 ,,Traumatic injury,,,3
 ,,,00-9,,29
 ,,,10-19,,32
-,,,20-29,,88
+,,,20-29,,89
 ,,,30-39,,90
-,,,40-49,,57
+,,,40-49,,58
 ,,,50-59,,78
 ,,,60-69,,70
 ,,,70-79,,43
@@ -32,13 +32,13 @@ Unknown,,,,,8
 ,,,,10,7
 ,,,,15,13
 ,,,,20,35
-,,,,25,48
+,,,,25,49
 ,,,,30,44
 ,,,,35,46
 ,,,,40,38
 ,,,,45,28
 ,,,,5,7
-,,,,50,24
+,,,,50,25
 ,,,,55,48
 ,,,,60,32
 ,,,,65,44
@@ -52,8 +52,8 @@ Female,Asian,,,,19
 Female,Black or African American,,,,58
 Female,Native Hawaiian or Other Pacific Islander,,,,1
 Female,Other Race,,,,4
-Female,Unknown,,,,48
-Female,White,,,,151
+Female,Unknown,,,,49
+Female,White,,,,152
 Male,American Indian or Alaska native,,,,1
 Male,Asian,,,,6
 Male,Black or African American,,,,49
@@ -66,8 +66,8 @@ Unknown,White,,,,2
 Female,,Anoxia,,,17
 Female,,Cardiovascular,,,3
 Female,,Cerebral edema,,,2
-Female,,Cerebrovascular accident,,,7
-Female,,Head trauma,,,4
+Female,,Cerebrovascular accident,,,8
+Female,,Head trauma,,,5
 Male,,Anoxia,,,11
 Male,,Asphyxiation,,,2
 Male,,Cerebrovascular accident,,,13
@@ -76,9 +76,9 @@ Male,,Head trauma,,,19
 Male,,Traumatic injury,,,3
 Female,,,00-9,,18
 Female,,,10-19,,11
-Female,,,20-29,,62
+Female,,,20-29,,63
 Female,,,30-39,,65
-Female,,,40-49,,30
+Female,,,40-49,,31
 Female,,,50-59,,37
 Female,,,60-69,,32
 Female,,,70-79,,21
@@ -102,13 +102,13 @@ Female,,,,0,13
 Female,,,,10,3
 Female,,,,15,5
 Female,,,,20,16
-Female,,,,25,35
+Female,,,,25,36
 Female,,,,30,33
 Female,,,,35,36
 Female,,,,40,25
 Female,,,,45,13
 Female,,,,5,5
-Female,,,,50,10
+Female,,,,50,11
 Female,,,,55,24
 Female,,,,60,14
 Female,,,,65,19
@@ -146,6 +146,7 @@ Unknown,,,,65,1
 ,Black or African American,Head trauma,,,7
 ,Other Race,Cerebrovascular accident,,,2
 ,Unknown,Asphyxiation,,,1
+,Unknown,Cerebrovascular accident,,,1
 ,Unknown,Gunshot wound,,,1
 ,Unknown,Head trauma,,,2
 ,Unknown,Traumatic injury,,,1
@@ -155,7 +156,7 @@ Unknown,,,,65,1
 ,White,Cerebral edema,,,2
 ,White,Cerebrovascular accident,,,13
 ,White,Gunshot wound,,,1
-,White,Head trauma,,,14
+,White,Head trauma,,,15
 ,White,Traumatic injury,,,2
 ,American Indian or Alaska native,,30-39,,1
 ,American Indian or Alaska native,,40-49,,1
@@ -185,14 +186,14 @@ Unknown,,,,65,1
 ,Unknown,,10-19,,5
 ,Unknown,,20-29,,16
 ,Unknown,,30-39,,25
-,Unknown,,40-49,,6
+,Unknown,,40-49,,7
 ,Unknown,,50-59,,3
 ,Unknown,,60-69,,4
 ,Unknown,,70-79,,2
 ,Unknown,,80-89,,1
 ,White,,00-9,,6
 ,White,,10-19,,12
-,White,,20-29,,37
+,White,,20-29,,38
 ,White,,30-39,,40
 ,White,,40-49,,38
 ,White,,50-59,,51
@@ -245,6 +246,7 @@ Unknown,,,,65,1
 ,Unknown,,,40,12
 ,Unknown,,,45,3
 ,Unknown,,,5,1
+,Unknown,,,50,1
 ,Unknown,,,55,2
 ,Unknown,,,60,2
 ,Unknown,,,65,2
@@ -254,7 +256,7 @@ Unknown,,,,65,1
 ,White,,,10,2
 ,White,,,15,5
 ,White,,,20,16
-,White,,,25,16
+,White,,,25,17
 ,White,,,30,23
 ,White,,,35,21
 ,White,,,40,18
@@ -283,7 +285,7 @@ Unknown,,,,65,1
 ,,Cerebrovascular accident,00-9,,1
 ,,Cerebrovascular accident,20-29,,2
 ,,Cerebrovascular accident,30-39,,3
-,,Cerebrovascular accident,40-49,,5
+,,Cerebrovascular accident,40-49,,6
 ,,Cerebrovascular accident,50-59,,6
 ,,Cerebrovascular accident,60-69,,2
 ,,Cerebrovascular accident,70-79,,1
@@ -291,7 +293,7 @@ Unknown,,,,65,1
 ,,Gunshot wound,40-49,,1
 ,,Head trauma,00-9,,1
 ,,Head trauma,10-19,,8
-,,Head trauma,20-29,,7
+,,Head trauma,20-29,,8
 ,,Head trauma,30-39,,1
 ,,Head trauma,40-49,,1
 ,,Head trauma,50-59,,4
@@ -320,7 +322,7 @@ Unknown,,,,65,1
 ,,Cerebrovascular accident,,35,2
 ,,Cerebrovascular accident,,40,3
 ,,Cerebrovascular accident,,45,3
-,,Cerebrovascular accident,,50,1
+,,Cerebrovascular accident,,50,2
 ,,Cerebrovascular accident,,55,3
 ,,Cerebrovascular accident,,60,3
 ,,Cerebrovascular accident,,65,1
@@ -330,7 +332,7 @@ Unknown,,,,65,1
 ,,Head trauma,,10,2
 ,,Head trauma,,15,2
 ,,Head trauma,,20,9
-,,Head trauma,,25,2
+,,Head trauma,,25,3
 ,,Head trauma,,30,1
 ,,Head trauma,,40,1
 ,,Head trauma,,45,1
@@ -346,14 +348,14 @@ Unknown,,,,65,1
 ,,,10-19,15,13
 ,,,10-19,20,13
 ,,,20-29,20,22
-,,,20-29,25,48
+,,,20-29,25,49
 ,,,20-29,30,18
 ,,,30-39,30,26
 ,,,30-39,35,46
 ,,,30-39,40,18
 ,,,40-49,40,20
 ,,,40-49,45,28
-,,,40-49,50,9
+,,,40-49,50,10
 ,,,50-59,50,15
 ,,,50-59,55,48
 ,,,50-59,60,15

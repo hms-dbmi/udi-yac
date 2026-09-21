@@ -367,7 +367,7 @@ points at this server. (Canonical description of every chat variable:
 ```python
 from udiagent.query import DuckDBConnector, QueryEngine
 engine = QueryEngine(
-    DuckDBConnector(views={"donors": "donors.csv"}),
+    DuckDBConnector(views={"donors": "hubmap/donors.tsv"}),
     table_map={"donors": "donors"},
 )
 engine.run_query(
