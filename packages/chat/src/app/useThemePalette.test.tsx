@@ -75,4 +75,25 @@ describe('useThemePalette', () => {
     expect(probe.palette?.text).toBe('rgb(250, 250, 250)');
     document.documentElement.classList.remove('dark');
   });
+
+  it('keeps the same palette object when the tokens have not changed', async () => {
+    // The freeze: a new identity reaches <UDIVis> as a changed `palette`, and
+    // VegaLite finalizes and re-embeds on any palette change. Vega's embed adds
+    // `vega-embed` / `fit-x` classes in the light DOM (the custom element sets
+    // `shadowRoot: false`), which trips this observer, which re-embeds again —
+    // a loop that allocates a Vega view per turn until the tab dies.
+    const probe = harness({ '--foreground': 'rgb(1, 2, 3)' });
+    const before = probe.palette;
+
+    const root = probe.view.container.firstElementChild as HTMLElement;
+    const chart = root.appendChild(document.createElement('div'));
+    await act(async () => {
+      chart.classList.add('vega-embed', 'fit-x');
+      document.documentElement.classList.add('dark');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(probe.palette).toBe(before);
+    document.documentElement.classList.remove('dark');
+  });
 });
