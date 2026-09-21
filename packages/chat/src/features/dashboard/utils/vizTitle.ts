@@ -245,13 +245,27 @@ export function applyFieldLabels(spec: UDIGrammar, labels: VizTitleLabels = {}):
   const valueLabels = labels.valueLabels;
   const hasValueLabels = !!valueLabels && Object.keys(valueLabels).length > 0;
 
+  const sourceLayers = toLayers(spec.representation);
+  // Layers share a scale, and Vega merges a layered axis title from the
+  // *explicit* titles only — an implicit field-derived one is dropped. A title
+  // invented here would therefore join the author's rather than defer to it, so
+  // a channel the spec already names is left alone. The survival templates are
+  // the case in point: six layers on one y scale, one of them titled, and the
+  // rest plotting internal pipeline columns nobody should read.
+  const titledEncodings = new Set(
+    sourceLayers
+      .flatMap((l) => toMappings(l.mapping))
+      .filter((m) => m.title && m.encoding)
+      .map((m) => m.encoding as string),
+  );
+
   let changed = false;
   const labelMapping = (m: MappingLike): MappingLike => {
     // A row layer's `*` wildcard covers every column, so no single name fits.
     if (!m.field || m.field === '*') return m;
     let next = m;
     // An explicit title from the spec author always wins.
-    if (!m.title) {
+    if (!m.title && !titledEncodings.has(m.encoding ?? '')) {
       const l = label(m);
       if (l && l !== m.field) next = { ...next, title: l };
     }
@@ -265,7 +279,7 @@ export function applyFieldLabels(spec: UDIGrammar, labels: VizTitleLabels = {}):
     return next;
   };
 
-  const layers = toLayers(spec.representation).map((layer) => {
+  const layers = sourceLayers.map((layer) => {
     if (!layer?.mapping) return layer;
     return {
       ...layer,

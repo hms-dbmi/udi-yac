@@ -355,6 +355,43 @@ describe('applyFieldLabels', () => {
     });
   });
 
+  it('leaves a shared channel alone when another layer already titles it', () => {
+    // The survival templates in miniature: layers sharing one y scale, only the
+    // curve titled, the rest plotting internal pipeline columns. Vega merges a
+    // layered axis title from the explicit titles only, so titling the others
+    // here would join them all into one unreadable string.
+    const s = spec({
+      representation: [
+        {
+          mark: 'line',
+          mapping: [
+            { encoding: 'x', field: 'age_value', type: 'quantitative' },
+            { encoding: 'y', field: 'full survival', type: 'quantitative' },
+          ],
+        },
+        {
+          mark: 'line',
+          mapping: [
+            { encoding: 'x', field: 'age_value', type: 'quantitative' },
+            {
+              encoding: 'y',
+              field: 'survival percentage',
+              type: 'quantitative',
+              title: 'survival (%)',
+            },
+          ],
+        },
+      ],
+    });
+    const layers = applyFieldLabels(s).representation as Array<{
+      mapping: Array<{ field?: string; title?: string }>;
+    }>;
+    expect(layers[0].mapping[1].title).toBeUndefined();
+    expect(layers[1].mapping[1].title).toBe('survival (%)');
+    // x carries no explicit title on either layer, so it is still labelled.
+    expect(layers[0].mapping[0].title).toBe('Age');
+  });
+
   it('does not mutate the spec it was given', () => {
     const original = scatter();
     const before = JSON.stringify(original);
