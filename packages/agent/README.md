@@ -262,10 +262,48 @@ provider that rotates without pre-publishing its new key doesn't cause an outage
 until the cache expires; those early refreshes are throttled to one every 10
 seconds. While the provider is unreachable, requests return `503`.
 
-On the frontend nothing changes: the host portal passes its token to the chat
-as `authToken` (see `UDIChatConfig`), which forwards it as `Authorization:
-Bearer`. Note that udi-yac does not run an identity provider of its own — for a
+Note that udi-yac does not run an identity provider of its own — for a
 standalone deployment with no portal in front, use `JWT_SECRET_KEY`.
+
+#### Getting the token from the portal to here
+
+The server only ever sees an `Authorization: Bearer` header; it does not care
+how that header was produced. Two topologies produce it, and which one applies
+depends on where the host portal keeps its token.
+
+**The host page holds the token.** It passes it to the chat as `authToken` (see
+`UDIChatConfig`) and the browser calls this server directly. `UDI_CORS_ORIGINS`
+must name the portal's origin, since those are cross-origin requests.
+
+**The host's backend holds the token.** Portals that keep the IdP token
+server-side — never in a cookie or local storage the page can read — have
+nothing to hand the chat. Instead the portal proxies our endpoints from its own
+backend and attaches the header there:
+
+```
+browser → https://portal.example/api/yac/*  (portal backend attaches the
+                                             Authorization header)
+        → https://agent.internal/v1/yac/*
+```
+
+Point the chat's `apiBaseUrl` at that path (`/api/yac`) and leave `authToken`
+unset — the chat then sends no `Authorization` header of its own, and the proxy
+supplies it. The browser never talks to this server, so `UDI_CORS_ORIGINS` is
+irrelevant to the request path and the agent can stay on a private network.
+That is the arrangement for the Radiant portal (see
+[#118](https://github.com/hms-dbmi/udi-yac/issues/118)).
+
+The proxy route must forward the request body, the `X-Conversation-Id` and
+`X-OpenAI-Key` request headers, and the `X-Usage-*` response headers.
+
+Either way, a verified token means the user is allowed to _use_ this server.
+By default it does not scope query results: server-side query backends connect
+with the service credentials in `UDI_QUERY_BACKENDS`. A StarRocks backend with
+`jwtPassthrough` is the exception — it forwards the caller's own token to the
+database, which then applies that user's grants (see
+[`query/README.md`](src/udiagent/query/README.md)). That needs a real token, so
+it rules out the proxy topology above unless the proxy attaches a token the
+database can verify too.
 
 #### Future: role-based model permissions
 

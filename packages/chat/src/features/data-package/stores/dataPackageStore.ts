@@ -364,9 +364,14 @@ export function createDataPackageStore() {
       // mid-session (setAuthToken) and every later request must carry the new
       // one. Capturing an object here is what used to make the backend go
       // stale until the whole package was rebuilt.
-      const authHeaders = (): Record<string, string> => ({
-        Authorization: `Bearer ${get().authToken ?? 'dev'}`,
-      });
+      //
+      // No token means no header at all, rather than a `dev` placeholder: a
+      // deployment that proxies us through its own backend attaches the real
+      // one there, and a placeholder is just something for it to strip.
+      const authHeaders = (): Record<string, string> => {
+        const token = get().authToken;
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      };
       try {
         const response = await fetch(
           `${apiBaseUrl}/v1/yac/metadata?package=${encodeURIComponent(packageName)}`,
