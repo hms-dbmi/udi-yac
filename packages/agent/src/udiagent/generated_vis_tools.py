@@ -4281,8 +4281,7 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                                               'Joins {entity1} to {ent:entity2} on the subject id, expands the '
                                               'delimited {col:entity2_field} column, and plots one curve per value; '
                                               'the curves overlap.'),
- 'vis_060_line_survival_ever_matching': ('Survival curves for {ent:entity3} by whether {col:entity2_field} was ever '
-                                         'one of the named values',
+ 'vis_060_line_survival_ever_matching': ('Survival curves for {ent:entity3} by {col:entity2_field}',
                                          'Splits subjects by whether {ent:entity2} ever records one of the named '
                                          '{col:entity2_field} values for them, against everyone else.'),
  'vis_061_line_survival_presence': ('Survival curves for {ent:entity3} by presence in {ent:entity2}',

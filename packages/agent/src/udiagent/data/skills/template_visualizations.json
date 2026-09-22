@@ -1367,7 +1367,7 @@
     },
     "name_hint": "survival_ever_matching",
     "shared_entities": ["E3"],
-    "title_template": "Survival curves for <E3> by whether <E2.F> was ever one of the named values",
+    "title_template": "Survival curves for <E3> by <E2.F>",
     "summary_template": "Splits subjects by whether <E2> ever records one of the named <E2.F> values for them, against everyone else."
   },
   {
