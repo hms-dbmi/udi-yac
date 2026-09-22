@@ -660,18 +660,19 @@ def placeholder_encoding_info(spec_template):
                 "encodings": [],
                 "declared_type": None,
                 "aggregated": False,
-                "direct": False,
+                "direct_encodings": [],
             },
         )
         if isinstance(channel, str) and channel not in entry["encodings"]:
             entry["encodings"].append(channel)
-        # Whether the placeholder IS the drawn column or merely feeds one. Prose
-        # naming the channel ("{enc:color}") is right only for the former: a
-        # stratifier reaches colour through a derived `stratum` column, so the
-        # channel's own label names the derivation, not the column the caller
-        # chose. See `_tokenize_text_template`.
-        if direct:
-            entry["direct"] = True
+        # Channels where the placeholder IS the drawn field, as opposed to ones
+        # it merely feeds. Prose naming a channel ("{enc:color}") is only right
+        # for the former: a stratifier reaches colour through a derived
+        # `stratum`, and a ranked table's `<F>` sits in `column`, which picks a
+        # cell while `field` draws "smallest". Either way the channel's own
+        # label names something else. See `_tokenize_text_template`.
+        if direct and isinstance(channel, str) and channel not in entry["direct_encodings"]:
+            entry["direct_encodings"].append(channel)
         if declared_type and entry["declared_type"] is None:
             entry["declared_type"] = declared_type
         # The placeholder sits inside a rollup's output name ("average <F1>")
@@ -696,7 +697,7 @@ def placeholder_encoding_info(spec_template):
             channel = mapping.get("encoding")
             declared_type = mapping.get("type")
             # `field` is what gets drawn; `column` only places a table column.
-            for value in (mapping.get("field"), mapping.get("column")):
+            for value, is_field in ((mapping.get("field"), True), (mapping.get("column"), False)):
                 if not isinstance(value, str):
                     continue
                 if isinstance(channel, str):
@@ -712,7 +713,7 @@ def placeholder_encoding_info(spec_template):
                         channel,
                         declared_type,
                         aggregated,
-                        direct=True,
+                        direct=is_field,
                     )
 
     for transform in spec.get("transformation") or []:
@@ -1139,12 +1140,26 @@ def validate_bindings(
 
     # Fields this request supplies a grouping for, which exempts them from the
     # cardinality cap below.
+    #
+    # Parsed, not raw. `parse_grouping` discards groups that claim no values and
+    # returns None when none are left, so a payload like a lone empty `Other`
+    # means "no grouping" by the time the spec is built. Read raw, that payload
+    # still looks like a grouping and buys the exemption — the field would draw
+    # its whole domain with neither the cap nor the cuts check ever running.
+    from udiagent.stratify import GroupingError, parse_grouping
+
     targets = grouping_targets(spec_template)
-    grouped_field_keys = {
-        field_key
-        for group_key, field_key in targets.items()
-        if field_key and str(bindings.get(group_key) or "").strip()
-    }
+    grouped_field_keys = set()
+    for group_key, field_key in targets.items():
+        if not field_key:
+            continue
+        try:
+            if parse_grouping(bindings.get(group_key)) is not None:
+                grouped_field_keys.add(field_key)
+        except GroupingError:
+            # Malformed: reported by the per-binding check below, which owns the
+            # message. Not an exemption either way.
+            continue
 
     # Check fields exist on entities and types match
     for key, field_name in bindings.items():
@@ -1703,12 +1718,12 @@ _BIND_TOKEN = re.compile(r"\{bind:([^}]+)\}")
 def resolve_text_templates(tool_name, bindings):
     """The chosen template's user-facing (title, summary), ready for the client.
 
-    `{entity}` / `{enc:…}` / `{field:…}` tokens are left for the frontend to
-    resolve against the spec it is rendering, so both texts follow a field
-    swapped in the tweak panel. `{bind:…}` has no encoding to hang on (a binby
-    input, a stratifier behind a derived column), so the column the model chose
-    is filled in here — as a `{col:…}` token rather than the bare name, because
-    only the client holds the data package's display label for it.
+    `{entity}` / `{enc:…}` / `{field:…}` / `{ent:…}` / `{col:…}` tokens are left
+    for the frontend to resolve against the spec and bindings it is rendering,
+    so both texts follow a field swapped in the tweak panel. `{bind:…}` is the
+    leftover case: a placeholder with neither an encoding nor a tool parameter
+    to name (a cube measure), so there is nothing for the client to resolve it
+    against and the chosen value is filled in here.
     """
     from udiagent.generated_vis_tools import TOOL_TEXT
 
@@ -1717,11 +1732,7 @@ def resolve_text_templates(tool_name, bindings):
         return None
 
     def fill(text):
-        def to_col(match):
-            field = bindings.get(match.group(1))
-            return "{col:" + field + "}" if field else match.group(0)
-
-        return _BIND_TOKEN.sub(to_col, text)
+        return _BIND_TOKEN.sub(lambda m: bindings.get(m.group(1), m.group(0)), text)
 
     return {"title": fill(title), "summary": fill(summary)}
 

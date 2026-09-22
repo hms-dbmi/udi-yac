@@ -560,22 +560,42 @@ describe('renderTextTemplate — survival tokens', () => {
       humanizeFieldName(field),
   };
 
-  it('names any source by index, not just the first two', () => {
-    expect(renderTextTemplate('Survival curve for {entity2}', survival, labels)).toBe(
+  /** What the agent bound each template role to, as the store keeps it. */
+  const bindings = { entity2: 'Patient', entity2_field: 'protocol_name_and_arm' };
+
+  it('names the table a role binds, not a position in the source list', () => {
+    // `instantiate_template` drops a repeated source, so a spec can hold fewer
+    // sources than the template has roles — pcx's Patient carries both the
+    // stratifier and the censoring status. A positional token then resolves to
+    // nothing and the title silently falls back.
+    expect(renderTextTemplate('Survival curve for {ent:entity2}', survival, labels, bindings)).toBe(
       'Survival curve for Patients',
     );
   });
 
-  it('labels a column the agent resolved, wherever that column lives', () => {
-    // The stratifier is a column of the SECOND source, and only the package
-    // knows it is called "Protocol" rather than "Protocol Name And Arm".
+  it('labels the column a role binds, wherever that column lives', () => {
+    // Only the package knows it is "Protocol", not "Protocol Name And Arm",
+    // and only the bindings say which source declares it.
     expect(
       renderTextTemplate(
-        'Survival curves for {entity2} by {col:protocol_name_and_arm}',
+        'Survival curves for {ent:entity2} by {col:entity2_field}',
         survival,
         labels,
+        bindings,
       ),
     ).toBe('Survival curves for Patients by Protocol');
+  });
+
+  it('follows a stratifier swapped in the tweak panel', () => {
+    // The column is named by its BINDING, so re-resolving against the rebound
+    // args re-words the title. Frozen to the initial column, a chart tweaked
+    // from Protocol to Race kept saying Protocol.
+    expect(
+      renderTextTemplate('by {col:entity2_field}', survival, labels, {
+        ...bindings,
+        entity2_field: 'race',
+      }),
+    ).toBe('by Race');
   });
 
   it('humanizes when no package has loaded to say where the column lives', () => {
@@ -583,9 +603,13 @@ describe('renderTextTemplate — survival tokens', () => {
     // source that answers wins — a readable name either way, and the title
     // recomputes on render once labels land.
     const noPackage = { ...labels, hasField: undefined };
-    expect(renderTextTemplate('by {col:protocol_name_and_arm}', survival, noPackage)).toBe(
+    expect(renderTextTemplate('by {col:entity2_field}', survival, noPackage, bindings)).toBe(
       'by Protocol Name And Arm',
     );
+  });
+
+  it('gives up when a role names no binding at all', () => {
+    expect(renderTextTemplate('by {col:entity2_field}', survival, labels, {})).toBeUndefined();
   });
 
   it('does not let a derived stratum column name the split', () => {
