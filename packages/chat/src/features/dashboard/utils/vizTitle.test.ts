@@ -549,8 +549,12 @@ describe('renderTextTemplate — survival tokens', () => {
     ],
   });
 
+  /** Mirrors the store: `getFieldLabel` humanizes a miss rather than reporting
+   *  it, which is why `hasField` exists. Only Patient declares the column. */
   const labels = {
     getEntityLabel: (e: string) => ({ Patient: 'Patients' })[e] ?? e,
+    hasField: (entity: string, field: string) =>
+      entity === 'Patient' && field === 'protocol_name_and_arm',
     getFieldLabel: (entity: string, field: string) =>
       (entity === 'Patient' && field === 'protocol_name_and_arm' ? 'Protocol' : undefined) ??
       humanizeFieldName(field),
@@ -572,6 +576,16 @@ describe('renderTextTemplate — survival tokens', () => {
         labels,
       ),
     ).toBe('Survival curves for Patients by Protocol');
+  });
+
+  it('humanizes when no package has loaded to say where the column lives', () => {
+    // Before the package arrives there is no membership oracle, so the first
+    // source that answers wins — a readable name either way, and the title
+    // recomputes on render once labels land.
+    const noPackage = { ...labels, hasField: undefined };
+    expect(renderTextTemplate('by {col:protocol_name_and_arm}', survival, noPackage)).toBe(
+      'by Protocol Name And Arm',
+    );
   });
 
   it('does not let a derived stratum column name the split', () => {

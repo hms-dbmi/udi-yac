@@ -42,6 +42,9 @@ export interface VizTitleLabels {
   getEntityLabel?: (entity: string) => string;
   /** `udi:data_type` of a field, used to pick "categorized by" vs "colored by". */
   getFieldDataType?: (entity: string, field: string) => string | undefined;
+  /** Whether an entity declares a column, which `getFieldLabel` cannot say —
+   *  it humanizes a miss. Lets `{col:…}` find the right source. */
+  hasField?: (entity: string, field: string) => boolean;
   /** The package's categorical value labels, raw → label. Used to relabel axis
    *  and legend text; see `applyFieldLabels`. */
   valueLabels?: Record<string, string>;
@@ -199,21 +202,20 @@ export function renderTextTemplate(
   };
 
   /**
-   * A column the agent already resolved, labelled. Tries every source, because
-   * the column need not belong to the first one — a survival curve stratified
-   * by a related table's field names a column of that table. `getFieldLabel`
-   * humanizes what it cannot find rather than saying so, so a result that still
-   * looks humanized means "keep looking".
-   * ponytail: a package whose title for a field IS its humanized name reads the
-   * same either way, so the ambiguity costs nothing; a `hasField` callback on
-   * VizTitleLabels would settle it properly if that stops being true.
+   * A column the agent already resolved, labelled. Searches every source,
+   * because the column need not belong to the first one — a survival curve
+   * stratified by a related table's field names a column of that table, and
+   * only the package knows which source declares it.
    */
   const columnLabel = (field: string): string => {
     for (const source of sources) {
       const name = source?.name;
       if (!name) continue;
+      // With no membership oracle — no package loaded yet — the first source
+      // that answers is as good a guess as any.
+      if (labels.hasField && !labels.hasField(name, field)) continue;
       const label = labels.getFieldLabel?.(name, field);
-      if (label && label !== humanizeFieldName(field)) return label;
+      if (label) return label;
     }
     return humanizeFieldName(field);
   };

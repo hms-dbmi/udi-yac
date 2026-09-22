@@ -84,6 +84,11 @@ export interface DataPackageState {
   /** A field's declared `udi:data_type` (quantitative / ordinal / nominal).
    *  Available straight from the schema, unlike domains, which load from CSVs. */
   getFieldDataType: (entity: string, field: string) => string | undefined;
+  /** Whether a resource declares this column at all. `getFieldLabel` humanizes
+   *  what it cannot find rather than reporting the miss, so a caller holding a
+   *  column but not its entity — a chart title naming a column from one of
+   *  several joined sources — asks this first. */
+  hasField: (entity: string, field: string) => boolean;
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
@@ -346,6 +351,11 @@ export function createDataPackageStore() {
     getFieldDataType: (entity: string, field: string): string | undefined => {
       const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
       return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:data_type'];
+    },
+
+    hasField: (entity: string, field: string): boolean => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return !!resource?.schema?.fields?.some((f) => f.name === field);
     },
 
     setFilteredData: (entity: string, data: ExportRowSet) => {
