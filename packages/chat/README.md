@@ -48,6 +48,20 @@ To switch between bundled data packages and server-side (remote) mode, use `node
 - **Arquero** for client-side data loading and domain computation
 - **Vite** for dev server and library builds
 
+### Agent version pairing
+
+`udi-yac` and `udiagent` share a private contract beyond the HTTP shape: the
+agent sends a chart's title and summary **tokenized** (`{enc:x}`, `{ent:entity3}`,
+`{col:entity2_field}`, …) and this package resolves them against the spec, the
+template's bindings and the data package's display labels. The vocabulary grows
+as templates need new wording, so **run an agent no newer than your `udi-yac`**.
+
+A newer client against an older agent is always fine. The other way round, a
+token this version does not know makes the wording fall back to a title derived
+from the spec — readable, just less specific. Builds from before that fallback
+landed print the unknown token instead, so an old enough `udi-yac` shows
+`{col:entity2_field}` in a card title where a current one degrades cleanly.
+
 ## Architecture
 
 ### Dual Build Modes
