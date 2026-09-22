@@ -4252,40 +4252,40 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                               '{enc:color} category.'),
  'vis_051_line_sorted': ('Line chart of {enc:y} over {enc:x}',
                          'Displays how {enc:y} changes across {enc:x}, as a line.'),
- 'vis_052_line_survival': ('Survival curve for {entity1}',
-                           'Plots the share of subjects in {entity1} still event-free over time, from the start event '
-                           'to the end event.'),
- 'vis_053_line_survival_baseline': ('Survival curves for {entity1} by {enc:color}',
-                                    "Plots one curve per {enc:color} value, read from each subject's start event, so "
+ 'vis_052_line_survival': ('Survival curve for {entity2}',
+                           'Plots the share of {entity2} still event-free over time, from the start event to the end '
+                           "event, reading each subject's events from {entity1}."),
+ 'vis_053_line_survival_baseline': ('Survival curves for {entity2} by {bind:E1.F4}',
+                                    "Plots one curve per {bind:E1.F4} value, read from each subject's start event, so "
                                     'every subject falls in exactly one group.'),
- 'vis_054_line_survival_baseline_multivalue': ('Survival curves for {entity1} by each {enc:color} value',
-                                               "Expands the {enc:color} list on each subject's start event, so a "
+ 'vis_054_line_survival_baseline_multivalue': ('Survival curves for {entity2} by each {bind:E1.F4} value',
+                                               "Expands the {bind:E1.F4} list on each subject's start event, so a "
                                                'subject counts toward every value it listed then and the curves '
                                                'overlap.'),
- 'vis_055_line_survival_ever': ('Survival curves for {entity1} by every {enc:color} ever recorded',
-                                'A subject joins every group whose {enc:color} value appears anywhere on its timeline, '
-                                'so the curves overlap and do not add up to the whole cohort.'),
- 'vis_056_line_survival_ever_multivalue': ('Survival curves for {entity1} by every {enc:color} value ever listed',
-                                           'Expands the delimited {enc:color} column on every event, so a subject '
+ 'vis_055_line_survival_ever': ('Survival curves for {entity2} by every {bind:E1.F4} ever recorded',
+                                'A subject joins every group whose {bind:E1.F4} value appears anywhere on its '
+                                'timeline, so the curves overlap and do not add up to the whole cohort.'),
+ 'vis_056_line_survival_ever_multivalue': ('Survival curves for {entity2} by every {bind:E1.F4} value ever listed',
+                                           'Expands the delimited {bind:E1.F4} column on every event, so a subject '
                                            'joins each value listed at any point and the curves overlap.'),
- 'vis_057_line_survival_related': ('Survival curves for {entity1} by {enc:color}',
-                                   'Joins {entity1} to {entity2} on the subject id and plots one curve per {enc:color} '
+ 'vis_057_line_survival_related': ('Survival curves for {entity3} by {bind:E2.F}',
+                                   'Joins {entity1} to {entity2} on the subject id and plots one curve per {bind:E2.F} '
                                    'value; a subject with several {entity2} records joins a group for each.'),
- 'vis_058_line_survival_related_numeric': ('Survival curves for {entity1} by {enc:color}',
-                                           'Joins {entity1} to {entity2} on the subject id and cuts {enc:color} into '
+ 'vis_058_line_survival_related_numeric': ('Survival curves for {entity3} by {bind:E2.F}',
+                                           'Joins {entity1} to {entity2} on the subject id and cuts {bind:E2.F} into '
                                            'buckets at the supplied thresholds, one curve per bucket.'),
- 'vis_059_line_survival_related_multivalue': ('Survival curves for {entity1} by each {enc:color} value',
+ 'vis_059_line_survival_related_multivalue': ('Survival curves for {entity3} by each {bind:E2.F} value',
                                               'Joins {entity1} to {entity2} on the subject id, expands the delimited '
-                                              '{enc:color} column, and plots one curve per value; the curves overlap.'),
- 'vis_060_line_survival_ever_matching': ('Survival curves for {entity1} by whether {enc:color} was ever one of the '
+                                              '{bind:E2.F} column, and plots one curve per value; the curves overlap.'),
+ 'vis_060_line_survival_ever_matching': ('Survival curves for {entity3} by whether {bind:E2.F} was ever one of the '
                                          'named values',
                                          'Splits subjects by whether {entity2} ever records one of the named '
-                                         '{enc:color} values for them, against everyone else.'),
- 'vis_061_line_survival_presence': ('Survival curves for {entity1} by presence in {entity2}',
+                                         '{bind:E2.F} values for them, against everyone else.'),
+ 'vis_061_line_survival_presence': ('Survival curves for {entity3} by presence in {entity2}',
                                     'Splits subjects by whether {entity2} holds a row for them at all, giving two '
                                     'curves that together cover the whole cohort.'),
- 'vis_062_line_survival_presence_2x2': ('Survival curves for {entity1} by presence in {entity2} and {enc:color}',
-                                        'Splits subjects four ways — {entity2} only, {enc:color} only, both, neither — '
+ 'vis_062_line_survival_presence_2x2': ('Survival curves for {entity4} by presence in {entity2} and {entity3}',
+                                        'Splits subjects four ways — {entity2} only, {entity3} only, both, neither — '
                                         'by whether each table holds a row for them.'),
  'vis_063_line_survival_cube': ('Survival curve over {enc:x}',
                                 'Plots the share of subjects still event-free at each {enc:x} value, counted from the '

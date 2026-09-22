@@ -64,7 +64,12 @@ def test_text_templates_are_tokenized_for_the_frontend():
 
 
 def test_bind_tokens_resolve_to_the_chosen_column():
-    """A placeholder with no encoding (a binby input) is filled in server-side."""
+    """A placeholder with no encoding (a binby input) is filled in server-side.
+
+    As a `{col:…}` token, not the bare name: the column is fixed here, but its
+    display label lives in the client's data package, so "age_value" can still
+    reach the reader as "Age".
+    """
     from udiagent.vis_generate import resolve_text_templates
 
     from udiagent.generated_vis_tools import TOOL_DISPATCH
@@ -73,7 +78,7 @@ def test_bind_tokens_resolve_to_the_chosen_column():
     # ahead of this one renumbers it.
     tool = next(n for n in TOOL_DISPATCH if n.endswith("_histogram_distribution"))
     text = resolve_text_templates(tool, {"E": "donors", "F": "age_value"})
-    assert text["title"] == "Histogram of age_value"
+    assert text["title"] == "Histogram of {col:age_value}"
     assert "{bind:" not in text["summary"]
 
 

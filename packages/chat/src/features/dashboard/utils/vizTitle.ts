@@ -164,10 +164,16 @@ function makeLabeler(spec: UDIGrammar, labels: VizTitleLabels) {
  * it tokenized rather than filled in, so the text follows the chart: swap the x
  * field in the tweak panel and `{enc:x}` re-resolves on the next render.
  *
- *   {entity} {entity1} {entity2}   the source's display label
+ *   {entity} {entity1} {entity2}   the source's display label ({entityN} for
+ *                                  the Nth source — a survival curve names the
+ *                                  per-subject table, which is not the first)
  *   {entity:one}                   its singular, for "a point for each Donor"
  *   {enc:x}                        what encoding x plots — "Average Age"
  *   {field:x}                      the column behind it  — "Age"
+ *   {col:weight_value}             a column the agent already resolved, labelled
+ *                                  here — no encoding names it, because it only
+ *                                  feeds one (a binby input, a stratifier behind
+ *                                  a derived `stratum`)
  *
  * Returns undefined if any token cannot be resolved, so the caller falls back
  * to the generic builder rather than showing a half-filled sentence.
@@ -192,6 +198,26 @@ export function renderTextTemplate(
     return singular ? singularizeLabel(label) : label;
   };
 
+  /**
+   * A column the agent already resolved, labelled. Tries every source, because
+   * the column need not belong to the first one — a survival curve stratified
+   * by a related table's field names a column of that table. `getFieldLabel`
+   * humanizes what it cannot find rather than saying so, so a result that still
+   * looks humanized means "keep looking".
+   * ponytail: a package whose title for a field IS its humanized name reads the
+   * same either way, so the ambiguity costs nothing; a `hasField` callback on
+   * VizTitleLabels would settle it properly if that stops being true.
+   */
+  const columnLabel = (field: string): string => {
+    for (const source of sources) {
+      const name = source?.name;
+      if (!name) continue;
+      const label = labels.getFieldLabel?.(name, field);
+      if (label && label !== humanizeFieldName(field)) return label;
+    }
+    return humanizeFieldName(field);
+  };
+
   const byEncoding = new Map<string, MappingLike>();
   for (const layer of toLayers(spec.representation)) {
     for (const m of toMappings(layer?.mapping)) {
@@ -206,9 +232,9 @@ export function renderTextTemplate(
     if (kind === 'entity')
       value =
         entityAt(0, one) ?? (one ? singularizeLabel(entityLabel ?? '') : entityLabel) ?? undefined;
-    else if (kind === 'entity1') value = entityAt(0, one);
-    else if (kind === 'entity2') value = entityAt(1, one);
+    else if (/^entity[1-9]$/.test(kind)) value = entityAt(Number(kind.slice(6)) - 1, one);
     else if (kind === 'enc' && arg) value = label(byEncoding.get(arg) ?? {}) ?? undefined;
+    else if (kind === 'col' && arg) value = columnLabel(arg);
     else if (kind === 'field' && arg) {
       const m = byEncoding.get(arg);
       // The column behind an aggregated encoding, so prose can name it while
@@ -217,7 +243,13 @@ export function renderTextTemplate(
       const rollup = m?.field ? rollupOutputs[m.field] : undefined;
       const field = rollup?.field ?? m?.field;
       value = field ? fieldLabel(field) : undefined;
-    } else return whole;
+    } else {
+      // A token this client has no branch for — an older build against a newer
+      // agent. Unresolved rather than literal: a reader gets the deterministic
+      // built title, never "{col:protocol_name_and_arm}".
+      unresolved = true;
+      return whole;
+    }
     if (!value) unresolved = true;
     return value ?? whole;
   });

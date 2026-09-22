@@ -521,9 +521,65 @@ describe('renderTextTemplate', () => {
     expect(renderTextTemplate('', scatter())).toBeUndefined();
   });
 
-  it('leaves unrecognised tokens alone', () => {
-    expect(renderTextTemplate('Chart of {enc:x} {mystery}', scatter())).toBe(
-      'Chart of Age {mystery}',
+  it('gives up on a token it does not know rather than printing it', () => {
+    // An older client against a newer agent: this used to render the brace and
+    // all straight into a card title. Falling back hands the reader the built
+    // title instead, which is always sayable.
+    expect(renderTextTemplate('Chart of {enc:x} {mystery}', scatter())).toBeUndefined();
+  });
+});
+
+describe('renderTextTemplate — survival tokens', () => {
+  /** Two sources: the event log first, the per-subject table second. A survival
+   *  curve is about the subjects, so its text names the second one. */
+  const survival = spec({
+    source: [
+      { name: 'Event', source: 'event' },
+      { name: 'Patient', source: 'patient' },
+    ],
+    transformation: [{ rollup: { stratum: { op: 'max', field: 'baseline stratum' } } }],
+    representation: [
+      {
+        mark: 'line',
+        mapping: [
+          { encoding: 'x', field: 'survival years', type: 'quantitative' },
+          { encoding: 'color', field: 'stratum', type: 'nominal' },
+        ],
+      },
+    ],
+  });
+
+  const labels = {
+    getEntityLabel: (e: string) => ({ Patient: 'Patients' })[e] ?? e,
+    getFieldLabel: (entity: string, field: string) =>
+      (entity === 'Patient' && field === 'protocol_name_and_arm' ? 'Protocol' : undefined) ??
+      humanizeFieldName(field),
+  };
+
+  it('names any source by index, not just the first two', () => {
+    expect(renderTextTemplate('Survival curve for {entity2}', survival, labels)).toBe(
+      'Survival curve for Patients',
+    );
+  });
+
+  it('labels a column the agent resolved, wherever that column lives', () => {
+    // The stratifier is a column of the SECOND source, and only the package
+    // knows it is called "Protocol" rather than "Protocol Name And Arm".
+    expect(
+      renderTextTemplate(
+        'Survival curves for {entity2} by {col:protocol_name_and_arm}',
+        survival,
+        labels,
+      ),
+    ).toBe('Survival curves for Patients by Protocol');
+  });
+
+  it('does not let a derived stratum column name the split', () => {
+    // What the reported title did: {enc:color} resolves to the rollup behind
+    // the derived `stratum`, giving "Maximum Baseline Stratum". The agent now
+    // sends {col:…} for a stratifier, but pin what {enc:color} would have said.
+    expect(renderTextTemplate('by {enc:color}', survival, labels)).toBe(
+      'by Maximum Baseline Stratum',
     );
   });
 });

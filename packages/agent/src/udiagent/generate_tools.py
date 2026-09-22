@@ -329,7 +329,13 @@ def _extract_encoding_info(spec_template: str) -> dict[str, dict]:
     return placeholder_encoding_info(spec_template)
 
 
-_ENTITY_TOKENS = {"E": "{entity}", "E1": "{entity1}", "E2": "{entity2}"}
+_ENTITY_TOKENS = {
+    "E": "{entity}",
+    "E1": "{entity1}",
+    "E2": "{entity2}",
+    "E3": "{entity3}",
+    "E4": "{entity4}",
+}
 
 
 def _tokenize_text_template(text: str, encoding_info: dict, kind: str) -> str:
@@ -366,7 +372,11 @@ def _tokenize_text_template(text: str, encoding_info: dict, kind: str) -> str:
             return token
         info = encoding_info.get(base)
         encodings = info.get("encodings", []) if info else []
-        if not encodings:
+        # A placeholder that only *feeds* a drawn column — a stratifier behind a
+        # derived `stratum` — has no channel whose label names it: "{enc:color}"
+        # would resolve to the derivation ("Maximum Stratum"). Name the bound
+        # column instead.
+        if not encodings or not info.get("direct"):
             return "{bind:" + base + "}"
         encoding = encodings[0]
         # A non-aggregated encoding plots the column directly, so both kinds
