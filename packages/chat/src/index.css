@@ -176,10 +176,6 @@
 /* Scoped to our root: these were on `*`, `body` and `html`, which restyled a
    host app's every page (background, text color, border color, typeface). */
 @layer base {
-  .udi-yac,
-  .udi-yac * {
-    @apply udi:border-border udi:outline-ring/50;
-  }
   .udi-yac {
     @apply udi:bg-background udi:font-sans udi:text-foreground;
   }
@@ -404,6 +400,20 @@
 
   .udi-yac [hidden]:where(:not([hidden='until-found'])) {
     display: none;
+  }
+
+  /*
+   * After the preflight above, never before it. `border: 0 solid` is a
+   * shorthand, so it resets border-color to its initial `currentColor`, and
+   * both rules match `.udi-yac, .udi-yac *` at the same specificity — whichever
+   * is written last wins. Ahead of it, every border that does not name its own
+   * color renders in the foreground: the chat panel's `udi:border-r` came out
+   * black. Stock Tailwind gets this ordering for free, by importing preflight
+   * before the app's own base layer.
+   */
+  .udi-yac,
+  .udi-yac * {
+    @apply udi:border-border udi:outline-ring/50;
   }
 }
 
