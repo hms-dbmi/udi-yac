@@ -653,12 +653,25 @@ def placeholder_encoding_info(spec_template):
     except (json.JSONDecodeError, TypeError):
         return info
 
-    def record(base, channel, declared_type, aggregated=False):
+    def record(base, channel, declared_type, aggregated=False, direct=False):
         entry = info.setdefault(
-            base, {"encodings": [], "declared_type": None, "aggregated": False}
+            base,
+            {
+                "encodings": [],
+                "declared_type": None,
+                "aggregated": False,
+                "direct": False,
+            },
         )
         if isinstance(channel, str) and channel not in entry["encodings"]:
             entry["encodings"].append(channel)
+        # Whether the placeholder IS the drawn column or merely feeds one. Prose
+        # naming the channel ("{enc:color}") is right only for the former: a
+        # stratifier reaches colour through a derived `stratum` column, so the
+        # channel's own label names the derivation, not the column the caller
+        # chose. See `_tokenize_text_template`.
+        if direct:
+            entry["direct"] = True
         if declared_type and entry["declared_type"] is None:
             entry["declared_type"] = declared_type
         # The placeholder sits inside a rollup's output name ("average <F1>")
@@ -695,7 +708,11 @@ def placeholder_encoding_info(spec_template):
                 aggregated = re.fullmatch(PLACEHOLDER, value) is None
                 for placeholder in re.findall(PLACEHOLDER, value):
                     record(
-                        placeholder.split(":")[0], channel, declared_type, aggregated
+                        placeholder.split(":")[0],
+                        channel,
+                        declared_type,
+                        aggregated,
+                        direct=True,
                     )
 
     for transform in spec.get("transformation") or []:
@@ -762,6 +779,44 @@ def _extract_xy_placeholders(spec_template):
                 if match:
                     result[enc] = match.group(1)
     return result
+
+
+def _rollup_shadowed_keys(spec_template):
+    """(groupby key, rollup output key) binding pairs a template can collide on.
+
+    A rollup whose output name is the key it grouped by writes over that key —
+    Arquero's rollup overwrites it, and SQL would emit the name twice, which is
+    what later reads as "Column '<k>' is ambiguous". The survival templates roll
+    the stratifier's baseline value up under the stratifier's own name, so the
+    pair is (subject key, stratifier): binding both to one column collapses the
+    chart to a single stratum per subject.
+    """
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    def key_of(text):
+        match = re.fullmatch(PLACEHOLDER, text) if isinstance(text, str) else None
+        return match.group(1).split(":")[0] if match else None
+
+    pairs = []
+    pending = []
+    for step in spec.get("transformation") or []:
+        if not isinstance(step, dict):
+            continue
+        if "groupby" in step:
+            gb = step["groupby"]
+            pending = [gb] if isinstance(gb, str) else list(gb)
+        elif "rollup" in step:
+            for out in step["rollup"]:
+                out_key = key_of(out)
+                for group in pending:
+                    group_key = key_of(group)
+                    if group_key and out_key and group_key != out_key:
+                        pairs.append((group_key, out_key))
+            pending = []
+    return pairs
 
 
 def _entity_for_binding_key(key, bindings):
@@ -1214,6 +1269,23 @@ def validate_bindings(
                 f"for a visualization (max 50). Choose a different encoding or visualization."
             )
 
+    # A rollup output bound to the same column as the key it groups by is a
+    # degenerate chart, not just the SQL hazard of one name on two columns: the
+    # rollup overwrites the key, so a survival curve stratified by its own
+    # subject id draws one stratum per subject. Below the cardinality cap, whose
+    # message is the better one whenever it applies — this is here for the field
+    # the cap exempts, the one a `grouping` was supplied for, which is how a
+    # subject id got through in the first place.
+    for group_key, out_key in _rollup_shadowed_keys(spec_template):
+        group_field = bindings.get(group_key)
+        if group_field and group_field == bindings.get(out_key):
+            errors.append(
+                f"'{out_key}' and '{group_key}' are both set to '{group_field}', "
+                f"but '{group_key}' is the column the chart groups rows by, so "
+                f"every group would hold one value. Choose a different field "
+                f"for '{out_key}'."
+            )
+
     # A continuous stratifier with no grouping is not a chart: it has no
     # categories to draw a curve for, so it would draw one per distinct value —
     # a thousand curves of one subject each, which renders, takes a while, and
@@ -1634,8 +1706,9 @@ def resolve_text_templates(tool_name, bindings):
     `{entity}` / `{enc:…}` / `{field:…}` tokens are left for the frontend to
     resolve against the spec it is rendering, so both texts follow a field
     swapped in the tweak panel. `{bind:…}` has no encoding to hang on (a binby
-    input, a sort-only column) and is substituted here with the column the model
-    actually chose — those fields are not swappable, so a static name is right.
+    input, a stratifier behind a derived column), so the column the model chose
+    is filled in here — as a `{col:…}` token rather than the bare name, because
+    only the client holds the data package's display label for it.
     """
     from udiagent.generated_vis_tools import TOOL_TEXT
 
@@ -1644,7 +1717,11 @@ def resolve_text_templates(tool_name, bindings):
         return None
 
     def fill(text):
-        return _BIND_TOKEN.sub(lambda m: bindings.get(m.group(1), m.group(0)), text)
+        def to_col(match):
+            field = bindings.get(match.group(1))
+            return "{col:" + field + "}" if field else match.group(0)
+
+        return _BIND_TOKEN.sub(to_col, text)
 
     return {"title": fill(title), "summary": fill(summary)}
 
