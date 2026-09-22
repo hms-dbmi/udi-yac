@@ -9,6 +9,7 @@
  * directly. This is only how the bundled standalone app is configured.
  */
 
+import type { ReadOnlyOption } from '@/stores/globalStore';
 import { HUBMAP_DATAPACKAGE_URL } from '@/app/envVars';
 
 /** A blank value means "unset". CI interpolates `""` for an unset repo
@@ -36,6 +37,13 @@ export function bool(raw: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
+/** `readOnly` is tri-state: the boolean spellings above, plus `locked` for
+ *  read-only with no way back to the chat. */
+export function readOnly(raw: string | undefined): ReadOnlyOption {
+  if (raw?.trim().toLowerCase() === 'locked') return 'locked';
+  return bool(raw, false);
+}
+
 /** Parsed standalone-app config. Read by `App.tsx`; nothing else should touch
  *  `import.meta.env` directly. */
 export const env = {
@@ -44,4 +52,6 @@ export const env = {
   remotePackage: str(import.meta.env.VITE_UDI_REMOTE_PACKAGE),
   requireApiKey: bool(import.meta.env.VITE_UDI_REQUIRE_API_KEY, true),
   model: str(import.meta.env.VITE_UDI_MODEL),
+  readOnly: readOnly(import.meta.env.VITE_UDI_READ_ONLY),
+  initialSessionUrl: str(import.meta.env.VITE_UDI_INITIAL_SESSION),
 };
