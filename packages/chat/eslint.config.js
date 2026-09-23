@@ -62,6 +62,7 @@ const independentModules = createIndependentModules({
         // Cross-feature: barrels only.
         'src/features/*/index.ts',
         'src/utils/**',
+        'src/hooks/**',
         // The one part of the composition root features may reach. Stores are
         // vanilla and instantiated per-provider here, so a component consumes
         // them through this context rather than importing a store module.
@@ -96,6 +97,14 @@ const independentModules = createIndependentModules({
       name: 'Shared utilities',
       pattern: 'src/utils/**',
       allowImportsFrom: ['src/utils/**', '{sharedLayers}', 'src/features/*/index.ts'],
+      allowExternalImports: true,
+    },
+    // Shared hooks: like utils, but not in sharedLayers since they build on
+    // utils, which a leaf layer such as types must not reach.
+    {
+      name: 'Shared hooks',
+      pattern: 'src/hooks/**',
+      allowImportsFrom: ['src/hooks/**', 'src/utils/**', '{sharedLayers}'],
       allowExternalImports: true,
     },
     // Shared types — leaf layer, no feature reach.

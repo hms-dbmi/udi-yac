@@ -50,6 +50,11 @@ const FORBIDDEN: [name: string, file: string, code: string][] = [
     'src/types/probe.ts',
     "import { buildVizTitle } from '@/features/dashboard';",
   ],
+  [
+    'a shared hook depending on a feature internal',
+    'src/hooks/probe.ts',
+    "import { buildVizTitle } from '@/features/dashboard/utils/vizTitle';",
+  ],
 ];
 
 const ALLOWED: [name: string, file: string, code: string][] = [
@@ -72,6 +77,11 @@ const ALLOWED: [name: string, file: string, code: string][] = [
     'a feature using a shared component',
     'src/features/chat/components/probe.tsx',
     "import { FieldTooltipContent } from '@/components/FieldTooltipContent';",
+  ],
+  [
+    'a feature using a shared hook',
+    'src/features/chat/components/probe.ts',
+    "import { useJumpTarget } from '@/hooks/useJumpTarget';",
   ],
   [
     'the composition root reaching into a feature internal',
