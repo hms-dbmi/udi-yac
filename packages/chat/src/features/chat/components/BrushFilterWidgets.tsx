@@ -36,7 +36,7 @@ function BrushFilterWidget({ brush }: { brush: BrushFilter }) {
 
   if (selection.type === 'interval') {
     return (
-      <div className="space-y-3 p-2">
+      <div className="udi:space-y-3 udi:p-2">
         {fields.map((_, idx) => (
           <IntervalFilterComponent
             key={idx}
@@ -52,7 +52,7 @@ function BrushFilterWidget({ brush }: { brush: BrushFilter }) {
   }
 
   return (
-    <div className="p-2">
+    <div className="udi:p-2">
       <PointFilterComponent
         dataSelection={selection}
         tweakable={false}
@@ -78,8 +78,8 @@ export function BrushFilterWidgets() {
   return (
     <>
       {brushFilters.map((brush) => (
-        <div key={brush.id} data-message className="flex scroll-mt-6 justify-start">
-          <div className="max-w-[85%] min-w-0 rounded-lg bg-muted px-3 py-2 wrap-break-word">
+        <div key={brush.id} data-message className="udi:flex udi:scroll-mt-6 udi:justify-start">
+          <div className="udi:max-w-[85%] udi:min-w-0 udi:rounded-lg udi:bg-muted udi:px-3 udi:py-2 udi:wrap-break-word">
             <BrushFilterWidget brush={brush} />
           </div>
         </div>

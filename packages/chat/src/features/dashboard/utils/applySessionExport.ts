@@ -1,7 +1,7 @@
 import type { StoreApi } from 'zustand';
-import type { ConversationState } from '@/features/chat/stores/conversationStore';
-import type { DashboardState } from '@/features/dashboard/stores/dashboardStore';
-import type { SessionExport } from '@/features/dashboard/utils/dashboardSerialization';
+import type { ConversationState } from '@/features/chat';
+import type { DashboardState } from '../stores/dashboardStore';
+import type { SessionExport } from './dashboardSerialization';
 
 interface SessionTargetStores {
   conversation: StoreApi<ConversationState>;

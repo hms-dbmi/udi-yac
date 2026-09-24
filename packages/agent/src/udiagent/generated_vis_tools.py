@@ -4214,21 +4214,21 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_034_table_count': ('Table of the number of {entity}',
                          'Displays the total number of {entity} as a single figure.'),
  'vis_035_table_raw': ('Table of {entity}', 'Lists each {entity:one} record with all of its fields.'),
- 'vis_036_table_join': ('Table of {entity1} and {entity2}',
-                        'Lists each {entity1:one} record alongside the related {entity2:one} records it joins to.'),
- 'vis_037_table_join_count_ranked': ('Table of {entity2} by the number of {entity1}',
-                                     'Ranks each {entity2:one} by how many {entity1:one} records it has, with a bar in '
-                                     'each row showing the count.'),
+ 'vis_036_table_join': ('Table of {entity1} and {ent:entity2}',
+                        'Lists each {entity1:one} record alongside the related {ent:entity2:one} records it joins to.'),
+ 'vis_037_table_join_count_ranked': ('Table of {ent:entity2} by the number of {entity1}',
+                                     'Ranks each {ent:entity2:one} by how many {entity1:one} records it has, with a '
+                                     'bar in each row showing the count.'),
  'vis_038_table_ranked': ('Table of {entity} by {enc:x}',
                           'Ranks {entity} from the largest {enc:x} down, with a bar in each row showing the value.'),
- 'vis_039_table_join_max_ranked': ('Table of {entity2} by largest {enc:x}',
-                                   'Ranks each {entity2:one} by the largest {field:x} among its {entity1:one} records, '
-                                   'with a bar in each row showing the value.'),
- 'vis_040_table_ranked': ('Table of {entity} by {enc:color}',
-                          'Ranks {entity} from the smallest {enc:color} up, highlighting the smallest value.'),
- 'vis_041_table_join_min_ranked': ('Table of {entity2} by smallest {enc:color}',
-                                   'Ranks each {entity2:one} by the smallest {field:color} among its {entity1:one} '
-                                   'records, highlighting the smallest value.'),
+ 'vis_039_table_join_max_ranked': ('Table of {ent:entity2} by largest {enc:x}',
+                                   'Ranks each {ent:entity2:one} by the largest {field:x} among its {entity1:one} '
+                                   'records, with a bar in each row showing the value.'),
+ 'vis_040_table_ranked': ('Table of {entity} by {col:field}',
+                          'Ranks {entity} from the smallest {col:field} up, highlighting the smallest value.'),
+ 'vis_041_table_join_min_ranked': ('Table of {ent:entity2} by smallest {col:entity1_field}',
+                                   'Ranks each {ent:entity2:one} by the smallest {col:entity1_field} among its '
+                                   '{entity1:one} records, highlighting the smallest value.'),
  'vis_042_table_sorted': ('Table of {entity} sorted by {enc:x}',
                           'Lists {entity} ordered by {enc:x}, with a bar in each row showing the value.'),
  'vis_043_table_min': ('Table of the {enc:text} range',
@@ -4239,8 +4239,8 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_045_table_range': ('Table of the {enc:text} range by {enc:text}',
                          'Lists each {enc:text} category with the smallest and largest {field:text} among its '
                          '{entity}, drawn as a range bar.'),
- 'vis_046_table_ranked_mode': ('Table of the number of {entity} by {enc:color}',
-                               'Ranks every {enc:color} value by how many {entity} have it, highlighting the most '
+ 'vis_046_table_ranked_mode': ('Table of the number of {entity} by {enc:text}',
+                               'Ranks every {enc:text} value by how many {entity} have it, highlighting the most '
                                'frequent.'),
  'vis_047_table_sum': ('Table of {enc:text}', 'Displays the overall {enc:text} as a single figure.'),
  'vis_048_table_sorted': ('Table of {enc:x} by {enc:text}',
@@ -4252,41 +4252,45 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                               '{enc:color} category.'),
  'vis_051_line_sorted': ('Line chart of {enc:y} over {enc:x}',
                          'Displays how {enc:y} changes across {enc:x}, as a line.'),
- 'vis_052_line_survival': ('Survival curve for {entity1}',
-                           'Plots the share of subjects in {entity1} still event-free over time, from the start event '
-                           'to the end event.'),
- 'vis_053_line_survival_baseline': ('Survival curves for {entity1} by {enc:color}',
-                                    "Plots one curve per {enc:color} value, read from each subject's start event, so "
-                                    'every subject falls in exactly one group.'),
- 'vis_054_line_survival_baseline_multivalue': ('Survival curves for {entity1} by each {enc:color} value',
-                                               "Expands the {enc:color} list on each subject's start event, so a "
-                                               'subject counts toward every value it listed then and the curves '
+ 'vis_052_line_survival': ('Survival curve for {ent:entity2}',
+                           'Plots the share of {ent:entity2} still event-free over time, from the start event to the '
+                           "end event, reading each subject's events from {entity1}."),
+ 'vis_053_line_survival_baseline': ('Survival curves for {ent:entity2} by {col:entity1_field4}',
+                                    "Plots one curve per {col:entity1_field4} value, read from each subject's start "
+                                    'event, so every subject falls in exactly one group.'),
+ 'vis_054_line_survival_baseline_multivalue': ('Survival curves for {ent:entity2} by each {col:entity1_field4} value',
+                                               "Expands the {col:entity1_field4} list on each subject's start event, "
+                                               'so a subject counts toward every value it listed then and the curves '
                                                'overlap.'),
- 'vis_055_line_survival_ever': ('Survival curves for {entity1} by every {enc:color} ever recorded',
-                                'A subject joins every group whose {enc:color} value appears anywhere on its timeline, '
-                                'so the curves overlap and do not add up to the whole cohort.'),
- 'vis_056_line_survival_ever_multivalue': ('Survival curves for {entity1} by every {enc:color} value ever listed',
-                                           'Expands the delimited {enc:color} column on every event, so a subject '
-                                           'joins each value listed at any point and the curves overlap.'),
- 'vis_057_line_survival_related': ('Survival curves for {entity1} by {enc:color}',
-                                   'Joins {entity1} to {entity2} on the subject id and plots one curve per {enc:color} '
-                                   'value; a subject with several {entity2} records joins a group for each.'),
- 'vis_058_line_survival_related_numeric': ('Survival curves for {entity1} by {enc:color}',
-                                           'Joins {entity1} to {entity2} on the subject id and cuts {enc:color} into '
-                                           'buckets at the supplied thresholds, one curve per bucket.'),
- 'vis_059_line_survival_related_multivalue': ('Survival curves for {entity1} by each {enc:color} value',
-                                              'Joins {entity1} to {entity2} on the subject id, expands the delimited '
-                                              '{enc:color} column, and plots one curve per value; the curves overlap.'),
- 'vis_060_line_survival_ever_matching': ('Survival curves for {entity1} by whether {enc:color} was ever one of the '
-                                         'named values',
-                                         'Splits subjects by whether {entity2} ever records one of the named '
-                                         '{enc:color} values for them, against everyone else.'),
- 'vis_061_line_survival_presence': ('Survival curves for {entity1} by presence in {entity2}',
-                                    'Splits subjects by whether {entity2} holds a row for them at all, giving two '
+ 'vis_055_line_survival_ever': ('Survival curves for {ent:entity2} by every {col:entity1_field4} ever recorded',
+                                'A subject joins every group whose {col:entity1_field4} value appears anywhere on its '
+                                'timeline, so the curves overlap and do not add up to the whole cohort.'),
+ 'vis_056_line_survival_ever_multivalue': ('Survival curves for {ent:entity2} by every {col:entity1_field4} value ever '
+                                           'listed',
+                                           'Expands the delimited {col:entity1_field4} column on every event, so a '
+                                           'subject joins each value listed at any point and the curves overlap.'),
+ 'vis_057_line_survival_related': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+                                   'Joins {entity1} to {ent:entity2} on the subject id and plots one curve per '
+                                   '{col:entity2_field} value; a subject with several {ent:entity2} records joins a '
+                                   'group for each.'),
+ 'vis_058_line_survival_related_numeric': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+                                           'Joins {entity1} to {ent:entity2} on the subject id and cuts '
+                                           '{col:entity2_field} into buckets at the supplied thresholds, one curve per '
+                                           'bucket.'),
+ 'vis_059_line_survival_related_multivalue': ('Survival curves for {ent:entity3} by each {col:entity2_field} value',
+                                              'Joins {entity1} to {ent:entity2} on the subject id, expands the '
+                                              'delimited {col:entity2_field} column, and plots one curve per value; '
+                                              'the curves overlap.'),
+ 'vis_060_line_survival_ever_matching': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+                                         'Splits subjects by whether {ent:entity2} ever records one of the named '
+                                         '{col:entity2_field} values for them, against everyone else.'),
+ 'vis_061_line_survival_presence': ('Survival curves for {ent:entity3} by presence in {ent:entity2}',
+                                    'Splits subjects by whether {ent:entity2} holds a row for them at all, giving two '
                                     'curves that together cover the whole cohort.'),
- 'vis_062_line_survival_presence_2x2': ('Survival curves for {entity1} by presence in {entity2} and {enc:color}',
-                                        'Splits subjects four ways — {entity2} only, {enc:color} only, both, neither — '
-                                        'by whether each table holds a row for them.'),
+ 'vis_062_line_survival_presence_2x2': ('Survival curves for {ent:entity4} by presence in {ent:entity2} and '
+                                        '{ent:entity3}',
+                                        'Splits subjects four ways — {ent:entity2} only, {ent:entity3} only, both, '
+                                        'neither — by whether each table holds a row for them.'),
  'vis_063_line_survival_cube': ('Survival curve over {enc:x}',
                                 'Plots the share of subjects still event-free at each {enc:x} value, counted from the '
                                 "cube's measure; censored time points carry a tick."),
@@ -4305,8 +4309,9 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_068_grouped_scatter_by_color': ('Scatterplot of {enc:x} and {enc:y} by {enc:color}',
                                       'Displays a point for each {entity:one}, positioned by {enc:x} and {enc:y} and '
                                       'coloured by {enc:color}.'),
- 'vis_069_histogram_distribution': ('Histogram of {bind:F}',
-                                    'Displays how many {entity} fall into each range of {bind:F}, as adjacent bars.'),
+ 'vis_069_histogram_distribution': ('Histogram of {col:field}',
+                                    'Displays how many {entity} fall into each range of {col:field}, as adjacent '
+                                    'bars.'),
  'vis_070_area_density': ('Density plot of {enc:x}',
                           'Displays where {entity} concentrate across {enc:x}, as a smooth curve.'),
  'vis_071_dot_distribution': ('Dot plot of {enc:x}',

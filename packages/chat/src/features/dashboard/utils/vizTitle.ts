@@ -42,6 +42,9 @@ export interface VizTitleLabels {
   getEntityLabel?: (entity: string) => string;
   /** `udi:data_type` of a field, used to pick "categorized by" vs "colored by". */
   getFieldDataType?: (entity: string, field: string) => string | undefined;
+  /** Whether an entity declares a column, which `getFieldLabel` cannot say —
+   *  it humanizes a miss. Lets `{col:…}` find the right source. */
+  hasField?: (entity: string, field: string) => boolean;
   /** The package's categorical value labels, raw → label. Used to relabel axis
    *  and legend text; see `applyFieldLabels`. */
   valueLabels?: Record<string, string>;
@@ -164,10 +167,20 @@ function makeLabeler(spec: UDIGrammar, labels: VizTitleLabels) {
  * it tokenized rather than filled in, so the text follows the chart: swap the x
  * field in the tweak panel and `{enc:x}` re-resolves on the next render.
  *
- *   {entity} {entity1} {entity2}   the source's display label
+ *   {entity} {entity1}             the first source's display label
  *   {entity:one}                   its singular, for "a point for each Donor"
  *   {enc:x}                        what encoding x plots — "Average Age"
  *   {field:x}                      the column behind it  — "Age"
+ *   {ent:entity3}                  the table a template ROLE binds, labelled —
+ *                                  positions do not work, because a repeated
+ *                                  source is dropped from the spec
+ *   {col:entity1_field4}           the column a role binds, labelled — no
+ *                                  encoding names it, because it only feeds one
+ *                                  (a stratifier behind a derived `stratum`)
+ *
+ * `{ent:…}` and `{col:…}` name a tool parameter and resolve against `bindings`,
+ * so both follow a field swapped in the tweak panel. `{entity2}`+ are the older
+ * positional spelling, still read for dashboards saved before this.
  *
  * Returns undefined if any token cannot be resolved, so the caller falls back
  * to the generic builder rather than showing a half-filled sentence.
@@ -176,6 +189,7 @@ export function renderTextTemplate(
   template: string,
   spec: UDIGrammar,
   labels: VizTitleLabels = {},
+  bindings: Record<string, unknown> = {},
 ): string | undefined {
   if (!template) return undefined;
   const { entityLabel, label, fieldLabel, rollupOutputs } = makeLabeler(spec, labels);
@@ -192,6 +206,25 @@ export function renderTextTemplate(
     return singular ? singularizeLabel(label) : label;
   };
 
+  /**
+   * A column the agent already resolved, labelled. Searches every source,
+   * because the column need not belong to the first one — a survival curve
+   * stratified by a related table's field names a column of that table, and
+   * only the package knows which source declares it.
+   */
+  const columnLabel = (field: string): string => {
+    for (const source of sources) {
+      const name = source?.name;
+      if (!name) continue;
+      // With no membership oracle — no package loaded yet — the first source
+      // that answers is as good a guess as any.
+      if (labels.hasField && !labels.hasField(name, field)) continue;
+      const label = labels.getFieldLabel?.(name, field);
+      if (label) return label;
+    }
+    return humanizeFieldName(field);
+  };
+
   const byEncoding = new Map<string, MappingLike>();
   for (const layer of toLayers(spec.representation)) {
     for (const m of toMappings(layer?.mapping)) {
@@ -206,10 +239,25 @@ export function renderTextTemplate(
     if (kind === 'entity')
       value =
         entityAt(0, one) ?? (one ? singularizeLabel(entityLabel ?? '') : entityLabel) ?? undefined;
-    else if (kind === 'entity1') value = entityAt(0, one);
-    else if (kind === 'entity2') value = entityAt(1, one);
-    else if (kind === 'enc' && arg) value = label(byEncoding.get(arg) ?? {}) ?? undefined;
-    else if (kind === 'field' && arg) {
+    else if (/^entity[1-9]$/.test(kind)) value = entityAt(Number(kind.slice(6)) - 1, one);
+    else if (kind === 'ent' && arg) {
+      // Named by the tool parameter that binds it, not by position: the agent
+      // drops a repeated source, so two template roles on one table leave a
+      // spec with fewer sources than roles and a positional token resolves to
+      // nothing. `arg` may carry a `:one` suffix asking for the singular.
+      const [param, modifier] = arg.split(':');
+      const table = bindings[param];
+      if (typeof table === 'string' && table) {
+        const entity = labels.getEntityLabel?.(table) ?? humanizeFieldName(table);
+        value = modifier === 'one' ? singularizeLabel(entity) : entity;
+      }
+    } else if (kind === 'enc' && arg) value = label(byEncoding.get(arg) ?? {}) ?? undefined;
+    else if (kind === 'col' && arg) {
+      // Likewise the binding, not the column it resolved to when the chart was
+      // first built — the stratifier is tweakable, so this has to re-resolve.
+      const column = bindings[arg];
+      value = typeof column === 'string' && column ? columnLabel(column) : undefined;
+    } else if (kind === 'field' && arg) {
       const m = byEncoding.get(arg);
       // The column behind an aggregated encoding, so prose can name it while
       // spelling the operation out itself — "the mean Age", not "the mean
@@ -217,7 +265,13 @@ export function renderTextTemplate(
       const rollup = m?.field ? rollupOutputs[m.field] : undefined;
       const field = rollup?.field ?? m?.field;
       value = field ? fieldLabel(field) : undefined;
-    } else return whole;
+    } else {
+      // A token this client has no branch for — an older build against a newer
+      // agent. Unresolved rather than literal: a reader gets the deterministic
+      // built title, never "{col:protocol_name_and_arm}".
+      unresolved = true;
+      return whole;
+    }
     if (!value) unresolved = true;
     return value ?? whole;
   });
@@ -245,13 +299,27 @@ export function applyFieldLabels(spec: UDIGrammar, labels: VizTitleLabels = {}):
   const valueLabels = labels.valueLabels;
   const hasValueLabels = !!valueLabels && Object.keys(valueLabels).length > 0;
 
+  const sourceLayers = toLayers(spec.representation);
+  // Layers share a scale, and Vega merges a layered axis title from the
+  // *explicit* titles only — an implicit field-derived one is dropped. A title
+  // invented here would therefore join the author's rather than defer to it, so
+  // a channel the spec already names is left alone. The survival templates are
+  // the case in point: six layers on one y scale, one of them titled, and the
+  // rest plotting internal pipeline columns nobody should read.
+  const titledEncodings = new Set(
+    sourceLayers
+      .flatMap((l) => toMappings(l.mapping))
+      .filter((m) => m.title && m.encoding)
+      .map((m) => m.encoding as string),
+  );
+
   let changed = false;
   const labelMapping = (m: MappingLike): MappingLike => {
     // A row layer's `*` wildcard covers every column, so no single name fits.
     if (!m.field || m.field === '*') return m;
     let next = m;
     // An explicit title from the spec author always wins.
-    if (!m.title) {
+    if (!m.title && !titledEncodings.has(m.encoding ?? '')) {
       const l = label(m);
       if (l && l !== m.field) next = { ...next, title: l };
     }
@@ -265,7 +333,7 @@ export function applyFieldLabels(spec: UDIGrammar, labels: VizTitleLabels = {}):
     return next;
   };
 
-  const layers = toLayers(spec.representation).map((layer) => {
+  const layers = sourceLayers.map((layer) => {
     if (!layer?.mapping) return layer;
     return {
       ...layer,
@@ -374,6 +442,10 @@ export interface VizTitleSource {
   /** Tokenized wording from the visualization template the agent used. */
   titleTemplate?: string;
   summaryTemplate?: string;
+  /** Template provenance. Its `toolArgs` are the current bindings, which
+   *  `{ent:…}` / `{col:…}` name — kept current by `applyTemplateRebind`, so the
+   *  wording follows a tweak. */
+  template?: { toolArgs?: Record<string, unknown> };
 }
 
 export interface VizTitleProvenance {
@@ -397,7 +469,8 @@ export function vizTitleProvenance(
 ): VizTitleProvenance {
   const userTitle = viz.userTitle?.trim();
   const built =
-    (viz.titleTemplate && renderTextTemplate(viz.titleTemplate, viz.spec, labels)) ||
+    (viz.titleTemplate &&
+      renderTextTemplate(viz.titleTemplate, viz.spec, labels, viz.template?.toolArgs)) ||
     buildVizTitle(viz.spec, labels);
   const display = userTitle || built || viz.title || viz.userPrompt;
   return { display, original: viz.title, isRenamed: !!userTitle };
@@ -409,7 +482,7 @@ export function resolveVizSummary(
   labels: VizTitleLabels = {},
 ): string | undefined {
   if (!viz.summaryTemplate) return undefined;
-  return renderTextTemplate(viz.summaryTemplate, viz.spec, labels);
+  return renderTextTemplate(viz.summaryTemplate, viz.spec, labels, viz.template?.toolArgs);
 }
 
 export function resolveVizTitle(viz: VizTitleSource, labels: VizTitleLabels = {}): string {

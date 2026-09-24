@@ -48,7 +48,7 @@ function PopoverContent({
         // whole popover renders at z-auto and ends up behind anything
         // positioned higher in its containing stack (e.g. the dashboard's
         // `z-10` sticky header).
-        className="isolate z-1500 outline-none"
+        className="udi:isolate udi:z-1500 udi:outline-none"
         align={align}
         alignOffset={alignOffset}
         side={side}
@@ -58,7 +58,7 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            'z-1500 w-72 rounded-md bg-popover p-3 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+            'udi:z-1500 udi:w-72 udi:rounded-md udi:bg-popover udi:p-3 udi:text-sm udi:text-popover-foreground udi:shadow-md udi:ring-1 udi:ring-foreground/10 udi:outline-none udi:data-open:animate-in udi:data-open:fade-in-0 udi:data-open:zoom-in-95 udi:data-closed:animate-out udi:data-closed:fade-out-0 udi:data-closed:zoom-out-95',
             className,
           )}
           {...props}

@@ -50,6 +50,20 @@ To switch between bundled data packages and server-side (remote) mode, use `node
 - **Arquero** for client-side data loading and domain computation
 - **Vite** for dev server and library builds
 
+### Agent version pairing
+
+`udi-yac` and `udiagent` share a private contract beyond the HTTP shape: the
+agent sends a chart's title and summary **tokenized** (`{enc:x}`, `{ent:entity3}`,
+`{col:entity2_field}`, …) and this package resolves them against the spec, the
+template's bindings and the data package's display labels. The vocabulary grows
+as templates need new wording, so **run an agent no newer than your `udi-yac`**.
+
+A newer client against an older agent is always fine. The other way round, a
+token this version does not know makes the wording fall back to a title derived
+from the spec — readable, just less specific. Builds from before that fallback
+landed print the unknown token instead, so an old enough `udi-yac` shows
+`{col:entity2_field}` in a card title where a current one degrades cleanly.
+
 ## Architecture
 
 ### Dual Build Modes
@@ -81,10 +95,22 @@ Embedding in another app? Two things worth knowing up front:
 
 - **`apiBaseUrl` accepts a same-origin path** (`/api/yac`), so agent traffic can go
   through your own reverse proxy and let your server attach auth — no CORS, no token in
-  the browser. `authToken` is then unnecessary.
-- **Every style is scoped** to the root element's `udi-yac` class, so the stylesheet
-  won't touch your app's own shadcn tokens or typography. Dark mode follows a `.dark`
-  class on any ancestor (the usual shadcn convention).
+  the browser. Leave `authToken` unset and the chat sends no `Authorization` header at
+  all, so there is nothing for the proxy to strip. This is the only workable shape when
+  your portal keeps its identity-provider token server-side; forward the body, the
+  `X-Conversation-Id` and `X-OpenAI-Key` request headers, and the `X-Usage-*` response
+  headers.
+- **Every style is scoped.** Design tokens and element resets are confined to the root
+  element's `udi-yac` class, and every Tailwind utility we emit carries a `udi:` prefix
+  (`udi:flex`), so nothing collides with your own Tailwind build whichever stylesheet
+  loads last. The sheet ships no preflight, so it cannot reset your typography or box
+  model. Dark mode follows a `.dark` class on any ancestor (the usual shadcn convention).
+- **The bundle is server-safe.** `import 'udi-yac'` evaluates without a DOM, so a route
+  file that imports it does not break SSR. Rendering `<UDIChat>` still requires a
+  browser — mount it client-side.
+- **`react` and `react-dom` are the only runtime dependencies.** Everything else,
+  `udi-toolkit` included, is bundled into the published file. Types are bundled too:
+  import `UDIPalette` from `udi-yac`, not from `udi-toolkit`.
 
 ### Config Props
 
@@ -96,7 +122,7 @@ Embedding in another app? Two things worth knowing up front:
 | `dataPackage`         | `DataPackage?`         | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
 | `dataFieldDomains`    | `DataFieldDomain[]?`   | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
 | `fetchOptions`        | `RequestInit?`         | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
-| `authToken`           | `string?`              | JWT bearer token for API auth                                                                                                                                                                                                                    |
+| `authToken`           | `string?`              | JWT bearer token for API auth. Omit it when a backend proxy attaches the header instead; no `Authorization` header is then sent.                                                                                                                 |
 | `requireApiKey`       | `boolean?`             | Show API key input before chatting                                                                                                                                                                                                               |
 | `model`               | `string?`              | LLM model name override                                                                                                                                                                                                                          |
 | `downloadActions`     | `DownloadAction[]?`    | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |
@@ -368,8 +394,7 @@ Consumer entries are merged on top of the built-in icons (`donors`, `samples`, `
 Pass `palette` on `UDIChatConfig` to set the default colors used by every chart and table (dashboard cards, chat-message previews, and the memory bank). A spec-level per-encoding `range` still overrides the palette.
 
 ```tsx
-import { UDIChat } from 'udi-yac';
-import type { UDIPalette } from 'udi-toolkit/react';
+import { UDIChat, type UDIPalette } from 'udi-yac';
 import { interpolateViridis } from 'd3-scale-chromatic';
 
 const palette: UDIPalette = {
@@ -386,6 +411,20 @@ const palette: UDIPalette = {
 ```
 
 The `category`/`ordinal` fields accept a color array or a Vega scheme name. The `ramp` accepts a scheme name, a color array, or an interpolator function. Note: in the **table** renderer, function and array ramps are honored, while a bare scheme-name ramp falls back to the default (scheme names apply fully to Vega charts).
+
+#### Chart chrome follows your theme automatically
+
+Everything above colors the _data_. The surrounding chrome — plot background, axis lines, gridlines, tick labels, table text — is derived from the design tokens in effect on the chat root (`--foreground`, `--muted-foreground`, `--border`), and re-read whenever a `dark` class is toggled on any ancestor. So charts and tables follow light/dark mode, and follow your own token overrides, with no configuration.
+
+Supply any of these to take over a channel; each one you set wins, and the rest stay theme-derived:
+
+| Field        | Controls                                                      |
+| ------------ | ------------------------------------------------------------- |
+| `background` | Plot and table background. `'transparent'` inherits the card. |
+| `axis`       | Axis domain lines and ticks.                                  |
+| `grid`       | Gridlines, the plot frame, and table rules.                   |
+| `text`       | Tick labels, axis and legend titles, table text.              |
+| `mutedText`  | Empty cells and truncation notices.                           |
 
 ### Custom mascot
 

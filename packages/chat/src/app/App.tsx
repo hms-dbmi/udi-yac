@@ -16,7 +16,7 @@ function App() {
   if (initialSession === 'pending') return null;
 
   return (
-    <div className="h-screen">
+    <div className="udi:h-screen">
       <UDIChat
         apiBaseUrl={env.apiBaseUrl}
         remotePackage={env.remotePackage}

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { createConversationStore } from '@/features/chat/stores/conversationStore';
-import { createDashboardStore } from '@/features/dashboard/stores/dashboardStore';
-import type { SessionExport } from '@/features/dashboard/utils/dashboardSerialization';
+import { createConversationStore } from '@/features/chat';
+import { createDashboardStore } from '../stores/dashboardStore';
+import type { SessionExport } from './dashboardSerialization';
 import { applySessionExport } from './applySessionExport';
 
 const countBySex = {

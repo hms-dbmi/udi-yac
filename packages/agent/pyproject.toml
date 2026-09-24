@@ -1,6 +1,6 @@
 [project]
 name = "udiagent"
-version = "0.3.0"
+version = "0.5.0"
 description = "UDI Agent: LLM-powered data visualization orchestration library"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -15,6 +15,13 @@ dependencies = [
 [project.optional-dependencies]
 langfuse = [
     "langfuse>=4",
+]
+# Amazon Bedrock SigV4 auth (IAM instance profile / task role). The floor is
+# pinned here rather than on the core dependency so consumers who don't need
+# Bedrock keep the looser openai>=2.15.0; openai.providers.bedrock landed in
+# 2.44.0. openai[bedrock] rather than a bare botocore pin tracks upstream.
+bedrock = [
+    "openai[bedrock]>=2.44.0",
 ]
 server = [
     "fastapi[standard]>=0.128.0",
@@ -45,7 +52,7 @@ test = [
     "cryptography>=42.0.0",
 ]
 all = [
-    "udiagent[langfuse,server,benchmark,codegen,starrocks,duckdb]",
+    "udiagent[langfuse,server,benchmark,codegen,starrocks,duckdb,bedrock]",
 ]
 
 [build-system]

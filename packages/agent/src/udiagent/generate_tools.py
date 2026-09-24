@@ -329,10 +329,21 @@ def _extract_encoding_info(spec_template: str) -> dict[str, dict]:
     return placeholder_encoding_info(spec_template)
 
 
-_ENTITY_TOKENS = {"E": "{entity}", "E1": "{entity1}", "E2": "{entity2}"}
+#: An entity placeholder base: `E`, `E1`, `E2`, … Mirrors `vis_generate`'s copy.
+_ENTITY_KEY = re.compile(r"E\d*")
+
+_ENTITY_TOKENS = {
+    "E": "{entity}",
+    "E1": "{entity1}",
+    "E2": "{entity2}",
+    "E3": "{entity3}",
+    "E4": "{entity4}",
+}
 
 
-def _tokenize_text_template(text: str, encoding_info: dict, kind: str) -> str:
+def _tokenize_text_template(
+    text: str, encoding_info: dict, kind: str, arg_for: dict | None = None
+) -> str:
     """Rewrite a title/summary template's <placeholders> into frontend tokens.
 
     The frontend resolves each token against the spec it is actually rendering,
@@ -357,17 +368,35 @@ def _tokenize_text_template(text: str, encoding_info: dict, kind: str) -> str:
         base = ph.split(":")[0] if ":" in ph else ph
         # Entities are never encodings — "<E> count" would otherwise bind <E>
         # to the count axis.
-        if base in _ENTITY_TOKENS:
-            token = _ENTITY_TOKENS[base]
+        if base in _ENTITY_TOKENS or _ENTITY_KEY.fullmatch(base):
             # `<E:one>` asks for the singular: an entity label names a table and
             # so reads as a plural, which is wrong in "a point for each <E:one>".
-            if ph.endswith(":one"):
-                token = token[:-1] + ":one}"
+            suffix = ":one" if ph.endswith(":one") else ""
+            # `{entity}` / `{entity1}` name the FIRST source, which no amount of
+            # deduplication can move. Any later role has to name its binding
+            # instead: `instantiate_template` drops a repeated source, so two
+            # roles on one table (pcx's Patient carries both the stratifier and
+            # the censoring status) leave a spec whose third source does not
+            # exist, and a positional token resolves to nothing.
+            arg = (arg_for or {}).get(base)
+            if arg and base not in ("E", "E1"):
+                return "{ent:" + arg + suffix + "}"
+            token = _ENTITY_TOKENS.get(base, "{entity}")
+            if suffix:
+                token = token[:-1] + suffix + "}"
             return token
         info = encoding_info.get(base)
-        encodings = info.get("encodings", []) if info else []
+        # Only a channel the placeholder is actually *drawn on* can be asked for
+        # its label. One it merely feeds — a stratifier behind a derived
+        # `stratum`, or a ranked table's `column`, whose channel draws "smallest"
+        # — would answer with the derivation instead. Name the bound column.
+        encodings = (info.get("direct_encodings") or []) if info else []
         if not encodings:
-            return "{bind:" + base + "}"
+            # Named by its BINDING, not by the column it resolves to today: the
+            # stratifier is tweakable, and the client re-resolves this against
+            # the bindings it holds, so the title follows a swap.
+            arg = (arg_for or {}).get(base)
+            return "{col:" + arg + "}" if arg else "{bind:" + base + "}"
         encoding = encodings[0]
         # A non-aggregated encoding plots the column directly, so both kinds
         # resolve the same way.
@@ -756,12 +785,15 @@ def generate(template_sources, output_path: str):
             tool_dispatch[tool_name] = (template_idx, param_map)
             tool_tags[tool_name] = list(template.get("tags") or default_tags)
             encoding_info = _extract_encoding_info(spec_template)
+            # Placeholder base -> the tool parameter that binds it, so a text
+            # token can name the binding rather than a resolved value.
+            arg_for = {placeholder: arg for arg, placeholder in param_map.items()}
             tool_text[tool_name] = (
                 _tokenize_text_template(
-                    template.get("title_template", ""), encoding_info, "title"
+                    template.get("title_template", ""), encoding_info, "title", arg_for
                 ),
                 _tokenize_text_template(
-                    template.get("summary_template", ""), encoding_info, "summary"
+                    template.get("summary_template", ""), encoding_info, "summary", arg_for
                 ),
             )
             tool_shared_entities[tool_name] = list(

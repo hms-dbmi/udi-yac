@@ -1,5 +1,7 @@
 """The grouping core: parsing, validation and the derived stratum expression."""
 
+import json
+
 import pytest
 
 from udiagent.stratify import (
@@ -114,9 +116,29 @@ def test_duplicate_labels_are_refused():
     assert "distinct" in validate_grouping(grouping)[0]
 
 
-def test_empty_group_is_refused():
-    grouping = {"type": "nominal", "groups": [{"label": "A", "values": []}]}
-    assert "non-empty 'values'" in validate_grouping(grouping)[0]
+def test_a_group_claiming_no_values_is_dropped_not_refused():
+    """The reported failure: "stratify by protocol" came back as a dead chart.
+
+    The model answered the optional `grouping` with a lone catch-all it had no
+    values for. That is one stratum per value — the default — not an error.
+    """
+    grouping = {"type": "nominal", "groups": [{"label": "Other", "values": []}]}
+    assert parse_grouping(grouping) is None
+    # And the string form the tool argument actually arrives as.
+    assert parse_grouping(json.dumps(grouping)) is None
+
+
+def test_an_empty_group_beside_a_real_one_leaves_the_real_one():
+    grouping = parse_grouping(
+        {
+            "type": "nominal",
+            "groups": [{"label": "A", "values": ["a"]}, {"label": "Other", "values": []}],
+        }
+    )
+    assert grouping["groups"] == [{"label": "A", "values": ["a"]}]
+    assert validate_grouping(grouping) == []
+    # The catch-all it was reaching for is the default bucket anyway.
+    assert grouping_labels(grouping) == ["A", "Other"]
 
 
 # --- quantitative -----------------------------------------------------------

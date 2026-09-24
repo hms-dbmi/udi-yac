@@ -143,13 +143,13 @@ export function PointFilterComponent({
   const fieldOptions = categoricalSourceFields?.[entity] ?? [];
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5 text-sm flex-wrap">
+    <div className="udi:space-y-2">
+      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm udi:flex-wrap">
         {tweakable ? (
           <>
-            <span className="text-muted-foreground">Filtering</span>
+            <span className="udi:text-muted-foreground">Filtering</span>
             <Select value={entity} onValueChange={handleEntityChange}>
-              <SelectTrigger className="h-7 w-auto min-w-[80px] text-xs">
+              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -161,7 +161,7 @@ export function PointFilterComponent({
               </SelectContent>
             </Select>
             <Select value={field} onValueChange={handleFieldChange}>
-              <SelectTrigger className="h-7 w-auto min-w-[80px] text-xs">
+              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -174,35 +174,38 @@ export function PointFilterComponent({
             </Select>
           </>
         ) : (
-          <span className="text-muted-foreground">
+          <span className="udi:text-muted-foreground">
             Filtering {entity} {field}
           </span>
         )}
       </div>
       {isValid ? (
-        <div className="space-y-2">
+        <div className="udi:space-y-2">
           {allFields.map((f) => {
             const values = selectedValuesOf(f);
             return (
-              <div key={f} className="space-y-1.5">
+              <div key={f} className="udi:space-y-1.5">
                 {allFields.length > 1 && (
-                  <div className="text-xs font-medium text-muted-foreground">
+                  <div className="udi:text-xs udi:font-medium udi:text-muted-foreground">
                     {getFieldLabel(entity, f)}
                   </div>
                 )}
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                <div className="udi:space-y-1.5 udi:max-h-48 udi:overflow-y-auto">
                   {optionsOf(f).map((value) => {
                     // Display only — `value` itself still goes into the filter.
                     const label = value == null ? '<null>' : getValueLabel(String(value));
                     const id = `${filterKey}-${f}-${value}`;
                     return (
-                      <div key={value ?? '__null__'} className="flex items-center gap-2">
+                      <div
+                        key={value ?? '__null__'}
+                        className="udi:flex udi:items-center udi:gap-2"
+                      >
                         <Checkbox
                           id={id}
                           checked={values.includes(value)}
                           onCheckedChange={(checked) => handleToggle(f, value, !!checked)}
                         />
-                        <Label htmlFor={id} className="text-xs cursor-pointer">
+                        <Label htmlFor={id} className="udi:text-xs udi:cursor-pointer">
                           {label}
                         </Label>
                       </div>
@@ -212,7 +215,7 @@ export function PointFilterComponent({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 text-xs"
+                      className="udi:h-6 udi:text-xs"
                       onClick={() => handleClearAll(f)}
                     >
                       Clear all
@@ -224,7 +227,7 @@ export function PointFilterComponent({
           })}
         </div>
       ) : (
-        <span className="text-sm text-destructive">Error: Invalid filter.</span>
+        <span className="udi:text-sm udi:text-destructive">Error: Invalid filter.</span>
       )}
     </div>
   );

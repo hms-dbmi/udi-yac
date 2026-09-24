@@ -84,6 +84,11 @@ export interface DataPackageState {
   /** A field's declared `udi:data_type` (quantitative / ordinal / nominal).
    *  Available straight from the schema, unlike domains, which load from CSVs. */
   getFieldDataType: (entity: string, field: string) => string | undefined;
+  /** Whether a resource declares this column at all. `getFieldLabel` humanizes
+   *  what it cannot find rather than reporting the miss, so a caller holding a
+   *  column but not its entity — a chart title naming a column from one of
+   *  several joined sources — asks this first. */
+  hasField: (entity: string, field: string) => boolean;
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
 
@@ -348,6 +353,11 @@ export function createDataPackageStore() {
       return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:data_type'];
     },
 
+    hasField: (entity: string, field: string): boolean => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return !!resource?.schema?.fields?.some((f) => f.name === field);
+    },
+
     setFilteredData: (entity: string, data: ExportRowSet) => {
       set((state) => {
         const next = new Map(state.filteredData);
@@ -364,9 +374,14 @@ export function createDataPackageStore() {
       // mid-session (setAuthToken) and every later request must carry the new
       // one. Capturing an object here is what used to make the backend go
       // stale until the whole package was rebuilt.
-      const authHeaders = (): Record<string, string> => ({
-        Authorization: `Bearer ${get().authToken ?? 'dev'}`,
-      });
+      //
+      // No token means no header at all, rather than a `dev` placeholder: a
+      // deployment that proxies us through its own backend attaches the real
+      // one there, and a placeholder is just something for it to strip.
+      const authHeaders = (): Record<string, string> => {
+        const token = get().authToken;
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      };
       try {
         const response = await fetch(
           `${apiBaseUrl}/v1/yac/metadata?package=${encodeURIComponent(packageName)}`,

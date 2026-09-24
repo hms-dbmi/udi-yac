@@ -4,6 +4,8 @@ import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 import type { ReadOnlyOption } from '@/stores/globalStore';
 
+export type { ReadOnlyOption };
+
 /**
  * Signature for the optional analytics callback — deliberately untyped in
  * the `properties` bag so consumers can forward directly to GA4, Segment,

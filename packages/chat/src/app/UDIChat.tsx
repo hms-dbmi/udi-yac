@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
+import { useThemePalette } from './useThemePalette';
 import {
   UDIChatProvider,
   DownloadActionsProvider,
@@ -28,7 +29,7 @@ import { Button } from '@/components/ui/button';
 import { extractAllUdiSpecsFromMessage, type TemplateProvenance } from '@/features/dashboard';
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
 import { parseSessionExport } from '@/features/dashboard/utils/dashboardSerialization';
-import { applySessionExport } from '@/app/applySessionExport';
+import { applySessionExport } from '@/features/dashboard/utils/applySessionExport';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
@@ -224,7 +225,7 @@ function UDIChatInner({
     // purpose — `container-type: inline-size` implies `contain: layout`, which
     // would make the root a containing block for everything useChatRoot()
     // portals into it.
-    <div className="@container/shell flex h-full w-full bg-background">
+    <div className="udi:@container/shell udi:flex udi:h-full udi:w-full udi:bg-background">
       {/*
        * Read-only collapses the whole left region to a rail. One branch, rather
        * than a per-control sweep, because the chat pane is where every writing
@@ -245,7 +246,7 @@ function UDIChatInner({
         <>
           {/* Sidebar drawer — debug mode only */}
           {debugMode && drawerOpen && (
-            <div className="w-56 shrink-0 border-r bg-background overflow-hidden flex flex-col">
+            <div className="udi:w-56 udi:shrink-0 udi:border-r udi:bg-background udi:overflow-hidden udi:flex udi:flex-col">
               <ConversationList />
             </div>
           )}
@@ -260,15 +261,15 @@ function UDIChatInner({
            */}
           <div
             className={cn(
-              'shrink-0 min-w-[300px] border-r flex flex-col overflow-hidden',
-              overviewOpen ? 'w-[400px] @min-[1200px]/shell:w-[800px]' : 'w-[400px]',
+              'udi:shrink-0 udi:min-w-[300px] udi:border-r udi:flex udi:flex-col udi:overflow-hidden',
+              overviewOpen ? 'udi:w-[400px] udi:@min-[1200px]/shell:w-[800px]' : 'udi:w-[400px]',
             )}
           >
             <ViewSwitch
               overviewOpen={overviewOpen}
               onChange={(open) => globalStore.getState().setOverview(open)}
             />
-            <div className="flex flex-1 min-h-0">
+            <div className="udi:flex udi:flex-1 udi:min-h-0">
               <div
                 // A popover opened from a chart *in the chat* aligns its left edge
                 // to this column rather than to its trigger, which sits indented
@@ -277,8 +278,8 @@ function UDIChatInner({
                 // context is needed.
                 data-udi-chat-column=""
                 className={cn(
-                  'flex-1 min-w-0 flex flex-col overflow-hidden',
-                  overviewOpen && 'hidden @min-[1200px]/shell:flex',
+                  'udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden',
+                  overviewOpen && 'udi:hidden udi:@min-[1200px]/shell:flex',
                 )}
               >
                 <ChatPanel
@@ -298,7 +299,7 @@ function UDIChatInner({
                 />
               </div>
               {overviewOpen && (
-                <div className="flex-1 min-w-0 flex flex-col overflow-hidden @min-[1200px]/shell:border-l">
+                <div className="udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden udi:@min-[1200px]/shell:border-l">
                   <DataOverviewPanel />
                 </div>
               )}
@@ -306,7 +307,7 @@ function UDIChatInner({
           </div>
         </>
       )}
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="udi:flex-1 udi:min-w-0 udi:overflow-hidden">
         <DashboardPanel />
       </div>
     </div>
@@ -325,20 +326,20 @@ function UDIChatInner({
 function CollapsedChatRail({ locked, onExit }: { locked: boolean; onExit: () => void }) {
   if (locked) return null;
   return (
-    <div className="flex w-9 shrink-0 flex-col items-center border-r bg-background pt-2">
+    <div className="udi:flex udi:w-9 udi:shrink-0 udi:flex-col udi:items-center udi:border-r udi:bg-background udi:pt-2">
       <Tooltip>
         <TooltipTrigger
           render={
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="udi:h-7 udi:w-7"
               aria-label="Start chatting"
               onClick={onExit}
             />
           }
         >
-          <MessageSquare className="h-3.5 w-3.5" />
+          <MessageSquare className="udi:h-3.5 udi:w-3.5" />
         </TooltipTrigger>
         <TooltipContent side="right">Start chatting</TooltipContent>
       </Tooltip>
@@ -368,14 +369,14 @@ function ViewSwitch({
     <div
       role="group"
       aria-label="Sidebar view"
-      className="flex gap-1 border-b px-2 py-1.5 @min-[1200px]/shell:hidden"
+      className="udi:flex udi:gap-1 udi:border-b udi:px-2 udi:py-1.5 udi:@min-[1200px]/shell:hidden"
     >
       <Button
         variant={overviewOpen ? 'ghost' : 'secondary'}
         size="sm"
         aria-pressed={!overviewOpen}
         onClick={() => onChange(false)}
-        className="h-6 flex-1 text-xs"
+        className="udi:h-6 udi:flex-1 udi:text-xs"
       >
         Chat
       </Button>
@@ -384,7 +385,7 @@ function ViewSwitch({
         size="sm"
         aria-pressed={overviewOpen}
         onClick={() => onChange(true)}
-        className="h-6 flex-1 text-xs"
+        className="udi:h-6 udi:flex-1 udi:text-xs"
       >
         Data
       </Button>
@@ -401,6 +402,10 @@ function UDIChatValidated(props: UDIChatConfig) {
   // scoped design tokens live) instead of to document.body, and so the
   // dashboard's drag state can be scoped to us rather than the host page.
   const rootRef = useRef<HTMLDivElement>(null);
+  // Charts and tables render inside `.udi-yac` but are drawn by Vega and
+  // ag-grid, neither of which can see our CSS — so the theme has to be handed
+  // to them as colors. `props.palette` still wins per channel.
+  const themePalette = useThemePalette(rootRef, props.palette);
   return (
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
@@ -419,7 +424,7 @@ function UDIChatValidated(props: UDIChatConfig) {
                      * existing rich state (loadingPhase, sourceFields, etc.) keeps
                      * working unchanged.
                      */}
-                    <UDIToolkitProvider palette={props.palette}>
+                    <UDIToolkitProvider palette={themePalette}>
                       <MascotProvider mascot={props.mascot}>
                         <SplashMessagesProvider messages={props.splashMessages}>
                           {/*
@@ -430,7 +435,7 @@ function UDIChatValidated(props: UDIChatConfig) {
                            */}
                           <div
                             ref={rootRef}
-                            className={cn('udi-yac h-full w-full', props.className)}
+                            className={cn('udi-yac udi:h-full udi:w-full', props.className)}
                             style={props.style}
                           >
                             <UDIChatInner {...props} />

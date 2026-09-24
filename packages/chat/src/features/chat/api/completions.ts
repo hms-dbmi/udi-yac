@@ -105,9 +105,12 @@ export async function queryLLM(
   const body = constructQueryBody(messages, model, dataSchema, dataDomains);
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  // The backend requires an Authorization header (even in dev mode).
-  // Use the provided authToken, or fall back to a dev placeholder.
-  headers['Authorization'] = `Bearer ${config.authToken ?? 'dev'}`;
+  // Only when we were actually given a token. A deployment that proxies the
+  // agent through its own backend attaches the header there — sending a
+  // placeholder would just be something for that proxy to strip.
+  if (config.authToken) {
+    headers['Authorization'] = `Bearer ${config.authToken}`;
+  }
   if (config.openAiKey) {
     headers['X-OpenAI-Key'] = config.openAiKey;
   }

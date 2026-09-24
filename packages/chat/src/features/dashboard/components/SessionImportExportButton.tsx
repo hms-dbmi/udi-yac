@@ -20,7 +20,7 @@ import {
   useDataPackage,
   useTracker,
 } from '@/app/UDIChatContext';
-import { applySessionExport } from '@/app/applySessionExport';
+import { applySessionExport } from '../utils/applySessionExport';
 import {
   buildSessionExport,
   parseSessionExport,
@@ -111,23 +111,25 @@ export function SessionImportExportButton() {
         ref={fileInputRef}
         type="file"
         accept="application/json"
-        className="hidden"
+        className="udi:hidden"
         onChange={handleFileChange}
       />
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" />}
+          render={
+            <Button variant="outline" size="sm" className="udi:h-7 udi:text-xs udi:gap-1.5" />
+          }
         >
-          <Save className="h-3.5 w-3.5" />
+          <Save className="udi:h-3.5 udi:w-3.5" />
           Session
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleExport}>
-            <Download className="h-3.5 w-3.5 mr-2" />
+            <Download className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
             Export session
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handlePickFile}>
-            <Upload className="h-3.5 w-3.5 mr-2" />
+            <Upload className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
             Import session
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -89,8 +89,8 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
       <span
         title={display}
         className={cn(
-          'text-xs font-medium truncate flex-1 min-w-0 text-left px-1 py-0.5',
-          isRenamed && 'italic',
+          'udi:text-xs udi:font-medium udi:truncate udi:flex-1 udi:min-w-0 udi:text-left udi:px-1 udi:py-0.5',
+          isRenamed && 'udi:italic',
         )}
       >
         {display}
@@ -108,8 +108,8 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
         // header, and focus is shown with a border colour rather than a ring —
         // a ring paints outside the box and would spill past the card edge.
         className={cn(
-          'flex h-6 flex-1 items-center gap-0.5 min-w-0 rounded-md border border-input pr-0.5',
-          'bg-transparent transition-colors focus-within:border-ring dark:bg-input/30',
+          'udi:flex udi:h-6 udi:flex-1 udi:items-center udi:gap-0.5 udi:min-w-0 udi:rounded-md udi:border udi:border-input udi:pr-0.5',
+          'udi:bg-transparent udi:transition-colors udi:focus-within:border-ring udi:dark:bg-input/30',
         )}
       >
         <input
@@ -122,7 +122,7 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
           // width, which the card header's grid track sizes itself against.
           // `size={1}` keeps the field purely flex-sized.
           size={1}
-          className="h-5 min-w-0 flex-1 bg-transparent px-1.5 text-xs outline-none placeholder:text-muted-foreground"
+          className="udi:h-5 udi:min-w-0 udi:flex-1 udi:bg-transparent udi:px-1.5 udi:text-xs udi:outline-none udi:placeholder:text-muted-foreground"
           onChange={(e) => setDraft(e.target.value)}
           onBlur={(e) => {
             // Clicking or tabbing onto accept/cancel keeps the session open —
@@ -143,7 +143,7 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
         <Button
           variant="ghost"
           size="icon-xs"
-          className="size-5"
+          className="udi:size-5"
           title="Save title (Enter)"
           aria-label="Save title"
           // Keep focus in the input on mouse-down so the click never fires a
@@ -151,18 +151,18 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => stopEditing(true)}
         >
-          <Check className="h-3 w-3 text-green-600" />
+          <Check className="udi:h-3 udi:w-3 udi:text-green-600" />
         </Button>
         <Button
           variant="ghost"
           size="icon-xs"
-          className="size-5"
+          className="udi:size-5"
           title="Cancel (Esc)"
           aria-label="Cancel rename"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => stopEditing(false)}
         >
-          <X className="h-3 w-3" />
+          <X className="udi:h-3 udi:w-3" />
         </Button>
       </div>
     );
@@ -186,11 +186,11 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
       aria-label={`Rename visualization: ${display}`}
       onClick={startEditing}
       className={cn(
-        'text-xs font-medium truncate flex-1 min-w-0 text-left cursor-text rounded px-1 py-0.5',
-        'hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+        'udi:text-xs udi:font-medium udi:truncate udi:flex-1 udi:min-w-0 udi:text-left udi:cursor-text udi:rounded udi:px-1 udi:py-0.5',
+        'udi:hover:bg-muted udi:focus-visible:outline-none udi:focus-visible:ring-2 udi:focus-visible:ring-ring/50',
         // A renamed card reads as the user's own label; italics mark that the
         // text no longer comes from the assistant.
-        isRenamed && 'italic',
+        isRenamed && 'udi:italic',
       )}
     >
       {display}

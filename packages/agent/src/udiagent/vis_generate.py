@@ -653,12 +653,26 @@ def placeholder_encoding_info(spec_template):
     except (json.JSONDecodeError, TypeError):
         return info
 
-    def record(base, channel, declared_type, aggregated=False):
+    def record(base, channel, declared_type, aggregated=False, direct=False):
         entry = info.setdefault(
-            base, {"encodings": [], "declared_type": None, "aggregated": False}
+            base,
+            {
+                "encodings": [],
+                "declared_type": None,
+                "aggregated": False,
+                "direct_encodings": [],
+            },
         )
         if isinstance(channel, str) and channel not in entry["encodings"]:
             entry["encodings"].append(channel)
+        # Channels where the placeholder IS the drawn field, as opposed to ones
+        # it merely feeds. Prose naming a channel ("{enc:color}") is only right
+        # for the former: a stratifier reaches colour through a derived
+        # `stratum`, and a ranked table's `<F>` sits in `column`, which picks a
+        # cell while `field` draws "smallest". Either way the channel's own
+        # label names something else. See `_tokenize_text_template`.
+        if direct and isinstance(channel, str) and channel not in entry["direct_encodings"]:
+            entry["direct_encodings"].append(channel)
         if declared_type and entry["declared_type"] is None:
             entry["declared_type"] = declared_type
         # The placeholder sits inside a rollup's output name ("average <F1>")
@@ -683,7 +697,7 @@ def placeholder_encoding_info(spec_template):
             channel = mapping.get("encoding")
             declared_type = mapping.get("type")
             # `field` is what gets drawn; `column` only places a table column.
-            for value in (mapping.get("field"), mapping.get("column")):
+            for value, is_field in ((mapping.get("field"), True), (mapping.get("column"), False)):
                 if not isinstance(value, str):
                     continue
                 if isinstance(channel, str):
@@ -695,7 +709,11 @@ def placeholder_encoding_info(spec_template):
                 aggregated = re.fullmatch(PLACEHOLDER, value) is None
                 for placeholder in re.findall(PLACEHOLDER, value):
                     record(
-                        placeholder.split(":")[0], channel, declared_type, aggregated
+                        placeholder.split(":")[0],
+                        channel,
+                        declared_type,
+                        aggregated,
+                        direct=is_field,
                     )
 
     for transform in spec.get("transformation") or []:
@@ -762,6 +780,44 @@ def _extract_xy_placeholders(spec_template):
                 if match:
                     result[enc] = match.group(1)
     return result
+
+
+def _rollup_shadowed_keys(spec_template):
+    """(groupby key, rollup output key) binding pairs a template can collide on.
+
+    A rollup whose output name is the key it grouped by writes over that key —
+    Arquero's rollup overwrites it, and SQL would emit the name twice, which is
+    what later reads as "Column '<k>' is ambiguous". The survival templates roll
+    the stratifier's baseline value up under the stratifier's own name, so the
+    pair is (subject key, stratifier): binding both to one column collapses the
+    chart to a single stratum per subject.
+    """
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    def key_of(text):
+        match = re.fullmatch(PLACEHOLDER, text) if isinstance(text, str) else None
+        return match.group(1).split(":")[0] if match else None
+
+    pairs = []
+    pending = []
+    for step in spec.get("transformation") or []:
+        if not isinstance(step, dict):
+            continue
+        if "groupby" in step:
+            gb = step["groupby"]
+            pending = [gb] if isinstance(gb, str) else list(gb)
+        elif "rollup" in step:
+            for out in step["rollup"]:
+                out_key = key_of(out)
+                for group in pending:
+                    group_key = key_of(group)
+                    if group_key and out_key and group_key != out_key:
+                        pairs.append((group_key, out_key))
+            pending = []
+    return pairs
 
 
 def _entity_for_binding_key(key, bindings):
@@ -1084,12 +1140,26 @@ def validate_bindings(
 
     # Fields this request supplies a grouping for, which exempts them from the
     # cardinality cap below.
+    #
+    # Parsed, not raw. `parse_grouping` discards groups that claim no values and
+    # returns None when none are left, so a payload like a lone empty `Other`
+    # means "no grouping" by the time the spec is built. Read raw, that payload
+    # still looks like a grouping and buys the exemption — the field would draw
+    # its whole domain with neither the cap nor the cuts check ever running.
+    from udiagent.stratify import GroupingError, parse_grouping
+
     targets = grouping_targets(spec_template)
-    grouped_field_keys = {
-        field_key
-        for group_key, field_key in targets.items()
-        if field_key and str(bindings.get(group_key) or "").strip()
-    }
+    grouped_field_keys = set()
+    for group_key, field_key in targets.items():
+        if not field_key:
+            continue
+        try:
+            if parse_grouping(bindings.get(group_key)) is not None:
+                grouped_field_keys.add(field_key)
+        except GroupingError:
+            # Malformed: reported by the per-binding check below, which owns the
+            # message. Not an exemption either way.
+            continue
 
     # Check fields exist on entities and types match
     for key, field_name in bindings.items():
@@ -1212,6 +1282,23 @@ def validate_bindings(
             errors.append(
                 f"Field '{field_name}' has {cardinality} unique values, which is too many "
                 f"for a visualization (max 50). Choose a different encoding or visualization."
+            )
+
+    # A rollup output bound to the same column as the key it groups by is a
+    # degenerate chart, not just the SQL hazard of one name on two columns: the
+    # rollup overwrites the key, so a survival curve stratified by its own
+    # subject id draws one stratum per subject. Below the cardinality cap, whose
+    # message is the better one whenever it applies — this is here for the field
+    # the cap exempts, the one a `grouping` was supplied for, which is how a
+    # subject id got through in the first place.
+    for group_key, out_key in _rollup_shadowed_keys(spec_template):
+        group_field = bindings.get(group_key)
+        if group_field and group_field == bindings.get(out_key):
+            errors.append(
+                f"'{out_key}' and '{group_key}' are both set to '{group_field}', "
+                f"but '{group_key}' is the column the chart groups rows by, so "
+                f"every group would hold one value. Choose a different field "
+                f"for '{out_key}'."
             )
 
     # A continuous stratifier with no grouping is not a chart: it has no
@@ -1631,11 +1718,12 @@ _BIND_TOKEN = re.compile(r"\{bind:([^}]+)\}")
 def resolve_text_templates(tool_name, bindings):
     """The chosen template's user-facing (title, summary), ready for the client.
 
-    `{entity}` / `{enc:…}` / `{field:…}` tokens are left for the frontend to
-    resolve against the spec it is rendering, so both texts follow a field
-    swapped in the tweak panel. `{bind:…}` has no encoding to hang on (a binby
-    input, a sort-only column) and is substituted here with the column the model
-    actually chose — those fields are not swappable, so a static name is right.
+    `{entity}` / `{enc:…}` / `{field:…}` / `{ent:…}` / `{col:…}` tokens are left
+    for the frontend to resolve against the spec and bindings it is rendering,
+    so both texts follow a field swapped in the tweak panel. `{bind:…}` is the
+    leftover case: a placeholder with neither an encoding nor a tool parameter
+    to name (a cube measure), so there is nothing for the client to resolve it
+    against and the chosen value is filled in here.
     """
     from udiagent.generated_vis_tools import TOOL_TEXT
 

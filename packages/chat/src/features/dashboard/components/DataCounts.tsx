@@ -188,10 +188,10 @@ export function DataCounts() {
   if (loadingPhase === 'error') {
     return (
       <div
-        className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive"
+        className="udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:border-destructive/40 udi:bg-destructive/5 udi:px-2.5 udi:py-1.5 udi:text-xs udi:text-destructive"
         title={loadError ?? undefined}
       >
-        <AlertCircle className="h-4 w-4 shrink-0" />
+        <AlertCircle className="udi:h-4 udi:w-4 udi:shrink-0" />
         <span>Couldn't load data package{loadError ? `: ${loadError}` : '.'}</span>
       </div>
     );
@@ -201,16 +201,16 @@ export function DataCounts() {
   if (loadingPhase === 'fetching' || loadingPhase === 'idle') {
     if (loadingPhase === 'idle') return null;
     return (
-      <div className="flex items-center gap-2">
+      <div className="udi:flex udi:items-center udi:gap-2">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="inline-flex items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1.5 animate-pulse"
+            className="udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-muted udi:px-2.5 udi:py-1.5 udi:animate-pulse"
           >
-            <div className="h-5 w-5 rounded bg-muted-foreground/20" />
-            <div className="flex flex-col items-center gap-1">
-              <div className="h-4 w-8 rounded bg-muted-foreground/20" />
-              <div className="h-3 w-12 rounded bg-muted-foreground/20" />
+            <div className="udi:h-5 udi:w-5 udi:rounded udi:bg-muted-foreground/20" />
+            <div className="udi:flex udi:flex-col udi:items-center udi:gap-1">
+              <div className="udi:h-4 udi:w-8 udi:rounded udi:bg-muted-foreground/20" />
+              <div className="udi:h-3 udi:w-12 udi:rounded udi:bg-muted-foreground/20" />
             </div>
           </div>
         ))}
@@ -223,7 +223,7 @@ export function DataCounts() {
   const hasFilters = filterIds.length > 0;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="udi:flex udi:items-center udi:gap-2 udi:flex-wrap">
       {chips.map((chip) => {
         const filtered = filteredCounts[chip.id];
         const isFiltered =
@@ -235,15 +235,15 @@ export function DataCounts() {
             onClick={() => globalStore.getState().setOverview(true, chip.id)}
             title={`${chip.label} — open data overview`}
             aria-label={`${chip.label}: ${chip.totalCount.toLocaleString()} rows. Open data overview.`}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="udi:inline-flex udi:cursor-pointer udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-background udi:px-2.5 udi:py-1.5 udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none"
           >
-            <chip.Icon className="h-5 w-5 text-muted-foreground shrink-0" />
-            <div className="flex flex-col items-center text-center leading-tight">
-              <div className="text-base font-bold">
+            <chip.Icon className="udi:h-5 udi:w-5 udi:text-muted-foreground udi:shrink-0" />
+            <div className="udi:flex udi:flex-col udi:items-center udi:text-center udi:leading-tight">
+              <div className="udi:text-base udi:font-bold">
                 {isFiltered ? (
                   <>
                     {filtered.toLocaleString()}
-                    <span className="text-xs font-normal text-muted-foreground">
+                    <span className="udi:text-xs udi:font-normal udi:text-muted-foreground">
                       {' '}
                       / {chip.totalCount.toLocaleString()}
                     </span>
@@ -252,7 +252,7 @@ export function DataCounts() {
                   chip.totalCount.toLocaleString()
                 )}
               </div>
-              <span className="text-[11px] text-muted-foreground">{chip.label}</span>
+              <span className="udi:text-[11px] udi:text-muted-foreground">{chip.label}</span>
             </div>
           </button>
         );

@@ -166,23 +166,23 @@ export function StratifierGroupingControl({
             variant="outline"
             size="sm"
             disabled={disabled}
-            className="h-7 w-auto text-xs font-normal"
+            className="udi:h-7 udi:w-auto udi:text-xs udi:font-normal"
           />
         }
       >
-        <span className="text-muted-foreground mr-1">{param.label}:</span>
+        <span className="udi:text-muted-foreground udi:mr-1">{param.label}:</span>
         {summarize(draft, param.stratifier)}
       </PopoverTrigger>
       <PopoverContent
-        className="w-80"
+        className="udi:w-80"
         align="start"
         side={host?.onCard ? 'left' : 'bottom'}
         anchor={anchor}
       >
-        <div className="flex flex-col gap-3">
+        <div className="udi:flex udi:flex-col udi:gap-3">
           <div>
-            <p className="text-xs font-medium">Group {param.stratifier}</p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="udi:text-xs udi:font-medium">Group {param.stratifier}</p>
+            <p className="udi:text-[11px] udi:text-muted-foreground">
               {isQuantitative
                 ? 'Click the distribution to add a threshold, or drag one to move it.'
                 : 'Combine values into named groups; the rest fall into Other.'}
@@ -209,16 +209,16 @@ export function StratifierGroupingControl({
           )}
 
           {tooMany && (
-            <p role="status" className="text-[11px] text-destructive">
+            <p role="status" className="udi:text-[11px] udi:text-destructive">
               {labels.length} groups — at most {MAX_GROUPS} can be told apart on one chart.
             </p>
           )}
 
-          <div className="flex items-center justify-between">
+          <div className="udi:flex udi:items-center udi:justify-between">
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs"
+              className="udi:h-7 udi:text-xs"
               disabled={disabled || serializeGrouping(draft) === serializeGrouping(original)}
               onClick={() => apply(original)}
             >
@@ -226,7 +226,7 @@ export function StratifierGroupingControl({
             </Button>
             <Button
               size="sm"
-              className="h-7 text-xs"
+              className="udi:h-7 udi:text-xs"
               disabled={disabled || tooMany}
               onClick={() => {
                 apply(draft);
@@ -274,28 +274,28 @@ function NominalEditor({
 
   if (values.length === 0) {
     return (
-      <p className="text-[11px] text-muted-foreground">
+      <p className="udi:text-[11px] udi:text-muted-foreground">
         The values of this field are not loaded, so there is nothing to group by yet.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="udi:flex udi:flex-col udi:gap-2">
       {grouping.groups.map((group, index) => (
-        <div key={index} className="rounded border p-2">
-          <div className="flex items-center gap-1">
+        <div key={index} className="udi:rounded udi:border udi:p-2">
+          <div className="udi:flex udi:items-center udi:gap-1">
             <Input
               value={group.label}
               disabled={disabled}
               aria-label={`Group ${index + 1} name`}
-              className="h-6 text-xs"
+              className="udi:h-6 udi:text-xs"
               onChange={(e) => onDraft(renameGroup(grouping, index, e.target.value))}
             />
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 shrink-0"
+              className="udi:h-6 udi:w-6 udi:shrink-0"
               aria-label={`Remove ${group.label}`}
               disabled={disabled}
               onClick={() =>
@@ -305,16 +305,16 @@ function NominalEditor({
                 })
               }
             >
-              <X className="h-3 w-3" />
+              <X className="udi:h-3 udi:w-3" />
             </Button>
           </div>
-          <div className="mt-1 flex flex-wrap gap-1">
+          <div className="udi:mt-1 udi:flex udi:flex-wrap udi:gap-1">
             {group.values.map((value) => (
               <button
                 key={value}
                 type="button"
                 disabled={disabled}
-                className="rounded bg-secondary px-1.5 py-0.5 text-[10px] hover:line-through"
+                className="udi:rounded udi:bg-secondary udi:px-1.5 udi:py-0.5 udi:text-[10px] udi:hover:line-through"
                 title="Remove from this group"
                 onClick={() => onApply(assignValue(grouping, value, null))}
               >
@@ -322,7 +322,7 @@ function NominalEditor({
               </button>
             ))}
             {group.values.length === 0 && (
-              <span className="text-[10px] text-muted-foreground">no values yet</span>
+              <span className="udi:text-[10px] udi:text-muted-foreground">no values yet</span>
             )}
           </div>
         </div>
@@ -331,7 +331,7 @@ function NominalEditor({
       <Button
         variant="outline"
         size="sm"
-        className="h-7 text-xs"
+        className="udi:h-7 udi:text-xs"
         disabled={disabled || grouping.groups.length >= MAX_GROUPS}
         onClick={() =>
           onDraft({
@@ -340,15 +340,15 @@ function NominalEditor({
           })
         }
       >
-        <Plus className="mr-1 h-3 w-3" /> Add group
+        <Plus className="udi:mr-1 udi:h-3 udi:w-3" /> Add group
       </Button>
 
       {grouping.groups.length > 0 && (
         <div>
-          <p className="mb-1 text-[11px] text-muted-foreground">
+          <p className="udi:mb-1 udi:text-[11px] udi:text-muted-foreground">
             Unassigned ({unassigned.length}) — click to file into a group
           </p>
-          <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto">
+          <div className="udi:flex udi:max-h-28 udi:flex-wrap udi:gap-1 udi:overflow-y-auto">
             {unassigned.map((value) => (
               <UnassignedValue
                 key={value}
@@ -365,8 +365,8 @@ function NominalEditor({
       {/* Where the leftovers go. A single curve labelled "Other" is usually
           right; dropping them is the honest alternative when they are a
           grab-bag that would only add noise. */}
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] text-muted-foreground">Unassigned values</span>
+      <div className="udi:flex udi:items-center udi:gap-2">
+        <span className="udi:text-[11px] udi:text-muted-foreground">Unassigned values</span>
         <Select
           value={grouping.other === null ? '__drop__' : '__other__'}
           disabled={disabled}
@@ -374,7 +374,7 @@ function NominalEditor({
             onApply({ ...grouping, other: v === '__drop__' ? null : DEFAULT_OTHER_LABEL })
           }
         >
-          <SelectTrigger className="h-6 flex-1 text-xs">
+          <SelectTrigger className="udi:h-6 udi:flex-1 udi:text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -388,7 +388,7 @@ function NominalEditor({
           value={grouping.other}
           disabled={disabled}
           aria-label="Other group name"
-          className="h-6 text-xs"
+          className="udi:h-6 udi:text-xs"
           onChange={(e) => onDraft({ ...grouping, other: e.target.value })}
         />
       )}
@@ -414,7 +414,7 @@ function UnassignedValue({
       <button
         type="button"
         disabled={disabled}
-        className="rounded border px-1.5 py-0.5 text-[10px] hover:bg-accent"
+        className="udi:rounded udi:border udi:px-1.5 udi:py-0.5 udi:text-[10px] udi:hover:bg-accent"
         onClick={() => onAssign(groups[0])}
       >
         {value}
@@ -430,7 +430,7 @@ function UnassignedValue({
       }}
     >
       <SelectTrigger
-        className="h-5 w-auto border px-1.5 text-[10px]"
+        className="udi:h-5 udi:w-auto udi:border udi:px-1.5 udi:text-[10px]"
         aria-label={`Assign ${value}`}
       >
         {value}
@@ -525,7 +525,7 @@ function QuantitativeEditor({
   );
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="udi:flex udi:flex-col udi:gap-2">
       <CutPointHistogram
         bins={bins}
         min={min}
@@ -538,10 +538,12 @@ function QuantitativeEditor({
 
       {/* The same cut points as numbers. Dragging is for finding a threshold;
           typing is for the one a protocol already fixed at exactly 65. */}
-      <div className="flex flex-col gap-1">
+      <div className="udi:flex udi:flex-col udi:gap-1">
         {cuts.map((cut, index) => (
-          <div key={index} className="flex items-center gap-1">
-            <span className="w-10 shrink-0 text-[10px] text-muted-foreground">cut {index + 1}</span>
+          <div key={index} className="udi:flex udi:items-center udi:gap-1">
+            <span className="udi:w-10 udi:shrink-0 udi:text-[10px] udi:text-muted-foreground">
+              cut {index + 1}
+            </span>
             <CutInput
               value={cut}
               precision={precision}
@@ -552,31 +554,31 @@ function QuantitativeEditor({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 shrink-0"
+              className="udi:h-6 udi:w-6 udi:shrink-0"
               aria-label={`Remove cut point ${index + 1}`}
               disabled={disabled}
               onClick={() => setCuts(removeCut(cuts, index), true)}
             >
-              <X className="h-3 w-3" />
+              <X className="udi:h-3 udi:w-3" />
             </Button>
           </div>
         ))}
       </div>
 
-      <div className="flex gap-1">
+      <div className="udi:flex udi:gap-1">
         <Button
           variant="outline"
           size="sm"
-          className="h-7 flex-1 text-xs"
+          className="udi:h-7 udi:flex-1 udi:text-xs"
           disabled={disabled || cuts.length + 1 >= MAX_GROUPS}
           onClick={() => setCuts(addCut(cuts, (min + max) / 2, precision), true)}
         >
-          <Plus className="mr-1 h-3 w-3" /> Add cut
+          <Plus className="udi:mr-1 udi:h-3 udi:w-3" /> Add cut
         </Button>
         <Button
           variant="outline"
           size="sm"
-          className="h-7 flex-1 text-xs"
+          className="udi:h-7 udi:flex-1 udi:text-xs"
           disabled={disabled}
           onClick={() => setCuts(equalWidthCuts(min, max, 2, precision), true)}
           title="Split the range in half"
@@ -586,7 +588,7 @@ function QuantitativeEditor({
         <Button
           variant="outline"
           size="sm"
-          className="h-7 flex-1 text-xs"
+          className="udi:h-7 udi:flex-1 udi:text-xs"
           disabled={disabled}
           onClick={() => setCuts(equalWidthCuts(min, max, 4, precision), true)}
           title="Four equally wide buckets"
@@ -595,7 +597,7 @@ function QuantitativeEditor({
         </Button>
       </div>
 
-      <p className="text-[10px] text-muted-foreground">
+      <p className="udi:text-[10px] udi:text-muted-foreground">
         {cuts.length === 0
           ? 'No thresholds yet — a numeric stratifier needs at least one.'
           : groupingLabels({ type: 'quantitative', cuts }).join(' · ')}
@@ -670,7 +672,7 @@ function CutInput({
       value={text}
       disabled={disabled}
       aria-label={label}
-      className="h-6 text-xs"
+      className="udi:h-6 udi:text-xs"
       onChange={(e) => {
         const next = e.target.value;
         setText(next);
