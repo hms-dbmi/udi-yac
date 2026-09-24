@@ -64,7 +64,7 @@ export const ENV_VARS = [
     docDefault: 'false',
     example: 'locked',
     description:
-      'Start in read-only mode: the chat collapses to a rail and every editing control (card drag, resize, rename, close, field tweak, grid settings, session import) is hidden, while brushing, filters, the table toggle and downloads stay. `true` leaves a button on the rail that opens the chat; `locked` removes it. With the chat collapsed there is nothing to build a dashboard from, so pair this with `VITE_UDI_INITIAL_SESSION`.',
+      'Start in read-only mode: the chat collapses to a rail and every editing control (card drag, resize, rename, close, field tweak, grid settings, session import) is hidden, while brushing, filters, the table toggle and downloads stay. `true` leaves an Explore Data button over the dashboard (and one on the rail) that opens the chat; `locked` removes both. With the chat collapsed there is nothing to build a dashboard from, so pair this with `VITE_UDI_INITIAL_SESSION`.',
   },
   {
     name: 'VITE_UDI_INITIAL_SESSION',

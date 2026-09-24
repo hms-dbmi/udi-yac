@@ -108,12 +108,23 @@ def load_package(data_dir: Path) -> list[dict]:
             # Relationship metadata can't be introspected from the database
             # (StarRocks stores no FK constraints), yet the chat's
             # cross-entity filtering depends on it — carry it through to the
-            # backends config so /v1/yac/metadata can serve it.
+            # backends config so /v1/yac/metadata can serve it. Descriptions
+            # likewise exist only in the package, and are what tells the LLM
+            # what a column means.
             relationship_schema = {
                 key: schema[key]
                 for key in ("primaryKey", "foreignKeys")
                 if key in schema
             }
+            if resource.get("description"):
+                relationship_schema["description"] = resource["description"]
+            described = [
+                {"name": f["name"], "description": f["description"]}
+                for f in fields
+                if f.get("description")
+            ]
+            if described:
+                relationship_schema["fields"] = described
             entries.append(
                 {
                     "entity": resource["name"],

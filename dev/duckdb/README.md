@@ -69,7 +69,8 @@ uv run --project packages/agent --extra duckdb \
 
 If `<csv-dir>` has a `datapackage.json` (generate one with
 `python3 scripts/gen_datapackage.py <csv-dir>`), its entity names, field types,
-and `primaryKey`/`foreignKeys` drive the tables and cross-entity filtering.
+and `primaryKey`/`foreignKeys` drive the tables and cross-entity filtering, and
+its descriptions (from a `data_dictionary.csv` beside the CSVs) reach the LLM.
 
 ## Notes
 

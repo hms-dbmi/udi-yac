@@ -34,11 +34,16 @@ def _make_package(tmp: Path) -> Path:
                     {
                         "name": "Patient",
                         "path": "patient.csv",
+                        "description": "One row per patient.",
                         "udi:row_count": 2,
                         "schema": {
                             "fields": [
                                 {"name": "research_id", "udi:data_type": "nominal"},
-                                {"name": "age", "udi:data_type": "quantitative"},
+                                {
+                                    "name": "age",
+                                    "udi:data_type": "quantitative",
+                                    "description": "Age in days.",
+                                },
                             ],
                             "primaryKey": ["research_id"],
                         },
@@ -101,6 +106,11 @@ def test_seed_duckdb_round_trips(tmp_path):
     assert types["visit_day"] == "quantitative"
     assert types["kind"] == "nominal"
     assert visit["schema"]["foreignKeys"][0]["reference"]["resource"] == "Patient"
+    # Descriptions live only in the package, so they must survive the config.
+    patient = next(r for r in meta["dataSchema"]["resources"] if r["name"] == "Patient")
+    assert patient["description"] == "One row per patient."
+    ages = {f["name"]: f["description"] for f in patient["schema"]["fields"]}
+    assert ages == {"research_id": "", "age": "Age in days."}
 
     # "Unavailable" survives as a real category, not nulled away.
     rows = engine.run_query(source={"name": "Visit", "source": "visit"})["displayData"]

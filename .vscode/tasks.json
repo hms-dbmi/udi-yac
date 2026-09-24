@@ -118,7 +118,7 @@
       "label": "Data: Generate pcx datapackage",
       "detail": "Regenerate sample-data/pcx/datapackage.json from the CSVs (stdlib only). For another dataset, run scripts/gen_datapackage.py directly.",
       "type": "shell",
-      "command": "python3 scripts/gen_datapackage.py sample-data/pcx --strip pcx_30_ --strip _level_deid --strip _deid",
+      "command": "python3 scripts/gen_datapackage.py sample-data/pcx --strip pcx_30_ --strip _level_deid --strip _deid --parent Patient",
       "problemMatcher": [],
       "presentation": {
         "group": "data",

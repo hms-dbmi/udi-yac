@@ -41,6 +41,7 @@ describe('UDIChat — read-only shell', () => {
     render(<UDIChat {...config} />);
     expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Start chatting' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Explore Data' })).toBeNull();
   });
 
   it('collapses the chat to a rail in read-only mode', () => {
@@ -65,10 +66,21 @@ describe('UDIChat — read-only shell', () => {
     expect(screen.queryByRole('button', { name: 'Start chatting' })).toBeNull();
   });
 
+  it('brings the chat back from the floating Explore Data button', async () => {
+    const user = userEvent.setup();
+    render(<UDIChat {...config} readOnly />);
+
+    await user.click(screen.getByRole('button', { name: 'Explore Data' }));
+
+    expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Explore Data' })).toBeNull();
+  });
+
   it('offers no way out when locked', () => {
     render(<UDIChat {...config} readOnly="locked" />);
     expect(screen.queryByRole('heading', { name: 'Chat' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Start chatting' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Explore Data' })).toBeNull();
   });
 });
 

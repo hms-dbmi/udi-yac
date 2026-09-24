@@ -37,6 +37,8 @@ afterEach(() => {
 
 describe('App — initial session', () => {
   it('renders straight away when no session file is configured', async () => {
+    // Pinned rather than assumed: vitest loads the developer's .env.local.
+    vi.stubEnv('VITE_UDI_INITIAL_SESSION', '');
     await renderApp();
     expect(screen.getByTestId('udi-chat')).toBeTruthy();
     expect(chatProps.mock.calls[0][0].initialSession).toBeUndefined();

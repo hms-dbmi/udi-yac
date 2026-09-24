@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Sparkles } from 'lucide-react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
 import { useThemePalette } from './useThemePalette';
 import {
@@ -211,6 +211,11 @@ function UDIChatInner({
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
   }, [dataSelections, activeVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
 
+  const exitReadOnly = () => {
+    globalStore.getState().setReadOnly(false);
+    trackEvent('read_only_exited', {});
+  };
+
   const queryConfig: QueryConfig = {
     apiBaseUrl,
     authToken,
@@ -235,13 +240,7 @@ function UDIChatInner({
        * good: leaving read-only re-renders the region with its state intact.
        */}
       {readOnly ? (
-        <CollapsedChatRail
-          locked={readOnlyLocked}
-          onExit={() => {
-            globalStore.getState().setReadOnly(false);
-            trackEvent('read_only_exited', {});
-          }}
-        />
+        <CollapsedChatRail locked={readOnlyLocked} onExit={exitReadOnly} />
       ) : (
         <>
           {/* Sidebar drawer — debug mode only */}
@@ -307,8 +306,9 @@ function UDIChatInner({
           </div>
         </>
       )}
-      <div className="udi:flex-1 udi:min-w-0 udi:overflow-hidden">
+      <div className="udi:relative udi:flex-1 udi:min-w-0 udi:overflow-hidden">
         <DashboardPanel />
+        {readOnly && !readOnlyLocked && <ExploreDataButton onClick={exitReadOnly} />}
       </div>
     </div>
   );
@@ -344,6 +344,24 @@ function CollapsedChatRail({ locked, onExit }: { locked: boolean; onExit: () => 
         <TooltipContent side="right">Start chatting</TooltipContent>
       </Tooltip>
     </div>
+  );
+}
+
+/**
+ * The prominent way out of read-only, floating over the dashboard's
+ * bottom-right corner just left of its scroll buttons: a reader looking at the
+ * charts is looking there, not at the rail. `absolute`, not `fixed` — embedded
+ * in a host's column, `fixed` would pin it to the host page's viewport.
+ */
+function ExploreDataButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="udi:absolute udi:right-14 udi:bottom-3 udi:z-20 udi:h-11 udi:gap-2 udi:rounded-lg udi:border udi:border-udi-gray-300 udi:bg-udi-primary-700 udi:px-5 udi:text-base udi:text-white udi:shadow-lg udi:hover:bg-udi-primary-700/90"
+    >
+      <Sparkles className="udi:size-5" />
+      Explore Data
+    </Button>
   );
 }
 

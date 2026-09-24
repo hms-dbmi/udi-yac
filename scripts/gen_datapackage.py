@@ -9,11 +9,13 @@ Stdlib only — run without installing anything:
 
     python3 scripts/gen_datapackage.py sample-data/pcx
 
-Column descriptions are the one thing profiling cannot infer, and they reach
-the LLM (a bare number column called `age_at_diagnosis` is read as years unless
-something says days). Supply them with `--descriptions`, a JSON file of
-``{"Table.column": "text"}`` — kept beside the CSVs so a regenerated manifest
-does not lose them.
+Descriptions are the one thing profiling cannot infer, and they reach the LLM
+(a bare number column called `age_at_diagnosis` is read as years unless
+something says days). Supply them with `--descriptions`, a data dictionary CSV
+with `table,field,description` columns — `table` is the CSV filename (or the
+humanized table name), and a row with a blank `field` describes the table
+itself. Kept beside the CSVs as `data_dictionary.csv`, it is picked up
+automatically, so a regenerated manifest does not lose them.
 
 Writes <dir>/datapackage.json. See sample-data/readme.md for the format.
 Run `python3 scripts/gen_datapackage.py --selftest` to check the inference.
@@ -25,6 +27,9 @@ import json
 import re
 import sys
 from pathlib import Path
+
+# Picked up as the default `--descriptions`, and never profiled as a table.
+DICTIONARY_NAME = "data_dictionary.csv"
 
 
 def humanize(stem: str, strips: list[str]) -> str:
@@ -110,7 +115,7 @@ def _profile_table(name: str, header: list[str], rows: list[list[str]]) -> dict:
     }
 
 
-def _infer_foreign_keys(resources: list[dict]) -> None:
+def _infer_foreign_keys(resources: list[dict], preferred_parent: str | None = None) -> None:
     """Link tables on shared columns that are unique in at least one table.
 
     Single-column keys only; a table where the shared column is unique can serve
@@ -125,6 +130,12 @@ def _infer_foreign_keys(resources: list[dict]) -> None:
     table. Pruning pcx's demographics table to its cohort did exactly that —
     `research_id` became unique in Demographics as well as Patient, and all five
     of the package's foreign keys silently disappeared.
+
+    Width cannot separate tables that cover the same key space, and name order
+    then picks one arbitrarily — pcx's Patient, Demographics and Treatment
+    Summary all hold one row per patient. `preferred_parent` names the hub for
+    that case; the agent only joins tables linked directly, so the hub decides
+    which pairs of tables it can chart together.
     """
     cols_by_table = {r["name"]: {f["name"] for f in r["schema"]["fields"]} for r in resources}
     unique_cols = {
@@ -144,7 +155,11 @@ def _infer_foreign_keys(resources: list[dict]) -> None:
         parents = [name for name, u in unique_cols.items() if col in u]
         if not parents:
             continue
-        parent = max(parents, key=lambda name: (cardinality[(name, col)], name))
+        parent = (
+            preferred_parent
+            if preferred_parent in parents
+            else max(parents, key=lambda name: (cardinality[(name, col)], name))
+        )
         for r in resources:
             if r["name"] == parent or col not in cols_by_table[r["name"]]:
                 continue
@@ -184,21 +199,40 @@ def _annotate_cube(res: dict, measure: str) -> None:
             )
 
 
-def _apply_descriptions(resources: list[dict], descriptions: dict[str, str]) -> int:
-    """Fill in `description` from ``{"Table.column": text}``. Returns matches.
+def _load_descriptions(path: Path) -> dict[tuple[str, str], str]:
+    """Read a data dictionary CSV into ``{(table, field): text}``.
 
-    Keyed by the *humanized* table name, the same name specs and foreign keys
-    use, so a description is written against the table as the rest of the system
-    sees it rather than against a filename the strips could change.
+    A blank `field` is the table's own description. Blank descriptions are
+    skipped, so a dictionary with gaps leaves those columns as profiled.
     """
-    applied = 0
+    with path.open(newline="", encoding="utf-8") as fh:
+        return {
+            (row["table"].strip(), row["field"].strip()): row["description"].strip()
+            for row in csv.DictReader(fh)
+            if row["description"].strip()
+        }
+
+
+def _apply_descriptions(
+    resources: list[dict], descriptions: dict[tuple[str, str], str]
+) -> set[tuple[str, str]]:
+    """Fill in table and column `description`s. Returns the keys that matched.
+
+    A table is matched by its CSV filename or its humanized name: a dictionary
+    exported alongside the data knows the files, while one written by hand
+    against the package reads more naturally in the names specs use.
+    """
+    matched = set()
     for resource in resources:
-        for field in resource["schema"]["fields"]:
-            text = descriptions.get(f"{resource['name']}.{field['name']}")
-            if text:
-                field["description"] = text
-                applied += 1
-    return applied
+        for table in (resource["path"], resource["name"]):
+            if text := descriptions.get((table, "")):
+                resource["description"] = text
+                matched.add((table, ""))
+            for field in resource["schema"]["fields"]:
+                if text := descriptions.get((table, field["name"])):
+                    field["description"] = text
+                    matched.add((table, field["name"]))
+    return matched
 
 
 def build_package(
@@ -207,10 +241,13 @@ def build_package(
     udi_path: str,
     strips: list[str],
     measure: str | None = None,
-    descriptions: dict[str, str] | None = None,
+    descriptions: dict[tuple[str, str], str] | None = None,
+    preferred_parent: str | None = None,
 ) -> dict:
     resources = []
     for path in sorted(csv_dir.glob("*.csv")):
+        if path.name == DICTIONARY_NAME:
+            continue
         with path.open(newline="", encoding="utf-8") as fh:
             reader = csv.reader(fh)
             header = next(reader)
@@ -229,25 +266,18 @@ def build_package(
     if len(set(names)) != len(names):
         sys.exit(f"table names collide after humanizing: {names} — adjust --strip")
 
+    if preferred_parent and preferred_parent not in names:
+        sys.exit(f"--parent {preferred_parent!r} is not a table (has: {', '.join(names)})")
     if not measure:
-        _infer_foreign_keys(resources)
+        _infer_foreign_keys(resources, preferred_parent)
 
     if descriptions:
-        applied = _apply_descriptions(resources, descriptions)
-        unmatched = sorted(
-            key
-            for key in descriptions
-            if not any(
-                key == f"{r['name']}.{f['name']}"
-                for r in resources
-                for f in r["schema"]["fields"]
-            )
-        )
-        print(f"applied {applied} column description(s)")
+        matched = _apply_descriptions(resources, descriptions)
+        print(f"applied {len(matched)} description(s)")
         # Loud, because a typo here is otherwise invisible: the manifest simply
         # comes out without the description it was meant to carry.
-        for key in unmatched:
-            print(f"  ⚠ no such column: {key}", file=sys.stderr)
+        for table, field in sorted(descriptions.keys() - matched):
+            print(f"  ⚠ no such {'column' if field else 'table'}: {table} {field}", file=sys.stderr)
 
     return {
         "name": name,
@@ -310,10 +340,22 @@ def _selftest() -> None:
             }
         ], (table["name"], table["schema"]["foreignKeys"])
 
-    # Descriptions are keyed by the humanized table name and land on the field
-    # itself; a key naming no column is reported rather than applied.
-    described = prof("id,x\n1,a\n", "wide")
-    assert _apply_descriptions([described], {"wide.x": "an x", "wide.nope": "?"}) == 1
+    # Equal key spaces: the preferred parent wins over name order.
+    a, b = prof("id\n1\n2\n", "a"), prof("id\n1\n2\n", "b")
+    _infer_foreign_keys([a, b], preferred_parent="a")
+    assert a["schema"]["foreignKeys"] == [], a["schema"]["foreignKeys"]
+    assert b["schema"]["foreignKeys"][0]["reference"]["resource"] == "a", b["schema"]
+
+    # Descriptions match a table by filename or humanized name; a blank field
+    # describes the table, and a key naming no column is left unmatched.
+    described = prof("id,x\n1,a\n", "Wide")
+    described["path"] = "wide_deid.csv"
+    matched = _apply_descriptions(
+        [described],
+        {("wide_deid.csv", ""): "a table", ("Wide", "x"): "an x", ("Wide", "nope"): "?"},
+    )
+    assert matched == {("wide_deid.csv", ""), ("Wide", "x")}, matched
+    assert described["description"] == "a table", described
     by_name = {f["name"]: f for f in described["schema"]["fields"]}
     assert by_name["x"]["description"] == "an x", by_name["x"]
     assert by_name["id"]["description"] == "", by_name["id"]
@@ -346,8 +388,14 @@ def main() -> None:
     ap.add_argument(
         "--descriptions",
         type=Path,
-        help='JSON file of {"Table.column": "description"} to write into the manifest '
-        "(default: <dir>/field_descriptions.json when present)",
+        help="data dictionary CSV (table,field,description) to write into the manifest "
+        "(default: <dir>/data_dictionary.csv when present)",
+    )
+    ap.add_argument(
+        "--parent",
+        metavar="TABLE",
+        help="humanized table name to link to when a key column is unique in several "
+        "tables (default: the widest key space, then name order)",
     )
     ap.add_argument("-o", "--out", help="output path (default: <dir>/datapackage.json)")
     ap.add_argument("--selftest", action="store_true", help="run inference self-check and exit")
@@ -366,15 +414,15 @@ def main() -> None:
 
     descriptions_path = args.descriptions
     if descriptions_path is None:
-        default = csv_dir / "field_descriptions.json"
+        default = csv_dir / DICTIONARY_NAME
         descriptions_path = default if default.is_file() else None
     elif not descriptions_path.is_file():
         ap.error(f"--descriptions file not found: {descriptions_path}")
-    descriptions = (
-        json.loads(descriptions_path.read_text(encoding="utf-8")) if descriptions_path else None
-    )
+    descriptions = _load_descriptions(descriptions_path) if descriptions_path else None
 
-    pkg = build_package(csv_dir, name, udi_path, args.strip, args.measure, descriptions)
+    pkg = build_package(
+        csv_dir, name, udi_path, args.strip, args.measure, descriptions, args.parent
+    )
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])
