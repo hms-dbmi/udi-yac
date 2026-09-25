@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
 import { useThemePalette } from './useThemePalette';
 import {
@@ -36,7 +36,7 @@ import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { ConversationList } from '@/features/chat/components/ConversationList';
 import { useApiKey } from '@/features/chat/hooks/useApiKey';
 import { ErrorBoundary } from './ErrorBoundary';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { ChatRootProvider } from '@/lib/chatRoot';
 import type { QueryConfig } from '@/features/chat/api/completions';
@@ -235,16 +235,16 @@ function UDIChatInner({
     // portals into it.
     <div className="udi:@container/shell udi:flex udi:h-full udi:w-full udi:bg-background">
       {/*
-       * Read-only collapses the whole left region to a rail. One branch, rather
-       * than a per-control sweep, because the chat pane is where every writing
-       * affordance lives — the input and its `//admin` backdoor, reset, example
-       * prompts, the memory bank, the API key, closed-viz restore, and the data
-       * overview's "Open on dashboard" button. Nothing here is unmounted for
-       * good: leaving read-only re-renders the region with its state intact.
+       * Read-only drops the whole left region, so the dashboard gets the full
+       * width; the floating Explore Data button is the way back. One branch,
+       * rather than a per-control sweep, because the chat pane is where every
+       * writing affordance lives — the input and its `//admin` backdoor, reset,
+       * example prompts, the memory bank, the API key, closed-viz restore, and
+       * the data overview's "Open on dashboard" button. Nothing here is
+       * unmounted for good: leaving read-only re-renders the region with its
+       * state intact.
        */}
-      {readOnly ? (
-        <CollapsedChatRail locked={readOnlyLocked} onExit={exitReadOnly} />
-      ) : (
+      {!readOnly && (
         <>
           {/* Sidebar drawer — debug mode only */}
           {debugMode && drawerOpen && (
@@ -318,43 +318,10 @@ function UDIChatInner({
 }
 
 /**
- * What the chat pane shrinks to in read-only mode — the same "collapsed to a
- * rail, one button to bring it back" shape the data overview uses, so the
- * dashboard gets the full width without the chat disappearing without trace.
- *
- * Under `readOnly: 'locked'` there is nothing to collapse back to, so the rail
- * is dropped entirely and the dashboard takes the full width — a strip whose
- * only button cannot work is worse than no strip.
- */
-function CollapsedChatRail({ locked, onExit }: { locked: boolean; onExit: () => void }) {
-  if (locked) return null;
-  return (
-    <div className="udi:flex udi:w-9 udi:shrink-0 udi:flex-col udi:items-center udi:border-r udi:bg-background udi:pt-2">
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="udi:h-7 udi:w-7"
-              aria-label="Start chatting"
-              onClick={onExit}
-            />
-          }
-        >
-          <MessageSquare className="udi:h-3.5 udi:w-3.5" />
-        </TooltipTrigger>
-        <TooltipContent side="right">Start chatting</TooltipContent>
-      </Tooltip>
-    </div>
-  );
-}
-
-/**
- * The prominent way out of read-only, floating over the dashboard's
- * bottom-right corner just left of its scroll buttons: a reader looking at the
- * charts is looking there, not at the rail. `absolute`, not `fixed` — embedded
- * in a host's column, `fixed` would pin it to the host page's viewport.
+ * The way out of read-only, floating over the dashboard's bottom-right corner
+ * just left of its scroll buttons: a reader looking at the charts is looking
+ * there. `absolute`, not `fixed` — embedded in a host's column, `fixed` would
+ * pin it to the host page's viewport.
  */
 function ExploreDataButton({ onClick }: { onClick: () => void }) {
   return (

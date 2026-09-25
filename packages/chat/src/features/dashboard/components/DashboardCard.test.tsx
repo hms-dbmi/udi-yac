@@ -42,7 +42,7 @@ const countBySex = {
 } as unknown as UDIGrammar;
 
 /** Seeds one card plus the field lists that make its gear button actionable. */
-function Harness({ children }: { children?: ReactNode }) {
+function Harness({ children, spec = countBySex }: { children?: ReactNode; spec?: UDIGrammar }) {
   const store = useDashboardStore();
   const dataPackageStore = useDataPackageStore();
   useEffect(() => {
@@ -50,8 +50,8 @@ function Harness({ children }: { children?: ReactNode }) {
       sourceFields: { donors: ['sex', 'race'] },
       categoricalSourceFields: { donors: ['sex', 'race'] },
     });
-    store.getState().addActiveVisualization(0, 0, countBySex, 'prompt', null);
-  }, [store, dataPackageStore]);
+    store.getState().addActiveVisualization(0, 0, spec, 'prompt', null);
+  }, [store, dataPackageStore, spec]);
   const viz = useDashboard((s) => s.activeVisualizations.get('0-0'));
   if (!viz) return null;
   return (
@@ -62,10 +62,10 @@ function Harness({ children }: { children?: ReactNode }) {
   );
 }
 
-function renderCard() {
+function renderCard(spec?: UDIGrammar) {
   return render(
     <UDIChatProvider>
-      <Harness />
+      <Harness spec={spec} />
     </UDIChatProvider>,
   );
 }
@@ -88,6 +88,26 @@ function renderReadOnlyCard(readOnly: 'locked' | true = true) {
     </UDIChatProvider>,
   );
 }
+
+describe('DashboardCard — table toggle', () => {
+  it('offers a table view of a chart', async () => {
+    renderCard();
+    expect(await screen.findByRole('button', { name: 'Show table' })).toBeTruthy();
+  });
+
+  it('offers none on a spec that is already a table', async () => {
+    const valueCounts = {
+      ...countBySex,
+      representation: {
+        mark: 'row',
+        mapping: [{ encoding: 'text', field: 'sex', mark: 'text', type: 'nominal' }],
+      },
+    } as unknown as UDIGrammar;
+    renderCard(valueCounts);
+    expect(await screen.findByRole('button', { name: 'Drag card' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Show table' })).toBeNull();
+  });
+});
 
 describe('DashboardCard — header while renaming', () => {
   it('swaps the whole button row for the title field and its accept/cancel pair', async () => {

@@ -49,6 +49,15 @@ import { hasTweakableFields } from '../utils/tweakability';
 import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
 import { useJumpTarget } from '@/hooks/useJumpTarget';
 
+/** Whether the spec already draws a table: no representation (the toolkit then
+ *  lists every column) or only row layers. Such a card has no chart to toggle
+ *  away from, so it gets no table toggle. */
+function isTableSpec(spec: ActiveVisualization['spec']): boolean {
+  const representation: unknown = spec.representation;
+  const layers = representation == null ? [] : [representation].flat();
+  return layers.every((layer) => (layer as { mark?: unknown } | null)?.mark === 'row');
+}
+
 interface DashboardCardProps {
   vizKey: string;
   viz: ActiveVisualization;
@@ -291,25 +300,28 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                   <TooltipContent>Tweak fields</TooltipContent>
                 </Tooltip>
               )}
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="udi:h-6 udi:w-6"
-                      onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
-                    />
-                  }
-                >
-                  {isTableView ? (
-                    <BarChart3 className="udi:h-3 udi:w-3" />
-                  ) : (
-                    <Table2 className="udi:h-3 udi:w-3" />
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
-              </Tooltip>
+              {!isTableSpec(viz.spec) && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="udi:h-6 udi:w-6"
+                        aria-label={isTableView ? 'Show chart' : 'Show table'}
+                        onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
+                      />
+                    }
+                  >
+                    {isTableView ? (
+                      <BarChart3 className="udi:h-3 udi:w-3" />
+                    ) : (
+                      <Table2 className="udi:h-3 udi:w-3" />
+                    )}
+                  </TooltipTrigger>
+                  <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
+                </Tooltip>
+              )}
               {isTableView && (
                 <Tooltip>
                   <TooltipTrigger

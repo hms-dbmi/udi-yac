@@ -112,13 +112,14 @@ export interface UDIChatConfig {
    */
   palette?: UDIPalette;
   /**
-   * Start the chat in read-only mode: the chat pane collapses to a slim
-   * sidebar rail and every editing control is hidden — card drag, resize,
-   * rename, close, field tweak, grid settings and session import. What stays
-   * is everything that only reads: brushing and cross-filtering, the filter
-   * chips, the chart/table toggle, the info tooltips and Download Data.
+   * Start the chat in read-only mode: the chat pane and the dashboard's top
+   * bar (counts, grid settings, session import/export, Download Data) are
+   * hidden, as is every editing control on the cards — drag, resize, rename,
+   * close, field tweak. What stays is the charts and what reads them: brushing
+   * and cross-filtering, the filter chips, the chart/table toggle and the info
+   * tooltips.
    *
-   * - `true` — the rail carries a button that leaves read-only and opens the
+   * - `true` — a floating Explore Data button leaves read-only and opens the
    *   chat, so this is the *initial* mode rather than a lock.
    * - `'locked'` — the same, with no way out. For hosts embedding the
    *   dashboard that do not want their users chatting at all.

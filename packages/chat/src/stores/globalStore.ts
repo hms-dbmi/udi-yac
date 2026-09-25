@@ -3,8 +3,8 @@ import { createStore } from 'zustand/vanilla';
 /**
  * How the chat starts, and whether the user may change it.
  * - `false` (default) — the normal chat + dashboard app.
- * - `true` — starts read-only; the chat is collapsed to a rail with a button
- *   that leaves read-only.
+ * - `true` — starts read-only; the chat is hidden, and an Explore Data button
+ *   leaves read-only.
  * - `'locked'` — read-only with no way out, for hosts that embed the dashboard
  *   and do not want their users chatting at all.
  */
@@ -18,9 +18,9 @@ export interface GlobalState {
   /** Entity whose overview accordion item should be expanded, if any. */
   overviewEntity: string | null;
   /**
-   * Read-only mode: the chat collapses to a sidebar rail and every editing
-   * control (drag, resize, rename, close, field tweak, grid settings, session
-   * import) is hidden. Cross-filtering, the table toggle and downloads stay.
+   * Read-only mode: the chat pane, the dashboard's top bar and every editing
+   * control on the cards (drag, resize, rename, close, field tweak) are hidden.
+   * Cross-filtering and the table toggle stay.
    */
   readOnly: boolean;
   /** Whether `readOnly` is fixed for the session. See {@link ReadOnlyOption}. */

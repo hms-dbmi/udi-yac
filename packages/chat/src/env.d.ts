@@ -36,13 +36,13 @@ interface ImportMetaEnv {
    */
   readonly VITE_UDI_MODEL?: string;
   /**
-   * Start in read-only mode: the chat collapses to a rail and every editing
-   * control (card drag, resize, rename, close, field tweak, grid settings,
-   * session import) is hidden, while brushing, filters, the table toggle and
-   * downloads stay. `true` leaves an Explore Data button over the dashboard
-   * (and one on the rail) that opens the chat; `locked` removes both. With
-   * the chat collapsed there is nothing to build a dashboard from, so pair
-   * this with `VITE_UDI_INITIAL_SESSION`.
+   * Start in read-only mode: the chat pane and the dashboard’s top bar
+   * (counts, grid settings, session import/export, downloads) are hidden, as
+   * is every editing control on the cards, while brushing, filters and the
+   * table toggle stay. `true` leaves an Explore Data button over the
+   * dashboard that opens the chat; `locked` removes it. With the chat hidden
+   * there is nothing to build a dashboard from, so pair this with
+   * `VITE_UDI_INITIAL_SESSION`.
    */
   readonly VITE_UDI_READ_ONLY?: string;
   /**

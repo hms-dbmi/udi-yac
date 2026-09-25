@@ -5,6 +5,7 @@ import { ScrollAffordances } from './ScrollAffordances';
 import { GridSettingsButton } from './GridSettingsButton';
 import { WelcomeSplash } from './WelcomeSplash';
 import { FilterToolbar } from './FilterToolbar';
+import { useFilterChips } from '../hooks/useFilterChips';
 import { DataCounts } from './DataCounts';
 import { DownloadButton } from './DownloadButton';
 import { SessionImportExportButton } from './SessionImportExportButton';
@@ -12,20 +13,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
+/** Counts, grid settings, session import/export and downloads. Not rendered in
+ *  read-only: that view is usually a dashboard embedded in a host page, where
+ *  the charts need the height more than the chrome does. */
 function DashboardHeader() {
-  // Grid settings and session import both rewrite the dashboard, so they go in
-  // read-only. Download stays: reading data out is not editing.
-  const readOnly = useGlobal((s) => s.readOnly);
   return (
     <div className="udi:flex udi:items-center udi:justify-between udi:gap-2 udi:shrink-0">
       <DataCounts />
       <div className="udi:flex udi:items-center udi:gap-1.5">
-        {!readOnly && (
-          <>
-            <GridSettingsButton />
-            <SessionImportExportButton />
-          </>
-        )}
+        <GridSettingsButton />
+        <SessionImportExportButton />
         <DownloadButton />
       </div>
     </div>
@@ -36,6 +33,11 @@ export function DashboardPanel() {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
+  const readOnly = useGlobal((s) => s.readOnly);
+  // Read-only has no header, so the sticky band holds only the Filters section;
+  // with nothing filtered it would be an empty white strip.
+  const hasFilters = useFilterChips().length > 0;
+  const showBand = !readOnly || hasFilters;
 
   // Sticky-on-scroll: the header + filter row + separator stay pinned to
   // the top of the scroll viewport while the grid scrolls underneath. An
@@ -84,7 +86,7 @@ export function DashboardPanel() {
     return (
       <div className="udi:h-full udi:p-3 udi:overflow-hidden">
         <div className="udi:flex udi:flex-col udi:gap-3">
-          <DashboardHeader />
+          {!readOnly && <DashboardHeader />}
           <div className="udi:min-h-0 udi:flex-1">
             <WelcomeSplash />
           </div>
@@ -108,21 +110,25 @@ export function DashboardPanel() {
           <div ref={sentinelRef} aria-hidden />
           {/* No pb here: the Separator is the band's bottom edge so the stuck
               shadow casts straight onto the gray grid instead of a white chin. */}
-          <div
-            // Marks the band as overlaying the scrolled content, so a jumped-to
-            // card lands below it instead of underneath (scrollIntoViewport).
-            data-scroll-sticky-top
-            className={cn(
-              'udi:sticky udi:top-0 udi:z-10 udi:flex udi:flex-col udi:gap-3 udi:bg-background udi:pt-3 udi:transition-shadow',
-              isStuck && 'udi:shadow-md',
-            )}
-          >
-            <div className="udi:px-3">
-              <DashboardHeader />
+          {showBand && (
+            <div
+              // Marks the band as overlaying the scrolled content, so a jumped-to
+              // card lands below it instead of underneath (scrollIntoViewport).
+              data-scroll-sticky-top
+              className={cn(
+                'udi:sticky udi:top-0 udi:z-10 udi:flex udi:flex-col udi:gap-3 udi:bg-background udi:pt-3 udi:transition-shadow',
+                isStuck && 'udi:shadow-md',
+              )}
+            >
+              {!readOnly && (
+                <div className="udi:px-3">
+                  <DashboardHeader />
+                </div>
+              )}
+              <FilterToolbar />
+              <Separator />
             </div>
-            <FilterToolbar />
-            <Separator />
-          </div>
+          )}
           {/* Left + right gutter on the grid alone so the header band above
               stays full-width. The gray ScrollArea background paints behind
               these gutters, so the grid insets from both panel edges while the
