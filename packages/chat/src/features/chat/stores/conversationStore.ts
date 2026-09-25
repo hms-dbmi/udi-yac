@@ -8,6 +8,16 @@ export type { SessionUsage } from '@/types/usage';
 
 export interface ConversationState {
   messages: Message[];
+  /**
+   * Messages before this index are kept but not shown. Kept, because dashboard
+   * cards are keyed by message index (`${index}-${toolCallIndex}`) — removing
+   * them would hand those keys to new messages, whose charts would then be
+   * skipped as already active — and because they are the model's context for
+   * the charts on the dashboard.
+   */
+  hiddenCount: number;
+  /** Hide every message so far — the transcript behind a read-only session. */
+  hideMessages: () => void;
   /** Accumulated token usage since the conversation began. */
   sessionUsage: SessionUsage;
   /** Add one response's token usage to the running total. */
@@ -38,6 +48,10 @@ export function createConversationStore() {
   return createStore<ConversationState>()((set, get) => ({
     messages: [],
 
+    hiddenCount: 0,
+
+    hideMessages: () => set((state) => ({ hiddenCount: state.messages.length })),
+
     conversationId: generateEventId(),
 
     sessionUsage: EMPTY_USAGE,
@@ -60,10 +74,19 @@ export function createConversationStore() {
     setSessionUsage: (usage) => set({ sessionUsage: usage }),
 
     newConversation: () =>
-      set({ messages: [], conversationId: generateEventId(), sessionUsage: EMPTY_USAGE }),
+      set({
+        messages: [],
+        hiddenCount: 0,
+        conversationId: generateEventId(),
+        sessionUsage: EMPTY_USAGE,
+      }),
 
     loadConversation: (messages, options) =>
-      set(options?.keepId ? { messages } : { messages, conversationId: generateEventId() }),
+      set(
+        options?.keepId
+          ? { messages, hiddenCount: Math.min(get().hiddenCount, messages.length) }
+          : { messages, hiddenCount: 0, conversationId: generateEventId() },
+      ),
 
     exportConversation: () => JSON.stringify(get().messages, null, 2),
 

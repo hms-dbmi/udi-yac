@@ -1,7 +1,9 @@
 import './index.css';
 
-export { UDIChat } from './app/UDIChat';
+export { UDIChat, UDIDashboard } from './app/UDIChat';
 export type { UDIChatConfig, TrackerFn } from './app/UDIChatConfig';
+export type { ReadOnlyOption } from './app/UDIChatConfig';
+export type { SessionExport } from './features/dashboard/utils/dashboardSerialization';
 // Re-exported so embedders can type the `palette` prop without taking a
 // dependency on udi-toolkit — it is bundled into our output, not installed.
 export type { UDIPalette } from 'udi-toolkit/react';

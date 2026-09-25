@@ -60,6 +60,20 @@ export const ENV_VARS = [
       'LLM model override. Sent **only when the user supplies their own OpenAI key** — the agent honors a requested model only alongside an `X-OpenAI-Key`, so whoever pays for the tokens picks the model. Otherwise the agent’s `GPT_MODEL_NAME` applies.',
   },
   {
+    name: 'VITE_UDI_READ_ONLY',
+    docDefault: 'false',
+    example: 'locked',
+    description:
+      'Start in read-only mode: the chat pane and the dashboard’s top bar (counts, grid settings, session import/export, downloads) are hidden, as is every editing control on the cards, while brushing, filters and the table toggle stay. `true` leaves an Explore Data button over the dashboard that opens the chat; `locked` removes it. With the chat hidden there is nothing to build a dashboard from, so pair this with `VITE_UDI_INITIAL_SESSION`.',
+  },
+  {
+    name: 'VITE_UDI_INITIAL_SESSION',
+    docDefault: null,
+    example: '/demo-session.json',
+    description:
+      'Path or URL to a session export — the JSON written by the dashboard’s `Session → Export session` action. Fetched at startup and used to seed the dashboard and the conversation behind it. Anything under `public/` is served from the site root, so `public/demo-session.json` is `/demo-session.json`. A malformed file fails loudly through the ErrorBoundary; a missing one only logs, and the dashboard starts empty.',
+  },
+  {
     name: 'VITE_BASE',
     docDefault: '/',
     example: '/udi-yac/',

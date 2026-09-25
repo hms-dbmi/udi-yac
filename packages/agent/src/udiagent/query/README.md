@@ -88,9 +88,10 @@ HAVING count(matching) = count(total)`. An empty point value-list means **no
 
 - `table_map`: entity name → physical table/view name (entity names may
   contain spaces; table names are SQL-safe).
-- `entity_schemas`: per-entity `primaryKey`/`foreignKeys` that **can't be
-  introspected from the database** — merged into the schema by `introspect()`
-  (see §4); the chat's cross-entity filtering depends on them.
+- `entity_schemas`: per-entity `primaryKey`/`foreignKeys` and descriptions
+  that **can't be introspected from the database** — merged into the resource
+  by `introspect()` (see §4); the chat's cross-entity filtering depends on the
+  keys, and the LLM reads the descriptions.
 
 `run_query(source, transformation?, selections?, display_data_only?, offset?)`
 returns the client-facing result:
@@ -147,7 +148,10 @@ per low-cardinality categorical (≤ 80 distinct, matching the chat's
 
 Foreign keys and primary keys are **merged in from `entity_schemas`**, because
 the database stores no FK constraints — this is what makes cross-entity
-filtering work in remote mode.
+filtering work in remote mode. So are descriptions: a schema's `description`
+becomes the resource's, and its `fields` (`[{name, description}]`) fill in the
+matching introspected columns' `description` and their domains'
+`fieldDescription`.
 
 ---
 
@@ -199,8 +203,18 @@ The key `default` (or a package with no explicit match) serves requests whose
           },
         ],
       },
-      "donors": { "primaryKey": ["id"] },
+      "donors": {
+        "primaryKey": ["id"],
+        // optional: what the LLM is told the table and its columns mean
+        "description": "One row per tissue donor.",
+        "fields": [
+          { "name": "age", "description": "Age at donation, in years." },
+        ],
+      },
     },
+    // optional: the chat's "Try an example" prompts for this package, served by
+    // GET /v1/yac/examples?package=my_cohort in place of the global list
+    "examplePrompts": ["How many donors are in each age group?"],
   },
 }
 ```
@@ -229,7 +243,7 @@ Related env var: `UDI_METADATA_TTL_SECONDS` (default `3600`) — introspection
 cache TTL.
 
 **Generating the config for a CSV dataset.** Two seeders write this config for
-you, carrying `foreignKeys`/`primaryKey` from the directory's
+you, carrying `foreignKeys`/`primaryKey` and descriptions from the directory's
 `datapackage.json` into `schemas` and applying identical CSV cleaning:
 
 - `packages/agent/scripts/seed_duckdb.py` → a local `.duckdb` file +

@@ -30,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import { usePalette } from 'udi-toolkit/react';
 import {
+  useConversation,
   useDashboard,
   useDashboardStore,
   useMemoryBankStore,
@@ -47,6 +48,15 @@ import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
 import { hasTweakableFields } from '../utils/tweakability';
 import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
 import { useJumpTarget } from '@/hooks/useJumpTarget';
+
+/** Whether the spec already draws a table: no representation (the toolkit then
+ *  lists every column) or only row layers. Such a card has no chart to toggle
+ *  away from, so it gets no table toggle. */
+function isTableSpec(spec: ActiveVisualization['spec']): boolean {
+  const representation: unknown = spec.representation;
+  const layers = representation == null ? [] : [representation].flat();
+  return layers.every((layer) => (layer as { mark?: unknown } | null)?.mark === 'row');
+}
 
 interface DashboardCardProps {
   vizKey: string;
@@ -66,6 +76,9 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const palette = usePalette();
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
+  const readOnly = useGlobal((s) => s.readOnly);
+  // A card from a hidden message has no bubble to jump to.
+  const messageHidden = useConversation((s) => viz.index < s.hiddenCount);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   // Highlight when this card is hovered directly, or when the chat is pointing
   // at it (its single-viz message, or its accordion item in a multi-viz
@@ -229,7 +242,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     >
       <CardHeader className="udi:p-1 udi:pb-0 udi:shrink-0">
         <div className="udi:flex udi:items-center udi:w-full udi:min-w-0 udi:gap-0.5">
-          {!editingTitle && (
+          {!editingTitle && !readOnly && (
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -252,23 +265,25 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           <EditableCardTitle vizKey={vizKey} viz={viz} onEditingChange={setEditingTitle} />
           {!editingTitle && (
             <>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="udi:h-6 udi:w-6"
-                      aria-label="Show message in chat"
-                      onClick={() => dashboardStore.getState().requestJumpToMessage(vizKey)}
-                    />
-                  }
-                >
-                  <Crosshair className="udi:h-3 udi:w-3" />
-                </TooltipTrigger>
-                <TooltipContent>Show message in chat</TooltipContent>
-              </Tooltip>
-              {tweakable && (
+              {!readOnly && !messageHidden && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="udi:h-6 udi:w-6"
+                        aria-label="Show message in chat"
+                        onClick={() => dashboardStore.getState().requestJumpToMessage(vizKey)}
+                      />
+                    }
+                  >
+                    <Crosshair className="udi:h-3 udi:w-3" />
+                  </TooltipTrigger>
+                  <TooltipContent>Show message in chat</TooltipContent>
+                </Tooltip>
+              )}
+              {tweakable && !readOnly && (
                 <Tooltip>
                   <TooltipTrigger
                     render={
@@ -285,25 +300,28 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                   <TooltipContent>Tweak fields</TooltipContent>
                 </Tooltip>
               )}
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="udi:h-6 udi:w-6"
-                      onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
-                    />
-                  }
-                >
-                  {isTableView ? (
-                    <BarChart3 className="udi:h-3 udi:w-3" />
-                  ) : (
-                    <Table2 className="udi:h-3 udi:w-3" />
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
-              </Tooltip>
+              {!isTableSpec(viz.spec) && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="udi:h-6 udi:w-6"
+                        aria-label={isTableView ? 'Show chart' : 'Show table'}
+                        onClick={() => dashboardStore.getState().toggleTableView(vizKey)}
+                      />
+                    }
+                  >
+                    {isTableView ? (
+                      <BarChart3 className="udi:h-3 udi:w-3" />
+                    ) : (
+                      <Table2 className="udi:h-3 udi:w-3" />
+                    )}
+                  </TooltipTrigger>
+                  <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
+                </Tooltip>
+              )}
               {isTableView && (
                 <Tooltip>
                   <TooltipTrigger
@@ -414,27 +432,31 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                   </DialogContent>
                 </Dialog>
               )}
-              <span
-                aria-hidden
-                className="udi:mx-0.5 udi:select-none udi:text-sm udi:leading-none udi:text-muted-foreground/40"
-              >
-                |
-              </span>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="udi:h-6 udi:w-6"
-                      onClick={handleClose}
-                    />
-                  }
-                >
-                  <X className="udi:h-3 udi:w-3" />
-                </TooltipTrigger>
-                <TooltipContent>Close</TooltipContent>
-              </Tooltip>
+              {!readOnly && (
+                <>
+                  <span
+                    aria-hidden
+                    className="udi:mx-0.5 udi:select-none udi:text-sm udi:leading-none udi:text-muted-foreground/40"
+                  >
+                    |
+                  </span>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="udi:h-6 udi:w-6"
+                          onClick={handleClose}
+                        />
+                      }
+                    >
+                      <X className="udi:h-3 udi:w-3" />
+                    </TooltipTrigger>
+                    <TooltipContent>Close</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
             </>
           )}
         </div>

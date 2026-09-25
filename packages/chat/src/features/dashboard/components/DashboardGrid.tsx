@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import {
   GridLayout,
   useContainerWidth,
@@ -7,7 +15,7 @@ import {
   type Layout,
 } from 'react-grid-layout';
 import type { DataSelections } from 'udi-toolkit/react';
-import { useDashboard, useDashboardStore } from '@/app/UDIChatContext';
+import { useDashboard, useDashboardStore, useGlobal } from '@/app/UDIChatContext';
 import { useChatRoot } from '@/lib/chatRoot';
 import {
   DRAG_HANDLE_CLASS,
@@ -28,18 +36,37 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   const gridCols = useDashboard((s) => s.gridCols);
   const gridRowHeight = useDashboard((s) => s.gridRowHeight);
   const dashboardStore = useDashboardStore();
+  const readOnly = useGlobal((s) => s.readOnly);
   const { width, containerRef, mounted } = useContainerWidth();
 
   // On initial load, size the column count to the container via the shared
-  // width → cols rule (gridColsForWidth). Runs once on mount; resizing
-  // afterward is intentionally left alone. We read offsetWidth directly since
-  // `width` starts at a placeholder before the first measure.
+  // width → cols rule (gridColsForWidth) — unless a count was already chosen,
+  // as an imported session's is: this grid only mounts once there are cards,
+  // i.e. after the import, so fitting unconditionally would replace it. Runs
+  // once on mount; resizing afterward is intentionally left alone. We read
+  // offsetWidth directly since `width` starts at a placeholder before the first
+  // measure.
   useEffect(() => {
     const w = containerRef.current?.offsetWidth ?? 0;
     if (w > 0) {
-      dashboardStore.getState().setGridCols(gridColsForWidth(w));
+      dashboardStore.getState().fitGridColsToWidth(w);
     }
   }, [containerRef, dashboardStore]);
+
+  // Leaving read-only brings the chat pane back and narrows the grid, so a count
+  // chosen for the full-width view — an embedded session asks for one — would
+  // squeeze its cards unreadably narrow. Re-derive it for the width the grid has
+  // now. A layout effect: the chat pane is already in the DOM, so offsetWidth
+  // reads the narrower width, and the repack is painted in the same frame
+  // instead of after a squeezed one.
+  const wasReadOnly = useRef(readOnly);
+  useLayoutEffect(() => {
+    const leftReadOnly = wasReadOnly.current && !readOnly;
+    wasReadOnly.current = readOnly;
+    if (!leftReadOnly) return;
+    const w = containerRef.current?.offsetWidth ?? 0;
+    if (w > 0) dashboardStore.getState().setGridCols(gridColsForWidth(w));
+  }, [readOnly, containerRef, dashboardStore]);
 
   // Keep the measured width in the store so the "Reset layout" action (in the
   // gear popover, which can't measure the grid itself) can re-derive the column
@@ -184,13 +211,15 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
             maxRows: Infinity,
           }}
           dragConfig={{
-            enabled: true,
+            enabled: !readOnly,
             bounded: false,
             handle: `.${DRAG_HANDLE_CLASS}`,
             threshold: 3,
           }}
           resizeConfig={{
-            enabled: true,
+            // Off in read-only: react-grid-layout then renders no handles at
+            // all, so the hover affordance in index.css has nothing to reveal.
+            enabled: !readOnly,
             // `e` = width (per-card: the card spans more columns, pushing/
             // wrapping neighbours). `s` = height, but height is a ROW property,
             // so dragging it resizes the whole row (see the compactor override

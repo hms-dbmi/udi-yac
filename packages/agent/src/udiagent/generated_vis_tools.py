@@ -1893,12 +1893,13 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'type': 'object'}},
   'type': 'function'},
  {'function': {'description': '[table] Lists all distinct values of a nominal field with their counts, ordered by '
-                              'descending count, displayed as a table with in-cell bar marks. Design: Groups by the '
-                              'nominal field and counts occurrences, sorted descending so the bars are comparable '
-                              'top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows '
-                              'relative frequency but not the value. Tasks: Determine the range (distinct values) of a '
-                              'nominal field; compare category frequencies. Query patterns: What is the range of <E> '
-                              '<F:n> values?',
+                              'descending count, displayed as a table with in-cell bar marks. Use this for a field '
+                              'with too many distinct values to chart (over 50): it lists all of them. Design: Groups '
+                              'by the nominal field and counts occurrences, sorted descending so the bars are '
+                              'comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar '
+                              'alone shows relative frequency but not the value. Tasks: Determine the range (distinct '
+                              'values) of a nominal field; compare category frequencies. Query patterns: What is the '
+                              'range of <E> <F:n> values?',
                'name': 'vis_044_table_count_sorted_distinct',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',

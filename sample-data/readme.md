@@ -62,7 +62,14 @@ key column to one of them.
 generating a `datapackage.json` for a CSV directory; for remote (StarRocks)
 packages the seed script carries these FKs into the server config — the
 database itself has no FK metadata, so a package without `foreignKeys` gets
-no cross-entity filtering at all.
+no cross-entity filtering at all. When a key is unique in several tables
+(pcx's Patient, Demographics and Treatment Summary are all one row per
+patient), pass `--parent <Table>` to choose the hub; otherwise name order
+picks it, and the agent only joins tables linked directly.
+
+It also fills in table and column `description`s from a `data_dictionary.csv`
+in the same directory — columns `table,field,description`, where `table` is
+the CSV filename and a blank `field` describes the table itself.
 
 ## Single source of truth
 

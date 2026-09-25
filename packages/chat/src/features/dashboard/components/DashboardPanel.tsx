@@ -1,19 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useDashboard, useDashboardStore, useDataFilters, useGlobal } from '@/app/UDIChatContext';
+import { Loader2 } from 'lucide-react';
+import { useDashboard, useDataFilters, useGlobal } from '@/app/UDIChatContext';
 import { DashboardGrid } from './DashboardGrid';
 import { ScrollAffordances } from './ScrollAffordances';
 import { GridSettingsButton } from './GridSettingsButton';
 import { WelcomeSplash } from './WelcomeSplash';
 import { FilterToolbar } from './FilterToolbar';
+import { useFilterChips } from '../hooks/useFilterChips';
 import { DataCounts } from './DataCounts';
 import { DownloadButton } from './DownloadButton';
 import { SessionImportExportButton } from './SessionImportExportButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
+/** Counts, grid settings, session import/export and downloads. Not rendered in
+ *  read-only: that view is usually a dashboard embedded in a host page, where
+ *  the charts need the height more than the chrome does. */
 function DashboardHeader() {
   return (
     <div className="udi:flex udi:items-center udi:justify-between udi:gap-2 udi:shrink-0">
@@ -27,13 +30,21 @@ function DashboardHeader() {
   );
 }
 
-export function DashboardPanel() {
+/**
+ * @param seeding An `initialSession` is waiting on the data package. The
+ *   dashboard is not empty then, only not filled yet, so it shows a spinner
+ *   rather than the welcome splash, whose mascot would otherwise flash up for
+ *   the length of the load.
+ */
+export function DashboardPanel({ seeding = false }: { seeding?: boolean }) {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
-  const filterAllNullValues = useDashboard((s) => s.filterAllNullValues);
-  const debugMode = useGlobal((s) => s.debugMode);
-  const dashboardStore = useDashboardStore();
+  const readOnly = useGlobal((s) => s.readOnly);
+  // Read-only has no header, so the sticky band holds only the Filters section;
+  // with nothing filtered it would be an empty white strip.
+  const hasFilters = useFilterChips().length > 0;
+  const showBand = !readOnly || hasFilters;
 
   // Sticky-on-scroll: the header + filter row + separator stay pinned to
   // the top of the scroll viewport while the grid scrolls underneath. An
@@ -82,9 +93,19 @@ export function DashboardPanel() {
     return (
       <div className="udi:h-full udi:p-3 udi:overflow-hidden">
         <div className="udi:flex udi:flex-col udi:gap-3">
-          <DashboardHeader />
+          {!readOnly && <DashboardHeader />}
           <div className="udi:min-h-0 udi:flex-1">
-            <WelcomeSplash />
+            {seeding ? (
+              <div role="status" className="udi:flex udi:justify-center udi:py-12">
+                <Loader2
+                  aria-hidden
+                  className="udi:h-5 udi:w-5 udi:animate-spin udi:text-muted-foreground"
+                />
+                <span className="udi:sr-only">Loading dashboard</span>
+              </div>
+            ) : (
+              <WelcomeSplash />
+            )}
           </div>
         </div>
       </div>
@@ -106,45 +127,25 @@ export function DashboardPanel() {
           <div ref={sentinelRef} aria-hidden />
           {/* No pb here: the Separator is the band's bottom edge so the stuck
               shadow casts straight onto the gray grid instead of a white chin. */}
-          <div
-            // Marks the band as overlaying the scrolled content, so a jumped-to
-            // card lands below it instead of underneath (scrollIntoViewport).
-            data-scroll-sticky-top
-            className={cn(
-              'udi:sticky udi:top-0 udi:z-10 udi:flex udi:flex-col udi:gap-3 udi:bg-background udi:pt-3 udi:transition-shadow',
-              isStuck && 'udi:shadow-md',
-            )}
-          >
-            <div className="udi:px-3">
-              <DashboardHeader />
-            </div>
-            <div className="udi:px-3">
-              <div className="udi:flex udi:items-center udi:justify-between udi:mb-1.5">
-                <h3 className="udi:text-xs udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider">
-                  Filters
-                </h3>
-                {debugMode && (
-                  <div className="udi:flex udi:items-center udi:gap-1.5">
-                    <Label
-                      htmlFor="null-filter"
-                      className="udi:text-[10px] udi:text-muted-foreground"
-                    >
-                      Filter Nulls
-                    </Label>
-                    <Switch
-                      id="null-filter"
-                      checked={filterAllNullValues}
-                      onCheckedChange={(checked) =>
-                        dashboardStore.getState().setFilterAllNullValues(!!checked)
-                      }
-                    />
-                  </div>
-                )}
-              </div>
+          {showBand && (
+            <div
+              // Marks the band as overlaying the scrolled content, so a jumped-to
+              // card lands below it instead of underneath (scrollIntoViewport).
+              data-scroll-sticky-top
+              className={cn(
+                'udi:sticky udi:top-0 udi:z-10 udi:flex udi:flex-col udi:gap-3 udi:bg-background udi:pt-3 udi:transition-shadow',
+                isStuck && 'udi:shadow-md',
+              )}
+            >
+              {!readOnly && (
+                <div className="udi:px-3">
+                  <DashboardHeader />
+                </div>
+              )}
               <FilterToolbar />
+              <Separator />
             </div>
-            <Separator />
-          </div>
+          )}
           {/* Left + right gutter on the grid alone so the header band above
               stays full-width. The gray ScrollArea background paints behind
               these gutters, so the grid insets from both panel edges while the

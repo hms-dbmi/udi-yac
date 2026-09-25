@@ -78,6 +78,14 @@ FALLBACK_VALIDATION_FAILED = "validation_failed"
 #: Placeholder resolution raised — a template or schema bug, not a model mistake.
 FALLBACK_INSTANTIATE_FAILED = "instantiate_failed"
 
+#: More categories than an axis or legend can show legibly.
+MAX_DRAWN_CATEGORIES = 50
+#: The value-count table: every distinct value of a field with its count, sorted.
+#: What a request falls back to when the chart it asked for would draw a field
+#: with more than MAX_DRAWN_CATEGORIES values. Found by suffix, which the
+#: template's `name_hint` pins against the positional index in the tool name.
+VALUE_COUNTS_TOOL_SUFFIX = "_table_count_sorted_distinct"
+
 
 # ---------------------------------------------------------------------------
 # Few-shot example loading
@@ -1041,6 +1049,76 @@ def _binding_entity_key(field_key):
     return None
 
 
+def _is_row_table(spec_template):
+    """Whether the template draws a row table (`mark: "row"`) rather than a chart."""
+    try:
+        representation = json.loads(spec_template).get("representation")
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return False
+    return isinstance(representation, dict) and representation.get("mark") == "row"
+
+
+def _grouped_field_keys(spec_template, bindings):
+    """Placeholders whose field the request supplies a `grouping` for.
+
+    Parsed, not raw. `parse_grouping` discards groups that claim no values and
+    returns None when none are left, so a payload like a lone empty `Other`
+    means "no grouping" by the time the spec is built. Read raw, that payload
+    still looks like a grouping and buys the cardinality exemption — the field
+    would draw its whole domain with neither the cap nor the cuts check ever
+    running.
+    """
+    from udiagent.stratify import GroupingError, parse_grouping
+
+    keys = set()
+    for group_key, field_key in grouping_targets(spec_template).items():
+        if not field_key:
+            continue
+        try:
+            if parse_grouping(bindings.get(group_key)) is not None:
+                keys.add(field_key)
+        except GroupingError:
+            # Malformed: reported by validate_bindings, which owns the message.
+            # Not an exemption either way.
+            continue
+    return keys
+
+
+def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozenset()):
+    """`(key, entity, field, cardinality)` for each categorical binding the chart
+    would draw with more than MAX_DRAWN_CATEGORIES values.
+
+    Only drawn fields count; a grouping key the pipeline rolls up never reaches a
+    visual channel (see _encoded_placeholders). A field the request supplies a
+    *grouping* for is exempt: the chart draws the handful of strata the grouping
+    defines, not the field's own domain, and combining an unwieldy domain into a
+    few named groups is exactly what the cap should push a caller towards.
+
+    Row tables are exempt too. The cap exists because an axis or legend cannot
+    show hundreds of categories legibly, and a table has neither: it lists one
+    row per value and scrolls. Capping it left a request for "the most common
+    chemotherapy agents" — 198 of them — with no template that could answer.
+    """
+    if _is_row_table(spec_template):
+        return []
+    encoded = _encoded_placeholders(spec_template)
+    entities = schema.get("entities", {})
+    entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
+    over = []
+    for key, field_name in bindings.items():
+        # A grouping binding is a dict, not a column name.
+        if not isinstance(field_name, str) or key not in encoded or key in grouped_field_keys:
+            continue
+        entity_name = _entity_for_binding_key(key, entity_bindings)
+        info = entities.get(entity_name, {}).get("fields", {}).get(field_name)
+        if not isinstance(info, dict):
+            continue
+        cardinality = info.get("cardinality", 0)
+        if info["type"] in ("nominal", "ordinal") and cardinality > MAX_DRAWN_CATEGORIES:
+            over.append((key, entity_name, field_name, cardinality))
+    return over
+
+
 def validate_bindings(
     spec_template, bindings, schema, data_domains=None, shared_entities=()
 ):
@@ -1121,8 +1199,6 @@ def validate_bindings(
             if not has_rel:
                 errors.append(f"No relationship between '{e1}' and '{e2}'")
 
-    encoded_placeholders = _encoded_placeholders(spec_template)
-
     # Check that x and y encodings don't resolve to the same field
     xy_placeholders = _extract_xy_placeholders(spec_template)
     if xy_placeholders.get("x") and xy_placeholders.get("y"):
@@ -1138,28 +1214,17 @@ def validate_bindings(
 
     placeholder_types = _placeholder_type_requirements(spec_template)
 
-    # Fields this request supplies a grouping for, which exempts them from the
-    # cardinality cap below.
-    #
-    # Parsed, not raw. `parse_grouping` discards groups that claim no values and
-    # returns None when none are left, so a payload like a lone empty `Other`
-    # means "no grouping" by the time the spec is built. Read raw, that payload
-    # still looks like a grouping and buys the exemption — the field would draw
-    # its whole domain with neither the cap nor the cuts check ever running.
-    from udiagent.stratify import GroupingError, parse_grouping
-
     targets = grouping_targets(spec_template)
-    grouped_field_keys = set()
-    for group_key, field_key in targets.items():
-        if not field_key:
-            continue
-        try:
-            if parse_grouping(bindings.get(group_key)) is not None:
-                grouped_field_keys.add(field_key)
-        except GroupingError:
-            # Malformed: reported by the per-binding check below, which owns the
-            # message. Not an exemption either way.
-            continue
+    grouped_field_keys = _grouped_field_keys(spec_template, bindings)
+
+    # Fields drawn with more categories than a chart can show. Reported in the
+    # per-binding loop below, so errors keep binding order.
+    over_cap = {
+        key: cardinality
+        for key, _entity, _field, cardinality in over_cap_bindings(
+            spec_template, bindings, schema, grouped_field_keys
+        )
+    }
 
     # Check fields exist on entities and types match
     for key, field_name in bindings.items():
@@ -1245,9 +1310,6 @@ def validate_bindings(
 
         field_info = entity_fields[field_name]
         actual_type = field_info["type"] if isinstance(field_info, dict) else field_info
-        cardinality = (
-            field_info.get("cardinality", 0) if isinstance(field_info, dict) else 0
-        )
 
         expected_type = placeholder_types.get(key)
         if expected_type:
@@ -1267,21 +1329,14 @@ def validate_bindings(
                     f"Available {expected_type} fields: {', '.join(matching)}"
                 )
 
-        # Only cap fields that are actually drawn; a grouping key the pipeline
-        # rolls up never reaches a visual channel. See _encoded_placeholders.
-        # A field the request also supplies a *grouping* for is exempt: the chart
-        # draws the handful of strata that grouping defines, not the field's own
-        # domain, and combining an unwieldy domain into a few named groups is
-        # exactly what the cap should be pushing a caller towards.
-        if (
-            (actual_type == "nominal" or actual_type == "ordinal")
-            and cardinality > 50
-            and key in encoded_placeholders
-            and key not in grouped_field_keys
-        ):
+        # See over_cap_bindings for what is capped and what is exempt. The
+        # message names the way out, since the retry reads it: a table lists
+        # every value.
+        if key in over_cap:
             errors.append(
-                f"Field '{field_name}' has {cardinality} unique values, which is too many "
-                f"for a visualization (max 50). Choose a different encoding or visualization."
+                f"Field '{field_name}' has {over_cap[key]} unique values, too many to draw "
+                f"on an axis or legend (max {MAX_DRAWN_CATEGORIES}). A table can list every "
+                f"value, e.g. each value with its count, sorted by count."
             )
 
     # A rollup output bound to the same column as the key it groups by is a
@@ -1737,6 +1792,108 @@ def resolve_text_templates(tool_name, bindings):
     return {"title": fill(title), "summary": fill(summary)}
 
 
+def _record_template_spec(
+    context, tool_name, tool_args, spec_template, param_map, bindings, schema, messages
+):
+    """Resolve a template and record it on `context` as the delivered chart.
+
+    One place for everything that makes a template chart re-bindable later —
+    its provenance, its tweakable parameters, its wording — shared by the path
+    the model chose and the value-count substitute, so the two cannot drift.
+    Raises whatever `instantiate_template` raises.
+    """
+    spec_dict = instantiate_template(spec_template, bindings, schema)
+    context["spec_str"] = json.dumps(spec_dict)
+    context["gen_messages"] = messages
+    context["tool_used"] = tool_name
+    context["tool_args"] = tool_args
+    context["tweakable_params"] = template_tweakable_params(
+        spec_template, param_map, bindings, schema
+    )
+    context["text_templates"] = resolve_text_templates(tool_name, bindings)
+    return context
+
+
+def _groups_by(spec_template, key):
+    """Whether the template groups rows by placeholder `key` and rolls them up:
+    a count or aggregate per category of that field."""
+    try:
+        steps = json.loads(spec_template).get("transformation") or []
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return False
+    placeholder = re.compile(rf"<{re.escape(key)}(:\w+)?>")
+    return any(
+        isinstance(s, dict) and "groupby" in s and placeholder.search(json.dumps(s["groupby"]))
+        for s in steps
+    ) and any(isinstance(s, dict) and "rollup" in s for s in steps)
+
+
+def _substitute_value_counts(
+    context, rejected, tool_dispatch, templates, schema, messages, rid
+):
+    """Answer a request whose chart has too many categories with the full list.
+
+    Runs once every attempt is spent. When the last one was refused because a
+    field it counts per category has more values than a chart can draw, the
+    value-count table — every distinct value with its count, sorted — is the
+    same question asked of a form that can hold the answer. Deterministic, and
+    costs no further model call.
+
+    Only for a template that groups by the over-cap field. Anywhere else — a
+    survival stratifier bound to a subject id, say — the field was the wrong
+    choice, and a list of it would answer nothing; that still fails, with a
+    message naming the fix. Returns None when it does not apply.
+    """
+    tool_name, tool_args, _errors = rejected[-1]
+    template_idx, param_map = tool_dispatch[tool_name]
+    spec_template = templates[template_idx]
+    bindings = {param_map[k]: v for k, v in tool_args.items() if k in param_map}
+    over = [
+        entry
+        for entry in over_cap_bindings(
+            spec_template, bindings, schema, _grouped_field_keys(spec_template, bindings)
+        )
+        if _groups_by(spec_template, entry[0])
+    ]
+    list_tool = next((n for n in tool_dispatch if n.endswith(VALUE_COUNTS_TOOL_SUFFIX)), None)
+    if not over or list_tool is None:
+        return None
+
+    _key, entity, field, cardinality = over[0]
+    list_idx, list_map = tool_dispatch[list_tool]
+    roles = {"E": entity, "F": field}
+    list_args = {p: roles[ph] for p, ph in list_map.items() if ph in roles}
+    list_bindings = {list_map[p]: v for p, v in list_args.items()}
+    if validate_bindings(templates[list_idx], list_bindings, schema):
+        return None
+    try:
+        _record_template_spec(
+            context, list_tool, list_args, templates[list_idx], list_map,
+            list_bindings, schema, messages,
+        )
+    except Exception:
+        logger.exception("[vis %s] value-count substitute failed for %s", rid, field)
+        return None
+    context["text_templates"] = {
+        **(context.get("text_templates") or {}),
+        "summary": (
+            f"{field} has {cardinality} distinct values, too many to chart, so this "
+            "lists every value with its count."
+        ),
+    }
+    context["validation_retries"] = len(rejected)
+    logger.info(
+        "[vis %s] value_counts_substitute: %s drew %s.%s (%d values); listing them with %s",
+        rid,
+        tool_name,
+        entity,
+        field,
+        cardinality,
+        list_tool,
+    )
+    return context
+
+
 def _execute_generate(skill, context):
     """Execute the generate skill: try function-calling tools first, fall back to LLM."""
     agent = context["agent"]
@@ -1897,18 +2054,10 @@ def _execute_generate(skill, context):
                 break
 
             try:
-                spec_dict = instantiate_template(
-                    templates[template_idx], bindings, request_schema
+                _record_template_spec(
+                    context, tool_name, tool_args, templates[template_idx], param_map,
+                    bindings, request_schema, tool_messages,
                 )
-                spec_str = json.dumps(spec_dict)
-                context["spec_str"] = spec_str
-                context["gen_messages"] = tool_messages
-                context["tool_used"] = tool_name
-                context["tool_args"] = tool_args
-                context["tweakable_params"] = template_tweakable_params(
-                    templates[template_idx], param_map, bindings, request_schema
-                )
-                context["text_templates"] = resolve_text_templates(tool_name, bindings)
                 context["validation_retries"] = _attempt
                 logger.info(
                     "[vis %s] instantiated %s (retries=%d, tweakable_params=%d)",
@@ -1930,6 +2079,14 @@ def _execute_generate(skill, context):
                 )
                 fallback_reason = FALLBACK_INSTANTIATE_FAILED
                 break
+
+    # --- Too many categories to chart: list them instead ---
+    if fallback_reason == FALLBACK_VALIDATION_FAILED and rejected:
+        listed = _substitute_value_counts(
+            context, rejected, tool_dispatch, templates, request_schema, tool_messages, rid
+        )
+        if listed is not None:
+            return listed
 
     # --- The template path did not produce a spec ---
     context["fallback_reason"] = fallback_reason

@@ -499,9 +499,16 @@ async function updateVegaChartSelections() {
   ignore.value = true;
   // console.log('Current signals:', currentSignals);
 
+  // Only this chart's own brushes. The map holds every chart's selections
+  // (a source chart renders its brush from it), and asking Vega for a signal
+  // this view doesn't define throws — one error per foreign brush per chart on
+  // every selection change. signalKeys lists exactly the interval signals this
+  // chart owns, which is all updateVegaChartSelection applies.
+  const own = new Set(props.signalKeys ?? []);
   for (const [selectionName, selection] of Object.entries(props.selections)) {
-    // Isolate each selection: a malformed entry (or one for a signal this
-    // chart doesn't have) must not abort applying the others.
+    if (!own.has(selectionName)) continue;
+    // Isolate each selection: a malformed entry must not abort applying the
+    // others.
     try {
       updateVegaChartSelection(selectionName, selection);
     } catch (error) {
@@ -526,8 +533,9 @@ function updateVegaChartSelection(
   // (initVegaChart's brush listeners): via `view.signal(...)`, NOT
   // `getState().signals`. getState() applies Vega's default signal filter,
   // which can omit `_tuple_fields` in the embedded canvas view and made this
-  // whole function silently no-op. A missing tuple (this chart has no such
-  // interval selection) → nothing to do.
+  // whole function silently no-op. `view.signal` THROWS for a name this view
+  // doesn't define, so the caller passes only this chart's own brushes; an
+  // empty tuple (a brush not drawn yet) → nothing to do.
   const tupleFields = vegaView.value.signal(
     `${signalKeyStart}_tuple_fields`,
   ) as Array<{ channel: string; field: string }> | undefined;

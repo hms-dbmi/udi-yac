@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { str, bool } from '@/app/env';
+import { str, bool, readOnly } from '@/app/env';
 import { ENV_VARS } from '@/app/envVars';
 
 afterEach(() => vi.restoreAllMocks());
@@ -47,6 +47,20 @@ describe('bool', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(bool('maybe', true)).toBe(true);
     expect(warn).toHaveBeenCalledOnce();
+  });
+});
+
+describe('readOnly', () => {
+  it.each(['locked', 'LOCKED', ' Locked '])('reads %o as the lock', (raw) => {
+    expect(readOnly(raw)).toBe('locked');
+  });
+
+  it.each(['1', 'true', 'on'])('reads %o as read-only with a way out', (raw) => {
+    expect(readOnly(raw)).toBe(true);
+  });
+
+  it.each([undefined, '', 'false', 'no'])('reads %o as editable', (raw) => {
+    expect(readOnly(raw)).toBe(false);
   });
 });
 

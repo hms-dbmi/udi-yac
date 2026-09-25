@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
 import { useThemePalette } from './useThemePalette';
 import {
@@ -11,6 +12,7 @@ import {
   SplashMessagesProvider,
   TrackerProvider,
   useConversation,
+  useConversationStore,
   useDataPackageStore,
   useDashboardStore,
   useDashboard,
@@ -26,6 +28,8 @@ import { DataOverviewPanel } from '@/features/data-package';
 import { Button } from '@/components/ui/button';
 import { extractAllUdiSpecsFromMessage, type TemplateProvenance } from '@/features/dashboard';
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
+import { parseSessionExport } from '@/features/dashboard/utils/dashboardSerialization';
+import { applySessionExport } from '@/features/dashboard/utils/applySessionExport';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
@@ -51,7 +55,9 @@ function UDIChatInner({
   authToken,
   model,
   requireApiKey,
+  initialSession,
 }: UDIChatConfig) {
+  const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
@@ -64,7 +70,10 @@ function UDIChatInner({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
   const trackEvent = useTracker();
-  useLayoutPersistence();
+  const readOnly = useGlobal((s) => s.readOnly);
+  const readOnlyLocked = useGlobal((s) => s.readOnlyLocked);
+  const loadingPhase = useDataPackage((s) => s.loadingPhase);
+  useLayoutPersistence({ enabled: !readOnly, restore: initialSession == null });
 
   // Keep the store's token current. A host that refreshes the JWT must not
   // trigger a package reload: `authToken` is deliberately absent from the
@@ -99,6 +108,32 @@ function UDIChatInner({
     dataFieldDomainsProp,
     fetchOptions,
   ]);
+
+  // Seed from `initialSession`, once, after the data package is ready: the
+  // cards need its field lists to become interactive. `validateConfig` already
+  // rejected a malformed payload, so a parse failure here cannot happen — bail
+  // rather than throw from inside an effect if it somehow does.
+  const parsedInitialSession = useMemo(
+    () => (initialSession == null ? null : parseSessionExport(initialSession)),
+    [initialSession],
+  );
+  // A layout effect, so the cards land before the frame where the package turns
+  // ready is painted — otherwise that frame shows the empty dashboard's splash.
+  const seededRef = useRef(false);
+  useLayoutEffect(() => {
+    if (seededRef.current) return;
+    if (!parsedInitialSession?.ok) return;
+    if (loadingPhase !== 'ready') return;
+    seededRef.current = true;
+    applySessionExport(
+      parsedInitialSession.value,
+      { conversation: conversationStore, dashboard: dashboardStore },
+      dataPackageStore.getState().sourceFields,
+    );
+  }, [parsedInitialSession, loadingPhase, conversationStore, dashboardStore, dataPackageStore]);
+  // Until then the dashboard is not empty, only not filled yet.
+  const seeding =
+    parsedInitialSession?.ok === true && loadingPhase !== 'ready' && loadingPhase !== 'error';
 
   // Auto-activate visualizations from new assistant messages (batched to avoid O(n^2) cascade)
   useEffect(() => {
@@ -181,6 +216,14 @@ function UDIChatInner({
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
   }, [dataSelections, activeVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
 
+  const exitReadOnly = () => {
+    // The seeded transcript would open the chat on a wall of prompts nobody
+    // here typed. Hidden, not dropped — see `hiddenCount`.
+    conversationStore.getState().hideMessages();
+    globalStore.getState().setReadOnly(false);
+    trackEvent('read_only_exited', {});
+  };
+
   const queryConfig: QueryConfig = {
     apiBaseUrl,
     authToken,
@@ -196,71 +239,104 @@ function UDIChatInner({
     // would make the root a containing block for everything useChatRoot()
     // portals into it.
     <div className="udi:@container/shell udi:flex udi:h-full udi:w-full udi:bg-background">
-      {/* Sidebar drawer — debug mode only */}
-      {debugMode && drawerOpen && (
-        <div className="udi:w-56 udi:shrink-0 udi:border-r udi:bg-background udi:overflow-hidden udi:flex udi:flex-col">
-          <ConversationList />
-        </div>
-      )}
       {/*
-       * Left region: chat and the data overview. Above 1200px both fit beside
-       * the dashboard (400 + 400 + 400), so the region doubles in width and
-       * shows them side by side. Below it, the overview takes the chat's slot
-       * and the chat is CSS-hidden rather than unmounted, so a streaming
-       * response and the message list's scroll position survive the swap.
-       * ponytail: 1200 is the one knob — inlined in the variants below because
-       * Tailwind scans source text and cannot read a constant.
+       * Read-only drops the whole left region, so the dashboard gets the full
+       * width; the floating Explore Data button is the way back. One branch,
+       * rather than a per-control sweep, because the chat pane is where every
+       * writing affordance lives — the input and its `//admin` backdoor, reset,
+       * example prompts, the memory bank, the API key, closed-viz restore, and
+       * the data overview's "Open on dashboard" button. Nothing here is
+       * unmounted for good: leaving read-only re-renders the region with its
+       * state intact.
        */}
-      <div
-        className={cn(
-          'udi:shrink-0 udi:min-w-[300px] udi:border-r udi:flex udi:flex-col udi:overflow-hidden',
-          overviewOpen ? 'udi:w-[400px] udi:@min-[1200px]/shell:w-[800px]' : 'udi:w-[400px]',
-        )}
-      >
-        <ViewSwitch
-          overviewOpen={overviewOpen}
-          onChange={(open) => globalStore.getState().setOverview(open)}
-        />
-        <div className="udi:flex udi:flex-1 udi:min-h-0">
-          <div
-            // A popover opened from a chart *in the chat* aligns its left edge
-            // to this column rather than to its trigger, which sits indented
-            // inside a bubble — 320px starting there would spill over the
-            // dashboard. Found with `closest()` from the trigger, so no ref or
-            // context is needed.
-            data-udi-chat-column=""
-            className={cn(
-              'udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden',
-              overviewOpen && 'udi:hidden udi:@min-[1200px]/shell:flex',
-            )}
-          >
-            <ChatPanel
-              config={queryConfig}
-              needsApiKey={apiKey.needsApiKey}
-              hasApiKey={apiKey.hasApiKey}
-              userKeyQuotaExceeded={apiKey.userKeyQuotaExceeded}
-              pendingQuotaRetry={apiKey.pendingQuotaRetry}
-              onSetApiKey={apiKey.setApiKey}
-              onClearApiKey={apiKey.clearApiKey}
-              onQuotaRebuff={apiKey.onQuotaRebuff}
-              onNormalResponse={apiKey.onNormalResponse}
-              onConsumePendingRetry={apiKey.consumePendingRetry}
-              showDrawerToggle={debugMode}
-              drawerOpen={drawerOpen}
-              onToggleDrawer={() => setDrawerOpen((v) => !v)}
-            />
-          </div>
-          {overviewOpen && (
-            <div className="udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden udi:@min-[1200px]/shell:border-l">
-              <DataOverviewPanel />
+      {!readOnly && (
+        <>
+          {/* Sidebar drawer — debug mode only */}
+          {debugMode && drawerOpen && (
+            <div className="udi:w-56 udi:shrink-0 udi:border-r udi:bg-background udi:overflow-hidden udi:flex udi:flex-col">
+              <ConversationList />
             </div>
           )}
-        </div>
-      </div>
-      <div className="udi:flex-1 udi:min-w-0 udi:overflow-hidden">
-        <DashboardPanel />
+          {/*
+           * Left region: chat and the data overview. Above 1200px both fit beside
+           * the dashboard (400 + 400 + 400), so the region doubles in width and
+           * shows them side by side. Below it, the overview takes the chat's slot
+           * and the chat is CSS-hidden rather than unmounted, so a streaming
+           * response and the message list's scroll position survive the swap.
+           * ponytail: 1200 is the one knob — inlined in the variants below because
+           * Tailwind scans source text and cannot read a constant.
+           */}
+          <div
+            className={cn(
+              'udi:shrink-0 udi:min-w-[300px] udi:border-r udi:flex udi:flex-col udi:overflow-hidden',
+              overviewOpen ? 'udi:w-[400px] udi:@min-[1200px]/shell:w-[800px]' : 'udi:w-[400px]',
+            )}
+          >
+            <ViewSwitch
+              overviewOpen={overviewOpen}
+              onChange={(open) => globalStore.getState().setOverview(open)}
+            />
+            <div className="udi:flex udi:flex-1 udi:min-h-0">
+              <div
+                // A popover opened from a chart *in the chat* aligns its left edge
+                // to this column rather than to its trigger, which sits indented
+                // inside a bubble — 320px starting there would spill over the
+                // dashboard. Found with `closest()` from the trigger, so no ref or
+                // context is needed.
+                data-udi-chat-column=""
+                className={cn(
+                  'udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden',
+                  overviewOpen && 'udi:hidden udi:@min-[1200px]/shell:flex',
+                )}
+              >
+                <ChatPanel
+                  config={queryConfig}
+                  needsApiKey={apiKey.needsApiKey}
+                  hasApiKey={apiKey.hasApiKey}
+                  userKeyQuotaExceeded={apiKey.userKeyQuotaExceeded}
+                  pendingQuotaRetry={apiKey.pendingQuotaRetry}
+                  onSetApiKey={apiKey.setApiKey}
+                  onClearApiKey={apiKey.clearApiKey}
+                  onQuotaRebuff={apiKey.onQuotaRebuff}
+                  onNormalResponse={apiKey.onNormalResponse}
+                  onConsumePendingRetry={apiKey.consumePendingRetry}
+                  showDrawerToggle={debugMode}
+                  drawerOpen={drawerOpen}
+                  onToggleDrawer={() => setDrawerOpen((v) => !v)}
+                />
+              </div>
+              {overviewOpen && (
+                <div className="udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden udi:@min-[1200px]/shell:border-l">
+                  <DataOverviewPanel />
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+      <div className="udi:relative udi:flex-1 udi:min-w-0 udi:overflow-hidden">
+        <DashboardPanel seeding={seeding} />
+        {readOnly && !readOnlyLocked && <ExploreDataButton onClick={exitReadOnly} />}
       </div>
     </div>
+  );
+}
+
+/**
+ * The way out of read-only, floating over the dashboard's bottom-right corner
+ * just left of its scroll buttons: a reader looking at the charts is looking
+ * there. `absolute`, not `fixed` — embedded in a host's column, `fixed` would
+ * pin it to the host page's viewport.
+ */
+function ExploreDataButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="udi:absolute udi:right-14 udi:bottom-3 udi:z-20 udi:h-11 udi:gap-2 udi:rounded-lg udi:border udi:border-udi-gray-300 udi:bg-udi-primary-700 udi:px-5 udi:text-base udi:text-white udi:shadow-lg udi:hover:bg-udi-primary-700/90"
+    >
+      <Sparkles className="udi:size-5" />
+      Explore Data
+    </Button>
   );
 }
 
@@ -326,7 +402,7 @@ function UDIChatValidated(props: UDIChatConfig) {
   return (
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
-        <UDIChatProvider>
+        <UDIChatProvider readOnly={props.readOnly}>
           <ApiConfigProvider apiBaseUrl={props.apiBaseUrl} authToken={props.authToken}>
             <TrackerProvider onEvent={props.onEvent}>
               <DownloadActionsProvider actions={props.downloadActions}>
@@ -377,4 +453,13 @@ export function UDIChat(props: UDIChatConfig) {
       <UDIChatValidated {...props} />
     </ErrorBoundary>
   );
+}
+
+/**
+ * `UDIChat` started in read-only mode — the dashboard embed. Pass
+ * `initialSession` to give it something to show, and `readOnly="locked"` via
+ * `UDIChat` itself if the user must not be able to open the chat at all.
+ */
+export function UDIDashboard(props: Omit<UDIChatConfig, 'readOnly'>) {
+  return <UDIChat {...props} readOnly />;
 }

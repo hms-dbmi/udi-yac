@@ -48,7 +48,11 @@ If the directory has a `datapackage.json` (generate one with the stdlib-only
 entity names and field types drive the table schemas, and its
 `primaryKey`/`foreignKeys` are carried into the backends config — the
 database itself stores no FK constraints, and the chat's cross-entity
-filtering depends on them (served back via `/v1/yac/metadata`). Without a
+filtering depends on them (served back via `/v1/yac/metadata`). Table and
+column descriptions ride along the same way; `gen_datapackage.py` reads them
+from a `data_dictionary.csv` (`table,field,description`) beside the CSVs. An
+`example_prompts.json` there (a JSON list of strings) becomes the package's
+`examplePrompts`: the chat's "Try an example" list for it. Without a
 datapackage, column types are sniffed (all-numeric columns → BIGINT/DOUBLE,
 else VARCHAR) and no entity relationships are available. Placeholder strings
 ("Not Available", "Not Reported", "Unknown", …) in otherwise-numeric columns

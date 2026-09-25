@@ -24,14 +24,16 @@ Each is described once in [`src/app/envVars.ts`](src/app/envVars.ts); this table
 
 <!-- BEGIN generated: env vars (scripts/gen-chat-env-docs.mjs) -->
 
-| Variable                   | Default                         | Description                                                                                                                                                                                                                                            |
-| -------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `VITE_UDI_API_BASE_URL`    | `http://localhost:8007`         | UDIAgent FastAPI server URL. May also be a same-origin path (e.g. `/api/yac`) when the chat sits behind the host app’s reverse proxy.                                                                                                                  |
-| `VITE_UDI_DATA_PACKAGE`    | `/data/hubmap/datapackage.json` | Path or URL to a `datapackage.json`. Defaults to the bundled HuBMAP snapshot synced from `sample-data/`. Ignored when `VITE_UDI_REMOTE_PACKAGE` is set.                                                                                                |
-| `VITE_UDI_REMOTE_PACKAGE`  | —                               | Name of a server-side data package (configured on the agent via `UDI_QUERY_BACKENDS`). When set, no CSVs load in the browser: metadata comes from `/v1/yac/metadata` and queries go to `/v1/yac/query`. Takes precedence over `VITE_UDI_DATA_PACKAGE`. |
-| `VITE_UDI_REQUIRE_API_KEY` | `true`                          | Prompt the user for an OpenAI key in the UI. Defaults to `true`, but `.env.example` ships `false` because local dev runs against an agent that has its own `OPENAI_API_KEY`.                                                                           |
-| `VITE_UDI_MODEL`           | —                               | LLM model override. Sent **only when the user supplies their own OpenAI key** — the agent honors a requested model only alongside an `X-OpenAI-Key`, so whoever pays for the tokens picks the model. Otherwise the agent’s `GPT_MODEL_NAME` applies.   |
-| `VITE_BASE`                | `/`                             | Public base path for the built SPA (read in `vite.config.ts`, build-time only). The library build always uses `./`.                                                                                                                                    |
+| Variable                   | Default                         | Description                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_UDI_API_BASE_URL`    | `http://localhost:8007`         | UDIAgent FastAPI server URL. May also be a same-origin path (e.g. `/api/yac`) when the chat sits behind the host app’s reverse proxy.                                                                                                                                                                                                                                                                                                                  |
+| `VITE_UDI_DATA_PACKAGE`    | `/data/hubmap/datapackage.json` | Path or URL to a `datapackage.json`. Defaults to the bundled HuBMAP snapshot synced from `sample-data/`. Ignored when `VITE_UDI_REMOTE_PACKAGE` is set.                                                                                                                                                                                                                                                                                                |
+| `VITE_UDI_REMOTE_PACKAGE`  | —                               | Name of a server-side data package (configured on the agent via `UDI_QUERY_BACKENDS`). When set, no CSVs load in the browser: metadata comes from `/v1/yac/metadata` and queries go to `/v1/yac/query`. Takes precedence over `VITE_UDI_DATA_PACKAGE`.                                                                                                                                                                                                 |
+| `VITE_UDI_REQUIRE_API_KEY` | `true`                          | Prompt the user for an OpenAI key in the UI. Defaults to `true`, but `.env.example` ships `false` because local dev runs against an agent that has its own `OPENAI_API_KEY`.                                                                                                                                                                                                                                                                           |
+| `VITE_UDI_MODEL`           | —                               | LLM model override. Sent **only when the user supplies their own OpenAI key** — the agent honors a requested model only alongside an `X-OpenAI-Key`, so whoever pays for the tokens picks the model. Otherwise the agent’s `GPT_MODEL_NAME` applies.                                                                                                                                                                                                   |
+| `VITE_UDI_READ_ONLY`       | `false`                         | Start in read-only mode: the chat pane and the dashboard’s top bar (counts, grid settings, session import/export, downloads) are hidden, as is every editing control on the cards, while brushing, filters and the table toggle stay. `true` leaves an Explore Data button over the dashboard that opens the chat; `locked` removes it. With the chat hidden there is nothing to build a dashboard from, so pair this with `VITE_UDI_INITIAL_SESSION`. |
+| `VITE_UDI_INITIAL_SESSION` | —                               | Path or URL to a session export — the JSON written by the dashboard’s `Session → Export session` action. Fetched at startup and used to seed the dashboard and the conversation behind it. Anything under `public/` is served from the site root, so `public/demo-session.json` is `/demo-session.json`. A malformed file fails loudly through the ErrorBoundary; a missing one only logs, and the dashboard starts empty.                             |
+| `VITE_BASE`                | `/`                             | Public base path for the built SPA (read in `vite.config.ts`, build-time only). The library build always uses `./`.                                                                                                                                                                                                                                                                                                                                    |
 
 <!-- END generated: env vars -->
 
@@ -68,8 +70,8 @@ landed print the unknown token instead, so an old enough `udi-yac` shows
 
 The project builds as both a **library** and a **standalone app**:
 
-- **Library** (`pnpm build`): Exports the `UDIChat` component and `UDIChatConfig` type. Consumers provide React and render `<UDIChat>` with configuration props.
-- **Standalone** (`pnpm build:app`): Builds `App.tsx` as a full SPA with dev defaults.
+- **Library** (`pnpm build:lib`): Exports the `UDIChat` / `UDIDashboard` components and the `UDIChatConfig` type. Consumers provide React and render `<UDIChat>` with configuration props.
+- **Standalone** (`pnpm build`): Builds `App.tsx` as a full SPA with dev defaults.
 
 ### Library Usage
 
@@ -112,25 +114,88 @@ Embedding in another app? Two things worth knowing up front:
 
 ### Config Props
 
-| Prop               | Type                 | Description                                                                                                                                                                                                                                      |
-| ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apiBaseUrl`       | `string`             | Base URL for the UDIAgent API. Absolute (`https://agent.example.org`) or a same-origin path (`/api/yac`).                                                                                                                                        |
-| `remotePackage`    | `string?`            | Server-side data package name. Schema/domains come from `GET /v1/yac/metadata` and queries from `POST /v1/yac/query`; no CSVs load in the browser and cross-filtering becomes commit-on-mouse-up. Takes precedence over both data-package props. |
-| `dataPackagePath`  | `string?`            | URL/path to `datapackage_udi.json`. Ignored when `dataPackage` is provided.                                                                                                                                                                      |
-| `dataPackage`      | `DataPackage?`       | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
-| `dataFieldDomains` | `DataFieldDomain[]?` | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
-| `fetchOptions`     | `RequestInit?`       | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
-| `authToken`        | `string?`            | JWT bearer token for API auth. Omit it when a backend proxy attaches the header instead; no `Authorization` header is then sent.                                                                                                                 |
-| `requireApiKey`    | `boolean?`           | Show API key input before chatting                                                                                                                                                                                                               |
-| `model`            | `string?`            | LLM model name override                                                                                                                                                                                                                          |
-| `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |
-| `entityIcons`      | `EntityIconMap?`     | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                                                                                                                                                          |
-| `mascot`           | `ReactNode \| null?` | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                                                                                                                                                         |
-| `splashMessages`   | `readonly string[]?` | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages).                                                                                                                                  |
-| `onEvent`          | `TrackerFn?`         | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                                                                                                                                                       |
-| `palette`          | `UDIPalette?`        | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
-| `className`        | `string?`            | CSS class for the root element                                                                                                                                                                                                                   |
-| `style`            | `CSSProperties?`     | Inline styles for the root element                                                                                                                                                                                                               |
+| Prop                  | Type                   | Description                                                                                                                                                                                                                                      |
+| --------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apiBaseUrl`          | `string`               | Base URL for the UDIAgent API. Absolute (`https://agent.example.org`) or a same-origin path (`/api/yac`).                                                                                                                                        |
+| `remotePackage`       | `string?`              | Server-side data package name. Schema/domains come from `GET /v1/yac/metadata` and queries from `POST /v1/yac/query`; no CSVs load in the browser and cross-filtering becomes commit-on-mouse-up. Takes precedence over both data-package props. |
+| `dataPackagePath`     | `string?`              | URL/path to `datapackage_udi.json`. Ignored when `dataPackage` is provided.                                                                                                                                                                      |
+| `dataPackage`         | `DataPackage?`         | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
+| `dataFieldDomains`    | `DataFieldDomain[]?`   | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
+| `fetchOptions`        | `RequestInit?`         | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
+| `authToken`           | `string?`              | JWT bearer token for API auth. Omit it when a backend proxy attaches the header instead; no `Authorization` header is then sent.                                                                                                                 |
+| `requireApiKey`       | `boolean?`             | Show API key input before chatting                                                                                                                                                                                                               |
+| `model`               | `string?`              | LLM model name override                                                                                                                                                                                                                          |
+| `downloadActions`     | `DownloadAction[]?`    | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |
+| `downloadButtonLabel` | `string?`              | Override the Download dropdown's trigger label. Defaults to `Download Data`.                                                                                                                                                                     |
+| `entityIcons`         | `EntityIconMap?`       | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                                                                                                                                                          |
+| `mascot`              | `ReactNode \| null?`   | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                                                                                                                                                         |
+| `splashMessages`      | `readonly string[]?`   | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages).                                                                                                                                  |
+| `onEvent`             | `TrackerFn?`           | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                                                                                                                                                       |
+| `palette`             | `UDIPalette?`          | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
+| `readOnly`            | `boolean \| 'locked'?` | Start with the chat collapsed to a rail and every editing control hidden. `'locked'` removes the way back out. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                      |
+| `initialSession`      | `unknown?`             | A session export to seed the dashboard and conversation with. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                                                                       |
+| `className`           | `string?`              | CSS class for the root element                                                                                                                                                                                                                   |
+| `style`               | `CSSProperties?`       | Inline styles for the root element                                                                                                                                                                                                               |
+
+### Read-only dashboard embed
+
+To drop UDI into a host app as a **dashboard** rather than a chat, use `UDIDashboard` (or
+`UDIChat` with `readOnly`). The chat pane, the dashboard's top bar and every editing control
+disappear, leaving the dashboard the full width and height.
+
+```tsx
+import { UDIDashboard } from 'udi-yac';
+import 'udi-yac/style.css';
+
+<div className="h-screen">
+  <UDIDashboard
+    apiBaseUrl="/api/yac"
+    dataPackagePath="./data/hubmap/datapackage.json"
+    initialSession={savedSession}
+  />
+</div>;
+```
+
+**Read-only is the starting mode, not a lock.** A floating "Explore Data" button at the dashboard's
+bottom right leaves read-only, at which point the full chat and every editing control appear. The
+chat opens fresh: the conversation `initialSession` carried is hidden, though the model still has
+it as context for the charts on the dashboard. If your users must not be able to chat at all,
+pass `readOnly="locked"` to `UDIChat` instead: the button is dropped, leaving no way out.
+
+| Removed in read-only                                                       | Kept in read-only                       |
+| -------------------------------------------------------------------------- | --------------------------------------- |
+| The chat pane and the data overview                                        | Brushing and cross-filtering            |
+| Card drag, resize, rename, close, field tweak                              | The filter chips, including clearing    |
+| The top bar: counts, grid settings, session import / export, Download Data | The chart / table toggle and all-fields |
+| The Filters section, while nothing is filtered                             | The info tooltips                       |
+
+Layout changes are not written to `localStorage` while read-only, since there are none to make.
+
+#### Seeding the dashboard
+
+With the chat hidden there is nothing to build a dashboard from, so a read-only embed almost
+always wants `initialSession`. It takes the JSON that the dashboard's **Session → Export session**
+action writes — build a dashboard in the app, export it, and ship that file with your host:
+
+```tsx
+import savedSession from './my-dashboard.json';
+
+<UDIDashboard
+  apiBaseUrl="/api/yac"
+  dataPackagePath="/data/datapackage.json"
+  initialSession={savedSession}
+/>;
+```
+
+The prop is typed `unknown` so `JSON.parse(text)` can go straight in; it is validated against the
+`SessionExport` shape and a malformed payload throws a descriptive error rather than leaving a
+silently empty dashboard. It is applied once, after the data package finishes loading. `readOnly`
+and `initialSession` are independent — seeding a normal, chat-enabled session works too.
+
+To try the same thing in the standalone app without writing any code, point the two env vars at
+an exported session — `VITE_UDI_READ_ONLY=locked` and `VITE_UDI_INITIAL_SESSION=/demo-session.json`
+in `.env.local`, with the file dropped in `public/` (served from the site root). The app fetches it
+at startup and hands it to `initialSession`.
 
 ### Data Source Configuration
 
@@ -444,6 +509,7 @@ Event names are stable, snake_case strings. **Properties carry metadata only —
 | `api_key_set`                | User submits a key through the `ApiKeyInput`                                                    | `inResponseToQuota: boolean` — true if a budget-exceeded rebuff had triggered the prompt (distinguishes first-time entry from quota-recovery entry)                                                                                                          |
 | `api_key_cleared`            | User clears their stored key via the header icon                                                | _(none)_                                                                                                                                                                                                                                                     |
 | `conversation_reset`         | User clicks the Reset button (clears messages, pinned viz, filters, memory bank)                | `conversationLength: number` — message count at the moment of reset                                                                                                                                                                                          |
+| `read_only_exited`           | User leaves read-only mode with the Explore Data button                                         | _(none)_                                                                                                                                                                                                                                                     |
 | `visualization_pinned`       | A new visualization is auto-pinned from an assistant response                                   | `hasTitle: boolean`<br>`toolCallIndex: number` — position within the assistant message's tool_calls                                                                                                                                                          |
 | `visualization_closed`       | User clicks the × on a pinned visualization card                                                | `hasTitle: boolean`                                                                                                                                                                                                                                          |
 | `download_raw_data`          | User clicks "Download Raw Data" in the Download Data dropdown                                   | `sources: number` — count of sources contributing rows<br>`rowsTotal: number`                                                                                                                                                                                |
@@ -462,7 +528,7 @@ Every row in the table above also includes `sessionId: string`; it's omitted fro
 
 **Properties you will _not_ see.** By design, the following never cross the tracker boundary: raw message text, tool_call `arguments`, OpenAI API keys, data rows, filter values. Only counts, booleans, tool-call names, ids, and short slug strings are emitted.
 
-### Debug Mode (type `!/admin` in chat)
+### Debug Mode (type `//admin` in chat)
 
 - System prompts toggle (show/hide system messages)
 - Conversation sidebar drawer (load saved session JSON files)
