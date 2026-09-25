@@ -2,8 +2,16 @@ import { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useDataFilters, useDataPackageStore } from '@/app/UDIChatContext';
+import {
+  useDashboard,
+  useDashboardStore,
+  useDataFilters,
+  useDataPackageStore,
+  useGlobal,
+} from '@/app/UDIChatContext';
 import { useBrushFilters, brushHasValue } from '@/features/dashboard';
 import type { DataSelection } from '@/features/dashboard';
 
@@ -48,8 +56,18 @@ function formatSelectionFields(
   return results;
 }
 
+/**
+ * The dashboard's Filters section: a chip per active filter. With none, a
+ * read-only view renders nothing — its reader can brush but not ask, so the
+ * empty state's "ask in the chat" is noise. Once chatting it is shown, as is
+ * debug mode's, whose heading carries the Filter Nulls switch.
+ */
 export function FilterToolbar() {
   const dataPackageStore = useDataPackageStore();
+  const dashboardStore = useDashboardStore();
+  const filterAllNullValues = useDashboard((s) => s.filterAllNullValues);
+  const debugMode = useGlobal((s) => s.debugMode);
+  const readOnly = useGlobal((s) => s.readOnly);
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const clearFilter = useDataFilters((s) => s.clearFilter);
   // Brush/click selections, gated to currently-active visualizations so a
@@ -115,14 +133,41 @@ export function FilterToolbar() {
     return result;
   }, [dataSelections, brushFilters, dataPackageStore]);
 
-  if (chips.length === 0) {
-    return (
-      <p className="udi:text-xs udi:text-muted-foreground udi:px-1">
-        Ask in the chat or interact with visualizations to add data filters.
-      </p>
-    );
-  }
+  if (chips.length === 0 && readOnly && !debugMode) return null;
 
+  return (
+    <div className="udi:px-3">
+      <div className="udi:flex udi:items-center udi:justify-between udi:mb-1.5">
+        <h3 className="udi:text-xs udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider">
+          Filters
+        </h3>
+        {debugMode && (
+          <div className="udi:flex udi:items-center udi:gap-1.5">
+            <Label htmlFor="null-filter" className="udi:text-[10px] udi:text-muted-foreground">
+              Filter Nulls
+            </Label>
+            <Switch
+              id="null-filter"
+              checked={filterAllNullValues}
+              onCheckedChange={(checked) =>
+                dashboardStore.getState().setFilterAllNullValues(!!checked)
+              }
+            />
+          </div>
+        )}
+      </div>
+      {chips.length === 0 ? (
+        <p className="udi:text-xs udi:text-muted-foreground udi:px-1">
+          Ask in the chat or interact with visualizations to add data filters.
+        </p>
+      ) : (
+        <FilterChips chips={chips} onClear={clearFilter} />
+      )}
+    </div>
+  );
+}
+
+function FilterChips({ chips, onClear }: { chips: ChipInfo[]; onClear: (id: string) => void }) {
   return (
     <div className="udi:flex udi:items-center udi:gap-1.5 udi:flex-wrap">
       {chips.map((chip) => (
@@ -134,7 +179,7 @@ export function FilterToolbar() {
                   variant="ghost"
                   size="icon"
                   className="udi:absolute udi:-top-1.5 udi:-right-1.5 udi:z-10 udi:h-4 udi:w-4 udi:rounded-full udi:border udi:bg-background udi:shadow-sm udi:opacity-0 udi:group-hover:opacity-100 udi:transition-opacity"
-                  onClick={() => clearFilter(chip.id)}
+                  onClick={() => onClear(chip.id)}
                 />
               }
             >

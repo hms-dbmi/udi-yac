@@ -156,6 +156,19 @@ def load_package(data_dir: Path) -> list[dict]:
     return entries
 
 
+def load_example_prompts(data_dir: Path) -> list[str] | None:
+    """The package's own "Try an example" prompts, from `example_prompts.json`
+    (a JSON list of strings) beside the CSVs — served by /v1/yac/examples in
+    place of the agent's global list, which is written for HuBMAP."""
+    path = data_dir / "example_prompts.json"
+    if not path.exists():
+        return None
+    prompts = json.loads(path.read_text())
+    if not isinstance(prompts, list) or not all(isinstance(p, str) for p in prompts):
+        raise SystemExit(f"{path} must be a JSON list of strings")
+    return [p.strip() for p in prompts if p.strip()] or None
+
+
 def _is_number(value: str) -> bool:
     value = value.strip()
     if not value:
@@ -282,6 +295,7 @@ def set_env_var(env_path: Path, key: str, value: str) -> None:
 def write_backends_config(
     out_path: Path, database: str, entries: list[dict],
     host: str, port: int, user: str, password: str,
+    example_prompts: list[str] | None = None,
 ) -> None:
     config = {
         database: {
@@ -301,6 +315,8 @@ def write_backends_config(
     }
     if schemas:
         config[database]["schemas"] = schemas
+    if example_prompts:
+        config[database]["examplePrompts"] = example_prompts
     existing = {}
     if out_path.exists():
         try:
@@ -341,7 +357,10 @@ def seed(
     finally:
         conn.close()
     if config_out is not None:
-        write_backends_config(config_out, database, entries, host, port, user, password)
+        write_backends_config(
+            config_out, database, entries, host, port, user, password,
+            load_example_prompts(data_dir),
+        )
         print(f"\nwrote {config_out}")
     return entries
 

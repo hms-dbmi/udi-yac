@@ -471,7 +471,21 @@ def _no_backend_message(package, engines) -> str:
     )
 
 
+def _load_example_prompts() -> dict[str, list[str]]:
+    """Per-package "Try an example" prompts: each backend spec's optional
+    `examplePrompts`, which the seeders fill from `example_prompts.json`."""
+    path = config.udi_query_backends
+    if not path:
+        return {}
+    return {
+        package: spec["examplePrompts"]
+        for package, spec in json.loads(Path(path).read_text()).items()
+        if isinstance(spec.get("examplePrompts"), list)
+    }
+
+
 app.state.query_engines = _load_query_engines()
+app.state.example_prompts = _load_example_prompts()
 # (package name, principal) -> MetadataCache, created lazily. Keyed by
 # principal because dataDomains holds the actual distinct VALUES of each column
 # (introspect.py), so under per-user row policies a shared cache would serve one
@@ -687,7 +701,13 @@ def yac_benchmark(
 
 
 @app.get("/v1/yac/examples")
-def yac_examples():
+def yac_examples(package: str | None = None):
+    """Example prompts for the chat. A package with its own `examplePrompts` in
+    the backends config gets those — prompts are about a dataset, and the
+    global list below is written for HuBMAP."""
+    own = app.state.example_prompts.get(package) if package else None
+    if own:
+        return JSONResponse(content=own)
     examples_path = _DATA_DIR / "example_prompts.json"
     if not examples_path.exists():
         return JSONResponse(

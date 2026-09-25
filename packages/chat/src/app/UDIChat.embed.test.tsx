@@ -153,6 +153,33 @@ describe('UDIChat — initialSession', () => {
 
     expect(await screen.findByText('Seeded cohort')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Drag card' })).toBeTruthy();
+    // Chatting from the start, the seeded transcript is the user's own.
+    expect(screen.getByText('donors by sex')).toBeTruthy();
+  });
+
+  it('opens a fresh chat from read-only, hiding the seeded transcript but not its charts', async () => {
+    const user = userEvent.setup();
+    render(<UDIChat {...seedConfig} readOnly initialSession={seededSession} />);
+    expect(await screen.findByText('Seeded cohort')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Explore Data' }));
+
+    expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
+    expect(screen.queryByText('donors by sex')).toBeNull();
+    expect(screen.getByText('Seeded cohort')).toBeTruthy();
+    // Its message is hidden, so there is nothing for the card to jump to.
+    expect(screen.queryByRole('button', { name: 'Show message in chat' })).toBeNull();
+  });
+
+  it('hides an empty Filters section while read-only, and brings it back on exit', async () => {
+    const user = userEvent.setup();
+    render(<UDIDashboard {...seedConfig} initialSession={seededSession} />);
+    expect(await screen.findByText('Seeded cohort')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Filters' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Explore Data' }));
+
+    expect(screen.getByRole('heading', { name: 'Filters' })).toBeTruthy();
   });
 
   it('throws a descriptive error for a malformed session rather than showing an empty dashboard', () => {

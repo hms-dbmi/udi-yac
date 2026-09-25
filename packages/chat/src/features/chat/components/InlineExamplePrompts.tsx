@@ -19,7 +19,8 @@ export function InlineExamplePrompts({
   onExampleClick,
   isLoading,
 }: InlineExamplePromptsProps) {
-  const messageCount = useConversation((s) => s.messages.length);
+  // Hidden messages don't count: a chat opened from read-only starts fresh.
+  const messageCount = useConversation((s) => s.messages.length - s.hiddenCount);
   const { examplePrompts } = useExamplePrompts(apiBaseUrl);
 
   if (messageCount > 0 || examplePrompts.length === 0) return null;

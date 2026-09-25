@@ -212,6 +212,9 @@ The key `default` (or a package with no explicit match) serves requests whose
         ],
       },
     },
+    // optional: the chat's "Try an example" prompts for this package, served by
+    // GET /v1/yac/examples?package=my_cohort in place of the global list
+    "examplePrompts": ["How many donors are in each age group?"],
   },
 }
 ```

@@ -30,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import { usePalette } from 'udi-toolkit/react';
 import {
+  useConversation,
   useDashboard,
   useDashboardStore,
   useMemoryBankStore,
@@ -67,6 +68,8 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const trackEvent = useTracker();
   const debugMode = useGlobal((s) => s.debugMode);
   const readOnly = useGlobal((s) => s.readOnly);
+  // A card from a hidden message has no bubble to jump to.
+  const messageHidden = useConversation((s) => viz.index < s.hiddenCount);
   const isTableView = useDashboard((s) => s.isTableView(vizKey));
   // Highlight when this card is hovered directly, or when the chat is pointing
   // at it (its single-viz message, or its accordion item in a multi-viz
@@ -253,7 +256,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
           <EditableCardTitle vizKey={vizKey} viz={viz} onEditingChange={setEditingTitle} />
           {!editingTitle && (
             <>
-              {!readOnly && (
+              {!readOnly && !messageHidden && (
                 <Tooltip>
                   <TooltipTrigger
                     render={

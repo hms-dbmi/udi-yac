@@ -9,12 +9,7 @@ import {
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore, useGlobal } from '@/app/UDIChatContext';
 import { useChatRoot } from '@/lib/chatRoot';
-import {
-  DRAG_HANDLE_CLASS,
-  GRID_INTERACTING_CLASS,
-  GRID_MARGIN,
-  gridColsForWidth,
-} from '../utils/gridDefaults';
+import { DRAG_HANDLE_CLASS, GRID_INTERACTING_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
 import { packRowMajor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
 
@@ -32,13 +27,16 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
   const { width, containerRef, mounted } = useContainerWidth();
 
   // On initial load, size the column count to the container via the shared
-  // width → cols rule (gridColsForWidth). Runs once on mount; resizing
-  // afterward is intentionally left alone. We read offsetWidth directly since
-  // `width` starts at a placeholder before the first measure.
+  // width → cols rule (gridColsForWidth) — unless a count was already chosen,
+  // as an imported session's is: this grid only mounts once there are cards,
+  // i.e. after the import, so fitting unconditionally would replace it. Runs
+  // once on mount; resizing afterward is intentionally left alone. We read
+  // offsetWidth directly since `width` starts at a placeholder before the first
+  // measure.
   useEffect(() => {
     const w = containerRef.current?.offsetWidth ?? 0;
     if (w > 0) {
-      dashboardStore.getState().setGridCols(gridColsForWidth(w));
+      dashboardStore.getState().fitGridColsToWidth(w);
     }
   }, [containerRef, dashboardStore]);
 

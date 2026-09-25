@@ -212,6 +212,9 @@ function UDIChatInner({
   }, [dataSelections, activeVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
 
   const exitReadOnly = () => {
+    // The seeded transcript would open the chat on a wall of prompts nobody
+    // here typed. Hidden, not dropped — see `hiddenCount`.
+    conversationStore.getState().hideMessages();
     globalStore.getState().setReadOnly(false);
     trackEvent('read_only_exited', {});
   };

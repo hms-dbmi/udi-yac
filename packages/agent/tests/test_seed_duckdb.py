@@ -17,6 +17,7 @@ from udiagent.query import DuckDBConnector, QueryEngine, introspect  # noqa: E40
 
 def _make_package(tmp: Path) -> Path:
     (tmp / "patient.csv").write_text("research_id,age\nP1,10\nP2,20\n")
+    (tmp / "example_prompts.json").write_text('["Ages by visit kind?", "  "]')
     # `visit_day` mixes numbers with a sentinel -> must type numeric with NULL,
     # not text. `kind` keeps its sentinel-looking value as a real category.
     (tmp / "visit.csv").write_text(
@@ -92,6 +93,8 @@ def test_seed_duckdb_round_trips(tmp_path):
     assert cfg["type"] == "duckdb"
     assert cfg["tables"] == {"Patient": "patient", "Visit": "visit"}
     assert cfg["schemas"]["Visit"]["foreignKeys"][0]["reference"]["resource"] == "Patient"
+    # The package's own example prompts ride along; blanks are dropped.
+    assert cfg["examplePrompts"] == ["Ages by visit kind?"]
 
     # Open the seeded file the way the server does and introspect.
     engine = QueryEngine(

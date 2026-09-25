@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useDashboard, useDashboardStore, useDataFilters, useGlobal } from '@/app/UDIChatContext';
+import { useDashboard, useDataFilters, useGlobal } from '@/app/UDIChatContext';
 import { DashboardGrid } from './DashboardGrid';
 import { ScrollAffordances } from './ScrollAffordances';
 import { GridSettingsButton } from './GridSettingsButton';
@@ -10,8 +10,6 @@ import { DownloadButton } from './DownloadButton';
 import { SessionImportExportButton } from './SessionImportExportButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 function DashboardHeader() {
@@ -38,9 +36,6 @@ export function DashboardPanel() {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
-  const filterAllNullValues = useDashboard((s) => s.filterAllNullValues);
-  const debugMode = useGlobal((s) => s.debugMode);
-  const dashboardStore = useDashboardStore();
 
   // Sticky-on-scroll: the header + filter row + separator stay pinned to
   // the top of the scroll viewport while the grid scrolls underneath. An
@@ -125,31 +120,7 @@ export function DashboardPanel() {
             <div className="udi:px-3">
               <DashboardHeader />
             </div>
-            <div className="udi:px-3">
-              <div className="udi:flex udi:items-center udi:justify-between udi:mb-1.5">
-                <h3 className="udi:text-xs udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider">
-                  Filters
-                </h3>
-                {debugMode && (
-                  <div className="udi:flex udi:items-center udi:gap-1.5">
-                    <Label
-                      htmlFor="null-filter"
-                      className="udi:text-[10px] udi:text-muted-foreground"
-                    >
-                      Filter Nulls
-                    </Label>
-                    <Switch
-                      id="null-filter"
-                      checked={filterAllNullValues}
-                      onCheckedChange={(checked) =>
-                        dashboardStore.getState().setFilterAllNullValues(!!checked)
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-              <FilterToolbar />
-            </div>
+            <FilterToolbar />
             <Separator />
           </div>
           {/* Left + right gutter on the grid alone so the header band above
