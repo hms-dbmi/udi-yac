@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import {
   GridLayout,
   useContainerWidth,
@@ -9,7 +17,12 @@ import {
 import type { DataSelections } from 'udi-toolkit/react';
 import { useDashboard, useDashboardStore, useGlobal } from '@/app/UDIChatContext';
 import { useChatRoot } from '@/lib/chatRoot';
-import { DRAG_HANDLE_CLASS, GRID_INTERACTING_CLASS, GRID_MARGIN } from '../utils/gridDefaults';
+import {
+  DRAG_HANDLE_CLASS,
+  GRID_INTERACTING_CLASS,
+  GRID_MARGIN,
+  gridColsForWidth,
+} from '../utils/gridDefaults';
 import { packRowMajor } from '../utils/gridPacking';
 import { DashboardCard } from './DashboardCard';
 
@@ -39,6 +52,21 @@ export function DashboardGrid({ selections }: DashboardGridProps) {
       dashboardStore.getState().fitGridColsToWidth(w);
     }
   }, [containerRef, dashboardStore]);
+
+  // Leaving read-only brings the chat pane back and narrows the grid, so a count
+  // chosen for the full-width view — an embedded session asks for one — would
+  // squeeze its cards unreadably narrow. Re-derive it for the width the grid has
+  // now. A layout effect: the chat pane is already in the DOM, so offsetWidth
+  // reads the narrower width, and the repack is painted in the same frame
+  // instead of after a squeezed one.
+  const wasReadOnly = useRef(readOnly);
+  useLayoutEffect(() => {
+    const leftReadOnly = wasReadOnly.current && !readOnly;
+    wasReadOnly.current = readOnly;
+    if (!leftReadOnly) return;
+    const w = containerRef.current?.offsetWidth ?? 0;
+    if (w > 0) dashboardStore.getState().setGridCols(gridColsForWidth(w));
+  }, [readOnly, containerRef, dashboardStore]);
 
   // Keep the measured width in the store so the "Reset layout" action (in the
   // gear popover, which can't measure the grid itself) can re-derive the column

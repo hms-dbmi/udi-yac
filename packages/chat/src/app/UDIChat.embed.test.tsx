@@ -172,6 +172,22 @@ describe('UDIChat — initialSession', () => {
     expect(screen.getByRole('heading', { name: 'Filters' })).toBeTruthy();
   });
 
+  it('shows a spinner, not the welcome splash, while the seed waits on the package', async () => {
+    // The package fetch never settles, so the seed never lands.
+    vi.stubGlobal('fetch', () => new Promise(() => {}));
+    const splash = { ...config, splashMessages: ['Hello from the splash'] };
+
+    const { unmount } = render(<UDIDashboard {...splash} initialSession={seededSession} />);
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(screen.queryByText('Hello from the splash')).toBeNull();
+    unmount();
+
+    // Without a session the empty dashboard is genuinely empty: splash as usual.
+    render(<UDIDashboard {...splash} />);
+    expect(screen.getByText('Hello from the splash')).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
   it('throws a descriptive error for a malformed session rather than showing an empty dashboard', () => {
     // The ErrorBoundary renders the message, so this asserts on the DOM rather
     // than on a throw escaping render.

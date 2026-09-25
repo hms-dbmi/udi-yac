@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
 import { useThemePalette } from './useThemePalette';
@@ -117,8 +117,10 @@ function UDIChatInner({
     () => (initialSession == null ? null : parseSessionExport(initialSession)),
     [initialSession],
   );
+  // A layout effect, so the cards land before the frame where the package turns
+  // ready is painted — otherwise that frame shows the empty dashboard's splash.
   const seededRef = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (seededRef.current) return;
     if (!parsedInitialSession?.ok) return;
     if (loadingPhase !== 'ready') return;
@@ -129,6 +131,9 @@ function UDIChatInner({
       dataPackageStore.getState().sourceFields,
     );
   }, [parsedInitialSession, loadingPhase, conversationStore, dashboardStore, dataPackageStore]);
+  // Until then the dashboard is not empty, only not filled yet.
+  const seeding =
+    parsedInitialSession?.ok === true && loadingPhase !== 'ready' && loadingPhase !== 'error';
 
   // Auto-activate visualizations from new assistant messages (batched to avoid O(n^2) cascade)
   useEffect(() => {
@@ -310,7 +315,7 @@ function UDIChatInner({
         </>
       )}
       <div className="udi:relative udi:flex-1 udi:min-w-0 udi:overflow-hidden">
-        <DashboardPanel />
+        <DashboardPanel seeding={seeding} />
         {readOnly && !readOnlyLocked && <ExploreDataButton onClick={exitReadOnly} />}
       </div>
     </div>

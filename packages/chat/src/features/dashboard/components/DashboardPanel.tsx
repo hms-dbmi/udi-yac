@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useDashboard, useDataFilters, useGlobal } from '@/app/UDIChatContext';
 import { DashboardGrid } from './DashboardGrid';
 import { ScrollAffordances } from './ScrollAffordances';
@@ -29,7 +30,13 @@ function DashboardHeader() {
   );
 }
 
-export function DashboardPanel() {
+/**
+ * @param seeding An `initialSession` is waiting on the data package. The
+ *   dashboard is not empty then, only not filled yet, so it shows a spinner
+ *   rather than the welcome splash, whose mascot would otherwise flash up for
+ *   the length of the load.
+ */
+export function DashboardPanel({ seeding = false }: { seeding?: boolean }) {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
@@ -88,7 +95,17 @@ export function DashboardPanel() {
         <div className="udi:flex udi:flex-col udi:gap-3">
           {!readOnly && <DashboardHeader />}
           <div className="udi:min-h-0 udi:flex-1">
-            <WelcomeSplash />
+            {seeding ? (
+              <div role="status" className="udi:flex udi:justify-center udi:py-12">
+                <Loader2
+                  aria-hidden
+                  className="udi:h-5 udi:w-5 udi:animate-spin udi:text-muted-foreground"
+                />
+                <span className="udi:sr-only">Loading dashboard</span>
+              </div>
+            ) : (
+              <WelcomeSplash />
+            )}
           </div>
         </div>
       </div>
