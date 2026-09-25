@@ -55,7 +55,13 @@ export function FilterToolbar() {
   );
 }
 
-function FilterChips({ chips, onClear }: { chips: ChipInfo[]; onClear: (id: string) => void }) {
+export function FilterChips({
+  chips,
+  onClear,
+}: {
+  chips: ChipInfo[];
+  onClear: (id: string) => void;
+}) {
   return (
     <div className="udi:flex udi:items-center udi:gap-1.5 udi:flex-wrap">
       {chips.map((chip) => (
@@ -66,7 +72,10 @@ function FilterChips({ chips, onClear }: { chips: ChipInfo[]; onClear: (id: stri
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="udi:absolute udi:-top-1.5 udi:-right-1.5 udi:z-10 udi:h-4 udi:w-4 udi:rounded-full udi:border udi:bg-background udi:shadow-sm udi:opacity-0 udi:group-hover:opacity-100 udi:transition-opacity"
+                  // Named for its chip — "Clear filter" alone doesn't say which of
+                  // several — and shown on keyboard focus, not only on hover.
+                  aria-label={`Clear filter ${chip.label}: ${chip.value}`}
+                  className="udi:absolute udi:-top-1.5 udi:-right-1.5 udi:z-10 udi:h-4 udi:w-4 udi:rounded-full udi:border udi:bg-background udi:shadow-sm udi:opacity-0 udi:group-hover:opacity-100 udi:focus-visible:opacity-100 udi:transition-opacity"
                   onClick={() => onClear(chip.id)}
                 />
               }
