@@ -1,8 +1,8 @@
 {
   "sources": {
     "penguins": "penguins.csv",
-    "donors": "donors.csv",
-    "samples": "samples.csv"
+    "donors": "hubmap/donors.tsv",
+    "samples": "hubmap/samples.tsv"
   },
   "cases": [
     {
@@ -729,7 +729,7 @@
       "spec": {
         "source": {
           "name": "donors",
-          "source": "donors.csv"
+          "source": "hubmap/donors.tsv"
         },
         "transformation": [
           {
@@ -791,22 +791,30 @@
       "expect": {
         "displayData": [
           {
-            "sex": "Male",
-            "max_pct": 0.9924812030075187
-          },
-          {
             "sex": "Female",
             "max_pct": 1
+          },
+          {
+            "sex": "Unknown",
+            "max_pct": 0.9620758483033932
+          },
+          {
+            "sex": "Male",
+            "max_pct": 0.9960079840319361
           }
         ],
         "allData": [
           {
-            "sex": "Male",
-            "max_pct": 0.9924812030075187
-          },
-          {
             "sex": "Female",
             "max_pct": 1
+          },
+          {
+            "sex": "Unknown",
+            "max_pct": 0.9620758483033932
+          },
+          {
+            "sex": "Male",
+            "max_pct": 0.9960079840319361
           }
         ],
         "isSubset": false
@@ -1108,11 +1116,11 @@
         "source": [
           {
             "name": "donors",
-            "source": "donors.csv"
+            "source": "hubmap/donors.tsv"
           },
           {
             "name": "samples",
-            "source": "samples.csv"
+            "source": "hubmap/samples.tsv"
           }
         ],
         "transformation": [
@@ -1189,45 +1197,65 @@
         "displayData": [
           {
             "group": "has samples",
-            "sex": "Female",
-            "n": 8
+            "sex": "Male",
+            "n": 40
           },
           {
             "group": "has samples",
-            "sex": "Male",
-            "n": 10
+            "sex": "Unknown",
+            "n": 4
           },
           {
-            "group": "no samples",
-            "sex": "Male",
-            "n": 92
+            "group": "has samples",
+            "sex": "Female",
+            "n": 35
           },
           {
             "group": "no samples",
             "sex": "Female",
-            "n": 156
+            "n": 249
+          },
+          {
+            "group": "no samples",
+            "sex": "Unknown",
+            "n": 4
+          },
+          {
+            "group": "no samples",
+            "sex": "Male",
+            "n": 169
           }
         ],
         "allData": [
           {
             "group": "has samples",
-            "sex": "Female",
-            "n": 8
+            "sex": "Male",
+            "n": 40
           },
           {
             "group": "has samples",
-            "sex": "Male",
-            "n": 10
+            "sex": "Unknown",
+            "n": 4
           },
           {
-            "group": "no samples",
-            "sex": "Male",
-            "n": 92
+            "group": "has samples",
+            "sex": "Female",
+            "n": 35
           },
           {
             "group": "no samples",
             "sex": "Female",
-            "n": 156
+            "n": 249
+          },
+          {
+            "group": "no samples",
+            "sex": "Unknown",
+            "n": 4
+          },
+          {
+            "group": "no samples",
+            "sex": "Male",
+            "n": 169
           }
         ],
         "isSubset": false
@@ -1239,11 +1267,11 @@
         "source": [
           {
             "name": "donors",
-            "source": "donors.csv"
+            "source": "hubmap/donors.tsv"
           },
           {
             "name": "samples",
-            "source": "samples.csv"
+            "source": "hubmap/samples.tsv"
           }
         ],
         "transformation": [
@@ -1271,22 +1299,30 @@
       "expect": {
         "displayData": [
           {
-            "sex": "Male",
-            "samples_count": 995
+            "sex": "Female",
+            "samples_count": 2935
           },
           {
-            "sex": "Female",
-            "samples_count": 1359
+            "sex": "Male",
+            "samples_count": 2174
+          },
+          {
+            "sex": "Unknown",
+            "samples_count": 33
           }
         ],
         "allData": [
           {
-            "sex": "Male",
-            "samples_count": 995
+            "sex": "Female",
+            "samples_count": 2935
           },
           {
-            "sex": "Female",
-            "samples_count": 1359
+            "sex": "Male",
+            "samples_count": 2174
+          },
+          {
+            "sex": "Unknown",
+            "samples_count": 33
           }
         ],
         "isSubset": false
@@ -1365,7 +1401,7 @@
       "spec": {
         "source": {
           "name": "samples",
-          "source": "samples.csv"
+          "source": "hubmap/samples.tsv"
         },
         "transformation": [
           {
@@ -1403,38 +1439,38 @@
       "expect": {
         "displayData": [
           {
+            "sample_category": "section",
+            "n": 1469
+          },
+          {
             "sample_category": "block",
-            "n": 393
+            "n": 977
           },
           {
             "sample_category": "organ",
-            "n": 207
+            "n": 342
           },
           {
             "sample_category": "suspension",
-            "n": 53
-          },
-          {
-            "sample_category": "section",
-            "n": 706
+            "n": 147
           }
         ],
         "allData": [
           {
             "sample_category": "section",
-            "n": 1182
+            "n": 2659
           },
           {
             "sample_category": "block",
-            "n": 756
+            "n": 1660
           },
           {
             "sample_category": "organ",
-            "n": 344
+            "n": 601
           },
           {
             "sample_category": "suspension",
-            "n": 72
+            "n": 222
           }
         ],
         "isSubset": true
@@ -1905,11 +1941,11 @@
         "source": [
           {
             "name": "donors",
-            "source": "donors.csv"
+            "source": "hubmap/donors.tsv"
           },
           {
             "name": "samples",
-            "source": "samples.csv"
+            "source": "hubmap/samples.tsv"
           }
         ],
         "transformation": [
@@ -1955,39 +1991,44 @@
       "expect": {
         "displayData": [
           {
-            "group_name": "Vanderbilt TMC",
-            "donors": 57,
-            "samples_count": 531
-          },
-          {
-            "group_name": "TMC - University of Pennsylvania",
-            "donors": 7,
-            "samples_count": 249
-          },
-          {
-            "group_name": "University of California San Diego TMC",
-            "donors": 40,
-            "samples_count": 274
-          },
-          {
-            "group_name": "University of Florida TMC",
-            "donors": 15,
-            "samples_count": 225
-          },
-          {
-            "group_name": "Stanford TMC",
-            "donors": 11,
-            "samples_count": 201
+            "group_name": "Stanford University Bone Marrow TMC",
+            "donors": 61,
+            "samples_count": 177
           },
           {
             "group_name": "General Electric RTI",
-            "donors": 12,
-            "samples_count": 336
+            "donors": 46,
+            "samples_count": 778
+          },
+          {
+            "group_name": "Vanderbilt TMC",
+            "donors": 105,
+            "samples_count": 1125
+          },
+          {
+            "group_name": "University of California San Diego TMC",
+            "donors": 48,
+            "samples_count": 386
+          },
+          {
+            "group_name": "TMC - University of California San Diego focusing on female reproduction",
+            "donors": 40,
+            "samples_count": 403
           },
           {
             "group_name": "TTD - University of San Diego and City of Hope",
             "donors": 14,
             "samples_count": 42
+          },
+          {
+            "group_name": "University of Rochester Medical Center TMC",
+            "donors": 7,
+            "samples_count": 439
+          },
+          {
+            "group_name": "University of Florida TMC",
+            "donors": 15,
+            "samples_count": 225
           },
           {
             "group_name": "Stanford RTI",
@@ -1997,22 +2038,17 @@
           {
             "group_name": "California Institute of Technology TMC",
             "donors": 12,
-            "samples_count": 59
+            "samples_count": 61
           },
           {
-            "group_name": "TMC - University of Connecticut",
-            "donors": 6,
-            "samples_count": 18
+            "group_name": "TMC - Children's Hospital of Philadelphia",
+            "donors": 37,
+            "samples_count": 226
           },
           {
-            "group_name": "University of Rochester Medical Center TMC",
-            "donors": 2,
-            "samples_count": 33
-          },
-          {
-            "group_name": "TMC - University of California San Diego focusing on female reproduction",
-            "donors": 16,
-            "samples_count": 88
+            "group_name": "TMC - Pacific Northwest National Laboratory",
+            "donors": 5,
+            "samples_count": 117
           },
           {
             "group_name": "TC - University of Florida",
@@ -2020,9 +2056,29 @@
             "samples_count": 6
           },
           {
+            "group_name": "Stanford TMC",
+            "donors": 12,
+            "samples_count": 224
+          },
+          {
+            "group_name": "Washington University Kidney TMC",
+            "donors": 10,
+            "samples_count": 109
+          },
+          {
+            "group_name": "TMC - University of Pennsylvania",
+            "donors": 9,
+            "samples_count": 514
+          },
+          {
             "group_name": "TTD - Penn State University and Columbia University",
             "donors": 1,
             "samples_count": 2
+          },
+          {
+            "group_name": "TMC - University of Connecticut",
+            "donors": 6,
+            "samples_count": 18
           },
           {
             "group_name": "EXT - Human Cell Atlas",
@@ -2032,39 +2088,44 @@
         ],
         "allData": [
           {
-            "group_name": "Vanderbilt TMC",
-            "donors": 57,
-            "samples_count": 531
-          },
-          {
-            "group_name": "TMC - University of Pennsylvania",
-            "donors": 7,
-            "samples_count": 249
-          },
-          {
-            "group_name": "University of California San Diego TMC",
-            "donors": 40,
-            "samples_count": 274
-          },
-          {
-            "group_name": "University of Florida TMC",
-            "donors": 15,
-            "samples_count": 225
-          },
-          {
-            "group_name": "Stanford TMC",
-            "donors": 11,
-            "samples_count": 201
+            "group_name": "Stanford University Bone Marrow TMC",
+            "donors": 61,
+            "samples_count": 177
           },
           {
             "group_name": "General Electric RTI",
-            "donors": 12,
-            "samples_count": 336
+            "donors": 46,
+            "samples_count": 778
+          },
+          {
+            "group_name": "Vanderbilt TMC",
+            "donors": 105,
+            "samples_count": 1125
+          },
+          {
+            "group_name": "University of California San Diego TMC",
+            "donors": 48,
+            "samples_count": 386
+          },
+          {
+            "group_name": "TMC - University of California San Diego focusing on female reproduction",
+            "donors": 40,
+            "samples_count": 403
           },
           {
             "group_name": "TTD - University of San Diego and City of Hope",
             "donors": 14,
             "samples_count": 42
+          },
+          {
+            "group_name": "University of Rochester Medical Center TMC",
+            "donors": 7,
+            "samples_count": 439
+          },
+          {
+            "group_name": "University of Florida TMC",
+            "donors": 15,
+            "samples_count": 225
           },
           {
             "group_name": "Stanford RTI",
@@ -2074,22 +2135,17 @@
           {
             "group_name": "California Institute of Technology TMC",
             "donors": 12,
-            "samples_count": 59
+            "samples_count": 61
           },
           {
-            "group_name": "TMC - University of Connecticut",
-            "donors": 6,
-            "samples_count": 18
+            "group_name": "TMC - Children's Hospital of Philadelphia",
+            "donors": 37,
+            "samples_count": 226
           },
           {
-            "group_name": "University of Rochester Medical Center TMC",
-            "donors": 2,
-            "samples_count": 33
-          },
-          {
-            "group_name": "TMC - University of California San Diego focusing on female reproduction",
-            "donors": 16,
-            "samples_count": 88
+            "group_name": "TMC - Pacific Northwest National Laboratory",
+            "donors": 5,
+            "samples_count": 117
           },
           {
             "group_name": "TC - University of Florida",
@@ -2097,9 +2153,29 @@
             "samples_count": 6
           },
           {
+            "group_name": "Stanford TMC",
+            "donors": 12,
+            "samples_count": 224
+          },
+          {
+            "group_name": "Washington University Kidney TMC",
+            "donors": 10,
+            "samples_count": 109
+          },
+          {
+            "group_name": "TMC - University of Pennsylvania",
+            "donors": 9,
+            "samples_count": 514
+          },
+          {
             "group_name": "TTD - Penn State University and Columbia University",
             "donors": 1,
             "samples_count": 2
+          },
+          {
+            "group_name": "TMC - University of Connecticut",
+            "donors": 6,
+            "samples_count": 18
           },
           {
             "group_name": "EXT - Human Cell Atlas",
@@ -2116,11 +2192,11 @@
         "source": [
           {
             "name": "donors",
-            "source": "donors.csv"
+            "source": "hubmap/donors.tsv"
           },
           {
             "name": "samples",
-            "source": "samples.csv"
+            "source": "hubmap/samples.tsv"
           }
         ],
         "transformation": [
@@ -2176,14 +2252,14 @@
           {
             "mapped_consortium_1": "HuBMAP",
             "sample_category": "organ",
-            "n": 3249
+            "n": 11025
           }
         ],
         "allData": [
           {
             "mapped_consortium_1": "HuBMAP",
             "sample_category": "organ",
-            "n": 3249
+            "n": 11025
           }
         ],
         "isSubset": false
@@ -2194,7 +2270,7 @@
       "spec": {
         "source": {
           "name": "donors",
-          "source": "donors.csv"
+          "source": "hubmap/donors.tsv"
         },
         "transformation": [
           {
@@ -2220,127 +2296,115 @@
       "expect": {
         "displayData": [
           {
-            "medical_history": "Hypertension",
-            "n": 39
-          },
-          {
-            "medical_history": "Hyperlipidimia",
-            "n": 9
-          },
-          {
-            "medical_history": "Cardiac Arrest",
-            "n": 15
-          },
-          {
-            "medical_history": "Heart failure with reduced ejection fraction",
-            "n": 2
-          },
-          {
-            "medical_history": "Coronary Artery Disease",
-            "n": 20
-          },
-          {
-            "medical_history": "Cancer",
-            "n": 19
-          },
-          {
-            "medical_history": "Tonsillitis",
-            "n": 1
-          },
-          {
             "medical_history": "Type 2 Diabetes Mellitus",
-            "n": 11
+            "n": 21
           },
           {
-            "medical_history": "Tourette's Syndrome",
-            "n": 1
-          },
-          {
-            "medical_history": "Depression",
-            "n": 5
-          },
-          {
-            "medical_history": "Renal Mass",
-            "n": 1
-          },
-          {
-            "medical_history": "Fibroadenoma of Breast",
-            "n": 1
-          },
-          {
-            "medical_history": "Migraine",
-            "n": 1
-          },
-          {
-            "medical_history": "Lupus",
-            "n": 1
-          },
-          {
-            "medical_history": "Liver failure",
-            "n": 2
-          },
-          {
-            "medical_history": "Brain cancer",
-            "n": 1
+            "medical_history": "Hypertension",
+            "n": 53
           },
           {
             "medical_history": "Asthma",
-            "n": 4
+            "n": 7
           },
           {
             "medical_history": "Chronic Obstructive Lung Disease",
-            "n": 1
+            "n": 2
           },
           {
             "medical_history": "Obstructive sleep apnea",
             "n": 1
           },
           {
-            "medical_history": "Salpingectomy",
-            "n": 11
-          },
-          {
-            "medical_history": "Cesarian section",
-            "n": 11
-          },
-          {
-            "medical_history": "Gestational diabetes mellitus class A1",
-            "n": 3
+            "medical_history": "Tonsillitis",
+            "n": 1
           },
           {
             "medical_history": "Traumatic brain injury",
-            "n": 1
+            "n": 2
           },
           {
             "medical_history": "Seizures",
             "n": 2
           },
           {
-            "medical_history": "Gastrointestinal disease",
-            "n": 6
+            "medical_history": "Salpingectomy",
+            "n": 13
           },
           {
-            "medical_history": "Eating Disorder",
-            "n": 1
+            "medical_history": "Cesarian section",
+            "n": 11
+          },
+          {
+            "medical_history": "Coronary Artery Disease",
+            "n": 20
+          },
+          {
+            "medical_history": "Gastrointestinal disease",
+            "n": 7
+          },
+          {
+            "medical_history": "Gestational diabetes mellitus class A1",
+            "n": 4
+          },
+          {
+            "medical_history": "Cardiac Arrest",
+            "n": 16
+          },
+          {
+            "medical_history": "Renal cell carcinoma",
+            "n": 16
+          },
+          {
+            "medical_history": "Gastroesophageal reflux disease",
+            "n": 5
+          },
+          {
+            "medical_history": "Pre-eclampsia",
+            "n": 5
           },
           {
             "medical_history": "Coronary Heart Disease",
             "n": 2
           },
           {
-            "medical_history": "Gonorrhea",
+            "medical_history": "Hyperlipidimia",
+            "n": 12
+          },
+          {
+            "medical_history": "Liver failure",
+            "n": 2
+          },
+          {
+            "medical_history": "Cancer",
+            "n": 23
+          },
+          {
+            "medical_history": "Obesity",
+            "n": 7
+          },
+          {
+            "medical_history": "Renal Mass",
             "n": 1
           },
           {
-            "medical_history": "Kidney cancer",
-            "n": 5
+            "medical_history": "Anxiety",
+            "n": 2
           },
           {
-            "medical_history": "Hypothyroidism",
+            "medical_history": "Depression",
+            "n": 6
+          },
+          {
+            "medical_history": "Meningitis",
             "n": 1
           },
           {
-            "medical_history": "Intrauterine growth retardation",
+            "medical_history": "Heart failure with reduced ejection fraction",
+            "n": 2
+          },
+          {
+            "medical_history": "Bipolar disorder",
             "n": 1
           },
           {
@@ -2348,24 +2412,68 @@
             "n": 1
           },
           {
-            "medical_history": "Type 1 Diabetes Mellitus",
-            "n": 3
-          },
-          {
-            "medical_history": "Gastroesophageal reflux disease",
+            "medical_history": "Chlamydia",
             "n": 1
           },
           {
-            "medical_history": "Ovarian cancer",
+            "medical_history": "Myocardial infarction",
+            "n": 2
+          },
+          {
+            "medical_history": "Small airways disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Cerebrovascular accident",
+            "n": 1
+          },
+          {
+            "medical_history": "History of tracheostomy",
+            "n": 1
+          },
+          {
+            "medical_history": "Ventilator dependency",
+            "n": 1
+          },
+          {
+            "medical_history": "Kidney disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Hypoxic ischemic encephalopathy",
+            "n": 1
+          },
+          {
+            "medical_history": "Ateriovenous malformation",
+            "n": 1
+          },
+          {
+            "medical_history": "Feeding assisted",
             "n": 1
           },
           {
             "medical_history": "Breast cancer",
+            "n": 3
+          },
+          {
+            "medical_history": "Polycystic kidney disease",
             "n": 1
           },
           {
-            "medical_history": "Pre-eclampsia",
-            "n": 5
+            "medical_history": "Aneurysm",
+            "n": 1
+          },
+          {
+            "medical_history": "Intrauterine growth retardation",
+            "n": 2
+          },
+          {
+            "medical_history": "Tourette's Syndrome",
+            "n": 2
+          },
+          {
+            "medical_history": "Prostate cancer",
+            "n": 2
           },
           {
             "medical_history": "Gestational diabetes mellitus",
@@ -2376,8 +2484,96 @@
             "n": 1
           },
           {
-            "medical_history": "Meningitis",
+            "medical_history": "COVID-19",
+            "n": 4
+          },
+          {
+            "medical_history": "Eating Disorder",
             "n": 1
+          },
+          {
+            "medical_history": "Pneumonia",
+            "n": 1
+          },
+          {
+            "medical_history": "Intracranial hemorrhage",
+            "n": 2
+          },
+          {
+            "medical_history": "Kidney cancer",
+            "n": 5
+          },
+          {
+            "medical_history": "Type 1 Diabetes Mellitus",
+            "n": 3
+          },
+          {
+            "medical_history": "Cystic nephroma",
+            "n": 1
+          },
+          {
+            "medical_history": "Papillary adenoma",
+            "n": 1
+          },
+          {
+            "medical_history": "Disorder of renal parenchyma",
+            "n": 1
+          },
+          {
+            "medical_history": "Coronary arteriosclerosis",
+            "n": 1
+          },
+          {
+            "medical_history": "Gonorrhea",
+            "n": 1
+          },
+          {
+            "medical_history": "Bronchopulmonary dysplasia",
+            "n": 1
+          },
+          {
+            "medical_history": "Pulmonary hypertension",
+            "n": 1
+          },
+          {
+            "medical_history": "Premature birth",
+            "n": 1
+          },
+          {
+            "medical_history": "Extremely low birth weight",
+            "n": 1
+          },
+          {
+            "medical_history": "Brain cancer",
+            "n": 1
+          },
+          {
+            "medical_history": "Hypothyroidism",
+            "n": 2
+          },
+          {
+            "medical_history": "Multiple nodules of lung",
+            "n": 1
+          },
+          {
+            "medical_history": "Colonic polyps",
+            "n": 1
+          },
+          {
+            "medical_history": "Centriacinar emphysema",
+            "n": 1
+          },
+          {
+            "medical_history": "Acute kidney injury",
+            "n": 2
+          },
+          {
+            "medical_history": "Rhabdomyolysis",
+            "n": 1
+          },
+          {
+            "medical_history": "Hypoxic brain injury",
+            "n": 2
           },
           {
             "medical_history": "Diabetic ketoacidosis",
@@ -2412,141 +2608,157 @@
             "n": 1
           },
           {
-            "medical_history": "COVID-19",
+            "medical_history": "Fibroadenoma of Breast",
             "n": 1
           },
           {
-            "medical_history": "Chlamydia",
+            "medical_history": "Migraine",
+            "n": 1
+          },
+          {
+            "medical_history": "Lupus",
+            "n": 1
+          },
+          {
+            "medical_history": "21-hydroxylase deficiency",
+            "n": 1
+          },
+          {
+            "medical_history": "Seasonal Allergies",
+            "n": 1
+          },
+          {
+            "medical_history": "Neurological disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Acute respiratory distress syndrome",
+            "n": 1
+          },
+          {
+            "medical_history": "Brainstem death",
             "n": 1
           },
           {
             "medical_history": "Autistic disorder",
+            "n": 1
+          },
+          {
+            "medical_history": "Ovarian cancer",
             "n": 1
           }
         ],
         "allData": [
           {
-            "medical_history": "Hypertension",
-            "n": 39
-          },
-          {
-            "medical_history": "Hyperlipidimia",
-            "n": 9
-          },
-          {
-            "medical_history": "Cardiac Arrest",
-            "n": 15
-          },
-          {
-            "medical_history": "Heart failure with reduced ejection fraction",
-            "n": 2
-          },
-          {
-            "medical_history": "Coronary Artery Disease",
-            "n": 20
-          },
-          {
-            "medical_history": "Cancer",
-            "n": 19
-          },
-          {
-            "medical_history": "Tonsillitis",
-            "n": 1
-          },
-          {
             "medical_history": "Type 2 Diabetes Mellitus",
-            "n": 11
+            "n": 21
           },
           {
-            "medical_history": "Tourette's Syndrome",
-            "n": 1
-          },
-          {
-            "medical_history": "Depression",
-            "n": 5
-          },
-          {
-            "medical_history": "Renal Mass",
-            "n": 1
-          },
-          {
-            "medical_history": "Fibroadenoma of Breast",
-            "n": 1
-          },
-          {
-            "medical_history": "Migraine",
-            "n": 1
-          },
-          {
-            "medical_history": "Lupus",
-            "n": 1
-          },
-          {
-            "medical_history": "Liver failure",
-            "n": 2
-          },
-          {
-            "medical_history": "Brain cancer",
-            "n": 1
+            "medical_history": "Hypertension",
+            "n": 53
           },
           {
             "medical_history": "Asthma",
-            "n": 4
+            "n": 7
           },
           {
             "medical_history": "Chronic Obstructive Lung Disease",
-            "n": 1
+            "n": 2
           },
           {
             "medical_history": "Obstructive sleep apnea",
             "n": 1
           },
           {
-            "medical_history": "Salpingectomy",
-            "n": 11
-          },
-          {
-            "medical_history": "Cesarian section",
-            "n": 11
-          },
-          {
-            "medical_history": "Gestational diabetes mellitus class A1",
-            "n": 3
+            "medical_history": "Tonsillitis",
+            "n": 1
           },
           {
             "medical_history": "Traumatic brain injury",
-            "n": 1
+            "n": 2
           },
           {
             "medical_history": "Seizures",
             "n": 2
           },
           {
-            "medical_history": "Gastrointestinal disease",
-            "n": 6
+            "medical_history": "Salpingectomy",
+            "n": 13
           },
           {
-            "medical_history": "Eating Disorder",
-            "n": 1
+            "medical_history": "Cesarian section",
+            "n": 11
+          },
+          {
+            "medical_history": "Coronary Artery Disease",
+            "n": 20
+          },
+          {
+            "medical_history": "Gastrointestinal disease",
+            "n": 7
+          },
+          {
+            "medical_history": "Gestational diabetes mellitus class A1",
+            "n": 4
+          },
+          {
+            "medical_history": "Cardiac Arrest",
+            "n": 16
+          },
+          {
+            "medical_history": "Renal cell carcinoma",
+            "n": 16
+          },
+          {
+            "medical_history": "Gastroesophageal reflux disease",
+            "n": 5
+          },
+          {
+            "medical_history": "Pre-eclampsia",
+            "n": 5
           },
           {
             "medical_history": "Coronary Heart Disease",
             "n": 2
           },
           {
-            "medical_history": "Gonorrhea",
+            "medical_history": "Hyperlipidimia",
+            "n": 12
+          },
+          {
+            "medical_history": "Liver failure",
+            "n": 2
+          },
+          {
+            "medical_history": "Cancer",
+            "n": 23
+          },
+          {
+            "medical_history": "Obesity",
+            "n": 7
+          },
+          {
+            "medical_history": "Renal Mass",
             "n": 1
           },
           {
-            "medical_history": "Kidney cancer",
-            "n": 5
+            "medical_history": "Anxiety",
+            "n": 2
           },
           {
-            "medical_history": "Hypothyroidism",
+            "medical_history": "Depression",
+            "n": 6
+          },
+          {
+            "medical_history": "Meningitis",
             "n": 1
           },
           {
-            "medical_history": "Intrauterine growth retardation",
+            "medical_history": "Heart failure with reduced ejection fraction",
+            "n": 2
+          },
+          {
+            "medical_history": "Bipolar disorder",
             "n": 1
           },
           {
@@ -2554,24 +2766,68 @@
             "n": 1
           },
           {
-            "medical_history": "Type 1 Diabetes Mellitus",
-            "n": 3
-          },
-          {
-            "medical_history": "Gastroesophageal reflux disease",
+            "medical_history": "Chlamydia",
             "n": 1
           },
           {
-            "medical_history": "Ovarian cancer",
+            "medical_history": "Myocardial infarction",
+            "n": 2
+          },
+          {
+            "medical_history": "Small airways disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Cerebrovascular accident",
+            "n": 1
+          },
+          {
+            "medical_history": "History of tracheostomy",
+            "n": 1
+          },
+          {
+            "medical_history": "Ventilator dependency",
+            "n": 1
+          },
+          {
+            "medical_history": "Kidney disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Hypoxic ischemic encephalopathy",
+            "n": 1
+          },
+          {
+            "medical_history": "Ateriovenous malformation",
+            "n": 1
+          },
+          {
+            "medical_history": "Feeding assisted",
             "n": 1
           },
           {
             "medical_history": "Breast cancer",
+            "n": 3
+          },
+          {
+            "medical_history": "Polycystic kidney disease",
             "n": 1
           },
           {
-            "medical_history": "Pre-eclampsia",
-            "n": 5
+            "medical_history": "Aneurysm",
+            "n": 1
+          },
+          {
+            "medical_history": "Intrauterine growth retardation",
+            "n": 2
+          },
+          {
+            "medical_history": "Tourette's Syndrome",
+            "n": 2
+          },
+          {
+            "medical_history": "Prostate cancer",
+            "n": 2
           },
           {
             "medical_history": "Gestational diabetes mellitus",
@@ -2582,8 +2838,96 @@
             "n": 1
           },
           {
-            "medical_history": "Meningitis",
+            "medical_history": "COVID-19",
+            "n": 4
+          },
+          {
+            "medical_history": "Eating Disorder",
             "n": 1
+          },
+          {
+            "medical_history": "Pneumonia",
+            "n": 1
+          },
+          {
+            "medical_history": "Intracranial hemorrhage",
+            "n": 2
+          },
+          {
+            "medical_history": "Kidney cancer",
+            "n": 5
+          },
+          {
+            "medical_history": "Type 1 Diabetes Mellitus",
+            "n": 3
+          },
+          {
+            "medical_history": "Cystic nephroma",
+            "n": 1
+          },
+          {
+            "medical_history": "Papillary adenoma",
+            "n": 1
+          },
+          {
+            "medical_history": "Disorder of renal parenchyma",
+            "n": 1
+          },
+          {
+            "medical_history": "Coronary arteriosclerosis",
+            "n": 1
+          },
+          {
+            "medical_history": "Gonorrhea",
+            "n": 1
+          },
+          {
+            "medical_history": "Bronchopulmonary dysplasia",
+            "n": 1
+          },
+          {
+            "medical_history": "Pulmonary hypertension",
+            "n": 1
+          },
+          {
+            "medical_history": "Premature birth",
+            "n": 1
+          },
+          {
+            "medical_history": "Extremely low birth weight",
+            "n": 1
+          },
+          {
+            "medical_history": "Brain cancer",
+            "n": 1
+          },
+          {
+            "medical_history": "Hypothyroidism",
+            "n": 2
+          },
+          {
+            "medical_history": "Multiple nodules of lung",
+            "n": 1
+          },
+          {
+            "medical_history": "Colonic polyps",
+            "n": 1
+          },
+          {
+            "medical_history": "Centriacinar emphysema",
+            "n": 1
+          },
+          {
+            "medical_history": "Acute kidney injury",
+            "n": 2
+          },
+          {
+            "medical_history": "Rhabdomyolysis",
+            "n": 1
+          },
+          {
+            "medical_history": "Hypoxic brain injury",
+            "n": 2
           },
           {
             "medical_history": "Diabetic ketoacidosis",
@@ -2618,15 +2962,43 @@
             "n": 1
           },
           {
-            "medical_history": "COVID-19",
+            "medical_history": "Fibroadenoma of Breast",
             "n": 1
           },
           {
-            "medical_history": "Chlamydia",
+            "medical_history": "Migraine",
+            "n": 1
+          },
+          {
+            "medical_history": "Lupus",
+            "n": 1
+          },
+          {
+            "medical_history": "21-hydroxylase deficiency",
+            "n": 1
+          },
+          {
+            "medical_history": "Seasonal Allergies",
+            "n": 1
+          },
+          {
+            "medical_history": "Neurological disease",
+            "n": 1
+          },
+          {
+            "medical_history": "Acute respiratory distress syndrome",
+            "n": 1
+          },
+          {
+            "medical_history": "Brainstem death",
             "n": 1
           },
           {
             "medical_history": "Autistic disorder",
+            "n": 1
+          },
+          {
+            "medical_history": "Ovarian cancer",
             "n": 1
           }
         ],
@@ -2638,7 +3010,7 @@
       "spec": {
         "source": {
           "name": "donors",
-          "source": "donors.csv"
+          "source": "hubmap/donors.tsv"
         },
         "transformation": [
           {
@@ -2665,119 +3037,19 @@
       "expect": {
         "displayData": [
           {
-            "condition": "Hypertension",
-            "sex": "Female",
-            "n": 19
-          },
-          {
-            "condition": "Hyperlipidimia",
-            "sex": "Female",
-            "n": 4
-          },
-          {
-            "condition": "Hypertension",
-            "sex": "Male",
-            "n": 20
-          },
-          {
-            "condition": "Cardiac Arrest",
-            "sex": "Male",
-            "n": 6
-          },
-          {
-            "condition": "Heart failure with reduced ejection fraction",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Coronary Artery Disease",
-            "sex": "Female",
-            "n": 10
-          },
-          {
-            "condition": "Cardiac Arrest",
-            "sex": "Female",
-            "n": 9
-          },
-          {
-            "condition": "Cancer",
-            "sex": "Male",
-            "n": 9
-          },
-          {
-            "condition": "Tonsillitis",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Coronary Artery Disease",
-            "sex": "Male",
-            "n": 10
-          },
-          {
             "condition": "Type 2 Diabetes Mellitus",
             "sex": "Female",
-            "n": 9
+            "n": 13
           },
           {
-            "condition": "Tourette's Syndrome",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Depression",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Cancer",
+            "condition": "Hypertension",
             "sex": "Female",
-            "n": 10
-          },
-          {
-            "condition": "Hyperlipidimia",
-            "sex": "Male",
-            "n": 5
-          },
-          {
-            "condition": "Renal Mass",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Depression",
-            "sex": "Female",
-            "n": 4
-          },
-          {
-            "condition": "Fibroadenoma of Breast",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Migraine",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Lupus",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Liver failure",
-            "sex": "Female",
-            "n": 2
-          },
-          {
-            "condition": "Brain cancer",
-            "sex": "Female",
-            "n": 1
+            "n": 23
           },
           {
             "condition": "Asthma",
             "sex": "Female",
-            "n": 4
+            "n": 5
           },
           {
             "condition": "Chronic Obstructive Lung Disease",
@@ -2790,9 +3062,24 @@
             "n": 1
           },
           {
+            "condition": "Tonsillitis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Traumatic brain injury",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Seizures",
+            "sex": "Male",
+            "n": 1
+          },
+          {
             "condition": "Salpingectomy",
             "sex": "Female",
-            "n": 11
+            "n": 12
           },
           {
             "condition": "Cesarian section",
@@ -2800,59 +3087,9 @@
             "n": 11
           },
           {
-            "condition": "Gestational diabetes mellitus class A1",
+            "condition": "Coronary Artery Disease",
             "sex": "Female",
-            "n": 3
-          },
-          {
-            "condition": "Traumatic brain injury",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Seizures",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Gastrointestinal disease",
-            "sex": "Male",
-            "n": 2
-          },
-          {
-            "condition": "Seizures",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Eating Disorder",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Coronary Heart Disease",
-            "sex": "Male",
-            "n": 2
-          },
-          {
-            "condition": "Gonorrhea",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Kidney cancer",
-            "sex": "Female",
-            "n": 3
-          },
-          {
-            "condition": "Hypothyroidism",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Intrauterine growth retardation",
-            "sex": "Female",
-            "n": 1
+            "n": 10
           },
           {
             "condition": "Gastrointestinal disease",
@@ -2860,44 +3097,234 @@
             "n": 4
           },
           {
+            "condition": "Gestational diabetes mellitus class A1",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Cardiac Arrest",
+            "sex": "Male",
+            "n": 6
+          },
+          {
+            "condition": "Cardiac Arrest",
+            "sex": "Female",
+            "n": 10
+          },
+          {
+            "condition": "Renal cell carcinoma",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "condition": "Gastroesophageal reflux disease",
+            "sex": "Male",
+            "n": 3
+          },
+          {
+            "condition": "Pre-eclampsia",
+            "sex": "Female",
+            "n": 5
+          },
+          {
+            "condition": "Coronary Heart Disease",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Hyperlipidimia",
+            "sex": "Male",
+            "n": 6
+          },
+          {
+            "condition": "Liver failure",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Cancer",
+            "sex": "Male",
+            "n": 11
+          },
+          {
+            "condition": "Cancer",
+            "sex": "Female",
+            "n": 12
+          },
+          {
+            "condition": "Hypertension",
+            "sex": "Male",
+            "n": 30
+          },
+          {
+            "condition": "Renal cell carcinoma",
+            "sex": "Female",
+            "n": 6
+          },
+          {
+            "condition": "Obesity",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Renal Mass",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Gastroesophageal reflux disease",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Anxiety",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Depression",
+            "sex": "Female",
+            "n": 5
+          },
+          {
+            "condition": "Coronary Artery Disease",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "condition": "Hyperlipidimia",
+            "sex": "Female",
+            "n": 6
+          },
+          {
+            "condition": "Meningitis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Heart failure with reduced ejection fraction",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Bipolar disorder",
+            "sex": "Female",
+            "n": 1
+          },
+          {
             "condition": "Benign Hemangioma",
             "sex": "Female",
             "n": 1
           },
           {
-            "condition": "Kidney cancer",
+            "condition": "Type 2 Diabetes Mellitus",
+            "sex": "Unknown",
+            "n": 1
+          },
+          {
+            "condition": "Salpingectomy",
+            "sex": "Unknown",
+            "n": 1
+          },
+          {
+            "condition": "Asthma",
+            "sex": "Unknown",
+            "n": 1
+          },
+          {
+            "condition": "Chlamydia",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Myocardial infarction",
             "sex": "Male",
             "n": 2
           },
           {
-            "condition": "Type 1 Diabetes Mellitus",
+            "condition": "Small airways disease",
             "sex": "Male",
             "n": 1
           },
           {
-            "condition": "Type 1 Diabetes Mellitus",
-            "sex": "Female",
-            "n": 2
+            "condition": "Obesity",
+            "sex": "Male",
+            "n": 3
           },
           {
-            "condition": "Gastroesophageal reflux disease",
+            "condition": "Cerebrovascular accident",
             "sex": "Female",
             "n": 1
           },
           {
-            "condition": "Ovarian cancer",
+            "condition": "History of tracheostomy",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Ventilator dependency",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Kidney disease",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Hypoxic ischemic encephalopathy",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Ateriovenous malformation",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Feeding assisted",
             "sex": "Female",
             "n": 1
           },
           {
             "condition": "Breast cancer",
             "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Polycystic kidney disease",
+            "sex": "Female",
             "n": 1
           },
           {
-            "condition": "Pre-eclampsia",
+            "condition": "Aneurysm",
             "sex": "Female",
-            "n": 5
+            "n": 1
+          },
+          {
+            "condition": "Gastrointestinal disease",
+            "sex": "Male",
+            "n": 3
+          },
+          {
+            "condition": "Intrauterine growth retardation",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Tourette's Syndrome",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Type 2 Diabetes Mellitus",
+            "sex": "Male",
+            "n": 7
+          },
+          {
+            "condition": "Prostate cancer",
+            "sex": "Male",
+            "n": 2
           },
           {
             "condition": "Gestational diabetes mellitus",
@@ -2910,14 +3337,149 @@
             "n": 1
           },
           {
-            "condition": "Type 2 Diabetes Mellitus",
+            "condition": "COVID-19",
+            "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Seizures",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Eating Disorder",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "COVID-19",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Pneumonia",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Intracranial hemorrhage",
             "sex": "Male",
             "n": 2
           },
           {
-            "condition": "Meningitis",
+            "condition": "Kidney cancer",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Type 1 Diabetes Mellitus",
             "sex": "Male",
             "n": 1
+          },
+          {
+            "condition": "Cystic nephroma",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Papillary adenoma",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Disorder of renal parenchyma",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Coronary arteriosclerosis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Heart failure with reduced ejection fraction",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Gonorrhea",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Bronchopulmonary dysplasia",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Pulmonary hypertension",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Premature birth",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Extremely low birth weight",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Brain cancer",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Hypothyroidism",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Depression",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Multiple nodules of lung",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Colonic polyps",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Centriacinar emphysema",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Acute kidney injury",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Rhabdomyolysis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Hypoxic brain injury",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Chronic Obstructive Lung Disease",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Type 1 Diabetes Mellitus",
+            "sex": "Female",
+            "n": 2
           },
           {
             "condition": "Diabetic ketoacidosis",
@@ -2960,13 +3522,68 @@
             "n": 1
           },
           {
-            "condition": "COVID-19",
+            "condition": "Asthma",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Kidney cancer",
+            "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Fibroadenoma of Breast",
             "sex": "Female",
             "n": 1
           },
           {
-            "condition": "Chlamydia",
+            "condition": "Migraine",
             "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Lupus",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "21-hydroxylase deficiency",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Hypoxic brain injury",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Seasonal Allergies",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Neurological disease",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Acute respiratory distress syndrome",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Acute kidney injury",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Brainstem death",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Anxiety",
+            "sex": "Male",
             "n": 1
           },
           {
@@ -2975,126 +3592,26 @@
             "n": 1
           },
           {
-            "condition": "Heart failure with reduced ejection fraction",
+            "condition": "Ovarian cancer",
             "sex": "Female",
             "n": 1
           }
         ],
         "allData": [
           {
-            "condition": "Hypertension",
-            "sex": "Female",
-            "n": 19
-          },
-          {
-            "condition": "Hyperlipidimia",
-            "sex": "Female",
-            "n": 4
-          },
-          {
-            "condition": "Hypertension",
-            "sex": "Male",
-            "n": 20
-          },
-          {
-            "condition": "Cardiac Arrest",
-            "sex": "Male",
-            "n": 6
-          },
-          {
-            "condition": "Heart failure with reduced ejection fraction",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Coronary Artery Disease",
-            "sex": "Female",
-            "n": 10
-          },
-          {
-            "condition": "Cardiac Arrest",
-            "sex": "Female",
-            "n": 9
-          },
-          {
-            "condition": "Cancer",
-            "sex": "Male",
-            "n": 9
-          },
-          {
-            "condition": "Tonsillitis",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Coronary Artery Disease",
-            "sex": "Male",
-            "n": 10
-          },
-          {
             "condition": "Type 2 Diabetes Mellitus",
             "sex": "Female",
-            "n": 9
+            "n": 13
           },
           {
-            "condition": "Tourette's Syndrome",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Depression",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Cancer",
+            "condition": "Hypertension",
             "sex": "Female",
-            "n": 10
-          },
-          {
-            "condition": "Hyperlipidimia",
-            "sex": "Male",
-            "n": 5
-          },
-          {
-            "condition": "Renal Mass",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Depression",
-            "sex": "Female",
-            "n": 4
-          },
-          {
-            "condition": "Fibroadenoma of Breast",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Migraine",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Lupus",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Liver failure",
-            "sex": "Female",
-            "n": 2
-          },
-          {
-            "condition": "Brain cancer",
-            "sex": "Female",
-            "n": 1
+            "n": 23
           },
           {
             "condition": "Asthma",
             "sex": "Female",
-            "n": 4
+            "n": 5
           },
           {
             "condition": "Chronic Obstructive Lung Disease",
@@ -3107,9 +3624,24 @@
             "n": 1
           },
           {
+            "condition": "Tonsillitis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Traumatic brain injury",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Seizures",
+            "sex": "Male",
+            "n": 1
+          },
+          {
             "condition": "Salpingectomy",
             "sex": "Female",
-            "n": 11
+            "n": 12
           },
           {
             "condition": "Cesarian section",
@@ -3117,59 +3649,9 @@
             "n": 11
           },
           {
-            "condition": "Gestational diabetes mellitus class A1",
+            "condition": "Coronary Artery Disease",
             "sex": "Female",
-            "n": 3
-          },
-          {
-            "condition": "Traumatic brain injury",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Seizures",
-            "sex": "Male",
-            "n": 1
-          },
-          {
-            "condition": "Gastrointestinal disease",
-            "sex": "Male",
-            "n": 2
-          },
-          {
-            "condition": "Seizures",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Eating Disorder",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Coronary Heart Disease",
-            "sex": "Male",
-            "n": 2
-          },
-          {
-            "condition": "Gonorrhea",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Kidney cancer",
-            "sex": "Female",
-            "n": 3
-          },
-          {
-            "condition": "Hypothyroidism",
-            "sex": "Female",
-            "n": 1
-          },
-          {
-            "condition": "Intrauterine growth retardation",
-            "sex": "Female",
-            "n": 1
+            "n": 10
           },
           {
             "condition": "Gastrointestinal disease",
@@ -3177,44 +3659,234 @@
             "n": 4
           },
           {
+            "condition": "Gestational diabetes mellitus class A1",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Cardiac Arrest",
+            "sex": "Male",
+            "n": 6
+          },
+          {
+            "condition": "Cardiac Arrest",
+            "sex": "Female",
+            "n": 10
+          },
+          {
+            "condition": "Renal cell carcinoma",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "condition": "Gastroesophageal reflux disease",
+            "sex": "Male",
+            "n": 3
+          },
+          {
+            "condition": "Pre-eclampsia",
+            "sex": "Female",
+            "n": 5
+          },
+          {
+            "condition": "Coronary Heart Disease",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Hyperlipidimia",
+            "sex": "Male",
+            "n": 6
+          },
+          {
+            "condition": "Liver failure",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Cancer",
+            "sex": "Male",
+            "n": 11
+          },
+          {
+            "condition": "Cancer",
+            "sex": "Female",
+            "n": 12
+          },
+          {
+            "condition": "Hypertension",
+            "sex": "Male",
+            "n": 30
+          },
+          {
+            "condition": "Renal cell carcinoma",
+            "sex": "Female",
+            "n": 6
+          },
+          {
+            "condition": "Obesity",
+            "sex": "Female",
+            "n": 4
+          },
+          {
+            "condition": "Renal Mass",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Gastroesophageal reflux disease",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Anxiety",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Depression",
+            "sex": "Female",
+            "n": 5
+          },
+          {
+            "condition": "Coronary Artery Disease",
+            "sex": "Male",
+            "n": 10
+          },
+          {
+            "condition": "Hyperlipidimia",
+            "sex": "Female",
+            "n": 6
+          },
+          {
+            "condition": "Meningitis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Heart failure with reduced ejection fraction",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Bipolar disorder",
+            "sex": "Female",
+            "n": 1
+          },
+          {
             "condition": "Benign Hemangioma",
             "sex": "Female",
             "n": 1
           },
           {
-            "condition": "Kidney cancer",
+            "condition": "Type 2 Diabetes Mellitus",
+            "sex": "Unknown",
+            "n": 1
+          },
+          {
+            "condition": "Salpingectomy",
+            "sex": "Unknown",
+            "n": 1
+          },
+          {
+            "condition": "Asthma",
+            "sex": "Unknown",
+            "n": 1
+          },
+          {
+            "condition": "Chlamydia",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Myocardial infarction",
             "sex": "Male",
             "n": 2
           },
           {
-            "condition": "Type 1 Diabetes Mellitus",
+            "condition": "Small airways disease",
             "sex": "Male",
             "n": 1
           },
           {
-            "condition": "Type 1 Diabetes Mellitus",
-            "sex": "Female",
-            "n": 2
+            "condition": "Obesity",
+            "sex": "Male",
+            "n": 3
           },
           {
-            "condition": "Gastroesophageal reflux disease",
+            "condition": "Cerebrovascular accident",
             "sex": "Female",
             "n": 1
           },
           {
-            "condition": "Ovarian cancer",
+            "condition": "History of tracheostomy",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Ventilator dependency",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Kidney disease",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Hypoxic ischemic encephalopathy",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Ateriovenous malformation",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Feeding assisted",
             "sex": "Female",
             "n": 1
           },
           {
             "condition": "Breast cancer",
             "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Polycystic kidney disease",
+            "sex": "Female",
             "n": 1
           },
           {
-            "condition": "Pre-eclampsia",
+            "condition": "Aneurysm",
             "sex": "Female",
-            "n": 5
+            "n": 1
+          },
+          {
+            "condition": "Gastrointestinal disease",
+            "sex": "Male",
+            "n": 3
+          },
+          {
+            "condition": "Intrauterine growth retardation",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Tourette's Syndrome",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Type 2 Diabetes Mellitus",
+            "sex": "Male",
+            "n": 7
+          },
+          {
+            "condition": "Prostate cancer",
+            "sex": "Male",
+            "n": 2
           },
           {
             "condition": "Gestational diabetes mellitus",
@@ -3227,14 +3899,149 @@
             "n": 1
           },
           {
-            "condition": "Type 2 Diabetes Mellitus",
+            "condition": "COVID-19",
+            "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Seizures",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Eating Disorder",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "COVID-19",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Pneumonia",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Intracranial hemorrhage",
             "sex": "Male",
             "n": 2
           },
           {
-            "condition": "Meningitis",
+            "condition": "Kidney cancer",
+            "sex": "Male",
+            "n": 2
+          },
+          {
+            "condition": "Type 1 Diabetes Mellitus",
             "sex": "Male",
             "n": 1
+          },
+          {
+            "condition": "Cystic nephroma",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Papillary adenoma",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Disorder of renal parenchyma",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Coronary arteriosclerosis",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Heart failure with reduced ejection fraction",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Gonorrhea",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Bronchopulmonary dysplasia",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Pulmonary hypertension",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Premature birth",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Extremely low birth weight",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Brain cancer",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Hypothyroidism",
+            "sex": "Female",
+            "n": 2
+          },
+          {
+            "condition": "Depression",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Multiple nodules of lung",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Colonic polyps",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Centriacinar emphysema",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Acute kidney injury",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Rhabdomyolysis",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Hypoxic brain injury",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Chronic Obstructive Lung Disease",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Type 1 Diabetes Mellitus",
+            "sex": "Female",
+            "n": 2
           },
           {
             "condition": "Diabetic ketoacidosis",
@@ -3277,13 +4084,68 @@
             "n": 1
           },
           {
-            "condition": "COVID-19",
+            "condition": "Asthma",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Kidney cancer",
+            "sex": "Female",
+            "n": 3
+          },
+          {
+            "condition": "Fibroadenoma of Breast",
             "sex": "Female",
             "n": 1
           },
           {
-            "condition": "Chlamydia",
+            "condition": "Migraine",
             "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Lupus",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "21-hydroxylase deficiency",
+            "sex": "Female",
+            "n": 1
+          },
+          {
+            "condition": "Hypoxic brain injury",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Seasonal Allergies",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Neurological disease",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Acute respiratory distress syndrome",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Acute kidney injury",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Brainstem death",
+            "sex": "Male",
+            "n": 1
+          },
+          {
+            "condition": "Anxiety",
+            "sex": "Male",
             "n": 1
           },
           {
@@ -3292,7 +4154,7 @@
             "n": 1
           },
           {
-            "condition": "Heart failure with reduced ejection fraction",
+            "condition": "Ovarian cancer",
             "sex": "Female",
             "n": 1
           }
