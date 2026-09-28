@@ -1,4 +1,5 @@
 import type { UDIChatConfig } from '@/app/UDIChatConfig';
+import { parseSessionExport } from '@/features/dashboard/utils/dashboardSerialization';
 
 /**
  * Lightweight runtime validation for the UDIChatConfig shape.
@@ -80,6 +81,17 @@ export function validateConfig(config: UDIChatConfig): void {
   // dataFieldDomains, when provided, must be an array.
   if (config.dataFieldDomains != null && !Array.isArray(config.dataFieldDomains)) {
     errors.push('`dataFieldDomains` must be an array of DataFieldDomain objects when provided.');
+  }
+
+  // A malformed `initialSession` would otherwise fail silently inside the
+  // effect that applies it, leaving an empty dashboard with no explanation —
+  // especially bad in a read-only embed, where there is no chat to build one
+  // with instead.
+  if (config.initialSession != null) {
+    const parsed = parseSessionExport(config.initialSession);
+    if (!parsed.ok) {
+      errors.push(`\`initialSession\` is not a valid session export: ${parsed.error}`);
+    }
   }
 
   if (errors.length > 0) {

@@ -38,7 +38,8 @@ class QueryEngine:
         table_map: entity name -> physical table/view name.
         row_cap: max rows returned for row-level (non-aggregated) results.
         entity_schemas: entity name -> extra schema metadata that can't be
-            introspected from the database — primaryKey/foreignKeys — merged
+            introspected from the database — primaryKey/foreignKeys, plus the
+            table `description` and per-column `fields` descriptions — merged
             into each resource by introspect(). The chat's cross-entity
             filtering (getEntityRelationship) depends on foreignKeys.
         """

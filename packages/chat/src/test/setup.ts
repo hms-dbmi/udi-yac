@@ -22,3 +22,9 @@ Element.prototype.getAnimations ??= () => [];
 // doesn't implement the constructor, so a click would throw instead of
 // toggling. MouseEvent carries everything the handlers read.
 globalThis.PointerEvent ??= class extends MouseEvent {} as unknown as typeof PointerEvent;
+
+// jsdom implements scrollTo on window but not on elements, and the message
+// list scrolls its own ScrollArea viewport on new messages. Unstubbed, that
+// throws asynchronously out of a requestAnimationFrame callback, which vitest
+// reports as an unhandled error and fails the run even when every test passed.
+Element.prototype.scrollTo ??= () => {};

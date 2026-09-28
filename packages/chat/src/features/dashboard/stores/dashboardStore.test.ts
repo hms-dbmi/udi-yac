@@ -1295,6 +1295,32 @@ describe('dashboardStore — setGridCols reflows items on cols change', () => {
   });
 });
 
+describe('dashboardStore — fitGridColsToWidth', () => {
+  // gridColsForWidth: one column per 700px, rounded up — 3000px fits 5.
+  it('sizes the columns to the width while nothing has chosen a count', () => {
+    const store = createDashboardStore();
+    store.getState().fitGridColsToWidth(3000);
+    expect(store.getState().gridCols).toBe(5);
+  });
+
+  it('keeps a chosen count — even one equal to the default', () => {
+    // An imported session asking for 3 columns, then the grid mounting on a
+    // wide screen: the import must win.
+    const store = createDashboardStore();
+    store.getState().setGridCols(3);
+    store.getState().fitGridColsToWidth(3000);
+    expect(store.getState().gridCols).toBe(3);
+  });
+
+  it('follows the width again after a layout reset', () => {
+    const store = createDashboardStore();
+    store.getState().setGridCols(2);
+    store.getState().resetLayout();
+    store.getState().fitGridColsToWidth(3000);
+    expect(store.getState().gridCols).toBe(5);
+  });
+});
+
 describe('dashboardStore — setLayoutItems is a no-op for content-equal layouts', () => {
   it('does not update layout when the items are byte-equal to the current state', () => {
     const store = createDashboardStore();

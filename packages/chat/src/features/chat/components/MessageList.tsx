@@ -19,10 +19,13 @@ export function MessageList({
   onSelectSuggestion,
 }: MessageListProps) {
   const messages = useConversation((s) => s.messages);
+  const hiddenCount = useConversation((s) => s.hiddenCount);
   const debugMode = useGlobal((s) => s.debugMode);
   const { contentRef, firstUnreadIndex, scrollToBottom } = useMessageListScroll(messages);
 
-  const displayed = messages.filter((m) => m.role !== 'system' || (debugMode && showSystemPrompts));
+  const displayed = messages.filter(
+    (m, i) => i >= hiddenCount && (m.role !== 'system' || (debugMode && showSystemPrompts)),
+  );
 
   return (
     <div className="udi:relative udi:flex-1 udi:min-h-0">

@@ -27,6 +27,8 @@
 
 @theme {
   --color-udi-primary: #57b4e9;
+  /* Dark enough for white text (5:1), which udi-primary is not. */
+  --color-udi-primary-700: #0b75a2;
   --color-udi-gray-100: #eff3f5;
   --color-udi-gray-300: #cad5da;
   --color-udi-gray-800: #384853;

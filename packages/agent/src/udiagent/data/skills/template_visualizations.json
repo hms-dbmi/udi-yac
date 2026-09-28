@@ -856,11 +856,12 @@
     "spec_key_count": 26,
     "task_types": ["Determine_Range"],
     "tags": ["line_item", "table"],
-    "description": "Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks.",
+    "description": "Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks. Use this for a field with too many distinct values to chart (over 50): it lists all of them.",
     "design_considerations": "Groups by the nominal field and counts occurrences, sorted descending so the bars are comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows relative frequency but not the value.",
     "tasks": "Determine the range (distinct values) of a nominal field; compare category frequencies.",
     "review_hint": "",
     "preview_bindings": null,
+    "name_hint": "count_sorted_distinct",
     "shared_entities": [],
     "title_template": "Table of the number of <E> by <F>",
     "summary_template": "Lists every distinct <F> value with how many <E> have it, with a bar in each row showing the count."

@@ -120,6 +120,10 @@ export interface DashboardState {
   activeVisualizations: Map<string, ActiveVisualization>;
   layout: DashboardLayout;
   gridCols: number;
+  /** Whether the column count still follows the container width. Cleared once
+   *  something chooses it — the grid settings, or an imported session's `grid`
+   *  — so the grid's fit-on-mount cannot override that choice. */
+  gridColsAuto: boolean;
   gridRowHeight: number;
   containerWidth: number;
   filterAllNullValues: boolean;
@@ -211,6 +215,8 @@ export interface DashboardState {
   setVisualizationTitle: (key: string, title: string) => void;
   setLayoutItems: (items: Layout) => void;
   setGridCols: (cols: number) => void;
+  /** Derive the column count from the grid's width, unless it was chosen. */
+  fitGridColsToWidth: (px: number) => void;
   setGridRowHeight: (px: number) => void;
   setContainerWidth: (px: number) => void;
   repackLayout: (dataPackageStore?: StoreApi<DataPackageState>) => void;
@@ -426,11 +432,30 @@ function getFieldsInEveryLayer(spec: UDIGrammar): string[] {
   return [...first].filter((field) => rest.every((layer) => layer.has(field)));
 }
 
+/**
+ * The state change for switching to `cols` columns, or null if it is already
+ * the count. Items are re-packed in row-major reading order so cards with
+ * x+w > cols don't overflow the grid; the layout reference is kept when the
+ * repack moves nothing, so RGL sees no new prop.
+ */
+function withGridCols(
+  state: DashboardState,
+  cols: number,
+): (Pick<DashboardState, 'gridCols'> & Partial<Pick<DashboardState, 'layout'>>) | null {
+  const safe = clampGridCols(cols);
+  if (state.gridCols === safe) return null;
+  const sorted = [...state.layout.items].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+  const repacked = packAllRowMajor(sorted, safe);
+  if (layoutItemsEqual(state.layout.items, repacked)) return { gridCols: safe };
+  return { gridCols: safe, layout: { items: repacked } };
+}
+
 export function createDashboardStore() {
   return createStore<DashboardState>()((set, get) => ({
     activeVisualizations: new Map(),
     layout: emptyLayout(),
     gridCols: DEFAULT_GRID_COLS,
+    gridColsAuto: true,
     gridRowHeight: DEFAULT_GRID_ROW_HEIGHT_PX,
     containerWidth: 0,
     filterAllNullValues: true,
@@ -877,20 +902,17 @@ export function createDashboardStore() {
     },
 
     setGridCols: (cols) => {
-      const safe = clampGridCols(cols);
-      const current = get();
-      if (current.gridCols === safe) return;
-      // Re-pack items into the new column count in row-major reading order
-      // so existing cards with x+w > newCols don't overflow the grid.
-      const sorted = [...current.layout.items].sort((a, b) =>
-        a.y === b.y ? a.x - b.x : a.y - b.y,
-      );
-      const repacked = packAllRowMajor(sorted, safe);
-      if (layoutItemsEqual(current.layout.items, repacked)) {
-        set({ gridCols: safe });
-        return;
-      }
-      set({ gridCols: safe, layout: { items: repacked } });
+      // Marked chosen even when unchanged: an import asking for the default
+      // count must still stop the fit-on-mount from replacing it.
+      if (get().gridColsAuto) set({ gridColsAuto: false });
+      const next = withGridCols(get(), cols);
+      if (next) set(next);
+    },
+
+    fitGridColsToWidth: (px) => {
+      if (!get().gridColsAuto) return;
+      const next = withGridCols(get(), gridColsForWidth(px));
+      if (next) set(next);
     },
 
     setGridRowHeight: (px) => {
@@ -933,6 +955,7 @@ export function createDashboardStore() {
       // height back to the default. Then repack the cards against the reset grid.
       set((state) => ({
         gridCols: gridColsForWidth(state.containerWidth),
+        gridColsAuto: true,
         gridRowHeight: DEFAULT_GRID_ROW_HEIGHT_PX,
       }));
       get().repackLayout(dataPackageStore);

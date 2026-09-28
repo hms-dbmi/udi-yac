@@ -13,7 +13,7 @@ export default {
 
 const donorsSource = {
   name: 'donors',
-  source: './data/donors.csv',
+  source: './data/hubmap/donors.tsv',
 };
 
 const weightSelection = {
@@ -311,4 +311,3 @@ export const SelfFilterHistogramWithStringFilter = {
     },
   },
 };
-

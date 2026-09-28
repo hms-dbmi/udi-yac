@@ -24,7 +24,7 @@ export const Default = {
       source: [
         {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
       ],
       transformation: [
@@ -57,7 +57,7 @@ export const HierarchicalDonut = {
       source: [
         {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
       ],
       transformation: [

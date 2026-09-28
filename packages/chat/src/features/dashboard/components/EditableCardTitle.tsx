@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDashboardStore, useTracker } from '@/app/UDIChatContext';
+import { useDashboardStore, useGlobal, useTracker } from '@/app/UDIChatContext';
 import { cn } from '@/lib/utils';
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import { vizTitleProvenance } from '../utils/vizTitle';
@@ -32,6 +32,7 @@ const MAX_TITLE_LENGTH = 120;
 export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCardTitleProps) {
   const dashboardStore = useDashboardStore();
   const trackEvent = useTracker();
+  const readOnly = useGlobal((s) => s.readOnly);
 
   const labels = useVizTitleLabels();
   const { display, original, isRenamed } = useMemo(
@@ -79,6 +80,23 @@ export function EditableCardTitle({ vizKey, viz, onEditingChange }: EditableCard
     el?.focus();
     el?.select();
   }, []);
+
+  // Read-only: a plain label. Rendering the button with `disabled` would keep
+  // the "Click to rename" tooltip and the text-cursor affordance promising
+  // something that no longer happens.
+  if (readOnly) {
+    return (
+      <span
+        title={display}
+        className={cn(
+          'udi:text-xs udi:font-medium udi:truncate udi:flex-1 udi:min-w-0 udi:text-left udi:px-1 udi:py-0.5',
+          isRenamed && 'udi:italic',
+        )}
+      >
+        {display}
+      </span>
+    );
+  }
 
   if (editing) {
     return (
