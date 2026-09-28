@@ -14,7 +14,7 @@ export default {
   title: 'Unnest',
 };
 
-const DONORS = { name: 'donors', source: './data/donors.csv' };
+const DONORS = { name: 'donors', source: './data/hubmap/donors.tsv' };
 
 /** Count donors per category, as a horizontal bar chart. */
 const countByCategory = (field: string, transformation: object[]) => ({
@@ -38,7 +38,7 @@ const countByCategory = (field: string, transformation: object[]) => ({
 /**
  * Without `unnest`, every distinct *string* becomes its own category. "Smoker"
  * and "Smoker, Heavy drinker" are counted as unrelated groups, so this chart
- * reports 26 smokers when 45 donors smoke, and spends 19 bars on 12 real
+ * reports 26 smokers when 45 donors smoke, and spends 25 bars on 12 real
  * categories. The more habits a donor records, the further the count drifts.
  */
 export const WithoutUnnest = {
@@ -50,7 +50,7 @@ export const WithoutUnnest = {
  * a row per habit, so the bars are the 12 actual categories and "Smoker" counts
  * every donor who smokes.
  *
- * Note the counts sum to 96 across 67 donors: the cohorts overlap by design, and
+ * Note the counts sum to 128 across 84 donors: the cohorts overlap by design, and
  * the bars are no longer parts of a whole. `separator: ','` matches this column's
  * delimiter; surrounding whitespace is always trimmed, so `"a, b"` and `"a,b"`
  * behave the same.

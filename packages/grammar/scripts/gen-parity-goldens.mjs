@@ -21,15 +21,18 @@ const outPath = resolve(here, '../../agent/tests/goldens/parity.json');
 setActivePinia(createPinia());
 const store = useDataSourcesStore();
 
-// Entities available to specs. The pytest side registers the same CSVs as
-// DuckDB views, so both compilers read identical data.
+// Entities available to specs. The pytest side registers the same files as
+// DuckDB views, so both compilers read identical data. donors/samples come
+// from the committed HuBMAP package — the only copy of that data in the repo.
 const SOURCES = {
   penguins: 'penguins.csv',
-  donors: 'donors.csv',
-  samples: 'samples.csv',
+  donors: 'hubmap/donors.tsv',
+  samples: 'hubmap/samples.tsv',
 };
 for (const [name, file] of Object.entries(SOURCES)) {
-  const table = fromCSV(readFileSync(join(sampleData, file), 'utf8'));
+  // Delimiter by extension, as the toolkit's own loaders infer it.
+  const delimiter = file.endsWith('.tsv') ? '\t' : ',';
+  const table = fromCSV(readFileSync(join(sampleData, file), 'utf8'), { delimiter });
   store.seedDataSource(name, file, table);
 }
 

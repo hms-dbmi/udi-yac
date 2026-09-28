@@ -13,7 +13,7 @@
       "mediatype": "text/csv",
       "encoding": "utf-8",
       "scheme": "file",
-      "udi:row_count": 367,
+      "udi:row_count": 369,
       "udi:column_count": 6,
       "udi:cube": true,
       "udi:measures": [
@@ -73,7 +73,7 @@
             "type": "integer",
             "description": "Pre-aggregated count of donors matching this row’s dimensions.",
             "udi:data_type": "quantitative",
-            "udi:cardinality": 60,
+            "udi:cardinality": 59,
             "udi:unique": false
           }
         ]
