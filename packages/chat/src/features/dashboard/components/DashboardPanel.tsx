@@ -16,9 +16,9 @@ import { cn } from '@/lib/utils';
 
 function DashboardHeader() {
   return (
-    <div className="flex items-center justify-between gap-2 shrink-0">
+    <div className="udi:flex udi:items-center udi:justify-between udi:gap-2 udi:shrink-0">
       <DataCounts />
-      <div className="flex items-center gap-1.5">
+      <div className="udi:flex udi:items-center udi:gap-1.5">
         <GridSettingsButton />
         <SessionImportExportButton />
         <DownloadButton />
@@ -80,10 +80,10 @@ export function DashboardPanel() {
   // `h-full` anchors correctly.
   if (!hasEntries) {
     return (
-      <div className="h-full p-3 overflow-hidden">
-        <div className="flex flex-col gap-3">
+      <div className="udi:h-full udi:p-3 udi:overflow-hidden">
+        <div className="udi:flex udi:flex-col udi:gap-3">
           <DashboardHeader />
-          <div className="min-h-0 flex-1">
+          <div className="udi:min-h-0 udi:flex-1">
             <WelcomeSplash />
           </div>
         </div>
@@ -92,7 +92,7 @@ export function DashboardPanel() {
   }
 
   return (
-    <div ref={scrollWrapperRef} className="relative h-full">
+    <div ref={scrollWrapperRef} className="udi:relative udi:h-full">
       {/* Gray panel background lives on the ScrollArea so it paints behind the
           transparent viewport and fills the bottom gutter (pb-3). The left +
           right gutters are applied to the grid alone (below), not the
@@ -101,8 +101,8 @@ export function DashboardPanel() {
           background still shows through the grid's side gutters. Header +
           filters use px-3 to match the grid's inset. Top spacing lives on the
           sticky band (pt-3) so no gray strip lands above it. */}
-      <ScrollArea className="h-full bg-udi-gray-100 pb-3">
-        <div className="flex flex-col">
+      <ScrollArea className="udi:h-full udi:bg-udi-gray-100 udi:pb-3">
+        <div className="udi:flex udi:flex-col">
           <div ref={sentinelRef} aria-hidden />
           {/* No pb here: the Separator is the band's bottom edge so the stuck
               shadow casts straight onto the gray grid instead of a white chin. */}
@@ -111,21 +111,24 @@ export function DashboardPanel() {
             // card lands below it instead of underneath (scrollIntoViewport).
             data-scroll-sticky-top
             className={cn(
-              'sticky top-0 z-10 flex flex-col gap-3 bg-background pt-3 transition-shadow',
-              isStuck && 'shadow-md',
+              'udi:sticky udi:top-0 udi:z-10 udi:flex udi:flex-col udi:gap-3 udi:bg-background udi:pt-3 udi:transition-shadow',
+              isStuck && 'udi:shadow-md',
             )}
           >
-            <div className="px-3">
+            <div className="udi:px-3">
               <DashboardHeader />
             </div>
-            <div className="px-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="udi:px-3">
+              <div className="udi:flex udi:items-center udi:justify-between udi:mb-1.5">
+                <h3 className="udi:text-xs udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider">
                   Filters
                 </h3>
                 {debugMode && (
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="null-filter" className="text-[10px] text-muted-foreground">
+                  <div className="udi:flex udi:items-center udi:gap-1.5">
+                    <Label
+                      htmlFor="null-filter"
+                      className="udi:text-[10px] udi:text-muted-foreground"
+                    >
                       Filter Nulls
                     </Label>
                     <Switch
@@ -146,7 +149,7 @@ export function DashboardPanel() {
               stays full-width. The gray ScrollArea background paints behind
               these gutters, so the grid insets from both panel edges while the
               dashboard background still spans the full width. */}
-          <div className="px-3">
+          <div className="udi:px-3">
             <DashboardGrid selections={mergedSelections} />
           </div>
         </div>

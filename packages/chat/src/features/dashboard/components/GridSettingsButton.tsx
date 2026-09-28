@@ -58,25 +58,27 @@ export function GridSettingsButton() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 w-7 p-0"
+                  className="udi:h-7 udi:w-7 udi:p-0"
                   aria-label="Grid settings"
                 />
               }
             >
-              <Settings className="h-3.5 w-3.5" />
+              <Settings className="udi:h-3.5 udi:w-3.5" />
             </PopoverTrigger>
           }
         />
         <TooltipContent>Grid settings</TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-64">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="grid-cols" className="text-xs">
+      <PopoverContent className="udi:w-64">
+        <div className="udi:flex udi:flex-col udi:gap-3">
+          <div className="udi:flex udi:flex-col udi:gap-1.5">
+            <div className="udi:flex udi:items-center udi:justify-between">
+              <Label htmlFor="grid-cols" className="udi:text-xs">
                 Columns
               </Label>
-              <span className="text-xs tabular-nums text-muted-foreground">{gridCols}</span>
+              <span className="udi:text-xs udi:tabular-nums udi:text-muted-foreground">
+                {gridCols}
+              </span>
             </div>
             <Slider
               id="grid-cols"
@@ -87,12 +89,14 @@ export function GridSettingsButton() {
               onValueChange={handleColsChange}
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="grid-row-height" className="text-xs">
+          <div className="udi:flex udi:flex-col udi:gap-1.5">
+            <div className="udi:flex udi:items-center udi:justify-between">
+              <Label htmlFor="grid-row-height" className="udi:text-xs">
                 Row height
               </Label>
-              <span className="text-xs tabular-nums text-muted-foreground">{gridRowHeight} px</span>
+              <span className="udi:text-xs udi:tabular-nums udi:text-muted-foreground">
+                {gridRowHeight} px
+              </span>
             </div>
             <Slider
               id="grid-row-height"
@@ -107,10 +111,10 @@ export function GridSettingsButton() {
           <Button
             variant="ghost"
             size="sm"
-            className="-mx-1 h-8 justify-start px-2 text-xs"
+            className="udi:-mx-1 udi:h-8 udi:justify-start udi:px-2 udi:text-xs"
             onClick={handleResetLayout}
           >
-            <RotateCcw className="mr-2 h-3.5 w-3.5" />
+            <RotateCcw className="udi:mr-2 udi:h-3.5 udi:w-3.5" />
             Reset layout
           </Button>
         </div>

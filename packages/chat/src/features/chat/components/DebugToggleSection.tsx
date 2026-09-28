@@ -26,15 +26,15 @@ export function DebugToggleSection({
   const hasSystemMessages = messages.some((m) => m.role === 'system');
 
   return (
-    <div className="flex items-center gap-3 px-3 py-1.5 bg-muted/50 border-b">
-      <div className="flex items-center gap-1.5">
+    <div className="udi:flex udi:items-center udi:gap-3 udi:px-3 udi:py-1.5 udi:bg-muted/50 udi:border-b">
+      <div className="udi:flex udi:items-center udi:gap-1.5">
         <Switch
           id="system-prompts"
           checked={showSystemPrompts}
           onCheckedChange={(v) => onShowSystemPromptsChange(!!v)}
           disabled={!hasSystemMessages}
         />
-        <Label htmlFor="system-prompts" className="text-[10px] text-muted-foreground">
+        <Label htmlFor="system-prompts" className="udi:text-[10px] udi:text-muted-foreground">
           System Prompts{!hasSystemMessages && ' (none)'}
         </Label>
       </div>

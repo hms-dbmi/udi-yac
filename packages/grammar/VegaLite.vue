@@ -70,9 +70,29 @@ function buildVegaConfig(): Record<string, unknown> {
   if (ordinal != null) range.ordinal = toVegaRange(ordinal);
   if (ramp != null) range.ramp = toVegaRamp(ramp, registerRampScheme);
 
+  // Chrome. Vega's defaults are a white plot with black axes, which reads as a
+  // bright rectangle punched into a dark host app; none of it is reachable from
+  // a spec, so the palette is the only place it can come from.
+  const background = palette.background ?? DEFAULT_PALETTE.background;
+  const axis = palette.axis ?? DEFAULT_PALETTE.axis;
+  const grid = palette.grid ?? DEFAULT_PALETTE.grid;
+  const text = palette.text ?? DEFAULT_PALETTE.text;
+
   const config: Record<string, unknown> = {
     point: { shape: 'circle', filled: true },
     range,
+    background,
+    axis: {
+      domainColor: axis,
+      tickColor: axis,
+      gridColor: grid,
+      labelColor: text,
+      titleColor: text,
+    },
+    // The plot frame Vega strokes behind the marks — a rule, not an axis.
+    view: { stroke: grid },
+    legend: { labelColor: text, titleColor: text },
+    title: { color: text, subtitleColor: text },
   };
   if (markColor != null) config.mark = { color: markColor };
   return config;

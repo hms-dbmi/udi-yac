@@ -222,6 +222,53 @@ def test_invalid_stratifier_is_rejected_with_reader_grade_prose(
     assert "spec" not in body
 
 
+def test_a_stratifier_bound_to_the_subject_key_is_rejected_even_when_grouped(
+    client, data_schema
+):
+    """The reported chart: "stratified by protocol" bound to the patient id.
+
+    A supplied grouping exempts the field from the cardinality cap — draws the
+    strata the grouping names, not the field's domain — so the cap that catches
+    this bare choice let it through. What is left is a curve grouped by the very
+    column it splits on: one subject per stratum, and a rollup writing over the
+    key it grouped by, which SQL can only express as one name on two columns.
+    """
+    response = _post(
+        client,
+        data_schema,
+        entity1_field4="research_id",
+        grouping={
+            "type": "nominal",
+            "groups": [{"label": "ACNS0122", "values": ["ACNS0122"]}],
+        },
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "invalid_bindings"
+    assert "'E1.F4' and 'E1.F1' are both set to 'research_id'" in body["error"]
+    assert "spec" not in body
+
+
+def test_an_empty_grouping_does_not_buy_the_cardinality_exemption(client, data_schema):
+    """A grouping exempts its field from the 50-value cap, because the chart then
+    draws the strata the grouping names rather than the field's own domain.
+
+    A lone catch-all claiming no values parses to "no grouping", so the field is
+    back to drawing its whole domain and the cap has to apply again. Read raw,
+    the payload still looked like a grouping and bought the exemption.
+    """
+    response = _post(
+        client,
+        data_schema,
+        entity1_field4="tumor_locations",
+        grouping={"type": "nominal", "groups": [{"label": "Other", "values": []}]},
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "invalid_bindings"
+    assert "unique values" in body["error"]
+
+
 def test_incomplete_bindings_are_rejected_rather_than_silently_resolved(
     client, data_schema
 ):

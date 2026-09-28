@@ -76,32 +76,32 @@ export function ConversationList() {
   );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-3 py-2">
-        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+    <div className="udi:flex udi:flex-col udi:h-full">
+      <div className="udi:px-3 udi:py-2">
+        <h3 className="udi:text-xs udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider">
           Conversations
         </h3>
       </div>
-      <div className="px-2">
+      <div className="udi:px-2">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 text-xs"
+          className="udi:w-full udi:justify-start udi:gap-2 udi:text-xs"
           onClick={handleNew}
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="udi:h-3.5 udi:w-3.5" />
           New Conversation
         </Button>
       </div>
-      <Separator className="my-1" />
-      <p className="px-3 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+      <Separator className="udi:my-1" />
+      <p className="udi:px-3 udi:py-1 udi:text-[10px] udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider">
         Saved Sessions
       </p>
-      <div className="flex-1 overflow-y-auto px-1">
+      <div className="udi:flex-1 udi:overflow-y-auto udi:px-1">
         {CONVERSATION_FILES.map((file) => (
           <button
             key={file}
-            className="text-xs text-left text-foreground hover:bg-muted rounded px-2 py-1.5 w-full truncate"
+            className="udi:text-xs udi:text-left udi:text-foreground udi:hover:bg-muted udi:rounded udi:px-2 udi:py-1.5 udi:w-full udi:truncate"
             onClick={() => handleLoad(file)}
           >
             {stripExtension(file)}

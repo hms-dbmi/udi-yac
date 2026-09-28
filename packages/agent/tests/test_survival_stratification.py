@@ -1063,6 +1063,25 @@ def test_an_absent_grouping_leaves_the_curves_exactly_as_they_were(survival):
     assert ungrouped == explicitly_none == {"A": (2, 2), "B": (2, 0)}
 
 
+def test_a_catch_all_with_no_values_is_the_absent_grouping(survival):
+    """The reported failure, end to end: "stratify by protocol" drew nothing.
+
+    Asked for an optional grouping it had no column values for, the model sent a
+    lone `Other` claiming none. Refusing that killed the whole chart, when it
+    plainly means "just split by the field" — the default, drawn here.
+    """
+    cohorts = _cohorts(
+        survival(
+            "_line_survival_baseline",
+            grouping=json.dumps(
+                {"type": "nominal", "groups": [{"label": "Other", "values": []}]}
+            ),
+        ),
+        "stratum",
+    )
+    assert cohorts == {"A": (2, 2), "B": (2, 0)}
+
+
 def test_a_nominal_grouping_merges_values_into_one_stratum(survival):
     """Two arms combined into one curve, which is the whole point of the feature.
 

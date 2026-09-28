@@ -12,7 +12,7 @@ export function highlightMatch(text: string, query: string): ReactNode {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded-sm bg-yellow-300/70 px-0.5 text-foreground">
+      <mark className="udi:rounded-sm udi:bg-yellow-300/70 udi:px-0.5 udi:text-foreground">
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}

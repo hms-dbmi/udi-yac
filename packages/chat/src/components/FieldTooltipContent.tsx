@@ -24,17 +24,22 @@ export function FieldTooltipContent({
 }: FieldTooltipContentProps) {
   const showLabel = !!label && label !== field;
   return (
-    <TooltipContent className="max-w-sm flex-col items-start gap-1 px-3 py-2 text-xs">
-      {showLabel && <span className="font-medium">{label}</span>}
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono font-medium">{field}</span>
+    <TooltipContent className="udi:max-w-sm udi:flex-col udi:items-start udi:gap-1 udi:px-3 udi:py-2 udi:text-xs">
+      {showLabel && <span className="udi:font-medium">{label}</span>}
+      <div className="udi:flex udi:items-center udi:gap-1.5">
+        <span className="udi:font-mono udi:font-medium">{field}</span>
         {dataType && (
-          <Badge variant="outline" className="border-background/30 text-[9px] text-background">
+          <Badge
+            variant="outline"
+            className="udi:border-background/30 udi:text-[9px] udi:text-background"
+          >
             {dataType}
           </Badge>
         )}
       </div>
-      {description && <p className="text-[11px] leading-snug text-background/80">{description}</p>}
+      {description && (
+        <p className="udi:text-[11px] udi:leading-snug udi:text-background/80">{description}</p>
+      )}
     </TooltipContent>
   );
 }

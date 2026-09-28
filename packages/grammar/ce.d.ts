@@ -14,6 +14,11 @@ import type {
   IntervalDomain,
   CategoricalDomain,
 } from './dist/domainTypes';
+import type {
+  UDIPalette,
+  ContinuousColor,
+  DiscreteColor,
+} from './dist/Palette';
 
 export declare const UDIVisElement: CustomElementConstructor;
 
@@ -50,6 +55,35 @@ export declare function subscribeToSelections(callback: () => void): () => void;
 /** Wipe every active selection in the shared DataSourcesStore. */
 export declare function clearAllSelections(): void;
 
+/** Snapshot of every active selection in the shared DataSourcesStore. */
+export declare function getDataSelections(): DataSelections;
+
+/*
+ * Query backend seam. Local (the default) is the in-browser Arquero engine;
+ * remote batches POSTs to a /v1/yac/query server. Re-exported from the built
+ * declarations rather than restated, so the signatures cannot drift.
+ */
+export {
+  setQueryBackend,
+  getQueryBackend,
+  createRemoteBackend,
+  LOCAL_BACKEND,
+} from './dist/queryBackend';
+export type {
+  QueryBackend,
+  LocalQueryBackend,
+  RemoteQueryBackend,
+  RemoteQueryRequest,
+  RemoteVizResult,
+  RemoteBackendConfig,
+} from './dist/queryBackend';
+
+/**
+ * The palette the toolkit falls back to when no `palette` is supplied. Exported
+ * so a consumer can spread it and override individual channels.
+ */
+export declare const DEFAULT_PALETTE: UDIPalette;
+
 export type {
   UDIGrammar,
   DataSelections,
@@ -61,4 +95,7 @@ export type {
   DataFieldDomain,
   IntervalDomain,
   CategoricalDomain,
+  UDIPalette,
+  ContinuousColor,
+  DiscreteColor,
 };

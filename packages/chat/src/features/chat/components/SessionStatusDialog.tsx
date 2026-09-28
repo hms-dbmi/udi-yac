@@ -60,35 +60,39 @@ export function SessionStatusDialog({
       <Tooltip>
         <TooltipTrigger
           render={
-            <DialogTrigger render={<Button variant="ghost" size="icon" className="h-7 w-7" />}>
+            <DialogTrigger
+              render={<Button variant="ghost" size="icon" className="udi:h-7 udi:w-7" />}
+            >
               <KeyRound
-                className={`h-3.5 w-3.5 ${hasApiKey ? 'text-green-600' : 'text-muted-foreground'}`}
+                className={`udi:h-3.5 udi:w-3.5 ${hasApiKey ? 'udi:text-green-600' : 'udi:text-muted-foreground'}`}
               />
             </DialogTrigger>
           }
         />
         <TooltipContent>API key &amp; usage</TooltipContent>
       </Tooltip>
-      <DialogContent className="max-w-md">
+      <DialogContent className="udi:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-sm">API Key &amp; Usage</DialogTitle>
+          <DialogTitle className="udi:text-sm">API Key &amp; Usage</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">API key</span>
+        <div className="udi:flex udi:flex-col udi:gap-4">
+          <section className="udi:flex udi:flex-col udi:gap-2">
+            <div className="udi:flex udi:items-center udi:justify-between">
+              <span className="udi:text-sm udi:font-medium">API key</span>
               <Badge
                 variant={hasApiKey ? 'secondary' : 'outline'}
-                className={hasApiKey ? 'bg-green-600/10 text-green-700' : undefined}
+                className={hasApiKey ? 'udi:bg-green-600/10 udi:text-green-700' : undefined}
               >
                 {hasApiKey ? 'Set' : 'Not set'}
               </Badge>
             </div>
             {hasApiKey ? (
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">
+              <div className="udi:flex udi:items-center udi:justify-between udi:gap-3">
+                <p className="udi:text-xs udi:text-muted-foreground">
                   Sent to the backend on every request via the{' '}
-                  <code className="rounded bg-muted px-1 py-0.5 text-[11px]">X-OpenAI-Key</code>{' '}
+                  <code className="udi:rounded udi:bg-muted udi:px-1 udi:py-0.5 udi:text-[11px]">
+                    X-OpenAI-Key
+                  </code>{' '}
                   header.
                 </p>
                 <Button variant="outline" size="sm" onClick={onClearApiKey}>
@@ -97,29 +101,29 @@ export function SessionStatusDialog({
               </div>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground">
+                <p className="udi:text-xs udi:text-muted-foreground">
                   No key set — the backend uses its own key, subject to a shared budget.
                 </p>
                 <ApiKeyInput onSubmit={handleSet} />
               </>
             )}
           </section>
-          <section className="flex flex-col gap-2 border-t pt-3">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium">Tokens used</span>
-              <span className="text-lg font-semibold tabular-nums">
+          <section className="udi:flex udi:flex-col udi:gap-2 udi:border-t udi:pt-3">
+            <div className="udi:flex udi:items-baseline udi:justify-between">
+              <span className="udi:text-sm udi:font-medium">Tokens used</span>
+              <span className="udi:text-lg udi:font-semibold udi:tabular-nums">
                 {usage.totalTokens.toLocaleString()}
               </span>
             </div>
-            <dl className="flex flex-col gap-1 text-xs">
+            <dl className="udi:flex udi:flex-col udi:gap-1 udi:text-xs">
               {usageRows.map((row) => (
-                <div key={row.label} className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">{row.label}</dt>
-                  <dd className="tabular-nums">{row.value}</dd>
+                <div key={row.label} className="udi:flex udi:justify-between udi:gap-4">
+                  <dt className="udi:text-muted-foreground">{row.label}</dt>
+                  <dd className="udi:tabular-nums">{row.value}</dd>
                 </div>
               ))}
             </dl>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="udi:text-[11px] udi:text-muted-foreground">
               Resets when you start a new conversation.
             </p>
           </section>

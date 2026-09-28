@@ -6,8 +6,14 @@ Two mutually exclusive modes:
   tokens. Standalone deployments.
 * **External JWKS** (`JWT_JWKS_URL` + `JWT_AUDIENCE`) — tokens are issued by a
   host portal's identity provider (Keycloak, Globus, Auth0, Entra) and verified
-  against its published keys. The embedded chat forwards the portal's token via
-  its ``authToken`` config; nothing else in the request path changes.
+  against its published keys.
+
+In JWKS mode the token can reach us two ways, and this module does not care
+which: either the host page holds it and the embedded chat forwards it via its
+``authToken`` config, or the host's own backend holds it and attaches the
+header while proxying our endpoints. The second is the only option for portals
+that deliberately keep the token server-side, so the browser sends no
+``Authorization`` header at all and the proxy supplies it.
 
 The verified payload also carries the raw compact token under
 ``RAW_TOKEN_CLAIM``, so a query backend configured for JWT passthrough can
@@ -90,7 +96,11 @@ def make_verify_jwt(
             cache["fetched"] = now
         return cache["keys"]
 
-    def verify_jwt(authorization: str = Header(...)):
+    # Defaulted rather than required: a missing header is an authentication
+    # failure (401), not a malformed request (422) — and under a proxy that
+    # attaches the header itself, the browser has no reason to send a
+    # placeholder just to satisfy a required field.
+    def verify_jwt(authorization: str = Header(default="")):
         if insecure_dev_mode:
             return {"dev_mode": True}
         if not authorization.startswith("Bearer "):

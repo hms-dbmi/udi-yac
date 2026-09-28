@@ -51,7 +51,8 @@ export async function instantiateVisTemplate(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.authToken ?? 'dev'}`,
+      // Only when we were actually given one — see queryLLM.
+      ...(config.authToken ? { Authorization: `Bearer ${config.authToken}` } : {}),
     },
     body: JSON.stringify(body),
     signal: signal ?? null,

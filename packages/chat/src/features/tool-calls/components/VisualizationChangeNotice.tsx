@@ -102,15 +102,15 @@ export function VisualizationChangeNotice({
   return (
     // Each row puts its undo control hard against the right edge, so the two
     // buttons line up in a column however long the text beside them runs.
-    <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+    <div className="udi:mt-1 udi:flex udi:flex-col udi:gap-0.5 udi:text-xs udi:text-muted-foreground">
       {tweaked && (
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate">
+        <div className="udi:flex udi:items-center udi:justify-between udi:gap-2">
+          <span className="udi:truncate">
             {/* A custom name already tells the user what the chart is called,
                 so naming the generated title too would just be noise. */}
             {retitled && !isRenamed ? (
               <>
-                Fields changed — now titled <span className="italic">{retitled}</span>
+                Fields changed — now titled <span className="udi:italic">{retitled}</span>
               </>
             ) : (
               'Fields changed'
@@ -122,17 +122,17 @@ export function VisualizationChangeNotice({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  className="size-5 shrink-0"
+                  className="udi:size-5 udi:shrink-0"
                   title="Reset the visualization to its original fields"
                   aria-label="Reset visualization"
                 />
               }
             >
-              <RotateCcw className="h-3 w-3" />
+              <RotateCcw className="udi:h-3 udi:w-3" />
             </DialogTrigger>
-            <DialogContent className="max-w-sm">
+            <DialogContent className="udi:max-w-sm">
               <DialogHeader>
-                <DialogTitle className="text-sm">Reset this visualization?</DialogTitle>
+                <DialogTitle className="udi:text-sm">Reset this visualization?</DialogTitle>
                 <DialogDescription>
                   The chart goes back to the fields the assistant originally chose, discarding every
                   change made with the tweak controls. Filters and any custom name are left as they
@@ -150,19 +150,19 @@ export function VisualizationChangeNotice({
         </div>
       )}
       {isRenamed && (
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate">
-            Renamed to <span className="italic">{display}</span>
+        <div className="udi:flex udi:items-center udi:justify-between udi:gap-2">
+          <span className="udi:truncate">
+            Renamed to <span className="udi:italic">{display}</span>
           </span>
           <Button
             variant="ghost"
             size="icon-xs"
-            className="size-5 shrink-0"
+            className="udi:size-5 udi:shrink-0"
             title="Remove the custom name"
             aria-label="Remove custom name"
             onClick={dismissRename}
           >
-            <X className="h-3 w-3" />
+            <X className="udi:h-3 udi:w-3" />
           </Button>
         </div>
       )}

@@ -476,34 +476,55 @@ class PipelineCompiler:
     def _compile_rollup(self, st: _State, transform: dict, out_name: str | None) -> None:
         in_ref = self._in_ref(st, transform.get("in"))
         groups = st.pending_groupby or []
-        cols = [self._q(g) for g in groups]
-        aggs = []
-        for out_field, agg in transform["rollup"].items():
-            op = agg.get("op")
-            out_col = self._q(out_field)
-            if op == "count":
-                aggs.append(f"COUNT(*) AS {out_col}")
-            elif op == "frequency":
-                # Arquero: count, then normalize by the grand total.
-                aggs.append(f"COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS {out_col}")
-            elif op in ("sum", "min", "max"):
-                aggs.append(f"{op.upper()}({self._q(agg['field'])}) AS {out_col}")
-            elif op == "mean":
-                aggs.append(f"AVG({self._q(agg['field'])}) AS {out_col}")
-            elif op == "median":
-                aggs.append(
-                    f"{self.dialect.median(self._q(agg['field']))} AS {out_col}"
-                )
-            else:
-                raise UnsupportedQueryError(f"unsupported rollup op '{op}'")
-        select_list = ", ".join(cols + aggs)
-        sql = f"SELECT {select_list} FROM {in_ref}"
-        if cols:
-            sql += " GROUP BY " + ", ".join(cols)
-        self._push(st, sql, out_name, list(groups) + list(transform["rollup"]))
+        rollup = transform["rollup"]
+        # Arquero writes a rollup's columns onto the grouped table, so an output
+        # that reuses a group key OVERWRITES it: one column, keeping the key's
+        # position. Emitting both is what later reads as "Column '<k>' is
+        # ambiguous" on StarRocks, and DuckDB quietly picking one is no better.
+        shadowed = any(g in rollup for g in groups)
+        # With an aggregate aliased to a group key's name in scope, an
+        # unqualified GROUP BY could bind to that alias instead of the input
+        # column. Only aliased where it matters, so every other rollup's SQL
+        # is unchanged.
+        src = f"{in_ref} g" if shadowed else in_ref
+        key = (lambda g: f"g.{self._q(g)}") if shadowed else self._q
+
+        select_parts = [
+            self._rollup_agg_sql(g, rollup[g]) if g in rollup else key(g)
+            for g in groups
+        ] + [
+            self._rollup_agg_sql(name, agg)
+            for name, agg in rollup.items()
+            if name not in groups
+        ]
+        sql = f"SELECT {', '.join(select_parts)} FROM {src}"
+        if groups:
+            sql += " GROUP BY " + ", ".join(key(g) for g in groups)
+        self._push(
+            st,
+            sql,
+            out_name,
+            list(groups) + [n for n in rollup if n not in groups],
+        )
         st.pending_groupby = None
         st.order_by = None
         st.aggregated = True
+
+    def _rollup_agg_sql(self, out_field: str, agg: dict) -> str:
+        op = agg.get("op")
+        out_col = self._q(out_field)
+        if op == "count":
+            return f"COUNT(*) AS {out_col}"
+        if op == "frequency":
+            # Arquero: count, then normalize by the grand total.
+            return f"COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS {out_col}"
+        if op in ("sum", "min", "max"):
+            return f"{op.upper()}({self._q(agg['field'])}) AS {out_col}"
+        if op == "mean":
+            return f"AVG({self._q(agg['field'])}) AS {out_col}"
+        if op == "median":
+            return f"{self.dialect.median(self._q(agg['field']))} AS {out_col}"
+        raise UnsupportedQueryError(f"unsupported rollup op '{op}'")
 
     def _compile_orderby(self, st: _State, transform: dict) -> None:
         spec = transform["orderby"]

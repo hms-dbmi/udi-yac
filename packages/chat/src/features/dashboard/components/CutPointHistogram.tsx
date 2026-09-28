@@ -116,11 +116,11 @@ export function CutPointHistogram({
   );
 
   return (
-    <div className="select-none">
+    <div className="udi:select-none">
       <svg
         ref={svgRef}
         role="presentation"
-        className={`w-full ${disabled ? 'opacity-50' : 'cursor-copy'}`}
+        className={`udi:w-full ${disabled ? 'udi:opacity-50' : 'udi:cursor-copy'}`}
         height={HEIGHT}
         viewBox={`0 0 100 ${HEIGHT}`}
         preserveAspectRatio="none"
@@ -140,7 +140,7 @@ export function CutPointHistogram({
               y={HEIGHT - barHeight}
               width={100 / bins.length}
               height={barHeight}
-              className="fill-muted-foreground/30"
+              className="udi:fill-muted-foreground/30"
             />
           );
         })}
@@ -150,7 +150,7 @@ export function CutPointHistogram({
           y1={HEIGHT}
           x2={100}
           y2={HEIGHT}
-          className="stroke-border"
+          className="udi:stroke-border"
           strokeWidth={1}
           vectorEffect="non-scaling-stroke"
         />
@@ -164,7 +164,7 @@ export function CutPointHistogram({
                 y1={0}
                 x2={x}
                 y2={HEIGHT}
-                className="stroke-primary"
+                className="udi:stroke-primary"
                 strokeWidth={2}
                 vectorEffect="non-scaling-stroke"
               />
@@ -176,14 +176,14 @@ export function CutPointHistogram({
                 width={HANDLE_HIT}
                 height={HEIGHT}
                 fill="transparent"
-                className={disabled ? '' : 'cursor-ew-resize'}
+                className={disabled ? '' : 'udi:cursor-ew-resize'}
                 onPointerDown={handlePointerDown(index)}
               />
             </g>
           );
         })}
       </svg>
-      <div className="flex justify-between text-[10px] text-muted-foreground">
+      <div className="udi:flex udi:justify-between udi:text-[10px] udi:text-muted-foreground">
         <span>{formatBound(min, precision)}</span>
         <span>{formatBound(max, precision)}</span>
       </div>

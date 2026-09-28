@@ -30,19 +30,19 @@ export function ClosedVisualizationsPanel() {
   if (closedVisualizations.size === 0) return null;
 
   return (
-    <div className="px-3 py-1.5 border-t">
-      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+    <div className="udi:px-3 udi:py-1.5 udi:border-t">
+      <p className="udi:text-[10px] udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider udi:mb-1">
         Recently Closed
       </p>
-      <div className="flex flex-col gap-0.5 max-h-20 overflow-y-auto">
+      <div className="udi:flex udi:flex-col udi:gap-0.5 udi:max-h-20 udi:overflow-y-auto">
         {Array.from(closedVisualizations.entries()).map(([key, viz]) => (
           <button
             key={key}
-            className="flex items-center gap-1.5 text-xs text-left hover:bg-muted rounded px-1.5 py-0.5 w-full"
+            className="udi:flex udi:items-center udi:gap-1.5 udi:text-xs udi:text-left udi:hover:bg-muted udi:rounded udi:px-1.5 udi:py-0.5 udi:w-full"
             onClick={() => handleRestore(key)}
           >
-            <RotateCw className="h-3 w-3 shrink-0 text-muted-foreground" />
-            <span className="truncate">{resolveVizTitle(viz, titleLabels)}</span>
+            <RotateCw className="udi:h-3 udi:w-3 udi:shrink-0 udi:text-muted-foreground" />
+            <span className="udi:truncate">{resolveVizTitle(viz, titleLabels)}</span>
           </button>
         ))}
       </div>

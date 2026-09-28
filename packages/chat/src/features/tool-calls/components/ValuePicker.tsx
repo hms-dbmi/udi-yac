@@ -38,43 +38,45 @@ export function ValuePicker({
   }, [options, trimmed]);
 
   return (
-    <div className="space-y-1.5">
+    <div className="udi:space-y-1.5">
       {options.length > filterThreshold && (
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+        <div className="udi:relative">
+          <Search className="udi:pointer-events-none udi:absolute udi:top-1/2 udi:left-2 udi:h-3 udi:w-3 udi:-translate-y-1/2 udi:text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Filter values..."
-            className="h-7 pl-7 text-xs"
+            className="udi:h-7 udi:pl-7 udi:text-xs"
           />
         </div>
       )}
-      <div className="max-h-48 space-y-1.5 overflow-y-auto">
+      <div className="udi:max-h-48 udi:space-y-1.5 udi:overflow-y-auto">
         {visible.map((value, i) => {
           // Index, not the value: real domain values contain spaces and
           // punctuation, which make an invalid id and silently break the
           // label/control association (and with it the accessible name).
           const id = `${idPrefix}-${i}`;
           return (
-            <div key={value} className="flex items-center gap-2">
+            <div key={value} className="udi:flex udi:items-center udi:gap-2">
               <Checkbox
                 id={id}
                 checked={selected.includes(value)}
                 onCheckedChange={(checked) => onToggle(value, !!checked)}
               />
-              <Label htmlFor={id} className="cursor-pointer text-xs">
+              <Label htmlFor={id} className="udi:cursor-pointer udi:text-xs">
                 {highlightMatch(value, trimmed)}
               </Label>
             </div>
           );
         })}
         {visible.length === 0 && (
-          <span className="text-xs text-muted-foreground">No values match {`"${query}"`}.</span>
+          <span className="udi:text-xs udi:text-muted-foreground">
+            No values match {`"${query}"`}.
+          </span>
         )}
       </div>
       {trimmed && visible.length > 0 && (
-        <span className="text-[10px] text-muted-foreground">
+        <span className="udi:text-[10px] udi:text-muted-foreground">
           {visible.length} of {options.length} shown
         </span>
       )}

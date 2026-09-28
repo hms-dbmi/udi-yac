@@ -138,8 +138,8 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
   if (tweakableParams.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2 flex-wrap">
+    <div className="udi:flex udi:flex-col udi:gap-1">
+      <div className="udi:flex udi:items-center udi:gap-2 udi:flex-wrap">
         {tweakableParams.map((param) =>
           param.kind === 'grouping' ? (
             <StratifierGroupingControl
@@ -163,8 +163,8 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
               disabled={pendingParam !== null}
               onValueChange={(val) => handleFieldChange(param, val)}
             >
-              <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
-                <span className="text-muted-foreground mr-1">{param.label}:</span>
+              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[100px] udi:text-xs">
+                <span className="udi:text-muted-foreground udi:mr-1">{param.label}:</span>
                 <SelectValue>{fieldLabel(param.field)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -179,7 +179,7 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
         )}
       </div>
       {error && (
-        <p role="status" className="text-xs text-destructive">
+        <p role="status" className="udi:text-xs udi:text-destructive">
           {error}
         </p>
       )}

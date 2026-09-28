@@ -62,7 +62,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
 
   const crossFieldHint = (suggestions: FieldSuggestion[], value: string) =>
     suggestions.length > 0 && (
-      <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+      <div className="udi:flex udi:flex-wrap udi:items-center udi:gap-1 udi:text-xs udi:text-muted-foreground">
         <span>{q(value)} does appear in</span>
         {suggestions.map((s) => (
           <Badge
@@ -70,7 +70,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
             variant="outline"
             role="button"
             tabIndex={0}
-            className="cursor-pointer font-mono text-[10px] hover:bg-muted hover:text-foreground"
+            className="udi:cursor-pointer udi:font-mono udi:text-[10px] udi:hover:bg-muted udi:hover:text-foreground"
             onClick={() => commitValues(s.entity, s.field, [s.value], 'cross-field')}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -113,9 +113,9 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
             <p>
               This data has no {q(entity)} to filter. Try asking again about one of these instead:
             </p>
-            <div className="flex flex-wrap gap-1">
+            <div className="udi:flex udi:flex-wrap udi:gap-1">
               {shown.map((e) => (
-                <Badge key={e} variant="secondary" className="font-mono text-[10px]">
+                <Badge key={e} variant="secondary" className="udi:font-mono udi:text-[10px]">
                   {e}
                 </Badge>
               ))}
@@ -130,11 +130,11 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
         return (
           <>
             <p>
-              <span className="font-mono">{entity}</span> has no field{' '}
-              <span className="font-mono">{field}</span>.
+              <span className="udi:font-mono">{entity}</span> has no field{' '}
+              <span className="udi:font-mono">{field}</span>.
             </p>
             {nearbyFields.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+              <div className="udi:flex udi:flex-wrap udi:items-center udi:gap-1 udi:text-xs udi:text-muted-foreground">
                 <span>Did you mean</span>
                 {nearbyFields.map((f) => (
                   <Badge
@@ -142,7 +142,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
                     variant="outline"
                     role="button"
                     tabIndex={0}
-                    className="cursor-pointer font-mono text-[10px] hover:bg-muted hover:text-foreground"
+                    className="udi:cursor-pointer udi:font-mono udi:text-[10px] udi:hover:bg-muted udi:hover:text-foreground"
                     onClick={() => commitValues(entity, f, [], 'field-suggestion')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -181,7 +181,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
         return (
           <>
             <p>
-              <span className="font-mono">
+              <span className="udi:font-mono">
                 {entity}.{field}
               </span>{' '}
               has no value {missing.map(q).join(', ')}.
@@ -190,11 +190,11 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
             </p>
 
             {caseFix && (
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-muted-foreground">Did you mean {q(caseFix.value)}?</span>
+              <div className="udi:flex udi:flex-wrap udi:items-center udi:gap-2 udi:text-xs">
+                <span className="udi:text-muted-foreground">Did you mean {q(caseFix.value)}?</span>
                 <Button
                   size="sm"
-                  className="h-6 text-xs"
+                  className="udi:h-6 udi:text-xs"
                   onClick={() => commitValues(entity, field, [caseFix.value], 'case')}
                 >
                   Use it
@@ -203,7 +203,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
             )}
 
             {!caseFix && nearby.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+              <div className="udi:flex udi:flex-wrap udi:items-center udi:gap-1 udi:text-xs udi:text-muted-foreground">
                 <span>Nearby:</span>
                 {nearby.map((n) => (
                   <Badge
@@ -211,7 +211,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
                     variant="outline"
                     role="button"
                     tabIndex={0}
-                    className="cursor-pointer text-[10px] hover:bg-muted hover:text-foreground"
+                    className="udi:cursor-pointer udi:text-[10px] udi:hover:bg-muted udi:hover:text-foreground"
                     onClick={() => commitValues(entity, field, [n.value], 'nearby')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -231,17 +231,17 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
             {present.length > 0 && (
               <Button
                 size="sm"
-                className="h-6 text-xs"
+                className="udi:h-6 udi:text-xs"
                 onClick={() => commitValues(entity, field, present, 'partial')}
               >
                 Apply the {present.length} matching {present.length === 1 ? 'value' : 'values'}
               </Button>
             )}
 
-            <div className="space-y-1.5 border-t pt-2">
-              <span className="text-xs text-muted-foreground">
+            <div className="udi:space-y-1.5 udi:border-t udi:pt-2">
+              <span className="udi:text-xs udi:text-muted-foreground">
                 Pick from the {options.length} {options.length === 1 ? 'value' : 'values'}{' '}
-                <span className="font-mono">{field}</span> does have:
+                <span className="udi:font-mono">{field}</span> does have:
               </span>
               {picker(entity, field, options)}
             </div>
@@ -256,12 +256,14 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
   };
 
   return (
-    <div className="my-2 space-y-2 rounded border bg-background/50 p-2">
-      <div className="flex items-center gap-1.5 text-destructive">
-        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-        <span className="text-[10px] font-medium tracking-wider uppercase">No matching values</span>
+    <div className="udi:my-2 udi:space-y-2 udi:rounded udi:border udi:bg-background/50 udi:p-2">
+      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-destructive">
+        <AlertCircle className="udi:h-3.5 udi:w-3.5 udi:shrink-0" />
+        <span className="udi:text-[10px] udi:font-medium udi:tracking-wider udi:uppercase">
+          No matching values
+        </span>
       </div>
-      <div className="space-y-2 text-sm">{body()}</div>
+      <div className="udi:space-y-2 udi:text-sm">{body()}</div>
     </div>
   );
 }

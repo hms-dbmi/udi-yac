@@ -355,6 +355,43 @@ describe('applyFieldLabels', () => {
     });
   });
 
+  it('leaves a shared channel alone when another layer already titles it', () => {
+    // The survival templates in miniature: layers sharing one y scale, only the
+    // curve titled, the rest plotting internal pipeline columns. Vega merges a
+    // layered axis title from the explicit titles only, so titling the others
+    // here would join them all into one unreadable string.
+    const s = spec({
+      representation: [
+        {
+          mark: 'line',
+          mapping: [
+            { encoding: 'x', field: 'age_value', type: 'quantitative' },
+            { encoding: 'y', field: 'full survival', type: 'quantitative' },
+          ],
+        },
+        {
+          mark: 'line',
+          mapping: [
+            { encoding: 'x', field: 'age_value', type: 'quantitative' },
+            {
+              encoding: 'y',
+              field: 'survival percentage',
+              type: 'quantitative',
+              title: 'survival (%)',
+            },
+          ],
+        },
+      ],
+    });
+    const layers = applyFieldLabels(s).representation as Array<{
+      mapping: Array<{ field?: string; title?: string }>;
+    }>;
+    expect(layers[0].mapping[1].title).toBeUndefined();
+    expect(layers[1].mapping[1].title).toBe('survival (%)');
+    // x carries no explicit title on either layer, so it is still labelled.
+    expect(layers[0].mapping[0].title).toBe('Age');
+  });
+
   it('does not mutate the spec it was given', () => {
     const original = scatter();
     const before = JSON.stringify(original);
@@ -484,9 +521,103 @@ describe('renderTextTemplate', () => {
     expect(renderTextTemplate('', scatter())).toBeUndefined();
   });
 
-  it('leaves unrecognised tokens alone', () => {
-    expect(renderTextTemplate('Chart of {enc:x} {mystery}', scatter())).toBe(
-      'Chart of Age {mystery}',
+  it('gives up on a token it does not know rather than printing it', () => {
+    // An older client against a newer agent: this used to render the brace and
+    // all straight into a card title. Falling back hands the reader the built
+    // title instead, which is always sayable.
+    expect(renderTextTemplate('Chart of {enc:x} {mystery}', scatter())).toBeUndefined();
+  });
+});
+
+describe('renderTextTemplate — survival tokens', () => {
+  /** Two sources: the event log first, the per-subject table second. A survival
+   *  curve is about the subjects, so its text names the second one. */
+  const survival = spec({
+    source: [
+      { name: 'Event', source: 'event' },
+      { name: 'Patient', source: 'patient' },
+    ],
+    transformation: [{ rollup: { stratum: { op: 'max', field: 'baseline stratum' } } }],
+    representation: [
+      {
+        mark: 'line',
+        mapping: [
+          { encoding: 'x', field: 'survival years', type: 'quantitative' },
+          { encoding: 'color', field: 'stratum', type: 'nominal' },
+        ],
+      },
+    ],
+  });
+
+  /** Mirrors the store: `getFieldLabel` humanizes a miss rather than reporting
+   *  it, which is why `hasField` exists. Only Patient declares the column. */
+  const labels = {
+    getEntityLabel: (e: string) => ({ Patient: 'Patients' })[e] ?? e,
+    hasField: (entity: string, field: string) =>
+      entity === 'Patient' && field === 'protocol_name_and_arm',
+    getFieldLabel: (entity: string, field: string) =>
+      (entity === 'Patient' && field === 'protocol_name_and_arm' ? 'Protocol' : undefined) ??
+      humanizeFieldName(field),
+  };
+
+  /** What the agent bound each template role to, as the store keeps it. */
+  const bindings = { entity2: 'Patient', entity2_field: 'protocol_name_and_arm' };
+
+  it('names the table a role binds, not a position in the source list', () => {
+    // `instantiate_template` drops a repeated source, so a spec can hold fewer
+    // sources than the template has roles — pcx's Patient carries both the
+    // stratifier and the censoring status. A positional token then resolves to
+    // nothing and the title silently falls back.
+    expect(renderTextTemplate('Survival curve for {ent:entity2}', survival, labels, bindings)).toBe(
+      'Survival curve for Patients',
+    );
+  });
+
+  it('labels the column a role binds, wherever that column lives', () => {
+    // Only the package knows it is "Protocol", not "Protocol Name And Arm",
+    // and only the bindings say which source declares it.
+    expect(
+      renderTextTemplate(
+        'Survival curves for {ent:entity2} by {col:entity2_field}',
+        survival,
+        labels,
+        bindings,
+      ),
+    ).toBe('Survival curves for Patients by Protocol');
+  });
+
+  it('follows a stratifier swapped in the tweak panel', () => {
+    // The column is named by its BINDING, so re-resolving against the rebound
+    // args re-words the title. Frozen to the initial column, a chart tweaked
+    // from Protocol to Race kept saying Protocol.
+    expect(
+      renderTextTemplate('by {col:entity2_field}', survival, labels, {
+        ...bindings,
+        entity2_field: 'race',
+      }),
+    ).toBe('by Race');
+  });
+
+  it('humanizes when no package has loaded to say where the column lives', () => {
+    // Before the package arrives there is no membership oracle, so the first
+    // source that answers wins — a readable name either way, and the title
+    // recomputes on render once labels land.
+    const noPackage = { ...labels, hasField: undefined };
+    expect(renderTextTemplate('by {col:entity2_field}', survival, noPackage, bindings)).toBe(
+      'by Protocol Name And Arm',
+    );
+  });
+
+  it('gives up when a role names no binding at all', () => {
+    expect(renderTextTemplate('by {col:entity2_field}', survival, labels, {})).toBeUndefined();
+  });
+
+  it('does not let a derived stratum column name the split', () => {
+    // What the reported title did: {enc:color} resolves to the rollup behind
+    // the derived `stratum`, giving "Maximum Baseline Stratum". The agent now
+    // sends {col:…} for a stratifier, but pin what {enc:color} would have said.
+    expect(renderTextTemplate('by {enc:color}', survival, labels)).toBe(
+      'by Maximum Baseline Stratum',
     );
   });
 });

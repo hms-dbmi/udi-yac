@@ -75,7 +75,7 @@ def parse_grouping(raw):
     if raw is None:
         return None
     if isinstance(raw, dict):
-        return raw or None
+        return _without_empty_groups(raw)
     if not isinstance(raw, str):
         raise GroupingError(
             f"grouping must be a JSON object or string, got {type(raw).__name__}."
@@ -99,7 +99,32 @@ def parse_grouping(raw):
             "grouping must be a JSON object with a 'type' of 'nominal' or "
             f"'quantitative', got {type(parsed).__name__}."
         )
-    return parsed or None
+    return _without_empty_groups(parsed)
+
+
+def _without_empty_groups(grouping):
+    """The grouping with value-less nominal groups dropped, None if none remain.
+
+    The same "felt obliged to send something" the docstring above describes, one
+    level down. A model that wants a catch-all writes `{"label": "Other",
+    "values": []}` rather than reaching for `other`; a model that cannot see the
+    column's values writes that and nothing else, meaning "split by this field"
+    — which is exactly the no-grouping default. A group claiming no values adds
+    no stratum either way, so it is dropped rather than made fatal: refusing it
+    turned "stratify by protocol" into a dead chart.
+    """
+    if not grouping:
+        return None
+    groups = grouping.get("groups")
+    if not isinstance(groups, list):
+        return grouping
+    # Non-dict entries stay, so the shape error they really have is still raised.
+    kept = [g for g in groups if not isinstance(g, dict) or g.get("values")]
+    if len(kept) == len(groups):
+        return grouping
+    if not kept and not grouping.get("cuts"):
+        return None
+    return {**grouping, "groups": kept}
 
 
 def grouping_kind(grouping):

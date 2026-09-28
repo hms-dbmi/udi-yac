@@ -98,7 +98,7 @@ export function ChatPanel({
   }, [pendingQuotaRetry, dataReady, onConsumePendingRetry, retryLastUserMessage]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="udi:flex udi:flex-col udi:h-full">
       <ChatHeaderBar
         config={config}
         hasApiKey={hasApiKey}
@@ -126,24 +126,24 @@ export function ChatPanel({
         onSelectSuggestion={handleSend}
       />
       {error && (
-        <div className="px-3 py-1">
-          <p className="text-xs text-destructive">{error}</p>
+        <div className="udi:px-3 udi:py-1">
+          <p className="udi:text-xs udi:text-destructive">{error}</p>
         </div>
       )}
       {!dataReady && (
-        <div className="px-3 py-1 flex items-center gap-1.5">
-          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-          <p className="text-xs text-muted-foreground">Loading fields...</p>
+        <div className="udi:px-3 udi:py-1 udi:flex udi:items-center udi:gap-1.5">
+          <Loader2 className="udi:h-3 udi:w-3 udi:animate-spin udi:text-muted-foreground" />
+          <p className="udi:text-xs udi:text-muted-foreground">Loading fields...</p>
         </div>
       )}
       {userKeyQuotaExceeded && (
-        <div className="px-3 py-1">
-          <p className="text-xs text-destructive">
+        <div className="udi:px-3 udi:py-1">
+          <p className="udi:text-xs udi:text-destructive">
             Your OpenAI key appears to be over quota —{' '}
             <button
               type="button"
               onClick={onClearApiKey}
-              className="underline underline-offset-2 hover:text-destructive/80"
+              className="udi:underline udi:underline-offset-2 udi:hover:text-destructive/80"
             >
               clear it and enter a new one
             </button>

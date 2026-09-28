@@ -170,3 +170,42 @@ def test_derive_adding_a_column_still_uses_select_star(compile_sql):
         [{"derive": {"flag": {"literal": 1}}}],
     )
     assert "SELECT *," in sql
+
+
+def test_a_rollup_output_replaces_the_group_key_it_shadows(compile_sql):
+    """The reported failure: a stratified survival curve whose stratifier was
+    bound to the same column as the subject key.
+
+    The template groups by the subject key and rolls the stratifier's baseline
+    value back up under its own name, so the two collide. Arquero writes the
+    rollup's columns onto the grouped table, so the output overwrites the key —
+    one column, in the key's slot. Emitting both made every later reference
+    fail with "Column 'research_id' is ambiguous" on StarRocks.
+    """
+    sql, dialect = compile_sql(
+        [{"name": "donors", "source": "donors"}],
+        [
+            {"groupby": "group_name"},
+            {
+                "rollup": {
+                    "first": {"op": "min", "field": "uuid"},
+                    "group_name": {"op": "max", "field": "sex"},
+                }
+            },
+        ],
+    )
+    _assert_no_duplicate_outputs(sql, dialect)
+    # The aggregate takes the key's position, and GROUP BY is qualified so it
+    # cannot bind to the alias that now shares that name.
+    assert _select_lists(sql)[0].startswith("MAX(")
+    assert "GROUP BY g." in sql
+
+
+def test_a_plain_rollup_is_left_exactly_as_it_was(compile_sql):
+    """No shadowing, no source alias — the common path's SQL is unchanged."""
+    sql, _ = compile_sql(
+        [{"name": "donors", "source": "donors"}],
+        [{"groupby": "group_name"}, {"rollup": {"n": {"op": "count"}}}],
+    )
+    assert " g GROUP BY" not in sql
+    assert "GROUP BY g." not in sql

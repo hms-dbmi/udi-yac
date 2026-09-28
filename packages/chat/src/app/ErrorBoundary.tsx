@@ -85,25 +85,25 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.error) return this.props.children;
 
     return (
-      <div className="flex flex-col items-center justify-center h-full p-6 gap-4">
-        <div className="text-center">
-          <h2 className="text-sm font-semibold mb-1">Something went wrong</h2>
-          <p className="text-xs text-muted-foreground">{this.state.error.message}</p>
+      <div className="udi:flex udi:flex-col udi:items-center udi:justify-center udi:h-full udi:p-6 udi:gap-4">
+        <div className="udi:text-center">
+          <h2 className="udi:text-sm udi:font-semibold udi:mb-1">Something went wrong</h2>
+          <p className="udi:text-xs udi:text-muted-foreground">{this.state.error.message}</p>
         </div>
-        <pre className="w-full max-h-[300px] overflow-auto rounded-md bg-muted p-3 text-xs font-mono whitespace-pre-wrap break-words">
+        <pre className="udi:w-full udi:max-h-[300px] udi:overflow-auto udi:rounded-md udi:bg-muted udi:p-3 udi:text-xs udi:font-mono udi:whitespace-pre-wrap udi:break-words">
           {this.getErrorText()}
         </pre>
-        <div className="flex flex-wrap gap-2 justify-center">
+        <div className="udi:flex udi:flex-wrap udi:gap-2 udi:justify-center">
           <Button variant="outline" size="sm" onClick={this.handleCopy}>
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
+            <Copy className="udi:h-3.5 udi:w-3.5 udi:mr-1.5" />
             Copy error
           </Button>
           <Button variant="outline" size="sm" onClick={this.handleExport}>
-            <Download className="h-3.5 w-3.5 mr-1.5" />
+            <Download className="udi:h-3.5 udi:w-3.5 udi:mr-1.5" />
             Export configuration
           </Button>
           <Button size="sm" onClick={this.handleReset}>
-            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+            <RotateCcw className="udi:h-3.5 udi:w-3.5 udi:mr-1.5" />
             Retry
           </Button>
         </div>

@@ -17,7 +17,11 @@ import UDICellRenderer from './UDICellRenderer.vue';
 defineExpose({
   UDICellRenderer,
 });
-import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  themeQuartz,
+} from 'ag-grid-community';
 import { AgGridVue } from 'ag-grid-vue3'; // Vue Data Grid Component
 import type { Domain, RowLayer, RowMapping } from './GrammarTypes';
 import type { UDIPalette } from './Palette';
@@ -200,10 +204,28 @@ const colDefs = computed<ColDef[]>(() => {
     })),
   ];
 });
+
+/*
+ * ag-grid ships its own light theme and knows nothing about our palette, so a
+ * table stayed white-on-white inside a dark host even once the marks followed
+ * the theme. Map the palette's chrome onto the Theming API; with no chrome in
+ * the palette the grid keeps ag-grid's stock Quartz look.
+ */
+const gridTheme = computed(() => {
+  const palette = effectivePalette.value;
+  const params: Record<string, string> = {};
+  if (palette?.background != null) params.backgroundColor = palette.background;
+  if (palette?.text != null) params.foregroundColor = palette.text;
+  if (palette?.grid != null) params.borderColor = palette.grid;
+  return Object.keys(params).length > 0
+    ? themeQuartz.withParams(params)
+    : themeQuartz;
+});
 </script>
 
 <template>
   <ag-grid-vue
+    :theme="gridTheme"
     :rowData="props.data"
     :columnDefs="colDefs"
     :style="props.fillContainer ? { height: '100%' } : { height: '500px' }"

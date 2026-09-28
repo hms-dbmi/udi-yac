@@ -152,7 +152,14 @@ class QueryEngine:
                 sql += f" OFFSET {int(offset)}"
         else:
             sql = compiled.sql
-        rows = self.connector.execute(sql, compiled.params)
+        try:
+            rows = self.connector.execute(sql, compiled.params)
+        except Exception:
+            # The SQL is the only thing that identifies which compiled shape a
+            # backend rejected, and `run_batch` reports the driver's message
+            # alone. Server-side log, never the response: it names tables.
+            logger.error("query failed; SQL was: %s", sql)
+            raise
         truncated = cap is not None and len(rows) > self.row_cap
         if truncated:
             rows = rows[: self.row_cap]

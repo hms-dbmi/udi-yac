@@ -55,9 +55,12 @@ describe('dataPackageStore — remote backend auth token', () => {
     });
   });
 
-  it('falls back to the dev placeholder when no token is supplied', async () => {
-    await loadRemote(undefined);
-    expect(currentBackendHeaders()).toEqual({ Authorization: 'Bearer dev' });
+  it('sends no Authorization header when no token is supplied', async () => {
+    // A deployment that proxies us through its own backend attaches the real
+    // header there; a `dev` placeholder would only be something to strip.
+    const { fetchMock } = await loadRemote(undefined);
+    expect(currentBackendHeaders()).toEqual({});
+    expect((fetchMock.mock.calls[0][1] as RequestInit).headers).toEqual({});
   });
 
   it('gives the backend a header function rather than a captured object', async () => {
