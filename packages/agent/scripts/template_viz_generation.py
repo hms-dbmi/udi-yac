@@ -2798,7 +2798,10 @@ def generate():
         task_types=[
             TaskType.DETERMINE_RANGE,
         ],
-        description="Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks.",
+        # Pins the tool name: vis_generate finds this template by its suffix to
+        # substitute it for a chart with too many categories (VALUE_COUNTS_TOOL_SUFFIX).
+        name_hint="count_sorted_distinct",
+        description="Lists all distinct values of a nominal field with their counts, ordered by descending count, displayed as a table with in-cell bar marks. Use this for a field with too many distinct values to chart (over 50): it lists all of them.",
         title_template="Table of the number of <E> by <F>",
         summary_template="Lists every distinct <F> value with how many <E> have it, with a bar in each row showing the count.",
         design_considerations="Groups by the nominal field and counts occurrences, sorted descending so the bars are comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar alone shows relative frequency but not the value.",

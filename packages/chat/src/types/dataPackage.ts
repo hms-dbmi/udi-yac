@@ -43,6 +43,9 @@ export interface DataPackageResource {
 }
 
 export interface DataPackage {
+  /** Frictionless's package name. Remote packages carry the name they were
+   *  requested by, which is what the agent keys per-package config on. */
+  name?: string;
   'udi:path': string;
   resources: DataPackageResource[];
   /**

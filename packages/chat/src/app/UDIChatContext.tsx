@@ -23,7 +23,7 @@ import {
   createMemoryBankStore,
   type MemoryBankState,
 } from '@/features/dashboard/stores/memoryBankStore';
-import { createGlobalStore, type GlobalState } from '@/stores/globalStore';
+import { createGlobalStore, type GlobalState, type ReadOnlyOption } from '@/stores/globalStore';
 import { registerSnapshotSource } from './snapshotRegistry';
 
 interface UDIChatStores {
@@ -37,7 +37,19 @@ interface UDIChatStores {
 
 const UDIChatContext = createContext<UDIChatStores | null>(null);
 
-export function UDIChatProvider({ children }: { children: ReactNode }) {
+/**
+ * `readOnly` seeds the global store's starting mode. It is read once, when the
+ * stores are created, so read-only renders from the very first paint with no
+ * flash of the editable UI — and because it only seeds state, the user can
+ * leave read-only afterwards (unless it was `'locked'`).
+ */
+export function UDIChatProvider({
+  children,
+  readOnly,
+}: {
+  children: ReactNode;
+  readOnly?: ReadOnlyOption;
+}) {
   const storesRef = useRef<UDIChatStores | null>(null);
   if (storesRef.current == null) {
     storesRef.current = {
@@ -46,7 +58,7 @@ export function UDIChatProvider({ children }: { children: ReactNode }) {
       dataPackage: createDataPackageStore(),
       dataFilters: createDataFiltersStore(),
       memoryBank: createMemoryBankStore(),
-      global: createGlobalStore(),
+      global: createGlobalStore(readOnly),
     };
     // Register synchronously so the (outer) ErrorBoundary can capture the
     // current session even if the very first child render throws — a

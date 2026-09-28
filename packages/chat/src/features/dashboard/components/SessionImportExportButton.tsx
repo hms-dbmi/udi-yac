@@ -20,6 +20,7 @@ import {
   useDataPackage,
   useTracker,
 } from '@/app/UDIChatContext';
+import { applySessionExport } from '../utils/applySessionExport';
 import {
   buildSessionExport,
   parseSessionExport,
@@ -87,23 +88,9 @@ export function SessionImportExportButton() {
           setErrorMessage(parsed.error);
           return;
         }
-        conversationStore.getState().loadConversation(parsed.value.conversation.messages);
-        if (parsed.value.conversation.sessionUsage) {
-          conversationStore.getState().setSessionUsage(parsed.value.conversation.sessionUsage);
-        }
-        const dashboard = dashboardStore.getState();
-        // Apply grid config FIRST so the import's repack/pack runs against
-        // the right cols. Falls back to current defaults if the export
-        // didn't carry a grid block (older v2 exports).
-        if (parsed.value.grid) {
-          dashboard.setGridCols(parsed.value.grid.cols);
-          dashboard.setGridRowHeight(parsed.value.grid.rowHeight);
-        }
-        dashboard.importDashboard(
-          {
-            visualizations: parsed.value.visualizations,
-            layout: parsed.value.layout,
-          },
+        applySessionExport(
+          parsed.value,
+          { conversation: conversationStore, dashboard: dashboardStore },
           sourceFields,
         );
         trackEvent('session_imported', {
