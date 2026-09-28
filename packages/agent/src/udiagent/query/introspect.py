@@ -19,8 +19,12 @@ from __future__ import annotations
 import time
 from typing import Any
 
-# Categorical domains larger than this are omitted — mirrors the chat's
-# removeLongDomains (dataPackageStore.ts) cap of 80.
+# Categorical domains larger than this are omitted from an introspected
+# package. Independent of the chat's own cap: `capLongDomains`
+# (dataPackageStore.ts) trims what a browser-loaded package *sends* to the
+# agent, while this decides what a server-side package ever collects. Fields
+# over the cap still appear in the schema with no domain, which the chat reads
+# as "unverifiable", not "invalid".
 DEFAULT_DISTINCT_CAP = 80
 
 # Below this row count, exact COUNT(DISTINCT) is cheap and the approximate

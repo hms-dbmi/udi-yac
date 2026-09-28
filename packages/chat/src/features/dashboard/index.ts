@@ -18,6 +18,7 @@ export {
 export {
   createDataFiltersStore,
   extractFilterSpecFromMessage,
+  filterSpecForToolCall,
   messageFilterKeyWithToolCall,
   messageFilterKey,
   type DataFiltersState,

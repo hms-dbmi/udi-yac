@@ -11,6 +11,8 @@ import { highlightMatch } from '@/utils/highlightMatch';
 interface FieldListChipProps {
   entity: string;
   fields: string[];
+  /** When set, chips become buttons that report the field they name. */
+  onSelect?: (field: string) => void;
 }
 
 interface FieldMeta {
@@ -28,7 +30,7 @@ const DEFAULT_VISIBLE = 5;
  * chip carries a tooltip with the field's description and data type, and the
  * expanded view exposes a substring filter that highlights matches.
  */
-export function FieldListChip({ entity, fields }: FieldListChipProps) {
+export function FieldListChip({ entity, fields, onSelect }: FieldListChipProps) {
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const dataPackage = useDataPackage((s) => s.dataPackage);
@@ -102,7 +104,13 @@ export function FieldListChip({ entity, fields }: FieldListChipProps) {
       <TooltipProvider delay={150} timeout={0}>
         <div className="udi:flex udi:flex-wrap udi:gap-1">
           {visible.map((field) => (
-            <FieldChip key={field} field={field} meta={fieldMeta[field]} highlight={trimmedQuery} />
+            <FieldChip
+              key={field}
+              field={field}
+              meta={fieldMeta[field]}
+              highlight={trimmedQuery}
+              onSelect={onSelect}
+            />
           ))}
           {filtered.length === 0 && (
             <span className="udi:text-[10px] udi:text-muted-foreground">
@@ -136,16 +144,34 @@ interface FieldChipProps {
   field: string;
   meta: FieldMeta | undefined;
   highlight: string;
+  onSelect?: (field: string) => void;
 }
 
-function FieldChip({ field, meta, highlight }: FieldChipProps) {
+function FieldChip({ field, meta, highlight, onSelect }: FieldChipProps) {
   return (
     <Tooltip>
       <TooltipTrigger
         render={
           <Badge
             variant="secondary"
-            className="udi:max-w-[250px] udi:cursor-default udi:font-mono udi:text-[10px]"
+            className={
+              onSelect
+                ? 'udi:max-w-[250px] udi:cursor-pointer udi:font-mono udi:text-[10px] udi:hover:bg-muted'
+                : 'udi:max-w-[250px] udi:cursor-default udi:font-mono udi:text-[10px]'
+            }
+            role={onSelect ? 'button' : undefined}
+            tabIndex={onSelect ? 0 : undefined}
+            onClick={onSelect ? () => onSelect(field) : undefined}
+            onKeyDown={
+              onSelect
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelect(field);
+                    }
+                  }
+                : undefined
+            }
           >
             <span className="udi:min-w-0 udi:truncate">{highlightMatch(field, highlight)}</span>
             <Info className="udi:shrink-0 udi:opacity-60" />
