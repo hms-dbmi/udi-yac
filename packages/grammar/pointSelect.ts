@@ -42,15 +42,21 @@ export function togglePointValues(
 
 /**
  * Vega expression that is true for a mark to dim during a gesture: one not
- * matching the picks on every field. False outside a gesture (the signal is
- * null), so the condition leaves the mark's own opacity alone.
+ * matching the picks. False outside a gesture (the signal is null), so the
+ * condition leaves the mark's own opacity alone. A field with nothing picked
+ * matches any mark, as the store's point filter skips it — a label click picks
+ * a stacked bar's category and leaves its color field empty — but with nothing
+ * picked on any field, every mark dims.
  */
 export function pickDimTest(fields: string[]): string {
-  const match = fields
-    .map((f) => {
-      const key = JSON.stringify(f);
-      return `indexof(${PICK_SIGNAL}[${key}] || [], toString(datum[${key}])) >= 0`;
-    })
+  const picks = (key: string) => `length(${PICK_SIGNAL}[${key}] || [])`;
+  const keys = fields.map((f) => JSON.stringify(f));
+  const anyPicked = keys.map((key) => `${picks(key)} > 0`).join(' || ');
+  const match = keys
+    .map(
+      (key) =>
+        `(${picks(key)} == 0 || indexof(${PICK_SIGNAL}[${key}], toString(datum[${key}])) >= 0)`,
+    )
     .join(' && ');
-  return `${PICK_SIGNAL} && !(${match})`;
+  return `${PICK_SIGNAL} && !((${anyPicked}) && ${match})`;
 }

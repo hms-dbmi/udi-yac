@@ -21,6 +21,15 @@ import type { UDIPalette } from './Palette';
 import { DEFAULT_PALETTE, toVegaRange, toVegaRamp } from './Palette';
 import { registerRampScheme } from './paletteScheme';
 import { PICK_SIGNAL, selectFields, togglePointValues } from './pointSelect';
+import {
+  CLICKABLE_LABELS,
+  LABEL_TOTALS_SIGNAL,
+  type LabelAxis,
+  categoryTotals,
+  findLabelAxis,
+  patchLabelAxis,
+  underlineGeometry,
+} from './axisLabelSelect';
 
 // our type is more specific than the one from vega-embed
 interface VegaSpecShim {
@@ -181,10 +190,19 @@ function initVegaChart() {
   if (specObject.data && specObject.data.values) {
     delete specObject.data.values;
   }
+  // A bar chart's category labels gray out when a filter empties them, and are
+  // clickable when its point selection covers the axis: the way to pick a bar
+  // too thin to hit.
+  const axis = findLabelAxis(
+    specObject,
+    selectFields(props.pointSelect?.fields),
+  );
+  labelAxis = axis;
   // console.log('initializing vega chart with spec:', specObject);
   vegaEmbed(vegaContainer.value, specObject as VisualizationSpec, {
     actions: props.hideActions ? false : true,
     config: buildVegaConfig(),
+    ...(axis ? { patch: (vgSpec) => patchLabelAxis(vgSpec, axis) } : {}),
   })
     .then((result) => {
       errorMessage.value = null;
@@ -259,10 +277,22 @@ function initVegaChart() {
         // if the signal is a point selection we I couldn't get signals
         // to work with dynamic data, so click events it is!
         view.addEventListener('click', function (event, item) {
+          // A category label stands in for its bar: the selection gets the
+          // axis field alone, so a stacked bar is picked whole.
+          const label =
+            axis &&
+            (item?.mark as { name?: string } | undefined)?.name ===
+              CLICKABLE_LABELS
+              ? (item as { datum?: { value?: unknown } }).datum
+              : null;
           // No fields → no selection to build; bail.
-          const fields = selectFields(point.fields);
+          const fields =
+            axis && label ? [axis.field] : selectFields(point.fields);
           if (fields.length === 0) return;
-          const datum = (item as { datum?: Record<string, unknown> })?.datum;
+          const datum =
+            axis && label
+              ? { [axis.field]: label.value }
+              : (item as { datum?: Record<string, unknown> })?.datum;
           // Shift held: toggle the mark into the gesture's picks, commit
           // nothing until Shift is released. Starting here too covers a
           // Shift press the keydown listener didn't see (focus elsewhere).
@@ -414,6 +444,61 @@ function onPickPointerLeave(): void {
   pointerOverChart = false;
 }
 
+// The running view's bar category axis (grayed-out / clickable labels), if any.
+let labelAxis: LabelAxis | null = null;
+
+// Hovering a clickable label underlines it. Chrome won't draw an animatable
+// underline on SVG text — it ignores text-underline-offset there and paints the
+// decoration in the text's fill — so the underline is an HTML element laid over
+// the label. It is created on demand rather than rendered by Vue because
+// vega-embed empties the container on every embed.
+let labelUnderline: HTMLDivElement | null = null;
+
+function labelText(event: PointerEvent): SVGTextElement | null {
+  const target = event.target as Element | null;
+  return target?.closest?.<SVGTextElement>(`.${CLICKABLE_LABELS} text`) ?? null;
+}
+
+function onLabelPointerOver(event: PointerEvent): void {
+  const text = labelText(event);
+  const container = vegaContainer.value as HTMLElement | undefined;
+  const ctm = text?.getScreenCTM();
+  if (!text || !container || !ctm) return;
+  if (!labelUnderline?.isConnected) {
+    labelUnderline = document.createElement('div');
+    labelUnderline.className = 'udi-label-underline';
+    labelUnderline.appendChild(document.createElement('span'));
+    container.appendChild(labelUnderline);
+  }
+  const rect = container.getBoundingClientRect();
+  const { left, top, width, angle } = underlineGeometry(
+    text.getBBox(),
+    (x, y) => {
+      const point = new DOMPoint(x, y).matrixTransform(ctm);
+      return {
+        x: point.x - rect.left - container.clientLeft + container.scrollLeft,
+        y: point.y - rect.top - container.clientTop + container.scrollTop,
+      };
+    },
+  );
+  Object.assign(labelUnderline.style, {
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width}px`,
+    transform: `rotate(${angle}rad)`,
+    color: getComputedStyle(text).fill,
+  });
+  // Restart the transition, so moving from one label to the next slides the
+  // underline in again instead of jumping it across.
+  labelUnderline.classList.remove('shown');
+  void labelUnderline.offsetWidth;
+  labelUnderline.classList.add('shown');
+}
+
+function onLabelPointerOut(event: PointerEvent): void {
+  if (labelText(event)) labelUnderline?.classList.remove('shown');
+}
+
 // Remote (non-interactive) mode: each live brush tick would trigger a server
 // round-trip, so buffer ticks here and commit once on pointer release. The
 // listeners are window-level so releasing outside the chart still commits.
@@ -450,6 +535,8 @@ onMounted(() => {
   window.addEventListener('blur', endPickGesture);
   vegaContainer.value?.addEventListener('pointermove', onPickPointerMove);
   vegaContainer.value?.addEventListener('pointerleave', onPickPointerLeave);
+  vegaContainer.value?.addEventListener('pointerover', onLabelPointerOver);
+  vegaContainer.value?.addEventListener('pointerout', onLabelPointerOut);
   initVegaChart();
   if (vegaContainer.value && typeof ResizeObserver !== 'undefined') {
     lastW = vegaContainer.value.offsetWidth;
@@ -479,6 +566,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('blur', endPickGesture);
   vegaContainer.value?.removeEventListener('pointermove', onPickPointerMove);
   vegaContainer.value?.removeEventListener('pointerleave', onPickPointerLeave);
+  vegaContainer.value?.removeEventListener('pointerover', onLabelPointerOver);
+  vegaContainer.value?.removeEventListener('pointerout', onLabelPointerOut);
   reembedForResize.cancel();
   if (resizeObserver) {
     resizeObserver.disconnect();
@@ -549,6 +638,14 @@ async function updateVegaChart() {
       .remove(() => true)
       .insert(specObject.data.values ?? []),
   );
+  // The label tooltips and gray-out read each bar's total from here, so they
+  // track the filtered rows the bars draw.
+  if (labelAxis) {
+    vegaView.value.signal(
+      LABEL_TOTALS_SIGNAL,
+      categoryTotals(specObject.data.values ?? [], labelAxis),
+    );
+  }
 
   // Restore only the verified-active brush signals (no-external-selection case)
   for (const [key, value] of Object.entries(savedSignals)) {
@@ -745,5 +842,36 @@ watch(() => props.selections, updateVegaChartSelections, { deep: true });
    to higher-z-index ancestors of the chart's mounting container. */
 #vg-tooltip-element {
   z-index: 2147483647;
+}
+
+/* Clickable category labels (axisLabelSelect.ts). Global, not scoped: Vega draws
+   the labels and VegaLite.vue creates the underline imperatively, so neither
+   carries this component's scope attribute. */
+.udi-clickable-labels text {
+  cursor: pointer;
+}
+.udi-label-underline {
+  position: absolute;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.udi-label-underline > span {
+  display: block;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transform: translateY(5px);
+  transition:
+    transform 180ms ease-out,
+    opacity 180ms ease-out;
+}
+.udi-label-underline.shown > span {
+  opacity: 1;
+  transform: translateY(1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .udi-label-underline > span {
+    transition: none;
+  }
 }
 </style>

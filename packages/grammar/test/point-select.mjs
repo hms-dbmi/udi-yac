@@ -42,7 +42,8 @@ assert.equal(
 // Field names are quoted, so a dotted or quoted name can't break the expression.
 assert.equal(
   pickDimTest(['a.b']),
-  'udi_pick && !(indexof(udi_pick["a.b"] || [], toString(datum["a.b"])) >= 0)',
+  'udi_pick && !((length(udi_pick["a.b"] || []) > 0) && ' +
+    '(length(udi_pick["a.b"] || []) == 0 || indexof(udi_pick["a.b"], toString(datum["a.b"])) >= 0))',
 );
 assert.deepEqual(selectFields('x'), ['x']);
 assert.deepEqual(selectFields(undefined), []);
@@ -74,5 +75,57 @@ assert.deepEqual(opacities(), { CHOP: 0.7, UCSF: 0.7 });
 view.signal('udi_pick', { org: ['CHOP'] });
 await view.runAsync();
 assert.deepEqual(opacities(), { CHOP: 0.7, UCSF: 0.25 });
+// A gesture that has picked nothing yet dims everything.
+view.signal('udi_pick', {});
+await view.runAsync();
+assert.deepEqual(opacities(), { CHOP: 0.25, UCSF: 0.25 });
+
+// Multi-field: a field with nothing picked matches any mark. A label click on a
+// stacked bar picks only the axis field, and must keep every segment of that
+// bar lit, whatever its color.
+const stacked = vl.compile({
+  data: {
+    values: [
+      { org: 'CHOP', sex: 'F' },
+      { org: 'CHOP', sex: 'M' },
+      { org: 'UCSF', sex: 'F' },
+    ],
+  },
+  params: [{ name: 'udi_pick', value: null }],
+  mark: 'point',
+  encoding: {
+    x: { field: 'org', type: 'nominal' },
+    y: { field: 'sex', type: 'nominal' },
+    opacity: {
+      condition: { test: pickDimTest(['org', 'sex']), value: 0.25 },
+    },
+  },
+}).spec;
+const stackedView = new vega.View(vega.parse(stacked), { renderer: 'none' });
+const stackedOpacities = () => {
+  const out = {};
+  const walk = (node) => {
+    if (node?.datum?.org)
+      out[`${node.datum.org}/${node.datum.sex}`] = node.opacity;
+    for (const child of node?.items ?? []) walk(child);
+  };
+  walk(stackedView.scenegraph().root);
+  return out;
+};
+stackedView.signal('udi_pick', { org: ['CHOP'] });
+await stackedView.runAsync();
+assert.deepEqual(stackedOpacities(), {
+  'CHOP/F': 0.7,
+  'CHOP/M': 0.7,
+  'UCSF/F': 0.25,
+});
+// Both fields picked still means the cross product, as before.
+stackedView.signal('udi_pick', { org: ['CHOP'], sex: ['F'] });
+await stackedView.runAsync();
+assert.deepEqual(stackedOpacities(), {
+  'CHOP/F': 0.7,
+  'CHOP/M': 0.25,
+  'UCSF/F': 0.25,
+});
 
 console.log('point-select: ok');

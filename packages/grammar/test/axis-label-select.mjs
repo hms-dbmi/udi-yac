@@ -1,0 +1,182 @@
+// Guards bar-chart category labels (axisLabelSelect.ts, used by VegaLite.vue):
+// which axis gets them and whether it is clickable, the totals their tooltip
+// shows, the gray-out of emptied categories, the underline geometry, and the
+// Vega contract the patch relies on — that a compiled Vega-Lite axis accepts a
+// mark name, interactivity, and a tooltip and opacity reading a signal. That
+// last part breaks silently if a vega upgrade changes how guide encode blocks
+// merge.
+//
+// Imports the TypeScript source directly — Node strips the types.
+import assert from 'node:assert/strict';
+import * as vl from 'vega-lite';
+import * as vega from 'vega';
+import {
+  CLICKABLE_LABELS,
+  EMPTY_LABEL_OPACITY,
+  LABEL_TOTALS_SIGNAL,
+  categoryTotals,
+  findLabelAxis,
+  patchLabelAxis,
+  underlineGeometry,
+} from '../axisLabelSelect.ts';
+
+const bar = (encoding, mark = { type: 'bar' }) => ({
+  layer: [{ mark, encoding }],
+});
+const nominal = (field, title) => ({
+  field,
+  type: 'nominal',
+  ...(title ? { title } : {}),
+});
+const quantitative = (field, title) => ({
+  field,
+  type: 'quantitative',
+  ...(title ? { title } : {}),
+});
+
+// ── which axis ───────────────────────────────────────────────────────────────
+assert.deepEqual(
+  findLabelAxis(bar({ x: nominal('race', 'Race'), y: quantitative('count') }), [
+    'race',
+    'sex',
+  ]),
+  {
+    channel: 'x',
+    field: 'race',
+    title: 'Race',
+    clickable: true,
+    measure: 'count',
+    measureTitle: 'count',
+  },
+);
+// Horizontal bars put the categories on y.
+assert.equal(
+  findLabelAxis(bar({ x: quantitative('count'), y: nominal('race') }), ['race'])
+    ?.channel,
+  'y',
+);
+// Dotted names arrive escaped for Vega-Lite; selections use the raw name.
+assert.equal(
+  findLabelAxis(bar({ x: nominal('donor\\.race'), y: quantitative('n') }), [
+    'donor.race',
+  ])?.field,
+  'donor.race',
+);
+// No selection on the axis field: the axis still grays out, but isn't clickable.
+assert.equal(
+  findLabelAxis(bar({ x: nominal('race'), y: quantitative('n') }), ['sex'])
+    ?.clickable,
+  false,
+);
+// Not a bar chart: no category axis.
+assert.equal(
+  findLabelAxis(
+    bar({ x: nominal('race'), y: quantitative('n') }, { type: 'point' }),
+    ['race'],
+  ),
+  null,
+);
+
+// ── totals ───────────────────────────────────────────────────────────────────
+const axis = findLabelAxis(
+  bar({ x: nominal('race', 'Race'), y: quantitative('count', 'Donors') }),
+  ['race'],
+);
+const rows = [
+  { race: 'White', sex: 'F', count: 4 },
+  { race: 'White', sex: 'M', count: 2 },
+  { race: 'Asian', sex: 'F', count: 1 },
+  { race: null, sex: 'F', count: 3 },
+];
+assert.deepEqual(categoryTotals(rows, axis), { White: 6, Asian: 1, null: 3 });
+// Without a measure, a category's total is its row count — still a key per
+// category that has rows, which is what the gray-out tests.
+assert.deepEqual(categoryTotals(rows, { ...axis, measure: undefined }), {
+  White: 2,
+  Asian: 1,
+  null: 1,
+});
+
+// ── underline geometry ───────────────────────────────────────────────────────
+const box = { x: 10, y: -12, width: 40, height: 14 };
+assert.deepEqual(
+  underlineGeometry(box, (x, y) => ({ x: x + 100, y: y + 50 })),
+  { left: 110, top: 52, width: 40, angle: 0 },
+);
+// A label the axis turns by -90° gets an underline turned with it.
+const turned = underlineGeometry(box, (x, y) => ({ x: y, y: -x }));
+assert.equal(turned.width, 40);
+assert.equal(turned.angle, -Math.PI / 2);
+
+// ── the Vega contract ────────────────────────────────────────────────────────
+const compiled = () =>
+  vl.compile({
+    data: { name: 'udi_data', values: rows },
+    width: 200,
+    height: 100,
+    layer: [
+      {
+        mark: 'bar',
+        encoding: {
+          x: nominal('race', 'Race'),
+          y: quantitative('count', 'Donors'),
+          color: nominal('sex'),
+        },
+      },
+    ],
+  }).spec;
+const spec = patchLabelAxis(compiled(), axis);
+const view = new vega.View(vega.parse(spec), { renderer: 'none' });
+view.signal(LABEL_TOTALS_SIGNAL, categoryTotals(rows, axis));
+await view.runAsync();
+
+const axisLabels = (v) => {
+  const found = [];
+  const walk = (node) => {
+    if (node?.marktype === 'text' && node.role === 'axis-label')
+      found.push(node);
+    for (const child of node?.items ?? []) walk(child);
+  };
+  walk(v.scenegraph().root);
+  return found;
+};
+const labelMarks = axisLabels(view).filter((m) => m.name === CLICKABLE_LABELS);
+assert.equal(labelMarks.length, 1, 'exactly the x axis gets clickable labels');
+assert.equal(labelMarks[0].interactive, true);
+const tooltips = Object.fromEntries(
+  labelMarks[0].items.map((item) => [String(item.datum.value), item.tooltip]),
+);
+assert.deepEqual(tooltips.White, { Race: 'White', Donors: '6' });
+assert.deepEqual(tooltips.Asian, { Race: 'Asian', Donors: '1' });
+
+// The totals follow the data: a new signal value re-encodes the labels.
+view.signal(LABEL_TOTALS_SIGNAL, { White: 1234.567 });
+await view.runAsync();
+const white = labelMarks[0].items.find((item) => item.datum.value === 'White');
+assert.deepEqual(white.tooltip, { Race: 'White', Donors: '1,234.57' });
+const asian = labelMarks[0].items.find((item) => item.datum.value === 'Asian');
+assert.deepEqual(asian.tooltip, { Race: 'Asian', Donors: '0' });
+// Asian has no rows left, so its label grays out; White keeps full opacity.
+assert.equal(asian.opacity, EMPTY_LABEL_OPACITY);
+assert.equal(white.opacity, 1);
+
+// An axis that isn't clickable still grays out, without becoming interactive.
+const plainView = new vega.View(
+  vega.parse(patchLabelAxis(compiled(), { ...axis, clickable: false })),
+  { renderer: 'none' },
+);
+plainView.signal(LABEL_TOTALS_SIGNAL, { White: 6 });
+await plainView.runAsync();
+// The x axis's labels: the mark holding the category values.
+const plainLabels = axisLabels(plainView).find((m) =>
+  m.items.some((item) => item.datum.value === 'White'),
+);
+assert.equal(plainLabels.name, undefined);
+assert.notEqual(plainLabels.interactive, true);
+const opacityOf = (value) =>
+  plainLabels.items.find((item) => item.datum.value === value).opacity;
+assert.equal(opacityOf('White'), 1);
+assert.equal(opacityOf('Asian'), EMPTY_LABEL_OPACITY);
+assert.equal(opacityOf(null), EMPTY_LABEL_OPACITY);
+
+console.log('axis-label-select: ok');
