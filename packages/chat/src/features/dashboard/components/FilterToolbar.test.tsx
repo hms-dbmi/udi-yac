@@ -6,7 +6,7 @@
  * (its chip reads "All"), and a "Remove filter" that takes the chip away.
  */
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import {
@@ -135,6 +135,24 @@ describe('FilterToolbar', () => {
 
     expect(assayChip()).toHaveTextContent('All');
     expect(screen.getByRole('button', { name: /File Size/ })).toHaveTextContent('All');
+  });
+
+  it('links a chip and its chat widget on hover, each lighting the other', async () => {
+    renderToolbar();
+    await userEvent.hover(assayChip());
+    expect(filters.getState().hoveredFilter).toEqual({
+      id: 'message-filter-0-0',
+      from: 'toolbar',
+    });
+    // Hovering from the toolbar lights the chat widget, not the chip itself.
+    expect(assayChip().className).not.toMatch(/ring-2/);
+    await userEvent.unhover(assayChip());
+    expect(filters.getState().hoveredFilter).toBeNull();
+
+    // The chat widget hovered: its chip lights.
+    act(() => filters.getState().setHoveredFilter({ id: 'message-filter-0-0', from: 'chat' }));
+    expect(assayChip().className).toMatch(/ring-2/);
+    expect(screen.getByRole('button', { name: /File Size/ }).className).not.toMatch(/ring-2/);
   });
 
   it('offers no Remove in read-only, which has no chat to restore it from', async () => {

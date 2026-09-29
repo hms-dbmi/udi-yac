@@ -69,6 +69,11 @@ export function FilterCollapsible({
   children: ReactNode;
 }) {
   const removed = useDataFilters((s) => !!s.removedFilters[filterId]);
+  // Lit while this filter's chip is hovered in the filter bar; hovering here
+  // lights the chip (and a brush's chart) in turn.
+  const highlighted = useDataFilters(
+    (s) => s.hoveredFilter?.from === 'toolbar' && s.hoveredFilter.id === filterId,
+  );
   const dataFiltersStore = useDataFiltersStore();
   const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
   const label = Object.keys(selection.selection ?? {})
@@ -81,8 +86,19 @@ export function FilterCollapsible({
     else store.removeFilter(filterId);
   };
 
+  const store = dataFiltersStore.getState();
   return (
-    <div>
+    <div
+      className={cn(
+        'udi:rounded-md udi:transition-shadow',
+        highlighted && 'udi:ring-2 udi:ring-primary/50',
+      )}
+      onMouseEnter={() => store.setHoveredFilter({ id: filterId, from: 'chat' })}
+      onMouseLeave={() => {
+        if (dataFiltersStore.getState().hoveredFilter?.id === filterId)
+          store.setHoveredFilter(null);
+      }}
+    >
       <button
         type="button"
         aria-expanded={!removed}

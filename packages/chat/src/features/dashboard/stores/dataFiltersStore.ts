@@ -8,6 +8,7 @@ import type {
 import type { Message, ToolCall } from '@/types/messages';
 import type { ValidStatus } from '@/types/dataPackage';
 import type { FilterDataArgs } from '@/features/tool-calls';
+import { normalizePointValues } from '@/features/data-package';
 
 export type { DataSelection, DataSelections };
 
@@ -95,11 +96,24 @@ export interface DataFiltersState {
    * the flag goes as soon as the filter holds a value again (a fresh brush).
    */
   removedFilters: Record<string, true>;
+  /**
+   * Where each brush filter sits in the chat: how many messages the
+   * conversation held when it first got a value, keyed by brush filter id. Its
+   * widget renders just before the message at that index, so it reads in the
+   * order it happened. Kept across removal, so a restored brush stays put.
+   */
+  brushAnchors: Record<string, number>;
+  /** The filter the pointer is on, and which side it is on: its chat widget
+   *  highlights for a toolbar hover and its chip for a chat one, while the
+   *  chart a brush came from highlights for either. */
+  hoveredFilter: HoveredFilter | null;
 
   getValidDataSelections: (validate: ValidateFilterFn) => DataSelections;
   syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => void;
   syncSelectionsBackToMessages: (messages: Message[]) => void;
-  updateInternalDataSelections: (newFilters: DataSelections) => void;
+  /** Mirror brush selections in. `messageCount` anchors each brush filter that
+   *  gets its first value here (see `brushAnchors`). */
+  updateInternalDataSelections: (newFilters: DataSelections, messageCount?: number) => void;
   /** Make a filter all-inclusive while keeping it in place. */
   clearFilter: (id: string) => void;
   /** Clear a filter and hide it; `restoreFilter` brings it back, cleared. */
@@ -114,6 +128,12 @@ export interface DataFiltersState {
   applyExternalFilters: (filters: UDIFilter[]) => void;
   resetFilters: () => void;
   setDataSelection: (key: string, selection: DataSelection) => void;
+  setHoveredFilter: (hovered: HoveredFilter | null) => void;
+}
+
+export interface HoveredFilter {
+  id: string;
+  from: 'chat' | 'toolbar';
 }
 
 // --- Pure helper functions ---
@@ -301,6 +321,8 @@ export function createDataFiltersStore() {
     dataSelections: {},
     internalDataSelections: {},
     removedFilters: {},
+    brushAnchors: {},
+    hoveredFilter: null,
 
     getValidDataSelections: (validate: ValidateFilterFn): DataSelections => {
       const { dataSelections } = get();
@@ -350,10 +372,17 @@ export function createDataFiltersStore() {
               )
             )
               continue;
+            // A filter asked for without values ("filter by radiation type")
+            // arrives as `[]`, or as `[""]` from older agents. Either way it is
+            // present with nothing picked, so its widget lists the values to
+            // choose from; a literal "" would filter to blanks and empty every
+            // chart.
             next[key] = {
               dataSourceKey: filterSpec.entity,
               type: 'point',
-              selection: { [filterSpec.field]: filterSpec.filter.pointValues },
+              selection: {
+                [filterSpec.field]: normalizePointValues(filterSpec.filter.pointValues),
+              },
             };
             changed = true;
           }
@@ -390,20 +419,25 @@ export function createDataFiltersStore() {
       }
     },
 
-    updateInternalDataSelections: (newFilters: DataSelections) => {
-      const { internalDataSelections: current, removedFilters } = get();
+    updateInternalDataSelections: (newFilters: DataSelections, messageCount?: number) => {
+      const { internalDataSelections: current, removedFilters, brushAnchors } = get();
       const next = { ...current };
       const removed = { ...removedFilters };
+      const anchors = { ...brushAnchors };
       let changed = false;
       for (const [key, newFilter] of Object.entries(newFilters)) {
         if (isChatFilterKey(key)) continue;
         if (JSON.stringify(next[key]) !== JSON.stringify(newFilter)) {
           next[key] = newFilter;
-          for (const id of brushIdsWithValue(key, newFilter)) delete removed[id];
+          for (const id of brushIdsWithValue(key, newFilter)) {
+            delete removed[id];
+            if (messageCount != null && !(id in anchors)) anchors[id] = messageCount;
+          }
           changed = true;
         }
       }
-      if (changed) set({ internalDataSelections: next, removedFilters: removed });
+      if (changed)
+        set({ internalDataSelections: next, removedFilters: removed, brushAnchors: anchors });
     },
 
     // Clearing keeps the filter in place (its chip reads "All", its chat
@@ -504,8 +538,11 @@ export function createDataFiltersStore() {
         ),
         internalDataSelections: {},
         removedFilters: {},
+        brushAnchors: {},
       }));
     },
+
+    setHoveredFilter: (hoveredFilter) => set({ hoveredFilter }),
 
     setDataSelection: (key: string, selection: DataSelection) => {
       set((state) => {

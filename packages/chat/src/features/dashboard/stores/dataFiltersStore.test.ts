@@ -8,6 +8,7 @@ import {
   messageFilterKey,
   messageFilterKeyWithToolCall,
   filterSpecForToolCall,
+  selectionHasValue,
   type DataSelection,
 } from './dataFiltersStore';
 import type { Message, ToolCall } from '@/types/messages';
@@ -213,6 +214,39 @@ describe('dataFiltersStore', () => {
       selection: { age: [5, 20] },
     });
     expect(store.getState().dataSelections['message-filter-0-0'].selection!.age).toEqual([5, 20]);
+  });
+
+  // A brush filter's chat widget sits where the brush was made: the message
+  // count when it first gets a value, per filter id (a point brush splits per
+  // field), kept through edits and removal until a reset.
+  it('anchors each brush filter at the message count of its first value', () => {
+    const store = createDataFiltersStore();
+    const point = (selection: Record<string, string[]>): DataSelection => ({
+      dataSourceKey: 'donors',
+      type: 'point',
+      selection,
+    });
+    store.getState().updateInternalDataSelections({ u1: point({ sex: ['Female'] }) }, 3);
+    expect(store.getState().brushAnchors).toEqual({ 'u1::sex': 3 });
+
+    // A second field picked later gets its own, later anchor; the first stays.
+    store
+      .getState()
+      .updateInternalDataSelections({ u1: point({ sex: ['Male'], race: ['Asian'] }) }, 7);
+    expect(store.getState().brushAnchors).toEqual({ 'u1::sex': 3, 'u1::race': 7 });
+
+    // Removed and brushed again: still where it first happened.
+    store.getState().removeFilter('u1::sex');
+    store
+      .getState()
+      .updateInternalDataSelections({ u1: point({ sex: ['Female'], race: ['Asian'] }) }, 9);
+    expect(store.getState().brushAnchors['u1::sex']).toBe(3);
+
+    // An empty selection anchors nothing; a reset forgets every anchor.
+    store.getState().updateInternalDataSelections({ u2: point({ sex: [] }) }, 9);
+    expect(store.getState().brushAnchors).not.toHaveProperty('u2::sex');
+    store.getState().resetFilters();
+    expect(store.getState().brushAnchors).toEqual({});
   });
 
   it('updateInternalDataSelections skips keys prefixed with message-filter-', () => {
@@ -566,6 +600,28 @@ describe('dataFiltersStore', () => {
         selection: { donor_id: ['HBM123'] },
       });
     });
+
+    // "Filter by radiation type" names a field without values. The filter must
+    // be in place with nothing picked — its widget lists the values — and
+    // older agents' `[""]` default must not become a live filter on blanks.
+    it.each([[[]], [['']]])(
+      'admits a point filter without values (%j) as nothing picked',
+      (pointValues) => {
+        const store = createDataFiltersStore();
+        store.getState().syncFiltersFromMessages(
+          [
+            filterMessage('radiation', 'radiation_type', 0, 0, {
+              filterType: 'point',
+              pointValues,
+            }),
+          ],
+          alwaysValid,
+        );
+        const selection = store.getState().dataSelections['message-filter-0-0'];
+        expect(selection.selection).toEqual({ radiation_type: [] });
+        expect(selectionHasValue(selection)).toBe(false);
+      },
+    );
 
     it('does not overwrite an existing selection for the same key', () => {
       const store = createDataFiltersStore();

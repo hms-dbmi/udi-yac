@@ -50,7 +50,9 @@ ORCHESTRATOR_TOOLS = [
                 "that could match multiple fields or entities in the dataset. For example, "
                 "'age' might match 'age_value' in donors or 'sample_age' in samples. "
                 "Returns a clarification request with candidate variables for the user "
-                "to choose from."
+                "to choose from. Only for ambiguous FIELDS: never use it to ask which "
+                "values to filter on — for that, call FilterData without pointValues, "
+                "which shows the user the field's values to pick from."
             ),
             "parameters": {
                 "type": "object",
@@ -181,7 +183,10 @@ ORCHESTRATOR_TOOLS = [
             "description": (
                 "Filter the dataset to a subset of rows. Use for categorical filters "
                 "(e.g. filter to Female donors) or numeric range filters (e.g. filter "
-                "to age > 50). Call this tool multiple times for multiple filters."
+                "to age > 50). Call this tool multiple times for multiple filters. "
+                "When the user names a categorical field but not which values (e.g. "
+                "'filter by radiation type'), call it with filterType 'point' and no "
+                "pointValues: the user is shown the field's values to choose from."
             ),
             "parameters": {
                 "type": "object",
@@ -217,7 +222,10 @@ ORCHESTRATOR_TOOLS = [
                         "type": "array",
                         "items": {"type": "string"},
                         "minItems": 1,
-                        "description": "Values to filter for. Required when filterType is 'point'.",
+                        "description": (
+                            "Values to filter for. Omit only when the user named the "
+                            "field but not the values, so they can pick them."
+                        ),
                     },
                 },
                 "required": ["entity", "field", "filterType"],

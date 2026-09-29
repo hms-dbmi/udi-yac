@@ -34,10 +34,12 @@ import { selectionHasValue } from '../stores/dataFiltersStore';
 import { usePalette } from 'udi-toolkit/react';
 import {
   useConversation,
+  useConversationStore,
   useDashboard,
   useDashboardStore,
   useMemoryBankStore,
   useDataPackage,
+  useDataFilters,
   useDataFiltersStore,
   useGlobal,
   useTracker,
@@ -71,6 +73,7 @@ interface DashboardCardProps {
 export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
+  const conversationStore = useConversationStore();
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const sourceFields = useDataPackage((s) => s.sourceFields);
@@ -89,7 +92,11 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // message). Hover never scrolls — the chat's jump button does that.
   const isSelfHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
   const isMessageHovered = useDashboard((s) => s.hoveredMessageVizKey === vizKey);
-  const isHovered = isSelfHovered || isMessageHovered;
+  // Or when one of this card's brush filters is hovered — its chip, or its
+  // widget in the chat. A brush filter's id is the viz uuid, or
+  // `${uuid}::${field}` for a point selection.
+  const isFilterHovered = useDataFilters((s) => s.hoveredFilter?.id.split('::')[0] === viz.uuid);
+  const isHovered = isSelfHovered || isMessageHovered || isFilterHovered;
 
   // "Show visualization in dashboard" pressed on this card's chat message.
   const jump = useDashboard((s) => s.jumpToVisualization);
@@ -160,12 +167,15 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // selections from there (see useBrushFilters). Cross-chart filtering still
   // works via the shared Pinia store + named-filter entries in each viz's
   // interactiveSpec.transformation.
+  // The message count anchors a new brush filter's chat widget where it happened.
   const handleSelectionChange = useCallback(
     (newSelections: DataSelections) => {
       const plain = JSON.parse(JSON.stringify(newSelections)) as DataSelections;
-      dataFiltersStore.getState().updateInternalDataSelections(plain);
+      dataFiltersStore
+        .getState()
+        .updateInternalDataSelections(plain, conversationStore.getState().messages.length);
     },
-    [dataFiltersStore],
+    [dataFiltersStore, conversationStore],
   );
 
   // When this viz's own brush is cleared externally (e.g. removing its chip in

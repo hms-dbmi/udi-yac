@@ -6,9 +6,11 @@ import { Switch } from '@/components/ui/switch';
 import {
   useDashboard,
   useDashboardStore,
+  useDataFilters,
   useDataFiltersStore,
   useGlobal,
 } from '@/app/UDIChatContext';
+import { cn } from '@/lib/utils';
 import { useFilterChips, type ChipInfo } from '../hooks/useFilterChips';
 import { FilterControls } from './FilterControls';
 
@@ -83,6 +85,12 @@ export function FilterChips({
   onRemove?: (id: string) => void;
   onReset: () => void;
 }) {
+  // A chip lights while its filter's chat widget is hovered, and hovering a
+  // chip lights the widget (and, for a brush, its chart).
+  const hovered = useDataFilters((s) => s.hoveredFilter);
+  const dataFiltersStore = useDataFiltersStore();
+  const hover = (id: string | null) =>
+    dataFiltersStore.getState().setHoveredFilter(id ? { id, from: 'toolbar' } : null);
   return (
     <div className="udi:flex udi:items-center udi:gap-1.5 udi:flex-wrap">
       {chips.map((chip) => (
@@ -92,8 +100,17 @@ export function FilterChips({
               <Button
                 variant="outline"
                 size="sm"
-                className="udi:h-7 udi:text-xs udi:font-normal"
+                className={cn(
+                  'udi:h-7 udi:text-xs udi:font-normal',
+                  hovered?.from === 'chat' &&
+                    hovered.id === chip.id &&
+                    'udi:ring-2 udi:ring-primary/50',
+                )}
                 title={`${chip.dataSourceKey} - ${chip.type}`}
+                onMouseEnter={() => hover(chip.id)}
+                onMouseLeave={() => {
+                  if (dataFiltersStore.getState().hoveredFilter?.id === chip.id) hover(null);
+                }}
               />
             }
           >

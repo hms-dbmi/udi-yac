@@ -4,6 +4,7 @@
  */
 
 export { ToolCallRenderer } from './components/ToolCallRenderer';
+export { FilterComponent } from './components/FilterComponent';
 
 export type {
   FreeTextExplainArgs,
