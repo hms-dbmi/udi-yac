@@ -1,14 +1,64 @@
-// Shift multi-select helpers (pointSelect.ts): the toggle a Shift-click
-// applies, and the Vega expression that dims unpicked marks. Imports the .ts
-// source directly (Node strips types), so no dist build is needed.
+// Multi-select helpers (pointSelect.ts): which modifier picks how, the toggle
+// a Ctrl/⌘-click applies, the range a Shift-click spans, and the Vega
+// expression that dims unpicked marks. Imports the .ts source directly (Node
+// strips types), so no dist build is needed.
 import assert from 'node:assert/strict';
 import * as vl from 'vega-lite';
 import * as vega from 'vega';
 import {
+  fieldChannel,
+  keyPickMode,
+  pickModeOf,
+  rangePicks,
   togglePointValues,
   pickDimTest,
   selectFields,
 } from '../pointSelect.ts';
+
+// Shift spans a range; Ctrl and ⌘ both toggle, and Shift wins over either.
+assert.equal(pickModeOf({ shiftKey: true }), 'range');
+assert.equal(pickModeOf({ ctrlKey: true }), 'toggle');
+assert.equal(pickModeOf({ metaKey: true }), 'toggle');
+assert.equal(pickModeOf({ shiftKey: true, metaKey: true }), 'range');
+assert.equal(pickModeOf({}), null);
+assert.equal(keyPickMode('Shift'), 'range');
+assert.equal(keyPickMode('Control'), 'toggle');
+assert.equal(keyPickMode('Meta'), 'toggle');
+assert.equal(keyPickMode('a'), null);
+
+// A range covers every category between its ends, in the scale's order, from
+// either direction; numbers match their string form, as selections store them.
+const races = ['Asian', 'Black', 'Other', 'Unknown', 'White'];
+assert.deepEqual(rangePicks(races, 'Black', 'Unknown'), [
+  'Black',
+  'Other',
+  'Unknown',
+]);
+assert.deepEqual(rangePicks(races, 'Unknown', 'Black'), [
+  'Black',
+  'Other',
+  'Unknown',
+]);
+assert.deepEqual(rangePicks(races, 'Other', 'Other'), ['Other']);
+assert.deepEqual(rangePicks([2019, 2020, 2021], '2021', '2019'), [
+  '2019',
+  '2020',
+  '2021',
+]);
+// An end the domain doesn't hold: just the two ends.
+assert.deepEqual(rangePicks(races, 'Black', 'Martian'), ['Black', 'Martian']);
+assert.deepEqual(rangePicks([], 'Black', 'Black'), ['Black']);
+
+// The channel a field is on, from the escaped Vega-Lite spec.
+const layered = {
+  layer: [
+    { encoding: { x: { field: 'count' } } },
+    { encoding: { theta: { field: 'n' }, color: { field: 'donor\\.race' } } },
+  ],
+};
+assert.equal(fieldChannel(layered, 'donor.race'), 'color');
+assert.equal(fieldChannel(layered, 'count'), 'x');
+assert.equal(fieldChannel(layered, 'sex'), null);
 
 // Toggle on from nothing, add a second value, toggle the first off, then the last.
 let sel = togglePointValues(null, { org: 'CHOP' }, ['org']);

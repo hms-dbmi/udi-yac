@@ -68,11 +68,18 @@ visible Vega tooltip, here the tiny "Unknown" bar's total:
 node .claude/skills/run-udi-toolkit/driver.mjs interactions--point-selection-cross-filter --hover 777,333
 ```
 
-`--shift` holds Shift through a `--click`. That starts a pick gesture: the
-`2-after` shot shows the dimming, and the driver then releases Shift, dumps again
-and saves `3-committed`.
+`--click` takes several points separated by `;`. `--shift` or `--ctrl` holds that
+key through all of them, which is a pick gesture:
+
+- Shift picks every category from the first click to the last.
+- Ctrl (⌘ on macOS) toggles each click on its own.
+
+The `2-after` shot shows the dimming. The driver then releases the key, dumps
+again, and saves `3-committed`. Ctrl-clicking Female and Unknown leaves Male out,
+which a Shift range from Female to Unknown would include:
 
 ```bash
+node .claude/skills/run-udi-toolkit/driver.mjs interactions--point-selection-cross-filter --click '190,333;777,333' --ctrl
 node .claude/skills/run-udi-toolkit/driver.mjs interactions--point-selection-cross-filter --click 777,333 --shift
 ```
 
@@ -95,8 +102,9 @@ dump shows what Vega was told; the picture shows what it drew.
 | flag                  | what it does                                             |
 | --------------------- | -------------------------------------------------------- |
 | `--brush x0,y0,x1,y1` | drag an interval brush on chart `--chart` (default 0)    |
-| `--click x,y`         | click chart `--chart` (point selection)                  |
-| `--shift`             | hold Shift through `--click`, then release and re-dump   |
+| `--click x,y[;x,y…]`  | click chart `--chart` (point selection), once per point  |
+| `--shift`             | hold Shift through `--click` (range), release, re-dump   |
+| `--ctrl`              | hold Ctrl through `--click` (toggle), release, re-dump   |
 | `--hover x,y`         | move onto a point and print the Vega tooltip, if shown   |
 | `--chart N`           | which `.vega-embed` on the page, in DOM order            |
 | `--out DIR`           | screenshot directory (default `/tmp/udi-toolkit-run`)    |

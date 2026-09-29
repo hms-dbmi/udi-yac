@@ -355,9 +355,14 @@ See [`src/data/hubmapRemote.ts`](src/data/hubmapRemote.ts) for the canonical inl
   all** (keep the filter, filter nothing — the chip reads "All") and **Remove filter** (drop the
   chip and collapse the filter's chat item; expanding that item brings it back cleared). **Reset**
   clears every filter.
-- **Multi-select on charts**: hold Shift over a bar chart and click several bars; nothing is
-  applied (or queried) until Shift is released, when they become one filter. Picks are limited to
-  the bars drawn — to add one the chart's own filter hides, clear the filter first.
+- **Multi-select on charts**: hold a key over a chart and click bars, or their axis labels:
+  - **Shift** picks a range: every category from the first click to the last, in axis order.
+  - **Ctrl** (**⌘** on macOS) toggles each click on its own.
+
+  Nothing is applied (or queried) until the key is released, when the picks become one filter.
+  Picks are limited to the bars drawn; to add one the chart's own filter hides, clear the
+  filter first.
+
 - **Cross-entity filtering**: filters propagate across related entities via foreign keys
 - **Null value filtering** toggle
 

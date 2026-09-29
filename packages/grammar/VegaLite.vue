@@ -20,7 +20,16 @@ import { isEmpty, debounce } from 'lodash';
 import type { UDIPalette } from './Palette';
 import { DEFAULT_PALETTE, toVegaRange, toVegaRamp } from './Palette';
 import { registerRampScheme } from './paletteScheme';
-import { PICK_SIGNAL, selectFields, togglePointValues } from './pointSelect';
+import {
+  PICK_SIGNAL,
+  type PickMode,
+  fieldChannel,
+  keyPickMode,
+  pickModeOf,
+  rangePicks,
+  selectFields,
+  togglePointValues,
+} from './pointSelect';
 import {
   CLICKABLE_LABELS,
   LABEL_TOTALS_SIGNAL,
@@ -293,13 +302,38 @@ function initVegaChart() {
             axis && label
               ? { [axis.field]: label.value }
               : (item as { datum?: Record<string, unknown> })?.datum;
-          // Shift held: toggle the mark into the gesture's picks, commit
-          // nothing until Shift is released. Starting here too covers a
-          // Shift press the keydown listener didn't see (focus elsewhere).
-          if ((event as MouseEvent).shiftKey) startPickGesture();
-          if (pickGestureActive) {
+          // A modifier held: add the click to the gesture's picks, commit
+          // nothing until it is released. Starting here too covers a key
+          // press the keydown listener didn't see (focus elsewhere).
+          const mode = pickModeOf(event);
+          if (mode) startPickGesture(mode);
+          if (pickMode === 'toggle') {
             if (datum) {
               pendingPicks = togglePointValues(pendingPicks, datum, fields);
+              applyPickSignal();
+            }
+            return;
+          }
+          if (pickMode === 'range') {
+            // A range runs along one field, in its scale's order: a bar
+            // chart's category axis (whole bars, as a label click picks), or
+            // else the selection's first field.
+            const rangeField = axis?.clickable ? axis.field : fields[0];
+            const channel = axis?.clickable
+              ? axis.channel
+              : rangeField && fieldChannel(specObject, rangeField);
+            if (datum && rangeField && channel) {
+              const value = String(datum[rangeField]);
+              rangeAnchor ??= value;
+              let domain: unknown[] = [];
+              try {
+                domain = view.scale(channel).domain();
+              } catch {
+                // No scale on that channel: the range is just its two ends.
+              }
+              pendingPicks = {
+                [rangeField]: rangePicks(domain, rangeAnchor, value),
+              };
               applyPickSignal();
             }
             return;
@@ -365,16 +399,20 @@ const reembedForResize = debounce(() => {
   initVegaChart();
 }, 150);
 
-// Shift multi-select for point selections. Holding Shift over the chart
-// freezes it: nothing is committed, so neither this chart nor any other
-// re-queries. Clicks toggle the drawn marks into `pendingPicks`, dimming the
-// rest via PICK_SIGNAL; releasing Shift (or the window losing focus) commits
-// the picks as one selection — one query, whatever was picked. Marks the
-// chart's own filter already hides can't be picked: their rows were never
-// fetched (a rollup skips the unfiltered pass), so adding one means clearing
-// the selection first.
-let pickGestureActive = false;
+// Multi-select for point selections. Holding a modifier over the chart freezes
+// it: nothing is committed, so neither this chart nor any other re-queries.
+// With Ctrl (⌘ on macOS), clicks toggle the drawn marks into `pendingPicks`;
+// with Shift, they pick every category from the first click to the latest.
+// Either way the rest dim via PICK_SIGNAL, and releasing the key (or the
+// window losing focus) commits the picks as one selection — one query,
+// whatever was picked. Marks the chart's own filter already hides can't be
+// picked: their rows were never fetched (a rollup skips the unfiltered pass),
+// so adding one means clearing the selection first.
+let pickMode: PickMode | null = null;
 let pendingPicks: Record<string, string[]> | null = null;
+// A Shift gesture's first click, which its range runs from; null until then,
+// and a Shift gesture that never clicks leaves the selection as it was.
+let rangeAnchor: string | null = null;
 let pointerOverChart = false;
 // Cleared by typing into a field, set by moving the pointer over the chart: a
 // capital letter typed in the chat while the pointer happens to rest on a
@@ -393,19 +431,19 @@ function isEditable(target: EventTarget | null): boolean {
 function applyPickSignal(): void {
   if (!vegaView.value || !props.pointSelect) return;
   try {
-    vegaView.value.signal(
-      PICK_SIGNAL,
-      pickGestureActive ? (pendingPicks ?? {}) : null,
-    );
+    vegaView.value.signal(PICK_SIGNAL, pickMode ? (pendingPicks ?? {}) : null);
     void vegaView.value.runAsync();
   } catch {
     // The layer maps opacity itself, so UDIVis emitted no pick signal.
   }
 }
 
-function startPickGesture(): void {
-  if (pickGestureActive || !props.pointSelect) return;
-  pickGestureActive = true;
+// Both modes start from the current selection, so holding a key dims nothing
+// new until a click; a range's first click then replaces it.
+function startPickGesture(mode: PickMode): void {
+  if (pickMode || !props.pointSelect) return;
+  pickMode = mode;
+  rangeAnchor = null;
   const current =
     dataSourcesStore.dataSelections[props.pointSelect.name]?.selection;
   pendingPicks = current
@@ -415,11 +453,18 @@ function startPickGesture(): void {
 }
 
 function endPickGesture(): void {
-  if (!pickGestureActive || !props.pointSelect) return;
-  pickGestureActive = false;
+  if (!pickMode || !props.pointSelect) return;
+  const unchanged = pickMode === 'range' && rangeAnchor === null;
+  pickMode = null;
+  rangeAnchor = null;
   const name = props.pointSelect.name;
-  if (pendingPicks) dataSourcesStore.updateDataSelection(name, pendingPicks);
-  else dataSourcesStore.clearDataSelection(name);
+  if (unchanged) {
+    // Shift was held and released without a click.
+  } else if (pendingPicks) {
+    dataSourcesStore.updateDataSelection(name, pendingPicks);
+  } else {
+    dataSourcesStore.clearDataSelection(name);
+  }
   pendingPicks = null;
   applyPickSignal();
 }
@@ -429,19 +474,25 @@ function onPickKeyDown(event: KeyboardEvent): void {
     pickArmed = false;
     return;
   }
-  if (event.key === 'Shift' && pointerOverChart && pickArmed)
-    startPickGesture();
+  const mode = keyPickMode(event.key);
+  if (mode && pointerOverChart && pickArmed) startPickGesture(mode);
 }
 function onPickKeyUp(event: KeyboardEvent): void {
-  if (event.key === 'Shift') endPickGesture();
+  if (pickMode && keyPickMode(event.key) === pickMode) endPickGesture();
 }
 function onPickPointerMove(event: PointerEvent): void {
   pointerOverChart = true;
   pickArmed = true;
-  if (event.shiftKey) startPickGesture();
+  const mode = pickModeOf(event);
+  if (mode) startPickGesture(mode);
 }
 function onPickPointerLeave(): void {
   pointerOverChart = false;
+}
+// A modifier click would otherwise also extend the page's text selection,
+// highlighting every axis label between two Shift-clicks.
+function onPickMouseDown(event: MouseEvent): void {
+  if (props.pointSelect && pickModeOf(event)) event.preventDefault();
 }
 
 // The running view's bar category axis (grayed-out / clickable labels), if any.
@@ -535,6 +586,7 @@ onMounted(() => {
   window.addEventListener('blur', endPickGesture);
   vegaContainer.value?.addEventListener('pointermove', onPickPointerMove);
   vegaContainer.value?.addEventListener('pointerleave', onPickPointerLeave);
+  vegaContainer.value?.addEventListener('mousedown', onPickMouseDown);
   vegaContainer.value?.addEventListener('pointerover', onLabelPointerOver);
   vegaContainer.value?.addEventListener('pointerout', onLabelPointerOut);
   initVegaChart();
@@ -566,6 +618,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('blur', endPickGesture);
   vegaContainer.value?.removeEventListener('pointermove', onPickPointerMove);
   vegaContainer.value?.removeEventListener('pointerleave', onPickPointerLeave);
+  vegaContainer.value?.removeEventListener('mousedown', onPickMouseDown);
   vegaContainer.value?.removeEventListener('pointerover', onLabelPointerOver);
   vegaContainer.value?.removeEventListener('pointerout', onLabelPointerOut);
   reembedForResize.cancel();

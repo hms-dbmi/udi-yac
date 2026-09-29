@@ -10,7 +10,8 @@
 //   node driver.mjs <story-id>               load + dump + screenshot
 //   node driver.mjs <story-id> --brush 76,85,420,234 [--chart 0]
 //   node driver.mjs <story-id> --click 300,200 [--chart 0]
-//   node driver.mjs <story-id> --click 300,200 --shift   (Shift-click pick gesture)
+//   node driver.mjs <story-id> --click 100,300;400,300 --shift   (Shift range pick)
+//   node driver.mjs <story-id> --click 100,300;400,300 --ctrl    (Ctrl toggle picks)
 //   node driver.mjs <story-id> --hover 300,200 [--chart 0]
 //
 // Brush/click/hover coordinates are pixels relative to the chart's `.vega-embed`
@@ -29,6 +30,7 @@ const { values: opt, positionals } = parseArgs({
     click: { type: 'string' },
     hover: { type: 'string' },
     shift: { type: 'boolean' },
+    ctrl: { type: 'boolean' },
     chart: { type: 'string', default: '0' },
     out: { type: 'string', default: '/tmp/udi-toolkit-run' },
     settle: { type: 'string', default: '2500' },
@@ -153,6 +155,8 @@ const tooltip = () =>
 await dump('initial');
 await shot('1-initial');
 
+const held = [opt.shift && 'Shift', opt.ctrl && 'Control'].filter(Boolean);
+
 if (opt.brush || opt.click || opt.hover) {
   const embeds = await page.$$('.vega-embed');
   const box = await embeds[Number(opt.chart)].boundingBox();
@@ -164,11 +168,14 @@ if (opt.brush || opt.click || opt.hover) {
     await page.mouse.move(box.x + x1, box.y + y1, { steps: 10 });
     await page.mouse.up();
   } else if (opt.click) {
-    const [x, y] = opt.click.split(',').map(Number);
-    // --shift holds Shift through the click: a point-selection pick gesture,
-    // which commits only when Shift is released (after the "2-after" shot).
-    if (opt.shift) await page.keyboard.down('Shift');
-    await page.mouse.click(box.x + x, box.y + y);
+    // --shift / --ctrl hold the key through every click: a point-selection
+    // pick gesture (Shift a range, Ctrl a toggle per click), which commits
+    // only when the key is released (after the "2-after" shot).
+    for (const key of held) await page.keyboard.down(key);
+    for (const point of opt.click.split(';')) {
+      const [x, y] = point.split(',').map(Number);
+      await page.mouse.click(box.x + x, box.y + y);
+    }
   } else {
     const [x, y] = opt.hover.split(',').map(Number);
     // Arrive from off the chart, so pointerover fires on the target.
@@ -179,10 +186,10 @@ if (opt.brush || opt.click || opt.hover) {
   await dump(opt.brush ? 'brushed' : opt.click ? 'clicked' : 'hovered');
   console.log('tooltip:', JSON.stringify(await tooltip()));
   await shot('2-after');
-  if (opt.shift) {
-    await page.keyboard.up('Shift');
+  if (held.length > 0) {
+    for (const key of held) await page.keyboard.up(key);
     await page.waitForTimeout(settle);
-    await dump('shift released');
+    await dump(`${held.join('+')} released`);
     await shot('3-committed');
   }
 }

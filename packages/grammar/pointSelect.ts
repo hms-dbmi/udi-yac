@@ -1,7 +1,69 @@
-// Shift-click multi-select for point selections (VegaLite.vue + UDIVis.vue).
-// Pure and import-free so test/point-select.mjs can load this file directly.
+// Multi-select for point selections (VegaLite.vue + UDIVis.vue): Shift-click
+// picks a contiguous range, Ctrl-click (⌘-click on macOS) toggles marks one by
+// one. Pure and import-free so test/point-select.mjs can load this file
+// directly.
 
 type PointSelection = Record<string, string[]>;
+
+/** How a held modifier multi-selects: `range` spans every category from the
+ *  first click to the latest, `toggle` adds or removes each clicked mark. */
+export type PickMode = 'range' | 'toggle';
+
+/**
+ * The multi-select a click or pointer event's modifiers ask for. Ctrl and ⌘
+ * both toggle, on every platform: Windows reserves the Windows key and macOS
+ * turns Ctrl-click into a right-click, so each platform only ever reaches its
+ * own. Shift wins when both are held.
+ */
+export function pickModeOf(event: {
+  shiftKey?: boolean;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
+}): PickMode | null {
+  if (event.shiftKey) return 'range';
+  if (event.ctrlKey || event.metaKey) return 'toggle';
+  return null;
+}
+
+/** The multi-select a `KeyboardEvent.key` starts or ends. */
+export function keyPickMode(key: string): PickMode | null {
+  if (key === 'Shift') return 'range';
+  if (key === 'Control' || key === 'Meta') return 'toggle';
+  return null;
+}
+
+/**
+ * The categories from `anchor` to `value`, inclusive and in the scale's order —
+ * which the renderer fixes, so a range doesn't depend on the rows. Either end
+ * missing from the domain leaves just the two ends.
+ */
+export function rangePicks(
+  domain: readonly unknown[],
+  anchor: string,
+  value: string,
+): string[] {
+  const order = domain.map((v) =>
+    String(v as string | number | boolean | null),
+  );
+  const from = order.indexOf(anchor);
+  const to = order.indexOf(value);
+  if (from < 0 || to < 0) return anchor === value ? [anchor] : [anchor, value];
+  return order.slice(Math.min(from, to), Math.max(from, to) + 1);
+}
+
+/** The Vega-Lite channel (and so scale name) whose field is `field`, from the
+ *  first layer that encodes it. Field names arrive escaped for Vega-Lite. */
+export function fieldChannel(spec: object, field: string): string | null {
+  const layers =
+    (spec as { layer?: { encoding?: Record<string, { field?: string }> }[] })
+      .layer ?? [];
+  for (const layer of layers) {
+    for (const [channel, def] of Object.entries(layer.encoding ?? {})) {
+      if (def?.field?.replace(/\\\./g, '.') === field) return channel;
+    }
+  }
+  return null;
+}
 
 /** The Vega signal holding a gesture's picks; null outside a gesture. */
 export const PICK_SIGNAL = 'udi_pick';
