@@ -2,20 +2,23 @@
 // Drive one udi-toolkit Storybook story in headless Chromium.
 //
 // Loads the story's iframe, dumps every rendered chart's Vega scale domains
-// (x / y / color) and data rows, optionally brushes or clicks one chart, dumps
-// again, and screenshots both states. See SKILL.md next to this file.
+// (x / y / color) and data rows, optionally brushes, clicks or hovers one chart,
+// dumps again (plus any visible Vega tooltip), and screenshots both states. See
+// SKILL.md next to this file.
 //
 //   node driver.mjs                          list story ids
 //   node driver.mjs <story-id>               load + dump + screenshot
 //   node driver.mjs <story-id> --brush 76,85,420,234 [--chart 0]
 //   node driver.mjs <story-id> --click 300,200 [--chart 0]
+//   node driver.mjs <story-id> --click 300,200 --shift   (Shift-click pick gesture)
+//   node driver.mjs <story-id> --hover 300,200 [--chart 0]
 //
-// Brush/click coordinates are pixels relative to the chart's `.vega-embed`
+// Brush/click/hover coordinates are pixels relative to the chart's `.vega-embed`
 // box. playwright-core is not a repo dependency: it is resolved from $PW_DIR
 // (default /tmp/udi-pw), and the browser is $CHROMIUM (default
 // /usr/bin/chromium).
 import { createRequire } from 'node:module';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
 const { values: opt, positionals } = parseArgs({
@@ -24,6 +27,8 @@ const { values: opt, positionals } = parseArgs({
     url: { type: 'string', default: 'http://localhost:6006' },
     brush: { type: 'string' },
     click: { type: 'string' },
+    hover: { type: 'string' },
+    shift: { type: 'boolean' },
     chart: { type: 'string', default: '0' },
     out: { type: 'string', default: '/tmp/udi-toolkit-run' },
     settle: { type: 'string', default: '2500' },
@@ -109,16 +114,46 @@ const dump = (label) =>
       });
     });
 
+// Captured over CDP rather than page.screenshot(): with this Playwright and
+// Chromium, page.screenshot() hangs until timeout whenever the pointer rests on
+// SVG text, which is exactly where a label hover leaves it. Only a page taller
+// than the viewport is captured beyond it, because that drops position:fixed
+// overlays — the Vega tooltip among them.
+const cdp = await page.context().newCDPSession(page);
 const shot = async (suffix) => {
   const path = `${opt.out}/${story}-${suffix}.png`;
-  await page.screenshot({ path, fullPage: true });
+  const { width, height } = await page.evaluate(() => ({
+    width: document.documentElement.scrollWidth,
+    height: document.documentElement.scrollHeight,
+  }));
+  const fits = height <= page.viewportSize().height;
+  const { data } = await cdp.send(
+    'Page.captureScreenshot',
+    fits
+      ? { format: 'png' }
+      : {
+          format: 'png',
+          captureBeyondViewport: true,
+          clip: { x: 0, y: 0, width, height, scale: 1 },
+        },
+  );
+  writeFileSync(path, Buffer.from(data, 'base64'));
   console.log(`screenshot ${path}`);
 };
+
+// vega-tooltip portals one element to <body>, shown by a `visible` class.
+const tooltip = () =>
+  page.evaluate(() => {
+    const el = document.getElementById('vg-tooltip-element');
+    return el?.classList.contains('visible')
+      ? el.innerText.replace(/\s+/g, ' ')
+      : null;
+  });
 
 await dump('initial');
 await shot('1-initial');
 
-if (opt.brush || opt.click) {
+if (opt.brush || opt.click || opt.hover) {
   const embeds = await page.$$('.vega-embed');
   const box = await embeds[Number(opt.chart)].boundingBox();
   if (opt.brush) {
@@ -128,13 +163,28 @@ if (opt.brush || opt.click) {
     // Drag in steps, the way a real pointer moves.
     await page.mouse.move(box.x + x1, box.y + y1, { steps: 10 });
     await page.mouse.up();
-  } else {
+  } else if (opt.click) {
     const [x, y] = opt.click.split(',').map(Number);
+    // --shift holds Shift through the click: a point-selection pick gesture,
+    // which commits only when Shift is released (after the "2-after" shot).
+    if (opt.shift) await page.keyboard.down('Shift');
     await page.mouse.click(box.x + x, box.y + y);
+  } else {
+    const [x, y] = opt.hover.split(',').map(Number);
+    // Arrive from off the chart, so pointerover fires on the target.
+    await page.mouse.move(0, 0);
+    await page.mouse.move(box.x + x, box.y + y, { steps: 5 });
   }
   await page.waitForTimeout(settle);
-  await dump(opt.brush ? 'brushed' : 'clicked');
+  await dump(opt.brush ? 'brushed' : opt.click ? 'clicked' : 'hovered');
+  console.log('tooltip:', JSON.stringify(await tooltip()));
   await shot('2-after');
+  if (opt.shift) {
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(settle);
+    await dump('shift released');
+    await shot('3-committed');
+  }
 }
 
 console.log('console errors:', JSON.stringify(errors));

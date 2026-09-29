@@ -60,6 +60,22 @@ Click a bar. The point selection filters the scatter plot below it:
 node .claude/skills/run-udi-toolkit/driver.mjs interactions--point-selection-cross-filter --click 200,200
 ```
 
+Hover or click a category-axis label. On a bar chart whose point selection covers
+the axis field, labels are clickable (`axisLabelSelect.ts`). A hover prints the
+visible Vega tooltip, here the tiny "Unknown" bar's total:
+
+```bash
+node .claude/skills/run-udi-toolkit/driver.mjs interactions--point-selection-cross-filter --hover 777,333
+```
+
+`--shift` holds Shift through a `--click`. That starts a pick gesture: the
+`2-after` shot shows the dimming, and the driver then releases Shift, dumps again
+and saves `3-committed`.
+
+```bash
+node .claude/skills/run-udi-toolkit/driver.mjs interactions--point-selection-cross-filter --click 777,333 --shift
+```
+
 Output looks like this:
 
 ```
@@ -80,6 +96,8 @@ dump shows what Vega was told; the picture shows what it drew.
 | --------------------- | -------------------------------------------------------- |
 | `--brush x0,y0,x1,y1` | drag an interval brush on chart `--chart` (default 0)    |
 | `--click x,y`         | click chart `--chart` (point selection)                  |
+| `--shift`             | hold Shift through `--click`, then release and re-dump   |
+| `--hover x,y`         | move onto a point and print the Vega tooltip, if shown   |
 | `--chart N`           | which `.vega-embed` on the page, in DOM order            |
 | `--out DIR`           | screenshot directory (default `/tmp/udi-toolkit-run`)    |
 | `--rows N`            | data rows to print per chart (default 4)                 |
@@ -87,8 +105,19 @@ dump shows what Vega was told; the picture shows what it drew.
 | `--url URL`           | Storybook base (default `http://localhost:6006`)         |
 
 Coordinates are pixels relative to the chart's `.vega-embed` box, in the driver's
-1000×1100 viewport. On the `interactions--default` scatter plot, the plot area
-spans roughly x 60→940 (weight 0→166) and y 323→25 (height 0→203).
+1000×1100 viewport. The box itself sits at about (16,17) on the page, so don't
+reuse page coordinates. On the `interactions--default` scatter plot, the plot area
+spans roughly x 60→940 (weight 0→166) and y 323→25 (height 0→203). Axis labels
+are only about 11px wide when rotated, so read their centers off the DOM, relative
+to the same box, before hovering or clicking one:
+
+```js
+const embed = document.querySelector('.vega-embed').getBoundingClientRect();
+[...document.querySelectorAll('.udi-clickable-labels text')].map((t) => {
+  const r = t.getBoundingClientRect();
+  return `${t.textContent}: ${Math.round(r.x + r.width / 2 - embed.x)},${Math.round(r.y + r.height / 2 - embed.y)}`;
+});
+```
 
 ### A spec no story has
 
@@ -168,6 +197,17 @@ node test/category-order.mjs
 - **A chart filtered by its own selection shrinks to what you picked.** In
   `interactions--point-selection-cross-filter`, clicking Female leaves the bar
   chart with `n=1` while its `x` domain keeps all three categories.
+- **`page.screenshot()` hangs whenever the pointer rests on SVG text**, with or
+  without any CSS, until `Timeout 30000ms exceeded`, right after its log says
+  fonts loaded. `page.hover()` leaves the pointer there too. The driver captures
+  over CDP (`Page.captureScreenshot`) instead, and moves with `page.mouse`.
+- **`captureBeyondViewport` drops `position: fixed` overlays**, the Vega tooltip
+  among them. The driver only uses it for pages taller than the viewport, so on a
+  tall page a tooltip shows in the printed `tooltip:` line but not in the shot.
+- **Chrome won't underline SVG text in an animatable way.** It ignores
+  `text-underline-offset` (computes `auto`) and paints the decoration in the
+  text's fill, ignoring `text-decoration-color`. That's why hovered labels get an
+  HTML overlay line instead (VegaLite.vue, `.udi-label-underline`).
 - **Every story load logs one `404 (Not Found)` console error.** Charts render
   fine; ignore it and look for anything else in `console errors`.
 - **No `chromium-cli` and no Playwright in the repo.** That is why the driver
