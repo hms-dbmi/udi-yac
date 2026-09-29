@@ -160,8 +160,10 @@ describe('DashboardCard — read-only mode', () => {
 
     const labels = screen.getAllByRole('button').map((b) => b.textContent);
     // Close and the tweak gear render no text, so assert on the count of what
-    // is left: the chart/table toggle and the info tooltip trigger.
-    expect(labels).toHaveLength(2);
+    // is left: the chart/table toggle, the category sort toggle and the info
+    // tooltip trigger.
+    expect(labels).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Sort by total' })).toBeTruthy();
   });
 
   it('brings the editing controls back when read-only is left', async () => {

@@ -539,13 +539,12 @@ def _pin_stratum_colours(spec, spec_template, bindings):
     Two things go wrong without this, both invisible until you watch a reader
     re-cut a chart.
 
-    The renderer computes a missing categorical domain as the values in the order
-    the *rows* happen to mention them, and assigns colours by position in that
-    array. A survival table is ordered by time, so "first stratum" means "the
-    group holding the earliest event" — move a cut point and the array permutes
-    and every curve changes colour, for no reason the reader can see. The
-    renderer skips any mapping that already carries a domain, so naming it here
-    settles the order once.
+    The renderer computes a missing categorical domain by sorting the values
+    alphabetically, and assigns colours by position in that array. That is not
+    bucket order: `< 50`, `>= 65` and `50–65` sort in that order, a named
+    grouping's "Other" lands mid-list, and adding a bucket shifts the colour of
+    every curve that sorts after it. The renderer skips any mapping that already
+    carries a domain, so naming it here settles the order once.
 
     And the buckets of a *quantitative* grouping are ordered — `< 50` really is
     below `50-65` — so they are drawn as an ordinal ramp rather than as unrelated

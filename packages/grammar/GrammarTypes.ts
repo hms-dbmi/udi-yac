@@ -719,6 +719,16 @@ export interface GenericFieldMapping<Encoding> {
   domainWhenFiltered?: 'full' | 'filtered';
 
   /**
+   * Order of a categorical domain the renderer computes (no explicit `domain`,
+   * `domainWhenFiltered` not `"filtered"`). Always computed from the
+   * unfiltered data, so it holds still as filters change.
+   * - `"ascending"` (default): alphabetical, numbers in numeric order, nulls last.
+   * - `"-x"` / `"-y"`: by the per-category sum of that channel's field, largest
+   *   first (a bar chart's bar totals); ties alphabetical.
+   */
+  sort?: 'ascending' | '-x' | '-y';
+
+  /**
    * Custom title for the axis or legend label of this encoding.
    * Overrides the default field name displayed on the axis.
    */

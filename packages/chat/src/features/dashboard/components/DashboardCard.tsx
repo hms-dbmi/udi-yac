@@ -17,6 +17,8 @@ import {
   Columns3,
   Info,
   Crosshair,
+  ArrowDownAZ,
+  ArrowDownWideNarrow,
 } from 'lucide-react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import {
@@ -48,6 +50,7 @@ import { cn } from '@/lib/utils';
 import { DRAG_HANDLE_CLASS } from '../utils/gridDefaults';
 import { hasTweakableFields } from '../utils/tweakability';
 import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
+import { sortCategoriesByTotal } from '../utils/categorySort';
 import { useJumpTarget } from '@/hooks/useJumpTarget';
 
 /** Whether the spec already draws a table: no representation (the toolkit then
@@ -112,10 +115,17 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // read "Weight" while the stored spec keeps `weight_value` for export, the
   // reset comparison and the query compiler.
   const titleLabels = useVizTitleLabels();
-  const plainSpec = useMemo(
+  const labelledSpec = useMemo(
     () => applyFieldLabels(JSON.parse(JSON.stringify(viz.interactiveSpec)), titleLabels),
     [viz.interactiveSpec, titleLabels],
   );
+
+  // Categories render alphabetically; bar charts can switch to largest-total
+  // first. Also render-time only — see sortCategoriesByTotal. Null means the
+  // chart has no category axis to reorder, so there is no toggle.
+  const [sortByTotal, setSortByTotal] = useState(false);
+  const byTotalSpec = useMemo(() => sortCategoriesByTotal(labelledSpec), [labelledSpec]);
+  const plainSpec = sortByTotal && byTotalSpec ? byTotalSpec : labelledSpec;
 
   // Fingerprint the spec so we can force UDIVis to remount when the spec
   // content changes — the Vue CE may not reliably re-render on prop updates
@@ -324,6 +334,30 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
                     )}
                   </TooltipTrigger>
                   <TooltipContent>{isTableView ? 'Show chart' : 'Show table'}</TooltipContent>
+                </Tooltip>
+              )}
+              {byTotalSpec && !isTableView && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="udi:h-6 udi:w-6"
+                        aria-label={sortByTotal ? 'Sort alphabetically' : 'Sort by total'}
+                        onClick={() => setSortByTotal((v) => !v)}
+                      />
+                    }
+                  >
+                    {sortByTotal ? (
+                      <ArrowDownAZ className="udi:h-3 udi:w-3" />
+                    ) : (
+                      <ArrowDownWideNarrow className="udi:h-3 udi:w-3" />
+                    )}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {sortByTotal ? 'Sort alphabetically' : 'Sort by total'}
+                  </TooltipContent>
                 </Tooltip>
               )}
               {isTableView && (
