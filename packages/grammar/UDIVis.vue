@@ -36,6 +36,7 @@ import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
 import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
+import { PICK_SIGNAL, pickDimTest, selectFields } from './pointSelect';
 const dataSourcesStore = useDataSourcesStore();
 // Declared up here rather than beside the template: performDataTransformation
 // reads it to decide whether allData is needed, and a later declaration would
@@ -232,7 +233,6 @@ function buildVisualization(): void {
   // setDefaultDomains during a previous subset state) don't persist
   // when the filter is cleared.
   parsedSpec.value = parseSpecification(JSON.parse(JSON.stringify(props.spec)));
-
   const backend = getQueryBackend();
   if (backend.kind === 'remote') {
     const epoch = ++remoteQueryEpoch;
@@ -897,6 +897,16 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         }
       } else {
         pointSelect.value = layer.select;
+        // Dim the marks a Shift gesture hasn't picked. The signal is null
+        // outside a gesture, and the condition has no default branch, so
+        // the mark keeps its own opacity then.
+        const pickFields = selectFields(layer.select.fields);
+        if (pickFields.length > 0 && vegaEncoding.opacity == null) {
+          vegaEncoding.opacity = {
+            condition: { test: pickDimTest(pickFields), value: 0.25 },
+          };
+          vegaSpec.params = [{ name: PICK_SIGNAL, value: null }];
+        }
       }
     }
     // For rect histograms (x/x2 or y/y2 pair), inset both anchors by a pixel

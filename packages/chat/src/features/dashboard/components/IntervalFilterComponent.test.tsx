@@ -14,7 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import { UDIChatProvider, useDataPackage, useDataPackageStore } from '@/app/UDIChatContext';
 import { IntervalFilterComponent } from './IntervalFilterComponent';
-import type { DataSelection } from '@/features/dashboard';
+import type { DataSelection } from '../stores/dataFiltersStore';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 
 const pkg = {

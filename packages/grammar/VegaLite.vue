@@ -20,6 +20,7 @@ import { isEmpty, debounce } from 'lodash';
 import type { UDIPalette } from './Palette';
 import { DEFAULT_PALETTE, toVegaRange, toVegaRamp } from './Palette';
 import { registerRampScheme } from './paletteScheme';
+import { PICK_SIGNAL, selectFields, togglePointValues } from './pointSelect';
 
 // our type is more specific than the one from vega-embed
 interface VegaSpecShim {
@@ -258,14 +259,21 @@ function initVegaChart() {
         // if the signal is a point selection we I couldn't get signals
         // to work with dynamic data, so click events it is!
         view.addEventListener('click', function (event, item) {
-          // Normalize the optional `fields` (string | string[] | undefined)
-          // to an iterable list of strings. No fields → no selection to
-          // build; bail.
-          const raw = point.fields;
-          const fields: string[] =
-            raw == null ? [] : typeof raw === 'string' ? [raw] : raw;
+          // No fields → no selection to build; bail.
+          const fields = selectFields(point.fields);
           if (fields.length === 0) return;
           const datum = (item as { datum?: Record<string, unknown> })?.datum;
+          // Shift held: toggle the mark into the gesture's picks, commit
+          // nothing until Shift is released. Starting here too covers a
+          // Shift press the keydown listener didn't see (focus elsewhere).
+          if ((event as MouseEvent).shiftKey) startPickGesture();
+          if (pickGestureActive) {
+            if (datum) {
+              pendingPicks = togglePointValues(pendingPicks, datum, fields);
+              applyPickSignal();
+            }
+            return;
+          }
           if (!datum) {
             dataSourcesStore.clearDataSelection(point.name);
           } else {
@@ -288,6 +296,8 @@ function initVegaChart() {
       // a fresh view starts with no selection rect even though Pinia still
       // holds the selection. No-op on initial mount when there's none.
       updateVegaChartSelections();
+      // Same for a gesture's picks highlight.
+      applyPickSignal();
     })
     .catch((error) => {
       console.error('Error rendering chart', error);
@@ -325,6 +335,85 @@ const reembedForResize = debounce(() => {
   initVegaChart();
 }, 150);
 
+// Shift multi-select for point selections. Holding Shift over the chart
+// freezes it: nothing is committed, so neither this chart nor any other
+// re-queries. Clicks toggle the drawn marks into `pendingPicks`, dimming the
+// rest via PICK_SIGNAL; releasing Shift (or the window losing focus) commits
+// the picks as one selection — one query, whatever was picked. Marks the
+// chart's own filter already hides can't be picked: their rows were never
+// fetched (a rollup skips the unfiltered pass), so adding one means clearing
+// the selection first.
+let pickGestureActive = false;
+let pendingPicks: Record<string, string[]> | null = null;
+let pointerOverChart = false;
+// Cleared by typing into a field, set by moving the pointer over the chart: a
+// capital letter typed in the chat while the pointer happens to rest on a
+// chart must not start a gesture.
+let pickArmed = false;
+
+function isEditable(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  return (
+    !!el &&
+    (el.isContentEditable ||
+      ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
+  );
+}
+
+function applyPickSignal(): void {
+  if (!vegaView.value || !props.pointSelect) return;
+  try {
+    vegaView.value.signal(
+      PICK_SIGNAL,
+      pickGestureActive ? (pendingPicks ?? {}) : null,
+    );
+    void vegaView.value.runAsync();
+  } catch {
+    // The layer maps opacity itself, so UDIVis emitted no pick signal.
+  }
+}
+
+function startPickGesture(): void {
+  if (pickGestureActive || !props.pointSelect) return;
+  pickGestureActive = true;
+  const current =
+    dataSourcesStore.dataSelections[props.pointSelect.name]?.selection;
+  pendingPicks = current
+    ? (JSON.parse(JSON.stringify(current)) as Record<string, string[]>)
+    : null;
+  applyPickSignal();
+}
+
+function endPickGesture(): void {
+  if (!pickGestureActive || !props.pointSelect) return;
+  pickGestureActive = false;
+  const name = props.pointSelect.name;
+  if (pendingPicks) dataSourcesStore.updateDataSelection(name, pendingPicks);
+  else dataSourcesStore.clearDataSelection(name);
+  pendingPicks = null;
+  applyPickSignal();
+}
+
+function onPickKeyDown(event: KeyboardEvent): void {
+  if (isEditable(event.target)) {
+    pickArmed = false;
+    return;
+  }
+  if (event.key === 'Shift' && pointerOverChart && pickArmed)
+    startPickGesture();
+}
+function onPickKeyUp(event: KeyboardEvent): void {
+  if (event.key === 'Shift') endPickGesture();
+}
+function onPickPointerMove(event: PointerEvent): void {
+  pointerOverChart = true;
+  pickArmed = true;
+  if (event.shiftKey) startPickGesture();
+}
+function onPickPointerLeave(): void {
+  pointerOverChart = false;
+}
+
 // Remote (non-interactive) mode: each live brush tick would trigger a server
 // round-trip, so buffer ticks here and commit once on pointer release. The
 // listeners are window-level so releasing outside the chart still commits.
@@ -356,6 +445,11 @@ onMounted(() => {
   window.addEventListener('pointerup', commitRemoteSelections);
   window.addEventListener('pointercancel', commitRemoteSelections);
   window.addEventListener('mouseup', commitRemoteSelections);
+  window.addEventListener('keydown', onPickKeyDown);
+  window.addEventListener('keyup', onPickKeyUp);
+  window.addEventListener('blur', endPickGesture);
+  vegaContainer.value?.addEventListener('pointermove', onPickPointerMove);
+  vegaContainer.value?.addEventListener('pointerleave', onPickPointerLeave);
   initVegaChart();
   if (vegaContainer.value && typeof ResizeObserver !== 'undefined') {
     lastW = vegaContainer.value.offsetWidth;
@@ -380,6 +474,11 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointerup', commitRemoteSelections);
   window.removeEventListener('pointercancel', commitRemoteSelections);
   window.removeEventListener('mouseup', commitRemoteSelections);
+  window.removeEventListener('keydown', onPickKeyDown);
+  window.removeEventListener('keyup', onPickKeyUp);
+  window.removeEventListener('blur', endPickGesture);
+  vegaContainer.value?.removeEventListener('pointermove', onPickPointerMove);
+  vegaContainer.value?.removeEventListener('pointerleave', onPickPointerLeave);
   reembedForResize.cancel();
   if (resizeObserver) {
     resizeObserver.disconnect();

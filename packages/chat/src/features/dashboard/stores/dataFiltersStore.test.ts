@@ -272,7 +272,7 @@ describe('dataFiltersStore', () => {
     });
   });
 
-  it('clearFilter with a `uuid::field` key drops only that field of a split point filter', () => {
+  it('clearFilter with a `uuid::field` key empties only that field of a split point filter', () => {
     const store = createDataFiltersStore();
     store.getState().updateInternalDataSelections({
       'uuid-1': {
@@ -283,16 +283,171 @@ describe('dataFiltersStore', () => {
     });
 
     store.getState().clearFilter('uuid-1::event_type');
-    let sel = store.getState().internalDataSelections['uuid-1'];
-    // Sibling field survives; the cleared field is removed entirely (its
-    // chip AND widget go away — clearing is an explicit filter removal).
-    expect(sel.selection).toEqual({ organization_name: ['CHOP'] });
+    // Sibling field keeps filtering; the cleared one stays in place, empty —
+    // its chip reads "All" and its widget stays for re-selection.
+    expect(store.getState().internalDataSelections['uuid-1'].selection).toEqual({
+      organization_name: ['CHOP'],
+      event_type: [],
+    });
+  });
 
-    store.getState().clearFilter('uuid-1::organization_name');
-    sel = store.getState().internalDataSelections['uuid-1'];
-    // Last field cleared -> the whole selection is null (full-clear
-    // semantics, which also triggers the source chart's brush reset).
-    expect(sel.selection).toBeNull();
+  it('clearFilter empties an interval brush rather than nulling it', () => {
+    const store = createDataFiltersStore();
+    store.getState().updateInternalDataSelections({
+      'uuid-1': { dataSourceKey: 'donors', type: 'interval', selection: { age: [10, 20] } },
+    });
+    store.getState().clearFilter('uuid-1');
+    expect(store.getState().internalDataSelections['uuid-1'].selection).toEqual({ age: [] });
+  });
+
+  describe('remove / restore', () => {
+    const point = (values: string[]): DataSelection => ({
+      dataSourceKey: 'donors',
+      type: 'point',
+      selection: { sex: values },
+    });
+
+    it('removeFilter empties and flags; restoreFilter unflags and leaves it cleared', () => {
+      const store = createDataFiltersStore();
+      store.getState().setDataSelection('message-filter-0-0', point(['male']));
+
+      store.getState().removeFilter('message-filter-0-0');
+      expect(store.getState().dataSelections['message-filter-0-0'].selection).toEqual({ sex: [] });
+      expect(store.getState().removedFilters['message-filter-0-0']).toBe(true);
+
+      store.getState().restoreFilter('message-filter-0-0');
+      expect(store.getState().removedFilters['message-filter-0-0']).toBeUndefined();
+      expect(store.getState().dataSelections['message-filter-0-0'].selection).toEqual({ sex: [] });
+    });
+
+    it('a fresh brush value re-activates a removed brush, and a later empty write keeps it', () => {
+      const store = createDataFiltersStore();
+      const brush = (values: string[]): DataSelection => ({
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { organization_name: values },
+      });
+      store.getState().updateInternalDataSelections({ 'uuid-1': brush(['CHOP']) });
+      store.getState().removeFilter('uuid-1::organization_name');
+      expect(store.getState().removedFilters['uuid-1::organization_name']).toBe(true);
+
+      // The chart emits a new click.
+      store.getState().updateInternalDataSelections({ 'uuid-1': brush(['UCSF']) });
+      expect(store.getState().removedFilters['uuid-1::organization_name']).toBeUndefined();
+
+      // Unticking the last value must not silently re-remove it.
+      store.getState().setFilter('uuid-1::organization_name', brush([]));
+      expect(store.getState().removedFilters['uuid-1::organization_name']).toBeUndefined();
+    });
+
+    it('setFilter merges a split point field back into its brush', () => {
+      const store = createDataFiltersStore();
+      store.getState().updateInternalDataSelections({
+        'uuid-1': {
+          dataSourceKey: 'Event',
+          type: 'point',
+          selection: { organization_name: ['CHOP'], event_type: ['Deceased'] },
+        },
+      });
+      store.getState().setFilter('uuid-1::event_type', {
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { event_type: ['Recurrence'] },
+      });
+      expect(store.getState().internalDataSelections['uuid-1'].selection).toEqual({
+        organization_name: ['CHOP'],
+        event_type: ['Recurrence'],
+      });
+    });
+
+    it('clearAllFilters empties both maps and keeps every key and flag', () => {
+      const store = createDataFiltersStore();
+      store.getState().setDataSelection('message-filter-0-0', point(['male']));
+      store.getState().setDataSelection('message-filter-1-0', point(['female']));
+      store.getState().removeFilter('message-filter-1-0');
+      store.getState().updateInternalDataSelections({
+        'uuid-1': { dataSourceKey: 'donors', type: 'interval', selection: { age: [1, 2] } },
+      });
+
+      store.getState().clearAllFilters();
+      const s = store.getState();
+      expect(s.dataSelections['message-filter-0-0'].selection).toEqual({ sex: [] });
+      expect(s.internalDataSelections['uuid-1'].selection).toEqual({ age: [] });
+      expect(s.removedFilters).toEqual({ 'message-filter-1-0': true });
+    });
+  });
+
+  describe('host filters', () => {
+    const host = (id: string, values: string[]) => ({
+      id,
+      dataSourceKey: 'donors',
+      type: 'point' as const,
+      selection: { sex: values },
+    });
+
+    it('upserts by id, and only when the entry itself changed', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyExternalFilters([host('a', ['male'])]);
+      expect(store.getState().dataSelections['host-filter-a'].selection).toEqual({
+        sex: ['male'],
+      });
+
+      // The user edits it; the host re-renders with the same prop.
+      store.getState().setFilter('host-filter-a', {
+        dataSourceKey: 'donors',
+        type: 'point',
+        selection: { sex: ['female'] },
+      });
+      store.getState().applyExternalFilters([host('a', ['male'])]);
+      expect(store.getState().dataSelections['host-filter-a'].selection).toEqual({
+        sex: ['female'],
+      });
+
+      // The host changes it.
+      store.getState().applyExternalFilters([host('a', ['male', 'female'])]);
+      expect(store.getState().dataSelections['host-filter-a'].selection).toEqual({
+        sex: ['male', 'female'],
+      });
+    });
+
+    it('deletes a filter the host dropped, and ignores echoed chat/chart filters', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyExternalFilters([host('a', ['male'])]);
+      store.getState().applyExternalFilters([
+        { ...host('message-filter-0-0', ['male']), origin: 'chat' },
+        { ...host('uuid-1::sex', ['male']), origin: 'chart' },
+      ]);
+      expect(store.getState().dataSelections).toEqual({});
+    });
+
+    it('survives resetFilters, which clears the conversation’s filters and flags', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyExternalFilters([host('a', ['male'])]);
+      store.getState().setDataSelection('message-filter-0-0', point(['male']));
+      store.getState().removeFilter('message-filter-0-0');
+
+      store.getState().resetFilters();
+      expect(Object.keys(store.getState().dataSelections)).toEqual(['host-filter-a']);
+      expect(store.getState().removedFilters).toEqual({});
+    });
+
+    it('is applied to the data, and kept out of the brush map', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyExternalFilters([host('a', ['male'])]);
+      store.getState().updateInternalDataSelections({
+        'host-filter-a': { dataSourceKey: 'donors', type: 'point', selection: { sex: ['x'] } },
+      });
+      expect(store.getState().internalDataSelections).toEqual({});
+      expect(Object.keys(store.getState().getValidDataSelections(alwaysValid))).toEqual([
+        'host-filter-a',
+      ]);
+    });
+
+    const point = (values: string[]): DataSelection => ({
+      dataSourceKey: 'donors',
+      type: 'point',
+      selection: { sex: values },
+    });
   });
 
   describe('getValidDataSelections', () => {
@@ -329,6 +484,22 @@ describe('dataFiltersStore', () => {
         selection: { age: [0, 10] },
       });
       expect(store.getState().getValidDataSelections(alwaysInvalid)).toEqual({});
+    });
+
+    it('checks every field, not only the first', () => {
+      const store = createDataFiltersStore();
+      store.getState().setDataSelection('host-filter-a', {
+        dataSourceKey: 'donors',
+        type: 'point',
+        selection: { sex: ['male'], no_such_field: ['x'] },
+      });
+      const onlySex = {
+        ...alwaysValid,
+        isValidPointFilter: (_e: string, field: string): ValidStatus => ({
+          isValid: field === 'sex' ? 'yes' : 'no',
+        }),
+      };
+      expect(store.getState().getValidDataSelections(onlySex)).toEqual({});
     });
 
     // Paired with the syncFiltersFromMessages test below: admission and

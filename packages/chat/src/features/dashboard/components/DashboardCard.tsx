@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ActiveVisualization } from '../stores/dashboardStore';
+import { selectionHasValue } from '../stores/dataFiltersStore';
 import { usePalette } from 'udi-toolkit/react';
 import {
   useConversation,
@@ -164,7 +165,10 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // the true→false transition only, so an active brush — or another viz's
   // brush — never triggers a remount loop. This uses React's "adjust state
   // during render" pattern rather than an effect.
-  const ownHasBrush = selections[viz.uuid]?.selection != null;
+  // "Has a value", not "non-null": clearing a filter empties it to
+  // `{field: []}`, which filters nothing but would leave the drawn rect.
+  const ownSelection = selections[viz.uuid];
+  const ownHasBrush = ownSelection != null && selectionHasValue(ownSelection);
   const [trackedHasBrush, setTrackedHasBrush] = useState(ownHasBrush);
   const [brushResetKey, setBrushResetKey] = useState(0);
   if (ownHasBrush !== trackedHasBrush) {

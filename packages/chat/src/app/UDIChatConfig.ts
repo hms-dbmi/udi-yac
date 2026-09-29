@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import type { UDIPalette } from 'udi-toolkit/react';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
-import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
+import type { DownloadAction, EntityIconMap, UDIFilter } from '@/features/dashboard';
 import type { ReadOnlyOption } from '@/stores/globalStore';
 
-export type { ReadOnlyOption };
+export type { ReadOnlyOption, UDIFilter };
 
 /**
  * Signature for the optional analytics callback — deliberately untyped in
@@ -142,6 +142,23 @@ export interface UDIChatConfig {
    * (the cards need its field lists to become interactive).
    */
   initialSession?: unknown;
+  /**
+   * Filters set by the embedding page. Each shows as a chip in the Filters
+   * bar and filters every chart, like a chat filter; the user can adjust,
+   * clear or remove it there. Entries are matched by `id` and applied again
+   * only when that entry changes, so re-rendering with the same array never
+   * undoes the user's edits; dropping an entry deletes its filter. Entries
+   * whose `origin` is `'chat'` or `'chart'` are ignored, so feeding
+   * {@link UDIChatConfig.onFiltersChange}'s output straight back is safe.
+   */
+  filters?: UDIFilter[];
+  /**
+   * Called with every filter in place whenever one changes — chat, chart and
+   * host filters alike, each tagged with its `origin`. A filter with no values
+   * (`[]`) is cleared: still shown, filtering nothing. Removed filters are
+   * left out.
+   */
+  onFiltersChange?: (filters: UDIFilter[]) => void;
   className?: string;
   style?: React.CSSProperties;
 }

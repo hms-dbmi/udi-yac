@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
-import type { DataSelection } from '@/features/dashboard';
+import type { DataSelection } from '../stores/dataFiltersStore';
 import type { PointSelection } from 'udi-toolkit/react';
 
 interface PointFilterComponentProps {
@@ -18,10 +18,12 @@ interface PointFilterComponentProps {
   filterKey: string;
   /**
    * Optional override for where an edit is written. Defaults to
-   * `dataFiltersStore.setDataSelection(filterKey, …)` (the LLM-filter path).
+   * `dataFiltersStore.setFilter(filterKey, …)`, which routes by filter id.
    * Brush-originated filters pass a writer that targets the brush store.
    */
   onCommit?: (selection: DataSelection) => void;
+  /** Drop the inline "Clear all" — the filter bar's popover has its own. */
+  hideClearAll?: boolean;
 }
 
 export function PointFilterComponent({
@@ -29,6 +31,7 @@ export function PointFilterComponent({
   tweakable,
   filterKey,
   onCommit,
+  hideClearAll = false,
 }: PointFilterComponentProps) {
   const entityNames = useDataPackage((s) => s.entityNames);
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
@@ -36,7 +39,7 @@ export function PointFilterComponent({
   const isValidPointFilter = useDataPackage((s) => s.isValidPointFilter);
   const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
   const getValueLabel = useDataPackage((s) => s.getValueLabel);
-  const setDataSelection = useDataFilters((s) => s.setDataSelection);
+  const setFilter = useDataFilters((s) => s.setFilter);
   const trackEvent = useTracker();
 
   const entity = dataSelection.dataSourceKey;
@@ -72,7 +75,7 @@ export function PointFilterComponent({
 
   const commit = (selection: DataSelection) => {
     if (onCommit) onCommit(selection);
-    else setDataSelection(filterKey, selection);
+    else setFilter(filterKey, selection);
   };
 
   const handleToggle = (f: string, value: string, checked: boolean) => {
@@ -145,39 +148,33 @@ export function PointFilterComponent({
   return (
     <div className="udi:space-y-2">
       <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm udi:flex-wrap">
-        {tweakable ? (
-          <>
-            <span className="udi:text-muted-foreground">Filtering</span>
-            <Select value={entity} onValueChange={handleEntityChange}>
-              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {entityNames.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={field} onValueChange={handleFieldChange}>
-              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {fieldOptions.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {f}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        ) : (
-          <span className="udi:text-muted-foreground">
-            Filtering {entity} {field}
-          </span>
-        )}
+        {/* Not tweakable (a brush, or the filter bar's popover): the entity and
+            field are fixed, so they show in place but can't be changed. */}
+        <span className="udi:text-muted-foreground">Filtering</span>
+        <Select value={entity} onValueChange={handleEntityChange} disabled={!tweakable}>
+          <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {entityNames.map((e) => (
+              <SelectItem key={e} value={e}>
+                {e}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={field} onValueChange={handleFieldChange} disabled={!tweakable}>
+          <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {fieldOptions.map((f) => (
+              <SelectItem key={f} value={f}>
+                {f}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       {isValid ? (
         <div className="udi:space-y-2">
@@ -211,7 +208,7 @@ export function PointFilterComponent({
                       </div>
                     );
                   })}
-                  {values.length > 0 && (
+                  {!hideClearAll && values.length > 0 && (
                     <Button
                       variant="ghost"
                       size="sm"

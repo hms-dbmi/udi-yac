@@ -1,11 +1,16 @@
-import { X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useDashboard, useDashboardStore, useDataFilters, useGlobal } from '@/app/UDIChatContext';
+import {
+  useDashboard,
+  useDashboardStore,
+  useDataFiltersStore,
+  useGlobal,
+} from '@/app/UDIChatContext';
 import { useFilterChips, type ChipInfo } from '../hooks/useFilterChips';
+import { FilterControls } from './FilterControls';
 
 /**
  * The dashboard's Filters section: a chip per active filter. With none, a
@@ -15,10 +20,10 @@ import { useFilterChips, type ChipInfo } from '../hooks/useFilterChips';
  */
 export function FilterToolbar() {
   const dashboardStore = useDashboardStore();
+  const dataFiltersStore = useDataFiltersStore();
   const filterAllNullValues = useDashboard((s) => s.filterAllNullValues);
   const debugMode = useGlobal((s) => s.debugMode);
   const readOnly = useGlobal((s) => s.readOnly);
-  const clearFilter = useDataFilters((s) => s.clearFilter);
   const chips = useFilterChips();
 
   if (chips.length === 0 && readOnly && !debugMode) return null;
@@ -49,51 +54,76 @@ export function FilterToolbar() {
           Ask in the chat or interact with visualizations to add data filters.
         </p>
       ) : (
-        <FilterChips chips={chips} onClear={clearFilter} />
+        <FilterChips
+          chips={chips}
+          onClear={(id) => dataFiltersStore.getState().clearFilter(id)}
+          // Read-only has no chat pane, so a removed filter could never be
+          // re-expanded there — offer only Clear.
+          onRemove={readOnly ? undefined : (id) => dataFiltersStore.getState().removeFilter(id)}
+          onReset={() => dataFiltersStore.getState().clearAllFilters()}
+        />
       )}
     </div>
   );
 }
 
+/**
+ * A chip per filter field, each the trigger for a popover holding that
+ * filter's controls. Entity and field are fixed there — changing what a filter
+ * is about happens in the chat, where it came from.
+ */
 export function FilterChips({
   chips,
   onClear,
+  onRemove,
+  onReset,
 }: {
   chips: ChipInfo[];
   onClear: (id: string) => void;
+  onRemove?: (id: string) => void;
+  onReset: () => void;
 }) {
   return (
     <div className="udi:flex udi:items-center udi:gap-1.5 udi:flex-wrap">
       {chips.map((chip) => (
-        <div key={`${chip.id}-${chip.label}`} className="udi:group udi:relative udi:inline-block">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  // Named for its chip — "Clear filter" alone doesn't say which of
-                  // several — and shown on keyboard focus, not only on hover.
-                  aria-label={`Clear filter ${chip.label}: ${chip.value}`}
-                  className="udi:absolute udi:-top-1.5 udi:-right-1.5 udi:z-10 udi:h-4 udi:w-4 udi:rounded-full udi:border udi:bg-background udi:shadow-sm udi:opacity-0 udi:group-hover:opacity-100 udi:focus-visible:opacity-100 udi:transition-opacity"
-                  onClick={() => onClear(chip.id)}
-                />
-              }
-            >
-              <X className="udi:h-2.5 udi:w-2.5" />
-            </TooltipTrigger>
-            <TooltipContent>Clear filter</TooltipContent>
-          </Tooltip>
-          <Badge
-            variant="outline"
-            className="udi:rounded-sm udi:text-xs udi:font-normal udi:gap-1.5 udi:cursor-default"
-            title={`${chip.dataSourceKey} - ${chip.type}`}
+        <Popover key={`${chip.id}-${chip.label}`}>
+          <PopoverTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="udi:h-7 udi:text-xs udi:font-normal"
+                title={`${chip.dataSourceKey} - ${chip.type}`}
+              />
+            }
           >
             <span className="udi:font-medium">{chip.label}</span>
-            <span className="udi:font-mono">{chip.value}</span>
-          </Badge>
-        </div>
+            <span className="udi:font-mono udi:text-muted-foreground">{chip.value}</span>
+            <ChevronDown aria-hidden />
+          </PopoverTrigger>
+          <PopoverContent align="start" className="udi:w-80 udi:p-2">
+            <FilterControls
+              filterId={chip.id}
+              selection={chip.selection}
+              tweakable={false}
+              hideClearAll
+            />
+            <div className="udi:flex udi:items-center udi:gap-2 udi:px-2 udi:pb-1">
+              <Button size="sm" onClick={() => onClear(chip.id)}>
+                Clear all
+              </Button>
+              {onRemove && (
+                <Button size="sm" variant="ghost" onClick={() => onRemove(chip.id)}>
+                  Remove filter
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       ))}
+      <Button variant="link" size="sm" className="udi:h-7 udi:text-xs" onClick={onReset}>
+        Reset
+      </Button>
     </div>
   );
 }

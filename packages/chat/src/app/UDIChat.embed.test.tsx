@@ -199,3 +199,34 @@ describe('UDIChat — initialSession', () => {
     consoleError.mockRestore();
   });
 });
+
+describe('UDIChat — host filters', () => {
+  const sexFilter = {
+    id: 'cohort',
+    dataSourceKey: 'donors',
+    type: 'point' as const,
+    selection: { sex: ['Female'] },
+  };
+
+  it('shows a `filters` entry as a chip and reports it through onFiltersChange', async () => {
+    const onFiltersChange = vi.fn();
+    render(
+      <UDIDashboard
+        {...seedConfig}
+        initialSession={seededSession}
+        filters={[sexFilter]}
+        onFiltersChange={onFiltersChange}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: /Sex\s*Female/ })).toBeTruthy();
+    expect(onFiltersChange).toHaveBeenLastCalledWith([{ ...sexFilter, origin: 'host' }]);
+  });
+
+  it('rejects a malformed `filters` entry', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<UDIChat {...seedConfig} filters={[{ id: 'x' } as never]} />);
+    expect(screen.getAllByText(/filters\[0\]/).length).toBeGreaterThan(0);
+    spy.mockRestore();
+  });
+});
