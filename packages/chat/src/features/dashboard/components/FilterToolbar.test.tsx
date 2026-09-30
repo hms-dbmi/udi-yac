@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  *
  * The Filters bar: each chip opens a popover holding its filter's controls,
- * with the entity/field fixed, a "Clear all" that keeps the filter in place
- * (its chip reads "All"), and a "Remove filter" that takes the chip away.
+ * with the entity/field fixed (shown as text), a "Clear all" that keeps the
+ * filter in place (its chip reads "All"), and a "Remove filter" that takes the
+ * chip away.
  */
 import { describe, it, expect } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
@@ -102,9 +103,9 @@ describe('FilterToolbar', () => {
     renderToolbar();
     await userEvent.click(assayChip());
 
-    const [entity, field] = screen.getAllByRole('combobox');
-    expect(entity).toHaveAttribute('data-disabled');
-    expect(field).toHaveAttribute('data-disabled');
+    // Shown as text, not as disabled pickers.
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Filtering Datasets › Assay Type');
     // The values are still editable.
     expect(screen.getByRole('checkbox', { name: 'CODEX' })).toBeChecked();
   });
@@ -155,11 +156,46 @@ describe('FilterToolbar', () => {
     expect(screen.getByRole('button', { name: /File Size/ }).className).not.toMatch(/ring-2/);
   });
 
-  it('offers no Remove in read-only, which has no chat to restore it from', async () => {
+  it('edits a range by typing its bounds, with no Clear all beside its reset', async () => {
+    renderToolbar();
+    await userEvent.click(screen.getByRole('button', { name: /File Size/ }));
+    expect(screen.queryByRole('button', { name: 'Clear all' })).toBeNull();
+
+    const range = () => filters.getState().dataSelections['message-filter-1-0'].selection;
+    const min = screen.getByRole('spinbutton', { name: 'Minimum file_size' });
+    const max = screen.getByRole('spinbutton', { name: 'Maximum file_size' });
+    await userEvent.clear(min);
+    await userEvent.type(min, '20{Enter}');
+    expect(range()).toEqual({ file_size: [20, 50] });
+
+    // Past the other bound: stops at it.
+    await userEvent.clear(max);
+    await userEvent.type(max, '5{Enter}');
+    expect(range()).toEqual({ file_size: [20, 20] });
+    expect(max).toHaveValue(20);
+
+    // Past the extent: the extent's end, shown as "max".
+    await userEvent.clear(max);
+    await userEvent.type(max, '500{Enter}');
+    expect(range()).toEqual({ file_size: [20, 100] });
+    expect(max).toHaveValue(null);
+
+    // Emptied, committed on blur: the extent's end too.
+    await userEvent.clear(min);
+    await userEvent.tab();
+    expect(range()).toEqual({ file_size: [0, 100] });
+
+    // Escape drops the edit.
+    await userEvent.type(min, '30{Escape}');
+    expect(range()).toEqual({ file_size: [0, 100] });
+  });
+
+  it('offers Remove in read-only too', async () => {
     renderToolbar({ readOnly: true });
     await userEvent.click(assayChip());
+    await userEvent.click(screen.getByRole('button', { name: 'Remove filter' }));
 
-    expect(screen.getByRole('button', { name: 'Clear all' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Remove filter' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Assay Type/ })).toBeNull();
+    expect(filters.getState().removedFilters['message-filter-0-0']).toBe(true);
   });
 });

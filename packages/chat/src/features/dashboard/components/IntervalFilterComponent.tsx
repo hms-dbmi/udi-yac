@@ -1,17 +1,12 @@
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { Slider } from '@/components/ui/slider';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { RotateCcw } from 'lucide-react';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '../stores/dataFiltersStore';
+import { FilterTarget } from './FilterTarget';
 import type { DataFieldDomain } from '@/types/dataPackage';
 import type { RangeSelection } from 'udi-toolkit/react';
 
@@ -31,6 +26,52 @@ interface IntervalFilterComponentProps {
 
 function formatNumber(n: number): string {
   return Number.isInteger(n) ? n.toString() : n.toFixed(2);
+}
+
+/**
+ * One end of the range, typed. Shows the committed value except while being
+ * edited; Enter or blur commits the draft, Escape drops it.
+ */
+function BoundInput({
+  value,
+  placeholder,
+  label,
+  disabled,
+  onCommit,
+}: {
+  value: string;
+  placeholder: string;
+  label: string;
+  disabled: boolean;
+  onCommit: (text: string) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const finish = (commit: boolean) => {
+    if (commit && draft !== null) onCommit(draft);
+    setDraft(null);
+  };
+  return (
+    <Input
+      type="number"
+      step="any"
+      value={draft ?? value}
+      placeholder={placeholder}
+      aria-label={label}
+      disabled={disabled}
+      // Not a credential: keep browsers and password managers from offering to fill it.
+      autoComplete="off"
+      data-1p-ignore
+      data-lpignore="true"
+      data-bwignore
+      data-form-type="other"
+      className="udi:h-7 udi:w-24 udi:px-1.5 udi:font-semibold udi:placeholder:font-semibold"
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === 'Escape') finish(e.key === 'Enter');
+      }}
+      onBlur={() => finish(true)}
+    />
+  );
 }
 
 /**
@@ -62,7 +103,6 @@ export function IntervalFilterComponent({
   filterKey,
   onCommit,
 }: IntervalFilterComponentProps) {
-  const entityNames = useDataPackage((s) => s.entityNames);
   const quantitativeSourceFields = useDataPackage((s) => s.quantitativeSourceFields);
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidIntervalFilter = useDataPackage((s) => s.isValidIntervalFilter);
@@ -167,22 +207,39 @@ export function IntervalFilterComponent({
     [trackEvent, entity, field, rangeMinMax],
   );
 
-  const handleReset = useCallback(() => {
-    const reset = [rangeMinMax.min, rangeMinMax.max];
-    setLocalRange(reset);
-    if (commitFrameRef.current != null) {
-      cancelAnimationFrame(commitFrameRef.current);
-      commitFrameRef.current = null;
-    }
-    pendingRangeRef.current = null;
-    commitToStore(reset);
-    trackEvent('filter_range_changed', {
-      entity,
-      field,
-      isReset: true,
-      isFullRange: true,
-    });
-  }, [commitToStore, rangeMinMax, trackEvent, entity, field]);
+  // Reset and typed bounds commit at once, dropping any drag frame in flight.
+  const commitNow = useCallback(
+    (range: number[], isReset: boolean) => {
+      setLocalRange(range);
+      if (commitFrameRef.current != null) {
+        cancelAnimationFrame(commitFrameRef.current);
+        commitFrameRef.current = null;
+      }
+      pendingRangeRef.current = null;
+      commitToStore(range);
+      trackEvent('filter_range_changed', {
+        entity,
+        field,
+        isReset,
+        isFullRange: range[0] <= rangeMinMax.min && range[1] >= rangeMinMax.max,
+      });
+    },
+    [commitToStore, rangeMinMax, trackEvent, entity, field],
+  );
+
+  const handleReset = () => commitNow([rangeMinMax.min, rangeMinMax.max], true);
+
+  // An empty bound means the extent's end. Typed values stay inside the
+  // extent, and a bound can't cross the other one.
+  const handleBoundCommit = (index: 0 | 1, text: string) => {
+    const extent = [rangeMinMax.min, rangeMinMax.max];
+    const typed = text.trim() === '' ? extent[index] : Number(text);
+    if (!Number.isFinite(typed)) return;
+    const clamped = Math.min(Math.max(typed, extent[0]), extent[1]);
+    const next = [...localRange];
+    next[index] = index === 0 ? Math.min(clamped, next[1]) : Math.max(clamped, next[0]);
+    if (next[index] !== localRange[index]) commitNow(next, false);
+  };
 
   // Base UI's Select fires `onValueChange` on every item press, including a
   // press on the already-selected item — a common way to dismiss the menu.
@@ -235,8 +292,10 @@ export function IntervalFilterComponent({
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
   const isValid = isValidIntervalFilter(entity, field).isValid !== 'no' && rangeMinMax.hasRange;
 
-  const minText = localRange[0] <= rangeMinMax.min ? 'min' : formatNumber(localRange[0]);
-  const maxText = localRange[1] >= rangeMinMax.max ? 'max' : formatNumber(localRange[1]);
+  // At the extent a bound reads "min"/"max" (the placeholder) rather than the
+  // extent's number.
+  const minText = localRange[0] <= rangeMinMax.min ? '' : formatNumber(localRange[0]);
+  const maxText = localRange[1] >= rangeMinMax.max ? '' : formatNumber(localRange[1]);
 
   // A brush from a visualization can report a range slightly outside the data
   // extent (charts often pad the axis with a visual buffer). Clamp only the
@@ -247,39 +306,30 @@ export function IntervalFilterComponent({
 
   return (
     <div className="udi:space-y-2">
+      <FilterTarget
+        entity={entity}
+        field={field}
+        fieldOptions={fieldOptions}
+        tweakable={tweakable}
+        onEntityChange={handleEntityChange}
+        onFieldChange={handleFieldChange}
+      />
       <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
-        {/* Not tweakable (a brush, or the filter bar's popover): the entity and
-            field are fixed, so they show in place but can't be changed. */}
-        <span className="udi:text-muted-foreground">Filtering</span>
-        <Select value={entity} onValueChange={handleEntityChange} disabled={!tweakable}>
-          <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {entityNames.map((e) => (
-              <SelectItem key={e} value={e}>
-                {e}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={field} onValueChange={handleFieldChange} disabled={!tweakable}>
-          <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {fieldOptions.map((f) => (
-              <SelectItem key={f} value={f}>
-                {f}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
-        <span className="udi:font-semibold">{minText}</span>
+        <BoundInput
+          value={minText}
+          placeholder="min"
+          label={`Minimum ${field}`}
+          disabled={!isValid}
+          onCommit={(text) => handleBoundCommit(0, text)}
+        />
         <span className="udi:text-muted-foreground">to</span>
-        <span className="udi:font-semibold">{maxText}</span>
+        <BoundInput
+          value={maxText}
+          placeholder="max"
+          label={`Maximum ${field}`}
+          disabled={!isValid}
+          onCommit={(text) => handleBoundCommit(1, text)}
+        />
         <Tooltip>
           <TooltipTrigger
             render={

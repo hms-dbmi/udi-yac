@@ -1,5 +1,6 @@
-// Guards bar-chart category labels (axisLabelSelect.ts, used by VegaLite.vue):
-// which axis gets them and whether it is clickable, the totals their tooltip
+// Guards category labels (axisLabelSelect.ts, used by VegaLite.vue) on a bar
+// chart's axis and a color legend: which guide gets them and whether it is
+// clickable, the totals their tooltip
 // shows, the gray-out of emptied categories, the underline geometry, and the
 // Vega contract the patch relies on — that a compiled Vega-Lite axis accepts a
 // mark name, interactivity, and a tooltip and opacity reading a signal. That
@@ -12,11 +13,16 @@ import * as vl from 'vega-lite';
 import * as vega from 'vega';
 import {
   CLICKABLE_LABELS,
+  CLICKABLE_LEGEND,
+  CLICKABLE_LEGEND_SYMBOLS,
   EMPTY_LABEL_OPACITY,
   LABEL_TOTALS_SIGNAL,
+  LEGEND_TOTALS_SIGNAL,
   categoryTotals,
   findLabelAxis,
+  findLabelLegend,
   patchLabelAxis,
+  patchLabelLegend,
   underlineGeometry,
 } from '../axisLabelSelect.ts';
 
@@ -76,6 +82,44 @@ assert.equal(
   ),
   null,
 );
+
+// ── which legend ─────────────────────────────────────────────────────────────
+assert.deepEqual(
+  findLabelLegend(
+    bar({
+      x: quantitative('count', 'Donors'),
+      y: nominal('race'),
+      color: nominal('sex', 'Sex'),
+    }),
+    ['race', 'sex'],
+  ),
+  {
+    channel: 'color',
+    field: 'sex',
+    title: 'Sex',
+    clickable: true,
+    measure: 'count',
+    measureTitle: 'Donors',
+  },
+);
+// Any mark: a pie's measure is its angle.
+assert.equal(
+  findLabelLegend(
+    bar({ theta: quantitative('n'), color: nominal('sex') }, { type: 'arc' }),
+    ['sex'],
+  )?.measure,
+  'n',
+);
+// Not in the selection: grays out, isn't clickable. Dotted names unescaped.
+assert.deepEqual(
+  (({ field, clickable }) => ({ field, clickable }))(
+    findLabelLegend(bar({ color: nominal('donor\\.sex') }), ['race']),
+  ),
+  { field: 'donor.sex', clickable: false },
+);
+// A color ramp or no color: no category legend.
+assert.equal(findLabelLegend(bar({ color: quantitative('n') }), ['n']), null);
+assert.equal(findLabelLegend(bar({ x: nominal('race') }), ['race']), null);
 
 // ── totals ───────────────────────────────────────────────────────────────────
 const axis = findLabelAxis(
@@ -178,5 +222,67 @@ const opacityOf = (value) =>
 assert.equal(opacityOf('White'), 1);
 assert.equal(opacityOf('Asian'), EMPTY_LABEL_OPACITY);
 assert.equal(opacityOf(null), EMPTY_LABEL_OPACITY);
+
+// The legend: labels and symbols both clickable, both grayed out when empty.
+const legend = findLabelLegend(
+  bar({
+    x: nominal('race'),
+    y: quantitative('count', 'Donors'),
+    color: nominal('sex', 'Sex'),
+  }),
+  ['race', 'sex'],
+);
+const legendMarks = async (patched, totals) => {
+  const v = new vega.View(vega.parse(patched), { renderer: 'none' });
+  v.signal(LEGEND_TOTALS_SIGNAL, totals);
+  await v.runAsync();
+  // Each legend entry is its own group, holding one symbol mark and one label
+  // mark; collect every entry's.
+  const found = { 'legend-label': [], 'legend-symbol': [] };
+  const walk = (node) => {
+    found[node?.role]?.push(node);
+    for (const child of node?.items ?? []) walk(child);
+  };
+  walk(v.scenegraph().root);
+  return found;
+};
+const clickableLegend = await legendMarks(
+  patchLabelLegend(compiled(), legend),
+  {
+    F: 8,
+  },
+);
+const legendLabels = clickableLegend['legend-label'];
+const legendSymbols = clickableLegend['legend-symbol'];
+assert.ok(legendLabels.length > 0 && legendSymbols.length > 0);
+assert.ok(
+  legendLabels.every((m) => m.name === CLICKABLE_LEGEND && m.interactive),
+);
+assert.ok(
+  legendSymbols.every(
+    (m) => m.name === CLICKABLE_LEGEND_SYMBOLS && m.interactive,
+  ),
+);
+const entry = (marks, value) =>
+  marks.flatMap((m) => m.items).find((item) => item.datum.value === value);
+assert.deepEqual(entry(legendLabels, 'F').tooltip, { Sex: 'F', Donors: '8' });
+// M has no rows left: label and swatch gray out; F keeps full opacity.
+assert.equal(entry(legendLabels, 'M').opacity, EMPTY_LABEL_OPACITY);
+assert.equal(entry(legendSymbols, 'M').opacity, EMPTY_LABEL_OPACITY);
+assert.equal(entry(legendLabels, 'F').opacity, 1);
+assert.equal(entry(legendSymbols, 'F').opacity, 1);
+
+// Not clickable: still grays out, but no names or interactivity.
+const plainLegend = await legendMarks(
+  patchLabelLegend(compiled(), { ...legend, clickable: false }),
+  { F: 8 },
+);
+assert.ok(plainLegend['legend-label'].every((m) => m.name === undefined));
+assert.ok(plainLegend['legend-symbol'].every((m) => !m.interactive));
+assert.equal(
+  entry(plainLegend['legend-label'], 'M').opacity,
+  EMPTY_LABEL_OPACITY,
+);
+assert.equal(entry(plainLegend['legend-symbol'], 'F').opacity, 1);
 
 console.log('axis-label-select: ok');

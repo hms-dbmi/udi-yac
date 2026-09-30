@@ -24,6 +24,7 @@ import {
   PICK_SIGNAL,
   type PickMode,
   fieldChannel,
+  holdsPickMode,
   keyPickMode,
   pickModeOf,
   rangePicks,
@@ -32,11 +33,16 @@ import {
 } from './pointSelect';
 import {
   CLICKABLE_LABELS,
+  CLICKABLE_LEGEND,
+  CLICKABLE_LEGEND_SYMBOLS,
   LABEL_TOTALS_SIGNAL,
+  LEGEND_TOTALS_SIGNAL,
   type LabelAxis,
   categoryTotals,
   findLabelAxis,
+  findLabelLegend,
   patchLabelAxis,
+  patchLabelLegend,
   underlineGeometry,
 } from './axisLabelSelect';
 
@@ -199,19 +205,28 @@ function initVegaChart() {
   if (specObject.data && specObject.data.values) {
     delete specObject.data.values;
   }
-  // A bar chart's category labels gray out when a filter empties them, and are
-  // clickable when its point selection covers the axis: the way to pick a bar
-  // too thin to hit.
-  const axis = findLabelAxis(
-    specObject,
-    selectFields(props.pointSelect?.fields),
-  );
+  // A bar chart's category labels, and any chart's color legend, gray out when
+  // a filter empties a category, and are clickable when the point selection
+  // covers their field: the way to pick a bar too thin to hit, or every
+  // segment of one color.
+  const pointFields = selectFields(props.pointSelect?.fields);
+  const axis = findLabelAxis(specObject, pointFields);
+  const legend = findLabelLegend(specObject, pointFields);
   labelAxis = axis;
+  labelLegend = legend;
   // console.log('initializing vega chart with spec:', specObject);
   vegaEmbed(vegaContainer.value, specObject as VisualizationSpec, {
     actions: props.hideActions ? false : true,
     config: buildVegaConfig(),
-    ...(axis ? { patch: (vgSpec) => patchLabelAxis(vgSpec, axis) } : {}),
+    ...(axis || legend
+      ? {
+          patch: (vgSpec) => {
+            if (axis) patchLabelAxis(vgSpec, axis);
+            if (legend) patchLabelLegend(vgSpec, legend);
+            return vgSpec;
+          },
+        }
+      : {}),
   })
     .then((result) => {
       errorMessage.value = null;
@@ -286,22 +301,26 @@ function initVegaChart() {
         // if the signal is a point selection we I couldn't get signals
         // to work with dynamic data, so click events it is!
         view.addEventListener('click', function (event, item) {
-          // A category label stands in for its bar: the selection gets the
-          // axis field alone, so a stacked bar is picked whole.
-          const label =
-            axis &&
-            (item?.mark as { name?: string } | undefined)?.name ===
-              CLICKABLE_LABELS
-              ? (item as { datum?: { value?: unknown } }).datum
-              : null;
+          // A category label stands in for its marks: the selection gets the
+          // guide's field alone, so an axis label picks a stacked bar whole
+          // and a legend entry every segment of its color.
+          const markName = (item?.mark as { name?: string } | undefined)?.name;
+          const guide =
+            markName === CLICKABLE_LABELS
+              ? axis
+              : markName === CLICKABLE_LEGEND ||
+                  markName === CLICKABLE_LEGEND_SYMBOLS
+                ? legend
+                : null;
+          const guideValue = guide
+            ? (item as { datum?: { value?: unknown } }).datum?.value
+            : undefined;
           // No fields → no selection to build; bail.
-          const fields =
-            axis && label ? [axis.field] : selectFields(point.fields);
+          const fields = guide ? [guide.field] : selectFields(point.fields);
           if (fields.length === 0) return;
-          const datum =
-            axis && label
-              ? { [axis.field]: label.value }
-              : (item as { datum?: Record<string, unknown> })?.datum;
+          const datum = guide
+            ? { [guide.field]: guideValue }
+            : (item as { datum?: Record<string, unknown> })?.datum;
           // A modifier held: add the click to the gesture's picks, commit
           // nothing until it is released. Starting here too covers a key
           // press the keydown listener didn't see (focus elsewhere).
@@ -315,15 +334,20 @@ function initVegaChart() {
             return;
           }
           if (pickMode === 'range') {
-            // A range runs along one field, in its scale's order: a bar
-            // chart's category axis (whole bars, as a label click picks), or
-            // else the selection's first field.
-            const rangeField = axis?.clickable ? axis.field : fields[0];
-            const channel = axis?.clickable
-              ? axis.channel
+            // A range runs along one field, in its scale's order: the clicked
+            // guide's (a legend entry picks colors), else a bar chart's
+            // category axis (whole bars, as a label click picks), or else the
+            // selection's first field.
+            const rangeGuide = guide ?? (axis?.clickable ? axis : null);
+            const rangeField = rangeGuide ? rangeGuide.field : fields[0];
+            const channel = rangeGuide
+              ? rangeGuide.channel
               : rangeField && fieldChannel(specObject, rangeField);
             if (datum && rangeField && channel) {
               const value = String(datum[rangeField]);
+              // Moving to another guide mid-gesture starts a new range there.
+              if (rangeAnchorField !== rangeField) rangeAnchor = null;
+              rangeAnchorField = rangeField;
               rangeAnchor ??= value;
               let domain: unknown[] = [];
               try {
@@ -403,16 +427,19 @@ const reembedForResize = debounce(() => {
 // it: nothing is committed, so neither this chart nor any other re-queries.
 // With Ctrl (⌘ on macOS), clicks toggle the drawn marks into `pendingPicks`;
 // with Shift, they pick every category from the first click to the latest.
-// Either way the rest dim via PICK_SIGNAL, and releasing the key (or the
-// window losing focus) commits the picks as one selection — one query,
-// whatever was picked. Marks the chart's own filter already hides can't be
-// picked: their rows were never fetched (a rollup skips the unfiltered pass),
-// so adding one means clearing the selection first.
+// Either way the rest dim via PICK_SIGNAL, and releasing the key commits the
+// picks as one selection — one query, whatever was picked. So does anything
+// that could swallow that release: the pointer leaving the chart, the window
+// losing focus or the page being hidden. Marks the chart's own filter already
+// hides can't be picked: their rows were never fetched (a rollup skips the
+// unfiltered pass), so adding one means clearing the selection first.
 let pickMode: PickMode | null = null;
 let pendingPicks: Record<string, string[]> | null = null;
 // A Shift gesture's first click, which its range runs from; null until then,
 // and a Shift gesture that never clicks leaves the selection as it was.
 let rangeAnchor: string | null = null;
+// The field that anchor belongs to.
+let rangeAnchorField: string | null = null;
 let pointerOverChart = false;
 // Cleared by typing into a field, set by moving the pointer over the chart: a
 // capital letter typed in the chat while the pointer happens to rest on a
@@ -444,6 +471,7 @@ function startPickGesture(mode: PickMode): void {
   if (pickMode || !props.pointSelect) return;
   pickMode = mode;
   rangeAnchor = null;
+  rangeAnchorField = null;
   const current =
     dataSourcesStore.dataSelections[props.pointSelect.name]?.selection;
   pendingPicks = current
@@ -457,6 +485,7 @@ function endPickGesture(): void {
   const unchanged = pickMode === 'range' && rangeAnchor === null;
   pickMode = null;
   rangeAnchor = null;
+  rangeAnchorField = null;
   const name = props.pointSelect.name;
   if (unchanged) {
     // Shift was held and released without a click.
@@ -483,11 +512,18 @@ function onPickKeyUp(event: KeyboardEvent): void {
 function onPickPointerMove(event: PointerEvent): void {
   pointerOverChart = true;
   pickArmed = true;
+  // The key's release can go unseen (a context menu had it), but every pointer
+  // event carries the modifiers actually held.
+  if (pickMode && !holdsPickMode(event, pickMode)) endPickGesture();
   const mode = pickModeOf(event);
   if (mode) startPickGesture(mode);
 }
 function onPickPointerLeave(): void {
   pointerOverChart = false;
+  endPickGesture();
+}
+function onPickVisibilityChange(): void {
+  if (document.hidden) endPickGesture();
 }
 // A modifier click would otherwise also extend the page's text selection,
 // highlighting every axis label between two Shift-clicks.
@@ -495,8 +531,10 @@ function onPickMouseDown(event: MouseEvent): void {
   if (props.pointSelect && pickModeOf(event)) event.preventDefault();
 }
 
-// The running view's bar category axis (grayed-out / clickable labels), if any.
+// The running view's bar category axis and color legend (grayed-out /
+// clickable labels), if any.
 let labelAxis: LabelAxis | null = null;
+let labelLegend: LabelAxis | null = null;
 
 // Hovering a clickable label underlines it. Chrome won't draw an animatable
 // underline on SVG text — it ignores text-underline-offset there and paints the
@@ -507,7 +545,11 @@ let labelUnderline: HTMLDivElement | null = null;
 
 function labelText(event: PointerEvent): SVGTextElement | null {
   const target = event.target as Element | null;
-  return target?.closest?.<SVGTextElement>(`.${CLICKABLE_LABELS} text`) ?? null;
+  return (
+    target?.closest?.<SVGTextElement>(
+      `.${CLICKABLE_LABELS} text, .${CLICKABLE_LEGEND} text`,
+    ) ?? null
+  );
 }
 
 function onLabelPointerOver(event: PointerEvent): void {
@@ -584,6 +626,7 @@ onMounted(() => {
   window.addEventListener('keydown', onPickKeyDown);
   window.addEventListener('keyup', onPickKeyUp);
   window.addEventListener('blur', endPickGesture);
+  document.addEventListener('visibilitychange', onPickVisibilityChange);
   vegaContainer.value?.addEventListener('pointermove', onPickPointerMove);
   vegaContainer.value?.addEventListener('pointerleave', onPickPointerLeave);
   vegaContainer.value?.addEventListener('mousedown', onPickMouseDown);
@@ -616,6 +659,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onPickKeyDown);
   window.removeEventListener('keyup', onPickKeyUp);
   window.removeEventListener('blur', endPickGesture);
+  document.removeEventListener('visibilitychange', onPickVisibilityChange);
   vegaContainer.value?.removeEventListener('pointermove', onPickPointerMove);
   vegaContainer.value?.removeEventListener('pointerleave', onPickPointerLeave);
   vegaContainer.value?.removeEventListener('mousedown', onPickMouseDown);
@@ -691,12 +735,18 @@ async function updateVegaChart() {
       .remove(() => true)
       .insert(specObject.data.values ?? []),
   );
-  // The label tooltips and gray-out read each bar's total from here, so they
-  // track the filtered rows the bars draw.
+  // The label tooltips and gray-out read each category's total from here, so
+  // they track the filtered rows the marks draw.
   if (labelAxis) {
     vegaView.value.signal(
       LABEL_TOTALS_SIGNAL,
       categoryTotals(specObject.data.values ?? [], labelAxis),
+    );
+  }
+  if (labelLegend) {
+    vegaView.value.signal(
+      LEGEND_TOTALS_SIGNAL,
+      categoryTotals(specObject.data.values ?? [], labelLegend),
     );
   }
 
@@ -900,7 +950,9 @@ watch(() => props.selections, updateVegaChartSelections, { deep: true });
 /* Clickable category labels (axisLabelSelect.ts). Global, not scoped: Vega draws
    the labels and VegaLite.vue creates the underline imperatively, so neither
    carries this component's scope attribute. */
-.udi-clickable-labels text {
+.udi-clickable-labels text,
+.udi-clickable-legend text,
+.udi-clickable-legend-symbols path {
   cursor: pointer;
 }
 .udi-label-underline {

@@ -25,6 +25,16 @@ export function pickModeOf(event: {
   return null;
 }
 
+/** Whether an event's modifiers still hold `mode`'s key down. */
+export function holdsPickMode(
+  event: { shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean },
+  mode: PickMode,
+): boolean {
+  return mode === 'range'
+    ? !!event.shiftKey
+    : !!(event.ctrlKey || event.metaKey);
+}
+
 /** The multi-select a `KeyboardEvent.key` starts or ends. */
 export function keyPickMode(key: string): PickMode | null {
   if (key === 'Shift') return 'range';

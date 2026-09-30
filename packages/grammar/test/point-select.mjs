@@ -7,6 +7,7 @@ import * as vl from 'vega-lite';
 import * as vega from 'vega';
 import {
   fieldChannel,
+  holdsPickMode,
   keyPickMode,
   pickModeOf,
   rangePicks,
@@ -21,6 +22,11 @@ assert.equal(pickModeOf({ ctrlKey: true }), 'toggle');
 assert.equal(pickModeOf({ metaKey: true }), 'toggle');
 assert.equal(pickModeOf({ shiftKey: true, metaKey: true }), 'range');
 assert.equal(pickModeOf({}), null);
+// A gesture holds while its own key does, whatever else is pressed.
+assert.equal(holdsPickMode({ shiftKey: true, ctrlKey: true }, 'range'), true);
+assert.equal(holdsPickMode({ ctrlKey: true }, 'range'), false);
+assert.equal(holdsPickMode({ metaKey: true }, 'toggle'), true);
+assert.equal(holdsPickMode({ shiftKey: true }, 'toggle'), false);
 assert.equal(keyPickMode('Shift'), 'range');
 assert.equal(keyPickMode('Control'), 'toggle');
 assert.equal(keyPickMode('Meta'), 'toggle');

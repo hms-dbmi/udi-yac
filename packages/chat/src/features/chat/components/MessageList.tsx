@@ -5,16 +5,19 @@ import { Button } from '@/components/ui/button';
 import { useConversation, useDataFilters, useGlobal } from '@/app/UDIChatContext';
 import { useBrushFilters } from '@/features/dashboard';
 import { MessageBubble } from './MessageBubble';
+import { InlineExamplePrompts } from './InlineExamplePrompts';
 import { filterInterjections } from '../utils/filterInterjections';
 import { useMessageListScroll } from '../hooks/useMessageListScroll';
 
 interface MessageListProps {
+  apiBaseUrl: string;
   isLoading: boolean;
   showSystemPrompts?: boolean;
   onSelectSuggestion?: (suggestion: string) => void;
 }
 
 export function MessageList({
+  apiBaseUrl,
   isLoading,
   showSystemPrompts,
   onSelectSuggestion,
@@ -48,6 +51,13 @@ export function MessageList({
             normal top-to-bottom scrolling. (justify-end would clip the top.) */}
         <div className="udi:flex udi:min-h-full udi:flex-col">
           <div ref={contentRef} className="udi:mt-auto udi:flex udi:flex-col udi:gap-3 udi:py-3">
+            {onSelectSuggestion && (
+              <InlineExamplePrompts
+                apiBaseUrl={apiBaseUrl}
+                onExampleClick={onSelectSuggestion}
+                isLoading={isLoading}
+              />
+            )}
             {displayed.map((msg) => {
               const realIndex = messages.indexOf(msg);
               const showDivider = firstUnreadIndex !== null && realIndex === firstUnreadIndex;

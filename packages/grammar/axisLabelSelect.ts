@@ -1,24 +1,33 @@
-// Category-axis labels on bar charts (VegaLite.vue). A label whose category a
-// filter has emptied is grayed out. Where the chart's point selection covers
-// the axis, labels are also clickable: a click selects the category as if its
-// bar had been clicked — the only way to pick a bar too thin to hit — and
-// hovering one shows the bar's total. Pure and import-free so
-// test/axis-label-select.mjs can load this file directly.
+// Category labels (VegaLite.vue): a bar chart's category axis, and any chart's
+// color legend. A label whose category a filter has emptied is grayed out.
+// Where the chart's point selection covers the field, labels are also
+// clickable: a click selects the category as if its mark had been clicked —
+// the only way to pick a bar too thin to hit — and hovering one shows its
+// total. Pure and import-free so test/axis-label-select.mjs can load this file
+// directly.
 
 /** Mark name of the clickable labels, which Vega's SVG renderer also emits as
  *  their CSS class. */
 export const CLICKABLE_LABELS = 'udi-clickable-labels';
+
+/** Mark names of a clickable color legend's labels and symbols. */
+export const CLICKABLE_LEGEND = 'udi-clickable-legend';
+export const CLICKABLE_LEGEND_SYMBOLS = 'udi-clickable-legend-symbols';
 
 /** Signal holding each drawn category's bar total, keyed by category. A
  *  category missing from it has no rows left; the tooltip and the gray-out read
  *  it. */
 export const LABEL_TOTALS_SIGNAL = 'udi_label_totals';
 
+/** The same for the color legend's categories. */
+export const LEGEND_TOTALS_SIGNAL = 'udi_legend_totals';
+
 /** Opacity of a label whose category has no rows left. */
 export const EMPTY_LABEL_OPACITY = 0.35;
 
+/** A category guide: the bar axis (x/y) or the color legend. */
 export interface LabelAxis {
-  channel: 'x' | 'y';
+  channel: 'x' | 'y' | 'color';
   /** The category field, unescaped: what rows and selections are keyed by. */
   field: string;
   title: string;
@@ -81,6 +90,37 @@ export function findLabelAxis(
   return null;
 }
 
+/**
+ * The color legend of the spec's first layer that colors by category, or null.
+ * `fields` are the chart's point-selection fields: only a legend among them is
+ * clickable. Its measure is what the layer's marks encode (a bar's length, a
+ * slice's angle), so the tooltip total matches what is drawn.
+ */
+export function findLabelLegend(
+  spec: object,
+  fields: string[],
+): LabelAxis | null {
+  for (const layer of (spec as { layer?: VlLayer[] }).layer ?? []) {
+    const def = layer.encoding?.color;
+    if (!def?.field || (def.type !== 'nominal' && def.type !== 'ordinal'))
+      continue;
+    const field = unescapeField(def.field);
+    const length = ['x', 'y', 'theta']
+      .map((channel) => layer.encoding?.[channel])
+      .find((d) => d?.field && d.type === 'quantitative');
+    const measure = length?.field ? unescapeField(length.field) : undefined;
+    return {
+      channel: 'color',
+      field,
+      title: def.title ?? field,
+      clickable: fields.includes(field),
+      measure,
+      measureTitle: measure ? (length?.title ?? measure) : undefined,
+    };
+  }
+  return null;
+}
+
 type VgEncodeEntry = Record<string, unknown> & {
   update?: Record<string, unknown>;
 };
@@ -100,34 +140,90 @@ interface VgAxis {
  */
 export function patchLabelAxis<T extends object>(spec: T, axis: LabelAxis): T {
   const vg = spec as { axes?: VgAxis[]; signals?: object[] };
-  const key = (text: string) => JSON.stringify(text);
-  const tooltip = axis.measure
-    ? `{${key(axis.title)}: datum.value, ${key(axis.measureTitle ?? axis.measure)}: ` +
-      `format(${LABEL_TOTALS_SIGNAL}[datum.value] || 0, ',.2~f')}`
-    : `{${key(axis.title)}: datum.value}`;
   vg.signals = [
     ...(vg.signals ?? []),
     { name: LABEL_TOTALS_SIGNAL, value: {} },
   ];
   for (const vgAxis of vg.axes ?? []) {
     if (vgAxis.scale !== axis.channel || vgAxis.labels === false) continue;
-    const labels = vgAxis.encode?.labels ?? {};
-    const opacity = {
-      signal: `${LABEL_TOTALS_SIGNAL}[datum.value] == null ? ${EMPTY_LABEL_OPACITY} : 1`,
-    };
     vgAxis.encode = {
       ...vgAxis.encode,
-      labels: axis.clickable
-        ? {
-            ...labels,
-            name: CLICKABLE_LABELS,
-            interactive: true,
-            update: { ...labels.update, opacity, tooltip: { signal: tooltip } },
-          }
-        : { ...labels, update: { ...labels.update, opacity } },
+      labels: patchGuideMark(
+        vgAxis.encode?.labels,
+        axis,
+        LABEL_TOTALS_SIGNAL,
+        CLICKABLE_LABELS,
+      ),
     };
   }
   return spec;
+}
+
+interface VgLegend {
+  fill?: string;
+  stroke?: string;
+  encode?: Record<string, VgEncodeEntry | undefined>;
+}
+
+/** The legend counterpart of patchLabelAxis: gray out the color legend's
+ *  empty categories, and make its labels and symbols clickable when the legend
+ *  is. Reads LEGEND_TOTALS_SIGNAL. */
+export function patchLabelLegend<T extends object>(
+  spec: T,
+  legend: LabelAxis,
+): T {
+  const vg = spec as { legends?: VgLegend[]; signals?: object[] };
+  vg.signals = [
+    ...(vg.signals ?? []),
+    { name: LEGEND_TOTALS_SIGNAL, value: {} },
+  ];
+  for (const vgLegend of vg.legends ?? []) {
+    if (vgLegend.fill !== 'color' && vgLegend.stroke !== 'color') continue;
+    vgLegend.encode = {
+      ...vgLegend.encode,
+      labels: patchGuideMark(
+        vgLegend.encode?.labels,
+        legend,
+        LEGEND_TOTALS_SIGNAL,
+        CLICKABLE_LEGEND,
+      ),
+      symbols: patchGuideMark(
+        vgLegend.encode?.symbols,
+        legend,
+        LEGEND_TOTALS_SIGNAL,
+        CLICKABLE_LEGEND_SYMBOLS,
+      ),
+    };
+  }
+  return spec;
+}
+
+/** One guide mark's encode block (a label or legend-symbol set, whose datum
+ *  is `{value}`): dimmed when its category has no total in `totals`, and when
+ *  the guide is clickable, named, interactive and with the total's tooltip. */
+function patchGuideMark(
+  entry: VgEncodeEntry | undefined,
+  guide: LabelAxis,
+  totals: string,
+  name: string,
+): VgEncodeEntry {
+  const block = entry ?? {};
+  const opacity = {
+    signal: `${totals}[datum.value] == null ? ${EMPTY_LABEL_OPACITY} : 1`,
+  };
+  if (!guide.clickable)
+    return { ...block, update: { ...block.update, opacity } };
+  const key = (text: string) => JSON.stringify(text);
+  const tooltip = guide.measure
+    ? `{${key(guide.title)}: datum.value, ${key(guide.measureTitle ?? guide.measure)}: ` +
+      `format(${totals}[datum.value] || 0, ',.2~f')}`
+    : `{${key(guide.title)}: datum.value}`;
+  return {
+    ...block,
+    name,
+    interactive: true,
+    update: { ...block.update, opacity, tooltip: { signal: tooltip } },
+  };
 }
 
 type Cell = string | number | boolean | null | undefined;

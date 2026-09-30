@@ -1,15 +1,9 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '../stores/dataFiltersStore';
+import { FilterTarget } from './FilterTarget';
 import type { PointSelection } from 'udi-toolkit/react';
 
 interface PointFilterComponentProps {
@@ -33,7 +27,6 @@ export function PointFilterComponent({
   onCommit,
   hideClearAll = false,
 }: PointFilterComponentProps) {
-  const entityNames = useDataPackage((s) => s.entityNames);
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidPointFilter = useDataPackage((s) => s.isValidPointFilter);
@@ -147,35 +140,14 @@ export function PointFilterComponent({
 
   return (
     <div className="udi:space-y-2">
-      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm udi:flex-wrap">
-        {/* Not tweakable (a brush, or the filter bar's popover): the entity and
-            field are fixed, so they show in place but can't be changed. */}
-        <span className="udi:text-muted-foreground">Filtering</span>
-        <Select value={entity} onValueChange={handleEntityChange} disabled={!tweakable}>
-          <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {entityNames.map((e) => (
-              <SelectItem key={e} value={e}>
-                {e}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={field} onValueChange={handleFieldChange} disabled={!tweakable}>
-          <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {fieldOptions.map((f) => (
-              <SelectItem key={f} value={f}>
-                {f}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <FilterTarget
+        entity={entity}
+        field={field}
+        fieldOptions={fieldOptions}
+        tweakable={tweakable}
+        onEntityChange={handleEntityChange}
+        onFieldChange={handleFieldChange}
+      />
       {isValid ? (
         <div className="udi:space-y-2">
           {allFields.map((f) => {

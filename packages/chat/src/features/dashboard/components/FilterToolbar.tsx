@@ -59,9 +59,9 @@ export function FilterToolbar() {
         <FilterChips
           chips={chips}
           onClear={(id) => dataFiltersStore.getState().clearFilter(id)}
-          // Read-only has no chat pane, so a removed filter could never be
-          // re-expanded there — offer only Clear.
-          onRemove={readOnly ? undefined : (id) => dataFiltersStore.getState().removeFilter(id)}
+          // Read-only too: brushing the chart again brings a brush filter
+          // back, and the chat's widget restores any filter once chatting.
+          onRemove={(id) => dataFiltersStore.getState().removeFilter(id)}
           onReset={() => dataFiltersStore.getState().clearAllFilters()}
         />
       )}
@@ -82,7 +82,7 @@ export function FilterChips({
 }: {
   chips: ChipInfo[];
   onClear: (id: string) => void;
-  onRemove?: (id: string) => void;
+  onRemove: (id: string) => void;
   onReset: () => void;
 }) {
   // A chip lights while its filter's chat widget is hovered, and hovering a
@@ -126,14 +126,15 @@ export function FilterChips({
               hideClearAll
             />
             <div className="udi:flex udi:items-center udi:gap-2 udi:px-2 udi:pb-1">
-              <Button size="sm" onClick={() => onClear(chip.id)}>
-                Clear all
-              </Button>
-              {onRemove && (
-                <Button size="sm" variant="ghost" onClick={() => onRemove(chip.id)}>
-                  Remove filter
+              {/* A range has its own reset beside its bounds. */}
+              {chip.selection.type !== 'interval' && (
+                <Button size="sm" onClick={() => onClear(chip.id)}>
+                  Clear all
                 </Button>
               )}
+              <Button size="sm" variant="ghost" onClick={() => onRemove(chip.id)}>
+                Remove filter
+              </Button>
             </div>
           </PopoverContent>
         </Popover>
