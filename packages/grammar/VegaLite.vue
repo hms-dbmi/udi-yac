@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { markRaw, ref, shallowRef, onMounted, onBeforeUnmount } from 'vue';
+import {
+  computed,
+  markRaw,
+  ref,
+  shallowRef,
+  onMounted,
+  onBeforeUnmount,
+} from 'vue';
 import vegaEmbed from 'vega-embed';
 // `defineProps` is a compile-time macro in <script setup> — importing it
 // shadows the macro and trips TS 6's "Import declaration conflicts with
@@ -122,6 +129,40 @@ function buildVegaConfig(): Record<string, unknown> {
   if (markColor != null) config.mark = { color: markColor };
   return config;
 }
+
+// What the chart can do, surfaced on hover: a pill naming the gesture, and for
+// point selections a pointer and a highlight on the hovered mark (CSS below).
+// A brush's crosshair is set in the spec (UDIVis), since Vega owns the cursor
+// there and the brush rect needs its own.
+const pointSelectable = computed(
+  () => selectFields(props.pointSelect?.fields).length > 0,
+);
+const toggleKey =
+  typeof navigator !== 'undefined' &&
+  /Mac|iPhone|iPad/.test(navigator.userAgent)
+    ? '⌘'
+    : 'Ctrl';
+const hint = computed(() =>
+  props.signalKeys?.length
+    ? 'Drag to filter'
+    : pointSelectable.value
+      ? `Click to filter · Shift range · ${toggleKey} toggle`
+      : null,
+);
+// The pill takes the palette's colors. A transparent background (the default,
+// which inherits the card) would leave its text over the marks, so the CSS
+// falls back to the page's own `Canvas` then.
+const hintColors = computed(() => {
+  const palette = props.palette ?? {};
+  const background = palette.background ?? DEFAULT_PALETTE.background;
+  return {
+    '--udi-hint-fg': palette.text ?? DEFAULT_PALETTE.text,
+    '--udi-hint-border': palette.grid ?? DEFAULT_PALETTE.grid,
+    ...(background && background !== 'transparent'
+      ? { '--udi-hint-bg': background }
+      : {}),
+  };
+});
 
 const vegaContainer = ref();
 // `shallowRef`, not `ref`, and the view is marked raw on the way in.
@@ -920,13 +961,28 @@ watch(() => props.selections, updateVegaChartSelections, { deep: true });
 </script>
 
 <template>
-  <div ref="vegaContainer" class="vega-chart-container"></div>
+  <div
+    class="udi-vega-wrap"
+    :class="{ 'udi-point-selectable': pointSelectable }"
+    :style="hintColors"
+  >
+    <div ref="vegaContainer" class="vega-chart-container"></div>
+    <div v-if="hint" class="udi-interaction-hint" aria-hidden="true">
+      {{ hint }}
+    </div>
+  </div>
   <div v-if="errorMessage" class="vega-error-message">
     {{ errorMessage }}
   </div>
 </template>
 
 <style scoped>
+.udi-vega-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .vega-chart-container {
   width: 100%;
   height: 100%;
@@ -954,6 +1010,44 @@ watch(() => props.selections, updateVegaChartSelections, { deep: true });
 .udi-clickable-legend text,
 .udi-clickable-legend-symbols path {
   cursor: pointer;
+}
+/* A point-selectable chart's marks: a pointer, and a light touch on the one
+   under it. .role-mark leaves axes and legends to the rules above. */
+.udi-point-selectable .role-mark path {
+  cursor: pointer;
+  transition: filter 120ms ease-out;
+}
+.udi-point-selectable .role-mark path:hover {
+  filter: brightness(0.9) saturate(1.15);
+}
+/* The gesture a chart takes, named on hover. Sized to the x-axis title's row
+   and kept in its left corner, below the y labels and the x ticks and clear of
+   a right-hand legend. The delay keeps it from flashing while the pointer
+   crosses the dashboard; pressing hides it, so it never sits on a brush being
+   drawn. */
+.udi-interaction-hint {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 0 6px;
+  border: 1px solid var(--udi-hint-border);
+  border-radius: 9999px;
+  background: var(--udi-hint-bg, Canvas);
+  color: var(--udi-hint-fg);
+  font-size: 10px;
+  line-height: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.udi-vega-wrap:hover .udi-interaction-hint {
+  opacity: 0.9;
+  transition-delay: 400ms;
+}
+.udi-vega-wrap:active .udi-interaction-hint {
+  opacity: 0;
+  transition-delay: 0s;
 }
 .udi-label-underline {
   position: absolute;

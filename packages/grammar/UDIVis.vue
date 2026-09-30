@@ -937,6 +937,12 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     // keeping all boundary ticks visible.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const markConfig: any = { type: layer.mark, tooltip: true };
+    // A brushable chart shows a crosshair over its plot and marks, so it reads
+    // as draggable; the brush rect keeps Vega-Lite's own `move` cursor.
+    if (selectParam?.select.type === 'interval') {
+      markConfig.cursor = 'crosshair';
+      vegaSpec.view = { ...vegaSpec.view, cursor: 'crosshair' };
+    }
     // Dashed strokes distinguish annotation layers (reference lines) from data.
     if (Array.isArray(layer.strokeDash) && layer.strokeDash.length > 0) {
       markConfig.strokeDash = layer.strokeDash;
