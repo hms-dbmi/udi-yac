@@ -18,6 +18,7 @@ import {
   EMPTY_LABEL_OPACITY,
   LABEL_TOTALS_SIGNAL,
   LEGEND_TOTALS_SIGNAL,
+  PULSE_SIGNAL,
   categoryTotals,
   findLabelAxis,
   findLabelLegend,
@@ -284,5 +285,47 @@ assert.equal(
   EMPTY_LABEL_OPACITY,
 );
 assert.equal(entry(plainLegend['legend-symbol'], 'F').opacity, 1);
+
+// A gesture's pending picks: an empty category being picked pulses with
+// PULSE_SIGNAL, one not picked stays dimmed, one with rows stays at full.
+// The patch declares the picks signal, once, even with both guides patched.
+const pulsing = new vega.View(
+  vega.parse(
+    patchLabelLegend(
+      patchLabelAxis(compiled(), axis, 'udi_pick'),
+      legend,
+      'udi_pick',
+    ),
+  ),
+  { renderer: 'none' },
+);
+pulsing.signal(LABEL_TOTALS_SIGNAL, { White: 6 });
+pulsing.signal('udi_pick', { race: ['Asian', 'White'] });
+const pulseOpacity = async (phase, value) => {
+  pulsing.signal(PULSE_SIGNAL, phase);
+  await pulsing.runAsync();
+  return axisLabels(pulsing)
+    .find((m) => m.name === CLICKABLE_LABELS)
+    .items.find((item) => item.datum.value === value).opacity;
+};
+assert.equal(await pulseOpacity(0, 'Asian'), EMPTY_LABEL_OPACITY);
+assert.equal(await pulseOpacity(1, 'Asian'), 1);
+assert.equal(await pulseOpacity(1, null), EMPTY_LABEL_OPACITY);
+assert.equal(await pulseOpacity(0, 'White'), 1);
+// Outside a gesture nothing pulses.
+pulsing.signal('udi_pick', null);
+assert.equal(await pulseOpacity(1, 'Asian'), EMPTY_LABEL_OPACITY);
+// A chart whose spec already declares the picks signal keeps one copy.
+const withPick = compiled();
+withPick.signals = [
+  ...(withPick.signals ?? []),
+  { name: 'udi_pick', value: null },
+];
+assert.equal(
+  patchLabelAxis(withPick, axis, 'udi_pick').signals.filter(
+    (s) => s.name === 'udi_pick',
+  ).length,
+  1,
+);
 
 console.log('axis-label-select: ok');

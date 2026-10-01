@@ -7,7 +7,7 @@
  * chip away.
  */
 import { describe, it, expect } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import {
@@ -20,6 +20,7 @@ import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 import type { StoreApi } from 'zustand/vanilla';
 import type { DataFiltersState } from '../stores/dataFiltersStore';
 import { FilterToolbar } from './FilterToolbar';
+import { FilterControls } from './FilterControls';
 
 const pkg = {
   'udi:path': 'data',
@@ -86,11 +87,15 @@ function Harness({ children }: { children: ReactNode }) {
   return loadingPhase === 'ready' ? <>{children}</> : null;
 }
 
-function renderToolbar({ readOnly = false }: { readOnly?: boolean } = {}) {
+function renderToolbar({
+  readOnly = false,
+  children,
+}: { readOnly?: boolean; children?: ReactNode } = {}) {
   return render(
     <UDIChatProvider readOnly={readOnly}>
       <Harness>
         <FilterToolbar />
+        {children}
       </Harness>
     </UDIChatProvider>,
   );
@@ -188,6 +193,34 @@ describe('FilterToolbar', () => {
     // Escape drops the edit.
     await userEvent.type(min, '30{Escape}');
     expect(range()).toEqual({ file_size: [0, 100] });
+  });
+
+  // The chat widget renders the same filter at the same time. A label whose id
+  // matched the widget's checkbox toggled that one: a click outside the
+  // popover, which closed it.
+  it('toggles from a value label without closing, beside the chat widget', async () => {
+    const assay = {
+      dataSourceKey: 'datasets',
+      type: 'point' as const,
+      selection: { assay_type: ['CODEX', 'MIBI'] },
+    };
+    renderToolbar({
+      children: (
+        <FilterControls filterId="message-filter-0-0" selection={assay} tweakable={false} />
+      ),
+    });
+    await userEvent.click(assayChip());
+    const popover = screen.getByRole('dialog');
+    // Each label points into its own popover, not at the widget's checkbox.
+    for (const label of popover.querySelectorAll('label')) {
+      expect(popover.contains(document.getElementById(label.htmlFor))).toBe(true);
+    }
+    await userEvent.click(within(popover).getByText('AF'));
+
+    expect(screen.getByRole('dialog')).toBe(popover);
+    expect(filters.getState().dataSelections['message-filter-0-0'].selection).toEqual({
+      assay_type: ['CODEX', 'MIBI', 'AF'],
+    });
   });
 
   it('offers Remove in read-only too', async () => {

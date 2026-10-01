@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,11 @@ export function PointFilterComponent({
   const getValueLabel = useDataPackage((s) => s.getValueLabel);
   const setFilter = useDataFilters((s) => s.setFilter);
   const trackEvent = useTracker();
+  // Per instance, not per filter: the same filter renders in its chat widget
+  // and in its chip's popover at once, and a label pointing at the other
+  // copy's checkbox would toggle that one instead — a click outside the
+  // popover, which then closes.
+  const idPrefix = useId();
 
   const entity = dataSelection.dataSourceKey;
   // Chart clicks produce MULTI-field point selections (e.g. a stacked-bar
@@ -150,7 +156,7 @@ export function PointFilterComponent({
       />
       {isValid ? (
         <div className="udi:space-y-2">
-          {allFields.map((f) => {
+          {allFields.map((f, fieldIndex) => {
             const values = selectedValuesOf(f);
             return (
               <div key={f} className="udi:space-y-1.5">
@@ -159,23 +165,37 @@ export function PointFilterComponent({
                     {getFieldLabel(entity, f)}
                   </div>
                 )}
-                <div className="udi:space-y-1.5 udi:max-h-48 udi:overflow-y-auto">
-                  {optionsOf(f).map((value) => {
+                {/* Rows are 1.5rem, and the list's height a whole number of
+                    them plus half, so a list that scrolls visibly cuts its
+                    last row in two. --udi-filter-rows sets the count (the
+                    chip popover asks for more). The Clear all below the
+                    values is a row too. */}
+                <div className="udi:max-h-[calc((var(--udi-filter-rows,8)_+_0.5)_*_1.5rem)] udi:overflow-y-auto">
+                  {optionsOf(f).map((value, i) => {
                     // Display only — `value` itself still goes into the filter.
                     const label = value == null ? '<null>' : getValueLabel(String(value));
-                    const id = `${filterKey}-${f}-${value}`;
+                    // Indexes, not names: values and fields hold spaces,
+                    // which make an invalid id.
+                    const id = `${idPrefix}-${fieldIndex}-${i}`;
                     return (
                       <div
                         key={value ?? '__null__'}
-                        className="udi:flex udi:items-center udi:gap-2"
+                        className="udi:flex udi:h-6 udi:items-center udi:gap-2"
                       >
                         <Checkbox
                           id={id}
                           checked={values.includes(value)}
                           onCheckedChange={(checked) => handleToggle(f, value, !!checked)}
                         />
-                        <Label htmlFor={id} className="udi:text-xs udi:cursor-pointer">
-                          {label}
+                        {/* One line, so every row is the same height and the
+                            half-row cut lands mid-row; the full text is the
+                            title. */}
+                        <Label
+                          htmlFor={id}
+                          title={label}
+                          className="udi:min-w-0 udi:text-xs udi:cursor-pointer"
+                        >
+                          <span className="udi:truncate">{label}</span>
                         </Label>
                       </div>
                     );

@@ -22,6 +22,11 @@ export const LABEL_TOTALS_SIGNAL = 'udi_label_totals';
 /** The same for the color legend's categories. */
 export const LEGEND_TOTALS_SIGNAL = 'udi_legend_totals';
 
+/** 0–1 phase of the pulse an empty category's label shows while a multi-select
+ *  gesture is adding it: its rows aren't fetched until the gesture commits.
+ *  VegaLite.vue animates it, only while such a pick exists. */
+export const PULSE_SIGNAL = 'udi_label_pulse';
+
 /** Opacity of a label whose category has no rows left. */
 export const EMPTY_LABEL_OPACITY = 0.35;
 
@@ -138,12 +143,13 @@ interface VgAxis {
  * mark name sit outside it, so this has to happen after compilation (vega-embed's
  * `patch`). Both read LABEL_TOTALS_SIGNAL, and re-encode when it changes.
  */
-export function patchLabelAxis<T extends object>(spec: T, axis: LabelAxis): T {
-  const vg = spec as { axes?: VgAxis[]; signals?: object[] };
-  vg.signals = [
-    ...(vg.signals ?? []),
-    { name: LABEL_TOTALS_SIGNAL, value: {} },
-  ];
+export function patchLabelAxis<T extends object>(
+  spec: T,
+  axis: LabelAxis,
+  pickSignal?: string,
+): T {
+  const vg = spec as { axes?: VgAxis[]; signals?: VgSignal[] };
+  addSignals(vg, LABEL_TOTALS_SIGNAL, {}, pickSignal);
   for (const vgAxis of vg.axes ?? []) {
     if (vgAxis.scale !== axis.channel || vgAxis.labels === false) continue;
     vgAxis.encode = {
@@ -153,6 +159,7 @@ export function patchLabelAxis<T extends object>(spec: T, axis: LabelAxis): T {
         axis,
         LABEL_TOTALS_SIGNAL,
         CLICKABLE_LABELS,
+        pickSignal,
       ),
     };
   }
@@ -171,12 +178,10 @@ interface VgLegend {
 export function patchLabelLegend<T extends object>(
   spec: T,
   legend: LabelAxis,
+  pickSignal?: string,
 ): T {
-  const vg = spec as { legends?: VgLegend[]; signals?: object[] };
-  vg.signals = [
-    ...(vg.signals ?? []),
-    { name: LEGEND_TOTALS_SIGNAL, value: {} },
-  ];
+  const vg = spec as { legends?: VgLegend[]; signals?: VgSignal[] };
+  addSignals(vg, LEGEND_TOTALS_SIGNAL, {}, pickSignal);
   for (const vgLegend of vg.legends ?? []) {
     if (vgLegend.fill !== 'color' && vgLegend.stroke !== 'color') continue;
     vgLegend.encode = {
@@ -186,34 +191,71 @@ export function patchLabelLegend<T extends object>(
         legend,
         LEGEND_TOTALS_SIGNAL,
         CLICKABLE_LEGEND,
+        pickSignal,
       ),
       symbols: patchGuideMark(
         vgLegend.encode?.symbols,
         legend,
         LEGEND_TOTALS_SIGNAL,
         CLICKABLE_LEGEND_SYMBOLS,
+        pickSignal,
       ),
     };
   }
   return spec;
 }
 
+interface VgSignal {
+  name: string;
+  value?: unknown;
+}
+
+/** The guide's totals signal, plus, when a gesture's picks are given, the
+ *  pulse and the picks signal itself. UDIVis declares the picks signal only on
+ *  charts whose marks it dims, and both patches share it, so it is added only
+ *  where missing: Vega rejects a signal declared twice. */
+function addSignals(
+  vg: { signals?: VgSignal[] },
+  totals: string,
+  value: unknown,
+  pickSignal: string | undefined,
+): void {
+  const signals = [...(vg.signals ?? []), { name: totals, value }];
+  for (const name of pickSignal ? [pickSignal, PULSE_SIGNAL] : []) {
+    if (!signals.some((s) => s.name === name))
+      signals.push({ name, value: name === PULSE_SIGNAL ? 0 : null });
+  }
+  vg.signals = signals;
+}
+
 /** One guide mark's encode block (a label or legend-symbol set, whose datum
  *  is `{value}`): dimmed when its category has no total in `totals`, and when
- *  the guide is clickable, named, interactive and with the total's tooltip. */
+ *  the guide is clickable, named, interactive and with the total's tooltip.
+ *  With `pickSignal`, an empty category the current gesture is picking pulses
+ *  between dimmed and full, so it reads as pending rather than still empty. */
 function patchGuideMark(
   entry: VgEncodeEntry | undefined,
   guide: LabelAxis,
   totals: string,
   name: string,
+  pickSignal?: string,
 ): VgEncodeEntry {
   const block = entry ?? {};
+  const key = (text: string) => JSON.stringify(text);
+  const empty = `${totals}[datum.value] == null`;
+  const dimmed = String(EMPTY_LABEL_OPACITY);
+  const pending =
+    pickSignal && guide.clickable
+      ? `${pickSignal} && indexof(${pickSignal}[${key(guide.field)}] || [], ` +
+        `toString(datum.value)) >= 0`
+      : null;
   const opacity = {
-    signal: `${totals}[datum.value] == null ? ${EMPTY_LABEL_OPACITY} : 1`,
+    signal: pending
+      ? `${empty} ? (${pending} ? ${dimmed} + ${1 - EMPTY_LABEL_OPACITY} * ${PULSE_SIGNAL} : ${dimmed}) : 1`
+      : `${empty} ? ${dimmed} : 1`,
   };
   if (!guide.clickable)
     return { ...block, update: { ...block.update, opacity } };
-  const key = (text: string) => JSON.stringify(text);
   const tooltip = guide.measure
     ? `{${key(guide.title)}: datum.value, ${key(guide.measureTitle ?? guide.measure)}: ` +
       `format(${totals}[datum.value] || 0, ',.2~f')}`

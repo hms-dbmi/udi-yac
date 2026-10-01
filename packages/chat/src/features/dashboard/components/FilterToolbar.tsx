@@ -118,7 +118,7 @@ export function FilterChips({
             <span className="udi:font-mono udi:text-muted-foreground">{chip.value}</span>
             <ChevronDown aria-hidden />
           </PopoverTrigger>
-          <PopoverContent align="start" className="udi:w-80 udi:p-2">
+          <PopoverContent align="start" className="udi:w-96 udi:p-2 udi:[--udi-filter-rows:12]">
             <FilterControls
               filterId={chip.id}
               selection={chip.selection}
