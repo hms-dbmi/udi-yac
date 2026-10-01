@@ -18,7 +18,6 @@ import {
   EMPTY_LABEL_OPACITY,
   LABEL_TOTALS_SIGNAL,
   LEGEND_TOTALS_SIGNAL,
-  PULSE_SIGNAL,
   categoryTotals,
   findLabelAxis,
   findLabelLegend,
@@ -286,10 +285,10 @@ assert.equal(
 );
 assert.equal(entry(plainLegend['legend-symbol'], 'F').opacity, 1);
 
-// A gesture's pending picks: an empty category being picked pulses with
-// PULSE_SIGNAL, one not picked stays dimmed, one with rows stays at full.
-// The patch declares the picks signal, once, even with both guides patched.
-const pulsing = new vega.View(
+// A gesture's pending picks: an empty category being picked shows at full
+// color, one not picked stays dimmed, one with rows stays at full. The patch
+// declares the picks signal, once, even with both guides patched.
+const pending = new vega.View(
   vega.parse(
     patchLabelLegend(
       patchLabelAxis(compiled(), axis, 'udi_pick'),
@@ -299,22 +298,20 @@ const pulsing = new vega.View(
   ),
   { renderer: 'none' },
 );
-pulsing.signal(LABEL_TOTALS_SIGNAL, { White: 6 });
-pulsing.signal('udi_pick', { race: ['Asian', 'White'] });
-const pulseOpacity = async (phase, value) => {
-  pulsing.signal(PULSE_SIGNAL, phase);
-  await pulsing.runAsync();
-  return axisLabels(pulsing)
+pending.signal(LABEL_TOTALS_SIGNAL, { White: 6 });
+const pendingOpacity = async (picks, value) => {
+  pending.signal('udi_pick', picks);
+  await pending.runAsync();
+  return axisLabels(pending)
     .find((m) => m.name === CLICKABLE_LABELS)
     .items.find((item) => item.datum.value === value).opacity;
 };
-assert.equal(await pulseOpacity(0, 'Asian'), EMPTY_LABEL_OPACITY);
-assert.equal(await pulseOpacity(1, 'Asian'), 1);
-assert.equal(await pulseOpacity(1, null), EMPTY_LABEL_OPACITY);
-assert.equal(await pulseOpacity(0, 'White'), 1);
-// Outside a gesture nothing pulses.
-pulsing.signal('udi_pick', null);
-assert.equal(await pulseOpacity(1, 'Asian'), EMPTY_LABEL_OPACITY);
+const picks = { race: ['Asian', 'White'] };
+assert.equal(await pendingOpacity(picks, 'Asian'), 1);
+assert.equal(await pendingOpacity(picks, null), EMPTY_LABEL_OPACITY);
+assert.equal(await pendingOpacity(picks, 'White'), 1);
+// Outside a gesture an empty category stays dimmed.
+assert.equal(await pendingOpacity(null, 'Asian'), EMPTY_LABEL_OPACITY);
 // A chart whose spec already declares the picks signal keeps one copy.
 const withPick = compiled();
 withPick.signals = [

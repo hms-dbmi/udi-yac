@@ -22,11 +22,6 @@ export const LABEL_TOTALS_SIGNAL = 'udi_label_totals';
 /** The same for the color legend's categories. */
 export const LEGEND_TOTALS_SIGNAL = 'udi_legend_totals';
 
-/** 0–1 phase of the pulse an empty category's label shows while a multi-select
- *  gesture is adding it: its rows aren't fetched until the gesture commits.
- *  VegaLite.vue animates it, only while such a pick exists. */
-export const PULSE_SIGNAL = 'udi_label_pulse';
-
 /** Opacity of a label whose category has no rows left. */
 export const EMPTY_LABEL_OPACITY = 0.35;
 
@@ -211,9 +206,9 @@ interface VgSignal {
 }
 
 /** The guide's totals signal, plus, when a gesture's picks are given, the
- *  pulse and the picks signal itself. UDIVis declares the picks signal only on
- *  charts whose marks it dims, and both patches share it, so it is added only
- *  where missing: Vega rejects a signal declared twice. */
+ *  picks signal itself. UDIVis declares that one only on charts whose marks it
+ *  dims, and both patches share it, so it is added only where missing: Vega
+ *  rejects a signal declared twice. */
 function addSignals(
   vg: { signals?: VgSignal[] },
   totals: string,
@@ -221,18 +216,17 @@ function addSignals(
   pickSignal: string | undefined,
 ): void {
   const signals = [...(vg.signals ?? []), { name: totals, value }];
-  for (const name of pickSignal ? [pickSignal, PULSE_SIGNAL] : []) {
-    if (!signals.some((s) => s.name === name))
-      signals.push({ name, value: name === PULSE_SIGNAL ? 0 : null });
-  }
+  if (pickSignal && !signals.some((s) => s.name === pickSignal))
+    signals.push({ name: pickSignal, value: null });
   vg.signals = signals;
 }
 
 /** One guide mark's encode block (a label or legend-symbol set, whose datum
  *  is `{value}`): dimmed when its category has no total in `totals`, and when
  *  the guide is clickable, named, interactive and with the total's tooltip.
- *  With `pickSignal`, an empty category the current gesture is picking pulses
- *  between dimmed and full, so it reads as pending rather than still empty. */
+ *  With `pickSignal`, an empty category the current gesture is picking shows
+ *  at full color: its rows come once the gesture commits, so it reads as
+ *  pending rather than still empty. */
 function patchGuideMark(
   entry: VgEncodeEntry | undefined,
   guide: LabelAxis,
@@ -251,7 +245,7 @@ function patchGuideMark(
       : null;
   const opacity = {
     signal: pending
-      ? `${empty} ? (${pending} ? ${dimmed} + ${1 - EMPTY_LABEL_OPACITY} * ${PULSE_SIGNAL} : ${dimmed}) : 1`
+      ? `${empty} && !(${pending}) ? ${dimmed} : 1`
       : `${empty} ? ${dimmed} : 1`,
   };
   if (!guide.clickable)

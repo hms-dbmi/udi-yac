@@ -44,7 +44,6 @@ import {
   CLICKABLE_LEGEND_SYMBOLS,
   LABEL_TOTALS_SIGNAL,
   LEGEND_TOTALS_SIGNAL,
-  PULSE_SIGNAL,
   type LabelAxis,
   categoryTotals,
   findLabelAxis,
@@ -263,7 +262,7 @@ function initVegaChart() {
     ...(axis || legend
       ? {
           patch: (vgSpec) => {
-            // A point selection's gestures pulse the empty labels they pick.
+            // A point selection's gestures light the empty labels they pick.
             const picks = props.pointSelect ? PICK_SIGNAL : undefined;
             if (axis) patchLabelAxis(vgSpec, axis, picks);
             if (legend) patchLabelLegend(vgSpec, legend, picks);
@@ -507,61 +506,6 @@ function applyPickSignal(): void {
   } catch {
     // The layer maps opacity itself, so UDIVis emitted no pick signal.
   }
-  updatePulse();
-}
-
-// A gesture picking an empty category (grayed-out label, no rows fetched yet)
-// pulses that label until the gesture commits. The phase is a Vega signal the
-// labels' opacity reads (axisLabelSelect.ts), stepped here only while such a
-// pick exists, so an idle chart runs nothing. Reduced motion holds it halfway.
-const PULSE_PERIOD_MS = 1000;
-let pulseTimer: ReturnType<typeof setInterval> | null = null;
-let pulsing = false;
-let axisTotals: Record<string, number> = {};
-let legendTotals: Record<string, number> = {};
-
-function pendingEmptyPick(): boolean {
-  if (!pickMode || !pendingPicks) return false;
-  const guides: [LabelAxis | null, Record<string, number>][] = [
-    [labelAxis, axisTotals],
-    [labelLegend, legendTotals],
-  ];
-  return guides.some(
-    ([guide, totals]) =>
-      guide?.clickable &&
-      (pendingPicks?.[guide.field] ?? []).some(
-        (value) => totals[value] == null,
-      ),
-  );
-}
-
-function setPulse(phase: number): void {
-  try {
-    vegaView.value?.signal(PULSE_SIGNAL, phase);
-    void vegaView.value?.runAsync();
-  } catch {
-    // No guide on this chart, so no pulse signal.
-  }
-}
-
-function updatePulse(): void {
-  if (pendingEmptyPick() === pulsing) return;
-  pulsing = !pulsing;
-  if (pulseTimer != null) clearInterval(pulseTimer);
-  pulseTimer = null;
-  if (!pulsing) {
-    setPulse(0);
-    return;
-  }
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-    setPulse(0.5);
-    return;
-  }
-  const start = performance.now();
-  pulseTimer = setInterval(() => {
-    const turns = (performance.now() - start) / PULSE_PERIOD_MS;
-    setPulse((1 - Math.cos(2 * Math.PI * turns)) / 2);
-  }, 50);
 }
 
 // Both modes start from the current selection, so holding a key dims nothing
@@ -752,7 +696,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  if (pulseTimer != null) clearInterval(pulseTimer);
   window.removeEventListener('pointerup', commitRemoteSelections);
   window.removeEventListener('pointercancel', commitRemoteSelections);
   window.removeEventListener('mouseup', commitRemoteSelections);
@@ -838,12 +781,16 @@ async function updateVegaChart() {
   // The label tooltips and gray-out read each category's total from here, so
   // they track the filtered rows the marks draw.
   if (labelAxis) {
-    axisTotals = categoryTotals(specObject.data.values ?? [], labelAxis);
-    vegaView.value.signal(LABEL_TOTALS_SIGNAL, axisTotals);
+    vegaView.value.signal(
+      LABEL_TOTALS_SIGNAL,
+      categoryTotals(specObject.data.values ?? [], labelAxis),
+    );
   }
   if (labelLegend) {
-    legendTotals = categoryTotals(specObject.data.values ?? [], labelLegend);
-    vegaView.value.signal(LEGEND_TOTALS_SIGNAL, legendTotals);
+    vegaView.value.signal(
+      LEGEND_TOTALS_SIGNAL,
+      categoryTotals(specObject.data.values ?? [], labelLegend),
+    );
   }
 
   // Restore only the verified-active brush signals (no-external-selection case)

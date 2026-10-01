@@ -1442,6 +1442,53 @@ describe('dashboardStore — repackLayout restores per-viz initial heights', () 
   });
 });
 
+describe('dashboardStore — initial height without a listed domain', () => {
+  // A server-side package lists a column's values only below a DISTINCT cap,
+  // while a chart can draw up to MAX_DRAWN_CATEGORIES of them: the schema's
+  // count sizes the card instead, so 198 bars don't land at the default height.
+  it('sizes a categorical y from the schema cardinality', () => {
+    const store = createDashboardStore();
+    const dp = createDataPackageStore();
+    dp.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          {
+            name: 'therapy',
+            path: 'therapy.csv',
+            schema: {
+              fields: [
+                { name: 'agent', 'udi:data_type': 'nominal', 'udi:cardinality': 198 },
+                { name: 'n', 'udi:data_type': 'quantitative' },
+              ],
+            },
+          },
+        ],
+      } as unknown as DataPackage,
+      dataFieldDomains: [],
+      loadingPhase: 'ready',
+    });
+    const spec = makeSpec({
+      source: { name: 'therapy', source: 'therapy.csv' },
+      representation: {
+        mark: 'bar',
+        mapping: [
+          { encoding: 'y', field: 'agent', type: 'nominal' },
+          { encoding: 'x', field: 'n', type: 'quantitative' },
+        ],
+      },
+    });
+    store
+      .getState()
+      .addActiveVisualizationBatch(
+        [{ index: 0, toolCallIndex: 0, spec, userPrompt: '', sourceFields: null }],
+        dp,
+      );
+    const rowHeight = store.getState().gridRowHeight;
+    expect(store.getState().layout.items[0].h).toBe(Math.ceil((80 + 198 * 12) / rowHeight));
+  });
+});
+
 describe('dashboardStore — setGridCols clamping', () => {
   it('clamps out-of-range cols to MIN/MAX_GRID_COLS', () => {
     const store = createDashboardStore();

@@ -1,7 +1,17 @@
+import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import {
   useDashboard,
@@ -58,7 +68,6 @@ export function FilterToolbar() {
       ) : (
         <FilterChips
           chips={chips}
-          onClear={(id) => dataFiltersStore.getState().clearFilter(id)}
           // Read-only too: brushing the chart again brings a brush filter
           // back, and the chat's widget restores any filter once chatting.
           onRemove={(id) => dataFiltersStore.getState().removeFilter(id)}
@@ -76,15 +85,19 @@ export function FilterToolbar() {
  */
 export function FilterChips({
   chips,
-  onClear,
   onRemove,
   onReset,
 }: {
   chips: ChipInfo[];
-  onClear: (id: string) => void;
   onRemove: (id: string) => void;
   onReset: () => void;
 }) {
+  // The chip whose removal waits on the confirmation. Held here, not in its
+  // popover, which closes as the dialog opens and would unmount a dialog
+  // living inside it.
+  // Kept after the dialog closes, so its text holds through the exit animation.
+  const [removing, setRemoving] = useState<ChipInfo | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   // A chip lights while its filter's chat widget is hovered, and hovering a
   // chip lights the widget (and, for a brush, its chart).
   const hovered = useDataFilters((s) => s.hoveredFilter);
@@ -119,22 +132,21 @@ export function FilterChips({
             <ChevronDown aria-hidden />
           </PopoverTrigger>
           <PopoverContent align="start" className="udi:w-96 udi:p-2 udi:[--udi-filter-rows:12]">
-            <FilterControls
-              filterId={chip.id}
-              selection={chip.selection}
-              tweakable={false}
-              hideClearAll
-            />
+            {/* Clearing is in the controls: a category list's select-all row,
+                a range's reset. */}
+            <FilterControls filterId={chip.id} selection={chip.selection} tweakable={false} />
             <div className="udi:flex udi:items-center udi:gap-2 udi:px-2 udi:pb-1">
-              {/* A range has its own reset beside its bounds. */}
-              {chip.selection.type !== 'interval' && (
-                <Button size="sm" onClick={() => onClear(chip.id)}>
-                  Clear all
-                </Button>
-              )}
-              <Button size="sm" variant="ghost" onClick={() => onRemove(chip.id)}>
+              {/* Closes the popover, which would otherwise sit above the
+                  dialog's backdrop. */}
+              <PopoverClose
+                render={<Button size="sm" variant="ghost" />}
+                onClick={() => {
+                  setRemoving(chip);
+                  setConfirmOpen(true);
+                }}
+              >
                 Remove filter
-              </Button>
+              </PopoverClose>
             </div>
           </PopoverContent>
         </Popover>
@@ -142,6 +154,34 @@ export function FilterChips({
       <Button variant="link" size="sm" className="udi:h-7 udi:text-xs" onClick={onReset}>
         Reset
       </Button>
+      {/* Removing is hard to undo from here: the chip goes, and the filter
+          comes back only from its chat widget (or, for a chart's, by selecting
+          on the chart again). So it asks first, as Reset conversation does. */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="udi:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="udi:text-sm">Remove the {removing?.label} filter?</DialogTitle>
+            <DialogDescription>
+              It stops filtering the dashboard and its chip leaves the filter bar. To bring it back,
+              expand it in the chat
+              {removing?.origin === 'chart' ? ', or select on its chart again' : ''}.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" size="sm" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (removing) onRemove(removing.id);
+                setConfirmOpen(false);
+              }}
+            >
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -511,7 +511,7 @@ export function createDashboardStore() {
         // returns a row count sized to fit categorical Y mappings, so a
         // "donors by race" chart lands tall enough to show every category
         // instead of cramped at the default height.
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
+        const dp = dataPackageStore?.getState();
         for (const {
           index,
           toolCallIndex,
@@ -539,9 +539,7 @@ export function createDashboardStore() {
             uuid,
             template,
           });
-          const h = getDomainForField
-            ? computeInitialCardHeight(spec, getDomainForField, state.gridRowHeight)
-            : DEFAULT_CARD_H;
+          const h = dp ? computeInitialCardHeight(spec, dp, state.gridRowHeight) : DEFAULT_CARD_H;
           newItems.push({ ...newDefaultItem(key), h });
         }
         if (newItems.length === 0) return { activeVisualizations: next };
@@ -590,10 +588,8 @@ export function createDashboardStore() {
         // DEFAULT_CARD_H on restore. Re-running the category-aware
         // estimator means a "donor by organ" chart comes back tall
         // enough for all 15 organs just like its initial add did.
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
-        const h = getDomainForField
-          ? computeInitialCardHeight(viz.spec, getDomainForField, state.gridRowHeight)
-          : DEFAULT_CARD_H;
+        const dp = dataPackageStore?.getState();
+        const h = dp ? computeInitialCardHeight(viz.spec, dp, state.gridRowHeight) : DEFAULT_CARD_H;
         const item = { ...newDefaultItem(key), h };
         return {
           activeVisualizations: next,
@@ -930,12 +926,12 @@ export function createDashboardStore() {
       set((state) => {
         if (state.layout.items.length === 0) return state;
         const cols = state.gridCols;
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
+        const dp = dataPackageStore?.getState();
         const ordered = state.layout.items.map((it) => {
           const viz = state.activeVisualizations.get(it.i);
           const h =
-            viz && getDomainForField
-              ? computeInitialCardHeight(viz.spec, getDomainForField, state.gridRowHeight)
+            viz && dp
+              ? computeInitialCardHeight(viz.spec, dp, state.gridRowHeight)
               : DEFAULT_CARD_H;
           return {
             ...it,

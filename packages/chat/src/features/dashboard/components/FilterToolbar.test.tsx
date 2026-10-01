@@ -7,7 +7,7 @@
  * chip away.
  */
 import { describe, it, expect } from 'vitest';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import {
@@ -115,21 +115,39 @@ describe('FilterToolbar', () => {
     expect(screen.getByRole('checkbox', { name: 'CODEX' })).toBeChecked();
   });
 
-  it('Clear all keeps the chip, now all-inclusive', async () => {
+  it('selects every value, then none, from the select-all row; both read All', async () => {
     renderToolbar();
     await userEvent.click(assayChip());
-    await userEvent.click(screen.getByRole('button', { name: 'Clear all' }));
+    const selectAll = screen.getByRole('checkbox', { name: '2 of 3 selected' });
+    expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
+    const assay = () => filters.getState().dataSelections['message-filter-0-0'].selection;
 
-    expect(filters.getState().dataSelections['message-filter-0-0'].selection).toEqual({
-      assay_type: [],
-    });
+    // From mixed, a click checks the rest.
+    await userEvent.click(selectAll);
+    expect(assay()).toEqual({ assay_type: ['AF', 'CODEX', 'MIBI'] });
+    expect(screen.getByRole('checkbox', { name: '3 of 3 selected' })).toBeChecked();
+    expect(assayChip()).toHaveTextContent('All');
+    expect(assayChip()).not.toHaveTextContent('CODEX');
+
+    // From all, none: the filter stays, all-inclusive.
+    await userEvent.click(screen.getByRole('checkbox', { name: '3 of 3 selected' }));
+    expect(assay()).toEqual({ assay_type: [] });
+    expect(screen.getByRole('checkbox', { name: '0 of 3 selected' })).not.toBeChecked();
     expect(assayChip()).toHaveTextContent('All');
   });
 
-  it('Remove filter takes the chip away', async () => {
+  it('asks before Remove filter takes the chip away', async () => {
     renderToolbar();
     await userEvent.click(assayChip());
     await userEvent.click(screen.getByRole('button', { name: 'Remove filter' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(assayChip()).toBeTruthy();
+    expect(filters.getState().removedFilters['message-filter-0-0']).toBeUndefined();
+
+    await userEvent.click(assayChip());
+    await userEvent.click(screen.getByRole('button', { name: 'Remove filter' }));
+    expect(screen.getByText('Remove the Assay Type filter?')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
 
     expect(screen.queryByRole('button', { name: /Assay Type/ })).toBeNull();
     expect(filters.getState().removedFilters['message-filter-0-0']).toBe(true);
@@ -179,20 +197,35 @@ describe('FilterToolbar', () => {
     expect(range()).toEqual({ file_size: [20, 20] });
     expect(max).toHaveValue(20);
 
-    // Past the extent: the extent's end, shown as "max".
+    // Past the extent: the extent's end.
     await userEvent.clear(max);
     await userEvent.type(max, '500{Enter}');
     expect(range()).toEqual({ file_size: [20, 100] });
-    expect(max).toHaveValue(null);
+    expect(max).toHaveValue(100);
 
-    // Emptied, committed on blur: the extent's end too.
+    // The field spans 0–100, so bounds are whole numbers, as a stratifier's
+    // cut points are (cutPrecision).
+    await userEvent.clear(min);
+    await userEvent.type(min, '30.6{Enter}');
+    expect(range()).toEqual({ file_size: [31, 100] });
+
+    // A step (spinner or arrow key) applies at once, without Enter or blur.
+    // Browsers report one with no inputType, as fireEvent.change does here.
+    fireEvent.change(max, { target: { value: '99' } });
+    expect(range()).toEqual({ file_size: [31, 99] });
+    // Stepping past the extent stops at it, and the box says so.
+    fireEvent.change(max, { target: { value: '101' } });
+    fireEvent.change(max, { target: { value: '102' } });
+    expect(range()).toEqual({ file_size: [31, 100] });
+    expect(max).toHaveValue(100);
+
+    // Emptied, or Escape: the edit is dropped.
     await userEvent.clear(min);
     await userEvent.tab();
-    expect(range()).toEqual({ file_size: [0, 100] });
-
-    // Escape drops the edit.
-    await userEvent.type(min, '30{Escape}');
-    expect(range()).toEqual({ file_size: [0, 100] });
+    expect(range()).toEqual({ file_size: [31, 100] });
+    expect(min).toHaveValue(31);
+    await userEvent.type(min, '5{Escape}');
+    expect(range()).toEqual({ file_size: [31, 100] });
   });
 
   // The chat widget renders the same filter at the same time. A label whose id
@@ -227,6 +260,7 @@ describe('FilterToolbar', () => {
     renderToolbar({ readOnly: true });
     await userEvent.click(assayChip());
     await userEvent.click(screen.getByRole('button', { name: 'Remove filter' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
 
     expect(screen.queryByRole('button', { name: /Assay Type/ })).toBeNull();
     expect(filters.getState().removedFilters['message-filter-0-0']).toBe(true);

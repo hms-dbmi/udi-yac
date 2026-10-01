@@ -1,9 +1,10 @@
-"""The 50-category cap: charts are capped, tables are not, and a request whose
+"""The category cap: charts are capped, tables are not, and a request whose
 chart counts a field with too many values gets the full list instead of an error.
 
 Reported against pcx: "Which chemotherapy agents are given most often?" failed on
 `chemotherapy_agents` (198 values), because even the value-count table — the one
-template that answers it — was capped.
+template that answers it — was capped. The cap was 50 then; it is pinned there
+below so the reported field still exceeds it, whatever MAX_DRAWN_CATEGORIES is now.
 """
 
 import json
@@ -47,6 +48,11 @@ _SCHEMA = json.dumps(
         ],
     }
 )
+
+
+@pytest.fixture(autouse=True)
+def _cap_at_50(monkeypatch):
+    monkeypatch.setattr(vg, "MAX_DRAWN_CATEGORIES", 50)
 
 
 def _tool(suffix):

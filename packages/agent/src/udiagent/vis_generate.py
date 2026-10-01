@@ -79,7 +79,7 @@ FALLBACK_VALIDATION_FAILED = "validation_failed"
 FALLBACK_INSTANTIATE_FAILED = "instantiate_failed"
 
 #: More categories than an axis or legend can show legibly.
-MAX_DRAWN_CATEGORIES = 50
+MAX_DRAWN_CATEGORIES = 500
 #: The value-count table: every distinct value of a field with its count, sorted.
 #: What a request falls back to when the chart it asked for would draw a field
 #: with more than MAX_DRAWN_CATEGORIES values. Found by suffix, which the
@@ -623,7 +623,7 @@ def _dedupe_sources(spec):
 def _encoded_placeholders(spec_template):
     """Placeholder names that end up drawn on some visual channel.
 
-    The >50 cardinality cap below exists because a chart cannot legibly show
+    The cardinality cap below (MAX_DRAWN_CATEGORIES) exists because a chart cannot legibly show
     hundreds of categories on an axis or in a legend. That reasoning only applies
     to fields that are actually *encoded*. A placeholder used solely as a grouping
     key — e.g. grouping an event log per patient id before rolling it up to one row

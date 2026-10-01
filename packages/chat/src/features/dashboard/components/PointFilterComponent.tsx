@@ -1,7 +1,6 @@
 import { useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '../stores/dataFiltersStore';
 import { FilterTarget } from './FilterTarget';
@@ -17,8 +16,6 @@ interface PointFilterComponentProps {
    * Brush-originated filters pass a writer that targets the brush store.
    */
   onCommit?: (selection: DataSelection) => void;
-  /** Drop the inline "Clear all" — the filter bar's popover has its own. */
-  hideClearAll?: boolean;
 }
 
 export function PointFilterComponent({
@@ -26,7 +23,6 @@ export function PointFilterComponent({
   tweakable,
   filterKey,
   onCommit,
-  hideClearAll = false,
 }: PointFilterComponentProps) {
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
@@ -92,15 +88,18 @@ export function PointFilterComponent({
     });
   };
 
-  const handleClearAll = (f: string) => {
+  // The select-all row. Checking every value and checking none both take in
+  // every row, but they are two different places to start from: none, then
+  // tick the one value wanted; all, then untick the one to leave out.
+  const handleSetAll = (f: string, all: boolean) => {
     const current = (dataSelection.selection ?? {}) as PointSelection;
-    const nextSelection: PointSelection = { ...current, [f]: [] };
-    commit({ ...dataSelection, selection: nextSelection });
+    const next = all ? optionsOf(f) : [];
+    commit({ ...dataSelection, selection: { ...current, [f]: next } });
     trackEvent('filter_selection_changed', {
       entity,
       field: f,
-      action: 'clear_all',
-      selectionCount: 0,
+      action: all ? 'select_all' : 'clear_all',
+      selectionCount: next.length,
     });
   };
 
@@ -158,6 +157,10 @@ export function PointFilterComponent({
         <div className="udi:space-y-2">
           {allFields.map((f, fieldIndex) => {
             const values = selectedValuesOf(f);
+            const options = optionsOf(f);
+            const checkedCount = options.filter((o) => values.includes(o)).length;
+            const allChecked = options.length > 0 && checkedCount === options.length;
+            const allId = `${idPrefix}-${fieldIndex}-all`;
             return (
               <div key={f} className="udi:space-y-1.5">
                 {allFields.length > 1 && (
@@ -165,13 +168,29 @@ export function PointFilterComponent({
                     {getFieldLabel(entity, f)}
                   </div>
                 )}
+                {/* Select all / none, mixed while some are checked; a click
+                    from mixed checks the rest. The count says how much of
+                    the list is out of view. Outside the scroll, so it stays. */}
+                <div className="udi:flex udi:h-6 udi:items-center udi:gap-2 udi:border-b udi:border-border">
+                  <Checkbox
+                    id={allId}
+                    checked={allChecked}
+                    indeterminate={checkedCount > 0 && !allChecked}
+                    onCheckedChange={(checked) => handleSetAll(f, !!checked)}
+                  />
+                  <Label
+                    htmlFor={allId}
+                    className="udi:text-xs udi:font-normal udi:text-muted-foreground udi:cursor-pointer"
+                  >
+                    {checkedCount} of {options.length} selected
+                  </Label>
+                </div>
                 {/* Rows are 1.5rem, and the list's height a whole number of
                     them plus half, so a list that scrolls visibly cuts its
                     last row in two. --udi-filter-rows sets the count (the
-                    chip popover asks for more). The Clear all below the
-                    values is a row too. */}
+                    chip popover asks for more). */}
                 <div className="udi:max-h-[calc((var(--udi-filter-rows,8)_+_0.5)_*_1.5rem)] udi:overflow-y-auto">
-                  {optionsOf(f).map((value, i) => {
+                  {options.map((value, i) => {
                     // Display only — `value` itself still goes into the filter.
                     const label = value == null ? '<null>' : getValueLabel(String(value));
                     // Indexes, not names: values and fields hold spaces,
@@ -200,16 +219,6 @@ export function PointFilterComponent({
                       </div>
                     );
                   })}
-                  {!hideClearAll && values.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="udi:h-6 udi:text-xs"
-                      onClick={() => handleClearAll(f)}
-                    >
-                      Clear all
-                    </Button>
-                  )}
                 </div>
               </div>
             );

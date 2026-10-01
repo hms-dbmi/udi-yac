@@ -1,5 +1,10 @@
 import { useMemo } from 'react';
-import { useDashboard, useDataFilters, useDataPackageStore } from '@/app/UDIChatContext';
+import {
+  useDashboard,
+  useDataFilters,
+  useDataPackage,
+  useDataPackageStore,
+} from '@/app/UDIChatContext';
 import {
   HOST_FILTER_PREFIX,
   isChatFilterKey,
@@ -39,6 +44,7 @@ function formatSelectionFields(
   sel: DataSelection,
   labelFor: (field: string) => string,
   valueFor: (value: string) => string,
+  domainOf: (field: string) => readonly unknown[] | undefined = () => undefined,
 ): { label: string; value: string }[] {
   const results: { label: string; value: string }[] = [];
   for (const [field, raw] of Object.entries(sel.selection ?? {})) {
@@ -55,7 +61,11 @@ function formatSelectionFields(
     } else if (sel.type === 'point') {
       const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
       const displayArr = arr.map((v: unknown) => (v == null ? 'NULL' : valueFor(String(v))));
-      if (displayArr.length === 0) {
+      // Every value checked takes in every row, as none checked does, and the
+      // select-all row makes it a common state: say so rather than list them.
+      const domain = domainOf(field);
+      const everyValue = !!domain?.length && domain.every((v) => arr.includes(v));
+      if (displayArr.length === 0 || everyValue) {
         results.push({ label: labelFor(field), value: 'All' });
       } else if (displayArr.length >= 3) {
         results.push({ label: labelFor(field), value: `${displayArr[0]}, ${displayArr[1]}, ...` });
@@ -134,6 +144,9 @@ export function useActiveFilters(): ActiveFilter[] {
 export function useFilterChips(): ChipInfo[] {
   const dataPackageStore = useDataPackageStore();
   const filters = useActiveFilters();
+  // Subscribed, so a chip re-reads "All" once the domains it is checked
+  // against arrive.
+  const domains = useDataPackage((s) => s.dataFieldDomains);
 
   return useMemo<ChipInfo[]>(() => {
     const dpState = dataPackageStore.getState();
@@ -142,6 +155,12 @@ export function useFilterChips(): ChipInfo[] {
         selection,
         (field) => dpState.getFieldLabel(selection.dataSourceKey, field),
         dpState.getValueLabel,
+        (field) => {
+          const domain = domains.find(
+            (d) => d.entity === selection.dataSourceKey && d.field === field,
+          )?.domain;
+          return (domain as { values?: unknown[] } | undefined)?.values;
+        },
       ).map(({ label, value }) => ({
         id,
         origin,
@@ -152,5 +171,5 @@ export function useFilterChips(): ChipInfo[] {
         selection,
       })),
     );
-  }, [filters, dataPackageStore]);
+  }, [filters, dataPackageStore, domains]);
 }

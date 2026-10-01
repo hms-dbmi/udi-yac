@@ -1,12 +1,13 @@
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { RotateCcw } from 'lucide-react';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '../stores/dataFiltersStore';
 import { FilterTarget } from './FilterTarget';
+import { StepNumberInput } from './StepNumberInput';
+import { cutPrecision } from '../utils/grouping';
 import type { DataFieldDomain } from '@/types/dataPackage';
 import type { RangeSelection } from 'udi-toolkit/react';
 
@@ -22,56 +23,6 @@ interface IntervalFilterComponentProps {
    * instead, so the same widget can drive a visualization brush.
    */
   onCommit?: (selection: DataSelection) => void;
-}
-
-function formatNumber(n: number): string {
-  return Number.isInteger(n) ? n.toString() : n.toFixed(2);
-}
-
-/**
- * One end of the range, typed. Shows the committed value except while being
- * edited; Enter or blur commits the draft, Escape drops it.
- */
-function BoundInput({
-  value,
-  placeholder,
-  label,
-  disabled,
-  onCommit,
-}: {
-  value: string;
-  placeholder: string;
-  label: string;
-  disabled: boolean;
-  onCommit: (text: string) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const finish = (commit: boolean) => {
-    if (commit && draft !== null) onCommit(draft);
-    setDraft(null);
-  };
-  return (
-    <Input
-      type="number"
-      step="any"
-      value={draft ?? value}
-      placeholder={placeholder}
-      aria-label={label}
-      disabled={disabled}
-      // Not a credential: keep browsers and password managers from offering to fill it.
-      autoComplete="off"
-      data-1p-ignore
-      data-lpignore="true"
-      data-bwignore
-      data-form-type="other"
-      className="udi:h-7 udi:w-24 udi:px-1.5 udi:font-semibold udi:placeholder:font-semibold"
-      onChange={(e) => setDraft(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === 'Escape') finish(e.key === 'Enter');
-      }}
-      onBlur={() => finish(true)}
-    />
-  );
 }
 
 /**
@@ -180,14 +131,31 @@ export function IntervalFilterComponent({
     [commitToStore],
   );
 
+  // Bounds carry the decimals the field is read at, as a stratifier's cuts do
+  // (StratifierGroupingControl): whole numbers for age in days. A bound at the
+  // extent keeps the extent's exact value, so dragging to the end still takes
+  // in the largest value rather than stopping at its rounded neighbour.
+  const precision = rangeMinMax.hasRange
+    ? cutPrecision(rangeMinMax.min, rangeMinMax.max)
+    : cutPrecision(localRange[0], localRange[1]);
+  const snap = useCallback(
+    (v: number) => {
+      const { min, max } = rangeMinMax;
+      if (v <= min) return min;
+      if (v >= max) return max;
+      return Math.min(Math.max(Number(v.toFixed(precision)), min), max);
+    },
+    [rangeMinMax, precision],
+  );
+
   const handleRangeChange = useCallback(
     (value: number | readonly number[]) => {
-      const arr = Array.isArray(value) ? [...value] : [value];
+      const arr = (Array.isArray(value) ? [...value] : [value]).map(snap);
       if (arr.length < 2) return;
       setLocalRange(arr);
       scheduleCommit(arr);
     },
-    [scheduleCommit],
+    [scheduleCommit, snap],
   );
 
   // Fire analytics once at drag-resolve rather than on every rAF commit, so a
@@ -229,15 +197,12 @@ export function IntervalFilterComponent({
 
   const handleReset = () => commitNow([rangeMinMax.min, rangeMinMax.max], true);
 
-  // An empty bound means the extent's end. Typed values stay inside the
-  // extent, and a bound can't cross the other one.
-  const handleBoundCommit = (index: 0 | 1, text: string) => {
-    const extent = [rangeMinMax.min, rangeMinMax.max];
-    const typed = text.trim() === '' ? extent[index] : Number(text);
-    if (!Number.isFinite(typed)) return;
-    const clamped = Math.min(Math.max(typed, extent[0]), extent[1]);
+  // A typed or stepped bound stays inside the extent, and can't cross the
+  // other one.
+  const handleBoundCommit = (index: 0 | 1, typed: number) => {
+    const bound = snap(typed);
     const next = [...localRange];
-    next[index] = index === 0 ? Math.min(clamped, next[1]) : Math.max(clamped, next[0]);
+    next[index] = index === 0 ? Math.min(bound, next[1]) : Math.max(bound, next[0]);
     if (next[index] !== localRange[index]) commitNow(next, false);
   };
 
@@ -292,17 +257,16 @@ export function IntervalFilterComponent({
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
   const isValid = isValidIntervalFilter(entity, field).isValid !== 'no' && rangeMinMax.hasRange;
 
-  // At the extent a bound reads "min"/"max" (the placeholder) rather than the
-  // extent's number.
-  const minText = localRange[0] <= rangeMinMax.min ? '' : formatNumber(localRange[0]);
-  const maxText = localRange[1] >= rangeMinMax.max ? '' : formatNumber(localRange[1]);
-
   // A brush from a visualization can report a range slightly outside the data
   // extent (charts often pad the axis with a visual buffer). Clamp only the
   // slider thumb positions to the track so they never overshoot the line; the
   // stored range value is left untouched.
   const clampInRange = (v: number) => Math.min(Math.max(v, rangeMinMax.min), rangeMinMax.max);
   const thumbRange = [clampInRange(localRange[0]), clampInRange(localRange[1])];
+  // The boxes show what the filter takes in, so they clamp too. Without a real
+  // extent there is nothing to clamp to: they show the requested bounds.
+  const shownRange = rangeMinMax.hasRange ? thumbRange : localRange;
+  const boundClass = 'udi:h-7 udi:w-24 udi:px-1.5 udi:text-sm udi:font-semibold';
 
   return (
     <div className="udi:space-y-2">
@@ -315,20 +279,22 @@ export function IntervalFilterComponent({
         onFieldChange={handleFieldChange}
       />
       <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
-        <BoundInput
-          value={minText}
-          placeholder="min"
+        <StepNumberInput
+          value={shownRange[0]}
+          precision={precision}
           label={`Minimum ${field}`}
           disabled={!isValid}
-          onCommit={(text) => handleBoundCommit(0, text)}
+          className={boundClass}
+          onCommit={(value) => handleBoundCommit(0, value)}
         />
         <span className="udi:text-muted-foreground">to</span>
-        <BoundInput
-          value={maxText}
-          placeholder="max"
+        <StepNumberInput
+          value={shownRange[1]}
+          precision={precision}
           label={`Maximum ${field}`}
           disabled={!isValid}
-          onCommit={(text) => handleBoundCommit(1, text)}
+          className={boundClass}
+          onCommit={(value) => handleBoundCommit(1, value)}
         />
         <Tooltip>
           <TooltipTrigger

@@ -16,12 +16,10 @@ export function FilterControls({
   filterId,
   selection,
   tweakable,
-  hideClearAll,
 }: {
   filterId: string;
   selection: DataSelection;
   tweakable: boolean;
-  hideClearAll?: boolean;
 }) {
   const fields = Object.keys(selection.selection ?? {});
 
@@ -43,12 +41,7 @@ export function FilterControls({
 
   return (
     <div className="udi:p-2">
-      <PointFilterComponent
-        dataSelection={selection}
-        tweakable={tweakable}
-        filterKey={filterId}
-        hideClearAll={hideClearAll}
-      />
+      <PointFilterComponent dataSelection={selection} tweakable={tweakable} filterKey={filterId} />
     </div>
   );
 }
