@@ -165,15 +165,19 @@ def test_binby_requires_a_quantitative_field():
     assert not gaps, "binby over unconstrained fields:\n" + "\n".join(gaps)
 
 
-def test_cardinality_cap_applies_only_to_encoded_fields():
+def test_cardinality_cap_applies_only_to_encoded_fields(monkeypatch):
     """A grouping key the pipeline rolls up is never drawn, so it isn't capped.
 
-    The >50 cap exists because an axis or legend cannot show hundreds of
+    The cap exists because an axis or legend cannot show hundreds of
     categories. Applying it to a groupby-only key blocked per-subject aggregation
     (grouping an event log by patient id) for a readability problem that cannot
     happen. Encoded fields must still be capped.
     """
+    import udiagent.vis_generate as vg
     from udiagent.vis_generate import validate_bindings
+
+    # Pinned, so the 500-value key below exceeds it whatever the cap is now.
+    monkeypatch.setattr(vg, "MAX_DRAWN_CATEGORIES", 50)
 
     schema = {
         "entities": {

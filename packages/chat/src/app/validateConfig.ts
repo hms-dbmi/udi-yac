@@ -94,6 +94,21 @@ export function validateConfig(config: UDIChatConfig): void {
     }
   }
 
+  if (config.filters != null) {
+    if (!Array.isArray(config.filters)) {
+      errors.push('`filters` must be an array of UDIFilter objects when provided.');
+    } else {
+      config.filters.forEach((f, i) => {
+        if (typeof f?.id !== 'string' || typeof f?.dataSourceKey !== 'string') {
+          errors.push(`filters[${i}] needs a string \`id\` and \`dataSourceKey\`.`);
+        }
+        if (f?.type !== 'point' && f?.type !== 'interval') {
+          errors.push(`filters[${i}].type must be "point" or "interval".`);
+        }
+      });
+    }
+  }
+
   if (errors.length > 0) {
     throw new Error(
       `UDIChat config is invalid:\n  - ${errors.join('\n  - ')}\n\n` +

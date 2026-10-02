@@ -1,15 +1,9 @@
+import { useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
-import type { DataSelection } from '@/features/dashboard';
+import type { DataSelection } from '../stores/dataFiltersStore';
+import { FilterTarget } from './FilterTarget';
 import type { PointSelection } from 'udi-toolkit/react';
 
 interface PointFilterComponentProps {
@@ -18,7 +12,7 @@ interface PointFilterComponentProps {
   filterKey: string;
   /**
    * Optional override for where an edit is written. Defaults to
-   * `dataFiltersStore.setDataSelection(filterKey, …)` (the LLM-filter path).
+   * `dataFiltersStore.setFilter(filterKey, …)`, which routes by filter id.
    * Brush-originated filters pass a writer that targets the brush store.
    */
   onCommit?: (selection: DataSelection) => void;
@@ -30,14 +24,18 @@ export function PointFilterComponent({
   filterKey,
   onCommit,
 }: PointFilterComponentProps) {
-  const entityNames = useDataPackage((s) => s.entityNames);
   const categoricalSourceFields = useDataPackage((s) => s.categoricalSourceFields);
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidPointFilter = useDataPackage((s) => s.isValidPointFilter);
   const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
   const getValueLabel = useDataPackage((s) => s.getValueLabel);
-  const setDataSelection = useDataFilters((s) => s.setDataSelection);
+  const setFilter = useDataFilters((s) => s.setFilter);
   const trackEvent = useTracker();
+  // Per instance, not per filter: the same filter renders in its chat widget
+  // and in its chip's popover at once, and a label pointing at the other
+  // copy's checkbox would toggle that one instead — a click outside the
+  // popover, which then closes.
+  const idPrefix = useId();
 
   const entity = dataSelection.dataSourceKey;
   // Chart clicks produce MULTI-field point selections (e.g. a stacked-bar
@@ -72,7 +70,7 @@ export function PointFilterComponent({
 
   const commit = (selection: DataSelection) => {
     if (onCommit) onCommit(selection);
-    else setDataSelection(filterKey, selection);
+    else setFilter(filterKey, selection);
   };
 
   const handleToggle = (f: string, value: string, checked: boolean) => {
@@ -90,15 +88,18 @@ export function PointFilterComponent({
     });
   };
 
-  const handleClearAll = (f: string) => {
+  // The select-all row. Checking every value and checking none both take in
+  // every row, but they are two different places to start from: none, then
+  // tick the one value wanted; all, then untick the one to leave out.
+  const handleSetAll = (f: string, all: boolean) => {
     const current = (dataSelection.selection ?? {}) as PointSelection;
-    const nextSelection: PointSelection = { ...current, [f]: [] };
-    commit({ ...dataSelection, selection: nextSelection });
+    const next = all ? optionsOf(f) : [];
+    commit({ ...dataSelection, selection: { ...current, [f]: next } });
     trackEvent('filter_selection_changed', {
       entity,
       field: f,
-      action: 'clear_all',
-      selectionCount: 0,
+      action: all ? 'select_all' : 'clear_all',
+      selectionCount: next.length,
     });
   };
 
@@ -144,45 +145,22 @@ export function PointFilterComponent({
 
   return (
     <div className="udi:space-y-2">
-      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm udi:flex-wrap">
-        {tweakable ? (
-          <>
-            <span className="udi:text-muted-foreground">Filtering</span>
-            <Select value={entity} onValueChange={handleEntityChange}>
-              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {entityNames.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={field} onValueChange={handleFieldChange}>
-              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {fieldOptions.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {f}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        ) : (
-          <span className="udi:text-muted-foreground">
-            Filtering {entity} {field}
-          </span>
-        )}
-      </div>
+      <FilterTarget
+        entity={entity}
+        field={field}
+        fieldOptions={fieldOptions}
+        tweakable={tweakable}
+        onEntityChange={handleEntityChange}
+        onFieldChange={handleFieldChange}
+      />
       {isValid ? (
         <div className="udi:space-y-2">
-          {allFields.map((f) => {
+          {allFields.map((f, fieldIndex) => {
             const values = selectedValuesOf(f);
+            const options = optionsOf(f);
+            const checkedCount = options.filter((o) => values.includes(o)).length;
+            const allChecked = options.length > 0 && checkedCount === options.length;
+            const allId = `${idPrefix}-${fieldIndex}-all`;
             return (
               <div key={f} className="udi:space-y-1.5">
                 {allFields.length > 1 && (
@@ -190,37 +168,57 @@ export function PointFilterComponent({
                     {getFieldLabel(entity, f)}
                   </div>
                 )}
-                <div className="udi:space-y-1.5 udi:max-h-48 udi:overflow-y-auto">
-                  {optionsOf(f).map((value) => {
+                {/* Select all / none, mixed while some are checked; a click
+                    from mixed checks the rest. The count says how much of
+                    the list is out of view. Outside the scroll, so it stays. */}
+                <div className="udi:flex udi:h-6 udi:items-center udi:gap-2 udi:border-b udi:border-border">
+                  <Checkbox
+                    id={allId}
+                    checked={allChecked}
+                    indeterminate={checkedCount > 0 && !allChecked}
+                    onCheckedChange={(checked) => handleSetAll(f, !!checked)}
+                  />
+                  <Label
+                    htmlFor={allId}
+                    className="udi:text-xs udi:font-normal udi:text-muted-foreground udi:cursor-pointer"
+                  >
+                    {checkedCount} of {options.length} selected
+                  </Label>
+                </div>
+                {/* Rows are 1.5rem, and the list's height a whole number of
+                    them plus half, so a list that scrolls visibly cuts its
+                    last row in two. --udi-filter-rows sets the count (the
+                    chip popover asks for more). */}
+                <div className="udi:max-h-[calc((var(--udi-filter-rows,8)_+_0.5)_*_1.5rem)] udi:overflow-y-auto">
+                  {options.map((value, i) => {
                     // Display only — `value` itself still goes into the filter.
                     const label = value == null ? '<null>' : getValueLabel(String(value));
-                    const id = `${filterKey}-${f}-${value}`;
+                    // Indexes, not names: values and fields hold spaces,
+                    // which make an invalid id.
+                    const id = `${idPrefix}-${fieldIndex}-${i}`;
                     return (
                       <div
                         key={value ?? '__null__'}
-                        className="udi:flex udi:items-center udi:gap-2"
+                        className="udi:flex udi:h-6 udi:items-center udi:gap-2"
                       >
                         <Checkbox
                           id={id}
                           checked={values.includes(value)}
                           onCheckedChange={(checked) => handleToggle(f, value, !!checked)}
                         />
-                        <Label htmlFor={id} className="udi:text-xs udi:cursor-pointer">
-                          {label}
+                        {/* One line, so every row is the same height and the
+                            half-row cut lands mid-row; the full text is the
+                            title. */}
+                        <Label
+                          htmlFor={id}
+                          title={label}
+                          className="udi:min-w-0 udi:text-xs udi:cursor-pointer"
+                        >
+                          <span className="udi:truncate">{label}</span>
                         </Label>
                       </div>
                     );
                   })}
-                  {values.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="udi:h-6 udi:text-xs"
-                      onClick={() => handleClearAll(f)}
-                    >
-                      Clear all
-                    </Button>
-                  )}
                 </div>
               </div>
             );

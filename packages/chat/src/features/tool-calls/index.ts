@@ -4,8 +4,7 @@
  */
 
 export { ToolCallRenderer } from './components/ToolCallRenderer';
-export { IntervalFilterComponent } from './components/IntervalFilterComponent';
-export { PointFilterComponent } from './components/PointFilterComponent';
+export { FilterComponent } from './components/FilterComponent';
 
 export type {
   FreeTextExplainArgs,

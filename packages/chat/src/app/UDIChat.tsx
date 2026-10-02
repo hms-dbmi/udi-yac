@@ -26,7 +26,13 @@ import {
 } from '@/app/UDIChatContext';
 import { DataOverviewPanel } from '@/features/data-package';
 import { Button } from '@/components/ui/button';
-import { extractAllUdiSpecsFromMessage, type TemplateProvenance } from '@/features/dashboard';
+import {
+  extractAllUdiSpecsFromMessage,
+  HOST_FILTER_PREFIX,
+  useActiveFilters,
+  type TemplateProvenance,
+  type UDIFilter,
+} from '@/features/dashboard';
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
 import { parseSessionExport } from '@/features/dashboard/utils/dashboardSerialization';
 import { applySessionExport } from '@/features/dashboard/utils/applySessionExport';
@@ -56,6 +62,8 @@ function UDIChatInner({
   model,
   requireApiKey,
   initialSession,
+  filters,
+  onFiltersChange,
 }: UDIChatConfig) {
   const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
@@ -221,6 +229,36 @@ function UDIChatInner({
   useEffect(() => {
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
   }, [dataSelections, activeVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
+
+  // Host filters in. Held until the package is ready: before then the
+  // validators can't place a filter's fields, and its chip would never show.
+  // `?? []` so a host that stops passing `filters` deletes the ones it set.
+  useEffect(() => {
+    if (loadingPhase !== 'ready') return;
+    dataFiltersStore.getState().applyExternalFilters(filters ?? []);
+  }, [filters, loadingPhase, dataFiltersStore]);
+
+  // Every filter in place out, whenever the set or a value changes. Lives here
+  // rather than in the filter bar, which isn't always mounted.
+  const activeFilters = useActiveFilters();
+  const lastReportedFilters = useRef('[]');
+  useEffect(() => {
+    if (!onFiltersChange) return;
+    const report: UDIFilter[] = activeFilters.map(({ id, origin, selection }) => ({
+      ...selection,
+      id: origin === 'host' ? id.slice(HOST_FILTER_PREFIX.length) : id,
+      origin,
+    }));
+    const json = JSON.stringify(report);
+    if (json === lastReportedFilters.current) return;
+    lastReportedFilters.current = json;
+    try {
+      // A copy, so a host mutating what it's handed can't reach the store.
+      onFiltersChange(JSON.parse(json) as UDIFilter[]);
+    } catch (err) {
+      console.error('UDIChat: onFiltersChange threw', err);
+    }
+  }, [activeFilters, onFiltersChange]);
 
   const exitReadOnly = () => {
     // The seeded transcript would open the chat on a wall of prompts nobody

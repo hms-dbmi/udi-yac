@@ -54,7 +54,7 @@ function ScrollBar({
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="udi:relative udi:flex-1 udi:rounded-full udi:bg-border"
+        className="udi:relative udi:flex-1 udi:rounded-full udi:bg-(--udi-scrollbar-thumb) udi:hover:bg-(--udi-scrollbar-thumb-hover)"
       />
     </ScrollAreaPrimitive.Scrollbar>
   );

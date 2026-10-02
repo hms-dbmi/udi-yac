@@ -134,6 +134,8 @@ Embedding in another app? Two things worth knowing up front:
 | `palette`             | `UDIPalette?`          | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
 | `readOnly`            | `boolean \| 'locked'?` | Start with the chat collapsed to a rail and every editing control hidden. `'locked'` removes the way back out. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                      |
 | `initialSession`      | `unknown?`             | A session export to seed the dashboard and conversation with. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                                                                       |
+| `filters`             | `UDIFilter[]?`         | Filters set by the embedding page. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                                                |
+| `onFiltersChange`     | `(filters) => void`    | Called with every filter in place whenever one changes. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                           |
 | `className`           | `string?`              | CSS class for the root element                                                                                                                                                                                                                   |
 | `style`               | `CSSProperties?`       | Inline styles for the root element                                                                                                                                                                                                               |
 
@@ -196,6 +198,33 @@ To try the same thing in the standalone app without writing any code, point the 
 an exported session — `VITE_UDI_READ_ONLY=locked` and `VITE_UDI_INITIAL_SESSION=/demo-session.json`
 in `.env.local`, with the file dropped in `public/` (served from the site root). The app fetches it
 at startup and hands it to `initialSession`.
+
+### Filters from the host page
+
+A host page can set filters and follow the ones in place, so controls outside the chat can drive it
+and read the results it is narrowing to:
+
+```tsx
+const [filters, setFilters] = useState<UDIFilter[]>([
+  { id: 'cohort', dataSourceKey: 'donors', type: 'point', selection: { sex: ['Female'] } },
+]);
+
+<UDIDashboard {...config} filters={filters} onFiltersChange={(all) => console.log(all)} />;
+```
+
+- **`filters`** entries are keyed by `id`. Each shows as a chip in the Filters bar and filters every
+  chart, like a filter asked for in the chat; the user can adjust, clear or remove it there. An
+  entry is applied again only when that entry changes, so re-rendering with the same array never
+  undoes the user's edits. Dropping an entry deletes its filter. Filters are applied once the data
+  package has loaded, and survive a conversation reset.
+- **`onFiltersChange`** receives every filter in place — chat, chart and host filters, each tagged
+  with its `origin` (`'chat' | 'chart' | 'host'`). A filter whose values are empty (`[]`) has been
+  cleared: its chip stays, reading "All", and it drops nothing. Removed filters are left out.
+  Entries whose `origin` is `'chat'` or `'chart'` are ignored when passed back in `filters`, so the
+  callback's output can be fed straight back.
+
+A `point` filter's `selection` maps each field to the values to keep; an `interval` filter's maps
+each field to `[min, max]`.
 
 ### Data Source Configuration
 
@@ -322,7 +351,18 @@ See [`src/data/hubmapRemote.ts`](src/data/hubmapRemote.ts) for the canonical inl
 
 - **Interval filters**: range sliders for numeric fields
 - **Point filters**: checkbox selection for categorical fields
-- **Filter toolbar**: active filter chips with clear buttons
+- **Filters bar**: a chip per filter; each opens a popover with that filter's controls, **Clear
+  all** (keep the filter, filter nothing — the chip reads "All") and **Remove filter** (drop the
+  chip and collapse the filter's chat item; expanding that item brings it back cleared). **Reset**
+  clears every filter.
+- **Multi-select on charts**: hold a key over a chart and click bars, their axis labels, or its legend entries:
+  - **Shift** picks a range: every category from the first click to the last, in axis or legend order.
+  - **Ctrl** (**⌘** on macOS) toggles each click on its own.
+
+  Nothing is applied (or queried) until the key is released or the pointer leaves the chart, when the picks become one filter.
+  Picks are limited to the bars drawn; to add one the chart's own filter hides, clear the
+  filter first.
+
 - **Cross-entity filtering**: filters propagate across related entities via foreign keys
 - **Null value filtering** toggle
 
@@ -584,7 +624,10 @@ src/
         DashboardPanel.tsx          # Dashboard layout (counts, filters, viz grid)
         DashboardCard.tsx           # Single pinned viz (chart, toolbar, tweak, spec)
         DataCounts.tsx              # Per-entity row counts (total + filtered)
-        FilterToolbar.tsx           # Active filter chips
+        FilterToolbar.tsx           # Filter chips, each a popover of its controls
+        FilterControls.tsx          # Filter widget by type + collapsible chat item
+        IntervalFilterComponent.tsx # Range slider
+        PointFilterComponent.tsx    # Checkbox list
         DownloadButton.tsx          # CSV/manifest download dropdown
         VizTweakComponent.tsx       # Field encoding swap dropdowns
         VizTweakComponent.types.ts  # TweakableParam, LayerLike, MappingLike
@@ -612,9 +655,7 @@ src/
       components/
         ToolCallRenderer.tsx        # Dispatches tool calls to renderers
         VisualizationCard.tsx       # UDIVis preview (chat) / pinned badge
-        FilterComponent.tsx         # Filter dispatcher (interval/point)
-        IntervalFilterComponent.tsx
-        PointFilterComponent.tsx
+        FilterComponent.tsx         # A FilterData tool call's chat item
         FreeTextExplain.tsx         # Markdown explanation with structured text
         RebuffNotice.tsx            # Rejection with suggestion buttons
         ClarifyVariable.tsx         # Field disambiguation UI

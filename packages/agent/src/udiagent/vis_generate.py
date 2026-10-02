@@ -79,7 +79,7 @@ FALLBACK_VALIDATION_FAILED = "validation_failed"
 FALLBACK_INSTANTIATE_FAILED = "instantiate_failed"
 
 #: More categories than an axis or legend can show legibly.
-MAX_DRAWN_CATEGORIES = 50
+MAX_DRAWN_CATEGORIES = 500
 #: The value-count table: every distinct value of a field with its count, sorted.
 #: What a request falls back to when the chart it asked for would draw a field
 #: with more than MAX_DRAWN_CATEGORIES values. Found by suffix, which the
@@ -539,13 +539,12 @@ def _pin_stratum_colours(spec, spec_template, bindings):
     Two things go wrong without this, both invisible until you watch a reader
     re-cut a chart.
 
-    The renderer computes a missing categorical domain as the values in the order
-    the *rows* happen to mention them, and assigns colours by position in that
-    array. A survival table is ordered by time, so "first stratum" means "the
-    group holding the earliest event" — move a cut point and the array permutes
-    and every curve changes colour, for no reason the reader can see. The
-    renderer skips any mapping that already carries a domain, so naming it here
-    settles the order once.
+    The renderer computes a missing categorical domain by sorting the values
+    alphabetically, and assigns colours by position in that array. That is not
+    bucket order: `< 50`, `>= 65` and `50–65` sort in that order, a named
+    grouping's "Other" lands mid-list, and adding a bucket shifts the colour of
+    every curve that sorts after it. The renderer skips any mapping that already
+    carries a domain, so naming it here settles the order once.
 
     And the buckets of a *quantitative* grouping are ordered — `< 50` really is
     below `50-65` — so they are drawn as an ordinal ramp rather than as unrelated
@@ -624,7 +623,7 @@ def _dedupe_sources(spec):
 def _encoded_placeholders(spec_template):
     """Placeholder names that end up drawn on some visual channel.
 
-    The >50 cardinality cap below exists because a chart cannot legibly show
+    The cardinality cap below (MAX_DRAWN_CATEGORIES) exists because a chart cannot legibly show
     hundreds of categories on an axis or in a legend. That reasoning only applies
     to fields that are actually *encoded*. A placeholder used solely as a grouping
     key — e.g. grouping an event log per patient id before rolling it up to one row

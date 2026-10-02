@@ -8,6 +8,7 @@ import type {
 import type { Message, ToolCall } from '@/types/messages';
 import type { ValidStatus } from '@/types/dataPackage';
 import type { FilterDataArgs } from '@/features/tool-calls';
+import { normalizePointValues } from '@/features/data-package';
 
 export type { DataSelection, DataSelections };
 
@@ -34,17 +35,105 @@ function isAdmissible(status: ValidStatus): boolean {
   return status.isValid !== 'no';
 }
 
+/** Where a filter came from: a FilterData tool call, a chart brush/click, or
+ *  the embedding page's `filters` prop. */
+export type FilterOrigin = 'chat' | 'chart' | 'host';
+
+/**
+ * A filter as the embedding page sees it (`filters` / `onFiltersChange`). An
+ * empty value list (or `[]` range) is all-inclusive: the filter is in place but
+ * drops nothing. `origin` is reported, and ignored on input.
+ */
+export interface UDIFilter extends DataSelection {
+  id: string;
+  origin?: FilterOrigin;
+}
+
+/** `dataSelections` key prefix for filters set through the `filters` prop. */
+export const HOST_FILTER_PREFIX = 'host-filter-';
+
+/** Keys of `dataSelections` that are filters in their own right (chat or host)
+ *  rather than brush selections echoed back out of Pinia. */
+export function isChatFilterKey(key: string): boolean {
+  return key.startsWith('message-filter-') || key.startsWith(HOST_FILTER_PREFIX);
+}
+
+/**
+ * Whether a selection currently constrains anything. A point field with every
+ * value unchecked, or an interval field emptied to `[]`, is "present but
+ * empty": the filter is still in place (its chip reads "All"), it just drops
+ * nothing.
+ */
+export function selectionHasValue(selection: DataSelection): boolean {
+  const sel = selection.selection;
+  if (sel == null) return false;
+  const values = Object.values(sel);
+  if (values.length === 0) return false;
+  return !values.every((v) => v == null || (Array.isArray(v) && v.length === 0));
+}
+
+/** Every field admissible — not only the first, which is all the LLM path ever
+ *  produces but a host-supplied filter need not respect. */
+export function isValidSelection(sel: DataSelection, validate: ValidateFilterFn): boolean {
+  const entries = Object.entries(sel.selection ?? {});
+  if (entries.length === 0) return false;
+  return entries.every(([field, values]) =>
+    isAdmissible(
+      sel.type === 'interval'
+        ? validate.isValidIntervalFilter(sel.dataSourceKey, field)
+        : validate.isValidPointFilter(sel.dataSourceKey, field, values as unknown[]),
+    ),
+  );
+}
+
 export interface DataFiltersState {
   dataSelections: DataSelections;
   internalDataSelections: DataSelections;
+  /**
+   * Filters the user removed (chip gone, chat item collapsed), keyed by filter
+   * id: the chat/host key, an interval brush's viz uuid, or `${uuid}::${field}`
+   * for a point brush. A removed filter is also emptied, so it drops nothing;
+   * the flag goes as soon as the filter holds a value again (a fresh brush).
+   */
+  removedFilters: Record<string, true>;
+  /**
+   * Where each brush filter sits in the chat: how many messages the
+   * conversation held when it first got a value, keyed by brush filter id. Its
+   * widget renders just before the message at that index, so it reads in the
+   * order it happened. Kept across removal, so a restored brush stays put.
+   */
+  brushAnchors: Record<string, number>;
+  /** The filter the pointer is on, and which side it is on: its chat widget
+   *  highlights for a toolbar hover and its chip for a chat one, while the
+   *  chart a brush came from highlights for either. */
+  hoveredFilter: HoveredFilter | null;
 
   getValidDataSelections: (validate: ValidateFilterFn) => DataSelections;
   syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => void;
   syncSelectionsBackToMessages: (messages: Message[]) => void;
-  updateInternalDataSelections: (newFilters: DataSelections) => void;
-  clearFilter: (key: string) => void;
+  /** Mirror brush selections in. `messageCount` anchors each brush filter that
+   *  gets its first value here (see `brushAnchors`). */
+  updateInternalDataSelections: (newFilters: DataSelections, messageCount?: number) => void;
+  /** Make a filter all-inclusive while keeping it in place. */
+  clearFilter: (id: string) => void;
+  /** Clear a filter and hide it; `restoreFilter` brings it back, cleared. */
+  removeFilter: (id: string) => void;
+  restoreFilter: (id: string) => void;
+  /** Clear every filter, chat and brush alike. */
+  clearAllFilters: () => void;
+  /** Write an edit to a filter by id, wherever it lives. */
+  setFilter: (id: string, selection: DataSelection) => void;
+  /** Sync the `filters` prop in: upsert what changed since the last call,
+   *  delete what the host dropped. */
+  applyExternalFilters: (filters: UDIFilter[]) => void;
   resetFilters: () => void;
   setDataSelection: (key: string, selection: DataSelection) => void;
+  setHoveredFilter: (hovered: HoveredFilter | null) => void;
+}
+
+export interface HoveredFilter {
+  id: string;
+  from: 'chat' | 'toolbar';
 }
 
 // --- Pure helper functions ---
@@ -192,44 +281,55 @@ function emptySelection(sel: DataSelection): DataSelection {
   };
 }
 
+/** The removed-flag ids a brush write re-activates: a point brush's flags are
+ *  per field (`${uuid}::${field}`), an interval brush's is the uuid. */
+function brushIdsWithValue(uuid: string, sel: DataSelection): string[] {
+  if (sel.type === 'interval') return selectionHasValue(sel) ? [uuid] : [];
+  return Object.entries(sel.selection ?? {})
+    .filter(([, v]) => Array.isArray(v) && v.length > 0)
+    .map(([field]) => `${uuid}::${field}`);
+}
+
+/** State update that empties filter `id` in whichever map holds it. */
+function clearedState(
+  s: DataFiltersState,
+  id: string,
+): Pick<DataFiltersState, 'removedFilters'> & Partial<DataFiltersState> {
+  const removedFilters = { ...s.removedFilters };
+  delete removedFilters[id];
+  const chat = s.dataSelections[id];
+  if (chat) {
+    return { dataSelections: { ...s.dataSelections, [id]: emptySelection(chat) }, removedFilters };
+  }
+  // A point brush is split per field (`${uuid}::${field}`): empty only that
+  // field, so its siblings keep filtering.
+  const [uuid, field] = id.split('::');
+  const brush = s.internalDataSelections[uuid];
+  if (!brush?.selection) return { removedFilters };
+  const next: DataSelection = field
+    ? { ...brush, selection: { ...brush.selection, [field]: [] } as DataSelection['selection'] }
+    : emptySelection(brush);
+  return { internalDataSelections: { ...s.internalDataSelections, [uuid]: next }, removedFilters };
+}
+
 export function createDataFiltersStore() {
+  // Last-applied JSON per host filter key, so a re-render passing the same
+  // `filters` prop never clobbers the user's edits to those filters.
+  const appliedHostFilters = new Map<string, string>();
+
   return createStore<DataFiltersState>()((set, get) => ({
     dataSelections: {},
     internalDataSelections: {},
+    removedFilters: {},
+    brushAnchors: {},
+    hoveredFilter: null,
 
     getValidDataSelections: (validate: ValidateFilterFn): DataSelections => {
       const { dataSelections } = get();
       const valid: DataSelections = {};
       for (const [key, selection] of Object.entries(dataSelections)) {
-        if (!selection.selection || Object.keys(selection.selection).length === 0) continue;
-        if (Object.values(selection.selection).every((v) => Array.isArray(v) && v.length === 0))
-          continue;
-        if (!key.startsWith('message-filter-')) continue;
-
-        if (selection.type === 'interval') {
-          if (
-            isAdmissible(
-              validate.isValidIntervalFilter(
-                selection.dataSourceKey,
-                Object.keys(selection.selection)[0],
-              ),
-            )
-          ) {
-            valid[key] = selection;
-          }
-        } else if (selection.type === 'point') {
-          if (
-            isAdmissible(
-              validate.isValidPointFilter(
-                selection.dataSourceKey,
-                Object.keys(selection.selection)[0],
-                Object.values(selection.selection)[0],
-              ),
-            )
-          ) {
-            valid[key] = selection;
-          }
-        }
+        if (!isChatFilterKey(key) || !selectionHasValue(selection)) continue;
+        if (isValidSelection(selection, validate)) valid[key] = selection;
       }
       return valid;
     },
@@ -272,10 +372,17 @@ export function createDataFiltersStore() {
               )
             )
               continue;
+            // A filter asked for without values ("filter by radiation type")
+            // arrives as `[]`, or as `[""]` from older agents. Either way it is
+            // present with nothing picked, so its widget lists the values to
+            // choose from; a literal "" would filter to blanks and empty every
+            // chart.
             next[key] = {
               dataSourceKey: filterSpec.entity,
               type: 'point',
-              selection: { [filterSpec.field]: filterSpec.filter.pointValues },
+              selection: {
+                [filterSpec.field]: normalizePointValues(filterSpec.filter.pointValues),
+              },
             };
             changed = true;
           }
@@ -312,62 +419,140 @@ export function createDataFiltersStore() {
       }
     },
 
-    updateInternalDataSelections: (newFilters: DataSelections) => {
-      const current = get().internalDataSelections;
+    updateInternalDataSelections: (newFilters: DataSelections, messageCount?: number) => {
+      const { internalDataSelections: current, removedFilters, brushAnchors } = get();
       const next = { ...current };
+      const removed = { ...removedFilters };
+      const anchors = { ...brushAnchors };
       let changed = false;
       for (const [key, newFilter] of Object.entries(newFilters)) {
-        if (key.startsWith('message-filter-')) continue;
+        if (isChatFilterKey(key)) continue;
         if (JSON.stringify(next[key]) !== JSON.stringify(newFilter)) {
           next[key] = newFilter;
+          for (const id of brushIdsWithValue(key, newFilter)) {
+            delete removed[id];
+            if (messageCount != null && !(id in anchors)) anchors[id] = messageCount;
+          }
           changed = true;
         }
       }
-      if (changed) set({ internalDataSelections: next });
+      if (changed)
+        set({ internalDataSelections: next, removedFilters: removed, brushAnchors: anchors });
     },
 
-    clearFilter: (key: string) => {
-      const { dataSelections, internalDataSelections } = get();
+    // Clearing keeps the filter in place (its chip reads "All", its chat
+    // widget stays expanded) with nothing checked: fields kept at `[]`, the
+    // same shape the widgets' own clear-all produces. That holds for an
+    // interval brush too — `{field: []}` filters nothing in either executor,
+    // and DashboardCard remounts the chart to drop the drawn rectangle.
+    clearFilter: (id: string) => set((s) => clearedState(s, id)),
 
-      const nextData = { ...dataSelections };
-      const nextInternal = { ...internalDataSelections };
+    removeFilter: (id: string) =>
+      set((s) => {
+        const next = clearedState(s, id);
+        return { ...next, removedFilters: { ...next.removedFilters, [id]: true } };
+      }),
 
-      // Per-field clear for split point filters (`${uuid}::${field}`): drop
-      // only that field from the uuid's multi-field selection; the whole
-      // selection clears when the last field goes. Removing the key entirely
-      // (vs leaving `field: []`) also removes its chat widget — clearing a
-      // chip is an explicit "remove this filter".
-      const [base, field] = key.split('::');
-      if (field && nextInternal[base]?.selection) {
-        const remaining = { ...nextInternal[base].selection } as Record<string, unknown>;
-        delete remaining[field];
-        nextInternal[base] = {
-          ...nextInternal[base],
-          selection: Object.keys(remaining).length > 0 ? (remaining as never) : null,
+    restoreFilter: (id: string) =>
+      set((s) => {
+        if (!s.removedFilters[id]) return {};
+        const removedFilters = { ...s.removedFilters };
+        delete removedFilters[id];
+        return { removedFilters };
+      }),
+
+    clearAllFilters: () =>
+      set((s) => {
+        const empty = (sels: DataSelections) =>
+          Object.fromEntries(Object.entries(sels).map(([k, v]) => [k, emptySelection(v)]));
+        return {
+          dataSelections: empty(s.dataSelections),
+          internalDataSelections: empty(s.internalDataSelections),
         };
-        set({ dataSelections: nextData, internalDataSelections: nextInternal });
+      }),
+
+    setFilter: (id: string, selection: DataSelection) => {
+      const state = get();
+      if (id in state.dataSelections) {
+        state.setDataSelection(id, selection);
         return;
       }
-
-      // An LLM filter's widget is anchored to its chat message, so it stays
-      // rendered after a clear. Nulling the selection left it with no fields,
-      // which PointFilterComponent renders as "Error: Invalid filter." — empty
-      // the fields instead, matching the widget's own clear-all button.
-      // Brush selections have no such anchor: null removes their widget too,
-      // which is the intended "remove this filter" for a chip.
-      if (nextData[key]) nextData[key] = emptySelection(nextData[key]);
-      if (nextInternal[key]) nextInternal[key] = { ...nextInternal[key], selection: null };
-      set({ dataSelections: nextData, internalDataSelections: nextInternal });
+      // Point brushes are split per field — merge this field's edit back into
+      // the uuid's full multi-field selection so sibling fields survive.
+      const [uuid, field] = id.split('::');
+      let merged = selection;
+      if (field) {
+        const current = state.internalDataSelections[uuid];
+        merged = {
+          ...current,
+          ...selection,
+          selection: {
+            ...(current?.selection ?? {}),
+            ...(selection.selection ?? {}),
+          } as DataSelection['selection'],
+        };
+      }
+      state.updateInternalDataSelections({ [uuid]: merged });
     },
 
+    applyExternalFilters: (filters: UDIFilter[]) => {
+      const { dataSelections, removedFilters } = get();
+      const next = { ...dataSelections };
+      const removed = { ...removedFilters };
+      const seen = new Set<string>();
+      let changed = false;
+      for (const f of filters) {
+        // A host echoing `onFiltersChange` straight back would otherwise copy
+        // every chat and chart filter in as a host filter.
+        if (f.origin === 'chat' || f.origin === 'chart') continue;
+        const key = HOST_FILTER_PREFIX + f.id;
+        seen.add(key);
+        const selection: DataSelection = {
+          dataSourceKey: f.dataSourceKey,
+          type: f.type,
+          selection: f.selection,
+        };
+        const json = JSON.stringify(selection);
+        if (appliedHostFilters.get(key) === json) continue;
+        appliedHostFilters.set(key, json);
+        next[key] = selection;
+        delete removed[key];
+        changed = true;
+      }
+      for (const key of [...appliedHostFilters.keys()]) {
+        if (seen.has(key)) continue;
+        appliedHostFilters.delete(key);
+        delete next[key];
+        delete removed[key];
+        changed = true;
+      }
+      if (changed) set({ dataSelections: next, removedFilters: removed });
+    },
+
+    // Host filters belong to the embedding page, not the conversation, so a
+    // reset or conversation switch keeps them.
     resetFilters: () => {
-      set({ dataSelections: {}, internalDataSelections: {} });
+      set((s) => ({
+        dataSelections: Object.fromEntries(
+          Object.entries(s.dataSelections).filter(([k]) => k.startsWith(HOST_FILTER_PREFIX)),
+        ),
+        internalDataSelections: {},
+        removedFilters: {},
+        brushAnchors: {},
+      }));
     },
+
+    setHoveredFilter: (hoveredFilter) => set({ hoveredFilter }),
 
     setDataSelection: (key: string, selection: DataSelection) => {
-      set((state) => ({
-        dataSelections: { ...state.dataSelections, [key]: selection },
-      }));
+      set((state) => {
+        if (!selectionHasValue(selection) || !state.removedFilters[key]) {
+          return { dataSelections: { ...state.dataSelections, [key]: selection } };
+        }
+        const removedFilters = { ...state.removedFilters };
+        delete removedFilters[key];
+        return { dataSelections: { ...state.dataSelections, [key]: selection }, removedFilters };
+      });
     },
   }));
 }

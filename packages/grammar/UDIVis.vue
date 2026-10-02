@@ -35,7 +35,9 @@ import type { UDIPalette } from './Palette';
 import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
+import { orderCategories } from './domainCompute';
 import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
+import { PICK_SIGNAL, pickDimTest, selectFields } from './pointSelect';
 const dataSourcesStore = useDataSourcesStore();
 // Declared up here rather than beside the template: performDataTransformation
 // reads it to decide whether allData is needed, and a later declaration would
@@ -232,7 +234,6 @@ function buildVisualization(): void {
   // setDefaultDomains during a previous subset state) don't persist
   // when the filter is cleared.
   parsedSpec.value = parseSpecification(JSON.parse(JSON.stringify(props.spec)));
-
   const backend = getQueryBackend();
   if (backend.kind === 'remote') {
     const epoch = ++remoteQueryEpoch;
@@ -247,6 +248,7 @@ function buildVisualization(): void {
         // viz's own brush that lags the store by a render — the store is
         // the source of truth for brush state.
         selections: { ...props.selections, ...dataSourcesStore.dataSelections },
+        displayDataOnly: !needsAllData(parsedSpec.value),
       })
       .then((result) => {
         if (epoch !== remoteQueryEpoch) return; // stale response
@@ -464,17 +466,26 @@ function setDefaultDomains(
         }
       } else {
         // TODO, check if row categorical fields work here.
-        if (catDomainCache.has(field)) {
-          // @ts-expect-error: Again...
-          mapping.domain = catDomainCache.get(field);
-        } else {
-          // @ts-expect-error: Again...
-          const values = data.map((d) => d[field]);
-          const uniqueValues = Array.from(new Set(values));
-          // @ts-expect-error: Again...
-          mapping.domain = uniqueValues;
-          catDomainCache.set(field, uniqueValues);
+        // Ordered by value (or by total, for `sort: '-x' | '-y'`) rather than
+        // by which row mentions a value first: row order changes with every
+        // filter, and the domain order is both the axis order and the color
+        // assignment.
+        // @ts-expect-error: checking sort
+        const sort: string | undefined = mapping.sort;
+        const totalField =
+          sort === '-x' || sort === '-y'
+            ? (mappingList as Array<{ encoding: string; field?: string }>).find(
+                (m) => m.encoding === sort.slice(1),
+              )?.field
+            : undefined;
+        const cacheKey = `${field}|${totalField ?? ''}`;
+        let domain = catDomainCache.get(cacheKey);
+        if (!domain) {
+          domain = orderCategories(data, field, totalField);
+          catDomainCache.set(cacheKey, domain);
         }
+        // @ts-expect-error: mapping.domain assignment
+        mapping.domain = domain;
       }
     }
   }
@@ -647,6 +658,19 @@ async function loadMoreRows(): Promise<void> {
   }
 }
 
+// Whether to run the second, unfiltered pipeline pass (allData / extent).
+// Charts need it even when the pipeline ends in a rollup, which the store would
+// otherwise skip: setDefaultDomains builds every scale domain from it, so a
+// filter can't drop categories off the axis or shift their colors.
+// TableComponent takes `data` only — it never reads allData, so for a row/table
+// spec that pass is another full materialization of the source (259ms for
+// HuBMAP's 9474 x 258 `datasets`) computed and thrown away. Skip it, unless a
+// default slot is present: that branch renders instead of TableComponent and
+// does expose allData to the consumer.
+function needsAllData(spec: ParsedUDIGrammar): boolean {
+  return isVegaLiteCompatible(spec) || !!slots.default;
+}
+
 function performDataTransformation(spec: ParsedUDIGrammar) {
   try {
     transformError.value = null;
@@ -654,15 +678,7 @@ function performDataTransformation(spec: ParsedUDIGrammar) {
     const dataObjects = dataSourcesStore.getDataObject(
       spec.source.map((x) => x.name),
       spec.transformation,
-      // TableComponent takes `data` only — it never reads allData, so for a
-      // row/table spec the second, unfiltered pipeline pass is another full
-      // materialization of the source (259ms for HuBMAP's 9474 x 258
-      // `datasets`) computed and thrown away. Skip it, unless a default slot
-      // is present: that branch renders instead of TableComponent and does
-      // expose allData to the consumer.
-      isVegaLiteCompatible(spec) || slots.default
-        ? undefined
-        : { displayDataOnly: true },
+      { displayDataOnly: !needsAllData(spec) },
     );
     // Keep previous data visible while loading/null — avoids "Loading..." flash
     if (dataObjects == null) return;
@@ -897,6 +913,16 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         }
       } else {
         pointSelect.value = layer.select;
+        // Dim the marks a Shift gesture hasn't picked. The signal is null
+        // outside a gesture, and the condition has no default branch, so
+        // the mark keeps its own opacity then.
+        const pickFields = selectFields(layer.select.fields);
+        if (pickFields.length > 0 && vegaEncoding.opacity == null) {
+          vegaEncoding.opacity = {
+            condition: { test: pickDimTest(pickFields), value: 0.25 },
+          };
+          vegaSpec.params = [{ name: PICK_SIGNAL, value: null }];
+        }
       }
     }
     // For rect histograms (x/x2 or y/y2 pair), inset both anchors by a pixel
@@ -911,6 +937,12 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     // keeping all boundary ticks visible.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const markConfig: any = { type: layer.mark, tooltip: true };
+    // A brushable chart shows a crosshair over its plot and marks, so it reads
+    // as draggable; the brush rect keeps Vega-Lite's own `move` cursor.
+    if (selectParam?.select.type === 'interval') {
+      markConfig.cursor = 'crosshair';
+      vegaSpec.view = { ...vegaSpec.view, cursor: 'crosshair' };
+    }
     // Dashed strokes distinguish annotation layers (reference lines) from data.
     if (Array.isArray(layer.strokeDash) && layer.strokeDash.length > 0) {
       markConfig.strokeDash = layer.strokeDash;

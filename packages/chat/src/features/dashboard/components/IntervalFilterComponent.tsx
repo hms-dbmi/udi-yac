@@ -1,17 +1,13 @@
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { Slider } from '@/components/ui/slider';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { RotateCcw } from 'lucide-react';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
-import type { DataSelection } from '@/features/dashboard';
+import type { DataSelection } from '../stores/dataFiltersStore';
+import { FilterTarget } from './FilterTarget';
+import { StepNumberInput } from './StepNumberInput';
+import { cutPrecision } from '../utils/grouping';
 import type { DataFieldDomain } from '@/types/dataPackage';
 import type { RangeSelection } from 'udi-toolkit/react';
 
@@ -22,15 +18,11 @@ interface IntervalFilterComponentProps {
   filterKey: string;
   /**
    * Optional override for where an edit is written. Defaults to
-   * `dataFiltersStore.setDataSelection(filterKey, …)` (the LLM-filter path).
+   * `dataFiltersStore.setFilter(filterKey, …)`, which routes by filter id.
    * Brush-originated filters pass a writer that targets the brush store
    * instead, so the same widget can drive a visualization brush.
    */
   onCommit?: (selection: DataSelection) => void;
-}
-
-function formatNumber(n: number): string {
-  return Number.isInteger(n) ? n.toString() : n.toFixed(2);
 }
 
 /**
@@ -62,11 +54,10 @@ export function IntervalFilterComponent({
   filterKey,
   onCommit,
 }: IntervalFilterComponentProps) {
-  const entityNames = useDataPackage((s) => s.entityNames);
   const quantitativeSourceFields = useDataPackage((s) => s.quantitativeSourceFields);
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidIntervalFilter = useDataPackage((s) => s.isValidIntervalFilter);
-  const setDataSelection = useDataFilters((s) => s.setDataSelection);
+  const setFilter = useDataFilters((s) => s.setFilter);
   const trackEvent = useTracker();
 
   const entity = dataSelection.dataSourceKey;
@@ -109,9 +100,9 @@ export function IntervalFilterComponent({
   const commit = useCallback(
     (selection: DataSelection) => {
       if (onCommit) onCommit(selection);
-      else setDataSelection(filterKey, selection);
+      else setFilter(filterKey, selection);
     },
-    [onCommit, setDataSelection, filterKey],
+    [onCommit, setFilter, filterKey],
   );
 
   const commitToStore = useCallback(
@@ -140,14 +131,31 @@ export function IntervalFilterComponent({
     [commitToStore],
   );
 
+  // Bounds carry the decimals the field is read at, as a stratifier's cuts do
+  // (StratifierGroupingControl): whole numbers for age in days. A bound at the
+  // extent keeps the extent's exact value, so dragging to the end still takes
+  // in the largest value rather than stopping at its rounded neighbour.
+  const precision = rangeMinMax.hasRange
+    ? cutPrecision(rangeMinMax.min, rangeMinMax.max)
+    : cutPrecision(localRange[0], localRange[1]);
+  const snap = useCallback(
+    (v: number) => {
+      const { min, max } = rangeMinMax;
+      if (v <= min) return min;
+      if (v >= max) return max;
+      return Math.min(Math.max(Number(v.toFixed(precision)), min), max);
+    },
+    [rangeMinMax, precision],
+  );
+
   const handleRangeChange = useCallback(
     (value: number | readonly number[]) => {
-      const arr = Array.isArray(value) ? [...value] : [value];
+      const arr = (Array.isArray(value) ? [...value] : [value]).map(snap);
       if (arr.length < 2) return;
       setLocalRange(arr);
       scheduleCommit(arr);
     },
-    [scheduleCommit],
+    [scheduleCommit, snap],
   );
 
   // Fire analytics once at drag-resolve rather than on every rAF commit, so a
@@ -167,22 +175,36 @@ export function IntervalFilterComponent({
     [trackEvent, entity, field, rangeMinMax],
   );
 
-  const handleReset = useCallback(() => {
-    const reset = [rangeMinMax.min, rangeMinMax.max];
-    setLocalRange(reset);
-    if (commitFrameRef.current != null) {
-      cancelAnimationFrame(commitFrameRef.current);
-      commitFrameRef.current = null;
-    }
-    pendingRangeRef.current = null;
-    commitToStore(reset);
-    trackEvent('filter_range_changed', {
-      entity,
-      field,
-      isReset: true,
-      isFullRange: true,
-    });
-  }, [commitToStore, rangeMinMax, trackEvent, entity, field]);
+  // Reset and typed bounds commit at once, dropping any drag frame in flight.
+  const commitNow = useCallback(
+    (range: number[], isReset: boolean) => {
+      setLocalRange(range);
+      if (commitFrameRef.current != null) {
+        cancelAnimationFrame(commitFrameRef.current);
+        commitFrameRef.current = null;
+      }
+      pendingRangeRef.current = null;
+      commitToStore(range);
+      trackEvent('filter_range_changed', {
+        entity,
+        field,
+        isReset,
+        isFullRange: range[0] <= rangeMinMax.min && range[1] >= rangeMinMax.max,
+      });
+    },
+    [commitToStore, rangeMinMax, trackEvent, entity, field],
+  );
+
+  const handleReset = () => commitNow([rangeMinMax.min, rangeMinMax.max], true);
+
+  // A typed or stepped bound stays inside the extent, and can't cross the
+  // other one.
+  const handleBoundCommit = (index: 0 | 1, typed: number) => {
+    const bound = snap(typed);
+    const next = [...localRange];
+    next[index] = index === 0 ? Math.min(bound, next[1]) : Math.max(bound, next[0]);
+    if (next[index] !== localRange[index]) commitNow(next, false);
+  };
 
   // Base UI's Select fires `onValueChange` on every item press, including a
   // press on the already-selected item — a common way to dismiss the menu.
@@ -235,57 +257,45 @@ export function IntervalFilterComponent({
   const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
   const isValid = isValidIntervalFilter(entity, field).isValid !== 'no' && rangeMinMax.hasRange;
 
-  const minText = localRange[0] <= rangeMinMax.min ? 'min' : formatNumber(localRange[0]);
-  const maxText = localRange[1] >= rangeMinMax.max ? 'max' : formatNumber(localRange[1]);
-
   // A brush from a visualization can report a range slightly outside the data
   // extent (charts often pad the axis with a visual buffer). Clamp only the
   // slider thumb positions to the track so they never overshoot the line; the
   // stored range value is left untouched.
   const clampInRange = (v: number) => Math.min(Math.max(v, rangeMinMax.min), rangeMinMax.max);
   const thumbRange = [clampInRange(localRange[0]), clampInRange(localRange[1])];
+  // The boxes show what the filter takes in, so they clamp too. Without a real
+  // extent there is nothing to clamp to: they show the requested bounds.
+  const shownRange = rangeMinMax.hasRange ? thumbRange : localRange;
+  const boundClass = 'udi:h-7 udi:w-24 udi:px-1.5 udi:text-sm udi:font-semibold';
 
   return (
     <div className="udi:space-y-2">
+      <FilterTarget
+        entity={entity}
+        field={field}
+        fieldOptions={fieldOptions}
+        tweakable={tweakable}
+        onEntityChange={handleEntityChange}
+        onFieldChange={handleFieldChange}
+      />
       <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
-        {tweakable ? (
-          <>
-            <span className="udi:text-muted-foreground">Filtering</span>
-            <Select value={entity} onValueChange={handleEntityChange}>
-              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {entityNames.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={field} onValueChange={handleFieldChange}>
-              <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[80px] udi:text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {fieldOptions.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {f}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        ) : (
-          <span className="udi:text-muted-foreground">
-            Filtering {entity} {field}
-          </span>
-        )}
-      </div>
-      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
-        <span className="udi:font-semibold">{minText}</span>
+        <StepNumberInput
+          value={shownRange[0]}
+          precision={precision}
+          label={`Minimum ${field}`}
+          disabled={!isValid}
+          className={boundClass}
+          onCommit={(value) => handleBoundCommit(0, value)}
+        />
         <span className="udi:text-muted-foreground">to</span>
-        <span className="udi:font-semibold">{maxText}</span>
+        <StepNumberInput
+          value={shownRange[1]}
+          precision={precision}
+          label={`Maximum ${field}`}
+          disabled={!isValid}
+          className={boundClass}
+          onCommit={(value) => handleBoundCommit(1, value)}
+        />
         <Tooltip>
           <TooltipTrigger
             render={
