@@ -142,9 +142,10 @@ Each connector exposes `execute(sql, params) -> list[dict]` plus a `dialect`
 **exactly the shape the browser used to compute from CSVs** — so the
 orchestrator and chat need no changes. Per table: `DESCRIBE` + one stats pass
 (`COUNT(*)`, per-column cardinality, numeric min/max) + one `DISTINCT` query
-per low-cardinality categorical (≤ 80 distinct, matching the chat's
-`removeLongDomains`). Cardinality is exact below 100k rows, approximate
-(`APPROX_COUNT_DISTINCT`) above. `MetadataCache` wraps it with a TTL.
+per categorical with at most 500 distinct values (`DEFAULT_DISTINCT_CAP`, as
+many as a chart can draw, so a filter on one can list them all). Cardinality
+is exact below 100k rows, approximate (`APPROX_COUNT_DISTINCT`) above.
+`MetadataCache` wraps it with a TTL.
 
 Foreign keys and primary keys are **merged in from `entity_schemas`**, because
 the database stores no FK constraints — this is what makes cross-entity

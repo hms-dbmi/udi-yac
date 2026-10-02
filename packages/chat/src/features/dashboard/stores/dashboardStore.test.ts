@@ -1486,6 +1486,9 @@ describe('dashboardStore — initial height without a listed domain', () => {
       );
     const rowHeight = store.getState().gridRowHeight;
     expect(store.getState().layout.items[0].h).toBe(Math.ceil((80 + 198 * 12) / rowHeight));
+    // Far taller than a usual card, so it takes the whole row (widenTallItems)
+    // and the next chart added doesn't land beside it.
+    expect(store.getState().layout.items[0].w).toBe(store.getState().gridCols);
   });
 });
 

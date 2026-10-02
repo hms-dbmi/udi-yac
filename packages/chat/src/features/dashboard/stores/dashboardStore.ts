@@ -28,6 +28,7 @@ import {
   packAllRowMajor,
   packRowMajor,
   repackRowMajor,
+  widenTallItems,
 } from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
 
@@ -551,7 +552,9 @@ export function createDashboardStore() {
         const existingOrdered = [...state.layout.items]
           .filter((it) => !newKeys.has(it.i))
           .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
-        const combined = [...newItems, ...existingOrdered];
+        // A new chart far taller than the cards it would join (a 198-category
+        // bar) gets a row of its own rather than stretching theirs.
+        const combined = widenTallItems([...newItems, ...existingOrdered], state.gridCols, newKeys);
         return {
           activeVisualizations: next,
           layout: { items: packAllRowMajor(combined, state.gridCols) },
@@ -941,7 +944,10 @@ export function createDashboardStore() {
             minH: MIN_CARD_H,
           };
         });
-        return { layout: { items: packAllRowMajor(ordered, cols) } };
+        // Every card is re-sized here as if new, so any of them can need a row
+        // of its own.
+        const widened = widenTallItems(ordered, cols, new Set(ordered.map((it) => it.i)));
+        return { layout: { items: packAllRowMajor(widened, cols) } };
       });
     },
 
