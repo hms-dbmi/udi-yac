@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UDI Chat</title>
+    <!-- The library ships without Tailwind's preflight (it would reset an
+         embedding host's page), so this standalone page clears the browser's
+         default 8px body margin itself. Left in, the full-height app overflows
+         the viewport by 16px and the whole page scrolls. -->
+    <style>
+      body {
+        margin: 0;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

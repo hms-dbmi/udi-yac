@@ -219,3 +219,21 @@ describe('FilterComponent — filters the data can satisfy', () => {
     expect(screen.getByRole('checkbox', { name: 'CODEX' })).toBeTruthy();
   });
 });
+
+describe('FilterComponent — collapsing is removing', () => {
+  it('collapses when the filter is removed, and expanding restores it cleared', () => {
+    renderFilter(filterMessage('datasets', 'assay_type', ['CODEX']));
+    const header = screen.getByRole('button', { name: /Filter: Assay Type/ });
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(header);
+    expect(header).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('checkbox', { name: 'CODEX' })).toBeNull();
+    expect(filters.getState().removedFilters['message-filter-0-0']).toBe(true);
+
+    fireEvent.click(header);
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('checkbox', { name: 'CODEX' })).not.toBeChecked();
+    expect(filters.getState().removedFilters['message-filter-0-0']).toBeUndefined();
+  });
+});

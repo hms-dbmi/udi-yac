@@ -1,5 +1,9 @@
 import { useMemo } from 'react';
-import type { DataSelection, DataSelections } from '../stores/dataFiltersStore';
+import {
+  selectionHasValue,
+  type DataSelection,
+  type DataSelections,
+} from '../stores/dataFiltersStore';
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import { useDataFilters, useDashboard } from '@/app/UDIChatContext';
 
@@ -22,18 +26,11 @@ export interface BrushFilter {
 }
 
 /**
- * Whether a brush selection currently constrains anything. An interval brush
- * always has a range; a point brush with every value unchecked is "present but
- * empty" — its widget should persist for re-selection, but it shouldn't render
- * a (valueless) toolbar chip.
+ * Whether a brush selection currently constrains anything. A point brush with
+ * every value unchecked, or a cleared interval brush (`{field: []}`), is
+ * "present but empty": its widget and chip persist, it just filters nothing.
  */
-export function brushHasValue(selection: DataSelection): boolean {
-  const sel = selection.selection;
-  if (sel == null) return false;
-  const values = Object.values(sel);
-  if (values.length === 0) return false;
-  return !values.every((v) => v == null || (Array.isArray(v) && v.length === 0));
-}
+export const brushHasValue = selectionHasValue;
 
 /**
  * Pure derivation of brush filters from the store's `internalDataSelections`

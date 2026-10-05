@@ -560,7 +560,9 @@ class Orchestrator:
         filter_obj = {
             "filterType": tool_args["filterType"],
             "intervalRange": tool_args.get("intervalRange", {"min": 0, "max": 0}),
-            "pointValues": tool_args.get("pointValues", [""]),
+            # Omitted values leave the filter in place with nothing picked, so
+            # the chat widget lists the field's values for the user to choose.
+            "pointValues": tool_args.get("pointValues", []),
         }
         return {
             "name": "FilterData",

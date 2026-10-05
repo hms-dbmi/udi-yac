@@ -1,11 +1,28 @@
-import { X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useDashboard, useDashboardStore, useDataFilters, useGlobal } from '@/app/UDIChatContext';
+import {
+  useDashboard,
+  useDashboardStore,
+  useDataFilters,
+  useDataFiltersStore,
+  useGlobal,
+} from '@/app/UDIChatContext';
+import { cn } from '@/lib/utils';
 import { useFilterChips, type ChipInfo } from '../hooks/useFilterChips';
+import { FilterControls } from './FilterControls';
 
 /**
  * The dashboard's Filters section: a chip per active filter. With none, a
@@ -15,10 +32,10 @@ import { useFilterChips, type ChipInfo } from '../hooks/useFilterChips';
  */
 export function FilterToolbar() {
   const dashboardStore = useDashboardStore();
+  const dataFiltersStore = useDataFiltersStore();
   const filterAllNullValues = useDashboard((s) => s.filterAllNullValues);
   const debugMode = useGlobal((s) => s.debugMode);
   const readOnly = useGlobal((s) => s.readOnly);
-  const clearFilter = useDataFilters((s) => s.clearFilter);
   const chips = useFilterChips();
 
   if (chips.length === 0 && readOnly && !debugMode) return null;
@@ -49,51 +66,122 @@ export function FilterToolbar() {
           Ask in the chat or interact with visualizations to add data filters.
         </p>
       ) : (
-        <FilterChips chips={chips} onClear={clearFilter} />
+        <FilterChips
+          chips={chips}
+          // Read-only too: brushing the chart again brings a brush filter
+          // back, and the chat's widget restores any filter once chatting.
+          onRemove={(id) => dataFiltersStore.getState().removeFilter(id)}
+          onReset={() => dataFiltersStore.getState().clearAllFilters()}
+        />
       )}
     </div>
   );
 }
 
+/**
+ * A chip per filter field, each the trigger for a popover holding that
+ * filter's controls. Entity and field are fixed there — changing what a filter
+ * is about happens in the chat, where it came from.
+ */
 export function FilterChips({
   chips,
-  onClear,
+  onRemove,
+  onReset,
 }: {
   chips: ChipInfo[];
-  onClear: (id: string) => void;
+  onRemove: (id: string) => void;
+  onReset: () => void;
 }) {
+  // The chip whose removal waits on the confirmation. Held here, not in its
+  // popover, which closes as the dialog opens and would unmount a dialog
+  // living inside it.
+  // Kept after the dialog closes, so its text holds through the exit animation.
+  const [removing, setRemoving] = useState<ChipInfo | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // A chip lights while its filter's chat widget is hovered, and hovering a
+  // chip lights the widget (and, for a brush, its chart).
+  const hovered = useDataFilters((s) => s.hoveredFilter);
+  const dataFiltersStore = useDataFiltersStore();
+  const hover = (id: string | null) =>
+    dataFiltersStore.getState().setHoveredFilter(id ? { id, from: 'toolbar' } : null);
   return (
     <div className="udi:flex udi:items-center udi:gap-1.5 udi:flex-wrap">
       {chips.map((chip) => (
-        <div key={`${chip.id}-${chip.label}`} className="udi:group udi:relative udi:inline-block">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  // Named for its chip — "Clear filter" alone doesn't say which of
-                  // several — and shown on keyboard focus, not only on hover.
-                  aria-label={`Clear filter ${chip.label}: ${chip.value}`}
-                  className="udi:absolute udi:-top-1.5 udi:-right-1.5 udi:z-10 udi:h-4 udi:w-4 udi:rounded-full udi:border udi:bg-background udi:shadow-sm udi:opacity-0 udi:group-hover:opacity-100 udi:focus-visible:opacity-100 udi:transition-opacity"
-                  onClick={() => onClear(chip.id)}
-                />
-              }
-            >
-              <X className="udi:h-2.5 udi:w-2.5" />
-            </TooltipTrigger>
-            <TooltipContent>Clear filter</TooltipContent>
-          </Tooltip>
-          <Badge
-            variant="outline"
-            className="udi:rounded-sm udi:text-xs udi:font-normal udi:gap-1.5 udi:cursor-default"
-            title={`${chip.dataSourceKey} - ${chip.type}`}
+        <Popover key={`${chip.id}-${chip.label}`}>
+          <PopoverTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'udi:h-7 udi:text-xs udi:font-normal',
+                  hovered?.from === 'chat' &&
+                    hovered.id === chip.id &&
+                    'udi:ring-2 udi:ring-primary/50',
+                )}
+                title={`${chip.dataSourceKey} - ${chip.type}`}
+                onMouseEnter={() => hover(chip.id)}
+                onMouseLeave={() => {
+                  if (dataFiltersStore.getState().hoveredFilter?.id === chip.id) hover(null);
+                }}
+              />
+            }
           >
             <span className="udi:font-medium">{chip.label}</span>
-            <span className="udi:font-mono">{chip.value}</span>
-          </Badge>
-        </div>
+            <span className="udi:font-mono udi:text-muted-foreground">{chip.value}</span>
+            <ChevronDown aria-hidden />
+          </PopoverTrigger>
+          <PopoverContent align="start" className="udi:w-96 udi:p-2 udi:[--udi-filter-rows:12]">
+            {/* Clearing is in the controls: a category list's select-all row,
+                a range's reset. */}
+            <FilterControls filterId={chip.id} selection={chip.selection} tweakable={false} />
+            <div className="udi:flex udi:items-center udi:gap-2 udi:px-2 udi:pb-1">
+              {/* Closes the popover, which would otherwise sit above the
+                  dialog's backdrop. */}
+              <PopoverClose
+                render={<Button size="sm" variant="ghost" />}
+                onClick={() => {
+                  setRemoving(chip);
+                  setConfirmOpen(true);
+                }}
+              >
+                Remove filter
+              </PopoverClose>
+            </div>
+          </PopoverContent>
+        </Popover>
       ))}
+      <Button variant="link" size="sm" className="udi:h-7 udi:text-xs" onClick={onReset}>
+        Reset
+      </Button>
+      {/* Removing is hard to undo from here: the chip goes, and the filter
+          comes back only from its chat widget (or, for a chart's, by selecting
+          on the chart again). So it asks first, as Reset conversation does. */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="udi:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="udi:text-sm">Remove the {removing?.label} filter?</DialogTitle>
+            <DialogDescription>
+              It stops filtering the dashboard and its chip leaves the filter bar. To bring it back,
+              expand it in the chat
+              {removing?.origin === 'chart' ? ', or select on its chart again' : ''}.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" size="sm" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (removing) onRemove(removing.id);
+                setConfirmOpen(false);
+              }}
+            >
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

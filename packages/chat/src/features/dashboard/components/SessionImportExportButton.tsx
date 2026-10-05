@@ -17,6 +17,7 @@ import {
 import {
   useConversationStore,
   useDashboardStore,
+  useDataFiltersStore,
   useDataPackage,
   useTracker,
 } from '@/app/UDIChatContext';
@@ -48,6 +49,7 @@ function timestamp(): string {
 export function SessionImportExportButton() {
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
+  const dataFiltersStore = useDataFiltersStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const trackEvent = useTracker();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +92,11 @@ export function SessionImportExportButton() {
         }
         applySessionExport(
           parsed.value,
-          { conversation: conversationStore, dashboard: dashboardStore },
+          {
+            conversation: conversationStore,
+            dashboard: dashboardStore,
+            dataFilters: dataFiltersStore,
+          },
           sourceFields,
         );
         trackEvent('session_imported', {
@@ -102,7 +108,7 @@ export function SessionImportExportButton() {
         setErrorMessage(err instanceof Error ? err.message : 'Failed to read file');
       }
     },
-    [conversationStore, dashboardStore, sourceFields, trackEvent],
+    [conversationStore, dashboardStore, dataFiltersStore, sourceFields, trackEvent],
   );
 
   return (

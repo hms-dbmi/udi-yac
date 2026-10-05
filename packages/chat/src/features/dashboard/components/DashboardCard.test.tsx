@@ -8,7 +8,7 @@
  * UDIVis is mocked: it boots a Vue custom element on mount, which the chat
  * package deliberately does not exercise in jsdom (it is tested in udi-toolkit).
  */
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -27,6 +27,7 @@ import {
   useGlobalStore,
 } from '@/app/UDIChatContext';
 import type { UDIGrammar } from 'udi-toolkit/react';
+import type { DataSelection } from '../stores/dataFiltersStore';
 import { DashboardCard } from './DashboardCard';
 
 const countBySex = {
@@ -159,8 +160,10 @@ describe('DashboardCard — read-only mode', () => {
 
     const labels = screen.getAllByRole('button').map((b) => b.textContent);
     // Close and the tweak gear render no text, so assert on the count of what
-    // is left: the chart/table toggle and the info tooltip trigger.
-    expect(labels).toHaveLength(2);
+    // is left: the chart/table toggle, the category sort toggle and the info
+    // tooltip trigger.
+    expect(labels).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Sort by total' })).toBeTruthy();
   });
 
   it('brings the editing controls back when read-only is left', async () => {
@@ -185,5 +188,41 @@ describe('DashboardCard — read-only mode', () => {
 
     expect(globalStore.getState().readOnly).toBe(true);
     expect(screen.queryByRole('button', { name: 'Drag card' })).toBeNull();
+  });
+});
+
+/** A card whose own brush a test can drive, the way a chip's Clear does. */
+let setOwnBrush: (sel: DataSelection['selection']) => void;
+function BrushHarness() {
+  const store = useDashboardStore();
+  const [brush, setBrush] = useState<DataSelection['selection']>({ donor_count: [1, 2] });
+  useEffect(() => {
+    setOwnBrush = setBrush;
+    store.getState().addActiveVisualization(0, 0, countBySex, 'prompt', null);
+  }, [store]);
+  const viz = useDashboard((s) => s.activeVisualizations.get('0-0'));
+  if (!viz) return null;
+  const selections = {
+    [viz.uuid]: { dataSourceKey: 'donors', type: 'interval' as const, selection: brush },
+  };
+  return <DashboardCard vizKey="0-0" viz={viz} selections={selections} />;
+}
+
+describe('DashboardCard — dropping a cleared brush', () => {
+  it('remounts the chart when its own brush is emptied, and not again when it goes null', async () => {
+    render(
+      <UDIChatProvider>
+        <BrushHarness />
+      </UDIChatProvider>,
+    );
+    const drawn = await screen.findByTestId('udi-vis');
+
+    // Cleared to `{field: []}`: filters nothing, but the rect is still drawn.
+    act(() => setOwnBrush({ donor_count: [] }));
+    const cleared = screen.getByTestId('udi-vis');
+    expect(cleared).not.toBe(drawn);
+
+    act(() => setOwnBrush(null));
+    expect(screen.getByTestId('udi-vis')).toBe(cleared);
   });
 });

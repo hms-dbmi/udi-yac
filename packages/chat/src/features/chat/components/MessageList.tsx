@@ -2,18 +2,22 @@ import { Fragment } from 'react';
 import { ArrowDown, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { useConversation, useGlobal } from '@/app/UDIChatContext';
+import { useConversation, useDataFilters, useGlobal } from '@/app/UDIChatContext';
+import { useBrushFilters } from '@/features/dashboard';
 import { MessageBubble } from './MessageBubble';
-import { BrushFilterWidgets } from './BrushFilterWidgets';
+import { InlineExamplePrompts } from './InlineExamplePrompts';
+import { filterInterjections } from '../utils/filterInterjections';
 import { useMessageListScroll } from '../hooks/useMessageListScroll';
 
 interface MessageListProps {
+  apiBaseUrl: string;
   isLoading: boolean;
   showSystemPrompts?: boolean;
   onSelectSuggestion?: (suggestion: string) => void;
 }
 
 export function MessageList({
+  apiBaseUrl,
   isLoading,
   showSystemPrompts,
   onSelectSuggestion,
@@ -22,10 +26,22 @@ export function MessageList({
   const hiddenCount = useConversation((s) => s.hiddenCount);
   const debugMode = useGlobal((s) => s.debugMode);
   const { contentRef, firstUnreadIndex, scrollToBottom } = useMessageListScroll(messages);
+  const brushes = useBrushFilters();
+  const brushAnchors = useDataFilters((s) => s.brushAnchors);
 
   const displayed = messages.filter(
     (m, i) => i >= hiddenCount && (m.role !== 'system' || (debugMode && showSystemPrompts)),
   );
+  const interjections = filterInterjections(messages, hiddenCount, brushes, brushAnchors);
+  let nextInterjection = 0;
+  const interjectionsUpTo = (index: number) => {
+    const start = nextInterjection;
+    while (nextInterjection < interjections.length && interjections[nextInterjection].at <= index)
+      nextInterjection++;
+    return interjections
+      .slice(start, nextInterjection)
+      .map(({ key, node }) => <Fragment key={key}>{node}</Fragment>);
+  };
 
   return (
     <div className="udi:relative udi:flex-1 udi:min-h-0">
@@ -35,11 +51,19 @@ export function MessageList({
             normal top-to-bottom scrolling. (justify-end would clip the top.) */}
         <div className="udi:flex udi:min-h-full udi:flex-col">
           <div ref={contentRef} className="udi:mt-auto udi:flex udi:flex-col udi:gap-3 udi:py-3">
+            {onSelectSuggestion && (
+              <InlineExamplePrompts
+                apiBaseUrl={apiBaseUrl}
+                onExampleClick={onSelectSuggestion}
+                isLoading={isLoading}
+              />
+            )}
             {displayed.map((msg) => {
               const realIndex = messages.indexOf(msg);
               const showDivider = firstUnreadIndex !== null && realIndex === firstUnreadIndex;
               return (
                 <Fragment key={realIndex}>
+                  {interjectionsUpTo(realIndex)}
                   {showDivider && <NewMessageDivider />}
                   <MessageBubble
                     message={msg}
@@ -49,6 +73,7 @@ export function MessageList({
                 </Fragment>
               );
             })}
+            {interjectionsUpTo(Infinity)}
             {isLoading && (
               <div className="udi:flex udi:justify-start">
                 <div className="udi:bg-muted udi:rounded-lg udi:px-4 udi:py-3">
@@ -56,7 +81,6 @@ export function MessageList({
                 </div>
               </div>
             )}
-            <BrushFilterWidgets />
           </div>
         </div>
       </ScrollArea>

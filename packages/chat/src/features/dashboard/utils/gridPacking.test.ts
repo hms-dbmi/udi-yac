@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { LayoutItem } from 'react-grid-layout';
-import { layoutItemsEqual, packAllRowMajor, packRowMajor, repackRowMajor } from './gridPacking';
+import {
+  TALL_CARD_RATIO,
+  layoutItemsEqual,
+  packAllRowMajor,
+  packRowMajor,
+  repackRowMajor,
+  widenTallItems,
+} from './gridPacking';
 
 function item(i: string, w = 1, h = 1): LayoutItem {
   return { i, x: 0, y: 0, w, h };
@@ -170,12 +177,26 @@ describe('row height (uniform + override)', () => {
       { i: 'A', x: 0, y: 0, w: 1, h: 3 },
       { i: 'B', x: 1, y: 0, w: 1, h: 3 },
     ];
-    // Prepend a tall card; cols=3 → all three share row 0, which grows to 8.
-    const out = repackRowMajor(existing, { i: 'C', x: 0, y: 0, w: 1, h: 8 }, 3);
+    // Prepend a taller card (within TALL_CARD_RATIO); cols=3 → all three
+    // share row 0, which grows to 5.
+    const out = repackRowMajor(existing, { i: 'C', x: 0, y: 0, w: 1, h: 5 }, 3);
     const byId = Object.fromEntries(out.map((it) => [it.i, it]));
-    expect(byId.A.h).toBe(8);
-    expect(byId.B.h).toBe(8);
-    expect(byId.C.h).toBe(8);
+    expect(byId.A.h).toBe(5);
+    expect(byId.B.h).toBe(5);
+    expect(byId.C.h).toBe(5);
+  });
+
+  it('gives a new card far taller than its row a row of its own', () => {
+    const existing: LayoutItem[] = [
+      { i: 'A', x: 0, y: 0, w: 1, h: 7 },
+      { i: 'B', x: 1, y: 0, w: 1, h: 7 },
+    ];
+    // 41 rows beside 7-row cards: full width, and A/B keep their height below it.
+    const out = repackRowMajor(existing, { i: 'C', x: 0, y: 0, w: 1, h: 41 }, 3);
+    const byId = Object.fromEntries(out.map((it) => [it.i, it]));
+    expect(byId.C).toMatchObject({ x: 0, y: 0, w: 3, h: 41 });
+    expect(byId.A).toMatchObject({ y: 41, h: 7 });
+    expect(byId.B).toMatchObject({ y: 41, h: 7 });
   });
 
   it('override grows the whole row (all cards, any width) and leaves other rows alone', () => {
@@ -245,5 +266,51 @@ describe('layoutItemsEqual', () => {
       { i: 'B', x: 1, y: 0, w: 1, h: 1 },
     ];
     expect(layoutItemsEqual(a, b)).toBe(false);
+  });
+});
+
+describe('widenTallItems', () => {
+  const widths = (items: LayoutItem[]) => Object.fromEntries(items.map((it) => [it.i, it.w]));
+
+  it('widens only the listed cards, and only past TALL_CARD_RATIO', () => {
+    // N is exactly at the ratio to A, the shortest beside it: stays.
+    const atRatio = [item('N', 1, 7 * TALL_CARD_RATIO), item('A', 1, 7), item('B', 1, 9)];
+    expect(widths(widenTallItems(atRatio, 3, new Set(['N'])))).toEqual({ N: 1, A: 1, B: 1 });
+    // Past it, but not listed: stays.
+    const past = [item('M', 1, 30), item('A', 1, 7), item('B', 1, 9)];
+    expect(widths(widenTallItems(past, 3, new Set(['A'])))).toEqual({ M: 1, A: 1, B: 1 });
+    // Listed: full width.
+    expect(widths(widenTallItems(past, 3, new Set(['M'])))).toEqual({ M: 3, A: 1, B: 1 });
+  });
+
+  it('measures a lone card against the reference height', () => {
+    expect(widths(widenTallItems([item('T', 1, 41)], 3, new Set(['T']), 7))).toEqual({ T: 3 });
+    expect(widths(widenTallItems([item('S', 1, 10)], 3, new Set(['S']), 7))).toEqual({ S: 1 });
+  });
+
+  it('leaves a one-column grid alone', () => {
+    expect(widths(widenTallItems([item('T', 1, 41), item('A', 1, 7)], 1, new Set(['T'])))).toEqual({
+      T: 1,
+      A: 1,
+    });
+  });
+
+  it('two tall cards beside a short one each get a row', () => {
+    // Measured against the tallest, T1 and T2 would vouch for each other and
+    // still stretch A to 40. T1 widens; T2 then lands beside A and B on the
+    // next row, and widens too.
+    const ordered = [item('T1', 1, 40), item('T2', 1, 40), item('A', 1, 7), item('B', 1, 7)];
+    const out = packAllRowMajor(widenTallItems(ordered, 3, new Set(['T1', 'T2'])), 3);
+    expect(out.map((it) => [it.i, it.y, it.w, it.h])).toEqual([
+      ['T1', 0, 3, 40],
+      ['T2', 40, 3, 40],
+      ['A', 80, 1, 7],
+      ['B', 80, 1, 7],
+    ]);
+  });
+
+  it('leaves two tall cards that only share a row with each other', () => {
+    const out = widenTallItems([item('T1', 1, 40), item('T2', 1, 38)], 2, new Set(['T1', 'T2']));
+    expect(widths(out)).toEqual({ T1: 1, T2: 1 });
   });
 });
