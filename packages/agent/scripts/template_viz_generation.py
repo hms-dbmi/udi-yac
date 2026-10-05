@@ -333,8 +333,9 @@ _SURVIVAL_ANCHORING = (
     "Every curve starts at (0, 100%): a subject with no recorded censoring date sits at day 0 "
     "and contributes no drop, and where a group has none of those, its flat opening segment "
     "and the drop into its first event are drawn explicitly. A solid rule carries the "
-    "final value out to the right edge, where a label repeats it as a number — so a group "
-    "with no end events at all gets neither, having no final value to report."
+    "final value out to the right edge, where a label repeats it as a number — drawn "
+    "below the line instead of above when the curve ends near 100%, where the top of the "
+    "plot would clip it, as a group with no end events at all does."
 )
 
 
@@ -1010,11 +1011,7 @@ def _cube_survival_chart(stratified: bool = False):
         {
             "label time": Expr.cond(
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.cond(
-                    Expr.binop(">", Expr.field("deaths"), Expr.lit(0)),
-                    Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
-                    Expr.lit(None),
-                ),
+                Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
                 Expr.lit(None),
             )
         }
@@ -1022,20 +1019,16 @@ def _cube_survival_chart(stratified: bool = False):
     chart = chart.derive(
         {
             "rule time": Expr.cond(
-                Expr.binop("==", Expr.field("deaths"), Expr.lit(0)),
-                Expr.lit(None),
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.field("label time"),
                 Expr.cond(
-                    Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                    Expr.field("label time"),
-                    Expr.cond(
-                        Expr.binop(
-                            "==",
-                            Expr.field("survival percentage"),
-                            Expr.field("final percentage"),
-                        ),
-                        Expr.field("<D1>"),
-                        Expr.lit(None),
+                    Expr.binop(
+                        "==",
+                        Expr.field("survival percentage"),
+                        Expr.field("final percentage"),
                     ),
+                    Expr.field("<D1>"),
+                    Expr.lit(None),
                 ),
             )
         }
@@ -1112,17 +1105,57 @@ def _cube_survival_chart(stratified: bool = False):
         .shape(value=_TICK_SHAPE)
         .size(value=_TICK_SIZE)
     )
-    chart = colour(
-        chart.mark("text")
-        .place(align="right", dy=-9)
-        .outline(color="white", width=3, opacity=0.7)
-        .avoid_overlap(8)
-        .x(field="label time", **time_axis)
-        .y(field="final percentage", **pct_axis)
-        .text(field="final label", type="nominal")
-    )
+    chart = _end_labels(chart, "label time", time_axis, pct_axis, colour)
     if stratified:
         chart = chart.title(stratum, align="right")
+    return chart
+
+
+#: Above this final percentage an end label is drawn BELOW its rule instead of
+#: above it. The label sits ~9px over the line, and the plot's top edge is the
+#: 100% gridline, so near the top a lifted label is clipped by the plot and
+#: vanishes. In data units because pixel height is unknown when the spec is
+#: written; 85 leaves room even in a small review card.
+_LABEL_FLIP_PERCENTAGE = 85
+
+
+def _end_labels(chart, x_field, x_axis, y_axis, colour):
+    """Draw the end-of-curve labels: above the rule, or below it near the top.
+
+    A text mark's offset is a constant of its layer, so "above unless that would
+    leave the plot" is two layers, and each label is routed to exactly one of
+    them by nulling its x in the other — a null x is how every annotation here
+    is suppressed. Each layer spreads its own labels apart; two curves ending
+    either side of the threshold are the one case where an above and a below
+    label could meet.
+    """
+    near_top = Expr.binop(
+        ">=", Expr.field("final percentage"), Expr.lit(_LABEL_FLIP_PERCENTAGE)
+    )
+    above, below = f"{x_field} above", f"{x_field} below"
+    chart = chart.derive(
+        {
+            above: Expr.cond(near_top, Expr.lit(None), Expr.field(x_field)),
+            below: Expr.cond(near_top, Expr.field(x_field), Expr.lit(None)),
+        }
+    )
+    for field, dy in ((above, -9), (below, 10)):
+        chart = colour(
+            chart.mark("text")
+            # Right-aligned and nudged clear of the rule: a centred label would
+            # sit across the line and read as a strikethrough, and a left-aligned
+            # one would run off the plot. A white halo keeps it readable where it
+            # crosses another stratum's curve.
+            .place(align="right", dy=dy)
+            .outline(color="white", width=3, opacity=0.7)
+            # Two strata can end at the same percentage, which would stack their
+            # labels on one another. 8 of the axis's 100 keeps them clearly apart
+            # at the sizes these are drawn at, including in a small review card.
+            .avoid_overlap(8)
+            .x(field=field, **x_axis)
+            .y(field="final percentage", **y_axis)
+            .text(field="final label", type="nominal")
+        )
     return chart
 
 
@@ -1400,9 +1433,10 @@ def _survival_chart(
     # cohort end) gets a visible run of dashes. Being the largest x in the data,
     # it also sets where the axis stops.
     #
-    # Null for a stratum in which nobody reached the end event: its "final" value
-    # is just the 100% it started at, and a label saying so, stacked against the
-    # axis at day 0, is noise.
+    # Kept for a stratum in which nobody reached the end event, too: its curve
+    # runs flat along the top of the plot, and with the legend dropped in favour
+    # of these labels, an unlabelled curve there could not be identified at all.
+    # `_end_labels` draws it below the line, where the plot does not clip it.
     #
     # Held on one row per group — the same `rank() == 1` row the rule borrows. A
     # text mark draws once per row it receives, so leaving this on every row would
@@ -1412,11 +1446,7 @@ def _survival_chart(
         {
             "label year": Expr.cond(
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.cond(
-                    Expr.binop(">", Expr.field("deaths"), Expr.lit(0)),
-                    Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
-                    Expr.lit(None),
-                ),
+                Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
                 Expr.lit(None),
             )
         }
@@ -1474,21 +1504,16 @@ def _survival_chart(
     chart = chart.derive(
         {
             "rule year": Expr.cond(
-                # No events, no final value to mark — see `label day`.
-                Expr.binop("==", Expr.field("deaths"), Expr.lit(0)),
-                Expr.lit(None),
+                Expr.binop("==", Expr.rank(), Expr.lit(1)),
+                Expr.field("label year"),
                 Expr.cond(
-                    Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                    Expr.field("label year"),
-                    Expr.cond(
-                        Expr.binop(
-                            "==",
-                            Expr.field("survival percentage"),
-                            Expr.field("final percentage"),
-                        ),
-                        Expr.field("survival years"),
-                        Expr.lit(None),
+                    Expr.binop(
+                        "==",
+                        Expr.field("survival percentage"),
+                        Expr.field("final percentage"),
                     ),
+                    Expr.field("survival years"),
+                    Expr.lit(None),
                 ),
             )
         }
@@ -1605,24 +1630,13 @@ def _survival_chart(
     if stratum:
         chart = chart.color(**stratum_colour)
 
-    chart = (
-        chart.mark("text")
-        # Right-aligned and lifted clear of the rule: a centred label would sit
-        # across the line and read as a strikethrough, and a left-aligned one
-        # would run off the plot. A white halo keeps it readable where it crosses
-        # another stratum's curve.
-        .place(align="right", dy=-9)
-        .outline(color="white", width=3, opacity=0.7)
-        # Two strata can end at the same percentage, which would stack their
-        # labels on one another. 8 of the axis's 100 keeps them clearly apart at
-        # the sizes these are drawn at, including in a small review card.
-        .avoid_overlap(8)
-        .x(field="label year", type="quantitative", title="survival years", domain={"min": 0})
-        .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
-        .text(field="final label", type="nominal")
+    chart = _end_labels(
+        chart,
+        "label year",
+        dict(type="quantitative", title="survival years", domain={"min": 0}),
+        dict(type="quantitative", domain={"min": 0, "max": 100}),
+        (lambda c: c.color(**stratum_colour)) if stratum else (lambda c: c),
     )
-    if stratum:
-        chart = chart.color(**stratum_colour)
 
     if stratum:
         # Right-aligned to sit over the series labels it names. The presence

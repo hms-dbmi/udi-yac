@@ -223,12 +223,29 @@ def test_a_missing_value_is_excluded_rather_than_made_into_a_stratum(survival, s
         assert cohorts["C"] == (1, 1)
 
 
-def test_a_stratum_with_no_deaths_stays_flat_and_unlabelled(survival):
+def test_a_stratum_with_no_deaths_stays_flat_and_is_labelled_below(survival):
     rows = [r for r in survival("_line_survival_baseline") if r["stratum"] == "B"]
     assert rows, "arm B should render"
     assert all(r["final percentage"] == 100 for r in rows)
-    # No final value to report, so the rule and its label are suppressed.
-    assert all(r["label year"] is None for r in rows)
+    # Labelled once — the legend is dropped, so an unlabelled flat curve could
+    # not be identified — and on the BELOW layer, since a label lifted above a
+    # line at 100% is clipped by the top of the plot.
+    labelled = [r for r in rows if r["label year"] is not None]
+    assert len(labelled) == 1
+    assert labelled[0]["label year below"] is not None
+    assert labelled[0]["label year above"] is None
+
+
+def test_end_labels_sit_above_the_line_unless_near_the_top(survival):
+    """Every drawn label is routed to exactly one of the two layers."""
+    for row in survival("_line_survival_baseline"):
+        above, below = row["label year above"], row["label year below"]
+        if row["label year"] is None:
+            assert above is None and below is None
+        elif row["final percentage"] >= 85:
+            assert below is not None and above is None
+        else:
+            assert above is not None and below is None
 
 
 def test_ever_recorded_stratification_overlaps_and_must_not_reconcile(survival):

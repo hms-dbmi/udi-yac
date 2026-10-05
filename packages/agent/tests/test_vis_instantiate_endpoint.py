@@ -136,9 +136,10 @@ def test_rebinding_the_stratifier_moves_every_reference(client, data_schema):
         for m in layer["mapping"]
         if m["encoding"] == "color"
     ]
-    # Six layers now carry the colour: the flat lead-in, the opening drop, the
-    # curve, the run-out rule, the end label, and the censoring ticks.
-    assert colours == ["stratum"] * 6
+    # Seven layers now carry the colour: the flat lead-in, the opening drop, the
+    # curve, the run-out rule, the censoring ticks, and the end label — twice,
+    # once drawn above the rule and once below it for curves ending near 100%.
+    assert colours == ["stratum"] * 7
 
 
 def test_response_describes_the_parameters_it_accepts(client, data_schema):
