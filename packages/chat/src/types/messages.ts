@@ -30,9 +30,11 @@ export interface FlatToolCall {
  * A column name or a literal data value for most parameters, and a structured
  * object for a stratifier `grouping` — the model fills that one as typed fields
  * rather than as JSON inside a string, so it travels as an object the whole way
- * rather than being serialized and reparsed at each hop.
+ * rather than being serialized and reparsed at each hop. A list is a literal
+ * parameter taking several values, any of which matches (a survival curve's
+ * end events).
  */
-export type TemplateArgValue = string | Record<string, unknown>;
+export type TemplateArgValue = string | string[] | Record<string, unknown>;
 
 export interface TemplateParamDescriptor {
   /**

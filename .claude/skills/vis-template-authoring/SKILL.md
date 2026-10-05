@@ -93,6 +93,17 @@ apps/template-studio  ← renders templates, writes review decisions to
    > cardinality ones are dropped before sending; an interval domain is a
    > min/max) is left unchecked, never reported as empty.
 
+   **`<V*:list>` takes several values.** Write the comparison exactly as for a
+   single value — `Expr.binop("==", Expr.field("<E1.F2:n>"), Expr.lit("<V2:list>"))`
+   — and `instantiate_template` rewrites it into one comparison per listed value,
+   `||`-chained (`!=` becomes an `&&` chain of `!=`). The tool parameter becomes an
+   array of strings; a bare string still binds as the one-element list, so a chart
+   saved before a parameter took lists keeps its meaning. Every listed value goes
+   through the domain check. The survival templates' end event is one: death alone
+   for overall survival, the first of progression/recurrence/second
+   malignancy/death for **event-free survival** — which is why `end day` is
+   reduced with `min` (the earliest listed event), not `max`.
+
    Describe such a template by the **shape** it needs ("an event log with a subject
    id, an event-type column and a numeric time column"), not by the dataset that
    motivated it — the values are no longer baked in. Keep concrete example values
@@ -133,6 +144,7 @@ apps/template-studio  ← renders templates, writes review decisions to
 | `<MARGINAL:D1,D2>`                      | cube marginal filter: listed dims non-null, all others null      |
 | `<E1.r.E2.id.from>` / `.to`             | join keys, from the schema's relationships                       |
 | `<V>`, `<V1>`…`<V3>`                    | a literal data **value** the model supplies (not a column)       |
+| `<V2:list>`                             | one or more literal values; a comparison matches **any** of them |
 | `<GROUP:E1.F4>`                         | the expression cutting that field into strata (see below)        |
 | `<GROUPTAG:E2.F>` / `<GROUPLABEL:E2.F>` | the same grouping, for a stratifier a subject has SEVERAL of     |
 | `:n` / `:q` / `:o` suffix               | constrains the bound field's type (nominal/quantitative/ordinal) |

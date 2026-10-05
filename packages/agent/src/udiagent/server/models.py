@@ -53,8 +53,9 @@ class YACVisInstantiateRequest(BaseModel):
     #: Values are column names and literal values, except a stratifier
     #: `grouping`, which is a structured object — the model fills it as typed
     #: fields rather than as JSON inside a string, and a client re-binding one
-    #: sends the same shape straight back.
-    toolArgs: dict[str, str | dict]
+    #: sends the same shape straight back. A list is a `<V*:list>` literal —
+    #: several values, any of which matches (a survival curve's end events).
+    toolArgs: dict[str, str | list[str] | dict]
     dataSchema: str
 
 
@@ -90,7 +91,8 @@ class YACVisInstantiateResponse(BaseModel):
     spec: dict
     #: The accepted bindings, pruned to parameters this template actually has,
     #: so a client can send them straight back for the next tweak. A stratifier
-    #: `grouping` rides here as an object, like it does on the way in.
-    toolArgs: dict[str, str | dict]
+    #: `grouping` rides here as an object, like it does on the way in, and a
+    #: list-valued literal as a list.
+    toolArgs: dict[str, str | list[str] | dict]
     params: list[YACVisParam]
 

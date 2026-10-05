@@ -422,6 +422,34 @@ _ENCODING_LABELS = {
 }
 
 
+_VALUE_DESCRIPTION = (
+    "A literal data VALUE to match (not a column name) — one of the "
+    "values actually present in the relevant column, copied exactly, "
+    "including case and spacing."
+)
+
+
+def _value_param_schema(placeholder: str) -> dict:
+    """The tool parameter for a `<V*>` literal: a string, or for `<V*:list>` a
+    non-empty list of them, any of which counts as a match.
+
+    A list rather than a delimiter inside one string, because the values are
+    copied out of the data and a delimiter can occur in a value.
+    """
+    if placeholder.endswith(":list"):
+        return {
+            "type": "array",
+            "items": {"type": "string", "description": _VALUE_DESCRIPTION},
+            "minItems": 1,
+            "description": (
+                "One or more literal data VALUES (not column names); a row "
+                "holding ANY of them matches. Each copied exactly from the "
+                "relevant column, including case and spacing."
+            ),
+        }
+    return {"type": "string", "description": _VALUE_DESCRIPTION}
+
+
 def _add_grouping_param(
     properties: dict, param_map: dict, seen: set, group_key: str
 ) -> None:
@@ -568,11 +596,10 @@ def _generate_single_entity_tool(
             # <V*> is a literal data value, not a column. Say so explicitly: the
             # obvious failure is the model passing a column name here, which would
             # make the comparison it feeds match nothing.
-            param_description = (
-                "A literal data VALUE to match (not a column name) — one of the "
-                "values actually present in the relevant column, copied exactly, "
-                "including case and spacing."
-            )
+            properties[param_name] = _value_param_schema(ph)
+            required.append(param_name)
+            param_map[param_name] = base
+            continue
         properties[param_name] = {
             "type": "string",
             "description": param_description,
@@ -640,15 +667,19 @@ def _generate_join_entity_tool(
     param_map = {}
     for key in entity_keys:
         param = f"entity{key[1:]}"
-        description = entity_descriptions.get(
+        # Not `description`: that is the tool's own, built above. Reusing the name
+        # here sent every join tool to the model described as its last entity
+        # parameter ("The secondary data entity (table) to join with.") — the
+        # same shadowing the single-entity generator already warns about.
+        entity_description = entity_descriptions.get(
             key, f"An additional data entity (table) to join with ({param})."
         )
         if key in shared:
-            description += (
+            entity_description += (
                 " MAY be the same table as another entity here, when one table "
                 "carries both roles."
             )
-        properties[param] = {"type": "string", "description": description}
+        properties[param] = {"type": "string", "description": entity_description}
         required.append(param)
         param_map[param] = key
 
@@ -687,16 +718,14 @@ def _generate_join_entity_tool(
         seen.add(param_name)
 
         if base.startswith("V"):
-            param_description = (
-                "A literal data VALUE to match (not a column name) — one of the "
-                "values actually present in the relevant column, copied exactly, "
-                "including case and spacing."
-            )
-        else:
-            field_type = _get_field_type_for_placeholder(ph)
-            param_description = _build_field_description(
-                field_type, encoding_info.get(base), field_roles.get(base)
-            )
+            properties[param_name] = _value_param_schema(ph)
+            required.append(param_name)
+            param_map[param_name] = base
+            continue
+        field_type = _get_field_type_for_placeholder(ph)
+        param_description = _build_field_description(
+            field_type, encoding_info.get(base), field_roles.get(base)
+        )
         properties[param_name] = {"type": "string", "description": param_description}
         required.append(param_name)
         param_map[param_name] = base

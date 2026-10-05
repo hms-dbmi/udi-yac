@@ -103,6 +103,9 @@ class StratumReading(Enum):
 # fills from the request's column domains, so they work with any event vocabulary.
 PREVIEW_START_EVENT = "Initial CNS Tumor"
 PREVIEW_END_EVENT = "Deceased"
+#: Event-free survival's end: the first progression, recurrence, second
+#: malignancy or death. pcx spells progression "Progressive".
+PREVIEW_EFS_END_EVENTS = ["Progressive", "Recurrence", "Second Malignancy", "Deceased"]
 #: The censoring source for previews: pcx records "still alive as of" on the
 #: patient table, as a status column plus the date that status was current.
 PREVIEW_CENSOR_ENTITY = "Patient"
@@ -286,6 +289,15 @@ def validate_specs(df, grammar_path, strict=False):
 # these caveats must read identically across all four variants — a reader
 # comparing two cards should see the same wording for the same limitation, and a
 # fix to one should not leave three copies stale.
+#: Appended to every event-log survival description: the end is a LIST of event
+#: types, and this is where the model learns what to put in it. Phrased by
+#: endpoint rather than by any dataset's vocabulary — the values themselves come
+#: from the event-type column's domain at request time.
+_SURVIVAL_END_EVENTS = (
+    " The clock stops at the earliest listed end event: death alone for overall "
+    "survival; progression, recurrence, relapse, second malignancy and death for "
+    "event-free survival."
+)
 _SURVIVAL_TIME_VARYING = (
     "An event-level column has no single value per subject: a subject's recorded value can "
     "differ between the event that starts the clock and the event that stops it. "
@@ -307,9 +319,15 @@ _SURVIVAL_CENSORING = (
     "is a separate binding: a subject-level table with a status column and the date that "
     "status was current, plus the value meaning 'no event yet'. A subject that table never "
     "mentions still reaches the curve, at time zero and with no tick. "
-    "The estimate is still crude, not Kaplan-Meier: the denominator is the whole cohort "
-    "throughout rather than the number still at risk, so a curve whose follow-up thins out "
-    "is held up by subjects no longer being watched, and there is no significance test. "
+    "These are survival curves but not strictly the Kaplan-Meier estimator, and the "
+    "difference is entirely in how censoring is counted: a censored subject stays in the "
+    "denominator after its follow-up ends, where Kaplan-Meier drops it from the number "
+    "still at risk. So wherever a subject is censored before a later event, the curve sits "
+    "ABOVE the Kaplan-Meier one and overstates survival. With no censoring — every subject "
+    "reaching an end event, or censored only after the last one — the two are identical, "
+    "since the product of Kaplan-Meier's per-event factors reduces to events over cohort. "
+    "A subject placed at day 0 for want of a censoring date counts as censored at the "
+    "start. There is no significance test. "
     "Strata are also unequal in size, and a small one steps coarsely (n=4 moves in "
     "quarters), so a dramatic-looking curve may rest on a handful of subjects. "
 )
@@ -414,6 +432,14 @@ def _event_table(reading) -> str:
         return "<E1>__p"
     return "<E1>"
 
+
+#: The event types that stop the clock. A LIST, because which events end
+#: "survival" is the question being asked, not a property of the data: death
+#: alone for overall survival; progression, recurrence, a second malignancy or
+#: death for event-free survival. A subject's end is the EARLIEST of its listed
+#: events — hence `min` wherever `end day` is reduced — and with a single listed
+#: event that is the same day `max` used to pick, since a subject dies once.
+_END_EVENTS = "<V2:list>"
 
 #: The status value meaning "no event yet" — `alive`, `in remission`, `active`.
 #: A value rather than a column, because which string means that is a property of
@@ -695,7 +721,7 @@ def _survival_subject_rows(
             Expr.lit(None),
         ),
         "end day": Expr.cond(
-            Expr.binop("==", Expr.field(_placeholder_base(event_type)), Expr.lit("<V2>")),
+            Expr.binop("==", Expr.field(_placeholder_base(event_type)), Expr.lit(_END_EVENTS)),
             Expr.field(_placeholder_base(time_field)),
             Expr.lit(None),
         ),
@@ -754,7 +780,7 @@ def _survival_subject_rows(
             .rollup(
                 {
                     "start day": Op.min("start day"),
-                    "end day": Op.max("end day"),
+                    "end day": Op.min("end day"),
                     _CENSOR_DAY: Op.max(_CENSOR_DAY),
                     _STRATUM_COL: Op.max(_STRATUM_COL),
                 }
@@ -770,7 +796,7 @@ def _survival_subject_rows(
             .rollup(
                 {
                     "start day": Op.min("start day"),
-                    "end day": Op.max("end day"),
+                    "end day": Op.min("end day"),
                     _CENSOR_DAY: Op.max(_CENSOR_DAY),
                     _PRESENCE_STRATUM: Op.max(_PRESENCE_STRATUM),
                 }
@@ -782,7 +808,7 @@ def _survival_subject_rows(
         chart = chart.groupby(subject_key).rollup(
             {
                 "start day": Op.min("start day"),
-                "end day": Op.max("end day"),
+                "end day": Op.min("end day"),
                 _CENSOR_DAY: Op.max(_CENSOR_DAY),
                 # Named after the stratifier itself, so every downstream
                 # reference — the colour mappings, the label, the heading, the
@@ -818,7 +844,7 @@ def _survival_subject_rows(
         chart = chart.derive(
             {
                 "subject start": Expr.agg("min", "start day"),
-                "subject end": Expr.agg("max", "end day"),
+                "subject end": Expr.agg("min", "end day"),
             }
         )
         # A null is not a value anyone "ever recorded", so it must not become a
@@ -848,7 +874,7 @@ def _survival_subject_rows(
     chart = chart.groupby(subject_key).rollup(
         {
             "start day": Op.min("start day"),
-            "end day": Op.max("end day"),
+            "end day": Op.min("end day"),
             _CENSOR_DAY: Op.max(_CENSOR_DAY),
         }
     )
@@ -3102,6 +3128,8 @@ def generate():
             "Show a survival curve for <E>.",
             "Plot survival time from diagnosis to death for each <F1:n>.",
             "What fraction of subjects are still alive over time after diagnosis?",
+            "Show event-free survival for <E>.",
+            "How long do subjects go without progression, recurrence or death?",
         ],
         spec=_survival_chart(),
         chart_type=ChartType.LINE,
@@ -3117,32 +3145,31 @@ def generate():
         ],
         description=(
             "Survival curve from an event log — a table with one row per event, a subject id, "
-            "an event-type column and a numeric time column. Given a start event type and an end "
-            "event type, derives each subject's elapsed time between them and plots the falling "
-            "fraction of subjects that have not yet reached the end event."
-        ),
+            "an event-type column and a numeric time column. Given a start event type and one or "
+            "more end event types, derives each subject's elapsed time between them and plots the "
+            "falling fraction of subjects that have not yet reached an end event."
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "Survival time is not stored anywhere; it is reconstructed as the gap between two "
             "events for the same subject, so the template groups the event log by subject id and "
             "rolls it up to one row each before computing anything. The subject id is only a "
             "grouping key and is never encoded, so its cardinality does not matter. "
-            "IMPORTANT: this is a crude survival curve, not a Kaplan-Meier estimate. Subjects "
-            "with no end event are kept in the denominator but contribute no drop, which assumes "
-            "every one of them was followed for the whole window. A true Kaplan-Meier estimator "
-            "reweights by the number still at risk at each event time; that needs a cumulative "
-            "product and per-time at-risk counts, which the grammar cannot express today. Read "
-            "the curve as an observed-survival fraction over the cohort, and do not use it where "
-            "differences in follow-up length matter."
-            "Every curve starts at (0, 100%): subjects who never reach the end event sit at day 0 and contribute no drop, and where a group has none of those, its flat opening segment and the drop into its first event are drawn explicitly. The run-out rule carries the final value out to the right edge, where a label repeats it as a number — so a group with no end events at all gets neither, having no final value to report."
+            + _SURVIVAL_CENSORING
+            + _SURVIVAL_ANCHORING
         ),
         tasks=(
             "Judge how survival falls over time after a starting event; compare the observed "
             "survival fraction of a cohort at a given number of days."
         ),
         review_hint=(
-            "The two event types are <V1>/<V2> literal-value placeholders, so the model supplies "
-            "them per request from the column's domain — nothing here is dataset-specific. Check "
-            "the censoring caveat in the design considerations before approving."
+            "The event types are <V1>/<V2> literal-value placeholders, so the model supplies "
+            "them per request from the column's domain — nothing here is dataset-specific. <V2> "
+            "is a list: previews as EVENT-FREE survival (progression, recurrence, second "
+            "malignancy or death), where every other survival card previews overall survival — "
+            "on pcx this curve should end below the overall one (46 of 65 subjects have an "
+            "event, against 34 deaths; ~29% against ~48%). Check the censoring caveat in the design "
+            "considerations before approving."
         ),
         # The studio cannot infer which column is the subject id, which is the
         # event type, or which holds the day offset — a type-directed search would
@@ -3157,7 +3184,7 @@ def generate():
             "E2.F2": PREVIEW_CENSOR_STATUS,
             "E2.F3": PREVIEW_CENSOR_DATE,
             "V1": PREVIEW_START_EVENT,
-            "V2": PREVIEW_END_EVENT,
+            "V2": PREVIEW_EFS_END_EVENTS,
             "V3": PREVIEW_CENSOR_VALUE,
         },
     )
@@ -3190,11 +3217,12 @@ def generate():
         description=(
             "Survival curves split by a nominal field as recorded at the start event, from an "
             "event log — one row per event, with a subject id, an event-type column and a numeric "
-            "time column. Given a start and an end event type, derives each subject's elapsed time "
+            "time column. Given a start and one or more end event types, derives each subject's elapsed time "
             "between them and plots one curve per category. The stratifier is read once, from the "
             "subject's start event, so each subject falls in exactly one group and the groups add "
             "back up to the whole cohort. This is the default way to split a survival curve."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             _SURVIVAL_TIME_VARYING +
             "This template reads it once, at the start event, which is what makes the groups a "
@@ -3274,8 +3302,9 @@ def generate():
             "the start event, from an event log — one row per event, with a subject id, an "
             "event-type column and a numeric time column. Expands the start event's list so a "
             "subject counts toward every value it listed then, derives each subject's elapsed time "
-            "between a start and an end event type, and plots one curve per value."
-        ),
+            "between a start and one or more end event types, and plots one curve per value."
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "For set-valued columns such as tumor locations, where one subject can belong to "
             "several categories at once. "
@@ -3353,7 +3382,8 @@ def generate():
             "to the whole. Use this only when the request is explicitly about ever having a value; "
             "otherwise prefer the variant that reads the field at the start event, which "
             "partitions the cohort."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             _SURVIVAL_TIME_VARYING +
             "This template treats it as membership: the subject's span is broadcast onto each of "
@@ -3431,7 +3461,8 @@ def generate():
             "event, so a subject joins each value listed at any point and carries its whole "
             "elapsed time into all of them. Cohorts OVERLAP twice over — across values of one "
             "event and across events — and do not add up."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "For set-valued columns where membership at any point is the question. "
             + _SURVIVAL_TIME_VARYING +
@@ -3504,13 +3535,14 @@ def generate():
             "Survival curves split by a field in a RELATED table, from an event log — one row "
             "per event, with a subject id, an event-type column and a numeric time column. Joins "
             "the event log to a second entity on the relationship between them, derives each "
-            "subject's elapsed time between a start and an end event type, and plots one curve "
+            "subject's elapsed time between a start and one or more end event types, and plots one curve "
             "per value of the related field. Both tables must name the subject-id column they "
             "share, which is what the join runs on. Use this when the attribute to split by does not "
             "live on the event log itself — a treatment protocol, an enrolling site, a cohort "
             "assignment recorded elsewhere. A subject with several related records joins a group "
             "for each, so the cohorts OVERLAP and the groups do not add up to the whole."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "The stratifier is not a column of the event log, so the two entities are joined "
             "first, on the subject-id column each side names. A declared relationship is not "
@@ -3601,7 +3633,8 @@ def generate():
             "one, because a continuous column has no categories to draw a curve for. Ascending "
             "cut points, each bucket half-open on the right, so a cut at 65 puts 65 in the upper "
             "bucket. Use it whenever the attribute to split by is a number rather than a label."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "The buckets are computed BEFORE the (subject, stratum) grouping, so two values in "
             "the same bucket collapse to one row for that subject rather than two — a subject is "
@@ -3689,14 +3722,14 @@ def generate():
             "table, from an event log — one row per event, with a subject id, an event-type "
             "column and a numeric time column. Joins the event log to a second entity on the "
             "subject-id column each side names, expands that entity's semicolon-delimited column "
-            "so one record listing several values counts toward each of them, derives every "
-            "subject's elapsed time between a start and an end event type, and plots one curve "
+            "so a record listing several values counts toward each, derives every "
+            "subject's elapsed time between a start and one or more end event types, and plots one curve "
             "per value. Use this when the attribute to split by lives in another table AND that "
             "column holds a set rather than a single value — the agents making up a chemotherapy "
-            "regimen, the sites one course of radiation covered, the conditions listed on a "
-            "diagnosis record. The cohorts OVERLAP: a subject joins a group for every value "
+            "regimen, the sites a course of radiation covered. The cohorts OVERLAP: a subject joins a group for every value "
             "listed on any of its related records, so the groups do not add up to the whole."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "The cross-table and multi-value readings composed: the stratifier is neither a "
             "column of the event log nor single-valued. The two entities are joined first, on "
@@ -3811,14 +3844,14 @@ def generate():
             "one of a named set of values — 'ever received methotrexate', 'ever enrolled on "
             "protocol X' — against everyone else. Use this when the related table holds one "
             "row per subject per value (a patient's list of drugs, sites, diagnoses), so a "
-            "subject has SEVERAL values rather than one, and the question is about having a "
-            "particular one of them at any point. Supply the values in `grouping`: this "
+            "subject has SEVERAL values rather than one. Supply the values in `grouping`: this "
             "template REQUIRES one, and the values it names are the question. "
             "Prefer this over the presence template, which asks only whether the subject is "
             "in the table at all (for a drug table that is 'received any treatment'), and "
             "over the related-field template, which draws one curve per value and lets a "
             "subject appear in several."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "The match is reduced to one answer PER SUBJECT before the label is chosen, which "
             "is what makes the curves a partition: each subject appears exactly once, and the "
@@ -3904,7 +3937,8 @@ def generate():
             "named or plotted; only the shared subject-id column on each side. Exactly two "
             "curves, and they PARTITION the cohort: every subject is in one or the other, so the "
             "two groups add back to the whole and reconcile with the unstratified curve."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "Use this, not the related-field variant, when the question is whether a subject has "
             "any record in a table rather than which value it holds. Absence is unanswerable from "
@@ -3987,7 +4021,8 @@ def generate():
             "subject falls in exactly one cell, so they add back to the whole. Use the "
             "single-table presence variant when only one table is in question — four curves for a "
             "two-way question is harder to read for no gain."
-        ),
+        )
+        + _SURVIVAL_END_EVENTS,
         design_considerations=(
             "Two LEFT joins, each against the other table reduced to one row per subject, so "
             "absence stays visible and neither join multiplies event rows. Each cell is labelled "
@@ -4092,9 +4127,10 @@ def generate():
             "which a cube cannot express, since the count IS the cell and there are no rows to "
             "expand it into. A cell censoring four subjects draws the same single mark as a "
             "cell censoring one, so the ticks show WHERE follow-up ended, not how much. "
-            "The estimate is crude rather than Kaplan-Meier: the denominator stays the whole "
-            "cohort instead of the number still at risk, so a curve whose follow-up thins out "
-            "is held up by subjects no longer being watched. No significance test."
+            "Not strictly the Kaplan-Meier estimator: censored subjects stay in the "
+            "denominator after their follow-up ends rather than leaving the number at risk, so "
+            "wherever censoring precedes a later event the curve overstates survival. With no "
+            "censoring the two are identical. No significance test."
         ),
         tasks=(
             "Read the fraction still event-free at a given time; find where the steepest drops "
@@ -4159,7 +4195,8 @@ def generate():
             "The same requirements and caveats as the unstratified cube curve apply: the time "
             "dimension must be numeric, the denominator comes from the marginal rather than "
             "the grand total, one tick per censoring time point rather than per subject, and "
-            "the estimate is crude rather than Kaplan-Meier. "
+            "the estimate is not strictly Kaplan-Meier — identical without censoring, "
+            "overstating survival where censoring precedes a later event. "
             "Strata are unequal in size, and a small one steps coarsely — a stratum of four "
             "moves in quarters — so a dramatic-looking curve may rest on a handful of "
             "subjects. Read the counts in the labels before reading the gaps."

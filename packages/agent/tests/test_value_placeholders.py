@@ -127,8 +127,10 @@ def test_no_survival_template_hardcodes_an_event_value():
         if "survival" not in (template.get("description") or "").lower():
             continue
         spec = template["spec_template"]
-        assert "<V1>" in spec and "<V2>" in spec, f"template {index} lost its value placeholders"
-        for leaked in ("Initial CNS Tumor", "Deceased"):
+        assert "<V1>" in spec and ("<V2>" in spec or "<V2:list>" in spec), (
+            f"template {index} lost its value placeholders"
+        )
+        for leaked in ("Initial CNS Tumor", "Deceased", "Progressive", "Recurrence"):
             assert leaked not in spec, f"template {index} still hardcodes {leaked!r}"
             assert leaked not in (template.get("description") or "")
             assert leaked not in (template.get("design_considerations") or "")

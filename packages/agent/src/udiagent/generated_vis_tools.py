@@ -253,9 +253,9 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E2>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": '
  '{"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": '
  '{"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
- '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
+ '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}}}, {"groupby": "<E1.F1:n>"}, {"rollup": {"start day": {"op": "min", "field": "start day"}, "end day": {"op": '
- '"max", "field": "end day"}, "censor day": {"op": "max", "field": "censor day"}}}, {"filter": {"op": "!=", "left": '
+ '"min", "field": "end day"}, "censor day": {"op": "max", "field": "censor day"}}}, {"filter": {"op": "!=", "left": '
  '{"field": "start day"}, "right": {"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end '
  'day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": '
  '"!=", "left": {"field": "end day"}, "right": {"literal": null}}, "then": {"op": "-", "left": {"field": "end day"}, '
@@ -315,10 +315,10 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E2>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": '
  '{"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": '
  '{"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
- '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
+ '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}, "baseline stratum": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V1>"}}, "then": '
  '{"field": "<E1.F4:n>"}, "else": {"literal": null}}}}, {"groupby": "<E1.F1:n>"}, {"rollup": {"start day": {"op": '
- '"min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}, "censor day": {"op": "max", "field": '
+ '"min", "field": "start day"}, "end day": {"op": "min", "field": "end day"}, "censor day": {"op": "max", "field": '
  '"censor day"}, "<E1.F4>": {"op": "max", "field": "baseline stratum"}}}, {"filter": {"op": "!=", "left": {"field": '
  '"start day"}, "right": {"literal": null}}}, {"filter": {"op": "!=", "left": {"field": "<E1.F4>"}, "right": '
  '{"literal": null}}}, {"derive": {"stratum": "<GROUP:E1.F4>"}}, {"filter": {"op": "!=", "left": {"field": "stratum"}, '
@@ -386,10 +386,10 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E2>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": '
  '{"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": '
  '{"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
- '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
+ '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}, "baseline stratum": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V1>"}}, "then": '
  '{"field": "<E1.F4:n>"}, "else": {"literal": null}}}}, {"groupby": "<E1.F1:n>"}, {"rollup": {"start day": {"op": '
- '"min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}, "censor day": {"op": "max", "field": '
+ '"min", "field": "start day"}, "end day": {"op": "min", "field": "end day"}, "censor day": {"op": "max", "field": '
  '"censor day"}, "<E1.F4>": {"op": "max", "field": "baseline stratum"}}}, {"filter": {"op": "!=", "left": {"field": '
  '"start day"}, "right": {"literal": null}}}, {"filter": {"op": "!=", "left": {"field": "<E1.F4>"}, "right": '
  '{"literal": null}}}, {"unnest": {"field": "<E1.F4>", "separator": ";"}}, {"derive": {"stratum": "<GROUP:E1.F4>"}}, '
@@ -458,9 +458,9 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E2>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": '
  '{"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": '
  '{"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
- '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
+ '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": "min", "field": "start day"}, "subject '
- 'end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E1.F4:n>"}, "right": '
+ 'end": {"agg": "min", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E1.F4:n>"}, "right": '
  '{"literal": null}}}, {"derive": {"stratum": "<GROUP:E1.F4>"}}, {"filter": {"op": "!=", "left": {"field": "stratum"}, '
  '"right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": {"start day": {"op": "min", "field": '
  '"subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": "max", "field": "censor '
@@ -529,9 +529,9 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E2>__by_subject"], "out": "<E1>__cens"}, {"unnest": {"field": "<E1.F4:n>", "separator": ";"}}, {"filter": {"op": '
  '"!=", "left": {"field": "<E1.F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", '
  '"left": {"field": "<E1.F2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
- 'null}}, "end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": '
+ 'null}}, "end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": '
  '{"field": "<E1.F3>"}, "else": {"literal": null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": '
- '"min", "field": "start day"}, "subject end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": '
+ '"min", "field": "start day"}, "subject end": {"agg": "min", "field": "end day"}}}, {"filter": {"op": "!=", "left": '
  '{"field": "<E1.F4:n>"}, "right": {"literal": null}}}, {"derive": {"stratum": "<GROUP:E1.F4>"}}, {"filter": {"op": '
  '"!=", "left": {"field": "stratum"}, "right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": '
  '{"start day": {"op": "min", "field": "subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor '
@@ -601,9 +601,9 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E3>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": '
  '{"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": '
  '{"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
- '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
+ '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": "min", "field": "start day"}, "subject '
- 'end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E2.F:n>"}, "right": '
+ 'end": {"agg": "min", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E2.F:n>"}, "right": '
  '{"literal": null}}}, {"derive": {"stratum": "<GROUP:E2.F>"}}, {"filter": {"op": "!=", "left": {"field": "stratum"}, '
  '"right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": {"start day": {"op": "min", "field": '
  '"subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": "max", "field": "censor '
@@ -673,9 +673,9 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E3>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": '
  '{"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": '
  '{"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
- '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
+ '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": "min", "field": "start day"}, "subject '
- 'end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E2.F:q>"}, "right": '
+ 'end": {"agg": "min", "field": "end day"}}}, {"filter": {"op": "!=", "left": {"field": "<E2.F:q>"}, "right": '
  '{"literal": null}}}, {"derive": {"stratum": "<GROUP:E2.F>"}}, {"filter": {"op": "!=", "left": {"field": "stratum"}, '
  '"right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": {"start day": {"op": "min", "field": '
  '"subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor day": {"op": "max", "field": "censor '
@@ -745,9 +745,9 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E3>__by_subject"], "out": "<E1>__cens"}, {"unnest": {"field": "<E2.F:n>", "separator": ";"}}, {"filter": {"op": '
  '"!=", "left": {"field": "<E1.F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", '
  '"left": {"field": "<E1.F2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
- 'null}}, "end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": '
+ 'null}}, "end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": '
  '{"field": "<E1.F3>"}, "else": {"literal": null}}}}, {"groupby": "<E1.F1:n>"}, {"derive": {"subject start": {"agg": '
- '"min", "field": "start day"}, "subject end": {"agg": "max", "field": "end day"}}}, {"filter": {"op": "!=", "left": '
+ '"min", "field": "start day"}, "subject end": {"agg": "min", "field": "end day"}}}, {"filter": {"op": "!=", "left": '
  '{"field": "<E2.F:n>"}, "right": {"literal": null}}}, {"derive": {"stratum": "<GROUP:E2.F>"}}, {"filter": {"op": '
  '"!=", "left": {"field": "stratum"}, "right": {"literal": null}}}, {"groupby": ["<E1.F1>", "stratum"]}, {"rollup": '
  '{"start day": {"op": "min", "field": "subject start"}, "end day": {"op": "max", "field": "subject end"}, "censor '
@@ -819,9 +819,9 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E3.F1>"], "kind": "left"}, "in": ["<E1>__p", "<E3>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", '
  '"left": {"field": "<E1.F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": '
  '{"field": "<E1.F2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, '
- '"end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": '
+ '"end day": {"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": '
  '"<E1.F3>"}, "else": {"literal": null}}, "stratum": "<GROUPLABEL:E2.F>"}}, {"groupby": "<E1.F1:n>"}, {"rollup": '
- '{"start day": {"op": "min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}, "censor day": '
+ '{"start day": {"op": "min", "field": "start day"}, "end day": {"op": "min", "field": "end day"}, "censor day": '
  '{"op": "max", "field": "censor day"}, "stratum": {"op": "max", "field": "stratum"}}}, {"filter": {"op": "!=", '
  '"left": {"field": "start day"}, "right": {"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": '
  '{"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": '
@@ -889,10 +889,10 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"kind": "left"}, "in": ["<E1>__p", "<E3>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": '
  '{"field": "<E1.F3:q>"}, "right": {"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": '
  '"<E1.F2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": '
- '{"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, '
+ '{"if": {"op": "==", "left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": "<E1.F3>"}, '
  '"else": {"literal": null}}, "group": {"if": {"op": "!=", "left": {"field": "in second table"}, "right": {"literal": '
  'null}}, "then": {"literal": "<E2>"}, "else": {"literal": "No <E2>"}}}}, {"groupby": "<E1.F1:n>"}, {"rollup": {"start '
- 'day": {"op": "min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}, "censor day": {"op": "max", '
+ 'day": {"op": "min", "field": "start day"}, "end day": {"op": "min", "field": "end day"}, "censor day": {"op": "max", '
  '"field": "censor day"}, "group": {"op": "max", "field": "group"}}}, {"filter": {"op": "!=", "left": {"field": "start '
  'day"}, "right": {"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": {"field": "end day"}, "right": '
  '{"literal": null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": {"if": {"op": "!=", "left": '
@@ -965,12 +965,12 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"<E4>__by_subject"], "out": "<E1>__cens"}, {"filter": {"op": "!=", "left": {"field": "<E1.F3:q>"}, "right": '
  '{"literal": null}}}, {"derive": {"start day": {"if": {"op": "==", "left": {"field": "<E1.F2:n>"}, "right": '
  '{"literal": "<V1>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": null}}, "end day": {"if": {"op": "==", '
- '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
+ '"left": {"field": "<E1.F2>"}, "right": {"literal": "<V2:list>"}}, "then": {"field": "<E1.F3>"}, "else": {"literal": '
  'null}}, "group": {"if": {"op": "!=", "left": {"field": "in second table"}, "right": {"literal": null}}, "then": '
  '{"if": {"op": "!=", "left": {"field": "in third table"}, "right": {"literal": null}}, "then": {"literal": "<E2> + '
  '<E3>"}, "else": {"literal": "<E2> only"}}, "else": {"if": {"op": "!=", "left": {"field": "in third table"}, "right": '
  '{"literal": null}}, "then": {"literal": "<E3> only"}, "else": {"literal": "Neither"}}}}}, {"groupby": "<E1.F1:n>"}, '
- '{"rollup": {"start day": {"op": "min", "field": "start day"}, "end day": {"op": "max", "field": "end day"}, "censor '
+ '{"rollup": {"start day": {"op": "min", "field": "start day"}, "end day": {"op": "min", "field": "end day"}, "censor '
  'day": {"op": "max", "field": "censor day"}, "group": {"op": "max", "field": "group"}}}, {"filter": {"op": "!=", '
  '"left": {"field": "start day"}, "right": {"literal": null}}}, {"derive": {"died": {"if": {"op": "!=", "left": '
  '{"field": "end day"}, "right": {"literal": null}}, "then": {"literal": 1}, "else": {"literal": 0}}, "survival days": '
@@ -1223,7 +1223,11 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with.',
+ {'function': {'description': '[barchart] Joins two entities and counts records grouped by a field from the related '
+                              'entity, displayed as a vertical bar chart. Design: Cross-entity join groups by a field '
+                              'not native to the counted entity. Vertical orientation for small category counts (<=4). '
+                              'Tasks: Compare counts across categories from a related entity; discover cross-entity '
+                              'frequency patterns. Query patterns: How many <E1> are there, grouped by <E2.F:n>?',
                'name': 'vis_002_barchart_join_count_vert_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1236,7 +1240,11 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity1', 'entity2', 'entity2_field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with.',
+ {'function': {'description': '[barchart] Joins two entities and counts records grouped by a field from the related '
+                              'entity, displayed as a horizontal bar chart. Design: Cross-entity join with horizontal '
+                              'orientation for higher category counts (>4). Tasks: Compare counts across categories '
+                              'from a related entity; discover cross-entity frequency patterns. Query patterns: How '
+                              'many <E1> are there, grouped by <E2.F:n>?',
                'name': 'vis_003_barchart_join_count_horiz_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1283,7 +1291,13 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with.',
+ {'function': {'description': '[stacked_bar] Joins two entities and produces a vertical stacked bar chart of counts '
+                              'grouped by two nominal fields. Design: Stacked bars show part-to-whole composition '
+                              'within each category. Vertical layout for small category counts (<=4). Color encodes '
+                              'the secondary grouping field from the related entity. Color is preferably mapped to the '
+                              'variable with fewer unique values for better discriminability. Tasks: Compare group '
+                              'compositions across categories; identify dominant sub-groups within each bar. Query '
+                              'patterns: How many <E1> are there, grouped by <E1.F1:n> and <E2.F2:n>?',
                'name': 'vis_006_stacked_bar_join_count_vert_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1298,7 +1312,13 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity1', 'entity2', 'entity1_field1', 'entity2_field2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with.',
+ {'function': {'description': '[stacked_bar] Joins two entities and produces a horizontal stacked bar chart of counts '
+                              'grouped by two nominal fields. Design: Horizontal orientation for higher category '
+                              'counts (>4). Color encodes the primary grouping field. Cross-entity join required. '
+                              'Color is preferably mapped to the variable with fewer unique values for better '
+                              'discriminability. Tasks: Compare group compositions across categories; identify '
+                              'dominant sub-groups within each bar. Query patterns: How many <E1> are there, grouped '
+                              'by <E1.F1:n> and <E2.F2:n>?',
                'name': 'vis_007_stacked_bar_join_count_horiz_stacked_grouped',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1787,7 +1807,12 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with.',
+ {'function': {'description': '[table] Joins two related entities and displays the combined data as a table. Design: '
+                              'Cross-entity join enriches the view by combining fields from two related entities. '
+                              'Requires a valid foreign-key relationship. Tasks: Explore combined data from two '
+                              'related entities; retrieve specific values; identify anomalies and extremes. Query '
+                              'patterns: What does the combined data of <E1> and <E2> look like?; Make a table that '
+                              'combines <E1> and <E2>.',
                'name': 'vis_036_table_join',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1798,7 +1823,11 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity1', 'entity2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with.',
+ {'function': {'description': '[table] Finds which related entity record has the highest count of associated records, '
+                              'displayed as a ranked table with bar indicators. Design: Groups by foreign key, counts, '
+                              'ranks, and highlights the top record with color encoding. Bar marks on the count column '
+                              'provide visual comparison. Tasks: Identify the record with the most associated '
+                              'entities; compare counts across records. Query patterns: What <E2> has the most <E1>?',
                'name': 'vis_037_table_join_count_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1823,7 +1852,11 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with.',
+ {'function': {'description': '[table] Joins two entities, computes the maximum of a quantitative field per group, and '
+                              'ranks the results in a table with bar indicators. Design: Cross-entity join followed by '
+                              'group-level max aggregation. Highlights the top record with color encoding. Tasks: '
+                              'Identify which related record has the largest aggregated value; compare across groups. '
+                              'Query patterns: What Record in <E2> has the largest <E1> <E1.F:q>?',
                'name': 'vis_039_table_join_max_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -1852,7 +1885,12 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with.',
+ {'function': {'description': '[table] Joins two entities, computes the minimum of a quantitative field per group, and '
+                              'ranks the results in a table with conditional formatting. Design: Cross-entity join '
+                              'followed by group-level min aggregation. Highlights the top record with background '
+                              'color via rect mark. Tasks: Identify which related record has the smallest aggregated '
+                              'value; compare across groups. Query patterns: What Record in <E2> has the smallest <E1> '
+                              '<E1.F:q>?',
                'name': 'vis_041_table_join_min_ranked',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2022,8 +2060,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'dimension'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
-                              'here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curve from an event log — a table with one row per event, a subject id, '
+                              'an event-type column and a numeric time column. Given a start event type and one or '
+                              "more end event types, derives each subject's elapsed time between them and plots the "
+                              'falling fraction of subjects that have not yet reached an end event. The clock stops at '
+                              'the earliest listed end event: death alone for overall survival; progression, '
+                              'recurrence, relapse, second malignancy and death for event-free survival. Design: '
+                              'Survival time is not stored anywhere; it is reconstructed as the gap between two events '
+                              'for the same subject, so the template groups the event log by subject id and rolls it '
+                              'up to one row each before computing anything. The subject id is only a grouping key and '
+                              'is never encoded, so its cardinality does not matter. Tasks: Judge how survival falls '
+                              'over time after a starting event; compare the observed survival fraction of a cohort at '
+                              'a given number of days.',
                'name': 'vis_052_line_survival',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2059,11 +2107,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2082,8 +2137,17 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
-                              'here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by a nominal field as recorded at the start event, from an '
+                              'event log — one row per event, with a subject id, an event-type column and a numeric '
+                              "time column. Given a start and one or more end event types, derives each subject's "
+                              'elapsed time between them and plots one curve per category. The stratifier is read '
+                              "once, from the subject's start event, so each subject falls in exactly one group and "
+                              'the groups add back up to the whole cohort. This is the default way to split a survival '
+                              'curve. The clock stops at the earliest listed end event: death alone for overall '
+                              'survival; progression, recurrence, relapse, second malignancy and death for event-free '
+                              "survival. Design: An event-level column has no single value per subject: a subject's "
+                              'recorded value can differ between the event that starts the clock and the event that '
+                              'stops it.',
                'name': 'vis_053_line_survival_baseline',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2201,11 +2265,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2225,8 +2296,17 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
-                              'here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by each value of a multi-value (delimited) field as '
+                              'recorded at the start event, from an event log — one row per event, with a subject id, '
+                              "an event-type column and a numeric time column. Expands the start event's list so a "
+                              "subject counts toward every value it listed then, derives each subject's elapsed time "
+                              'between a start and one or more end event types, and plots one curve per value. The '
+                              'clock stops at the earliest listed end event: death alone for overall survival; '
+                              'progression, recurrence, relapse, second malignancy and death for event-free survival. '
+                              'Design: For set-valued columns such as tumor locations, where one subject can belong to '
+                              'several categories at once. An event-level column has no single value per subject: a '
+                              "subject's recorded value can differ between the event that starts the clock and the "
+                              'event that stops it.',
                'name': 'vis_054_line_survival_baseline_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2344,11 +2424,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2368,8 +2455,17 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
-                              'here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by every value a subject ever recorded, from an event log '
+                              '— one row per event, with a subject id, an event-type column and a numeric time column. '
+                              'A subject joins every group whose value appears anywhere on its timeline and carries '
+                              'its whole elapsed time into each, so the cohorts OVERLAP and the groups do not add up '
+                              'to the whole. Use this only when the request is explicitly about ever having a value; '
+                              'otherwise prefer the variant that reads the field at the start event, which partitions '
+                              'the cohort. The clock stops at the earliest listed end event: death alone for overall '
+                              'survival; progression, recurrence, relapse, second malignancy and death for event-free '
+                              "survival. Design: An event-level column has no single value per subject: a subject's "
+                              'recorded value can differ between the event that starts the clock and the event that '
+                              'stops it.',
                'name': 'vis_055_line_survival_ever',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2487,11 +2583,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2511,8 +2614,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'The secondary data entity (table) to join with. MAY be the same table as another entity '
-                              'here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by every value of a multi-value (delimited) field a '
+                              'subject ever recorded, from an event log — one row per event, with a subject id, an '
+                              'event-type column and a numeric time column. Expands the delimited column on every '
+                              'event, so a subject joins each value listed at any point and carries its whole elapsed '
+                              'time into all of them. Cohorts OVERLAP twice over — across values of one event and '
+                              'across events — and do not add up. The clock stops at the earliest listed end event: '
+                              'death alone for overall survival; progression, recurrence, relapse, second malignancy '
+                              'and death for event-free survival. Design: For set-valued columns where membership at '
+                              'any point is the question. An event-level column has no single value per subject: a '
+                              "subject's recorded value can differ between the event that starts the clock and the "
+                              'event that stops it. `unnest` runs first, on the event rows, so the per-subject rollup '
+                              'sees one row per (subject, value) pair and a subject joins every value it ever listed.',
                'name': 'vis_056_line_survival_ever_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2630,11 +2743,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2654,8 +2774,17 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
-                              'another entity here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by a field in a RELATED table, from an event log — one row '
+                              'per event, with a subject id, an event-type column and a numeric time column. Joins the '
+                              "event log to a second entity on the relationship between them, derives each subject's "
+                              'elapsed time between a start and one or more end event types, and plots one curve per '
+                              'value of the related field. Both tables must name the subject-id column they share, '
+                              'which is what the join runs on. Use this when the attribute to split by does not live '
+                              'on the event log itself — a treatment protocol, an enrolling site, a cohort assignment '
+                              'recorded elsewhere. A subject with several related records joins a group for each, so '
+                              'the cohorts OVERLAP and the groups do not add up to the whole. The clock stops at the '
+                              'earliest listed end event: death alone for overall survival; progression, recurrence, '
+                              'relapse, second malignancy and death for event-free survival.',
                'name': 'vis_057_line_survival_related',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2784,11 +2913,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2810,8 +2946,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
-                              'another entity here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by a NUMERIC field in a related table, cut into buckets at '
+                              "thresholds — 'under 65 versus 65 and over', tertiles of a lab value. Takes an event log "
+                              '(one row per event, with a subject id, an event-type column and a numeric time column) '
+                              'and a second table holding a per-subject number, joined on the subject-id column each '
+                              'side names. Supply the cut points in `grouping`: this template REQUIRES one, because a '
+                              'continuous column has no categories to draw a curve for. Ascending cut points, each '
+                              'bucket half-open on the right, so a cut at 65 puts 65 in the upper bucket. Use it '
+                              'whenever the attribute to split by is a number rather than a label. The clock stops at '
+                              'the earliest listed end event: death alone for overall survival; progression, '
+                              'recurrence, relapse, second malignancy and death for event-free survival.',
                'name': 'vis_058_line_survival_related_numeric',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -2940,11 +3084,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2966,8 +3117,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
-                              'another entity here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by each value of a multi-value (delimited) field in a '
+                              'RELATED table, from an event log — one row per event, with a subject id, an event-type '
+                              'column and a numeric time column. Joins the event log to a second entity on the '
+                              "subject-id column each side names, expands that entity's semicolon-delimited column so "
+                              "a record listing several values counts toward each, derives every subject's elapsed "
+                              'time between a start and one or more end event types, and plots one curve per value. '
+                              'Use this when the attribute to split by lives in another table AND that column holds a '
+                              'set rather than a single value — the agents making up a chemotherapy regimen, the sites '
+                              'a course of radiation covered. The cohorts OVERLAP: a subject joins a group for every '
+                              'value listed on any of its related records, so the groups do not add up to the whole. '
+                              'The clock stops at the earliest listed end event: death alone for overall survival; '
+                              'progression, recurrence, relapse, second malignancy and death for event-free survival.',
                'name': 'vis_059_line_survival_related_multivalue',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -3096,11 +3257,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3122,8 +3290,17 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
-                              'another entity here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by whether a subject EVER appears in a related table with '
+                              "one of a named set of values — 'ever received methotrexate', 'ever enrolled on protocol "
+                              "X' — against everyone else. Use this when the related table holds one row per subject "
+                              "per value (a patient's list of drugs, sites, diagnoses), so a subject has SEVERAL "
+                              'values rather than one. Supply the values in `grouping`: this template REQUIRES one, '
+                              'and the values it names are the question. Prefer this over the presence template, which '
+                              'asks only whether the subject is in the table at all (for a drug table that is '
+                              "'received any treatment'), and over the related-field template, which draws one curve "
+                              'per value and lets a subject appear in several. The clock stops at the earliest listed '
+                              'end event: death alone for overall survival; progression, recurrence, relapse, second '
+                              'malignancy and death for event-free survival.',
                'name': 'vis_060_line_survival_ever_matching',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -3252,11 +3429,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3278,8 +3462,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'An additional data entity (table) to join with (entity3). MAY be the same table as '
-                              'another entity here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves split by PRESENCE OR ABSENCE of the subject in a second table, '
+                              'from an event log — one row per event, with a subject id, an event-type column and a '
+                              "numeric time column. Answers 'did this subject receive/undergo/enrol in the thing that "
+                              "table records' — radiation, surgery, a protocol — where the fact is the existence of a "
+                              'row, not the value of any column. No field from the second table is named or plotted; '
+                              'only the shared subject-id column on each side. Exactly two curves, and they PARTITION '
+                              'the cohort: every subject is in one or the other, so the two groups add back to the '
+                              'whole and reconcile with the unstratified curve. The clock stops at the earliest listed '
+                              'end event: death alone for overall survival; progression, recurrence, relapse, second '
+                              'malignancy and death for event-free survival. Design: Use this, not the related-field '
+                              'variant, when the question is whether a subject has any record in a table rather than '
+                              'which value it holds.',
                'name': 'vis_061_line_survival_presence',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -3326,11 +3520,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3351,8 +3552,17 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                            'value3'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': 'An additional data entity (table) to join with (entity4). MAY be the same table as '
-                              'another entity here, when one table carries both roles.',
+ {'function': {'description': '[line] Survival curves for the 2x2 CROSS of presence in two other tables, from an event '
+                              'log — one row per event, with a subject id, an event-type column and a numeric time '
+                              'column. Produces up to four curves — second table only, third table only, both, neither '
+                              '— for questions about combinations of treatments or procedures recorded in separate '
+                              'tables. No field from either extra table is named or plotted; only the shared '
+                              'subject-id column on each side. The four groups PARTITION the cohort: every subject '
+                              'falls in exactly one cell, so they add back to the whole. Use the single-table presence '
+                              'variant when only one table is in question — four curves for a two-way question is '
+                              'harder to read for no gain. The clock stops at the earliest listed end event: death '
+                              'alone for overall survival; progression, recurrence, relapse, second malignancy and '
+                              'death for event-free survival.',
                'name': 'vis_062_line_survival_presence_2x2',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
@@ -3409,11 +3619,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
-                                                        'type': 'string'},
+                                             'value2': {'description': 'One or more literal data VALUES (not column '
+                                                                       'names); a row holding ANY of them matches. '
+                                                                       'Each copied exactly from the relevant column, '
+                                                                       'including case and spacing.',
+                                                        'items': {'description': 'A literal data VALUE to match (not a '
+                                                                                 'column name) — one of the values '
+                                                                                 'actually present in the relevant '
+                                                                                 'column, copied exactly, including '
+                                                                                 'case and spacing.',
+                                                                  'type': 'string'},
+                                                        'minItems': 1,
+                                                        'type': 'array'},
                                              'value3': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '

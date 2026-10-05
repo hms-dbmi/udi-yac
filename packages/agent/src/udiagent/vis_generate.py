@@ -59,6 +59,90 @@ def _grouping_parts(tag):
     kind, number, field = match.groups()
     return kind, f"GROUP{number or ''}", (field or "").split(":")[0]
 
+
+# A literal value placeholder that accepts SEVERAL values: `<V2:list>`. Compared
+# with `==` it matches a row holding any of them, with `!=` a row holding none —
+# so one template serves "time to death" and "time to the first of progression,
+# recurrence or death" alike. The binding is a list of strings; a bare string is
+# the one-element list, which keeps a call made before the parameter took lists
+# meaning what it meant.
+_LIST_VALUE = re.compile(r"(V\d*):list")
+
+
+def value_list(value):
+    """A list-valued `<V*:list>` binding as a list of strings.
+
+    Accepts a list, a JSON-encoded list (what a client that keeps every
+    argument a string sends back), or a single string.
+    """
+    if isinstance(value, (list, tuple)):
+        return [str(v) for v in value]
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.startswith("["):
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, list):
+                return [str(v) for v in parsed]
+        return [value]
+    if value is None:
+        return []
+    return [str(value)]
+
+
+def _expand_value_lists(spec_template, bindings):
+    """Rewrite each comparison against a `<V*:list>` into one per listed value.
+
+    Done on the parsed template, before any string substitution, because the
+    values are data the model supplied and only a structured rewrite keeps them
+    out of the JSON text. `==` becomes an `||` chain, `!=` an `&&` chain; the
+    field side is copied untouched, so its own placeholder resolves as usual.
+    """
+    if ":list>" not in spec_template:
+        return spec_template
+    try:
+        spec = json.loads(spec_template)
+    except (json.JSONDecodeError, TypeError):
+        return spec_template
+
+    def list_key(node):
+        literal = node.get("literal") if isinstance(node, dict) else None
+        if not isinstance(literal, str):
+            return None
+        match = re.fullmatch(PLACEHOLDER, literal)
+        if not match or not _LIST_VALUE.fullmatch(match.group(1)):
+            return None
+        return match.group(1).split(":")[0]
+
+    def visit(node):
+        if isinstance(node, list):
+            return [visit(child) for child in node]
+        if not isinstance(node, dict):
+            return node
+        op = node.get("op")
+        if op in ("==", "!="):
+            for value_side, other_side in (("right", "left"), ("left", "right")):
+                key = list_key(node.get(value_side))
+                if key is None:
+                    continue
+                # An empty list compares against "" so the chart still
+                # instantiates; validation has already reported it.
+                values = value_list(bindings.get(key)) or [""]
+                clauses = [
+                    {"op": op, other_side: node[other_side], value_side: {"literal": v}}
+                    for v in values
+                ]
+                expr = clauses[0]
+                for clause in clauses[1:]:
+                    expr = {"op": "||" if op == "==" else "&&", "left": expr, "right": clause}
+                return expr
+        return {k: visit(v) for k, v in node.items()}
+
+    return json.dumps(visit(spec))
+
+
 logger = logging.getLogger(__name__)
 
 # Why the template path was abandoned. Named rather than inlined because these
@@ -500,6 +584,10 @@ def _resolve_placeholder(tag, bindings, schema):
     # or a value like 'Grade "III"' would produce unparseable JSON.
     if re.fullmatch(r"V\d*", base):
         value = bindings.get(base, "")
+        # A list reaching here is not inside a comparison (those were expanded
+        # by `_expand_value_lists`), so it is text — a label — and reads as one.
+        if isinstance(value, (list, tuple)):
+            value = ", ".join(value_list(value))
         return json.dumps(str(value))[1:-1]
 
     return bindings.get(base, "")
@@ -515,7 +603,7 @@ def instantiate_template(spec_template, bindings, schema):
 
     Returns: Parsed spec dict.
     """
-    spec = spec_template
+    spec = _expand_value_lists(spec_template, bindings)
     # The cube marginal filter resolves to a structured Expr object, not a
     # string; strip the quotes around its placeholder so it injects unquoted
     # ("filter": {...}) and stays valid JSON.
@@ -1236,7 +1324,8 @@ def validate_bindings(
         # apply. Only require that something was supplied — an empty value would
         # silently make a filter match nothing.
         if re.fullmatch(r"V\d*", key):
-            if not str(field_name).strip():
+            values = value_list(field_name)
+            if not values or not all(v.strip() for v in values):
                 errors.append(
                     f"Value '{key}' is empty; supply the data value to match "
                     f"(e.g. one of the values present in the relevant column)."
@@ -1461,10 +1550,13 @@ def validate_bindings(
     domains = _categorical_domains(data_domains) if data_domains else {}
     if domains:
         for value_key, field_keys in value_field_pairs(spec_template).items():
-            value = bindings.get(value_key)
-            if not isinstance(value, str) or not value.strip():
-                continue
-            for field_key in sorted(field_keys):
+            # Every value of a list binding is checked: one misspelt end event
+            # in four does not empty the chart, but it silently drops that event
+            # from the definition, which is the same mistake made smaller.
+            values = [v for v in value_list(bindings.get(value_key)) if v.strip()]
+            for value, field_key in (
+                (v, f) for v in values for f in sorted(field_keys)
+            ):
                 field_name = bindings.get(field_key)
                 entity_name = _entity_for_binding_key(field_key, entity_bindings)
                 known = domains.get((entity_name, field_name))
