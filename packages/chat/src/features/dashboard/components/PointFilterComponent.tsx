@@ -206,8 +206,13 @@ export function PointFilterComponent({
                         key={value ?? '__null__'}
                         className="udi:flex udi:h-6 udi:items-center udi:gap-2"
                       >
+                        {/* The checkbox's hit area reaches 8px past its
+                            16px box by default, which on the last row spills
+                            out of the list and makes even a short one scroll.
+                            4px fills the 24px row exactly. */}
                         <Checkbox
                           id={id}
+                          className="udi:after:-inset-y-1"
                           checked={values.includes(value)}
                           onCheckedChange={(checked) => handleToggle(f, value, !!checked)}
                         />

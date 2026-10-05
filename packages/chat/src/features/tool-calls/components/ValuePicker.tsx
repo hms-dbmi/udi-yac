@@ -52,15 +52,19 @@ export function ValuePicker({
         </div>
       )}
       <ScrollArea scrollShadow viewportClassName="udi:max-h-48">
-        <div className="udi:space-y-1.5">
+        <div>
           {visible.map((value, i) => {
             // Index, not the value: real domain values contain spaces and
             // punctuation, which make an invalid id and silently break the
             // label/control association (and with it the accessible name).
             const id = `${idPrefix}-${i}`;
             return (
-              <div key={value} className="udi:flex udi:items-center udi:gap-2">
+              // Fixed 24px rows, with the checkbox's hit area trimmed to fill
+              // one: its default reaches 8px past the box, and on the last row
+              // that spills out of the list and makes even a short one scroll.
+              <div key={value} className="udi:flex udi:h-6 udi:items-center udi:gap-2">
                 <Checkbox
+                  className="udi:after:-inset-y-1"
                   id={id}
                   checked={selected.includes(value)}
                   onCheckedChange={(checked) => onToggle(value, !!checked)}
