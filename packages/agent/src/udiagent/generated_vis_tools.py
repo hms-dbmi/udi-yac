@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 76
+Tools: 77
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -1317,6 +1317,15 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"type": "quantitative"}, {"encoding": "y", "field": "<F1>", "type": "nominal"}, {"encoding": "x", "field": "<F2>", '
  '"type": "nominal"}, {"encoding": "color", "value": "black"}], "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
  '0.7}]}',
+ '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
+ '[{"join": {"on": ["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"]}, "in": ["<E1>", "<E2>"], "out": "<E1>__<E2>"}, '
+ '{"groupby": ["<E1.F1>", "<E2.F2>", "<E1.r.E2.id.from>"]}, {"rollup": {"<E1> rows": {"op": "count"}}}, {"groupby": '
+ '["<E2.F2>", "<E1.F1>"]}, {"rollup": {"count <E2>": {"op": "count"}}}], "representation": [{"mark": "rect", '
+ '"mapping": [{"encoding": "color", "field": "count <E2>", "type": "quantitative"}, {"encoding": "y", "field": '
+ '"<E1.F1>", "type": "nominal"}, {"encoding": "x", "field": "<E2.F2>", "type": "nominal"}]}, {"mark": "text", '
+ '"mapping": [{"encoding": "text", "field": "count <E2>", "type": "quantitative"}, {"encoding": "y", "field": '
+ '"<E1.F1>", "type": "nominal"}, {"encoding": "x", "field": "<E2.F2>", "type": "nominal"}, {"encoding": "color", '
+ '"value": "black"}], "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7}]}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F3>", "<F2>"]}, {"rollup": '
  '{"average <F1>": {"op": "mean", "field": "<F1:q>"}}}], "representation": {"mark": "rect", "mapping": [{"encoding": '
  '"color", "field": "average <F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}, '
@@ -3921,6 +3930,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field1', 'field2'],
                               'type': 'object'}},
   'type': 'function'},
+ {'function': {'description': '[heatmap] Joins two related entities and displays the number of distinct entity2 '
+                              'records for each combination of a nominal field on entity1 and a nominal field on '
+                              'entity2, as a heatmap with labeled cells. Use when the two fields live in different '
+                              'tables — e.g. a treatment protocol on a therapy table by vital status on a patient '
+                              'table, or gender on a demographics table by vital status. Bind entity2 to the table '
+                              'whose records are being counted (the patients) and entity1 to the related table holding '
+                              'the other field. Design: The join repeats each <E2> record once per related <E1> row, '
+                              'so the template first reduces to one row per (cell, record) on the join key and only '
+                              'then counts: a cell is the number of DISTINCT records, never the number of related '
+                              'rows. A record with rows under several <E1.F1> values is counted in each of those '
+                              'cells, so with a one-to-many relationship the cells can sum to more than the number of '
+                              'records — that is membership, not double counting within a cell.',
+               'name': 'vis_066_heatmap_count_join',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                                                         'type': 'string'},
+                                             'entity1_field1': {'description': 'nominal field, encodes y-axis.',
+                                                                'type': 'string'},
+                                             'entity2': {'description': 'The secondary data entity (table) to join '
+                                                                        'with.',
+                                                         'type': 'string'},
+                                             'entity2_field2': {'description': 'nominal field, encodes x-axis.',
+                                                                'type': 'string'}},
+                              'required': ['entity1', 'entity2', 'entity1_field1', 'entity2_field2'],
+                              'type': 'object'}},
+  'type': 'function'},
  {'function': {'description': '[heatmap] Displays the average of a quantitative field for each combination of two '
                               'nominal fields as a heatmap. Design: Uses three fields: a quantitative measure '
                               'aggregated by average, and two nominal axes. Color encodes the aggregate value. The '
@@ -3928,7 +3963,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'readability. Tasks: Identify patterns in the average value across two categorical '
                               'dimensions; find combinations with extreme values. Query patterns: What is the average '
                               '<F1:q> for each <F2:n> and <F3:n>?',
-               'name': 'vis_066_heatmap_avg',
+               'name': 'vis_067_heatmap_avg',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -3951,7 +3986,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'across two dimensions; compare values across combinations. Query patterns: Are there '
                               'clusters in the measure across two dimensions?; Make a heatmap across two categorical '
                               'dimensions.',
-               'name': 'vis_067_heatmap_basic',
+               'name': 'vis_068_heatmap_basic',
                'parameters': {'additionalProperties': False,
                               'properties': {'dimension1': {'description': 'cube nominal dimension, encodes x-axis.',
                                                             'type': 'string'},
@@ -3969,7 +4004,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'assess whether the relationship between two quantitative fields differs across groups. '
                               'Query patterns: Are there clusters of <E> <F1:q> and <F2:q> values across different '
                               '<F3:n> groups?',
-               'name': 'vis_068_grouped_scatter_by_color',
+               'name': 'vis_069_grouped_scatter_by_color',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -3987,7 +4022,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'span from bin start to bin end on x, with count on y. Tasks: Characterize the shape of '
                               'a distribution; identify modes, skewness, and gaps. Query patterns: What is the '
                               'distribution of <F:q>?; Make a histogram of <F:q>?',
-               'name': 'vis_069_histogram_distribution',
+               'name': 'vis_070_histogram_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4001,7 +4036,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
                               'distribution; identify modes and overall density patterns. Query patterns: What is the '
                               'distribution of <F:q>?',
-               'name': 'vis_070_area_density',
+               'name': 'vis_071_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4015,7 +4050,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'datasets (50 or fewer values) where individual observations are meaningful and '
                               'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
                               'values, clusters, and outliers. Query patterns: What is the distribution of <F:q>?',
-               'name': 'vis_071_dot_distribution',
+               'name': 'vis_072_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4031,7 +4066,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
                               'tendency or spread. Query patterns: Is the distribution of <F1:q> similar for each '
                               '<F2:n>?',
-               'name': 'vis_072_grouped_area_density',
+               'name': 'vis_073_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4048,7 +4083,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
                               'groups; identify clusters and outliers within each group. Query patterns: Is the '
                               'distribution of <F1:q> similar for each <F2:n>?',
-               'name': 'vis_073_grouped_dot_distribution',
+               'name': 'vis_074_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4066,7 +4101,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a field; determine how many records have valid values and what proportion. Query '
                               'patterns: How many <E> records have a non-null <F:q|o|n>?; What percentage of <E> '
                               'records have a non-null <F:q|o|n>?',
-               'name': 'vis_074_table_count_null_nonnull',
+               'name': 'vis_075_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4082,7 +4117,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Assess data quality; determine how many records are missing a value and what '
                               'proportion. Query patterns: How many <E> records have a null <F:q|o|n>?; What '
                               'percentage of <E> records have a null <F:q|o|n>?',
-               'name': 'vis_075_table_count_null',
+               'name': 'vis_076_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4331,16 +4366,21 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'value1': 'V1',
                                             'value2': 'V2'}),
  'vis_065_heatmap_count': (65, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_066_heatmap_avg': (66, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_067_heatmap_basic': (67, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
- 'vis_068_grouped_scatter_by_color': (68, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
- 'vis_069_histogram_distribution': (69, {'entity': 'E', 'field': 'F'}),
- 'vis_070_area_density': (70, {'entity': 'E', 'field': 'F'}),
- 'vis_071_dot_distribution': (71, {'entity': 'E', 'field': 'F'}),
- 'vis_072_grouped_area_density': (72, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_073_grouped_dot_distribution': (73, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_074_table_count_null_nonnull': (74, {'entity': 'E', 'field': 'F'}),
- 'vis_075_table_count_null': (75, {'entity': 'E', 'field': 'F'})}
+ 'vis_066_heatmap_count_join': (66,
+                                {'entity1': 'E1',
+                                 'entity1_field1': 'E1.F1',
+                                 'entity2': 'E2',
+                                 'entity2_field2': 'E2.F2'}),
+ 'vis_067_heatmap_avg': (67, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_068_heatmap_basic': (68, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
+ 'vis_069_grouped_scatter_by_color': (69, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
+ 'vis_070_histogram_distribution': (70, {'entity': 'E', 'field': 'F'}),
+ 'vis_071_area_density': (71, {'entity': 'E', 'field': 'F'}),
+ 'vis_072_dot_distribution': (72, {'entity': 'E', 'field': 'F'}),
+ 'vis_073_grouped_area_density': (73, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_074_grouped_dot_distribution': (74, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_075_table_count_null_nonnull': (75, {'entity': 'E', 'field': 'F'}),
+ 'vis_076_table_count_null': (76, {'entity': 'E', 'field': 'F'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -4410,16 +4450,17 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_063_line_survival_cube': ['data_cube', 'line'],
  'vis_064_line_survival_cube_stratified': ['data_cube', 'line'],
  'vis_065_heatmap_count': ['line_item', 'heatmap'],
- 'vis_066_heatmap_avg': ['line_item', 'heatmap'],
- 'vis_067_heatmap_basic': ['data_cube', 'heatmap'],
- 'vis_068_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
- 'vis_069_histogram_distribution': ['line_item', 'histogram'],
- 'vis_070_area_density': ['line_item', 'area'],
- 'vis_071_dot_distribution': ['line_item', 'dot'],
- 'vis_072_grouped_area_density': ['line_item', 'grouped_area'],
- 'vis_073_grouped_dot_distribution': ['line_item', 'grouped_dot'],
- 'vis_074_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_075_table_count_null': ['line_item', 'table']}
+ 'vis_066_heatmap_count_join': ['line_item', 'heatmap'],
+ 'vis_067_heatmap_avg': ['line_item', 'heatmap'],
+ 'vis_068_heatmap_basic': ['data_cube', 'heatmap'],
+ 'vis_069_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
+ 'vis_070_histogram_distribution': ['line_item', 'histogram'],
+ 'vis_071_area_density': ['line_item', 'area'],
+ 'vis_072_dot_distribution': ['line_item', 'dot'],
+ 'vis_073_grouped_area_density': ['line_item', 'grouped_area'],
+ 'vis_074_grouped_dot_distribution': ['line_item', 'grouped_dot'],
+ 'vis_075_table_count_null_nonnull': ['line_item', 'table'],
+ 'vis_076_table_count_null': ['line_item', 'table']}
 
 
 # Entity keys per tool name that may share a table with another entity
@@ -4490,16 +4531,17 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_063_line_survival_cube': [],
  'vis_064_line_survival_cube_stratified': [],
  'vis_065_heatmap_count': [],
- 'vis_066_heatmap_avg': [],
- 'vis_067_heatmap_basic': [],
- 'vis_068_grouped_scatter_by_color': [],
- 'vis_069_histogram_distribution': [],
- 'vis_070_area_density': [],
- 'vis_071_dot_distribution': [],
- 'vis_072_grouped_area_density': [],
- 'vis_073_grouped_dot_distribution': [],
- 'vis_074_table_count_null_nonnull': [],
- 'vis_075_table_count_null': []}
+ 'vis_066_heatmap_count_join': [],
+ 'vis_067_heatmap_avg': [],
+ 'vis_068_heatmap_basic': [],
+ 'vis_069_grouped_scatter_by_color': [],
+ 'vis_070_histogram_distribution': [],
+ 'vis_071_area_density': [],
+ 'vis_072_dot_distribution': [],
+ 'vis_073_grouped_area_density': [],
+ 'vis_074_grouped_dot_distribution': [],
+ 'vis_075_table_count_null_nonnull': [],
+ 'vis_076_table_count_null': []}
 
 # User-facing text per tool name: (title_template, summary_template),
 # with placeholders rewritten to tokens the frontend resolves against
@@ -4695,31 +4737,35 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_065_heatmap_count': ('Heatmap of the number of {entity} by {enc:y} and {enc:x}',
                            'Displays the number of {entity} for each pairing of {enc:y} and {enc:x}, as a grid of '
                            'shaded, labelled cells.'),
- 'vis_066_heatmap_avg': ('Heatmap of {enc:color} by {enc:y} and {enc:x}',
+ 'vis_066_heatmap_count_join': ('Heatmap of the number of {ent:entity2} by {enc:y} and {enc:x}',
+                                'Joins {entity1} to {ent:entity2} and counts distinct {ent:entity2} for each pairing '
+                                'of {enc:y} and {enc:x}; one with several {entity1} rows under the same {enc:y} counts '
+                                'once in that cell.'),
+ 'vis_067_heatmap_avg': ('Heatmap of {enc:color} by {enc:y} and {enc:x}',
                          'Displays the mean {field:color} for each pairing of {enc:y} and {enc:x}, as a grid of shaded '
                          'cells.'),
- 'vis_067_heatmap_basic': ('Heatmap of {enc:color} by {enc:x} and {enc:y}',
+ 'vis_068_heatmap_basic': ('Heatmap of {enc:color} by {enc:x} and {enc:y}',
                            'Displays {enc:color} for each pairing of {enc:x} and {enc:y}, as a grid of shaded, '
                            'labelled cells.'),
- 'vis_068_grouped_scatter_by_color': ('Scatterplot of {enc:x} and {enc:y} by {enc:color}',
+ 'vis_069_grouped_scatter_by_color': ('Scatterplot of {enc:x} and {enc:y} by {enc:color}',
                                       'Displays a point for each {entity:one}, positioned by {enc:x} and {enc:y} and '
                                       'coloured by {enc:color}.'),
- 'vis_069_histogram_distribution': ('Histogram of {col:field}',
+ 'vis_070_histogram_distribution': ('Histogram of {col:field}',
                                     'Displays how many {entity} fall into each range of {col:field}, as adjacent '
                                     'bars.'),
- 'vis_070_area_density': ('Density plot of {enc:x}',
+ 'vis_071_area_density': ('Density plot of {enc:x}',
                           'Displays where {entity} concentrate across {enc:x}, as a smooth curve.'),
- 'vis_071_dot_distribution': ('Dot plot of {enc:x}',
+ 'vis_072_dot_distribution': ('Dot plot of {enc:x}',
                               'Displays a point for each {entity:one} along a single {enc:x} axis.'),
- 'vis_072_grouped_area_density': ('Density plot of {enc:x} by {enc:color}',
+ 'vis_073_grouped_area_density': ('Density plot of {enc:x} by {enc:color}',
                                   'Displays where {entity} concentrate across {enc:x}, as one overlapping curve per '
                                   '{enc:color} category.'),
- 'vis_073_grouped_dot_distribution': ('Dot plot of {enc:x} by {enc:y}',
+ 'vis_074_grouped_dot_distribution': ('Dot plot of {enc:x} by {enc:y}',
                                       'Displays a point for each {entity:one} along {enc:x}, with one row per {enc:y} '
                                       'category.'),
- 'vis_074_table_count_null_nonnull': ('Table of {enc:text} completeness',
+ 'vis_075_table_count_null_nonnull': ('Table of {enc:text} completeness',
                                       'Displays how many {entity} have a value for {field:text}, and what percentage '
                                       'of them that is.'),
- 'vis_075_table_count_null': ('Table of missing {enc:text} values',
+ 'vis_076_table_count_null': ('Table of missing {enc:text} values',
                               'Displays how many {entity} are missing {field:text}, and what percentage of them that '
                               'is.')}

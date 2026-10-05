@@ -314,9 +314,8 @@ def _post_join_collisions(spec: dict, collisions: frozenset[str]) -> list[str]:
     fails. The join step's own ``on`` keys are exempt: they are consumed by the
     join itself, while a later ``groupby`` on the same name is not.
 
-    Some shipped templates join and then group by the join key, which is
-    unrenderable against any schema whose two tables share that column name — a
-    real limitation of the template, worth reporting rather than papering over.
+    A join key BOTH tables name the same is exempt too, everywhere: it is not
+    renamed (see below).
     """
     if not collisions:
         return []
@@ -330,6 +329,20 @@ def _post_join_collisions(spec: dict, collisions: frozenset[str]) -> list[str]:
             return [s for v in node for s in strings(v)]
         return []
 
+    # A key both tables name the same is not renamed: Arquero treats it as one
+    # shared key column and keeps it under its own name (only NON-key columns get
+    # `_1`/`_2`), and the SQL compiler does the same. So grouping by such a key
+    # after the join — which is how a template counts distinct records across it
+    # — resolves fine, and must not be reported.
+    shared_keys: set[str] = set()
+    for step in spec.get("transformation") or []:
+        on = step.get("join", {}).get("on") if isinstance(step, dict) else None
+        if isinstance(on, str):
+            shared_keys.add(on)
+        elif isinstance(on, list) and len(on) == 2 and on[0] == on[1]:
+            if isinstance(on[0], str):
+                shared_keys.add(on[0])
+
     used: list[str] = []
     for step in spec.get("transformation") or []:
         if isinstance(step, dict) and "join" in step:
@@ -337,7 +350,7 @@ def _post_join_collisions(spec: dict, collisions: frozenset[str]) -> list[str]:
         used.extend(strings(step))
     used.extend(strings(spec.get("representation")))
 
-    return sorted({name for name in used if name in collisions})
+    return sorted({name for name in used if name in collisions - shared_keys})
 
 
 def _grammar_error(spec: dict, grammar: dict | None) -> str:

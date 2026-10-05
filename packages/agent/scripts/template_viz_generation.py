@@ -4345,6 +4345,91 @@ def generate():
         tasks="Identify clusters or patterns in the co-occurrence of two fields; compare counts across combinations; find correlations.",
     )
 
+    # Cross-entity count heatmap: one nominal field from each of two related
+    # tables — protocol (on a therapy table) by vital status (on a patient
+    # table), gender (demographics) by vital status. Counts DISTINCT records of
+    # the referenced table, because the join repeats each of them once per
+    # related row: a patient with three regimens is three joined rows, and a
+    # row count would report regimens while the axis title said patients.
+    df = add_row(
+        df,
+        query_templates=[
+            "How many <E2> are there for each <E1.F1:n> and <E2.F2:n>?",
+            "Make a heatmap of <E2> counts by <E1.F1:n> and <E2.F2:n>.",
+            "Show the count of <E2> by <E1.F1:n> and <E2.F2:n>.",
+        ],
+        spec=(
+            Chart()
+            .source("<E1>", "<E1.url>")
+            .source("<E2>", "<E2.url>")
+            .join(
+                in_name=["<E1>", "<E2>"],
+                on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
+                out_name="<E1>__<E2>",
+            )
+            # One row per (cell, record): collapses the join's repeats, so the
+            # count below is of distinct <E2> records. A no-op when the tables
+            # are one-to-one.
+            .groupby(["<E1.F1>", "<E2.F2>", "<E1.r.E2.id.from>"])
+            .rollup({"<E1> rows": Op.count()})
+            .groupby(["<E2.F2>", "<E1.F1>"])
+            .rollup({"count <E2>": Op.count()})
+            .mark("rect")
+            .color(field="count <E2>", type="quantitative")
+            .y(field="<E1.F1>", type="nominal")
+            .x(field="<E2.F2>", type="nominal")
+            .mark("text")
+            .text(field="count <E2>", type="quantitative")
+            .y(field="<E1.F1>", type="nominal")
+            .x(field="<E2.F2>", type="nominal")
+            # Same black-on-halo labelling as the single-table count heatmap.
+            .color(value="black")
+            .outline(color="white", width=3, opacity=0.7)
+        ),
+        chart_type=ChartType.HEATMAP,
+        name_hint="count_join",
+        task_types=[
+            TaskType.CLUSTER,
+            TaskType.COMPUTE_DERIVED_VALUE,
+            TaskType.CORRELATE,
+        ],
+        description=(
+            "Joins two related entities and displays the number of distinct entity2 records "
+            "for each combination of a nominal field on entity1 and a nominal field on entity2, "
+            "as a heatmap with labeled cells. Use when the two fields live in different tables — "
+            "e.g. a treatment protocol on a therapy table by vital status on a patient table, or "
+            "gender on a demographics table by vital status. Bind entity2 to the table whose "
+            "records are being counted (the patients) and entity1 to the related table holding "
+            "the other field."
+        ),
+        title_template="Heatmap of the number of <E2> by <E1.F1> and <E2.F2>",
+        summary_template=(
+            "Joins <E1> to <E2> and counts distinct <E2> for each pairing of <E1.F1> and "
+            "<E2.F2>; one with several <E1> rows under the same <E1.F1> counts once in that cell."
+        ),
+        design_considerations=(
+            "The join repeats each <E2> record once per related <E1> row, so the template first "
+            "reduces to one row per (cell, record) on the join key and only then counts: a cell "
+            "is the number of DISTINCT records, never the number of related rows. A record with "
+            "rows under several <E1.F1> values is counted in each of those cells, so with a "
+            "one-to-many relationship the cells can sum to more than the number of records — "
+            "that is membership, not double counting within a cell. Records with no related row "
+            "drop out of the inner join. Rect marks with quantitative colour show density; "
+            "overlaid black text on a white halo gives exact counts. <E1.F1> goes on the y-axis, "
+            "where a related table's longer category names stay readable."
+        ),
+        tasks=(
+            "Compare how a status on one table is distributed across categories recorded in a "
+            "related table; find combinations that are over- or under-represented."
+        ),
+        review_hint=(
+            "Check cells count distinct records, not joined rows: on pcx, protocol (Medical "
+            "Therapy) by vital_status (Patient) puts 20 deceased patients under 'Not "
+            "Applicable', where a row count would say 29. Gender (Demographics) by "
+            "vital_status is one-to-one, so its cells sum to the patient count."
+        ),
+    )
+
     # Aggregate heatmap (average over two nominal fields)
     for name, op in [("average", Op.mean)]:
         named_aggregate = f"{name} <F1>"
