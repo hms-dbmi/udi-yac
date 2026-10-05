@@ -32,7 +32,9 @@ const SOURCES = {
 for (const [name, file] of Object.entries(SOURCES)) {
   // Delimiter by extension, as the toolkit's own loaders infer it.
   const delimiter = file.endsWith('.tsv') ? '\t' : ',';
-  const table = fromCSV(readFileSync(join(sampleData, file), 'utf8'), { delimiter });
+  const table = fromCSV(readFileSync(join(sampleData, file), 'utf8'), {
+    delimiter,
+  });
   store.seedDataSource(name, file, table);
 }
 
@@ -245,6 +247,71 @@ const CASES = [
         },
         { groupby: 'sex' },
         { rollup: { max_pct: { op: 'max', field: 'percentile' } } },
+      ],
+    },
+  ],
+  [
+    // log/exp exist to write a running PRODUCT as exp(rolling sum(log)) — the
+    // Kaplan-Meier estimate. The at-risk count comes from rank() over a UNIQUE
+    // order (see rolling-percentile on ties), and every factor is positive, so
+    // no log(0) arises; the templates guard that case with a conditional.
+    'rolling-log-exp-product',
+    {
+      source: src('donors'),
+      transformation: [
+        { filter: notNull('age_value') },
+        { groupby: 'sex' },
+        { derive: { n: { agg: 'count' } } },
+        { orderby: { field: 'hubmap_id', order: 'asc' } },
+        {
+          derive: {
+            at_risk: {
+              op: '+',
+              left: {
+                op: '-',
+                left: { field: 'n' },
+                right: { window: 'rank' },
+              },
+              right: { literal: 1 },
+            },
+          },
+        },
+        {
+          derive: {
+            log_factor: {
+              fn: 'log',
+              args: [
+                {
+                  op: '/',
+                  left: { field: 'at_risk' },
+                  right: {
+                    op: '+',
+                    left: { field: 'at_risk' },
+                    right: { literal: 1 },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          derive: {
+            product: {
+              rolling: {
+                expression: {
+                  fn: 'exp',
+                  args: [{ agg: 'sum', field: 'log_factor' }],
+                },
+              },
+            },
+          },
+        },
+        {
+          rollup: {
+            lo: { op: 'min', field: 'product' },
+            hi: { op: 'max', field: 'product' },
+          },
+        },
       ],
     },
   ],

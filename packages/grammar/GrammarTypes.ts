@@ -452,11 +452,13 @@ export interface RollingDeriveExpression {
  * It is deliberately NOT a general expression language: it covers exactly the
  * surface the visualization templates emit today — field references, literals,
  * binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates
- * (count/sum/…), and window functions (rank). Add a node only when a template
+ * (count/sum/…), window functions (rank), and the log/exp math functions. Add
+ * a node only when a template
  * needs one.
  *
  * The union is untagged; nodes are distinguished by key
- * (`field` | `literal` | `op` | `if` | `agg` | `window`) without a `type` tag.
+ * (`field` | `literal` | `op` | `if` | `agg` | `window` | `concat` | `fn`)
+ * without a `type` tag.
  * CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field`
  * prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr
  * case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node
@@ -473,7 +475,8 @@ export type Expr =
   | ConditionalExpr
   | AggregateExpr
   | WindowExpr
-  | ConcatExpr;
+  | ConcatExpr
+  | FunctionExpr;
 
 /**
  * A reference to a column in the current table. Legacy form: `d['age']`.
@@ -553,6 +556,20 @@ export interface WindowExpr {
  */
 export interface ConcatExpr {
   concat: Expr[];
+}
+
+/**
+ * A scalar math function of one argument. `log` is the NATURAL logarithm.
+ *
+ * Exists for running products: no executor has a portable product aggregate,
+ * but a product is `exp(sum(log(x)))`, and a running sum is already a rolling
+ * derive — which is how the survival templates compute the Kaplan-Meier
+ * estimate. `log` of zero or a negative number is -Infinity/NaN in Arquero and
+ * an error in SQL, so guard the argument with a conditional.
+ */
+export interface FunctionExpr {
+  fn: 'log' | 'exp';
+  args: [Expr];
 }
 
 /**

@@ -162,8 +162,10 @@ def test_survival_capability_is_advertised_to_the_orchestrator():
     assert "survival" in instructions
     # Must route to CreateVisualization rather than Rebuff.
     assert "rebuff" in instructions, "the prompt should say survival is not a Rebuff case"
-    # And must not let the agent claim a true Kaplan-Meier estimate.
-    assert "not" in instructions and "kaplan-meier" in instructions
+    # It may now call the curve Kaplan-Meier — it is one — but must not let the
+    # agent claim statistical significance, which nothing computes.
+    assert "kaplan-meier estimate" in instructions
+    assert "significance" in instructions and "not" in instructions
 
 
 def test_concat_compiles_to_sql():

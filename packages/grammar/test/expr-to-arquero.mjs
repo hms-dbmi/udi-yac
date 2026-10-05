@@ -2,7 +2,7 @@
 // legacy expression form and its AST equivalent produce identical results on
 // a real Arquero table. Run after `npm run build:all` (imports from dist).
 import assert from 'node:assert/strict';
-import { from } from 'arquero';
+import { from, rolling } from 'arquero';
 import { exprToArquero, isExpr } from '../dist/index.js';
 
 const table = from([
@@ -116,7 +116,12 @@ console.log('expr-to-arquero: all assertions passed');
 // into a single column first.
 assert.equal(
   exprToArquero({
-    concat: [{ field: 'org' }, { literal: ' ' }, { field: 'pct' }, { literal: '%' }],
+    concat: [
+      { field: 'org' },
+      { literal: ' ' },
+      { field: 'pct' },
+      { literal: '%' },
+    ],
   }),
   `('' + (d['org']) + (" ") + (d['pct']) + ("%"))`,
   'concat should stringify and join its parts in order',
@@ -133,3 +138,58 @@ assert.throws(
   'an empty concat is a spec error, not an empty string',
 );
 console.log('expr-to-arquero: concat assertions passed');
+
+// log/exp: scalar math functions, there so a running PRODUCT can be written as
+// exp(sum(log(x))) — the Kaplan-Meier estimate in the survival templates.
+{
+  const nums = from([{ x: 1 }, { x: Math.E }, { x: 10 }]);
+  const logAst = { fn: 'log', args: [{ field: 'x' }] };
+  assert.ok(isExpr(logAst), 'isExpr should accept a function node');
+  assert.deepEqual(
+    nums.derive({ y: exprToArquero(logAst) }).array('y'),
+    nums.derive({ y: "log(d['x'])" }).array('y'),
+    'log is the natural logarithm',
+  );
+  assert.equal(
+    nums
+      .derive({ y: exprToArquero({ fn: 'exp', args: [logAst] }) })
+      .array('y')[2],
+    10.000000000000002,
+    'exp inverts log',
+  );
+
+  // The product the survival templates rely on, through a real rolling window.
+  const factors = from([
+    { t: 1, f: 0.5 },
+    { t: 2, f: 0.8 },
+    { t: 3, f: 0.25 },
+  ]).orderby('t');
+  const withLog = factors.derive({
+    lf: exprToArquero({ fn: 'log', args: [{ field: 'f' }] }),
+  });
+  const product = withLog
+    .derive({
+      p: rolling(
+        exprToArquero({ fn: 'exp', args: [{ agg: 'sum', field: 'lf' }] }),
+      ),
+    })
+    .array('p');
+  [0.5, 0.4, 0.1].forEach((want, i) =>
+    assert.ok(
+      Math.abs(product[i] - want) < 1e-12,
+      `running product row ${i}: ${product[i]}`,
+    ),
+  );
+
+  assert.throws(
+    () => exprToArquero({ fn: 'sqrt', args: [{ field: 'x' }] }),
+    /unsupported function/,
+    'only whitelisted functions compile',
+  );
+  assert.throws(
+    () => exprToArquero({ fn: 'log', args: [] }),
+    /exactly one argument/,
+    'a function takes exactly one argument',
+  );
+}
+console.log('expr-to-arquero: function assertions passed');

@@ -319,15 +319,13 @@ _SURVIVAL_CENSORING = (
     "is a separate binding: a subject-level table with a status column and the date that "
     "status was current, plus the value meaning 'no event yet'. A subject that table never "
     "mentions still reaches the curve, at time zero and with no tick. "
-    "These are survival curves but not strictly the Kaplan-Meier estimator, and the "
-    "difference is entirely in how censoring is counted: a censored subject stays in the "
-    "denominator after its follow-up ends, where Kaplan-Meier drops it from the number "
-    "still at risk. So wherever a subject is censored before a later event, the curve sits "
-    "ABOVE the Kaplan-Meier one and overstates survival. With no censoring — every subject "
-    "reaching an end event, or censored only after the last one — the two are identical, "
-    "since the product of Kaplan-Meier's per-event factors reduces to events over cohort. "
-    "A subject placed at day 0 for want of a censoring date counts as censored at the "
-    "start. There is no significance test. "
+    "The curve is the Kaplan-Meier estimate: a censored subject leaves the number at risk "
+    "when its follow-up stops, and each event lowers the curve by the fraction of those "
+    "still at risk who had it — so late events among few remaining subjects drop it "
+    "steeply, and a curve can reach 0% when the last subject at risk has the event. At "
+    "equal times, events count before censorings. A subject placed at day 0 for want of a "
+    "censoring date is censored at the start, leaving the risk set before the first event. "
+    "There are no confidence intervals and no significance test. "
     "Strata are also unequal in size, and a small one steps coarsely (n=4 moves in "
     "quarters), so a dramatic-looking curve may rest on a handful of subjects. "
 )
@@ -822,8 +820,8 @@ def _survival_subject_rows(
             }
         )
         # The cohort is everyone with a start event, counted BEFORE anyone is
-        # dropped for lacking an end event — that is what makes the curve level
-        # off at the observed survival fraction instead of falling to zero.
+        # dropped for lacking an end event: a subject who never reached one is
+        # censored, not removed, and stays at risk until its follow-up stops.
         chart = chart.filter(Expr.not_null("start day"))
         # A subject with no value on its start event cannot be placed in any
         # group and leaves the cohort here, which is why these group sizes can
@@ -967,26 +965,13 @@ def _cube_survival_chart(stratified: bool = False):
         }
     )
     chart = chart.orderby("<D1>")
-    # Cumulative events over the ordered time points, as the fraction still
-    # event-free. Same construction as the line-level curve, counting cells
-    # rather than subjects.
-    chart = chart.derive(
-        {
-            "survival percentage": rolling(
-                Expr.binop(
-                    "*",
-                    Expr.binop(
-                        "-",
-                        Expr.lit(1),
-                        Expr.binop(
-                            "/", Expr.agg("sum", _CUBE_EVENTS), Expr.field("subjects")
-                        ),
-                    ),
-                    Expr.lit(100),
-                )
-            )
-        }
-    )
+    # The Kaplan-Meier estimate over the ordered time points — the same estimator
+    # as the line-level curve, stepping a time point at a time instead of a
+    # subject at a time. Each point removes everyone it observed (events and
+    # censorings) from the risk set, but only after its own events are counted
+    # against it: the at-risk count includes this point's censored subjects,
+    # which is the Kaplan-Meier tie rule.
+    chart = _kaplan_meier(chart, events=_CUBE_EVENTS, leaving="observed")
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
     chart = chart.derive({"full survival": Expr.lit(100)})
     chart = chart.derive({"first time": Expr.agg("min", "<D1>")})
@@ -1083,21 +1068,17 @@ def _cube_survival_chart(stratified: bool = False):
         }
     )
     chart = chart.derive(
-        {"survivors": Expr.binop("-", Expr.field("subjects"), Expr.field("deaths"))}
-    )
-    chart = chart.derive(
         {
             "final label": Expr.concat(
                 ([Expr.field(stratum)] if stratified else [])
                 + ([Expr.lit(" ")] if stratified else [])
                 + [
-                    Expr.lit("("),
-                    Expr.field("survivors"),
-                    Expr.lit("/"),
-                    Expr.field("subjects"),
-                    Expr.lit(") "),
                     Expr.field("final survival"),
-                    Expr.lit("%"),
+                    Expr.lit("% (n="),
+                    Expr.field("subjects"),
+                    Expr.lit(", "),
+                    Expr.field("deaths"),
+                    Expr.lit(" events)"),
                 ]
             )
         }
@@ -1143,6 +1124,91 @@ def _cube_survival_chart(stratified: bool = False):
     if stratified:
         chart = chart.title(stratum, align="right")
     return chart
+
+
+#: Sort key putting events before censorings at the same time — the
+#: Kaplan-Meier convention. 0 for an event, 1 for a censoring.
+_KM_CENSORED_LAST = "censored last"
+
+
+def _kaplan_meier(chart, *, events="died", leaving=None):
+    """Derive `survival percentage`, the Kaplan-Meier estimate, row by row.
+
+    Expects the table grouped per curve (or ungrouped for one curve), with
+    `subjects` broadcast as the group's cohort size, and ordered by time with a
+    unique tiebreak — so `rank()` is a row number. Each row then carries the
+    events it contributes (`events`) and, for a pre-aggregated cube, how many
+    subjects it removes from the risk set (`leaving`; one per row when None,
+    since a line-level row IS a subject).
+
+    Kaplan-Meier multiplies, at each event, the fraction of those still at risk
+    who did not have it. Nobody leaves the risk set except by an event or a
+    censoring, so the number at risk is the cohort minus everyone on an earlier
+    row. The grammar has no product aggregate, so the running product is taken
+    as exp(running sum of logs). A censored row has no events, a factor of 1 and
+    a log of 0, so it changes nothing at its own time and shrinks the risk set
+    for every later one — which is the whole difference from dividing by the
+    cohort. Tied events need no special handling: processed a row at a time,
+    (1 - 1/n)(1 - 1/(n-1)) is 1 - 2/n, the same as one step of two.
+
+    The factor reaches 0 when everyone still at risk has the event, and log(0)
+    is -Infinity in Arquero and an error in SQL. The log is taken of 1 instead,
+    and a running count of such rows forces the curve to 0 from there on.
+    """
+    if leaving is None:
+        # Rows strictly before this one, each a subject who has left the risk set.
+        at_risk = Expr.binop(
+            "+",
+            Expr.binop("-", Expr.field("subjects"), Expr.rank()),
+            Expr.lit(1),
+        )
+        chart = chart.derive({"at risk": at_risk})
+    else:
+        # A cube row is a time point holding several subjects, so the risk set
+        # shrinks by the running total of `leaving`, excluding this row's own.
+        chart = chart.derive({"left so far": rolling(Expr.agg("sum", leaving))})
+        chart = chart.derive(
+            {
+                "at risk": Expr.binop(
+                    "+",
+                    Expr.binop("-", Expr.field("subjects"), Expr.field("left so far")),
+                    Expr.field(leaving),
+                )
+            }
+        )
+    chart = chart.derive(
+        {
+            "km factor": Expr.binop(
+                "-",
+                Expr.lit(1),
+                Expr.binop("/", Expr.field(events), Expr.field("at risk")),
+            )
+        }
+    )
+    positive = Expr.binop(">", Expr.field("km factor"), Expr.lit(0))
+    chart = chart.derive(
+        {
+            "km log": Expr.log(
+                Expr.cond(positive, Expr.field("km factor"), Expr.lit(1))
+            ),
+            "km exhausted": Expr.cond(positive, Expr.lit(0), Expr.lit(1)),
+        }
+    )
+    chart = chart.derive(
+        {
+            "km product": rolling(Expr.exp(Expr.agg("sum", "km log"))),
+            "km exhausted so far": rolling(Expr.agg("sum", "km exhausted")),
+        }
+    )
+    return chart.derive(
+        {
+            "survival percentage": Expr.cond(
+                Expr.binop(">", Expr.field("km exhausted so far"), Expr.lit(0)),
+                Expr.lit(0),
+                Expr.binop("*", Expr.field("km product"), Expr.lit(100)),
+            )
+        }
+    )
 
 
 def _survival_chart(
@@ -1227,9 +1293,10 @@ def _survival_chart(
     # pile up — is what lets the curve say how long they were actually followed,
     # and is what gives the tick layer an x to sit at.
     #
-    # A subject the censoring table never mentions still falls back to day 0: it
-    # contributes to the denominator and no drop, which is what puts the curve's
-    # first point at (0, 100%) when such subjects exist. The grammar cannot
+    # A subject the censoring table never mentions still falls back to day 0:
+    # censored at the start, so it leaves the risk set before the first event and
+    # contributes no drop — but it puts the curve's first point at (0, 100%) when
+    # such subjects exist. The grammar cannot
     # synthesize a leading row, and where no subject sits at 0 the explicit
     # lead-in layer draws that opening segment instead.
     #
@@ -1240,6 +1307,15 @@ def _survival_chart(
                 Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
                 Expr.lit(1),
                 Expr.lit(0),
+            ),
+            # The Kaplan-Meier tie rule as a sort key: at equal times, events
+            # come before censorings, so a subject censored on the day of
+            # someone else's event still counts as at risk for that event.
+            # Ascending, because orderby takes one direction for every key.
+            _KM_CENSORED_LAST: Expr.cond(
+                Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
+                Expr.lit(0),
+                Expr.lit(1),
             ),
             "survival days": Expr.cond(
                 Expr.binop("!=", Expr.field("end day"), Expr.lit(None)),
@@ -1307,27 +1383,13 @@ def _survival_chart(
     # rank 1 — so "the rank() == 1 row", which the annotations below borrow, would
     # be dozens of rows and rank 2 would not exist at all.
     chart = chart.orderby(
-        ["survival years", _placeholder_base(_survival_event_fields(reading)["subject"])]
+        [
+            "survival years",
+            _KM_CENSORED_LAST,
+            _placeholder_base(_survival_event_fields(reading)["subject"]),
+        ]
     )
-
-    # Cumulative deaths over the ordered rows, as a percentage still surviving.
-    # A rolling *sum of the death indicator* rather than a row count, because the
-    # day-0 rows are subjects who have not died and must not count as events.
-    chart = chart.derive(
-        {
-            "survival percentage": rolling(
-                Expr.binop(
-                    "*",
-                    Expr.binop(
-                        "-",
-                        Expr.lit(1),
-                        Expr.binop("/", Expr.agg("sum", "died"), Expr.field("subjects")),
-                    ),
-                    Expr.lit(100),
-                )
-            )
-        }
-    )
+    chart = _kaplan_meier(chart)
 
     # The curve only descends, so its minimum is its final value. `agg` respects
     # the current grouping, giving a per-stratum final when stratified.
@@ -1449,26 +1511,23 @@ def _survival_chart(
     # stratified it carries the category name too: the colour legend alone makes a
     # reader trace a hue back to a key, and these curves converge at the right
     # edge where that is hardest.
-    # Survivors over cohort size — the numerator and denominator of the percentage
-    # beside it, so a reader can see what the number is a fraction *of*. That is
-    # what separates "36%" resting on 22 subjects from the same figure resting on
-    # 400, and these strata differ by an order of magnitude in size.
-    chart = chart.derive(
-        {"survivors": Expr.binop("-", Expr.field("subjects"), Expr.field("deaths"))}
-    )
+    # Cohort size and event count beside the percentage, so a reader can see what
+    # the number rests on: "36%" from 22 subjects is not the same claim as from
+    # 400, and these strata differ by an order of magnitude in size. Not
+    # "survivors/subjects": under Kaplan-Meier a censored subject leaves the risk
+    # set, so that fraction is no longer the percentage beside it.
     chart = chart.derive(
         {
             "final label": Expr.concat(
                 ([Expr.field(stratum_col)] if stratum else [])
                 + ([Expr.lit(" ")] if stratum else [])
                 + [
-                    Expr.lit("("),
-                    Expr.field("survivors"),
-                    Expr.lit("/"),
-                    Expr.field("subjects"),
-                    Expr.lit(") "),
                     Expr.field("final survival"),
-                    Expr.lit("%"),
+                    Expr.lit("% (n="),
+                    Expr.field("subjects"),
+                    Expr.lit(", "),
+                    Expr.field("deaths"),
+                    Expr.lit(" events)"),
                 ]
             )
         }
@@ -3168,7 +3227,8 @@ def generate():
             "is a list: previews as EVENT-FREE survival (progression, recurrence, second "
             "malignancy or death), where every other survival card previews overall survival — "
             "on pcx this curve should end below the overall one (46 of 65 subjects have an "
-            "event, against 34 deaths; ~29% against ~48%). Check the censoring caveat in the design "
+            "event, against 34 deaths, and the event-free curve reaches 0% where overall survival "
+            "ends at ~33%). Check the censoring caveat in the design "
             "considerations before approving."
         ),
         # The studio cannot infer which column is the subject id, which is the
@@ -3245,16 +3305,16 @@ def generate():
             "present when the clock started is associated with worse or better observed survival."
         ),
         review_hint=(
-            "For a two-value stratifier the curves must BRACKET the unstratified curve — one "
-            "above it, one below — because a weighted average has to sit between them. Two curves "
-            "both above it means the stratifier is being read per event again, which silently "
+            "For a two-value stratifier the curves should BRACKET the unstratified curve — one "
+            "above it, one below. Kaplan-Meier curves are not exact weighted averages, so one "
+            "touching the pooled curve (both at 0%, say) is fine, but two curves well above it "
+            "means the stratifier is being read per event again, which silently "
             "drops the deaths of subjects whose value changed. Previews with `metastasis`, whose "
             "value differs between the start and death events for 24 of 34 pcx deaths, so that "
             "failure would be visible. Also check the group sizes add to the unstratified card's "
-            "cohort. Each curve should start at 1 - 1/n for its own stratum, so a small group "
-            "starts visibly lower and steps coarsely; that is correct, not a denominator bug. "
-            "There is no at-risk weighting or significance test, so do not read group differences "
-            "as real."
+            "cohort. Each curve's first drop is 1/(number at risk) per event, so a small group "
+            "steps coarsely; that is correct, not a denominator bug. "
+            "There is no significance test, so do not read group differences as real."
         ),
         preview_bindings={
             "E1": "Event",
@@ -3966,7 +4026,8 @@ def generate():
         review_hint=(
             "Expect exactly two curves, named after the second table ('Radiation' / 'No "
             "Radiation'), and expect them to BRACKET the unstratified curve: this reading "
-            "partitions the cohort, so two curves on the same side of the pooled one is a bug. "
+            "partitions the cohort, so two curves well clear on the same side of the pooled one "
+            "is a bug. "
             "The counts in the labels must add to the unstratified subject count. Previews with "
             "the radiation table, where roughly half the subjects have a record. Judge whether "
             "the immortal-time caveat in the description is visible enough to a reader who sees "
@@ -4127,10 +4188,10 @@ def generate():
             "which a cube cannot express, since the count IS the cell and there are no rows to "
             "expand it into. A cell censoring four subjects draws the same single mark as a "
             "cell censoring one, so the ticks show WHERE follow-up ended, not how much. "
-            "Not strictly the Kaplan-Meier estimator: censored subjects stay in the "
-            "denominator after their follow-up ends rather than leaving the number at risk, so "
-            "wherever censoring precedes a later event the curve overstates survival. With no "
-            "censoring the two are identical. No significance test."
+            "The curve is the Kaplan-Meier estimate, a time point at a time: each point's "
+            "events are divided by everyone still at risk there (its own censorings included, "
+            "the usual tie rule), and then everyone it observed leaves the risk set. No "
+            "confidence intervals or significance test."
         ),
         tasks=(
             "Read the fraction still event-free at a given time; find where the steepest drops "
@@ -4195,8 +4256,7 @@ def generate():
             "The same requirements and caveats as the unstratified cube curve apply: the time "
             "dimension must be numeric, the denominator comes from the marginal rather than "
             "the grand total, one tick per censoring time point rather than per subject, and "
-            "the estimate is not strictly Kaplan-Meier — identical without censoring, "
-            "overstating survival where censoring precedes a later event. "
+            "the curve is the Kaplan-Meier estimate. "
             "Strata are unequal in size, and a small one steps coarsely — a stratum of four "
             "moves in quarters — so a dramatic-looking curve may rest on a handful of "
             "subjects. Read the counts in the labels before reading the gaps."

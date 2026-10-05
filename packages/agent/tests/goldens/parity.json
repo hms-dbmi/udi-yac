@@ -821,6 +821,155 @@
       }
     },
     {
+      "name": "rolling-log-exp-product",
+      "spec": {
+        "source": {
+          "name": "donors",
+          "source": "hubmap/donors.tsv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "age_value"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "groupby": "sex"
+          },
+          {
+            "derive": {
+              "n": {
+                "agg": "count"
+              }
+            }
+          },
+          {
+            "orderby": {
+              "field": "hubmap_id",
+              "order": "asc"
+            }
+          },
+          {
+            "derive": {
+              "at_risk": {
+                "op": "+",
+                "left": {
+                  "op": "-",
+                  "left": {
+                    "field": "n"
+                  },
+                  "right": {
+                    "window": "rank"
+                  }
+                },
+                "right": {
+                  "literal": 1
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "log_factor": {
+                "fn": "log",
+                "args": [
+                  {
+                    "op": "/",
+                    "left": {
+                      "field": "at_risk"
+                    },
+                    "right": {
+                      "op": "+",
+                      "left": {
+                        "field": "at_risk"
+                      },
+                      "right": {
+                        "literal": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "derive": {
+              "product": {
+                "rolling": {
+                  "expression": {
+                    "fn": "exp",
+                    "args": [
+                      {
+                        "agg": "sum",
+                        "field": "log_factor"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rollup": {
+              "lo": {
+                "op": "min",
+                "field": "product"
+              },
+              "hi": {
+                "op": "max",
+                "field": "product"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sex": "Female",
+            "lo": 0.0035087719298245636,
+            "hi": 0.9964912280701754
+          },
+          {
+            "sex": "Unknown",
+            "lo": 0.11111111111111113,
+            "hi": 0.8888888888888888
+          },
+          {
+            "sex": "Male",
+            "lo": 0.0047619047619047675,
+            "hi": 0.9952380952380953
+          }
+        ],
+        "allData": [
+          {
+            "sex": "Female",
+            "lo": 0.0035087719298245636,
+            "hi": 0.9964912280701754
+          },
+          {
+            "sex": "Unknown",
+            "lo": 0.11111111111111113,
+            "hi": 0.8888888888888888
+          },
+          {
+            "sex": "Male",
+            "lo": 0.0047619047619047675,
+            "hi": 0.9952380952380953
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "groupby-derive-window-agg",
       "spec": {
         "source": {

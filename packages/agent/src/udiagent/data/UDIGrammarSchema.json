@@ -485,6 +485,9 @@
         },
         {
           "$ref": "#/definitions/ConcatExpr"
+        },
+        {
+          "$ref": "#/definitions/FunctionExpr"
         }
       ],
       "description": "A backend-neutral expression AST used by `derive` and `filter`, so the same spec can be compiled to Arquero (client/interactive) or SQL (server/remote).\n\nIt is deliberately NOT a general expression language: it covers exactly the surface the visualization templates emit today — field references, literals, binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates (count/sum/…), and window functions (rank). Add a node only when a template needs one.\n\nThe union is untagged; nodes are distinguished by key (`field` | `literal` | `op` | `if` | `agg` | `window`) without a `type` tag. CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field` prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node uses `agg`.\n\nponytail: the `string` form in DeriveExpression/FilterExpression is transitional. Once all templates/specs emit Expr, drop `string |` from those unions and the SQL backend no longer needs to reject raw expressions."
@@ -2519,6 +2522,26 @@
         }
       },
       "required": ["window"],
+      "type": "object"
+    },
+    "FunctionExpr": {
+      "additionalProperties": false,
+      "description": "A scalar math function of one argument. `log` is the NATURAL logarithm.\n\nExists for running products: no executor has a portable product aggregate, but a product is `exp(sum(log(x)))`, and a running sum is already a rolling derive — which is how the survival templates compute the Kaplan-Meier estimate. `log` of zero or a negative number is -Infinity/NaN in Arquero and an error in SQL, so guard the argument with a conditional.",
+      "properties": {
+        "args": {
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        },
+        "fn": {
+          "enum": ["log", "exp"],
+          "type": "string"
+        }
+      },
+      "required": ["fn", "args"],
       "type": "object"
     }
   }

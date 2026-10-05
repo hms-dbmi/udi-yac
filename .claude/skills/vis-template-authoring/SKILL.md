@@ -323,7 +323,8 @@ this, so a third table needs no new plumbing.
 
 Unlike a related _field_, presence **partitions** the cohort: every subject is in one
 group, so the counts add back to the unstratified curve (on pcx: 49 + 16 = 65
-subjects, 22 + 12 = 34 deaths, curves at 55% and 25% bracketing the pooled 48%). It
+subjects, 22 + 12 = 34 deaths, Kaplan-Meier curves at 40% and 14% bracketing the
+pooled 33%). It
 is still immortal-time biased — a subject has to survive long enough to be treated —
 so the "yes" group is flattered by construction, and the template says so.
 
@@ -366,6 +367,20 @@ for its x. Null out every other row so vega-lite drops it. The same trick draws 
 _segment the data does not contain_: the survival curves' opening flat 100% run and
 the drop into the first event are two borrowed rows each, x and y both conditional
 on `rank()`.
+
+**The survival curves are Kaplan-Meier, as a running product.** The grammar has
+no product aggregate, so `_kaplan_meier` in the template script writes it as
+`exp(rolling sum(log(factor)))` with `Expr.log`/`Expr.exp` — the one place those
+functions are used. Three things hold it up: the at-risk count is
+`subjects - rank() + 1`, so the order needs a unique tiebreak (see the rank note
+below); events sort before censorings at equal times (an ascending
+`censored last` key, since `orderby` takes one direction for every field); and a
+factor of 0 — the last subject at risk having the event — is never logged, since
+`log(0)` is -Infinity in Arquero and an error in SQL: a running count of such rows
+forces the curve to 0 instead. The cube variant steps a time point at a time and
+shrinks the risk set by each point's whole count. With no censoring the product
+telescopes to `1 - events/cohort`, which is a useful check. The
+`rolling-log-exp-product` parity golden pins both executors.
 
 **Where an aggregate is taken decides its scope.** `Expr.agg` respects whatever
 grouping is in effect, so the same expression means "per stratum" after a

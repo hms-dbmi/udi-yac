@@ -34,6 +34,14 @@ _BINARY_OPERATORS = {
     "||": "OR",
 }
 
+# UDI function -> SQL function. `log` is the natural logarithm (Arquero's
+# op.log), so LN — not LOG, which is base 10 in some dialects. Both exist in
+# DuckDB and StarRocks.
+_FUNCTIONS = {
+    "log": "LN",
+    "exp": "EXP",
+}
+
 _AGGREGATES = {
     "count": "COUNT",
     "sum": "SUM",
@@ -56,6 +64,7 @@ def is_expr(value: Any) -> bool:
         or "agg" in value
         or "concat" in value
         or "window" in value
+        or "fn" in value
     )
 
 
@@ -133,6 +142,16 @@ def compile_expr(node: Any, ctx: ExprContext) -> str:
         compiled = [f"CAST({compile_expr(part, ctx)} AS VARCHAR)" for part in parts]
         return f"CONCAT({', '.join(compiled)})"
 
+    if "fn" in node:
+        name = node["fn"]
+        sql_fn = _FUNCTIONS.get(name)
+        if sql_fn is None:
+            raise UnsupportedQueryError(f"unsupported function '{name}'")
+        args = node.get("args")
+        if not isinstance(args, list) or len(args) != 1:
+            raise UnsupportedQueryError(f"function '{name}' takes exactly one argument")
+        return f"{sql_fn}({compile_expr(args[0], ctx)})"
+
     if "if" in node:
         cond = compile_expr(node["if"], ctx)
         then = compile_expr(node["then"], ctx)
@@ -193,5 +212,8 @@ def expr_uses_aggregate(node: Any) -> bool:
         if k in ("left", "right", "if", "then", "else")
     ):
         return True
-    parts = node.get("concat")
-    return isinstance(parts, list) and any(expr_uses_aggregate(p) for p in parts)
+    for key in ("concat", "args"):
+        parts = node.get(key)
+        if isinstance(parts, list) and any(expr_uses_aggregate(p) for p in parts):
+            return True
+    return False
