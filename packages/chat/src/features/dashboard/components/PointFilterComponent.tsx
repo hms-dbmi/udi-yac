@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
 import type { DataSelection } from '../stores/dataFiltersStore';
 import { FilterTarget } from './FilterTarget';
@@ -188,8 +189,12 @@ export function PointFilterComponent({
                 {/* Rows are 1.5rem, and the list's height a whole number of
                     them plus half, so a list that scrolls visibly cuts its
                     last row in two. --udi-filter-rows sets the count (the
-                    chip popover asks for more). */}
-                <div className="udi:max-h-[calc((var(--udi-filter-rows,8)_+_0.5)_*_1.5rem)] udi:overflow-y-auto">
+                    chip popover asks for more). The edge shadows say the
+                    same where a half row alone is easy to miss. */}
+                <ScrollArea
+                  scrollShadow
+                  viewportClassName="udi:max-h-[calc((var(--udi-filter-rows,8)_+_0.5)_*_1.5rem)]"
+                >
                   {options.map((value, i) => {
                     // Display only — `value` itself still goes into the filter.
                     const label = value == null ? '<null>' : getValueLabel(String(value));
@@ -219,7 +224,7 @@ export function PointFilterComponent({
                       </div>
                     );
                   })}
-                </div>
+                </ScrollArea>
               </div>
             );
           })}

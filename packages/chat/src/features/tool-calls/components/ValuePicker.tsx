@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { highlightMatch } from '@/utils/highlightMatch';
 
 interface ValuePickerProps {
@@ -50,31 +51,33 @@ export function ValuePicker({
           />
         </div>
       )}
-      <div className="udi:max-h-48 udi:space-y-1.5 udi:overflow-y-auto">
-        {visible.map((value, i) => {
-          // Index, not the value: real domain values contain spaces and
-          // punctuation, which make an invalid id and silently break the
-          // label/control association (and with it the accessible name).
-          const id = `${idPrefix}-${i}`;
-          return (
-            <div key={value} className="udi:flex udi:items-center udi:gap-2">
-              <Checkbox
-                id={id}
-                checked={selected.includes(value)}
-                onCheckedChange={(checked) => onToggle(value, !!checked)}
-              />
-              <Label htmlFor={id} className="udi:cursor-pointer udi:text-xs">
-                {highlightMatch(value, trimmed)}
-              </Label>
-            </div>
-          );
-        })}
-        {visible.length === 0 && (
-          <span className="udi:text-xs udi:text-muted-foreground">
-            No values match {`"${query}"`}.
-          </span>
-        )}
-      </div>
+      <ScrollArea scrollShadow viewportClassName="udi:max-h-48">
+        <div className="udi:space-y-1.5">
+          {visible.map((value, i) => {
+            // Index, not the value: real domain values contain spaces and
+            // punctuation, which make an invalid id and silently break the
+            // label/control association (and with it the accessible name).
+            const id = `${idPrefix}-${i}`;
+            return (
+              <div key={value} className="udi:flex udi:items-center udi:gap-2">
+                <Checkbox
+                  id={id}
+                  checked={selected.includes(value)}
+                  onCheckedChange={(checked) => onToggle(value, !!checked)}
+                />
+                <Label htmlFor={id} className="udi:cursor-pointer udi:text-xs">
+                  {highlightMatch(value, trimmed)}
+                </Label>
+              </div>
+            );
+          })}
+          {visible.length === 0 && (
+            <span className="udi:text-xs udi:text-muted-foreground">
+              No values match {`"${query}"`}.
+            </span>
+          )}
+        </div>
+      </ScrollArea>
       {trimmed && visible.length > 0 && (
         <span className="udi:text-[10px] udi:text-muted-foreground">
           {visible.length} of {options.length} shown
