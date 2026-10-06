@@ -234,8 +234,11 @@ def test_unknown_template_is_a_404_naming_the_likely_cause(client, data_schema):
     ],
 )
 def test_invalid_stratifier_is_rejected_with_reader_grade_prose(
-    client, data_schema, field, expected
+    client, data_schema, field, expected, monkeypatch
 ):
+    # Pinned, so research_id exceeds the category cap whatever it is now — at
+    # 500 it no longer does on pcx, and a later check rejects it with other words.
+    monkeypatch.setattr(vis_generate, "MAX_DRAWN_CATEGORIES", 50)
     response = _post(client, data_schema, entity1_field4=field)
     assert response.status_code == 422
     body = response.json()
