@@ -171,6 +171,23 @@ function templateParams(
       };
     }
 
+    // A choice picks one of a fixed set of computations. It travels the same
+    // re-bind path as a field — the agent resolves the template again — so it
+    // reuses the binding dropdown, listing the choice's options instead of columns.
+    if (descriptor.kind === 'choice') {
+      const choices = descriptor.choices ?? [];
+      const value = typeof descriptor.value === 'string' ? descriptor.value : '';
+      return {
+        kind: 'binding' as const,
+        field: value,
+        label: descriptor.label,
+        options: choices.map((c) => c.value),
+        optionLabels: Object.fromEntries(choices.map((c) => [c.value, c.label])),
+        param: descriptor.param,
+        placeholder: descriptor.placeholder,
+      };
+    }
+
     // Every other parameter binds a column, so its value is a column name. The
     // guard is for the type only — the agent never sends an object here.
     const value = typeof descriptor.value === 'string' ? descriptor.value : '';

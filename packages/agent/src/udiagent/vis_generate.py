@@ -19,6 +19,7 @@ import jsonschema
 from udiagent.skills import Skill, load_skills, render_template, _package_data_path
 from udiagent.grammar import load_grammar
 from udiagent.schema import simplify_data_schema, simplify_data_domains
+from udiagent.choices import CHOICES, ChoiceError, resolve_choice
 
 # A placeholder is `<NAME>`, where NAME is an uppercase-led token: `<E>`, `<F1:n>`,
 # `<V2>`, `<MARGINAL:D1,D2>`, `<E1.r.E2.id.from>`.
@@ -575,6 +576,13 @@ def _resolve_placeholder(tag, bindings, schema):
             return json.dumps(membership_label_expr(grouping))
         return json.dumps(grouping_expr(grouping, field_name))
 
+    # A choice (<ESTIMATOR>) picks one of a fixed set of computations and, like
+    # a grouping, resolves to an expression that injects unquoted. Absent means
+    # the default option, so every chart rendered before the choice existed
+    # resolves exactly as it did.
+    if tag in CHOICES:
+        return json.dumps(resolve_choice(tag, bindings.get(tag)))
+
     # Strip type suffix: F:n -> F, E1.F:q -> E1.F
     base = tag.split(":")[0] if ":" in tag else tag
 
@@ -611,6 +619,9 @@ def instantiate_template(spec_template, bindings, schema):
     # Same for a stratifier grouping, which resolves to the derive expression
     # computing the stratum column.
     spec = re.sub(r'"(<GROUP(?:TAG|LABEL)?\d*(?::[^>"]*)?>)"', r"\1", spec)
+    # And a choice, which resolves to the expression for the chosen option.
+    for key in CHOICES:
+        spec = spec.replace(f'"<{key}>"', f"<{key}>")
     while True:
         match = re.search(PLACEHOLDER, spec)
         if not match:
@@ -1332,6 +1343,15 @@ def validate_bindings(
                 )
             continue
 
+        # A choice binds one of a fixed set of options, not a column. Optional:
+        # absent or empty means the default.
+        if key in CHOICES:
+            try:
+                resolve_choice(key, field_name)
+            except ChoiceError as exc:
+                errors.append(str(exc))
+            continue
+
         # <GROUP*> binds a stratifier *grouping* — a JSON description of how to
         # combine the stratifier's values into a handful of named strata — rather
         # than a column, so none of the field checks below apply. It is optional:
@@ -1606,7 +1626,7 @@ def unbound_placeholders(spec_template, param_map, bindings):
         # A stratifier grouping is optional by construction: no grouping is the
         # default reading of every stratified chart, so an absent one is an
         # answer rather than an omission.
-        if _GROUP_BASE.fullmatch(base):
+        if _GROUP_BASE.fullmatch(base) or base in CHOICES:
             continue
         required.add(base)
 
@@ -1655,6 +1675,11 @@ def template_tweakable_params(spec_template, param_map, bindings, schema):
             continue
         if re.fullmatch(r"E\d*|V\d*", placeholder):
             continue
+        # A choice feeds a drawn column (the estimator computes the y the curve
+        # plots), but it is not a field to re-bind; it gets its own descriptor
+        # below.
+        if placeholder in CHOICES:
+            continue
         channels = encodings_by_placeholder[placeholder]
 
         if _GROUP_BASE.fullmatch(placeholder):
@@ -1697,6 +1722,30 @@ def template_tweakable_params(spec_template, param_map, bindings, schema):
                 "value": bindings[placeholder],
             }
         )
+    # A choice is never encoded — it changes how a drawn quantity is computed,
+    # not which column a channel shows — so it is offered on presence alone,
+    # and, like a grouping, even unbound: the default is a state of the control.
+    for param, placeholder in param_map.items():
+        choice = CHOICES.get(placeholder)
+        if choice is None or f"<{placeholder}>" not in spec_template:
+            continue
+        params.append(
+            {
+                "kind": "choice",
+                "param": param,
+                "placeholder": placeholder,
+                "entity": None,
+                "type": None,
+                "encodings": [],
+                "label": choice.label,
+                "value": bindings.get(placeholder) or choice.default,
+                "choices": [
+                    {"value": option, "label": label}
+                    for option, (label, _expr) in choice.options.items()
+                ],
+            }
+        )
+
     return sorted(params, key=lambda d: d["param"])
 
 

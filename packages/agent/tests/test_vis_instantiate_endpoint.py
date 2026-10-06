@@ -162,6 +162,25 @@ def test_response_describes_the_parameters_it_accepts(client, data_schema):
             "value": "organization_name",
             "field": None,
             "fieldType": None,
+            "choices": None,
+        },
+        # The survival estimator: offered unbound like the grouping, at its
+        # default, with the options the tweak panel's dropdown lists.
+        {
+            "kind": "choice",
+            "param": "estimator",
+            "placeholder": "ESTIMATOR",
+            "entity": None,
+            "type": None,
+            "encodings": [],
+            "label": "estimator",
+            "value": "kaplan_meier",
+            "field": None,
+            "fieldType": None,
+            "choices": [
+                {"value": "kaplan_meier", "label": "Kaplan-Meier"},
+                {"value": "basic", "label": "Basic (events / cohort)"},
+            ],
         },
         # Offered although nothing is bound to it: ungrouped is a state of this
         # control, not the absence of one, so withholding it until the chart is
@@ -177,6 +196,7 @@ def test_response_describes_the_parameters_it_accepts(client, data_schema):
             "value": "",
             "field": "organization_name",
             "fieldType": "nominal",
+            "choices": None,
         },
     ]
     # Echoed back so a client can send them straight into the next tweak.

@@ -67,6 +67,7 @@ class YACVisParam(BaseModel):
     stratifier into named strata, and its ``value`` is the grouping object (or
     ``""`` for the ungrouped default) — a client renders it from ``field`` and
     ``fieldType``, which say what is being cut and therefore which control fits.
+    A ``choice`` picks one of a fixed set of computations, listed in ``choices``.
     """
 
     #: Defaulted rather than required so an older client, and any caller
@@ -84,6 +85,10 @@ class YACVisParam(BaseModel):
     #: Grouping parameters only: the stratifier field and its type in the schema.
     field: str | None = None
     fieldType: str | None = None
+    #: Choice parameters only: the options a UI lists, `{value, label}` each. A
+    #: ``choice`` picks how something is computed (a survival estimator); its
+    #: ``value`` is the chosen option.
+    choices: list[dict[str, str]] | None = None
 
 
 class YACVisInstantiateResponse(BaseModel):

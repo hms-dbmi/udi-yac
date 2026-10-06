@@ -44,6 +44,11 @@ export interface BindingTweakableParam extends TweakableParamBase {
   param: string;
   /** Template placeholder it fills — for telemetry and debugging. */
   placeholder: string;
+  /**
+   * Display text per option, for a `choice` (an estimator), whose options are
+   * not column names. Absent for a field, whose options are labelled as fields.
+   */
+  optionLabels?: Record<string, string>;
 }
 
 /**

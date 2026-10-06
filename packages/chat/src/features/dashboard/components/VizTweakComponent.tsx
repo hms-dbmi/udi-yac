@@ -80,6 +80,14 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
     (field: string) => (sourceName ? getFieldLabel(sourceName, field) : field),
     [sourceName, getFieldLabel],
   );
+  // A choice's options are not columns, so they carry their own labels.
+  const optionLabel = useCallback(
+    (param: TweakableParam, option: string) =>
+      param.kind === 'binding' && param.optionLabels
+        ? (param.optionLabels[option] ?? option)
+        : fieldLabel(option),
+    [fieldLabel],
+  );
 
   const handleFieldChange = useCallback(
     (param: TweakableParam, newField: string | null) => {
@@ -165,12 +173,12 @@ export function VizTweakComponent({ spec, messageIndex, toolCallIndex }: VizTwea
             >
               <SelectTrigger className="udi:h-7 udi:w-auto udi:min-w-[100px] udi:text-xs">
                 <span className="udi:text-muted-foreground udi:mr-1">{param.label}:</span>
-                <SelectValue>{fieldLabel(param.field)}</SelectValue>
+                <SelectValue>{optionLabel(param, param.field)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {param.options.map((opt) => (
                   <SelectItem key={opt} value={opt}>
-                    {fieldLabel(opt)}
+                    {optionLabel(param, opt)}
                   </SelectItem>
                 ))}
               </SelectContent>

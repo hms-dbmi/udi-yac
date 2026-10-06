@@ -10,6 +10,7 @@ comes from the per-request ``data_schema`` (not a schema baked into
 import json
 import re
 
+from udiagent.choices import CHOICES
 from udiagent.schema import parse_schema_from_dict
 from udiagent.vis_generate import (
     _encoded_placeholders,
@@ -229,6 +230,14 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         for p in params:
             assert p["param"] in param_map, f"{name}: {p['param']} is not a parameter"
             assert param_map[p["param"]] == p["placeholder"]
+            # A choice changes how a drawn quantity is computed, not which column
+            # a channel shows, so it is the one parameter never encoded. It must
+            # instead offer the options the tweak panel lists.
+            if p["kind"] == "choice":
+                assert p["placeholder"] in CHOICES, f"{name}: {p['placeholder']}"
+                assert p["choices"], f"{name}: {p['param']} offers no options"
+                assert p["label"]
+                continue
             assert p["placeholder"] in encoded, f"{name}: {p['placeholder']} not encoded"
             assert not re.fullmatch(
                 r"E\d*|V\d*", p["placeholder"]
@@ -245,6 +254,10 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         for name, params in exposed.items()
         if "survival" in name
     }
+    # Every survival curve also offers its estimator (Kaplan-Meier or basic):
+    # how the curve is computed, rather than which column it reads.
+    assert all(params.count("estimator") == 1 for params in survival.values()), survival
+    survival = {k: [p for p in v if p != "estimator"] for k, v in survival.items()}
     assert survival == {
         "survival": [],
         # The stratifier sits on the event log, which is now the first side of a

@@ -15,6 +15,7 @@ import pprint
 import re
 from pathlib import Path
 
+from udiagent.choices import CHOICES as _CHOICES
 from udiagent.vis_generate import PLACEHOLDER
 
 
@@ -136,6 +137,11 @@ def _extract_placeholders(template_str: str) -> set[str]:
         if match and match.group(2):
             found.add(match.group(2))
     return found
+
+
+#: Choice placeholders (`<ESTIMATOR>`): optional enum parameters. See
+#: `udiagent.choices`.
+_CHOICE_KEYS = frozenset(_CHOICES)
 
 
 def _grouping_param_key(placeholder: str) -> str | None:
@@ -450,6 +456,27 @@ def _value_param_schema(placeholder: str) -> dict:
     return {"type": "string", "description": _VALUE_DESCRIPTION}
 
 
+def _add_choice_param(
+    properties: dict, param_map: dict, seen: set, key: str
+) -> None:
+    """Register the optional enum parameter for a choice placeholder (`<ESTIMATOR>`).
+
+    Optional for the same reason a grouping is: its absence is an answer — the
+    default option — and a required one would make the model pick an estimator
+    for every survival curve when almost every request means the default.
+    """
+    choice = _CHOICES[key]
+    if choice.param in seen:
+        return
+    seen.add(choice.param)
+    properties[choice.param] = {
+        "type": "string",
+        "enum": list(choice.options),
+        "description": choice.description,
+    }
+    param_map[choice.param] = key
+
+
 def _add_grouping_param(
     properties: dict, param_map: dict, seen: set, group_key: str
 ) -> None:
@@ -568,6 +595,9 @@ def _generate_single_entity_tool(
         group_key = _grouping_param_key(ph)
         if group_key:
             _add_grouping_param(properties, param_map, seen, group_key)
+            continue
+        if ph in _CHOICE_KEYS:
+            _add_choice_param(properties, param_map, seen, ph)
             continue
         m = re.match(r'(F\d*|D\d*|V\d*)', ph)
         if not m:
@@ -699,6 +729,9 @@ def _generate_join_entity_tool(
         group_key = _grouping_param_key(ph)
         if group_key:
             _add_grouping_param(properties, param_map, seen, group_key)
+            continue
+        if ph in _CHOICE_KEYS:
+            _add_choice_param(properties, param_map, seen, ph)
             continue
 
         m = re.match(r'(E\d+)\.(F\d*)', ph)

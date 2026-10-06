@@ -39,16 +39,19 @@ export type TemplateArgValue = string | string[] | Record<string, unknown>;
 export interface TemplateParamDescriptor {
   /**
    * What the parameter changes. A `field` swaps which column a channel is bound
-   * to; a `grouping` re-cuts a stratifier into named strata. Optional because an
-   * agent predating dynamic stratification sends neither — absent means `field`.
+   * to; a `grouping` re-cuts a stratifier into named strata; a `choice` picks one
+   * of a fixed set of computations (a survival curve's estimator). Optional
+   * because an agent predating dynamic stratification sends none — absent means
+   * `field`.
    */
-  kind?: 'field' | 'grouping';
+  kind?: 'field' | 'grouping' | 'choice';
   /** Tool parameter name to send back, e.g. `field4`. */
   param: string;
   /** The template placeholder it fills, e.g. `F4`. For debugging/telemetry. */
   placeholder: string;
-  /** Entity whose fields are valid values (a join template binds two). */
-  entity?: string;
+  /** Entity whose fields are valid values (a join template binds two). Null for
+   *  a `choice`, which binds no field. */
+  entity?: string | null;
   /** Field type the template requires; null/absent means unconstrained. */
   type?: 'nominal' | 'ordinal' | 'quantitative' | null;
   /** Visual channels this parameter is drawn on, e.g. `['color']`. */
@@ -64,6 +67,8 @@ export interface TemplateParamDescriptor {
   /** Grouping parameters only: the stratifier being cut, and its type. */
   field?: string | null;
   fieldType?: 'nominal' | 'ordinal' | 'quantitative' | null;
+  /** Choice parameters only: the options to list, in order. */
+  choices?: { value: string; label: string }[] | null;
 }
 
 /**

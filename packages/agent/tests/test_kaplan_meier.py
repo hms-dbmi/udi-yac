@@ -21,7 +21,7 @@ from udiagent.vis_generate import (
 )
 
 
-def _line_level(tmp_path, events_csv, patients_csv):
+def _line_level(tmp_path, events_csv, patients_csv, estimator=None):
     events = tmp_path / "events.csv"
     events.write_text(events_csv)
     patients = tmp_path / "patients.csv"
@@ -73,6 +73,8 @@ def _line_level(tmp_path, events_csv, patients_csv):
         "value2": ["death"],
         "value3": "alive",
     }
+    if estimator is not None:
+        args["estimator"] = estimator
     bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
     assert validate_bindings(templates[idx], bindings, schema) == []
     spec = instantiate_template(templates[idx], bindings, schema)
@@ -196,3 +198,40 @@ def test_a_cube_curve_is_kaplan_meier_a_time_point_at_a_time(tmp_path):
     curve = {r["time"]: r["survival percentage"] for r in out}
     assert curve == pytest.approx({1: 80.0, 2: 64.0, 3: 32.0})
     assert not any(math.isnan(r["survival percentage"]) for r in out)
+
+
+_CENSORED_EARLY = (
+    "subject,event,day\n" + _starts("a", "b", "c", "d") + "b,death,20\nc,death,30\n",
+    "subject,status,asof\na,alive,10\nb,deceased,20\nc,deceased,30\nd,alive,40\n",
+)
+
+
+def test_the_basic_estimator_divides_by_the_whole_cohort(tmp_path):
+    """The same data as the censoring test, drawn the other way: a stays in the
+    denominator after it is censored, so the drops are 1/4 each, not 1/3 then
+    1/2. Kaplan-Meier stays the default."""
+    basic = _line_level(tmp_path, *_CENSORED_EARLY, estimator="basic")
+    assert basic["b"] == pytest.approx(75)
+    assert basic["c"] == pytest.approx(50)
+    assert _line_level(tmp_path, *_CENSORED_EARLY) == _line_level(
+        tmp_path, *_CENSORED_EARLY, estimator="kaplan_meier"
+    )
+
+
+def test_an_unknown_estimator_is_refused():
+    from udiagent.vis_generate import validate_bindings
+
+    _defs, dispatch, templates, _tags = _load_generated_tools()
+    idx, _param_map = dispatch[next(n for n in dispatch if n.endswith("_line_survival"))]
+    errors = validate_bindings(templates[idx], {"ESTIMATOR": "nelson_aalen"}, {"entities": {}})
+    assert any("not a valid estimator" in e for e in errors), errors
+
+
+def test_every_survival_tool_offers_the_estimator_as_an_optional_enum():
+    defs, _dispatch, _templates, _tags = _load_generated_tools()
+    survival = [d["function"] for d in defs if "_line_survival" in d["function"]["name"]]
+    assert len(survival) == 13
+    for tool in survival:
+        parameters = tool["parameters"]
+        assert parameters["properties"]["estimator"]["enum"] == ["kaplan_meier", "basic"]
+        assert "estimator" not in parameters["required"], tool["name"]

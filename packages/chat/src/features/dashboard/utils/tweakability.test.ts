@@ -204,4 +204,36 @@ describe('computeTweakableParams — falling back to the spec heuristics', () =>
     });
     expect(grouping).not.toHaveProperty('options');
   });
+
+  it('turns a choice descriptor into a dropdown of its options, not of columns', () => {
+    const withChoice: TemplateProvenance = {
+      ...provenance(),
+      params: [
+        ...provenance().params,
+        {
+          kind: 'choice',
+          param: 'estimator',
+          placeholder: 'ESTIMATOR',
+          entity: null,
+          type: null,
+          encodings: [],
+          label: 'estimator',
+          value: 'kaplan_meier',
+          choices: [
+            { value: 'kaplan_meier', label: 'Kaplan-Meier' },
+            { value: 'basic', label: 'Basic (events / cohort)' },
+          ],
+        },
+      ],
+    };
+
+    const params = compute(survivalSpec(), withChoice);
+    const estimator = params.find((p) => p.kind === 'binding' && p.param === 'estimator');
+    expect(estimator).toMatchObject({
+      field: 'kaplan_meier',
+      // The re-bind sends the option value; the dropdown shows its label.
+      options: ['kaplan_meier', 'basic'],
+      optionLabels: { kaplan_meier: 'Kaplan-Meier', basic: 'Basic (events / cohort)' },
+    });
+  });
 });

@@ -1165,7 +1165,8 @@ _KM_CENSORED_LAST = "censored last"
 
 
 def _kaplan_meier(chart, *, events="died", leaving=None):
-    """Derive `survival percentage`, the Kaplan-Meier estimate, row by row.
+    """Derive `survival percentage` row by row — Kaplan-Meier unless the
+    `<ESTIMATOR>` choice asks for the basic events-over-cohort fraction.
 
     Expects the table grouped per curve (or ungrouped for one curve), with
     `subjects` broadcast as the group's cohort size, and ordered by time with a
@@ -1231,17 +1232,14 @@ def _kaplan_meier(chart, *, events="died", leaving=None):
         {
             "km product": rolling(Expr.exp(Expr.agg("sum", "km log"))),
             "km exhausted so far": rolling(Expr.agg("sum", "km exhausted")),
+            # For the basic estimator: events so far over the whole group.
+            "events so far": rolling(Expr.agg("sum", events)),
         }
     )
-    return chart.derive(
-        {
-            "survival percentage": Expr.cond(
-                Expr.binop(">", Expr.field("km exhausted so far"), Expr.lit(0)),
-                Expr.lit(0),
-                Expr.binop("*", Expr.field("km product"), Expr.lit(100)),
-            )
-        }
-    )
+    # Which of the two draws the curve is a choice the reader can flip in the
+    # dashboard's tweak panel (`udiagent.choices.ESTIMATOR`, which reads the
+    # columns above). Unset, it is Kaplan-Meier.
+    return chart.derive({"survival percentage": "<ESTIMATOR>"})
 
 
 def _survival_chart(
