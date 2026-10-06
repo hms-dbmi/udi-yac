@@ -48,7 +48,7 @@ export function FilterToolbar() {
         </h3>
         {debugMode && (
           <div className="udi:flex udi:items-center udi:gap-1.5">
-            <Label htmlFor="null-filter" className="udi:text-[10px] udi:text-muted-foreground">
+            <Label htmlFor="null-filter" className="udi:text-2xs udi:text-muted-foreground">
               Filter Nulls
             </Label>
             <Switch

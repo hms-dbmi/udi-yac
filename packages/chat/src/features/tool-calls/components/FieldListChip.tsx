@@ -68,14 +68,14 @@ export function FieldListChip({ entity, fields, onSelect }: FieldListChipProps) 
   return (
     <div className="udi:my-2 udi:rounded udi:border udi:bg-background/50 udi:p-2">
       <div className="udi:mb-1.5 udi:flex udi:items-center udi:justify-between udi:gap-2">
-        <span className="udi:text-[10px] udi:font-medium udi:uppercase udi:tracking-wider udi:text-muted-foreground">
+        <span className="udi:text-2xs udi:font-medium udi:uppercase udi:tracking-wider udi:text-muted-foreground">
           {entity ? `${entity} fields` : 'Fields'} ({fields.length})
         </span>
         {hasMore && (
           <Button
             variant="ghost"
             size="sm"
-            className="udi:h-5 udi:gap-1 udi:px-1.5 udi:text-[10px]"
+            className="udi:h-5 udi:gap-1 udi:px-1.5 udi:text-2xs"
             onClick={() => setExpanded((v) => !v)}
           >
             {expanded ? (
@@ -113,7 +113,7 @@ export function FieldListChip({ entity, fields, onSelect }: FieldListChipProps) 
             />
           ))}
           {filtered.length === 0 && (
-            <span className="udi:text-[10px] udi:text-muted-foreground">
+            <span className="udi:text-2xs udi:text-muted-foreground">
               No fields match {`"${query}"`}.
             </span>
           )}
@@ -129,7 +129,7 @@ export function FieldListChip({ entity, fields, onSelect }: FieldListChipProps) 
                   setExpanded(true);
                 }
               }}
-              className="udi:cursor-pointer udi:text-[10px] udi:text-muted-foreground udi:hover:bg-muted udi:hover:text-foreground"
+              className="udi:cursor-pointer udi:text-2xs udi:text-muted-foreground udi:hover:bg-muted udi:hover:text-foreground"
             >
               +{hiddenCount} more
             </Badge>
@@ -156,8 +156,8 @@ function FieldChip({ field, meta, highlight, onSelect }: FieldChipProps) {
             variant="secondary"
             className={
               onSelect
-                ? 'udi:max-w-[250px] udi:cursor-pointer udi:font-mono udi:text-[10px] udi:hover:bg-muted'
-                : 'udi:max-w-[250px] udi:cursor-default udi:font-mono udi:text-[10px]'
+                ? 'udi:max-w-[250px] udi:cursor-pointer udi:font-mono udi:text-2xs udi:hover:bg-muted'
+                : 'udi:max-w-[250px] udi:cursor-default udi:font-mono udi:text-2xs'
             }
             role={onSelect ? 'button' : undefined}
             tabIndex={onSelect ? 0 : undefined}

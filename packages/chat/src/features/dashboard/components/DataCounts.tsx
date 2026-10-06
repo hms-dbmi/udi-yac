@@ -252,7 +252,7 @@ export function DataCounts() {
                   chip.totalCount.toLocaleString()
                 )}
               </div>
-              <span className="udi:text-[11px] udi:text-muted-foreground">{chip.label}</span>
+              <span className="udi:text-xs udi:text-muted-foreground">{chip.label}</span>
             </div>
           </button>
         );

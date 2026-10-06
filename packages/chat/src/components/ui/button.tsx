@@ -24,7 +24,7 @@ const buttonVariants = cva(
         default:
           'udi:h-8 udi:gap-1.5 udi:px-2.5 udi:has-data-[icon=inline-end]:pr-2 udi:has-data-[icon=inline-start]:pl-2',
         xs: "udi:h-6 udi:gap-1 udi:rounded-[min(var(--radius-md),10px)] udi:px-2 udi:text-xs udi:in-data-[slot=button-group]:rounded-lg udi:has-data-[icon=inline-end]:pr-1.5 udi:has-data-[icon=inline-start]:pl-1.5 udi:[&_svg:not([class*='size-'])]:size-3",
-        sm: "udi:h-7 udi:gap-1 udi:rounded-[min(var(--radius-md),12px)] udi:px-2.5 udi:text-[0.8rem] udi:in-data-[slot=button-group]:rounded-lg udi:has-data-[icon=inline-end]:pr-1.5 udi:has-data-[icon=inline-start]:pl-1.5 udi:[&_svg:not([class*='size-'])]:size-3.5",
+        sm: "udi:h-7 udi:gap-1 udi:rounded-[min(var(--radius-md),12px)] udi:px-2.5 udi:text-xs udi:in-data-[slot=button-group]:rounded-lg udi:has-data-[icon=inline-end]:pr-1.5 udi:has-data-[icon=inline-start]:pl-1.5 udi:[&_svg:not([class*='size-'])]:size-3.5",
         lg: 'udi:h-9 udi:gap-1.5 udi:px-2.5 udi:has-data-[icon=inline-end]:pr-2 udi:has-data-[icon=inline-start]:pl-2',
         icon: 'udi:size-8',
         'icon-xs':

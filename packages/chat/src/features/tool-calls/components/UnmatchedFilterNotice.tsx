@@ -70,7 +70,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
             variant="outline"
             role="button"
             tabIndex={0}
-            className="udi:cursor-pointer udi:font-mono udi:text-[10px] udi:hover:bg-muted udi:hover:text-foreground"
+            className="udi:cursor-pointer udi:font-mono udi:text-2xs udi:hover:bg-muted udi:hover:text-foreground"
             onClick={() => commitValues(s.entity, s.field, [s.value], 'cross-field')}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -115,7 +115,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
             </p>
             <div className="udi:flex udi:flex-wrap udi:gap-1">
               {shown.map((e) => (
-                <Badge key={e} variant="secondary" className="udi:font-mono udi:text-[10px]">
+                <Badge key={e} variant="secondary" className="udi:font-mono udi:text-2xs">
                   {e}
                 </Badge>
               ))}
@@ -142,7 +142,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
                     variant="outline"
                     role="button"
                     tabIndex={0}
-                    className="udi:cursor-pointer udi:font-mono udi:text-[10px] udi:hover:bg-muted udi:hover:text-foreground"
+                    className="udi:cursor-pointer udi:font-mono udi:text-2xs udi:hover:bg-muted udi:hover:text-foreground"
                     onClick={() => commitValues(entity, f, [], 'field-suggestion')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -211,7 +211,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
                     variant="outline"
                     role="button"
                     tabIndex={0}
-                    className="udi:cursor-pointer udi:text-[10px] udi:hover:bg-muted udi:hover:text-foreground"
+                    className="udi:cursor-pointer udi:text-2xs udi:hover:bg-muted udi:hover:text-foreground"
                     onClick={() => commitValues(entity, field, [n.value], 'nearby')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -259,7 +259,7 @@ export function UnmatchedFilterNotice({ diagnosis, filterKey }: UnmatchedFilterN
     <div className="udi:my-2 udi:space-y-2 udi:rounded udi:border udi:bg-background/50 udi:p-2">
       <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-destructive">
         <AlertCircle className="udi:h-3.5 udi:w-3.5 udi:shrink-0" />
-        <span className="udi:text-[10px] udi:font-medium udi:tracking-wider udi:uppercase">
+        <span className="udi:text-2xs udi:font-medium udi:tracking-wider udi:uppercase">
           No matching values
         </span>
       </div>

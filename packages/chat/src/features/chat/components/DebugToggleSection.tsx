@@ -34,7 +34,7 @@ export function DebugToggleSection({
           onCheckedChange={(v) => onShowSystemPromptsChange(!!v)}
           disabled={!hasSystemMessages}
         />
-        <Label htmlFor="system-prompts" className="udi:text-[10px] udi:text-muted-foreground">
+        <Label htmlFor="system-prompts" className="udi:text-2xs udi:text-muted-foreground">
           System Prompts{!hasSystemMessages && ' (none)'}
         </Label>
       </div>

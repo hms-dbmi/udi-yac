@@ -91,13 +91,13 @@ export function ClarifyVariable({
                           ? 'secondary'
                           : 'outline'
                       }
-                      className="udi:text-[10px] udi:px-1 udi:py-0"
+                      className="udi:text-2xs udi:px-1 udi:py-0"
                     >
                       {candidate.entity}
                     </Badge>
                   </div>
                   {candidate.description && (
-                    <p className="udi:text-[10px] udi:font-normal udi:text-muted-foreground udi:mt-0.5">
+                    <p className="udi:text-2xs udi:font-normal udi:text-muted-foreground udi:mt-0.5">
                       {candidate.description}
                     </p>
                   )}

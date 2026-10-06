@@ -183,7 +183,7 @@ export function StratifierGroupingControl({
         <div className="udi:flex udi:flex-col udi:gap-3">
           <div>
             <p className="udi:text-xs udi:font-medium">Group {param.stratifier}</p>
-            <p className="udi:text-[11px] udi:text-muted-foreground">
+            <p className="udi:text-xs udi:text-muted-foreground">
               {isQuantitative
                 ? 'Click the distribution to add a threshold, or drag one to move it.'
                 : 'Combine values into named groups; the rest fall into Other.'}
@@ -210,7 +210,7 @@ export function StratifierGroupingControl({
           )}
 
           {tooMany && (
-            <p role="status" className="udi:text-[11px] udi:text-destructive">
+            <p role="status" className="udi:text-xs udi:text-destructive">
               {labels.length} groups — at most {MAX_GROUPS} can be told apart on one chart.
             </p>
           )}
@@ -275,7 +275,7 @@ function NominalEditor({
 
   if (values.length === 0) {
     return (
-      <p className="udi:text-[11px] udi:text-muted-foreground">
+      <p className="udi:text-xs udi:text-muted-foreground">
         The values of this field are not loaded, so there is nothing to group by yet.
       </p>
     );
@@ -315,7 +315,7 @@ function NominalEditor({
                 key={value}
                 type="button"
                 disabled={disabled}
-                className="udi:rounded udi:bg-secondary udi:px-1.5 udi:py-0.5 udi:text-[10px] udi:hover:line-through"
+                className="udi:rounded udi:bg-secondary udi:px-1.5 udi:py-0.5 udi:text-2xs udi:hover:line-through"
                 title="Remove from this group"
                 onClick={() => onApply(assignValue(grouping, value, null))}
               >
@@ -323,7 +323,7 @@ function NominalEditor({
               </button>
             ))}
             {group.values.length === 0 && (
-              <span className="udi:text-[10px] udi:text-muted-foreground">no values yet</span>
+              <span className="udi:text-2xs udi:text-muted-foreground">no values yet</span>
             )}
           </div>
         </div>
@@ -346,7 +346,7 @@ function NominalEditor({
 
       {grouping.groups.length > 0 && (
         <div>
-          <p className="udi:mb-1 udi:text-[11px] udi:text-muted-foreground">
+          <p className="udi:mb-1 udi:text-xs udi:text-muted-foreground">
             Unassigned ({unassigned.length}) — click to file into a group
           </p>
           <div className="udi:flex udi:max-h-28 udi:flex-wrap udi:gap-1 udi:overflow-y-auto">
@@ -367,7 +367,7 @@ function NominalEditor({
           right; dropping them is the honest alternative when they are a
           grab-bag that would only add noise. */}
       <div className="udi:flex udi:items-center udi:gap-2">
-        <span className="udi:text-[11px] udi:text-muted-foreground">Unassigned values</span>
+        <span className="udi:text-xs udi:text-muted-foreground">Unassigned values</span>
         <Select
           value={grouping.other === null ? '__drop__' : '__other__'}
           disabled={disabled}
@@ -415,7 +415,7 @@ function UnassignedValue({
       <button
         type="button"
         disabled={disabled}
-        className="udi:rounded udi:border udi:px-1.5 udi:py-0.5 udi:text-[10px] udi:hover:bg-accent"
+        className="udi:rounded udi:border udi:px-1.5 udi:py-0.5 udi:text-2xs udi:hover:bg-accent"
         onClick={() => onAssign(groups[0])}
       >
         {value}
@@ -431,7 +431,7 @@ function UnassignedValue({
       }}
     >
       <SelectTrigger
-        className="udi:h-5 udi:w-auto udi:border udi:px-1.5 udi:text-[10px]"
+        className="udi:h-5 udi:w-auto udi:border udi:px-1.5 udi:text-2xs"
         aria-label={`Assign ${value}`}
       >
         {value}
@@ -542,7 +542,7 @@ function QuantitativeEditor({
       <div className="udi:flex udi:flex-col udi:gap-1">
         {cuts.map((cut, index) => (
           <div key={index} className="udi:flex udi:items-center udi:gap-1">
-            <span className="udi:w-10 udi:shrink-0 udi:text-[10px] udi:text-muted-foreground">
+            <span className="udi:w-10 udi:shrink-0 udi:text-2xs udi:text-muted-foreground">
               cut {index + 1}
             </span>
             <StepNumberInput
@@ -598,7 +598,7 @@ function QuantitativeEditor({
         </Button>
       </div>
 
-      <p className="udi:text-[10px] udi:text-muted-foreground">
+      <p className="udi:text-2xs udi:text-muted-foreground">
         {cuts.length === 0
           ? 'No thresholds yet — a numeric stratifier needs at least one.'
           : groupingLabels({ type: 'quantitative', cuts }).join(' · ')}
