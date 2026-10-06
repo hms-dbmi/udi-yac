@@ -5,6 +5,9 @@
 
 export { DashboardPanel } from './components/DashboardPanel';
 export { VizTweakComponent } from './components/VizTweakComponent';
+export { IntervalFilterComponent } from './components/IntervalFilterComponent';
+export { PointFilterComponent } from './components/PointFilterComponent';
+export { FilterControls, FilterCollapsible } from './components/FilterControls';
 
 export {
   createDashboardStore,
@@ -18,10 +21,14 @@ export {
 export {
   createDataFiltersStore,
   extractFilterSpecFromMessage,
+  extractAllFilterSpecsFromMessage,
   filterSpecForToolCall,
   messageFilterKeyWithToolCall,
   messageFilterKey,
+  HOST_FILTER_PREFIX,
   type DataFiltersState,
+  type FilterOrigin,
+  type UDIFilter,
   type DataSelection,
   type DataSelections,
 } from './stores/dataFiltersStore';
@@ -46,6 +53,8 @@ export {
   brushHasValue,
   type BrushFilter,
 } from './hooks/useBrushFilters';
+
+export { useActiveFilters, type ActiveFilter } from './hooks/useFilterChips';
 
 export type {
   DownloadAction,

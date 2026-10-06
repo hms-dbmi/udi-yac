@@ -16,7 +16,7 @@ import { humanizeFieldName, singularizeLabel } from '@/utils/humanize';
  * read, so a field swap in VizTweakComponent needs no store bookkeeping.
  */
 
-interface MappingLike {
+export interface MappingLike {
   field?: string;
   encoding?: string;
   type?: string;
@@ -85,12 +85,12 @@ function resolveSourceName(spec: UDIGrammar): string | null {
   return src?.name ?? null;
 }
 
-function toLayers(representation: unknown): LayerLike[] {
+export function toLayers(representation: unknown): LayerLike[] {
   if (!representation) return [];
   return (Array.isArray(representation) ? representation : [representation]) as LayerLike[];
 }
 
-function toMappings(mapping: LayerLike['mapping']): MappingLike[] {
+export function toMappings(mapping: LayerLike['mapping']): MappingLike[] {
   if (!mapping) return [];
   return Array.isArray(mapping) ? mapping : [mapping];
 }

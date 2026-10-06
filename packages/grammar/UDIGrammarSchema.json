@@ -649,6 +649,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -696,6 +701,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -745,6 +755,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -792,6 +807,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -841,6 +861,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -888,6 +913,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -937,6 +967,11 @@
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
         },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
+        },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
           "type": "string"
@@ -984,6 +1019,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -2328,6 +2368,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",

@@ -28,6 +28,7 @@ import {
   packAllRowMajor,
   packRowMajor,
   repackRowMajor,
+  widenTallItems,
 } from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
 
@@ -511,7 +512,7 @@ export function createDashboardStore() {
         // returns a row count sized to fit categorical Y mappings, so a
         // "donors by race" chart lands tall enough to show every category
         // instead of cramped at the default height.
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
+        const dp = dataPackageStore?.getState();
         for (const {
           index,
           toolCallIndex,
@@ -539,9 +540,7 @@ export function createDashboardStore() {
             uuid,
             template,
           });
-          const h = getDomainForField
-            ? computeInitialCardHeight(spec, getDomainForField, state.gridRowHeight)
-            : DEFAULT_CARD_H;
+          const h = dp ? computeInitialCardHeight(spec, dp, state.gridRowHeight) : DEFAULT_CARD_H;
           newItems.push({ ...newDefaultItem(key), h });
         }
         if (newItems.length === 0) return { activeVisualizations: next };
@@ -553,7 +552,9 @@ export function createDashboardStore() {
         const existingOrdered = [...state.layout.items]
           .filter((it) => !newKeys.has(it.i))
           .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
-        const combined = [...newItems, ...existingOrdered];
+        // A new chart far taller than the cards it would join (a 198-category
+        // bar) gets a row of its own rather than stretching theirs.
+        const combined = widenTallItems([...newItems, ...existingOrdered], state.gridCols, newKeys);
         return {
           activeVisualizations: next,
           layout: { items: packAllRowMajor(combined, state.gridCols) },
@@ -590,10 +591,8 @@ export function createDashboardStore() {
         // DEFAULT_CARD_H on restore. Re-running the category-aware
         // estimator means a "donor by organ" chart comes back tall
         // enough for all 15 organs just like its initial add did.
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
-        const h = getDomainForField
-          ? computeInitialCardHeight(viz.spec, getDomainForField, state.gridRowHeight)
-          : DEFAULT_CARD_H;
+        const dp = dataPackageStore?.getState();
+        const h = dp ? computeInitialCardHeight(viz.spec, dp, state.gridRowHeight) : DEFAULT_CARD_H;
         const item = { ...newDefaultItem(key), h };
         return {
           activeVisualizations: next,
@@ -930,12 +929,12 @@ export function createDashboardStore() {
       set((state) => {
         if (state.layout.items.length === 0) return state;
         const cols = state.gridCols;
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
+        const dp = dataPackageStore?.getState();
         const ordered = state.layout.items.map((it) => {
           const viz = state.activeVisualizations.get(it.i);
           const h =
-            viz && getDomainForField
-              ? computeInitialCardHeight(viz.spec, getDomainForField, state.gridRowHeight)
+            viz && dp
+              ? computeInitialCardHeight(viz.spec, dp, state.gridRowHeight)
               : DEFAULT_CARD_H;
           return {
             ...it,
@@ -945,7 +944,10 @@ export function createDashboardStore() {
             minH: MIN_CARD_H,
           };
         });
-        return { layout: { items: packAllRowMajor(ordered, cols) } };
+        // Every card is re-sized here as if new, so any of them can need a row
+        // of its own.
+        const widened = widenTallItems(ordered, cols, new Set(ordered.map((it) => it.i)));
+        return { layout: { items: packAllRowMajor(widened, cols) } };
       });
     },
 

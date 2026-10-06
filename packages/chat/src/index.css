@@ -680,3 +680,42 @@
 .udi-yac.udi-grid-interacting .dashboard-grid-lanes {
   --swim-color: color-mix(in oklab, var(--primary) 40%, transparent);
 }
+
+/* Scrollbars, drawn the same on every platform: macOS overlay scrollbars stay
+   hidden until a list is scrolled, so nothing said it could be. Native ones
+   match the ScrollArea's (scroll-area.tsx), which reads the same thumb color.
+   Firefox knows only the standard properties; Chromium and Safari take
+   ::-webkit-scrollbar, which Chromium ignores once the standard properties
+   are set, so those are kept to browsers without the pseudo-elements. Scoped
+   to our root, so an embedding host keeps its own. Base UI's ScrollArea hides
+   its viewport's native bar with an unlayered rule, which outranks these. */
+@layer base {
+  .udi-yac {
+    --udi-scrollbar-thumb: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+    --udi-scrollbar-thumb-hover: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    .udi-yac,
+    .udi-yac * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--udi-scrollbar-thumb) transparent;
+    }
+  }
+  .udi-yac ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .udi-yac ::-webkit-scrollbar-track,
+  .udi-yac ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  .udi-yac ::-webkit-scrollbar-thumb {
+    /* The transparent border insets the thumb from the track's edges. */
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background: var(--udi-scrollbar-thumb) padding-box;
+  }
+  .udi-yac ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--udi-scrollbar-thumb-hover);
+  }
+}

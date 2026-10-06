@@ -14,7 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import { UDIChatProvider, useDataPackage, useDataPackageStore } from '@/app/UDIChatContext';
 import { IntervalFilterComponent } from './IntervalFilterComponent';
-import type { DataSelection } from '@/features/dashboard';
+import type { DataSelection } from '../stores/dataFiltersStore';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 
 const pkg = {
@@ -166,8 +166,8 @@ describe('IntervalFilterComponent — entity/field pickers', () => {
     await user.click(optionNamed(list, 'age'));
 
     expect(onCommit).not.toHaveBeenCalled();
-    expect(screen.getByText('10')).toBeTruthy();
-    expect(screen.getByText('25')).toBeTruthy();
+    expect(screen.getByRole('spinbutton', { name: 'Minimum age' })).toHaveValue(10);
+    expect(screen.getByRole('spinbutton', { name: 'Maximum age' })).toHaveValue(25);
   });
 
   it('keeps a narrowed range when the entity menu is dismissed by re-picking the same entity', async () => {
@@ -179,8 +179,8 @@ describe('IntervalFilterComponent — entity/field pickers', () => {
     await user.click(optionNamed(list, 'Donor'));
 
     expect(onCommit).not.toHaveBeenCalled();
-    expect(screen.getByText('10')).toBeTruthy();
-    expect(screen.getByText('25')).toBeTruthy();
+    expect(screen.getByRole('spinbutton', { name: 'Minimum age' })).toHaveValue(10);
+    expect(screen.getByRole('spinbutton', { name: 'Maximum age' })).toHaveValue(25);
   });
 
   it('keeps a narrowed range when a menu is dismissed with Escape', async () => {
@@ -192,8 +192,8 @@ describe('IntervalFilterComponent — entity/field pickers', () => {
     await user.keyboard('{Escape}');
 
     expect(onCommit).not.toHaveBeenCalled();
-    expect(screen.getByText('10')).toBeTruthy();
-    expect(screen.getByText('25')).toBeTruthy();
+    expect(screen.getByRole('spinbutton', { name: 'Minimum age' })).toHaveValue(10);
+    expect(screen.getByRole('spinbutton', { name: 'Maximum age' })).toHaveValue(25);
   });
 
   it('still resets to the new domain when a different field is picked', async () => {

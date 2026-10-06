@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import { IntervalFilterComponent } from './IntervalFilterComponent';
-import { PointFilterComponent } from './PointFilterComponent';
 import { UnmatchedFilterNotice } from './UnmatchedFilterNotice';
 import { useDataFilters, useDataPackage } from '@/app/UDIChatContext';
 import { diagnoseFilter, type FilterProbe } from '@/features/data-package';
 import {
+  FilterCollapsible,
+  FilterControls,
   filterSpecForToolCall,
   messageFilterKeyWithToolCall,
   messageFilterKey as mkFilterKey,
@@ -110,35 +110,9 @@ export function FilterComponent({
 
   if (!dataSelection) return null;
 
-  const allFields = Object.keys(dataSelection.selection ?? {});
-
-  if (filterType === 'interval') {
-    return (
-      <div className="udi:space-y-3 udi:p-2">
-        {allFields.map((_, idx) => (
-          <IntervalFilterComponent
-            key={idx}
-            dataSelection={dataSelection}
-            fieldIndex={idx}
-            tweakable={tweakable}
-            filterKey={filterKey}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (filterType === 'point') {
-    return (
-      <div className="udi:p-2">
-        <PointFilterComponent
-          dataSelection={dataSelection}
-          tweakable={tweakable}
-          filterKey={filterKey}
-        />
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <FilterCollapsible filterId={filterKey} selection={dataSelection}>
+      <FilterControls filterId={filterKey} selection={dataSelection} tweakable={tweakable} />
+    </FilterCollapsible>
+  );
 }

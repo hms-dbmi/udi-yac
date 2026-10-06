@@ -1,14 +1,38 @@
 import { useMemo } from 'react';
-import { useDataFilters, useDataPackageStore } from '@/app/UDIChatContext';
-import type { DataSelection } from '../stores/dataFiltersStore';
-import { brushHasValue, useBrushFilters } from './useBrushFilters';
+import {
+  useDashboard,
+  useDataFilters,
+  useDataPackage,
+  useDataPackageStore,
+} from '@/app/UDIChatContext';
+import {
+  HOST_FILTER_PREFIX,
+  isChatFilterKey,
+  isValidSelection,
+  type DataSelection,
+  type DataSelections,
+  type FilterOrigin,
+} from '../stores/dataFiltersStore';
+import type { ActiveVisualization } from '../stores/dashboardStore';
+import { selectBrushFilters } from './useBrushFilters';
+
+/** A filter in place, whatever made it. `id` is what the store's filter
+ *  actions (`setFilter`, `clearFilter`, `removeFilter`, ...) take. */
+export interface ActiveFilter {
+  id: string;
+  origin: FilterOrigin;
+  selection: DataSelection;
+}
 
 export interface ChipInfo {
   id: string;
+  origin: FilterOrigin;
   dataSourceKey: string;
   type: string;
   label: string;
   value: string;
+  /** The whole filter the chip summarizes — its popover edits this. */
+  selection: DataSelection;
 }
 
 /**
@@ -20,19 +44,30 @@ function formatSelectionFields(
   sel: DataSelection,
   labelFor: (field: string) => string,
   valueFor: (value: string) => string,
+  domainOf: (field: string) => readonly unknown[] | undefined = () => undefined,
 ): { label: string; value: string }[] {
   const results: { label: string; value: string }[] = [];
   for (const [field, raw] of Object.entries(sel.selection ?? {})) {
     if (sel.type === 'interval') {
       const arr = Array.isArray(raw) ? raw : [];
       const [min, max] = arr as [number | undefined, number | undefined];
+      if (arr.length < 2) {
+        results.push({ label: labelFor(field), value: 'All' });
+        continue;
+      }
       const minStr = typeof min === 'number' ? min.toFixed(0) : '...';
       const maxStr = typeof max === 'number' ? max.toFixed(0) : '...';
       results.push({ label: labelFor(field), value: `${minStr}\u2013${maxStr}` });
     } else if (sel.type === 'point') {
       const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
       const displayArr = arr.map((v: unknown) => (v == null ? 'NULL' : valueFor(String(v))));
-      if (displayArr.length >= 3) {
+      // Every value checked takes in every row, as none checked does, and the
+      // select-all row makes it a common state: say so rather than list them.
+      const domain = domainOf(field);
+      const everyValue = !!domain?.length && domain.every((v) => arr.includes(v));
+      if (displayArr.length === 0 || everyValue) {
+        results.push({ label: labelFor(field), value: 'All' });
+      } else if (displayArr.length >= 3) {
         results.push({ label: labelFor(field), value: `${displayArr[0]}, ${displayArr[1]}, ...` });
       } else {
         results.push({ label: labelFor(field), value: displayArr.join(', ') });
@@ -44,77 +79,97 @@ function formatSelectionFields(
   return results;
 }
 
+type Validate = Parameters<typeof isValidSelection>[1];
+
 /**
- * One chip per active filter: the chat's FilterData selections that still
- * validate against the package, plus brush/click selections on active
- * visualizations. Shared by the Filters section and by the dashboard, which
- * drops the section's band when a read-only view has nothing to show in it.
+ * Every filter currently in place, in chip order: the chat's FilterData
+ * selections and the host's `filters` that the package admits, then brush/click
+ * selections on active visualizations. Cleared (all-inclusive) filters are
+ * included — they keep their chip — and removed ones are not. Exported for
+ * unit testing; components use `useActiveFilters`.
+ */
+export function selectFilters(
+  dataSelections: DataSelections,
+  internalDataSelections: DataSelections,
+  activeVisualizations: Map<string, ActiveVisualization>,
+  removedFilters: Record<string, true>,
+  validate: Validate,
+): ActiveFilter[] {
+  const result: ActiveFilter[] = [];
+  for (const [id, selection] of Object.entries(dataSelections)) {
+    if (!isChatFilterKey(id) || removedFilters[id]) continue;
+    if (!isValidSelection(selection, validate)) continue;
+    result.push({ id, origin: id.startsWith(HOST_FILTER_PREFIX) ? 'host' : 'chat', selection });
+  }
+  for (const brush of selectBrushFilters(internalDataSelections, activeVisualizations)) {
+    if (removedFilters[brush.id]) continue;
+    result.push({ id: brush.id, origin: 'chart', selection: brush.selection });
+  }
+  return result;
+}
+
+export function useActiveFilters(): ActiveFilter[] {
+  const dataPackageStore = useDataPackageStore();
+  const dataSelections = useDataFilters((s) => s.dataSelections);
+  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
+  const removedFilters = useDataFilters((s) => s.removedFilters);
+  const activeVisualizations = useDashboard((s) => s.activeVisualizations);
+
+  return useMemo(() => {
+    const dpState = dataPackageStore.getState();
+    return selectFilters(
+      dataSelections,
+      internalDataSelections,
+      activeVisualizations,
+      removedFilters,
+      {
+        isValidIntervalFilter: dpState.isValidIntervalFilter,
+        isValidPointFilter: dpState.isValidPointFilter,
+      },
+    );
+  }, [
+    dataSelections,
+    internalDataSelections,
+    activeVisualizations,
+    removedFilters,
+    dataPackageStore,
+  ]);
+}
+
+/**
+ * One chip per field of each filter in place. Shared by the Filters section
+ * and by the dashboard, which drops the section's band when a read-only view
+ * has nothing to show in it.
  */
 export function useFilterChips(): ChipInfo[] {
   const dataPackageStore = useDataPackageStore();
-  const dataSelections = useDataFilters((s) => s.dataSelections);
-  // Brush/click selections, gated to currently-active visualizations so a
-  // closed viz's stale selection never renders a chip.
-  const brushFilters = useBrushFilters();
+  const filters = useActiveFilters();
+  // Subscribed, so a chip re-reads "All" once the domains it is checked
+  // against arrive.
+  const domains = useDataPackage((s) => s.dataFieldDomains);
 
   return useMemo<ChipInfo[]>(() => {
     const dpState = dataPackageStore.getState();
-    const validate = {
-      isValidIntervalFilter: dpState.isValidIntervalFilter,
-      isValidPointFilter: dpState.isValidPointFilter,
-    };
-
-    const validExternalSelections = Object.entries(dataSelections).filter(([key, sel]) => {
-      if (!sel.selection || Object.keys(sel.selection).length === 0) return false;
-      if (Object.values(sel.selection).every((v) => Array.isArray(v) && v.length === 0))
-        return false;
-      if (!key.startsWith('message-filter-')) return false;
-      // `!== 'no'` mirrors the store's admission rule: an unverifiable filter
-      // is applied to the data, so it must also get a chip the user can clear.
-      if (sel.type === 'interval') {
-        return (
-          validate.isValidIntervalFilter(sel.dataSourceKey, Object.keys(sel.selection)[0])
-            .isValid !== 'no'
-        );
-      }
-      if (sel.type === 'point') {
-        return (
-          validate.isValidPointFilter(
-            sel.dataSourceKey,
-            Object.keys(sel.selection)[0],
-            Object.values(sel.selection)[0] as unknown[],
-          ).isValid !== 'no'
-        );
-      }
-      return false;
-    });
-
-    // Visualization brush/click selections (already gated to active vizzes;
-    // point selections arrive pre-split, one filter per field, so each chip
-    // clears independently). A present-but-empty point filter keeps its chat
-    // widget but has no chip.
-    const brushEntries: [string, DataSelection][] = brushFilters
-      .filter((b) => brushHasValue(b.selection))
-      .map((b) => [b.id, b.selection]);
-
-    const allEntries = [...validExternalSelections, ...brushEntries];
-
-    const result: ChipInfo[] = [];
-    for (const [id, sel] of allEntries) {
-      if (
-        sel.selection == null ||
-        Object.values(sel.selection).every((v) => v == null || (Array.isArray(v) && v.length === 0))
-      )
-        continue;
-      const fields = formatSelectionFields(
-        sel,
-        (field) => dpState.getFieldLabel(sel.dataSourceKey, field),
+    return filters.flatMap(({ id, origin, selection }) =>
+      formatSelectionFields(
+        selection,
+        (field) => dpState.getFieldLabel(selection.dataSourceKey, field),
         dpState.getValueLabel,
-      );
-      for (const { label, value } of fields) {
-        result.push({ id, dataSourceKey: sel.dataSourceKey, type: sel.type, label, value });
-      }
-    }
-    return result;
-  }, [dataSelections, brushFilters, dataPackageStore]);
+        (field) => {
+          const domain = domains.find(
+            (d) => d.entity === selection.dataSourceKey && d.field === field,
+          )?.domain;
+          return (domain as { values?: unknown[] } | undefined)?.values;
+        },
+      ).map(({ label, value }) => ({
+        id,
+        origin,
+        dataSourceKey: selection.dataSourceKey,
+        type: selection.type,
+        label,
+        value,
+        selection,
+      })),
+    );
+  }, [filters, dataPackageStore, domains]);
 }

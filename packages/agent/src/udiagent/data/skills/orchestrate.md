@@ -51,6 +51,10 @@ It is **not** a list of what exists.
   absent from the data because it is not in the sample.
 - Call `ListFieldValues` when you need the full list — to check a value exists,
   or to quote values back to the user.
+- When the user asks to filter by a categorical field without saying which
+  values ("filter by radiation type"), call `FilterData` on that field with no
+  `pointValues`. The user is shown its values to pick from. Do not use
+  `ClarifyVariable` for this: it offers fields, not values.
 
 **Never refuse a request on the grounds that a table or column does not exist
 unless it is missing from the schema above.**

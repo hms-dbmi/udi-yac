@@ -161,6 +161,52 @@ describe('UDIChat — initialSession', () => {
     expect(screen.queryByRole('button', { name: 'Show message in chat' })).toBeNull();
   });
 
+  // Leaving read-only hides the seeded transcript, but not its filters: they
+  // still apply, so their chat widgets stay — at the top, where their messages
+  // were — with entity and field still editable, as a chat filter's are.
+  it('keeps a seeded filter editable in the chat after Explore Data', async () => {
+    const user = userEvent.setup();
+    const withFilter = {
+      ...seededSession,
+      conversation: {
+        messages: [
+          ...seededSession.conversation.messages,
+          {
+            role: 'assistant',
+            content: '',
+            tool_calls: [
+              {
+                function: {
+                  name: 'FilterData',
+                  arguments: {
+                    title: 'Donor Sex',
+                    entity: 'donors',
+                    field: 'sex',
+                    filter: {
+                      filterType: 'point',
+                      pointValues: ['Female'],
+                      intervalRange: { min: 0, max: 0 },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    };
+    render(<UDIChat {...seedConfig} readOnly initialSession={withFilter} />);
+    expect(await screen.findByText('Seeded cohort')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Explore Data' }));
+
+    expect(screen.queryByText('donors by sex')).toBeNull();
+    expect(screen.getByRole('button', { name: /Filter: / })).toBeTruthy();
+    const [entity, field] = screen.getAllByRole('combobox');
+    expect(entity).not.toHaveAttribute('data-disabled');
+    expect(field).not.toHaveAttribute('data-disabled');
+  });
+
   it('hides an empty Filters section while read-only, and brings it back on exit', async () => {
     const user = userEvent.setup();
     render(<UDIDashboard {...seedConfig} initialSession={seededSession} />);
@@ -197,5 +243,36 @@ describe('UDIChat — initialSession', () => {
     // details), so assert that it surfaced at all rather than exactly once.
     expect(screen.getAllByText(/initialSession/).length).toBeGreaterThan(0);
     consoleError.mockRestore();
+  });
+});
+
+describe('UDIChat — host filters', () => {
+  const sexFilter = {
+    id: 'cohort',
+    dataSourceKey: 'donors',
+    type: 'point' as const,
+    selection: { sex: ['Female'] },
+  };
+
+  it('shows a `filters` entry as a chip and reports it through onFiltersChange', async () => {
+    const onFiltersChange = vi.fn();
+    render(
+      <UDIDashboard
+        {...seedConfig}
+        initialSession={seededSession}
+        filters={[sexFilter]}
+        onFiltersChange={onFiltersChange}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: /Sex\s*Female/ })).toBeTruthy();
+    expect(onFiltersChange).toHaveBeenLastCalledWith([{ ...sexFilter, origin: 'host' }]);
+  });
+
+  it('rejects a malformed `filters` entry', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<UDIChat {...seedConfig} filters={[{ id: 'x' } as never]} />);
+    expect(screen.getAllByText(/filters\[0\]/).length).toBeGreaterThan(0);
+    spy.mockRestore();
   });
 });

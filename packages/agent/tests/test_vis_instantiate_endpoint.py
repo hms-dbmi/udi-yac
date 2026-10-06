@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import udiagent.vis_generate as vis_generate
 from udiagent.agent import UDIAgent
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -228,7 +229,7 @@ def test_unknown_template_is_a_404_naming_the_likely_cause(client, data_schema):
         # Declared quantitative, template requires nominal.
         ("event_date", "requires nominal"),
         ("no_such_column", "not found on entity 'Event'"),
-        # The 50-cardinality cap applies to a user's choice too, not just the model's.
+        # The cardinality cap applies to a user's choice too, not just the model's.
         ("research_id", "unique values"),
     ],
 )
@@ -270,14 +271,18 @@ def test_a_stratifier_bound_to_the_subject_key_is_rejected_even_when_grouped(
     assert "spec" not in body
 
 
-def test_an_empty_grouping_does_not_buy_the_cardinality_exemption(client, data_schema):
-    """A grouping exempts its field from the 50-value cap, because the chart then
+def test_an_empty_grouping_does_not_buy_the_cardinality_exemption(
+    client, data_schema, monkeypatch
+):
+    """A grouping exempts its field from the category cap, because the chart then
     draws the strata the grouping names rather than the field's own domain.
 
     A lone catch-all claiming no values parses to "no grouping", so the field is
     back to drawing its whole domain and the cap has to apply again. Read raw,
     the payload still looked like a grouping and bought the exemption.
     """
+    # Pinned, so tumor_locations (239 values) exceeds it whatever the cap is now.
+    monkeypatch.setattr(vis_generate, "MAX_DRAWN_CATEGORIES", 50)
     response = _post(
         client,
         data_schema,

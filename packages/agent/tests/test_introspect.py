@@ -57,8 +57,18 @@ def test_introspect_domains(engine):
     assert mass["domain"]["min"] == 2700
     assert mass["domain"]["max"] == 6300
 
-    # High-cardinality categoricals are dropped (removeLongDomains parity).
+    # Categoricals over DEFAULT_DISTINCT_CAP are dropped (hubmap_id has 501).
     assert ("donors", "hubmap_id") not in by_key
+
+
+def test_distinct_cap_covers_every_drawable_category():
+    """A chart can draw up to MAX_DRAWN_CATEGORIES categories; below that,
+    the domain must be collected, or the chart's filter can list only the
+    values already selected."""
+    from udiagent.query.introspect import DEFAULT_DISTINCT_CAP
+    from udiagent.vis_generate import MAX_DRAWN_CATEGORIES
+
+    assert DEFAULT_DISTINCT_CAP >= MAX_DRAWN_CATEGORIES
 
 
 def test_entity_schemas_merged_into_resources():

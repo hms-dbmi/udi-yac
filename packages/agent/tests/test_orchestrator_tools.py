@@ -29,6 +29,31 @@ def test_filter_data_still_names_its_filter():
     assert "title" in params["properties"]
 
 
+def test_filter_data_without_values_asks_for_them():
+    """"Filter by radiation type" names a field but no values. FilterData may
+    omit them, and the handler then passes an empty list — the chat's widget
+    lists the field's values to pick from. A blank string instead would be a
+    live filter on "" and empty the dashboard."""
+    from udiagent.orchestrator import Orchestrator
+
+    params = _tool("FilterData")["parameters"]
+    assert "pointValues" not in params["required"]
+    result = Orchestrator._handle_filter_data(
+        None,
+        {"entity": "Radiation", "field": "radiation_type", "filterType": "point"},
+        messages=[],
+        data_schema="",
+        data_domains="",
+        usage=None,
+    )
+    assert result["arguments"]["filter"]["pointValues"] == []
+
+
+def test_clarify_variable_is_for_fields_not_values():
+    description = _tool("ClarifyVariable")["description"]
+    assert "FilterData" in description
+
+
 def test_every_template_carries_user_facing_text():
     """Both strings are authored per template, so the frontend's generic
     builder only ever covers specs that came from no template at all."""

@@ -2105,7 +2105,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
   'type': 'function'},
  {'function': {'description': '[table] Lists all distinct values of a nominal field with their counts, ordered by '
                               'descending count, displayed as a table with in-cell bar marks. Use this for a field '
-                              'with too many distinct values to chart (over 50): it lists all of them. Design: Groups '
+                              'with too many distinct values to chart (over 500): it lists all of them. Design: Groups '
                               'by the nominal field and counts occurrences, sorted descending so the bars are '
                               'comparable top-to-bottom. The count is drawn as both a bar and a number, since a bar '
                               'alone shows relative frequency but not the value. Tasks: Determine the range (distinct '
