@@ -18,6 +18,7 @@ export interface DataPackageConfig extends LoadDataPackageOptions {
 
 export interface UDIToolkitContextValue {
   palette: UDIPalette | undefined;
+  fontScale?: number | undefined;
   status: DataPackageStatus;
 }
 
@@ -39,6 +40,11 @@ export interface UDIToolkitProviderProps {
    * not an override.
    */
   palette?: UDIPalette;
+  /**
+   * Default text-size multiplier inherited by every nested `<UDIVis>`; a
+   * per-instance `fontScale` prop still wins.
+   */
+  fontScale?: number;
   /**
    * Optional data-package descriptor. When supplied, the provider calls
    * `loadDataPackage(sources, options)` on mount (and again any time the
@@ -67,6 +73,7 @@ function sourceFingerprint(sources: SourceSpec[] | undefined): string {
  */
 export function UDIToolkitProvider({
   palette,
+  fontScale,
   dataPackage,
   children,
 }: UDIToolkitProviderProps): React.ReactElement {
@@ -121,9 +128,13 @@ export function UDIToolkitProvider({
   }, [fingerprint]);
 
   const value = React.useMemo<UDIToolkitContextValue>(
-    () => ({ palette, status }),
-    [palette, status],
+    () => ({ palette, fontScale, status }),
+    [palette, fontScale, status],
   );
 
-  return <UDIToolkitContext.Provider value={value}>{children}</UDIToolkitContext.Provider>;
+  return (
+    <UDIToolkitContext.Provider value={value}>
+      {children}
+    </UDIToolkitContext.Provider>
+  );
 }
