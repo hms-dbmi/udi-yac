@@ -18,11 +18,11 @@ minimumReleaseAgeExclude:
 overrides:
   flatted: 3.4.2
   node-forge: 1.4.0
-  express: 4.21.2
-  js-yaml: 4.1.1
+  express: 4.22.3
+  js-yaml: 4.3.2
   cross-spawn: 7.0.6
   glob: 10.5.0
-  postcss: 8.5.15
+  postcss: 8.5.29
   # scoped, not global: @quasar/app-vite and udi-toolkit each declare their own
   # vite ^8 range, so pin both to the workspace vite to keep a single instance.
   # (vitest 5 peer-deps vite ^8, so it no longer needs excluding from this pin.)
@@ -34,6 +34,9 @@ overrides:
   "@rollup/pluginutils>picomatch": 4.0.4
   "rollup-plugin-visualizer>picomatch": 4.0.4
   "tinyglobby>picomatch": 4.0.4
+  # Storybook 8's addon-actions pins uuid ^9; it only calls `v4`, unchanged in
+  # 11.x (still ships CJS). Drop when Storybook is upgraded.
+  "@storybook/addon-actions>uuid": 11.1.1
 
 # Node 24.20.0 made URL parsing spec-correct: an absolute path can no longer be
 # resolved against an opaque-path base. jsonschema walks $refs with
