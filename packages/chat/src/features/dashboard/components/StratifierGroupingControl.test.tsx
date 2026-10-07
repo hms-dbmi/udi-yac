@@ -111,11 +111,6 @@ function positionerStyle() {
 // unmounted tree — without this the next test finds two triggers.
 afterEach(cleanup);
 
-// jsdom has no PointerEvent, and without it fireEvent.pointerMove drops the
-// clientX the histogram maps to a cut value.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(globalThis as any).PointerEvent = MouseEvent;
-
 /** Drag the sole cut handle to `ratio` across the plot. */
 function dragCutTo(ratio: number) {
   const svg = document.body.querySelector('svg')!;
