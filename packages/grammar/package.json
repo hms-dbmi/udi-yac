@@ -93,7 +93,7 @@
     "@storybook/vue3": "^8.6.18",
     "@storybook/vue3-vite": "^8.6.18",
     "@types/lodash": "^4.17.25",
-    "@types/node": "^20.19.43",
+    "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@vitejs/plugin-vue": "^6.0.9",
     "@vue/eslint-config-prettier": "^10.2.0",
