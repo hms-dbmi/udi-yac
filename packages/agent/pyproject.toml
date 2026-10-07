@@ -21,7 +21,7 @@ langfuse = [
 # Bedrock keep the looser openai>=2.15.0; openai.providers.bedrock landed in
 # 2.44.0. openai[bedrock] rather than a bare botocore pin tracks upstream.
 bedrock = [
-    "openai[bedrock]>=2.44.0",
+    "openai[bedrock]>=3.24.0",
 ]
 server = [
     "fastapi[standard]>=0.128.0",
