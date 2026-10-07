@@ -9,7 +9,7 @@
  */
 import { useEffect } from 'react';
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { act, cleanup, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 
 vi.mock('udi-toolkit/react', () => ({
   UDIVis: () => <div data-testid="udi-vis" />,
@@ -69,5 +69,43 @@ describe('DashboardGrid — leaving read-only', () => {
     act(() => stores.global.getState().setReadOnly(false));
 
     expect(stores.dashboard.getState().gridCols).toBe(2);
+  });
+});
+
+// react-resizable sizes each move as the item's *rendered* height plus that
+// move's delta, so the item must re-render on every move, not only when the
+// snapped row count changes. react-grid-layout 2.3.0 memoized GridItem on its
+// grid props and broke this: the card froze until one move crossed half a row.
+describe('DashboardGrid — resizing', () => {
+  it('grows the card with the pointer between grid steps', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+    const { container } = render(
+      <UDIChatProvider>
+        <Harness />
+      </UDIChatProvider>,
+    );
+    const item = await vi.waitFor(() => {
+      const el = container.querySelector<HTMLElement>('.react-grid-item');
+      expect(el).not.toBeNull();
+      return el!;
+    });
+    const handle = item.querySelector('.react-resizable-handle-s')!;
+    const startHeight = parseFloat(item.style.height);
+
+    // 3 × 10px stays under half a row step (60px row + 8px margin), so the
+    // snapped height never changes and only the live preview should move.
+    act(() => {
+      fireEvent.mouseDown(handle, { button: 0, clientX: 0, clientY: 0 });
+    });
+    for (const clientY of [10, 20, 30]) {
+      act(() => {
+        fireEvent.mouseMove(document, { clientX: 0, clientY });
+      });
+    }
+
+    expect(parseFloat(item.style.height)).toBe(startHeight + 30);
+    act(() => {
+      fireEvent.mouseUp(document, { clientX: 0, clientY: 30 });
+    });
   });
 });
