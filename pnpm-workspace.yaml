@@ -26,8 +26,8 @@ overrides:
   # scoped, not global: @quasar/app-vite and udi-toolkit each declare their own
   # vite ^8 range, so pin both to the workspace vite to keep a single instance.
   # (vitest 5 peer-deps vite ^8, so it no longer needs excluding from this pin.)
-  "udi-toolkit>vite": 8.3.0
-  "@quasar/app-vite>vite": 8.3.0
+  "udi-toolkit>vite": 8.3.3
+  "@quasar/app-vite>vite": 8.3.3
   "anymatch>picomatch": 2.3.2
   "readdirp>picomatch": 2.3.2
   "micromatch>picomatch": 2.3.2
