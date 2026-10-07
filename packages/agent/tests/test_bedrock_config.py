@@ -157,7 +157,7 @@ class TestRealOpenAIClientAcceptsProvider:
 
         Uses a mock transport, so nothing leaves the process.
         """
-        import httpx
+        import httpx2 as httpx
         from openai import OpenAI
 
         captured = {}
@@ -350,7 +350,7 @@ class TestCredentialFailureResponse:
 
     def test_real_api_errors_are_not_masked_as_503(self):
         """APIError subclasses are upstream failures, not config faults."""
-        import httpx
+        import httpx2 as httpx
         from openai import APIConnectionError
 
         exc = APIConnectionError(request=httpx.Request("POST", "https://example.com"))
@@ -362,7 +362,7 @@ class TestCredentialFailureResponse:
 
     def test_authentication_error_still_maps_to_401(self):
         """Registering a handler on the base class must not steal subclasses."""
-        import httpx
+        import httpx2 as httpx
         from openai import AuthenticationError
 
         exc = AuthenticationError(
