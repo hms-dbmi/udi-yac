@@ -21,16 +21,16 @@ jobs:
         package: [agent, grammar]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Checkout source repository (where validate.py lives)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ARPA-H-BDF/bdfkb-schema
           path: validation-source
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ github.event.inputs.python-version }}
 
