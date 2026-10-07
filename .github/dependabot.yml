@@ -16,6 +16,13 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    ignore:
+      # 2.3.0 memoizes GridItem, which freezes a card mid-resize. Later
+      # versions are still proposed; the resizing test in
+      # packages/chat/src/features/dashboard/components/DashboardGrid.test.tsx
+      # fails if they still have the bug.
+      - dependency-name: react-grid-layout
+        versions: ["2.3.0"]
     groups:
       npm-minor-patch:
         applies-to: version-updates
