@@ -436,8 +436,8 @@ importers:
         specifier: ^8.6.18
         version: 8.6.18(storybook@8.6.18(prettier@3.9.9))
       '@storybook/vue3':
-        specifier: ^8.6.18
-        version: 8.6.18(storybook@8.6.18(prettier@3.9.9))(vue@3.5.43(typescript@6.0.3))
+        specifier: ^10.6.1
+        version: 10.6.1(storybook@8.6.18(prettier@3.9.9))(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3))
       '@storybook/vue3-vite':
         specifier: ^8.6.18
         version: 8.6.18(storybook@8.6.18(prettier@3.9.9))(vite@8.3.3(@types/node@22.20.5)(esbuild@0.25.12)(jiti@2.7.0)(sass-embedded@1.105.1)(sass@1.105.1)(terser@5.51.2)(yaml@2.9.1))(vue@3.5.43(typescript@6.0.3))
@@ -1993,6 +1993,16 @@ packages:
     peerDependencies:
       storybook: ^8.6.18
       vite: ^4.0.0 || ^5.0.0 || ^6.0.0
+
+  '@storybook/vue3@10.6.1':
+    resolution: {integrity: sha512-IZMGkRMkBQApOea+AZyUAuNxAUHb4CTW411l8chV5ID1bnM1uJZYh1I300ys+zjh7XyH/SNUMZ/Xsn6HzMUXzA==}
+    peerDependencies:
+      storybook: ^10.6.1
+      typescript: '>= 4.9.x'
+      vue: ^3.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   '@storybook/vue3@8.6.18':
     resolution: {integrity: sha512-FY6XkM3hW0aHxtrMEUBhlaBrIrS1Ler68mb/oZM2PQ9NqY2Mm9x3B3fZuQgFVzzEi4Vc/XXuYNVuC8+B5S0LhQ==}
@@ -5981,6 +5991,14 @@ packages:
       typescript:
         optional: true
 
+  vue-component-meta@3.3.12:
+    resolution: {integrity: sha512-UT2ax02yye/xT/eiVBaXjuLDS92spt2V6Aj9C3gJpKKBZg/etrDIGCTLG34M4zGN5qWJEkcpnRjDt3wXBoxOjw==}
+    peerDependencies:
+      typescript: '*'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   vue-component-type-helpers@2.2.12:
     resolution: {integrity: sha512-YbGqHZ5/eW4SnkPNR44mKVc6ZKQoRs/Rux1sxC6rdwXb4qpbOSYfDr9DsTHolOTGmIKgM9j141mZbBeg05R1pw==}
 
@@ -7699,6 +7717,20 @@ snapshots:
       vue-docgen-api: 4.79.2(vue@3.5.43(typescript@6.0.3))
     transitivePeerDependencies:
       - vue
+
+  '@storybook/vue3@10.6.1(storybook@8.6.18(prettier@3.9.9))(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3))':
+    dependencies:
+      '@storybook/global': 5.0.0
+      '@vue/compiler-dom': 3.5.43
+      '@vue/language-core': 3.3.12
+      storybook: 8.6.18(prettier@3.9.9)
+      type-fest: 5.10.0
+      vue: 3.5.43(typescript@6.0.3)
+      vue-component-meta: 3.3.12(typescript@6.0.3)
+      vue-component-type-helpers: 3.3.12
+      vue-docgen-api: 4.79.2(vue@3.5.43(typescript@6.0.3))
+    optionalDependencies:
+      typescript: 6.0.3
 
   '@storybook/vue3@8.6.18(storybook@8.6.18(prettier@3.9.9))(vue@3.5.43(typescript@6.0.3))':
     dependencies:
@@ -12059,6 +12091,14 @@ snapshots:
       vue-component-type-helpers: 2.2.12
     optionalDependencies:
       typescript: 5.9.3
+
+  vue-component-meta@3.3.12(typescript@6.0.3):
+    dependencies:
+      '@volar/typescript': 2.4.28
+      '@vue/language-core': 3.3.12
+      path-browserify: 1.0.1
+    optionalDependencies:
+      typescript: 6.0.3
 
   vue-component-type-helpers@2.2.12: {}
 
