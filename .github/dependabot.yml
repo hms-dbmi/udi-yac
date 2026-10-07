@@ -1,0 +1,54 @@
+# Minor/patch bumps arrive as one grouped PR per ecosystem each week; majors
+# get their own PRs. Security updates are grouped separately so they aren't
+# held back by an unrelated bump that fails CI.
+version: 2
+updates:
+  # Root covers the whole pnpm workspace (pnpm-workspace.yaml). Dependabot does
+  # not edit `overrides` there: when vite moves, bump the scoped
+  # `udi-toolkit>vite` / `@quasar/app-vite>vite` pins to match, or the toolkit
+  # and the Quasar app resolve a second vite.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  # Root uv.lock covers both workspace members (packages/agent, packages/grammar-py).
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      python-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]

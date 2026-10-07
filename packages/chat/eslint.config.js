@@ -175,6 +175,7 @@ export default defineConfig([
       'src/stores/**/*.{ts,tsx}',
       'src/features/*/stores/**/*.{ts,tsx}',
       'src/app/UDIChatContext.tsx',
+      'src/lib/chatRoot.tsx',
       'src/features/*/index.ts',
     ],
     rules: {
