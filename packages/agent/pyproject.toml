@@ -24,7 +24,7 @@ bedrock = [
     "openai[bedrock]>=2.44.0",
 ]
 server = [
-    "fastapi[standard]>=0.128.0",
+    "fastapi[standard]>=0.142.2",
     "python-jose[cryptography]>=3.5.0",
     "python-dotenv>=1.0.0",
     # Already pulled in by fastapi[standard]; declared because ServerConfig
