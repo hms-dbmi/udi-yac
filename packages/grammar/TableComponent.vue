@@ -213,10 +213,14 @@ const colDefs = computed<ColDef[]>(() => {
  * table stayed white-on-white inside a dark host even once the marks followed
  * the theme. Map the palette's chrome onto the Theming API; with no chrome in
  * the palette the grid keeps ag-grid's stock Quartz look.
+ *
+ * The font is the exception: before ag-grid 36 the grid drew in the host
+ * page's font, and 36 switched to Quartz's own stack (IBM Plex Sans, then
+ * system fonts). Inherit, so a table still matches the page around it.
  */
 const gridTheme = computed(() => {
   const palette = effectivePalette.value;
-  const params: Record<string, string | number> = {};
+  const params: Record<string, string | number> = { fontFamily: 'inherit' };
   if (palette?.background != null) params.backgroundColor = palette.background;
   if (palette?.text != null) params.foregroundColor = palette.text;
   if (palette?.grid != null) params.borderColor = palette.grid;
@@ -225,9 +229,7 @@ const gridTheme = computed(() => {
     params.fontSize = 14 * scale.value;
     params.headerFontSize = 14 * scale.value;
   }
-  return Object.keys(params).length > 0
-    ? themeQuartz.withParams(params)
-    : themeQuartz;
+  return themeQuartz.withParams(params);
 });
 </script>
 

@@ -375,11 +375,11 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0
       ag-grid-community:
-        specifier: 33.2.4
-        version: 33.2.4
+        specifier: 36.2.0
+        version: 36.2.0
       ag-grid-vue3:
-        specifier: 33.2.4
-        version: 33.2.4(vue@3.5.43(typescript@6.0.3))
+        specifier: 36.2.0
+        version: 36.2.0(vue@3.5.43(typescript@6.0.3))
       arquero:
         specifier: ^8.0.3
         version: 8.0.3
@@ -411,7 +411,7 @@ importers:
         specifier: ^6.4.3
         version: 6.4.3(vega@6.4.0)
       vue:
-        specifier: ^3.4.18
+        specifier: ^3.5.32
         version: 3.5.43(typescript@6.0.3)
     devDependencies:
       '@chromatic-com/storybook':
@@ -2500,16 +2500,19 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  ag-charts-types@11.2.4:
-    resolution: {integrity: sha512-a1aQjtQ9ZH+J8BF3YcWAIHUt9ZLiL9IVZ8R5h7z2CkTNu2TPq5UlsCcF0/YZKc1M8CM0CdSNLSGQuWUwDNxAcA==}
+  ag-charts-types@14.2.0:
+    resolution: {integrity: sha512-4pDV6/4zbzPN7t607Gr1o6DO9RhmPafQGr+hIpTJBaerbaMoC+WOO3v/wkxFbvCNrHKOexEKSfNTH7PaAR4UzA==}
 
-  ag-grid-community@33.2.4:
-    resolution: {integrity: sha512-7XT1+wxmMlMVXB27BJOzlft9ATB0C5HOJcCGMc8dCO2W17JXbNknVEEDGTBKoSvA4Cei8sARrRDxmPgY8mWopQ==}
+  ag-grid-community@36.2.0:
+    resolution: {integrity: sha512-tK0Toj7t0fV/OMLPnDc0xlYKAqDbnCT3iJodYSn2TJ541caU8jPdYwWhMdW+AP2+pUNwFiJVgc04eJNfvBPsWw==}
 
-  ag-grid-vue3@33.2.4:
-    resolution: {integrity: sha512-U5m4A9sc+jpoENwwl/AZ7r0053tbRvI39nRh55pYMJt6rrnotgUyJVHZfqJ6cExcSM3tqeW+vg1tMXGqoR4PNA==}
+  ag-grid-vue3@36.2.0:
+    resolution: {integrity: sha512-B6P5QHJGxY5g2LjHINAI904x1oMYb/VRlLWgmVylwEov0OicpowHSIxld28vgVkWkHGsdgqnbE4iDHQpVt4zPw==}
     peerDependencies:
-      vue: ^3.5.0
+      vue: ^3.5.32
+
+  ag-stack@36.2.0:
+    resolution: {integrity: sha512-f3XT2htFs9dUPcHni2z9ak69QNta5ODEpooHuuNvbjN98JkokpEqRQ9YLQHQJFdCcgi9Ybs/j3zkkvmNRamIPg==}
 
   ajv-draft-04@1.0.0:
     resolution: {integrity: sha512-mv00Te6nmYbRp5DCwclxtt7yV/joXJPGS7nM+97GdxvuttCOfgI3K4U25zboyeX0O+myI8ERluxQe5wljMmVIw==}
@@ -8289,16 +8292,19 @@ snapshots:
 
   acorn@8.19.0: {}
 
-  ag-charts-types@11.2.4: {}
+  ag-charts-types@14.2.0: {}
 
-  ag-grid-community@33.2.4:
+  ag-grid-community@36.2.0:
     dependencies:
-      ag-charts-types: 11.2.4
+      ag-charts-types: 14.2.0
+      ag-stack: 36.2.0
 
-  ag-grid-vue3@33.2.4(vue@3.5.43(typescript@6.0.3)):
+  ag-grid-vue3@36.2.0(vue@3.5.43(typescript@6.0.3)):
     dependencies:
-      ag-grid-community: 33.2.4
+      ag-grid-community: 36.2.0
       vue: 3.5.43(typescript@6.0.3)
+
+  ag-stack@36.2.0: {}
 
   ajv-draft-04@1.0.0(ajv@8.20.0):
     optionalDependencies:
