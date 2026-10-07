@@ -1,6 +1,6 @@
 // .storybook/preview.ts
 
-import { type Preview, setup } from '@storybook/vue3';
+import { type Preview, setup } from '@storybook/vue3-vite';
 
 import { type App } from 'vue';
 
@@ -16,10 +16,10 @@ setup((app: App) => {
 });
 
 const preview: Preview = {
+  initialGlobals: {
+    backgrounds: { value: 'light' },
+  },
   parameters: {
-    backgrounds: {
-      default: 'light',
-    },
     actions: { argTypesRegex: '^on[A-Z].*' },
     controls: {
       matchers: {

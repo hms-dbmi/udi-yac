@@ -1,4 +1,3 @@
-// import { fn } from '@storybook/test'
 import TestSlotsSimple from './TestSlotsSimple.vue';
 
 // export const ActionsData = {

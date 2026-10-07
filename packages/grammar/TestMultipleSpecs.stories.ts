@@ -1,4 +1,3 @@
-// import { fn } from '@storybook/test'
 import TestMultipleSpecs from './TestMultipleSpecs.vue';
 
 // export const ActionsData = {
