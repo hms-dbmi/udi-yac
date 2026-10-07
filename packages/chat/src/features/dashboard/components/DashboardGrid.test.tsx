@@ -72,10 +72,11 @@ describe('DashboardGrid — leaving read-only', () => {
   });
 });
 
-// react-resizable sizes each move as the item's *rendered* height plus that
-// move's delta, so the item must re-render on every move, not only when the
-// snapped row count changes. react-grid-layout 2.3.0 memoized GridItem on its
-// grid props and broke this: the card froze until one move crossed half a row.
+// A card's live size mid-resize is drawn only when its GridItem re-renders, so
+// that must happen on every pointer move, not only when the snapped row count
+// changes. react-grid-layout 2.3.0 memoized GridItem on its grid props and broke
+// this: the card froze, then jumped each time the pointer crossed half a row
+// (react-grid-layout/react-grid-layout#2303).
 describe('DashboardGrid — resizing', () => {
   it('grows the card with the pointer between grid steps', async () => {
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);

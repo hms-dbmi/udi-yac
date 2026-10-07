@@ -22,13 +22,13 @@ jobs:
       matrix:
         node-version: [22, 24]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
       - name: Setup Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
@@ -54,6 +54,12 @@ jobs:
       - name: Smoke test — package exports map
         run: node test/smoke-exports.mjs
         working-directory: packages/grammar
+
+      # Storybook isn't built anywhere else, so a broken Storybook upgrade would
+      # otherwise pass CI. Once is enough; it doesn't vary by Node version.
+      - name: Build Storybook
+        if: matrix.node-version == 24
+        run: pnpm build:storybook
 
       - name: Verify dist file sizes
         working-directory: packages/grammar

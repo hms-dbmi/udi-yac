@@ -53,7 +53,7 @@ Local query backends (server-side data dev/testing): **DuckDB** (`dev/duckdb/REA
 
 ## CI / Releases (.github/workflows/)
 
-Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml`, `ci-python.yml`. Combined GitHub Pages deploy (`pages.yml`): chat SPA at `/udi-yac/`, grammar demo at `/udi-yac/grammar/`. Releases are tagged per package — `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z` (`release-*.yml`). The `Main Branch Protection` ruleset requires a PR for every change to `main`, so **no release workflow bumps versions or pushes to `main`** — bump the version in a PR, merge it, then trigger the publish:
+Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml` (also builds Storybook), `ci-grammar-app.yml` (PR-only build of the demo app), `ci-python.yml`. Combined GitHub Pages deploy (`pages.yml`): chat SPA at `/udi-yac/`, grammar demo at `/udi-yac/grammar/`. Releases are tagged per package — `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z` (`release-*.yml`). The `Main Branch Protection` ruleset requires a PR for every change to `main`, so **no release workflow bumps versions or pushes to `main`** — bump the version in a PR, merge it, then trigger the publish:
 
 | Package          | Publish trigger                                                        |
 | ---------------- | ---------------------------------------------------------------------- |

@@ -1,0 +1,34 @@
+name: CI (grammar-app)
+
+# The demo app is otherwise built only by the Pages deploy on main, so a PR
+# that breaks it (or its vite-plugin-checker lint/type pass) would merge green.
+
+on:
+  pull_request:
+    paths:
+      - "apps/grammar-app/**"
+      - "packages/grammar/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/ci-grammar-app.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build udi-toolkit, then the demo app
+        run: pnpm build:grammar
