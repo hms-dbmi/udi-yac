@@ -47,6 +47,7 @@ async function fetchDataPackage(url: string): Promise<RawDataPackage> {
     throw new Error(
       `cannot reach the dev server for ${url} — is \`pnpm dev:template-studio\` ` +
         `still running? (${(err as Error).message})`,
+      { cause: err },
     );
   }
 

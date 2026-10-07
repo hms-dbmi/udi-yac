@@ -66,7 +66,7 @@
   },
   "devDependencies": {
     "@base-ui/react": "^1.8.0",
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@fontsource-variable/geist": "^5.3.0",
     "@microsoft/api-extractor": "^7.59.4",
     "@tailwindcss/vite": "^4.3.3",
@@ -80,7 +80,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "eslint": "^9.39.5",
+    "eslint": "^10.12.0",
     "eslint-plugin-project-structure": "^3.14.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
