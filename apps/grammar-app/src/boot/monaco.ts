@@ -4,38 +4,20 @@ import {
   loader,
 } from '@guolao/vue-monaco-editor';
 import * as monaco from 'monaco-editor';
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
-import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
-import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+// Only the JSON language is used (EditorPage), so only its worker is wired up.
+import editorWorker from 'monaco-editor/editor/editor.worker?worker';
+import jsonWorker from 'monaco-editor/language/json/json.worker?worker';
 
 self.MonacoEnvironment = {
   getWorker(_, label) {
-    switch (label) {
-      case 'json':
-        return new jsonWorker();
-      case 'css':
-      case 'scss':
-      case 'less':
-        return new cssWorker();
-      case 'html':
-      case 'handlebars':
-      case 'razor':
-        return new htmlWorker();
-      case 'typescript':
-      case 'javascript':
-        return new tsWorker();
-      default:
-        return new editorWorker();
-    }
+    return label === 'json' ? new jsonWorker() : new editorWorker();
   },
 };
 
 // more info on params: https://v2.quasar.dev/quasar-cli-vite/boot-files
 export default defineBoot(({ app }) => {
-  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-    ...monaco.languages.json.jsonDefaults.diagnosticsOptions,
+  monaco.json.jsonDefaults.setDiagnosticsOptions({
+    ...monaco.json.jsonDefaults.diagnosticsOptions,
     enableSchemaRequest: true,
     schemas: [
       {
