@@ -23,6 +23,15 @@ updates:
       # fails if they still have the bug.
       - dependency-name: react-grid-layout
         versions: ["2.3.0"]
+      # TypeScript 7.0 ships no JavaScript compiler API, which typescript-eslint,
+      # vue-tsc and vite-plugin-dts all need. Revisit once 7.1 is out and they
+      # support it.
+      - dependency-name: typescript
+        versions: [">=7"]
+      # Tracks the oldest Node major CI runs (node-version in the workflows),
+      # not the latest; bump it by hand when CI moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-patch:
         applies-to: version-updates
