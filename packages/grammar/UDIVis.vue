@@ -74,6 +74,12 @@ export interface ParserProps {
    * valued ramp survives (the spec is JSON-cloned internally).
    */
   palette?: UDIPalette | undefined;
+  /**
+   * Multiplier on every text size the chart or table draws — axis and legend
+   * labels, titles, table cells. 1 (the default) keeps Vega's and ag-grid's
+   * stock sizes; raise it for a projector.
+   */
+  fontScale?: number | undefined;
 }
 
 // Expose data selections to parent component
@@ -107,7 +113,10 @@ const effectivePalette = computed(
 // per element; unset, the stylesheet keeps its original value.
 const chromeVars = computed<CSSProperties>(() => {
   const muted = effectivePalette.value?.mutedText;
-  return muted != null ? { '--udi-vis-muted': muted } : {};
+  return {
+    ...(muted != null ? { '--udi-vis-muted': muted } : {}),
+    ...(props.fontScale != null ? { '--udi-font-scale': props.fontScale } : {}),
+  };
 });
 
 const parsedSpec = ref<ParsedUDIGrammar | null>(null);
@@ -1117,6 +1126,7 @@ const debugVegaData = ref();
         :point-select="pointSelect"
         :selections="props.selections"
         :palette="effectivePalette"
+        :font-scale="props.fontScale"
       />
     </template>
     <template v-else>
@@ -1125,6 +1135,7 @@ const debugVegaData = ref();
         :spec="parsedSpec"
         :palette="effectivePalette"
         :fill-container="props.fillContainer"
+        :font-scale="props.fontScale"
       />
     </template>
   </template>
@@ -1143,12 +1154,12 @@ const debugVegaData = ref();
   // colors; on a dark surface the grey is unreadable, so a themed palette
   // overrides it through `--udi-vis-muted` (see `chromeVars`).
   color: var(--udi-vis-muted, #757575);
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--udi-font-scale, 1));
   margin: 2px 6px;
 }
 .load-more-button {
   margin-left: 6px;
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--udi-font-scale, 1));
   color: #1976d2;
   background: none;
   border: none;

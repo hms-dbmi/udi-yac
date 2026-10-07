@@ -10,8 +10,11 @@ import {
   useDashboard,
   useDashboardStore,
   useDataPackageStore,
+  useGlobal,
+  useGlobalStore,
   useTracker,
 } from '@/app/UDIChatContext';
+import { MAX_FONT_SCALE, MIN_FONT_SCALE } from '@/stores/globalStore';
 import {
   MAX_GRID_COLS,
   MAX_GRID_ROW_HEIGHT_PX,
@@ -22,7 +25,9 @@ import {
 export function GridSettingsButton() {
   const gridCols = useDashboard((s) => s.gridCols);
   const gridRowHeight = useDashboard((s) => s.gridRowHeight);
+  const fontScale = useGlobal((s) => s.fontScale);
   const store = useDashboardStore();
+  const globalStore = useGlobalStore();
   const dataPackageStore = useDataPackageStore();
   const trackEvent = useTracker();
 
@@ -42,6 +47,14 @@ export function GridSettingsButton() {
     [store],
   );
 
+  const handleFontScaleChange = useCallback(
+    (next: number | readonly number[]) => {
+      const n = Array.isArray(next) ? next[0] : (next as number);
+      globalStore.getState().setFontScale(n);
+    },
+    [globalStore],
+  );
+
   const handleResetLayout = useCallback(() => {
     const state = store.getState();
     state.resetLayout(dataPackageStore);
@@ -59,7 +72,7 @@ export function GridSettingsButton() {
                   variant="outline"
                   size="sm"
                   className="udi:h-7 udi:w-7 udi:p-0"
-                  aria-label="Grid settings"
+                  aria-label="Display settings"
                 />
               }
             >
@@ -67,7 +80,7 @@ export function GridSettingsButton() {
             </PopoverTrigger>
           }
         />
-        <TooltipContent>Grid settings</TooltipContent>
+        <TooltipContent>Display settings</TooltipContent>
       </Tooltip>
       <PopoverContent className="udi:w-64">
         <div className="udi:flex udi:flex-col udi:gap-3">
@@ -105,6 +118,24 @@ export function GridSettingsButton() {
               step={10}
               value={[gridRowHeight]}
               onValueChange={handleRowHeightChange}
+            />
+          </div>
+          <div className="udi:flex udi:flex-col udi:gap-1.5">
+            <div className="udi:flex udi:items-center udi:justify-between">
+              <Label htmlFor="text-size" className="udi:text-xs">
+                Text size
+              </Label>
+              <span className="udi:text-xs udi:tabular-nums udi:text-muted-foreground">
+                {Math.round(fontScale * 100)}%
+              </span>
+            </div>
+            <Slider
+              id="text-size"
+              min={MIN_FONT_SCALE}
+              max={MAX_FONT_SCALE}
+              step={0.25}
+              value={[fontScale]}
+              onValueChange={handleFontScaleChange}
             />
           </div>
           <Separator />

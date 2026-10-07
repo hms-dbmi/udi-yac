@@ -31,14 +31,14 @@ export function FieldTooltipContent({
         {dataType && (
           <Badge
             variant="outline"
-            className="udi:border-background/30 udi:text-[9px] udi:text-background"
+            className="udi:border-background/30 udi:text-2xs udi:text-background"
           >
             {dataType}
           </Badge>
         )}
       </div>
       {description && (
-        <p className="udi:text-[11px] udi:leading-snug udi:text-background/80">{description}</p>
+        <p className="udi:text-xs udi:leading-snug udi:text-background/80">{description}</p>
       )}
     </TooltipContent>
   );

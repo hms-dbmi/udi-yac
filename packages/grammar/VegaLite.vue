@@ -83,6 +83,8 @@ interface VegaLiteProps {
   selections?: DataSelections | null | undefined;
   /** Consumer-supplied color palette; falls back to DEFAULT_PALETTE per channel. */
   palette?: UDIPalette | undefined;
+  /** Multiplier on every chart text size (1 = Vega's defaults). */
+  fontScale?: number | undefined;
 }
 
 const props = defineProps<VegaLiteProps>();
@@ -110,6 +112,11 @@ function buildVegaConfig(): Record<string, unknown> {
   const grid = palette.grid ?? DEFAULT_PALETTE.grid;
   const text = palette.text ?? DEFAULT_PALETTE.text;
 
+  // Text sizes are Vega's own defaults times the scale. Vega lays labels out by
+  // these numbers, so they have to come through config rather than CSS.
+  const s = props.fontScale ?? 1;
+  const labels = { labelFontSize: 10 * s, titleFontSize: 11 * s };
+
   const config: Record<string, unknown> = {
     point: { shape: 'circle', filled: true },
     range,
@@ -120,11 +127,19 @@ function buildVegaConfig(): Record<string, unknown> {
       gridColor: grid,
       labelColor: text,
       titleColor: text,
+      ...labels,
     },
     // The plot frame Vega strokes behind the marks — a rule, not an axis.
     view: { stroke: grid },
-    legend: { labelColor: text, titleColor: text },
-    title: { color: text, subtitleColor: text },
+    legend: { labelColor: text, titleColor: text, ...labels },
+    header: labels,
+    title: {
+      color: text,
+      subtitleColor: text,
+      fontSize: 13 * s,
+      subtitleFontSize: 10 * s,
+    },
+    text: { fontSize: 11 * s },
   };
   if (markColor != null) config.mark = { color: markColor };
   return config;
@@ -156,6 +171,7 @@ const hintColors = computed(() => {
   const palette = props.palette ?? {};
   const background = palette.background ?? DEFAULT_PALETTE.background;
   return {
+    '--udi-hint-scale': props.fontScale ?? 1,
     '--udi-hint-fg': palette.text ?? DEFAULT_PALETTE.text,
     '--udi-hint-border': palette.grid ?? DEFAULT_PALETTE.grid,
     ...(background && background !== 'transparent'
@@ -816,12 +832,12 @@ async function updateVegaChart() {
 
 watch(() => props.spec, updateVegaChart);
 
-// The palette only feeds the embed-time `config`, so a change requires a full
-// re-embed (not just a data update). Finalize the existing view first so its
-// dataflow / listeners don't leak. Palette is a consumer-level config that
-// rarely changes, so re-embedding (and dropping any active brush) is fine.
+// The palette and font scale only feed the embed-time `config`, so a change
+// requires a full re-embed (not just a data update). Finalize the existing view
+// first so its dataflow / listeners don't leak. Both are consumer-level config
+// that rarely changes, so re-embedding (and dropping any active brush) is fine.
 watch(
-  () => props.palette,
+  () => [props.palette, props.fontScale],
   () => {
     if (vegaView.value) {
       vegaView.value.finalize();
@@ -1036,8 +1052,8 @@ watch(() => props.selections, updateVegaChartSelections, { deep: true });
   border-radius: 9999px;
   background: var(--udi-hint-bg, Canvas);
   color: var(--udi-hint-fg);
-  font-size: 10px;
-  line-height: 12px;
+  font-size: calc(10px * var(--udi-hint-scale, 1));
+  line-height: calc(12px * var(--udi-hint-scale, 1));
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;

@@ -183,7 +183,7 @@ export function CutPointHistogram({
           );
         })}
       </svg>
-      <div className="udi:flex udi:justify-between udi:text-[10px] udi:text-muted-foreground">
+      <div className="udi:flex udi:justify-between udi:text-2xs udi:text-muted-foreground">
         <span>{formatBound(min, precision)}</span>
         <span>{formatBound(max, precision)}</span>
       </div>

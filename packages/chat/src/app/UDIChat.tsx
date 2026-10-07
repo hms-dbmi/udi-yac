@@ -1,4 +1,12 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from 'react';
 import { Sparkles } from 'lucide-react';
 import { UDIToolkitProvider } from 'udi-toolkit/react';
 import { useThemePalette } from './useThemePalette';
@@ -36,7 +44,7 @@ import {
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
 import { parseSessionExport } from '@/features/dashboard/utils/dashboardSerialization';
 import { applySessionExport } from '@/features/dashboard/utils/applySessionExport';
-import type { UDIGrammar } from 'udi-toolkit/react';
+import type { UDIGrammar, UDIPalette } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { ConversationList } from '@/features/chat/components/ConversationList';
@@ -430,6 +438,45 @@ function ViewSwitch({
   );
 }
 
+/**
+ * The toolkit provider and our root element, split out because both take the
+ * text-size preference, which lives in the global store and so is only
+ * reachable under UDIChatProvider.
+ */
+function ScaledRoot({
+  props,
+  rootRef,
+  palette,
+}: {
+  props: UDIChatConfig;
+  rootRef: RefObject<HTMLDivElement | null>;
+  palette: UDIPalette | undefined;
+}) {
+  const fontScale = useGlobal((s) => s.fontScale);
+  return (
+    <UDIToolkitProvider palette={palette} fontScale={fontScale}>
+      <MascotProvider mascot={props.mascot}>
+        <SplashMessagesProvider messages={props.splashMessages}>
+          {/*
+           * The `udi-yac` class is the scope for every design token and element
+           * reset in index.css. Without it nothing is styled — and with the
+           * tokens on :root instead, mounting us inside a shadcn host would
+           * retheme that host's pages. `--udi-font-scale` drives the text-size
+           * tokens there.
+           */}
+          <div
+            ref={rootRef}
+            className={cn('udi-yac udi:h-full udi:w-full', props.className)}
+            style={{ ...props.style, '--udi-font-scale': fontScale } as CSSProperties}
+          >
+            <UDIChatInner {...props} />
+          </div>
+        </SplashMessagesProvider>
+      </MascotProvider>
+    </UDIToolkitProvider>
+  );
+}
+
 function UDIChatValidated(props: UDIChatConfig) {
   // Throws on bad config; caught by the surrounding ErrorBoundary so the
   // consumer sees a structured error instead of an opaque crash deep in
@@ -461,25 +508,7 @@ function UDIChatValidated(props: UDIChatConfig) {
                      * existing rich state (loadingPhase, sourceFields, etc.) keeps
                      * working unchanged.
                      */}
-                    <UDIToolkitProvider palette={themePalette}>
-                      <MascotProvider mascot={props.mascot}>
-                        <SplashMessagesProvider messages={props.splashMessages}>
-                          {/*
-                           * The `udi-yac` class is the scope for every design token
-                           * and element reset in index.css. Without it nothing is
-                           * styled — and with the tokens on :root instead, mounting
-                           * us inside a shadcn host would retheme that host's pages.
-                           */}
-                          <div
-                            ref={rootRef}
-                            className={cn('udi-yac udi:h-full udi:w-full', props.className)}
-                            style={props.style}
-                          >
-                            <UDIChatInner {...props} />
-                          </div>
-                        </SplashMessagesProvider>
-                      </MascotProvider>
-                    </UDIToolkitProvider>
+                    <ScaledRoot props={props} rootRef={rootRef} palette={themePalette} />
                   </EntityIconsProvider>
                 </DownloadButtonLabelProvider>
               </DownloadActionsProvider>

@@ -83,7 +83,7 @@ export function ValuePicker({
         </div>
       </ScrollArea>
       {trimmed && visible.length > 0 && (
-        <span className="udi:text-[10px] udi:text-muted-foreground">
+        <span className="udi:text-2xs udi:text-muted-foreground">
           {visible.length} of {options.length} shown
         </span>
       )}

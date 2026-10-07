@@ -32,6 +32,9 @@
   --color-udi-gray-100: #eff3f5;
   --color-udi-gray-300: #cad5da;
   --color-udi-gray-800: #384853;
+  /* Below Tailwind's `xs`, for chips and captions. No line height of its own:
+     like the `text-[10px]` it replaced, it inherits the root's 1.5. */
+  --text-2xs: 0.625rem;
 }
 
 /*
@@ -127,6 +130,15 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Every text size scales with `--udi-font-scale`, which UDIChat sets on this
+     element from the Display settings "Text size" control. Tailwind's own scale
+     is rem, i.e. the *host's* <html>, so an embed could not otherwise scale it.
+     Charts take the same number as a prop, since Vega lays its text out in px. */
+  --udi-text-2xs: calc(0.625rem * var(--udi-font-scale, 1));
+  --udi-text-xs: calc(0.75rem * var(--udi-font-scale, 1));
+  --udi-text-sm: calc(0.875rem * var(--udi-font-scale, 1));
+  --udi-text-base: calc(1rem * var(--udi-font-scale, 1));
+  --udi-text-lg: calc(1.125rem * var(--udi-font-scale, 1));
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -180,6 +192,8 @@
 @layer base {
   .udi-yac {
     @apply udi:bg-background udi:font-sans udi:text-foreground;
+    /* For text without a size utility. 100% of the host's size at scale 1. */
+    font-size: calc(100% * var(--udi-font-scale, 1));
   }
 
   /*

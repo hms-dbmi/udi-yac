@@ -90,7 +90,7 @@ export function SessionStatusDialog({
               <div className="udi:flex udi:items-center udi:justify-between udi:gap-3">
                 <p className="udi:text-xs udi:text-muted-foreground">
                   Sent to the backend on every request via the{' '}
-                  <code className="udi:rounded udi:bg-muted udi:px-1 udi:py-0.5 udi:text-[11px]">
+                  <code className="udi:rounded udi:bg-muted udi:px-1 udi:py-0.5 udi:text-xs">
                     X-OpenAI-Key
                   </code>{' '}
                   header.
@@ -123,7 +123,7 @@ export function SessionStatusDialog({
                 </div>
               ))}
             </dl>
-            <p className="udi:text-[11px] udi:text-muted-foreground">
+            <p className="udi:text-xs udi:text-muted-foreground">
               Resets when you start a new conversation.
             </p>
           </section>

@@ -10,6 +10,26 @@ import { createStore } from 'zustand/vanilla';
  */
 export type ReadOnlyOption = boolean | 'locked';
 
+export const MIN_FONT_SCALE = 1;
+export const MAX_FONT_SCALE = 2;
+const FONT_SCALE_KEY = 'udi-yac:font-scale';
+
+function clampFontScale(value: number): number {
+  return Number.isFinite(value)
+    ? Math.min(MAX_FONT_SCALE, Math.max(MIN_FONT_SCALE, value))
+    : MIN_FONT_SCALE;
+}
+
+/** A per-viewer preference, so a projector setup survives a reload. */
+function readFontScale(): number {
+  try {
+    const raw = localStorage.getItem(FONT_SCALE_KEY);
+    return raw == null ? MIN_FONT_SCALE : clampFontScale(Number(raw));
+  } catch {
+    return MIN_FONT_SCALE;
+  }
+}
+
 export interface GlobalState {
   debugMode: boolean;
   isProduction: boolean;
@@ -25,6 +45,8 @@ export interface GlobalState {
   readOnly: boolean;
   /** Whether `readOnly` is fixed for the session. See {@link ReadOnlyOption}. */
   readOnlyLocked: boolean;
+  /** Multiplier on every text size, charts included (1 = stock). For presenting. */
+  fontScale: number;
   toggleDebugMode: () => void;
   /**
    * Open/close the Data Overview and optionally pick the entity to expand.
@@ -35,6 +57,7 @@ export interface GlobalState {
   /** No-op while `readOnlyLocked` — guarded here rather than at each call site
    *  so no caller can escape the lock. */
   setReadOnly: (value: boolean) => void;
+  setFontScale: (value: number) => void;
 }
 
 export function createGlobalStore(readOnly: ReadOnlyOption = false) {
@@ -45,6 +68,7 @@ export function createGlobalStore(readOnly: ReadOnlyOption = false) {
     overviewEntity: null,
     readOnly: readOnly !== false,
     readOnlyLocked: readOnly === 'locked',
+    fontScale: readFontScale(),
     toggleDebugMode: () => set((state) => ({ debugMode: !state.debugMode })),
     setOverview: (open, entity) =>
       set((state) => ({
@@ -52,5 +76,14 @@ export function createGlobalStore(readOnly: ReadOnlyOption = false) {
         overviewEntity: entity === undefined ? state.overviewEntity : entity,
       })),
     setReadOnly: (value) => set((state) => (state.readOnlyLocked ? state : { readOnly: value })),
+    setFontScale: (value) => {
+      const fontScale = clampFontScale(value);
+      try {
+        localStorage.setItem(FONT_SCALE_KEY, String(fontScale));
+      } catch {
+        // localStorage unavailable — the setting just won't outlive the page
+      }
+      set({ fontScale });
+    },
   }));
 }

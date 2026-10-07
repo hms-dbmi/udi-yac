@@ -43,9 +43,12 @@ interface TableComponentProps {
   /** Fill the parent's height instead of the default fixed height. Mirrors
    *  UDIVis's `fillContainer`; requires the parent to have a definite height. */
   fillContainer?: boolean | undefined;
+  /** Multiplier on the grid's text size and row height (1 = stock). */
+  fontScale?: number | undefined;
 }
 
 const props = defineProps<TableComponentProps>();
+const scale = computed(() => props.fontScale ?? 1);
 
 // Palette fallback chain: own prop → UDIToolkitProvider's injected palette →
 // undefined (cell renderers handle the DEFAULT_PALETTE fallback themselves).
@@ -213,10 +216,15 @@ const colDefs = computed<ColDef[]>(() => {
  */
 const gridTheme = computed(() => {
   const palette = effectivePalette.value;
-  const params: Record<string, string> = {};
+  const params: Record<string, string | number> = {};
   if (palette?.background != null) params.backgroundColor = palette.background;
   if (palette?.text != null) params.foregroundColor = palette.text;
   if (palette?.grid != null) params.borderColor = palette.grid;
+  // Quartz's stock size is 14px for both body and header.
+  if (scale.value !== 1) {
+    params.fontSize = 14 * scale.value;
+    params.headerFontSize = 14 * scale.value;
+  }
   return Object.keys(params).length > 0
     ? themeQuartz.withParams(params)
     : themeQuartz;
@@ -229,7 +237,7 @@ const gridTheme = computed(() => {
     :rowData="props.data"
     :columnDefs="colDefs"
     :style="props.fillContainer ? { height: '100%' } : { height: '500px' }"
-    :rowHeight="20"
+    :rowHeight="Math.round(20 * scale)"
     :pagination="true"
     :paginationPageSize="100"
     :paginationPageSizeSelector="[25, 50, 100, 500]"

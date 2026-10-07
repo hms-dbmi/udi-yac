@@ -31,7 +31,7 @@ export function ClosedVisualizationsPanel() {
 
   return (
     <div className="udi:px-3 udi:py-1.5 udi:border-t">
-      <p className="udi:text-[10px] udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider udi:mb-1">
+      <p className="udi:text-2xs udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider udi:mb-1">
         Recently Closed
       </p>
       <div className="udi:flex udi:flex-col udi:gap-0.5 udi:max-h-20 udi:overflow-y-auto">

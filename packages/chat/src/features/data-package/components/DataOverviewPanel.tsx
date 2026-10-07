@@ -65,7 +65,7 @@ function SchemaTreeRows({ nodes, icons, selected, onSelect, depth }: SchemaTreeR
               <Icon className="udi:size-3 udi:shrink-0 udi:text-muted-foreground" />
               <span className="udi:min-w-0 udi:flex-1 udi:truncate">{node.name}</span>
               {/* Fixed-width cardinality keeps the counts in a column of their own. */}
-              <span className="udi:w-7 udi:shrink-0 udi:text-right udi:text-[10px] udi:text-muted-foreground">
+              <span className="udi:w-7 udi:shrink-0 udi:text-right udi:text-2xs udi:text-muted-foreground">
                 {node.cardinality ? shortCardinality(node.cardinality) : ''}
               </span>
               <span className="udi:shrink-0 udi:tabular-nums udi:text-muted-foreground">
@@ -144,13 +144,13 @@ function JoinList({ groups, icons, selected, onSelect }: JoinListProps) {
                     // that entity's accordion trigger.
                     aria-label={`${edge.from} joins ${edge.to}`}
                     className={cn(
-                      'udi:flex udi:w-full udi:items-center udi:gap-1 udi:rounded udi:py-0.5 udi:pl-4 udi:text-left udi:text-[11px] udi:text-muted-foreground udi:hover:bg-accent udi:hover:text-foreground udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
+                      'udi:flex udi:w-full udi:items-center udi:gap-1 udi:rounded udi:py-0.5 udi:pl-4 udi:text-left udi:text-xs udi:text-muted-foreground udi:hover:bg-accent udi:hover:text-foreground udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
                       selected === edge.to && 'udi:text-udi-primary',
                     )}
                   >
                     <span aria-hidden>→</span>
                     <span className="udi:min-w-0 udi:flex-1 udi:truncate">{edge.to}</span>
-                    <span className="udi:w-7 udi:shrink-0 udi:text-right udi:text-[10px]">
+                    <span className="udi:w-7 udi:shrink-0 udi:text-right udi:text-2xs">
                       {edge.cardinality ? shortCardinality(edge.cardinality) : ''}
                     </span>
                   </button>
@@ -199,7 +199,7 @@ function SchemaMap({ dataPackage, icons, selected, onSelect }: SchemaMapProps) {
 
   return (
     <div className="udi:px-3 udi:py-2">
-      <h3 className="udi:mb-1 udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
+      <h3 className="udi:mb-1 udi:text-2xs udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
         Relationships
       </h3>
       {isHierarchy ? (

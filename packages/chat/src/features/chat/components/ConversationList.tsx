@@ -94,7 +94,7 @@ export function ConversationList() {
         </Button>
       </div>
       <Separator className="udi:my-1" />
-      <p className="udi:px-3 udi:py-1 udi:text-[10px] udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider">
+      <p className="udi:px-3 udi:py-1 udi:text-2xs udi:font-medium udi:text-muted-foreground udi:uppercase udi:tracking-wider">
         Saved Sessions
       </p>
       <div className="udi:flex-1 udi:overflow-y-auto udi:px-1">

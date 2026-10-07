@@ -86,7 +86,7 @@ const POPPED_VIZ_INDEX = -1;
  */
 function FieldListHeader({ label }: { label: string }) {
   return (
-    <div className="udi:sticky udi:top-18 udi:z-5 udi:flex udi:items-baseline udi:gap-2 udi:border-b udi:bg-background udi:pb-0.5 udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
+    <div className="udi:sticky udi:top-18 udi:z-5 udi:flex udi:items-baseline udi:gap-2 udi:border-b udi:bg-background udi:pb-0.5 udi:text-2xs udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
       <span className="udi:shrink-0 udi:basis-[45%]">{label}</span>
       <span className={cn('udi:min-w-0 udi:flex-1', VALUE_COLUMN_INDENT)}>Possible values</span>
     </div>
@@ -152,7 +152,7 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
               <li key={value} className="udi:min-w-0">
                 <Badge
                   variant="secondary"
-                  className="udi:h-auto udi:max-w-full udi:shrink udi:wrap-anywhere udi:whitespace-normal udi:font-mono udi:text-[10px]"
+                  className="udi:h-auto udi:max-w-full udi:shrink udi:wrap-anywhere udi:whitespace-normal udi:font-mono udi:text-2xs"
                 >
                   {highlightMatch(value, query)}
                 </Badge>
@@ -160,7 +160,7 @@ function CategoricalValues({ values, query }: { values: string[]; query: string 
             ))}
           </ul>
           {shown.length > EXPANDED_VALUE_CAP && (
-            <p className="udi:mb-1.5 udi:text-[10px] udi:text-muted-foreground">
+            <p className="udi:mb-1.5 udi:text-2xs udi:text-muted-foreground">
               Showing the first {EXPANDED_VALUE_CAP.toLocaleString()} of{' '}
               {shown.length.toLocaleString()}.
             </p>
@@ -472,7 +472,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
     <div className="udi:flex udi:flex-col udi:gap-3 udi:pb-1">
       {relationships.length > 0 && (
         <section>
-          <h4 className="udi:mb-1 udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
+          <h4 className="udi:mb-1 udi:text-2xs udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
             Relationships
           </h4>
           <ul className="udi:flex udi:flex-col udi:gap-0.5">
@@ -512,7 +512,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
          * this row keeps a fixed height even when the filter input is absent.
          */}
         <div className="udi:sticky udi:top-9 udi:z-10 udi:mb-1 udi:flex udi:h-9 udi:items-center udi:justify-between udi:gap-2 udi:bg-background">
-          <h4 className="udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
+          <h4 className="udi:text-2xs udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
             Fields ({totalFields})
           </h4>
           {/* Always offered: it now matches values as well as names, so it is
@@ -549,7 +549,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
       {tableSpec && (
         <section>
           <div className="udi:mb-1 udi:flex udi:items-center udi:justify-between udi:gap-2">
-            <h4 className="udi:text-[10px] udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
+            <h4 className="udi:text-2xs udi:font-medium udi:tracking-wider udi:text-muted-foreground udi:uppercase">
               Rows
             </h4>
             <div className="udi:flex udi:items-center udi:gap-1">
