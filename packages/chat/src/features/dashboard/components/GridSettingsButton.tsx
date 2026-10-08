@@ -26,6 +26,7 @@ export function GridSettingsButton() {
   const gridCols = useDashboard((s) => s.gridCols);
   const gridRowHeight = useDashboard((s) => s.gridRowHeight);
   const fontScale = useGlobal((s) => s.fontScale);
+  const hostFontScale = useGlobal((s) => s.hostFontScale);
   const store = useDashboardStore();
   const globalStore = useGlobalStore();
   const dataPackageStore = useDataPackageStore();
@@ -120,24 +121,27 @@ export function GridSettingsButton() {
               onValueChange={handleRowHeightChange}
             />
           </div>
-          <div className="udi:flex udi:flex-col udi:gap-1.5">
-            <div className="udi:flex udi:items-center udi:justify-between">
-              <Label htmlFor="text-size" className="udi:text-xs">
-                Text size
-              </Label>
-              <span className="udi:text-xs udi:tabular-nums udi:text-muted-foreground">
-                {Math.round(fontScale * 100)}%
-              </span>
+          {/* A host that sets `fontScale` owns the text size. */}
+          {hostFontScale == null && (
+            <div className="udi:flex udi:flex-col udi:gap-1.5">
+              <div className="udi:flex udi:items-center udi:justify-between">
+                <Label htmlFor="text-size" className="udi:text-xs">
+                  Text size
+                </Label>
+                <span className="udi:text-xs udi:tabular-nums udi:text-muted-foreground">
+                  {Math.round(fontScale * 100)}%
+                </span>
+              </div>
+              <Slider
+                id="text-size"
+                min={MIN_FONT_SCALE}
+                max={MAX_FONT_SCALE}
+                step={0.25}
+                value={[fontScale]}
+                onValueChange={handleFontScaleChange}
+              />
             </div>
-            <Slider
-              id="text-size"
-              min={MIN_FONT_SCALE}
-              max={MAX_FONT_SCALE}
-              step={0.25}
-              value={[fontScale]}
-              onValueChange={handleFontScaleChange}
-            />
-          </div>
+          )}
           <Separator />
           <Button
             variant="ghost"

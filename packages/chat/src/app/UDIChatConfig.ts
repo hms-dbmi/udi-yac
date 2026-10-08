@@ -112,6 +112,14 @@ export interface UDIChatConfig {
    */
   palette?: UDIPalette;
   /**
+   * Multiplier on every text size, charts and tables included: 1 is the stock
+   * size, 2 doubles it. Clamped to 1–2. When set, it overrides the viewer's own
+   * Text size setting and hides that slider, so the host decides — e.g. a
+   * presentation mode, or a read-only embed, which has no slider to reach.
+   * Omit it to leave text size to the viewer.
+   */
+  fontScale?: number;
+  /**
    * Start the chat in read-only mode: the chat pane and the dashboard's top
    * bar (counts, grid settings, session import/export, Download Data) are
    * hidden, as is every editing control on the cards — drag, resize, rename,

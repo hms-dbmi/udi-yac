@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 import type { TrackerFn } from '@/app/UDIChatConfig';
@@ -42,13 +42,18 @@ const UDIChatContext = createContext<UDIChatStores | null>(null);
  * stores are created, so read-only renders from the very first paint with no
  * flash of the editable UI — and because it only seeds state, the user can
  * leave read-only afterwards (unless it was `'locked'`).
+ *
+ * `fontScale` seeds the store the same way, so the first paint is already at
+ * the host's size, but unlike `readOnly` it also follows later changes.
  */
 export function UDIChatProvider({
   children,
   readOnly,
+  fontScale,
 }: {
   children: ReactNode;
   readOnly?: ReadOnlyOption;
+  fontScale?: number;
 }) {
   const storesRef = useRef<UDIChatStores | null>(null);
   if (storesRef.current == null) {
@@ -58,7 +63,7 @@ export function UDIChatProvider({
       dataPackage: createDataPackageStore(),
       dataFilters: createDataFiltersStore(),
       memoryBank: createMemoryBankStore(),
-      global: createGlobalStore(readOnly),
+      global: createGlobalStore(readOnly, fontScale),
     };
     // Register synchronously so the (outer) ErrorBoundary can capture the
     // current session even if the very first child render throws — a
@@ -68,6 +73,10 @@ export function UDIChatProvider({
       dashboard: storesRef.current.dashboard,
     });
   }
+  const globalStore = storesRef.current.global;
+  useEffect(() => {
+    globalStore.setState({ hostFontScale: fontScale });
+  }, [globalStore, fontScale]);
   return <UDIChatContext.Provider value={storesRef.current}>{children}</UDIChatContext.Provider>;
 }
 
