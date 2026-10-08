@@ -4,16 +4,115 @@ import json
 import logging
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
+from types import SimpleNamespace
 
 from udiagent._compat import get_openai_class, make_bedrock_provider
 
 logger = logging.getLogger(__name__)
+
+OPENAI_APIS = ("chat_completions", "responses")
 
 
 @lru_cache(maxsize=128)
 def _make_openai_client(api_key: str, openai_class):
     """Cached OpenAI client factory — preserves httpx connection pooling across requests."""
     return openai_class(api_key=api_key)
+
+
+def _chat_kwargs_to_responses(kw: dict) -> dict:
+    """Translate ``chat.completions.create`` kwargs into ``responses.create`` ones.
+
+    Covers the shapes this package sends, nothing more. System messages stay
+    in ``input`` rather than moving to ``instructions``, so the cacheable
+    prefix is the same one the Chat Completions path sends.
+    """
+    kw = dict(kw)
+    if kw.pop("n", 1) != 1:
+        raise ValueError("n > 1 is not supported on the Responses API")
+    items = []
+    for m in kw.pop("messages"):
+        if m["role"] == "tool":
+            items.append(
+                {
+                    "type": "function_call_output",
+                    "call_id": m["tool_call_id"],
+                    "output": m["content"],
+                }
+            )
+            continue
+        if m.get("content"):  # tool-call turns carry "" or None
+            items.append({"role": m["role"], "content": m["content"]})
+        for tc in m.get("tool_calls") or []:
+            items.append(
+                {
+                    "type": "function_call",
+                    "call_id": tc["id"],
+                    "name": tc["function"]["name"],
+                    "arguments": tc["function"]["arguments"],
+                }
+            )
+    kw["input"] = items
+    if "tools" in kw:
+        # Chat Completions tools are non-strict unless they say otherwise;
+        # Responses defaults them to strict, which rejects optional parameters.
+        kw["tools"] = [
+            {"type": "function", "strict": False, **t["function"]} for t in kw["tools"]
+        ]
+    if "response_format" in kw:
+        schema = kw.pop("response_format")["json_schema"]
+        kw["text"] = {"format": {"type": "json_schema", **schema}}
+    if "max_completion_tokens" in kw:
+        kw["max_output_tokens"] = kw.pop("max_completion_tokens")
+    if "reasoning_effort" in kw:
+        kw["reasoning"] = {"effort": kw.pop("reasoning_effort")}
+    kw["store"] = False
+    return kw
+
+
+def _responses_as_chat(resp):
+    """Present a Responses API result in the shape callers read from a chat completion."""
+    calls = [
+        SimpleNamespace(
+            id=item.call_id,
+            type="function",
+            function=SimpleNamespace(name=item.name, arguments=item.arguments),
+        )
+        for item in resp.output
+        if item.type == "function_call"
+    ]
+    incomplete = getattr(resp.incomplete_details, "reason", None)
+    if incomplete == "max_output_tokens":
+        finish_reason = "length"
+    elif incomplete == "content_filter":
+        finish_reason = "content_filter"
+    else:
+        finish_reason = "tool_calls" if calls else "stop"
+
+    usage = None
+    if resp.usage is not None:
+        u = resp.usage
+        input_details = getattr(u, "input_tokens_details", None)
+        output_details = getattr(u, "output_tokens_details", None)
+        usage = SimpleNamespace(
+            prompt_tokens=u.input_tokens,
+            completion_tokens=u.output_tokens,
+            total_tokens=u.total_tokens,
+            prompt_tokens_details=SimpleNamespace(
+                cached_tokens=getattr(input_details, "cached_tokens", 0),
+                cache_write_tokens=getattr(input_details, "cache_write_tokens", 0),
+            ),
+            completion_tokens_details=SimpleNamespace(
+                reasoning_tokens=getattr(output_details, "reasoning_tokens", 0),
+            ),
+        )
+    message = SimpleNamespace(
+        role="assistant", content=resp.output_text or None, tool_calls=calls or None
+    )
+    return SimpleNamespace(
+        model=resp.model,
+        usage=usage,
+        choices=[SimpleNamespace(index=0, finish_reason=finish_reason, message=message)],
+    )
 
 
 class UDIAgent:
@@ -45,7 +144,29 @@ class UDIAgent:
     ``langfuse.openai.OpenAI``. When none are provided, the plain ``openai``
     client is used and no traces are emitted (even if the ``langfuse``
     package is installed).
+
+    Request shaping applies to every LLM call (see ``create_completion``).
+    The defaults send exactly what this package always sent, so a backend
+    only sees a difference when a deployment opts in:
+
+    - ``openai_api``: ``"chat_completions"`` (default) or ``"responses"``.
+      Some models (e.g. ``gpt-6.1-sol``) only call tools through Responses;
+      self-hosted backends generally want the default.
+    - ``reasoning_effort``: sent verbatim when set — not validated, so values
+      a provider adds later work without a release. ``None`` omits it.
+    - ``temperature``: ``0.0`` by default; ``None`` omits it, which OpenAI
+      reasoning models require whenever reasoning effort isn't ``"none"``.
+    - ``max_completion_tokens``: when set, replaces each call's own output cap
+      (1024 for tool calls, 16384 for structured JSON). Reasoning tokens count
+      against the cap, so raise it when reasoning is on.
     """
+
+    # Class-level so agents built via ``__new__`` (as the tests do) get the
+    # same defaults as constructed ones.
+    openai_api: str = "chat_completions"
+    reasoning_effort: str | None = None
+    temperature: float | None = 0.0
+    max_completion_tokens: int | None = None
 
     def __init__(
         self,
@@ -59,7 +180,23 @@ class UDIAgent:
         langfuse_secret_key: str | None = None,
         langfuse_host: str | None = None,
         langfuse_environment: str | None = None,
+        openai_api: str = "chat_completions",
+        reasoning_effort: str | None = None,
+        temperature: float | None = 0.0,
+        max_completion_tokens: int | None = None,
     ):
+        if openai_api not in OPENAI_APIS:
+            raise ValueError(
+                f"openai_api must be one of {', '.join(OPENAI_APIS)}; got {openai_api!r}"
+            )
+        if max_completion_tokens is not None and max_completion_tokens <= 0:
+            raise ValueError(
+                f"max_completion_tokens must be positive; got {max_completion_tokens}"
+            )
+        self.openai_api = openai_api
+        self.reasoning_effort = reasoning_effort
+        self.temperature = temperature
+        self.max_completion_tokens = max_completion_tokens
         self.gpt_model_name = gpt_model_name
         self.openai_base_url = openai_base_url
         # Either param opts in, matching the LangFuse convention below — a
@@ -178,6 +315,38 @@ class UDIAgent:
             )
         return self.gpt_model
 
+    def create_completion(self, client, **kw):
+        """Make one LLM call, shaped by this agent's request settings.
+
+        Takes ``chat.completions.create`` kwargs and returns a chat-completion
+        shaped result whichever API is configured, so callers read
+        ``choices[0].message`` and ``usage`` the same way on both paths.
+        """
+        if self.temperature is not None:
+            kw["temperature"] = self.temperature
+        if self.reasoning_effort is not None:
+            kw["reasoning_effort"] = self.reasoning_effort
+        if self.max_completion_tokens is not None:
+            kw["max_completion_tokens"] = self.max_completion_tokens
+        if self.openai_api == "responses":
+            resp = _responses_as_chat(
+                client.responses.create(**_chat_kwargs_to_responses(kw))
+            )
+        else:
+            resp = client.chat.completions.create(**kw)
+        choices = getattr(resp, "choices", None) or []
+        if choices and getattr(choices[0], "finish_reason", None) == "length":
+            # Reasoning tokens count against the cap, so a model that thinks
+            # longer can run out before it emits the tool call.
+            logger.warning(
+                "%s stopped at the output-token cap (max_completion_tokens=%s); "
+                "raise max_completion_tokens (UDI_MAX_COMPLETION_TOKENS on the "
+                "server) if this recurs",
+                kw.get("model"),
+                kw.get("max_completion_tokens"),
+            )
+        return resp
+
     def gpt_completions_guided_json(
         self,
         messages: list[dict],
@@ -203,7 +372,8 @@ class UDIAgent:
         }
 
         client = self._get_gpt_client(openai_api_key)
-        resp = client.chat.completions.create(
+        resp = self.create_completion(
+            client,
             model=model or self.gpt_model_name,
             messages=messages,
             response_format={
@@ -211,7 +381,6 @@ class UDIAgent:
                 "json_schema": schema_wrapper,
             },
             n=n,
-            temperature=0.0,
             max_completion_tokens=16_384,
         )
 

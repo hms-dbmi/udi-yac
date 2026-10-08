@@ -277,7 +277,13 @@ class TestServerUsage:
     def test_completions_emits_usage_headers(self):
         from udiagent.orchestrator import OrchestratorResult
 
-        usage = Usage(prompt_tokens=11, completion_tokens=22, total_tokens=33)
+        usage = Usage(
+            prompt_tokens=11,
+            completion_tokens=22,
+            total_tokens=33,
+            cached_prompt_tokens=4,
+            cache_write_tokens=3,
+        )
         with patch.object(
             self.server_app.orchestrator,
             "run",
@@ -296,6 +302,8 @@ class TestServerUsage:
         assert resp.headers["X-Usage-Prompt-Tokens"] == "11"
         assert resp.headers["X-Usage-Completion-Tokens"] == "22"
         assert resp.headers["X-Usage-Total-Tokens"] == "33"
+        assert resp.headers["X-Usage-Cached-Prompt-Tokens"] == "4"
+        assert resp.headers["X-Usage-Cache-Write-Tokens"] == "3"
         assert resp.headers["X-Usage-Model"] == "gpt-test"
         # Body shape unchanged: bare list of tool_calls.
         body = resp.json()
