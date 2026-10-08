@@ -7,10 +7,13 @@ and record the types of errors made.
 It also includes the option to run with different information ablated, such as field descriptions.
 """
 
+from collections import defaultdict
 from datetime import datetime
+from itertools import combinations, product
 import json
 import requests
 import argparse
+import statistics
 import sys
 import uuid
 from jsonschema import validate, ValidationError
@@ -19,6 +22,8 @@ import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from udiagent.grammar import load_grammar
 
 PORT = 8007
 JSONL_SCHEMAS_FILENAME = "schemas.json"
@@ -74,7 +79,13 @@ def _load_benchmark_jsonl(path, limit=None):
 
 
 def run_benchmark(
-    benchmark_file, no_orchestrator=False, max_workers=5, resume_path=None, limit=None
+    benchmark_file,
+    no_orchestrator=False,
+    max_workers=5,
+    resume_path=None,
+    limit=None,
+    label=None,
+    description=None,
 ):
     benchmark_data = load_benchmark_data(benchmark_file, limit=limit)
 
@@ -84,6 +95,8 @@ def run_benchmark(
         max_workers=max_workers,
         resume_path=resume_path,
         benchmark_file=benchmark_file,
+        label=label,
+        description=description,
     )
     analysis = analyze_results(results)
     return
@@ -106,21 +119,29 @@ def collect_results(
     max_workers=5,
     resume_path=None,
     benchmark_file=None,
+    label=None,
+    description=None,
 ):
-    # Load existing results if resuming
+    # Load existing results if resuming. Only successful items carry over, so a
+    # resume retries everything that failed (None) or was refused (429).
     if resume_path:
         with open(resume_path) as f:
             existing = json.load(f)
         for i, item in enumerate(existing["results"]):
-            if "output" in item:
-                benchmark_data[i]["output"] = item["output"]
-        skipped = sum(1 for item in benchmark_data if "output" in item)
+            if _succeeded(item):
+                benchmark_data[i] = item
+        skipped = sum(1 for item in benchmark_data if _succeeded(item))
         print(
             f"Resumed from {resume_path}: {skipped}/{len(benchmark_data)} items already completed"
         )
 
-    # get free text description of benchmark run from user input
-    description = input("Enter a description for this benchmark run: ")
+    if description is None:
+        # Prompt only when someone is there to answer; scripted runs get "".
+        description = (
+            input("Enter a description for this benchmark run: ")
+            if sys.stdin.isatty()
+            else ""
+        )
 
     lock = threading.Lock()
     completed = 0
@@ -134,19 +155,26 @@ def collect_results(
             "description": description,
             "no_orchestrator": no_orchestrator,
             "data_path": benchmark_file,
+            "workers": max_workers,
+            # Filled from the server's echo once an item succeeds.
+            "label": label,
+            "model": None,
+            "llm_settings": None,
         },
         "results": benchmark_data,
     }
 
     def process_item(index, item):
         nonlocal completed
-        if "output" in item:  # already completed (resume)
+        if _succeeded(item):  # already completed (resume)
             with lock:
                 completed += 1
             return
+        start = time.perf_counter()
         output = fetch_agent_output(
             item["input"], item["expected"], no_orchestrator=no_orchestrator
         )
+        item["latency_s"] = round(time.perf_counter() - start, 3)
         item["output"] = output
         with lock:
             completed += 1
@@ -162,9 +190,21 @@ def collect_results(
         for future in as_completed(futures):
             future.result()  # raise any exceptions
 
+    metadata = benchmark_results["metadata"]
+    served = next((i["output"] for i in benchmark_data if _succeeded(i)), None)
+    if served:
+        metadata["model"] = served.get("model")
+        metadata["llm_settings"] = served.get("llm_settings")
+    metadata["label"] = metadata["label"] or metadata["model"]
+
     # Final save
     save_data_to_file(benchmark_results, RESULT_FILENAME)
     return benchmark_results
+
+
+def _succeeded(item):
+    """Whether the server answered this item (a refusal arrives as a bare list)."""
+    return isinstance(item.get("output"), dict)
 
 
 def fetch_agent_output(input, expected, no_orchestrator=False):
@@ -184,7 +224,9 @@ def fetch_agent_output(input, expected, no_orchestrator=False):
                 "Authorization": "Bearer fake_token",
             },
             data=data,
-            timeout=120,
+            # Generous: a slow model past a short client timeout keeps spending
+            # tokens on the server while the item is recorded as lost.
+            timeout=600,
         )
 
         if not response.ok:
@@ -193,6 +235,10 @@ def fetch_agent_output(input, expected, no_orchestrator=False):
             )
 
         data = response.json()
+        if isinstance(data, list):
+            # Quota/rate-limit refusals come back as HTTP 200 with a bare
+            # Rebuff list, which is not a result to score.
+            raise Exception(f"refused (rate limit or budget): {data}")
         return data
 
     except Exception as e:
@@ -200,9 +246,9 @@ def fetch_agent_output(input, expected, no_orchestrator=False):
         return None
 
 
-def analyze_results(results_data):
+def analyze_results(results_data, path=None):
     for item in results_data["results"]:
-        input, expected, output = item["input"], item["expected"], item["output"]
+        input, expected, output = item["input"], item["expected"], item.get("output")
         data_domains = input.get("dataDomains", "[]")
         data_domains = json.loads(data_domains)
         rubric_results = check_rubric(expected, output, data_domains)
@@ -210,17 +256,19 @@ def analyze_results(results_data):
         item["score"] = calculate_item_score(rubric_results)
 
     overall_scores = calculate_overall_scores(results_data["results"])
+    summary = summarize_run(
+        results_data["results"], overall_scores, results_data["metadata"].get("model")
+    )
 
     analysis = {
         "metadata": results_data["metadata"],
         "scores": overall_scores,
+        "summary": summary,
         "results": results_data["results"],
     }
 
-    save_data_to_file(
-        analysis,
-        ANALYSIS_FILENAME,
-    )
+    save_data_to_file(analysis, path or ANALYSIS_FILENAME)
+    print(json.dumps(summary, indent=2))
     return analysis
 
 
@@ -240,7 +288,7 @@ def update_rubric(rubric, key, expected, output, group, points, pass_value=None)
 def check_rubric(expected, output, data_domains):
     rubric = {}
 
-    if output is None:
+    if not isinstance(output, dict):  # failed (None) or refused (bare list)
         output = {}
 
     # orchestrator makes correct decision (filter/vis/both)
@@ -274,12 +322,19 @@ def check_filter_rubric(rubric, expected, output, data_domains):
     expected_tool_calls = expected.get("tool_calls", [])
     output_tool_calls = output.get("tool_calls", [])
 
-    expected_filter_call_args = [
-        call for call in expected_tool_calls if call["name"] == "FilterData"
-    ][0]["arguments"]
-    output_filter_call_args = [
-        call for call in output_tool_calls if call["name"] == "FilterData"
-    ][0]["arguments"]
+    expected_filter_call = _find_call(expected_tool_calls, "FilterData")
+    output_filter_call = _find_call(output_tool_calls, "FilterData")
+    if expected_filter_call is None:
+        # The reference itself chose to filter but produced no filter (possible
+        # when the reference is another model's run): nothing to score against.
+        return rubric
+    expected_filter_call_args = expected_filter_call["arguments"]
+    if output_filter_call is None:
+        update_rubric(
+            rubric, "filter_type", expected_filter_call_args, None, "filter", 40, False
+        )
+        return rubric
+    output_filter_call_args = output_filter_call["arguments"]
 
     # correct type of filter (point vs range): 40 points
     expected_filter_type = expected_filter_call_args["filter"]["filterType"]
@@ -377,11 +432,15 @@ def check_filter_rubric(rubric, expected, output, data_domains):
 
     # point valid (for point filters), the point values exist in the field domain: 5 points
     if expected_filter_type == "point" and not point_values_correct:
-        valid_points = [
-            x["domain"]["values"]
-            for x in data_domains
-            if x["entity"] == output_filter_entity and x["field"] == output_filter_field
-        ][0]
+        valid_points = next(
+            (
+                x.get("domain", {}).get("values", [])
+                for x in data_domains
+                if x["entity"] == output_filter_entity
+                and x["field"] == output_filter_field
+            ),
+            [],
+        )
         passed = all(point in valid_points for point in output_points)
         update_rubric(
             rubric,
@@ -400,13 +459,16 @@ def check_vis_rubric(rubric, expected, output, data_domains):
     expected_tool_calls = expected.get("tool_calls", [])
     output_tool_calls = output.get("tool_calls", [])
 
-    expected_vis_spec = [
-        call for call in expected_tool_calls if call["name"] == "RenderVisualization"
-    ][0]["arguments"]["spec"]
+    expected_vis_call = _find_call(expected_tool_calls, "RenderVisualization")
+    if expected_vis_call is None:
+        # The reference chose to chart but built nothing (a failed chart arrives
+        # as FreeTextExplain): nothing to score against.
+        return rubric
+    expected_vis_spec = expected_vis_call["arguments"]["spec"]
     expected_vis_spec_json = json.loads(expected_vis_spec)
-    output_vis_spec = [
-        call for call in output_tool_calls if call["name"] == "RenderVisualization"
-    ][0]["arguments"]["spec"]
+    output_vis_call = _find_call(output_tool_calls, "RenderVisualization")
+    # No chart scores like an unparseable one: zero for the vis group.
+    output_vis_spec = output_vis_call["arguments"]["spec"] if output_vis_call else None
 
     # generates specification that is a valid json
     try:
@@ -456,9 +518,7 @@ def check_vis_rubric(rubric, expected, output, data_domains):
     )
 
     # Generates specification that adheres to to udi grammar: 10 points
-    f = open("./src/UDIGrammarSchema.json", "r")
-    udi_grammar_dict = json.load(f)
-    f.close()
+    udi_grammar_dict = load_grammar("udi")["schema_dict"]
     try:
         valid_udi_spec = True
         validate(instance=output_vis_spec_json, schema=udi_grammar_dict)
@@ -506,6 +566,11 @@ def check_vis_rubric(rubric, expected, output, data_domains):
     )
 
     return rubric
+
+
+def _find_call(tool_calls, name):
+    """The first tool call with this name, or None."""
+    return next((call for call in tool_calls if call.get("name") == name), None)
 
 
 def calculate_item_score(rubric):
@@ -607,28 +672,271 @@ def calculate_overall_scores(results_data):
     }
 
 
+# USD per 1M tokens: (input, cached input, cache write, output). Cache writes
+# are billed at 1.25x input from GPT-5.6 on; earlier models charge input rate.
+# Reasoning tokens are part of completion tokens and billed as output. Check
+# these against https://openai.com/api/pricing before quoting a cost.
+PRICES = {
+    "gpt-5.4": (2.50, 0.25, 2.50, 15.00),
+    "gpt-6.1-sol": (2.00, 0.10, 2.50, 10.00),
+    "gpt-6-luna": (0.10, 0.01, 0.125, 0.50),
+}
+
+TOKEN_KEYS = (
+    "prompt_tokens",
+    "cached_prompt_tokens",
+    "cache_write_tokens",
+    "completion_tokens",
+    "reasoning_tokens",
+)
+
+
+def cost_usd(model, usage):
+    """Dollar cost of a usage dict, or None for a model without a price.
+
+    Cached and cache-write tokens are both shares of ``prompt_tokens`` (checked
+    per call by ``cache_subset_violations`` in the run summary).
+    """
+    if model not in PRICES:
+        return None
+    p_input, p_cached, p_write, p_output = PRICES[model]
+    cached = usage.get("cached_prompt_tokens", 0)
+    write = usage.get("cache_write_tokens", 0)
+    uncached = usage.get("prompt_tokens", 0) - cached - write
+    return (
+        uncached * p_input
+        + cached * p_cached
+        + write * p_write
+        + usage.get("completion_tokens", 0) * p_output
+    ) / 1e6
+
+
+def _percentile(values, q):
+    """The q-th percentile (0-100) of a non-empty list."""
+    if len(values) == 1:
+        return values[0]
+    return statistics.quantiles(values, n=100, method="inclusive")[q - 1]
+
+
+def summarize_run(results, scores, model):
+    """One flat dict per run: quality, failures, tokens, cost and latency.
+
+    Token, cost and latency figures cover answered items only; a failed item
+    has no usage to report and would drag the means toward zero.
+    """
+    answered = [item for item in results if _succeeded(item)]
+    usages = [item["output"].get("usage") or {} for item in answered]
+    operations = [op for usage in usages for op in usage.get("operations", [])]
+    totals = {key: sum(u.get(key, 0) for u in usages) for key in TOKEN_KEYS}
+    n = len(answered)
+    cost = cost_usd(model, totals)
+    latencies = [i["latency_s"] for i in answered if i.get("latency_s") is not None]
+    op_latencies = defaultdict(list)
+    for op in operations:
+        if op.get("latency_s") is not None:
+            op_latencies[op["op"]].append(op["latency_s"])
+
+    summary = {
+        "items": len(results),
+        "failed_items": len(results) - n,
+        "score_vs_expected": scores["overall_score"],
+        **{
+            f"{group}_score_vs_expected": agg["overall_score"]
+            for group, agg in sorted(scores["group_aggregates"].items())
+        },
+        **{f"{key}_per_item": totals[key] / n if n else 0 for key in TOKEN_KEYS},
+        "cached_percent": (
+            100 * totals["cached_prompt_tokens"] / totals["prompt_tokens"]
+            if totals["prompt_tokens"]
+            else 0
+        ),
+        "llm_calls_per_item": len(operations) / n if n else 0,
+        "cost_usd": cost,
+        "cost_per_item_usd": cost / n if cost is not None and n else None,
+        "latency_mean_s": statistics.fmean(latencies) if latencies else None,
+        "latency_p50_s": _percentile(sorted(latencies), 50) if latencies else None,
+        "latency_p95_s": _percentile(sorted(latencies), 95) if latencies else None,
+        **{
+            f"latency_{op}_mean_s": statistics.fmean(values)
+            for op, values in sorted(op_latencies.items())
+        },
+        "cache_subset_violations": sum(
+            op.get("cached_prompt_tokens", 0) + op.get("cache_write_tokens", 0)
+            > op.get("prompt_tokens", 0)
+            for op in operations
+        ),
+    }
+    return summary
+
+
+def _template(output):
+    """The visualization template a run chose for an item, or None."""
+    if not isinstance(output, dict):
+        return None
+    call = _find_call(output.get("tool_calls", []), "RenderVisualization")
+    return ((call or {}).get("meta") or {}).get("tool_used")
+
+
+def agreement(reference, candidate):
+    """Score one run's outputs against another's, item by item.
+
+    The reference run's output stands in for ``expected`` in the usual rubric,
+    so "1.0" means the candidate did what the reference did, not that either
+    is right. Items the reference failed on are skipped: there is nothing to
+    agree with.
+    """
+    ref_items, cand_items = reference["results"], candidate["results"]
+    if len(ref_items) != len(cand_items):
+        raise ValueError("runs cover different item counts; compare like with like")
+    scored = []
+    template_pairs = []
+    for ref, cand in zip(ref_items, cand_items):
+        if ref["input"]["messages"] != cand["input"]["messages"]:
+            raise ValueError("runs cover different items; compare like with like")
+        if not _succeeded(ref):
+            continue
+        domains = json.loads(ref["input"].get("dataDomains", "[]"))
+        rubric = check_rubric(ref["output"], cand.get("output"), domains)
+        scored.append({"score": calculate_item_score(rubric)})
+        if _template(ref["output"]):
+            template_pairs.append(_template(ref["output"]) == _template(cand.get("output")))
+    scores = calculate_overall_scores(scored)
+    return {
+        "agreement": scores["overall_score"],
+        "identical_percent": 100 * scores["correct_percent"],
+        **{
+            f"{group}_agreement": agg["overall_score"]
+            for group, agg in sorted(scores["group_aggregates"].items())
+        },
+        "template_agreement_percent": (
+            100 * sum(template_pairs) / len(template_pairs) if template_pairs else None
+        ),
+        "compared_items": len(scored),
+    }
+
+
+def _mean_sd(values):
+    values = [v for v in values if v is not None]
+    if not values:
+        return "—"
+    mean = statistics.fmean(values)
+    sd = statistics.stdev(values) if len(values) > 1 else 0.0
+    fmt = (lambda v: f"{v:,.0f}") if abs(mean) >= 100 else (lambda v: f"{v:.3g}")
+    return f"{fmt(mean)} ± {fmt(sd)}"
+
+
+def _table(columns):
+    """A markdown table from ``{header: {metric: [values]}}``, cells as mean ± sd."""
+    headers = list(columns)
+    rows = list(dict.fromkeys(row for column in columns.values() for row in column))
+    lines = [
+        "| metric | " + " | ".join(headers) + " |",
+        "|---" * (len(headers) + 1) + "|",
+    ]
+    for row in rows:
+        cells = (_mean_sd(columns[header].get(row, [])) for header in headers)
+        lines.append(f"| {row} | " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def _column(dicts):
+    """``[{metric: value}, ...]`` → ``{metric: [value, ...]}``."""
+    column = defaultdict(list)
+    for d in dicts:
+        for key, value in d.items():
+            column[key].append(value)
+    return column
+
+
+def compare(paths, baseline=None):
+    """Markdown tables comparing analysed runs, grouped by dataset.
+
+    Cells are mean ± sd across repeats of the same label. With ``baseline``, a
+    second table scores every other label's outputs against the baseline's
+    (every candidate repeat against every baseline repeat), and the baseline
+    column shows its repeats scored against each other: the noise floor that
+    any other model's agreement should be read against.
+    """
+    runs = defaultdict(list)
+    for path in paths:
+        with open(path) as f:
+            run = json.load(f)
+        meta = run["metadata"]
+        label = meta.get("label") or meta.get("model") or "unlabelled"
+        runs[(os.path.basename(meta["data_path"]), label)].append(run)
+
+    out = []
+    for dataset in sorted({dataset for dataset, _ in runs}):
+        labels = sorted(label for d, label in runs if d == dataset)
+        if baseline in labels:
+            labels.remove(baseline)
+            labels.insert(0, baseline)
+        header = {label: f"{label} (n={len(runs[(dataset, label)])})" for label in labels}
+        out.append(f"## {dataset}\n")
+        out.append(
+            _table(
+                {
+                    header[label]: _column(r.get("summary", {}) for r in runs[(dataset, label)])
+                    for label in labels
+                }
+            )
+        )
+        if baseline in labels:
+            base_runs = runs[(dataset, baseline)]
+            pairs = {
+                label: (
+                    combinations(base_runs, 2)
+                    if label == baseline
+                    else product(base_runs, runs[(dataset, label)])
+                )
+                for label in labels
+            }
+            out.append(f"\n### Agreement with {baseline}\n")
+            out.append(
+                f"Each cell scores a label's outputs against {baseline}'s, item by "
+                f"item. The {baseline} column scores its own repeats against each "
+                "other: the noise floor (needs 2+ repeats).\n"
+            )
+            out.append(
+                _table(
+                    {
+                        header[label]: _column(agreement(ref, cand) for ref, cand in pairs[label])
+                        for label in labels
+                    }
+                )
+            )
+        out.append("")
+    return "\n".join(out)
+
+
 if __name__ == "__main__":
-    # run_benchmark('./data/benchmark.json')
     parser = argparse.ArgumentParser(description="Run UDI Agent benchmark or analysis.")
     parser.add_argument(
         "-p",
         "--path",
         default="./data/benchmark.json",
-        help="Path to benchmark JSON file (default: ./data/benchmark.json)",
+        help="Benchmark data for full/collect, or a results JSON for analyze "
+        "(default: ./data/benchmark.json)",
     )
     parser.add_argument(
         "-a",
         "--action",
-        choices=["full", "collect", "analyze"],
+        choices=["full", "collect", "analyze", "compare"],
         default="full",
-        help="Action to perform: 'full' (run benchmark then analyze), 'collect' (run benchmark only), or 'analyze' (run analysis only).",
+        help="'full' (run benchmark then analyze), 'collect' (run only), "
+        "'analyze' (score a results file), or 'compare' (tabulate analysis files).",
+    )
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="compare: benchmark_analysis.json files from any number of runs.",
     )
 
     # add option to bypass orchestrator step.
     parser.add_argument(
         "--no-orchestrator",
         action="store_true",
-        help="If set, the benchmark will bypass the orchestrator step and directly call the correct tools.",
+        help="Intended to bypass the orchestrator step; currently ignored by the server.",
     )
 
     parser.add_argument(
@@ -642,7 +950,7 @@ if __name__ == "__main__":
         "--resume",
         type=str,
         default=None,
-        help="Path to a partial results JSON file to resume from.",
+        help="Path to a partial results JSON file to resume from; failed items are retried.",
     )
 
     parser.add_argument(
@@ -651,8 +959,34 @@ if __name__ == "__main__":
         default=None,
         help="Cap the number of benchmark items to load.",
     )
+    parser.add_argument(
+        "--label",
+        default=None,
+        help="Name this run's configuration in comparisons (default: the model the "
+        "server reports). Needed to tell apart configs sharing a model, e.g. "
+        "gpt-5.4 on Chat Completions vs Responses.",
+    )
+    parser.add_argument(
+        "--description",
+        default=None,
+        help="Free-text note stored with the run (prompted for when omitted on a terminal).",
+    )
+    parser.add_argument(
+        "--out",
+        default=None,
+        help="Directory for benchmark_results.json / benchmark_analysis.json "
+        "(default: ./out/<timestamp>; analyze writes next to its input).",
+    )
+    parser.add_argument(
+        "--baseline",
+        default=None,
+        help="compare: label whose outputs the others are scored against.",
+    )
 
     args = parser.parse_args()
+    if args.out:
+        RESULT_FILENAME = os.path.join(args.out, "benchmark_results.json")
+        ANALYSIS_FILENAME = os.path.join(args.out, "benchmark_analysis.json")
 
     if args.action == "full":
         # run_benchmark will run collection and analysis internally
@@ -662,6 +996,8 @@ if __name__ == "__main__":
             max_workers=args.workers,
             resume_path=args.resume,
             limit=args.limit,
+            label=args.label,
+            description=args.description,
         )
         sys.exit(0)
 
@@ -677,6 +1013,8 @@ if __name__ == "__main__":
             max_workers=args.workers,
             resume_path=args.resume,
             benchmark_file=args.path,
+            label=args.label,
+            description=args.description,
         )
 
         sys.exit(0)
@@ -689,5 +1027,16 @@ if __name__ == "__main__":
             print(f"Failed to read benchmark file {args.path}: {e}")
             sys.exit(1)
 
-        analyze_results(data)
+        analyze_results(
+            data,
+            None
+            if args.out
+            else os.path.join(os.path.dirname(args.path), "benchmark_analysis.json"),
+        )
+        sys.exit(0)
+
+    if args.action == "compare":
+        if not args.files:
+            parser.error("compare needs one or more benchmark_analysis.json files")
+        print(compare(args.files, baseline=args.baseline))
         sys.exit(0)
