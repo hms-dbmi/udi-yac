@@ -2487,7 +2487,7 @@ wheels = [
 
 [[package]]
 name = "udi-grammar-py"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "packages/grammar-py" }
 
 [package.dev-dependencies]
@@ -2502,7 +2502,7 @@ dev = [{ name = "pytest", specifier = ">=8.3.5" }]
 
 [[package]]
 name = "udiagent"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "packages/agent" }
 dependencies = [
     { name = "jsonschema" },
