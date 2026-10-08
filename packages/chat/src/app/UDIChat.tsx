@@ -56,6 +56,7 @@ import { ChatRootProvider } from '@/lib/chatRoot';
 import type { QueryConfig } from '@/features/chat/api/completions';
 import { validateConfig } from '@/app/validateConfig';
 import type { UDIChatConfig } from './UDIChatConfig';
+import { selectFontScale } from '@/stores/globalStore';
 
 export type { UDIChatConfig };
 
@@ -452,7 +453,7 @@ function ScaledRoot({
   rootRef: RefObject<HTMLDivElement | null>;
   palette: UDIPalette | undefined;
 }) {
-  const fontScale = useGlobal((s) => s.fontScale);
+  const fontScale = useGlobal(selectFontScale);
   return (
     <UDIToolkitProvider palette={palette} fontScale={fontScale}>
       <MascotProvider mascot={props.mascot}>
@@ -493,7 +494,7 @@ function UDIChatValidated(props: UDIChatConfig) {
   return (
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
-        <UDIChatProvider readOnly={props.readOnly}>
+        <UDIChatProvider readOnly={props.readOnly} fontScale={props.fontScale}>
           <ApiConfigProvider apiBaseUrl={props.apiBaseUrl} authToken={props.authToken}>
             <TrackerProvider onEvent={props.onEvent}>
               <DownloadActionsProvider actions={props.downloadActions}>

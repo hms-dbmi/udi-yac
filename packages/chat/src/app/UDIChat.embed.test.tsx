@@ -276,3 +276,28 @@ describe('UDIChat — host filters', () => {
     spy.mockRestore();
   });
 });
+
+describe('UDIChat — host fontScale', () => {
+  const rootScale = (container: HTMLElement) =>
+    container.querySelector<HTMLElement>('.udi-yac')!.style.getPropertyValue('--udi-font-scale');
+
+  it("overrides the viewer's saved text size, follows changes, and hides the slider", async () => {
+    localStorage.setItem('udi-yac:font-scale', '2');
+    const user = userEvent.setup();
+    const { container, rerender } = render(<UDIChat {...config} fontScale={1.5} />);
+    expect(rootScale(container)).toBe('1.5');
+
+    rerender(<UDIChat {...config} fontScale={1.25} />);
+    expect(rootScale(container)).toBe('1.25');
+
+    await user.click(screen.getByRole('button', { name: 'Display settings' }));
+    expect(screen.getByText('Columns')).toBeTruthy();
+    expect(screen.queryByText('Text size')).toBeNull();
+
+    // Dropping the prop hands text size back to the viewer.
+    rerender(<UDIChat {...config} />);
+    expect(rootScale(container)).toBe('2');
+    expect(screen.getByText('Text size')).toBeTruthy();
+    localStorage.removeItem('udi-yac:font-scale');
+  });
+});

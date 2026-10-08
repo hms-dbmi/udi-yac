@@ -1,4 +1,3 @@
-// import { fn } from '@storybook/test'
 import TestPointFilterHooks from './TestPointFilterHooks.vue';
 
 // export const ActionsData = {

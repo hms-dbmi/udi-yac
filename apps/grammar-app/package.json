@@ -17,19 +17,19 @@
   },
   "dependencies": {
     "@guolao/vue-monaco-editor": "^1.6.0",
-    "@quasar/extras": "^1.18.0",
+    "@quasar/extras": "^2.1.0",
     "lodash": "^4.18.1",
     "lz-string": "^1.5.0",
-    "monaco-editor": "^0.52.2",
-    "pinia": "^3.0.4",
+    "monaco-editor": "^0.57.0",
+    "pinia": "^4.0.3",
     "quasar": "^2.34.0",
     "udi-toolkit": "workspace:*",
     "vue": "^3.5.43",
-    "vue-router": "^4.6.4"
+    "vue-router": "^5.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@quasar/app-vite": "^2.6.2",
+    "@quasar/app-vite": "^3.10.1",
     "@types/lodash": "^4.17.25",
     "@types/node": "^22.20.5",
     "@vue/eslint-config-prettier": "^10.2.0",
