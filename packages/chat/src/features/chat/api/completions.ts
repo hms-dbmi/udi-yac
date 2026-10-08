@@ -69,6 +69,8 @@ export interface Usage {
   totalTokens: number;
   /** Cached share of `promptTokens` (0 when the provider doesn't report it). */
   cachedPromptTokens: number;
+  /** Share of `promptTokens` written to the prompt cache (0 when not reported). */
+  cacheWriteTokens: number;
   /** Reasoning share of `completionTokens` (0 when not reported). */
   reasoningTokens: number;
   model?: string;
@@ -86,6 +88,7 @@ function parseUsage(headers: Headers): Usage {
     completionTokens: num('X-Usage-Completion-Tokens'),
     totalTokens: num('X-Usage-Total-Tokens'),
     cachedPromptTokens: num('X-Usage-Cached-Prompt-Tokens'),
+    cacheWriteTokens: num('X-Usage-Cache-Write-Tokens'),
     reasoningTokens: num('X-Usage-Reasoning-Tokens'),
     model: headers.get('X-Usage-Model') ?? undefined,
   };

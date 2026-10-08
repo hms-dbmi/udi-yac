@@ -43,14 +43,16 @@ class Usage:
     completion_tokens: int = 0
     total_tokens: int = 0
     # Sub-counts broken out for cost visibility: cached input is billed at a
-    # discount; reasoning tokens are a subset of ``completion_tokens``. Both
+    # discount, and cache writes at a premium on models that charge for them
+    # (GPT-5.6+); reasoning tokens are a subset of ``completion_tokens``. All
     # are 0 on providers/models that don't report them.
     cached_prompt_tokens: int = 0
+    cache_write_tokens: int = 0
     reasoning_tokens: int = 0
     operations: list[dict] = field(default_factory=list)
 
     def add(self, op: str, resp_usage) -> None:
-        """Record usage from a ``chat.completions.create`` response."""
+        """Record usage from a chat-completion shaped response (see ``UDIAgent.create_completion``)."""
         if resp_usage is None:
             return
         prompt = int(getattr(resp_usage, "prompt_tokens", 0) or 0)
@@ -60,12 +62,14 @@ class Usage:
         )
         p_details = getattr(resp_usage, "prompt_tokens_details", None)
         cached = int(getattr(p_details, "cached_tokens", 0) or 0)
+        cache_write = int(getattr(p_details, "cache_write_tokens", 0) or 0)
         c_details = getattr(resp_usage, "completion_tokens_details", None)
         reasoning = int(getattr(c_details, "reasoning_tokens", 0) or 0)
         self.prompt_tokens += prompt
         self.completion_tokens += completion
         self.total_tokens += total
         self.cached_prompt_tokens += cached
+        self.cache_write_tokens += cache_write
         self.reasoning_tokens += reasoning
         self.operations.append(
             {
@@ -74,6 +78,7 @@ class Usage:
                 "completion_tokens": completion,
                 "total_tokens": total,
                 "cached_prompt_tokens": cached,
+                "cache_write_tokens": cache_write,
                 "reasoning_tokens": reasoning,
             }
         )
@@ -396,11 +401,11 @@ class Orchestrator:
             msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("rebuff", getattr(resp, "usage", None))
@@ -462,11 +467,11 @@ class Orchestrator:
             msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("free_text_explain", getattr(resp, "usage", None))
@@ -614,13 +619,13 @@ class Orchestrator:
         # is not converging and a chart is better than another lookup.
         for _lookup in range(MAX_VALUE_LOOKUPS + 1):
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
                 tools=self.tools,
                 tool_choice="required",
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("orchestrate", getattr(resp, "usage", None))

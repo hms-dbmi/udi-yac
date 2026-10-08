@@ -15,6 +15,7 @@ Validate an env file against this model without booting the server::
 """
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -171,6 +172,48 @@ class ServerConfig(BaseSettings):
             "`AWS_DEFAULT_REGION` or `~/.aws/config` — there is no instance "
             "metadata fallback. Set `AWS_BEDROCK_BASE_URL` instead to reach a "
             "PrivateLink endpoint."
+        ),
+    )
+    udi_openai_api: Literal["chat_completions", "responses"] = Field(
+        default="chat_completions",
+        examples=['responses'],
+        description=(
+            "Which OpenAI-compatible endpoint to call: `chat_completions` or "
+            "`responses`. Some OpenAI models (e.g. `gpt-6.1-sol`) only call "
+            "tools through `responses`; self-hosted backends (vLLM, Ollama) "
+            "generally want the default."
+        ),
+    )
+    udi_reasoning_effort: str | None = Field(
+        default=None,
+        examples=['low'],
+        description=(
+            "Reasoning effort sent with every request (`none`, `low`, "
+            "`medium`, …), passed through as-is so new provider values work "
+            "without a release. Unset sends nothing, leaving the model's "
+            "default."
+        ),
+    )
+    # A number or the word `omit`: a blank value already means "use the
+    # default" (see `_blank_is_unset`), so it can't also mean "don't send".
+    udi_temperature: float | Literal["omit"] = Field(
+        default=0.0,
+        examples=['omit'],
+        description=(
+            "Sampling temperature sent with every request, or `omit` to send "
+            "none. OpenAI rejects a temperature whenever "
+            "`UDI_REASONING_EFFORT` is anything but `none`, so set `omit` "
+            "with reasoning models there."
+        ),
+    )
+    udi_max_completion_tokens: int | None = Field(
+        default=None,
+        gt=0,
+        examples=['16384'],
+        description=(
+            "Output-token cap for every request, replacing the built-in ones "
+            "(1024 for tool calls, 16384 for structured JSON). Reasoning "
+            "tokens count against it, so raise it when reasoning is on."
         ),
     )
 
