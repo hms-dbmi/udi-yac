@@ -3,6 +3,7 @@
 import copy
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -80,6 +81,9 @@ class Usage:
                 "cached_prompt_tokens": cached,
                 "cache_write_tokens": cache_write,
                 "reasoning_tokens": reasoning,
+                # Wall-clock seconds of the call, set by _call_with_budget_guard
+                # (None for a call made outside it).
+                "latency_s": self.__dict__.pop("_last_latency_s", None),
             }
         )
 
@@ -110,14 +114,23 @@ def _call_with_budget_guard(fn, usage: "Usage", /, *args, **kwargs):
 
     Non-quota ``APIStatusError``s propagate unchanged.
     """
+    start = time.perf_counter()
     try:
-        return fn(*args, **kwargs)
+        resp = fn(*args, **kwargs)
     except openai.RateLimitError as err:
         raise BudgetExceededError(_DEFAULT_BUDGET_MESSAGE, usage) from err
     except openai.APIStatusError as err:
         if _is_quota_error(err):
             raise BudgetExceededError(_DEFAULT_BUDGET_MESSAGE, usage) from err
         raise
+    if usage is not None:
+        # ponytail: handed to the usage.add() that follows every guarded call
+        # rather than threaded through each call site. Safe while one Usage
+        # has one call in flight (calls within a run are sequential); a
+        # concurrent caller would need the latency returned explicitly.
+        # Not a dataclass field, so asdict() never reports it.
+        usage._last_latency_s = round(time.perf_counter() - start, 3)
+    return resp
 
 
 def build_rebuff_toolcall(
