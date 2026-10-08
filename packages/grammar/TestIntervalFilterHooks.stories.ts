@@ -1,4 +1,3 @@
-// import { fn } from '@storybook/test'
 import TestIntervalFilterHooks from './TestIntervalFilterHooks.vue';
 
 // export const ActionsData = {

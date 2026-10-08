@@ -1,6 +1,6 @@
 {
   "name": "udi-toolkit",
-  "version": "0.0.72",
+  "version": "0.0.74",
   "description": "Universal Discovery Interface Toolkit",
   "author": "dev-lan <devinscottlange@gmail.com>",
   "type": "module",
@@ -54,8 +54,8 @@
   "dependencies": {
     "@types/d3-scale": "^4.0.9",
     "@types/d3-scale-chromatic": "^3.1.0",
-    "ag-grid-community": "33.2.4",
-    "ag-grid-vue3": "33.2.4",
+    "ag-grid-community": "36.2.0",
+    "ag-grid-vue3": "36.2.0",
     "arquero": "^8.0.3",
     "d3-scale": "^4.0.2",
     "d3-scale-chromatic": "^3.1.0",
@@ -66,10 +66,10 @@
     "vega-lite": "^6.4.3"
   },
   "peerDependencies": {
-    "ag-grid-community": "33.2.4",
-    "pinia": "^3.0.1",
+    "ag-grid-community": "36.2.0",
+    "pinia": "^3.0.1 || ^4.0.0",
     "react": "^18.0.0 || ^19.0.0",
-    "vue": "^3.4.18"
+    "vue": "^3.5.32"
   },
   "peerDependenciesMeta": {
     "vue": {
@@ -83,27 +83,23 @@
     }
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "^3.2.7",
     "@eslint/js": "^10.0.1",
-    "@storybook/addon-essentials": "^8.6.18",
-    "@storybook/addon-interactions": "^8.6.18",
-    "@storybook/addon-onboarding": "^8.6.18",
-    "@storybook/blocks": "^8.6.18",
-    "@storybook/test": "^8.6.18",
-    "@storybook/vue3": "^8.6.18",
-    "@storybook/vue3-vite": "^8.6.18",
+    "@storybook/addon-docs": "^10.6.1",
+    "@storybook/vue3-vite": "^10.6.1",
     "@types/lodash": "^4.17.25",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/devtools-api": "^8.2.1",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",
     "autoprefixer": "^10.6.1",
     "eslint": "^10.12.0",
     "eslint-plugin-vue": "^10.11.1",
     "globals": "^17.13.0",
+    "pinia": "^4.0.3",
     "prettier": "^3.9.9",
-    "storybook": "^8.6.18",
+    "storybook": "^10.6.1",
     "ts-json-schema-generator": "^2.9.0",
     "typescript": "^6.0.3",
     "vite": "8.3.3",
@@ -120,7 +116,7 @@
     "access": "public"
   },
   "engines": {
-    "node": "^28 || ^26 || ^24 || ^22",
+    "node": "^28 || ^26 || ^24 || ^22.12",
     "npm": ">= 6.13.4"
   }
 }

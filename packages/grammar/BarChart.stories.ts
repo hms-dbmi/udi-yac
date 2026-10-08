@@ -1,5 +1,3 @@
-// import { fn } from '@storybook/test'
-
 import UDIVis from './UDIVis.vue';
 
 // export const ActionsData = {

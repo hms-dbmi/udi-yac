@@ -1,5 +1,3 @@
-// import { fn } from '@storybook/test'
-
 import UDIVis from './UDIVis.vue';
 
 // export const ActionsData = {
@@ -965,8 +963,18 @@ export const FillContainer = {
         representation: {
           mark: 'row',
           mapping: [
-            { mark: 'text', field: 'species', encoding: 'text', type: 'nominal' },
-            { mark: 'bar', field: 'body_mass_g', encoding: 'x', type: 'quantitative' },
+            {
+              mark: 'text',
+              field: 'species',
+              encoding: 'text',
+              type: 'nominal',
+            },
+            {
+              mark: 'bar',
+              field: 'body_mass_g',
+              encoding: 'x',
+              type: 'quantitative',
+            },
           ],
         },
       };

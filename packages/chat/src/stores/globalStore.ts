@@ -47,6 +47,8 @@ export interface GlobalState {
   readOnlyLocked: boolean;
   /** Multiplier on every text size, charts included (1 = stock). For presenting. */
   fontScale: number;
+  /** The host's `fontScale` prop. Overrides `fontScale` and hides its slider. */
+  hostFontScale: number | undefined;
   toggleDebugMode: () => void;
   /**
    * Open/close the Data Overview and optionally pick the entity to expand.
@@ -60,7 +62,11 @@ export interface GlobalState {
   setFontScale: (value: number) => void;
 }
 
-export function createGlobalStore(readOnly: ReadOnlyOption = false) {
+/** The text size in effect: the host's, when it set one, else the viewer's. */
+export const selectFontScale = (s: GlobalState): number =>
+  s.hostFontScale == null ? s.fontScale : clampFontScale(s.hostFontScale);
+
+export function createGlobalStore(readOnly: ReadOnlyOption = false, hostFontScale?: number) {
   return createStore<GlobalState>()((set) => ({
     debugMode: false,
     isProduction: false,
@@ -69,6 +75,7 @@ export function createGlobalStore(readOnly: ReadOnlyOption = false) {
     readOnly: readOnly !== false,
     readOnlyLocked: readOnly === 'locked',
     fontScale: readFontScale(),
+    hostFontScale,
     toggleDebugMode: () => set((state) => ({ debugMode: !state.debugMode })),
     setOverview: (open, entity) =>
       set((state) => ({
