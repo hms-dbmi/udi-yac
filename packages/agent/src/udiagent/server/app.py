@@ -691,18 +691,28 @@ def yac_benchmark(
     if refusal is not None:
         return refusal
 
+    model = request.model if x_openai_key else None
     result = orchestrator.run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
-        model=request.model if x_openai_key else None,
+        model=model,
     )
 
     return {
         "tool_calls": result.tool_calls,
         "orchestrator_choice": result.orchestrator_choice,
         "usage": asdict(result.usage),
+        # What actually ran, so a benchmark run is labelled by the server that
+        # served it rather than by whatever the runner was told.
+        "model": model or agent.gpt_model_name,
+        "llm_settings": {
+            "openai_api": agent.openai_api,
+            "reasoning_effort": agent.reasoning_effort,
+            "temperature": agent.temperature,
+            "max_completion_tokens": agent.max_completion_tokens,
+        },
     }
 
 
