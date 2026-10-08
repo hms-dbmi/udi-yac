@@ -184,6 +184,7 @@ function parseSessionUsage(raw: unknown): SessionUsage {
     completionTokens: n(raw.completionTokens),
     totalTokens: n(raw.totalTokens),
     cachedPromptTokens: n(raw.cachedPromptTokens),
+    cacheWriteTokens: n(raw.cacheWriteTokens),
     reasoningTokens: n(raw.reasoningTokens),
     requests: n(raw.requests),
     lastModel: typeof raw.lastModel === 'string' ? raw.lastModel : undefined,

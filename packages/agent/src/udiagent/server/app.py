@@ -114,6 +114,10 @@ agent = UDIAgent(
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
     langfuse_environment=config.langfuse_environment,
+    openai_api=config.udi_openai_api,
+    reasoning_effort=config.udi_reasoning_effort,
+    temperature=None if config.udi_temperature == "omit" else config.udi_temperature,
+    max_completion_tokens=config.udi_max_completion_tokens,
 )
 
 orchestrator = Orchestrator(
@@ -143,6 +147,7 @@ def _usage_headers(usage: Usage | None, model: str | None = None) -> dict[str, s
         "X-Usage-Completion-Tokens": str(usage.completion_tokens),
         "X-Usage-Total-Tokens": str(usage.total_tokens),
         "X-Usage-Cached-Prompt-Tokens": str(usage.cached_prompt_tokens),
+        "X-Usage-Cache-Write-Tokens": str(usage.cache_write_tokens),
         "X-Usage-Reasoning-Tokens": str(usage.reasoning_tokens),
         "X-Usage-Model": model or agent.gpt_model_name,
     }
@@ -256,6 +261,7 @@ app.add_middleware(
         "X-Usage-Completion-Tokens",
         "X-Usage-Total-Tokens",
         "X-Usage-Cached-Prompt-Tokens",
+        "X-Usage-Cache-Write-Tokens",
         "X-Usage-Reasoning-Tokens",
         "X-Usage-Model",
     ],

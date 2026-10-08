@@ -10,6 +10,8 @@ export interface SessionUsage {
   totalTokens: number;
   /** Cached share of `promptTokens` (0 when the provider doesn't report it). */
   cachedPromptTokens: number;
+  /** Share of `promptTokens` written to the prompt cache (0 when not reported). */
+  cacheWriteTokens: number;
   /** Reasoning share of `completionTokens` (0 when not reported). */
   reasoningTokens: number;
   requests: number;
@@ -21,6 +23,7 @@ export const EMPTY_USAGE: SessionUsage = {
   completionTokens: 0,
   totalTokens: 0,
   cachedPromptTokens: 0,
+  cacheWriteTokens: 0,
   reasoningTokens: 0,
   requests: 0,
 };

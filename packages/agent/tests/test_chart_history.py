@@ -147,6 +147,8 @@ def test_a_question_about_a_chart_reads_its_spec_and_answers_from_it():
     agent = SimpleNamespace(
         gpt_model_name="test-model",
         _get_gpt_client=lambda _key=None: client,
+        # Every LLM call goes through UDIAgent.create_completion.
+        create_completion=lambda c, **kw: c.chat.completions.create(**kw),
         trace=lambda **_kw: contextlib.nullcontext(),
     )
     messages = _history(_chart())

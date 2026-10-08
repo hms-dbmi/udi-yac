@@ -268,13 +268,13 @@ def _call_llm_with_tools(
     try:
         client = agent._get_gpt_client(openai_api_key)
         resp = _call_with_budget_guard(
-            client.chat.completions.create,
+            agent.create_completion,
             usage,
+            client,
             model=model or agent.gpt_model_name,
             messages=messages,
             tools=tools,
             tool_choice="auto",
-            temperature=0.0,
             max_completion_tokens=1024,
         )
         if usage is not None:
