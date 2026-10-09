@@ -33,7 +33,7 @@ server = [
 ]
 benchmark = [
     "datasets>=5.0.1",
-    "huggingface-hub>=0.36.0",
+    "huggingface-hub>=2.1.1",
     "ijson>=3.4.0.post0",
 ]
 codegen = [
