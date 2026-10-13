@@ -3,6 +3,7 @@
 import copy
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -80,6 +81,9 @@ class Usage:
                 "cached_prompt_tokens": cached,
                 "cache_write_tokens": cache_write,
                 "reasoning_tokens": reasoning,
+                # Wall-clock seconds of the call, set by _call_with_budget_guard
+                # (None for a call made outside it).
+                "latency_s": self.__dict__.pop("_last_latency_s", None),
             }
         )
 
@@ -110,14 +114,23 @@ def _call_with_budget_guard(fn, usage: "Usage", /, *args, **kwargs):
 
     Non-quota ``APIStatusError``s propagate unchanged.
     """
+    start = time.perf_counter()
     try:
-        return fn(*args, **kwargs)
+        resp = fn(*args, **kwargs)
     except openai.RateLimitError as err:
         raise BudgetExceededError(_DEFAULT_BUDGET_MESSAGE, usage) from err
     except openai.APIStatusError as err:
         if _is_quota_error(err):
             raise BudgetExceededError(_DEFAULT_BUDGET_MESSAGE, usage) from err
         raise
+    if usage is not None:
+        # ponytail: handed to the usage.add() that follows every guarded call
+        # rather than threaded through each call site. Safe while one Usage
+        # has one call in flight (calls within a run are sequential); a
+        # concurrent caller would need the latency returned explicitly.
+        # Not a dataclass field, so asdict() never reports it.
+        usage._last_latency_s = round(time.perf_counter() - start, 3)
+    return resp
 
 
 def build_rebuff_toolcall(
@@ -147,6 +160,33 @@ def build_rebuff_toolcall(
         "name": "Rebuff",
         "arguments": arguments,
     }
+
+
+_UNREADABLE_REPLY_MESSAGE = (
+    "Something went wrong while I was working out how to answer that. "
+    "Please try again, or rephrase your request."
+)
+
+
+def _tool_args(tc) -> dict | None:
+    """A tool call's arguments, or None when they aren't a JSON object.
+
+    A reply cut off at the output-token cap carries truncated arguments; a
+    model can also, rarely, emit malformed ones. Either way the call is
+    unusable, and it must not take the whole request down with it.
+    """
+    try:
+        args = json.loads(tc.function.arguments)
+    except (TypeError, json.JSONDecodeError):
+        args = None
+    if not isinstance(args, dict):
+        logger.warning(
+            "skipping %s: its arguments are not a JSON object (%d chars)",
+            tc.function.name,
+            len(tc.function.arguments or ""),
+        )
+        return None
+    return args
 
 
 @dataclass
@@ -228,6 +268,49 @@ class Orchestrator:
                 model=model,
                 budget_check=budget_check,
             )
+
+    def run_visualization(
+        self,
+        messages: list[dict],
+        data_schema: str,
+        data_domains: str,
+        openai_api_key: str | None = None,
+        model: str | None = None,
+        session_id: str | None = None,
+    ) -> OrchestratorResult:
+        """Build a chart for the latest user request, skipping the routing call.
+
+        For callers that already know the request wants a visualization, such
+        as visualization-only benchmarks measuring chart generation on its own.
+        The latest non-blank user message stands in for the description the
+        routing call would otherwise write.
+        """
+        description = next(
+            (
+                m["content"].strip()
+                for m in reversed(messages)
+                if m.get("role") == "user"
+                and isinstance(m.get("content"), str)
+                and m["content"].strip()
+            ),
+            "",
+        )
+        usage = Usage()
+        with self.agent.trace(session_id=session_id, name="visualization-run"):
+            tool_call = self._handle_create_visualization(
+                {"description": description} if description else {},
+                split_tool_calls(messages),
+                data_schema,
+                data_domains,
+                usage,
+                openai_api_key=openai_api_key,
+                model=model,
+            )
+        return OrchestratorResult(
+            tool_calls=[tool_call],
+            orchestrator_choice="render-visualization",
+            usage=usage,
+        )
 
     def _run(
         self,
@@ -662,7 +745,7 @@ class Orchestrator:
             )
             for tc in pending:
                 if tc in lookups:
-                    args = json.loads(tc.function.arguments)
+                    args = _tool_args(tc) or {}
                     answer = self._lookup_field_values(args, data_domains)
                     logger.info(
                         "field values looked up: %s.%s",
@@ -701,6 +784,7 @@ class Orchestrator:
         }
 
         tool_calls = []
+        unreadable = 0
         has_vis = False
         has_filter = False
         has_rebuff = False
@@ -709,7 +793,10 @@ class Orchestrator:
 
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
-            tool_args = json.loads(tc.function.arguments)
+            tool_args = _tool_args(tc)
+            if tool_args is None:
+                unreadable += 1
+                continue
 
             if tool_name in INTERNAL_ORCHESTRATOR_TOOLS:
                 # Answered in the lookup loop above, and not an outcome of the
@@ -742,6 +829,9 @@ class Orchestrator:
                 has_clarify = True
             elif tool_name == "FreeTextExplain":
                 has_explain = True
+
+        if unreadable and not tool_calls:
+            return [build_rebuff_toolcall(_UNREADABLE_REPLY_MESSAGE)], "rebuff"
 
         # Derive orchestrator_choice for backward compatibility
         if has_explain:

@@ -240,6 +240,22 @@ class TestConstructor:
         with pytest.raises(ValueError, match="max_completion_tokens"):
             UDIAgent(gpt_model_name="m", max_completion_tokens=0)
 
+    def test_unknown_vis_tool_choice_is_refused(self):
+        with pytest.raises(ValueError, match="vis_tool_choice"):
+            UDIAgent(gpt_model_name="m", vis_tool_choice="none")
+
+
+@pytest.mark.parametrize("choice", ["auto", "required"])
+def test_template_call_uses_vis_tool_choice(choice):
+    from udiagent.vis_generate import _call_llm_with_tools
+
+    agent = _agent(vis_tool_choice=choice)
+    client = MagicMock()
+    agent._get_gpt_client = lambda key: client
+    agent.gpt_model_name = "m"
+    _call_llm_with_tools(agent, MESSAGES, TOOLS, config=None)
+    assert client.chat.completions.create.call_args.kwargs["tool_choice"] == choice
+
 
 class TestServerConfig:
     @pytest.fixture(autouse=True)
@@ -250,6 +266,7 @@ class TestServerConfig:
             "UDI_REASONING_EFFORT",
             "UDI_TEMPERATURE",
             "UDI_MAX_COMPLETION_TOKENS",
+            "UDI_VIS_TOOL_CHOICE",
         ):
             monkeypatch.delenv(name, raising=False)
 
@@ -264,6 +281,7 @@ class TestServerConfig:
         assert cfg.udi_reasoning_effort is None
         assert cfg.udi_temperature == 0.0
         assert cfg.udi_max_completion_tokens is None
+        assert cfg.udi_vis_tool_choice == "auto"
 
     @pytest.mark.parametrize(
         ("raw", "parsed"), [("omit", "omit"), ("0.3", 0.3), ("", 0.0), ("  ", 0.0)]
@@ -276,10 +294,12 @@ class TestServerConfig:
         monkeypatch.setenv("UDI_OPENAI_API", "responses")
         monkeypatch.setenv("UDI_REASONING_EFFORT", "max")
         monkeypatch.setenv("UDI_MAX_COMPLETION_TOKENS", "16384")
+        monkeypatch.setenv("UDI_VIS_TOOL_CHOICE", "required")
         cfg = self._config()
         assert cfg.udi_openai_api == "responses"
         assert cfg.udi_reasoning_effort == "max"
         assert cfg.udi_max_completion_tokens == 16384
+        assert cfg.udi_vis_tool_choice == "required"
 
     @pytest.mark.parametrize(
         ("name", "value"),
@@ -287,6 +307,7 @@ class TestServerConfig:
             ("UDI_OPENAI_API", "bogus"),
             ("UDI_MAX_COMPLETION_TOKENS", "0"),
             ("UDI_TEMPERATURE", "warm"),
+            ("UDI_VIS_TOOL_CHOICE", "none"),
         ],
     )
     def test_bad_values_are_refused(self, monkeypatch, name, value):
