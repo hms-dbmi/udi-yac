@@ -11,6 +11,7 @@ from udiagent._compat import get_openai_class, make_bedrock_provider
 logger = logging.getLogger(__name__)
 
 OPENAI_APIS = ("chat_completions", "responses")
+VIS_TOOL_CHOICES = ("auto", "required")
 
 
 @lru_cache(maxsize=128)
@@ -159,6 +160,10 @@ class UDIAgent:
     - ``max_completion_tokens``: when set, replaces each call's own output cap
       (1024 for tool calls, 16384 for structured JSON). Reasoning tokens count
       against the cap, so raise it when reasoning is on.
+    - ``vis_tool_choice``: ``"auto"`` (default) lets the chart-template call
+      answer without picking a template, which falls back to a "no template
+      fits" message; ``"required"`` makes it pick one. Some models (e.g.
+      ``gpt-6.1-sol``) otherwise reply in prose to many chart requests.
     """
 
     # Class-level so agents built via ``__new__`` (as the tests do) get the
@@ -167,6 +172,7 @@ class UDIAgent:
     reasoning_effort: str | None = None
     temperature: float | None = 0.0
     max_completion_tokens: int | None = None
+    vis_tool_choice: str = "auto"
 
     def __init__(
         self,
@@ -184,10 +190,16 @@ class UDIAgent:
         reasoning_effort: str | None = None,
         temperature: float | None = 0.0,
         max_completion_tokens: int | None = None,
+        vis_tool_choice: str = "auto",
     ):
         if openai_api not in OPENAI_APIS:
             raise ValueError(
                 f"openai_api must be one of {', '.join(OPENAI_APIS)}; got {openai_api!r}"
+            )
+        if vis_tool_choice not in VIS_TOOL_CHOICES:
+            raise ValueError(
+                f"vis_tool_choice must be one of {', '.join(VIS_TOOL_CHOICES)}; "
+                f"got {vis_tool_choice!r}"
             )
         if max_completion_tokens is not None and max_completion_tokens <= 0:
             raise ValueError(
@@ -197,6 +209,7 @@ class UDIAgent:
         self.reasoning_effort = reasoning_effort
         self.temperature = temperature
         self.max_completion_tokens = max_completion_tokens
+        self.vis_tool_choice = vis_tool_choice
         self.gpt_model_name = gpt_model_name
         self.openai_base_url = openai_base_url
         # Either param opts in, matching the LangFuse convention below — a
