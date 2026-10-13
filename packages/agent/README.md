@@ -117,10 +117,10 @@ non-conforming templates (non-fatal; pass `--strict` to
 
 ### Reasoning models and the Responses API
 
-Four constructor parameters shape every LLM request. Their defaults send
-exactly what earlier releases sent, so nothing changes unless you set them. The
-server reads them from `UDI_OPENAI_API`, `UDI_REASONING_EFFORT`,
-`UDI_TEMPERATURE` (`omit` for `None`) and `UDI_MAX_COMPLETION_TOKENS`.
+Five constructor parameters shape LLM requests. Their defaults send exactly
+what earlier releases sent, so nothing changes unless you set them. The server
+reads them from `UDI_OPENAI_API`, `UDI_REASONING_EFFORT`, `UDI_TEMPERATURE`
+(`omit` for `None`), `UDI_MAX_COMPLETION_TOKENS` and `UDI_VIS_TOOL_CHOICE`.
 
 ```python
 agent = UDIAgent(
@@ -130,6 +130,7 @@ agent = UDIAgent(
     reasoning_effort="low",       # passed through verbatim; None sends nothing
     temperature=None,             # OpenAI rejects temperature when reasoning is on
     max_completion_tokens=16384,  # reasoning tokens count against the cap
+    vis_tool_choice="required",   # pick a chart template instead of replying in prose
 )
 ```
 
@@ -138,6 +139,11 @@ and visualization code are unaware of which API ran. Keep the default
 `"chat_completions"` for self-hosted backends (vLLM, Ollama) and Bedrock. When
 a call stops at the output cap, the server logs a warning naming the model; if
 that warning recurs, raise `max_completion_tokens`.
+
+`vis_tool_choice` applies only to the call that picks a chart template. With
+the default `"auto"` a model may answer without picking one, and the user gets
+a "no chart template fits" message; `gpt-6.1-sol` does this for about one chart
+request in seven. `"required"` makes it pick a template.
 
 Usage reporting includes `cache_write_tokens`: models that bill prompt-cache
 writes (GPT-5.6 and later, at 1.25× the input rate) report them, and the server
@@ -306,6 +312,7 @@ uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 | `UDI_REASONING_EFFORT`      | —                  | Reasoning effort sent with every request (`none`, `low`, `medium`, …), passed through as-is so new provider values work without a release. Unset sends nothing, leaving the model's default.                                                                                                                                                                                                          |
 | `UDI_TEMPERATURE`           | `0`                | Sampling temperature sent with every request, or `omit` to send none. OpenAI rejects a temperature whenever `UDI_REASONING_EFFORT` is anything but `none`, so set `omit` with reasoning models there.                                                                                                                                                                                                 |
 | `UDI_MAX_COMPLETION_TOKENS` | —                  | Output-token cap for every request, replacing the built-in ones (1024 for tool calls, 16384 for structured JSON). Reasoning tokens count against it, so raise it when reasoning is on.                                                                                                                                                                                                                |
+| `UDI_VIS_TOOL_CHOICE`       | `auto`             | Whether the chart-template call may answer without picking a template (`auto`, which then replies that no template fits) or must pick one (`required`). Some models (e.g. `gpt-6.1-sol`) reply in prose to many chart requests unless this is `required`.                                                                                                                                             |
 | `LANGFUSE_PUBLIC_KEY`       | —                  | LangFuse public key. Tracing is off unless all three are set.                                                                                                                                                                                                                                                                                                                                         |
 | `LANGFUSE_SECRET_KEY`       | —                  | LangFuse secret key. Tracing is off unless all three are set.                                                                                                                                                                                                                                                                                                                                         |
 | `LANGFUSE_HOST`             | —                  | LangFuse instance URL, e.g. `https://cloud.langfuse.com`.                                                                                                                                                                                                                                                                                                                                             |

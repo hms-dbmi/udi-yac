@@ -274,7 +274,7 @@ def _call_llm_with_tools(
             model=model or agent.gpt_model_name,
             messages=messages,
             tools=tools,
-            tool_choice="auto",
+            tool_choice=agent.vis_tool_choice,
             max_completion_tokens=1024,
         )
         if usage is not None:

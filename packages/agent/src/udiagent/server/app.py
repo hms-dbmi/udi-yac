@@ -118,6 +118,7 @@ agent = UDIAgent(
     reasoning_effort=config.udi_reasoning_effort,
     temperature=None if config.udi_temperature == "omit" else config.udi_temperature,
     max_completion_tokens=config.udi_max_completion_tokens,
+    vis_tool_choice=config.udi_vis_tool_choice,
 )
 
 orchestrator = Orchestrator(
@@ -712,6 +713,7 @@ def yac_benchmark(
             "reasoning_effort": agent.reasoning_effort,
             "temperature": agent.temperature,
             "max_completion_tokens": agent.max_completion_tokens,
+            "vis_tool_choice": agent.vis_tool_choice,
         },
     }
 
