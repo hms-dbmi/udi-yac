@@ -114,6 +114,52 @@ class TestRubricRobustness:
         assert rubric["vis_spec_source_correct"]["pass"] is True
 
 
+SPEC_STAIN = json.dumps(
+    {
+        "source": {"name": "datasets"},
+        "transformation": [{"groupby": "stain_name"}, {"rollup": {"n": {"op": "count"}}}],
+        "representation": {"mark": "bar", "mapping": [{"encoding": "x", "field": "stain_name"}]},
+    }
+)
+
+
+def _clarify(*fields):
+    return {
+        "name": "ClarifyVariable",
+        "arguments": {
+            "message": "Which field do you mean?",
+            "ambiguous_variables": [
+                {"query_term": "dye", "candidates": [{"field_name": f} for f in fields]}
+            ],
+        },
+    }
+
+
+class TestClarification:
+    EXPECTED = {
+        "tool_calls": [_chart(SPEC_STAIN, "bar")],
+        "orchestrator_choice": "render-visualization",
+    }
+
+    def test_question_offering_the_reference_field_earns_full_score(self):
+        output = _output(_clarify("stain", "stain_name"), choice="clarify-variable")
+        data = {
+            "metadata": {"model": "gpt-6.1-sol"},
+            "results": [
+                {"input": {"messages": MESSAGES}, "expected": self.EXPECTED, "output": output}
+            ],
+        }
+        analysis = analyze_results(data, path="/dev/null")
+        assert analysis["results"][0]["score"]["overall_score"] == 1.0
+        assert analysis["summary"]["clarify_percent"] == 100
+        assert analysis["summary"]["clarify_credited_percent"] == 100
+
+    def test_question_about_other_fields_scores_zero(self):
+        output = _output(_clarify("operator", "pi"), choice="clarify-variable")
+        rubric = check_rubric(self.EXPECTED, output, [])
+        assert rubric["orchestrator_choice"]["pass"] is False
+
+
 class TestSummary:
     def test_failures_are_counted_and_excluded_from_means(self):
         results = [
