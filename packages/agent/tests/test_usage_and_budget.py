@@ -191,6 +191,48 @@ class TestBudgetCheck:
 
 
 # ---------------------------------------------------------------------------
+# Unreadable tool arguments
+# ---------------------------------------------------------------------------
+
+
+MSG = [{"role": "user", "content": "hi"}]
+
+
+class TestUnreadableToolArguments:
+    """A reply cut off at the output cap carries truncated JSON arguments."""
+
+    def _run(self, *tool_calls):
+        orch, agent = _make_orchestrator()
+        agent.gpt_model.chat.completions.create = MagicMock(
+            return_value=_fake_completion(tool_calls=list(tool_calls))
+        )
+        return orch, orch.run(messages=MSG, data_schema="{}", data_domains="[]")
+
+    def test_truncated_arguments_become_a_rebuff_not_an_error(self, caplog):
+        _, result = self._run(
+            _fake_tool_call("CreateVisualization", '{"description": "dono')
+        )
+        assert result.orchestrator_choice == "rebuff"
+        assert "try again" in result.tool_calls[0]["arguments"]["message"]
+        assert "arguments are not a JSON object" in caplog.text
+
+    def test_readable_calls_still_run(self):
+        orch, agent = _make_orchestrator()
+        rebuff = {"name": "Rebuff", "arguments": {"message": "no"}}
+        agent.gpt_model.chat.completions.create = MagicMock(
+            return_value=_fake_completion(
+                tool_calls=[
+                    _fake_tool_call("CreateVisualization", '{"descr'),
+                    _fake_tool_call("Rebuff", '{"message": "no"}'),
+                ]
+            )
+        )
+        with patch.object(orch, "_handle_rebuff", return_value=rebuff):
+            result = orch.run(messages=MSG, data_schema="{}", data_domains="[]")
+        assert result.tool_calls == [rebuff]
+
+
+# ---------------------------------------------------------------------------
 # Rate-limit → BudgetExceededError
 # ---------------------------------------------------------------------------
 
