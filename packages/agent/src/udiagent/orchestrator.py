@@ -269,6 +269,49 @@ class Orchestrator:
                 budget_check=budget_check,
             )
 
+    def run_visualization(
+        self,
+        messages: list[dict],
+        data_schema: str,
+        data_domains: str,
+        openai_api_key: str | None = None,
+        model: str | None = None,
+        session_id: str | None = None,
+    ) -> OrchestratorResult:
+        """Build a chart for the latest user request, skipping the routing call.
+
+        For callers that already know the request wants a visualization, such
+        as visualization-only benchmarks measuring chart generation on its own.
+        The latest non-blank user message stands in for the description the
+        routing call would otherwise write.
+        """
+        description = next(
+            (
+                m["content"].strip()
+                for m in reversed(messages)
+                if m.get("role") == "user"
+                and isinstance(m.get("content"), str)
+                and m["content"].strip()
+            ),
+            "",
+        )
+        usage = Usage()
+        with self.agent.trace(session_id=session_id, name="visualization-run"):
+            tool_call = self._handle_create_visualization(
+                {"description": description} if description else {},
+                split_tool_calls(messages),
+                data_schema,
+                data_domains,
+                usage,
+                openai_api_key=openai_api_key,
+                model=model,
+            )
+        return OrchestratorResult(
+            tool_calls=[tool_call],
+            orchestrator_choice="render-visualization",
+            usage=usage,
+        )
+
     def _run(
         self,
         messages: list[dict],

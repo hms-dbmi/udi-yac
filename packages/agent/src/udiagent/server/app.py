@@ -11,7 +11,6 @@ Run with::
 
 import json
 import logging
-import os
 from dataclasses import asdict
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -72,6 +71,8 @@ config = ServerConfig.from_env()
 # has no data/ (only src/udiagent/data is packaged) and is often read-only —
 # hence the overrides. See the deployment guide in the package README.
 _DATA_DIR = Path(config.udi_data_dir or _PACKAGE_ROOT / "data")
+# Where the benchmark runner writes when run from the package directory.
+_OUTPUT_DIR = _PACKAGE_ROOT / "out"
 
 # --- Logging setup ---
 _log_dir = Path(config.udi_log_dir or _PACKAGE_ROOT / "logs")
@@ -693,7 +694,22 @@ def yac_benchmark(
         return refusal
 
     model = request.model if x_openai_key else None
-    result = orchestrator.run(
+    # The runner's --no-orchestrator sends the expected choice. Only a chart
+    # can be produced without the routing call; anything else is refused
+    # rather than silently routed, which would mislabel the run.
+    if request.orchestrator_choice is None:
+        run = orchestrator.run
+    elif request.orchestrator_choice == "render-visualization":
+        run = orchestrator.run_visualization
+    else:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "Skipping the routing call is only supported for "
+                "orchestrator_choice 'render-visualization'."
+            },
+        )
+    result = run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
@@ -744,14 +760,20 @@ def yac_structured_functions():
 
 
 @app.get("/v1/yac/benchmark_analysis")
-def yac_benchmark_analysis():
-    result_filename = "./out/benchmark_analysis.json"
-    if not os.path.exists(result_filename):
+def yac_benchmark_analysis(token_payload: dict = Depends(verify_jwt)):
+    """The most recently written benchmark analysis under the package's out/.
+
+    Behind auth like the benchmark itself: an analysis carries every prompt,
+    schema, domain and generated output of the run.
+    """
+    latest = max(
+        _OUTPUT_DIR.glob("**/benchmark_analysis.json"),
+        key=lambda path: path.stat().st_mtime,
+        default=None,
+    )
+    if latest is None:
         return JSONResponse(
-            content={"error": f"File {result_filename} not found."}, status_code=404
+            content={"error": "No benchmark analysis found."}, status_code=404
         )
-
-    with open(result_filename, "r") as f:
-        data = json.load(f)
-
-    return JSONResponse(content=data)
+    with latest.open() as f:
+        return JSONResponse(content=json.load(f))

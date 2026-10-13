@@ -1004,7 +1004,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--no-orchestrator",
         action="store_true",
-        help="Intended to bypass the orchestrator step; currently ignored by the server.",
+        help="Skip the routing call and go straight to chart generation. Only for "
+        "visualization-only data (e.g. the DQVis fixtures): the server refuses "
+        "items expecting any other orchestrator choice.",
     )
 
     parser.add_argument(
