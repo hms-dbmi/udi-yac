@@ -414,16 +414,16 @@ would change.
 
 ### Server Endpoints
 
-| Endpoint                       | Method | Description                                           |
-| ------------------------------ | ------ | ----------------------------------------------------- |
-| `/`                            | GET    | API status and info                                   |
-| `/v1/yac/completions`          | POST   | Main orchestrator — routes user requests to tools     |
-| `/v1/yac/query`                | POST   | Server-side data: batched grammar→SQL query execution |
-| `/v1/yac/metadata`             | GET    | Server-side data: introspected dataSchema/dataDomains |
-| `/v1/yac/benchmark`            | POST   | Benchmark variant with optional orchestrator override |
-| `/v1/yac/examples`             | GET    | Example prompts from `data/example_prompts.json`      |
-| `/v1/yac/structured_functions` | GET    | Structured function registry                          |
-| `/v1/yac/benchmark_analysis`   | GET    | Latest benchmark analysis results                     |
+| Endpoint                       | Method | Description                                              |
+| ------------------------------ | ------ | -------------------------------------------------------- |
+| `/`                            | GET    | API status and info                                      |
+| `/v1/yac/completions`          | POST   | Main orchestrator — routes user requests to tools        |
+| `/v1/yac/query`                | POST   | Server-side data: batched grammar→SQL query execution    |
+| `/v1/yac/metadata`             | GET    | Server-side data: introspected dataSchema/dataDomains    |
+| `/v1/yac/benchmark`            | POST   | Benchmark variant; can skip routing for chart-only items |
+| `/v1/yac/examples`             | GET    | Example prompts from `data/example_prompts.json`         |
+| `/v1/yac/structured_functions` | GET    | Structured function registry                             |
+| `/v1/yac/benchmark_analysis`   | GET    | Newest benchmark analysis under `out/` (auth required)   |
 
 ### Server-side query backends
 
@@ -660,8 +660,9 @@ Path A, which builds from source):
   this variable `/v1/yac/examples` returns `404`, which the chat UI tolerates by
   showing no example-prompt suggestions. Point it at a copy of that directory if
   you want them (it is ~2 MB, mostly benchmark fixtures).
-  `/v1/yac/benchmark_analysis` likewise reads `./out/` relative to the working
-  directory and is a benchmarking-only endpoint.
+  `/v1/yac/benchmark_analysis` likewise serves the newest
+  `out/**/benchmark_analysis.json` under the package directory, which a wheel
+  install doesn't have; it is a benchmarking-only endpoint.
 
 A minimal systemd unit:
 
@@ -862,6 +863,11 @@ Resume a run; items that failed or were refused (rate limit) are retried:
 uv run python -m udiagent.benchmark.runner --path ./data/benchmark_dqvis/small.jsonl --workers 5 \
   --resume ./out/<RUN>/benchmark_results.json --out ./out/<RUN>
 ```
+
+`--no-orchestrator` skips the routing call and goes straight to chart
+generation, to measure that on its own. Use it only on visualization-only data
+such as the DQVis fixtures: the server refuses items that expect any other
+orchestrator choice, and those items are recorded as failures.
 
 Each run writes `benchmark_results.json` and `benchmark_analysis.json`. The
 analysis carries a `summary` — failures, tokens per item (prompt, cached, cache
