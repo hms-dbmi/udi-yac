@@ -294,6 +294,14 @@ def check_rubric(expected, output, data_domains):
     # orchestrator makes correct decision (filter/vis/both)
     output_orchestrator_choice = output.get("orchestrator_choice", None)
     expected_orchestrator_choice = expected.get("orchestrator_choice", None)
+    # Asking which field is meant is also a correct decision when the request
+    # really is ambiguous: when the fields the question offers include one
+    # the reference used. Reviewers rated such questions good, and there is no
+    # chart to score, so it earns the item's full score.
+    warranted_clarification = (
+        output_orchestrator_choice == "clarify-variable" != expected_orchestrator_choice
+        and bool(_clarify_candidates(output) & _fields_used(expected))
+    )
     update_rubric(
         rubric,
         "orchestrator_choice",
@@ -301,6 +309,8 @@ def check_rubric(expected, output, data_domains):
         output_orchestrator_choice,
         "orchestrator",
         100,
+        expected_orchestrator_choice == output_orchestrator_choice
+        or warranted_clarification,
     )
 
     # FILTER RUBRIC
@@ -573,6 +583,46 @@ def _find_call(tool_calls, name):
     return next((call for call in tool_calls if call.get("name") == name), None)
 
 
+def _clarify_candidates(output):
+    """Every field a ClarifyVariable call offers to choose between."""
+    call = _find_call(output.get("tool_calls", []), "ClarifyVariable") or {}
+    return {
+        candidate.get("field_name")
+        for variable in (call.get("arguments") or {}).get("ambiguous_variables", [])
+        for candidate in variable.get("candidates", [])
+    }
+
+
+def _fields_used(expected):
+    """Every field the reference's chart spec or filter names."""
+    fields = set()
+
+    def walk(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key == "field" and isinstance(value, str):
+                    fields.add(value)
+                elif key == "groupby":
+                    values = [value] if isinstance(value, str) else value
+                    fields.update(v for v in values if isinstance(v, str))
+                else:
+                    walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    for call in expected.get("tool_calls", []):
+        arguments = call.get("arguments") or {}
+        if call.get("name") == "RenderVisualization":
+            try:
+                walk(json.loads(arguments.get("spec") or "{}"))
+            except (TypeError, json.JSONDecodeError):
+                pass
+        elif call.get("name") == "FilterData":
+            walk(arguments)
+    return fields
+
+
 def calculate_item_score(rubric):
     """
     For each rubric group calculate the total points.
@@ -725,6 +775,10 @@ def summarize_run(results, scores, model):
     has no usage to report and would drag the means toward zero.
     """
     answered = [item for item in results if _succeeded(item)]
+    clarified = [
+        item for item in answered
+        if item["output"].get("orchestrator_choice") == "clarify-variable"
+    ]
     usages = [item["output"].get("usage") or {} for item in answered]
     operations = [op for usage in usages for op in usage.get("operations", [])]
     totals = {key: sum(u.get(key, 0) for u in usages) for key in TOKEN_KEYS}
@@ -751,6 +805,19 @@ def summarize_run(results, scores, model):
             else 0
         ),
         "llm_calls_per_item": len(operations) / n if n else 0,
+        # Share of items answered with a clarifying question, and the share
+        # whose question the rubric credited (it offered the reference's field).
+        "clarify_percent": 100 * len(clarified) / len(results) if results else 0,
+        "clarify_credited_percent": (
+            100
+            * sum(
+                ((item.get("rubric") or {}).get("orchestrator_choice") or {}).get("pass", False)
+                for item in clarified
+            )
+            / len(results)
+            if results
+            else 0
+        ),
         "cost_usd": cost,
         "cost_per_item_usd": cost / n if cost is not None and n else None,
         "latency_mean_s": statistics.fmean(latencies) if latencies else None,
@@ -781,8 +848,9 @@ def agreement(reference, candidate):
     """Score one run's outputs against another's, item by item.
 
     The reference run's output stands in for ``expected`` in the usual rubric,
-    so "1.0" means the candidate did what the reference did, not that either
-    is right. Items the reference failed on are skipped: there is nothing to
+    so "1.0" means the candidate did what the reference did, or asked a
+    clarifying question about a field the reference used; not that either is
+    right. Items the reference failed on are skipped: there is nothing to
     agree with.
     """
     ref_items, cand_items = reference["results"], candidate["results"]
@@ -803,7 +871,7 @@ def agreement(reference, candidate):
     scores = calculate_overall_scores(scored)
     return {
         "agreement": scores["overall_score"],
-        "identical_percent": 100 * scores["correct_percent"],
+        "full_agreement_percent": 100 * scores["correct_percent"],
         **{
             f"{group}_agreement": agg["overall_score"]
             for group, agg in sorted(scores["group_aggregates"].items())
