@@ -162,6 +162,33 @@ def build_rebuff_toolcall(
     }
 
 
+_UNREADABLE_REPLY_MESSAGE = (
+    "Something went wrong while I was working out how to answer that. "
+    "Please try again, or rephrase your request."
+)
+
+
+def _tool_args(tc) -> dict | None:
+    """A tool call's arguments, or None when they aren't a JSON object.
+
+    A reply cut off at the output-token cap carries truncated arguments; a
+    model can also, rarely, emit malformed ones. Either way the call is
+    unusable, and it must not take the whole request down with it.
+    """
+    try:
+        args = json.loads(tc.function.arguments)
+    except (TypeError, json.JSONDecodeError):
+        args = None
+    if not isinstance(args, dict):
+        logger.warning(
+            "skipping %s: its arguments are not a JSON object (%d chars)",
+            tc.function.name,
+            len(tc.function.arguments or ""),
+        )
+        return None
+    return args
+
+
 @dataclass
 class OrchestratorResult:
     """Result of an orchestration run."""
@@ -675,7 +702,7 @@ class Orchestrator:
             )
             for tc in pending:
                 if tc in lookups:
-                    args = json.loads(tc.function.arguments)
+                    args = _tool_args(tc) or {}
                     answer = self._lookup_field_values(args, data_domains)
                     logger.info(
                         "field values looked up: %s.%s",
@@ -714,6 +741,7 @@ class Orchestrator:
         }
 
         tool_calls = []
+        unreadable = 0
         has_vis = False
         has_filter = False
         has_rebuff = False
@@ -722,7 +750,10 @@ class Orchestrator:
 
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
-            tool_args = json.loads(tc.function.arguments)
+            tool_args = _tool_args(tc)
+            if tool_args is None:
+                unreadable += 1
+                continue
 
             if tool_name in INTERNAL_ORCHESTRATOR_TOOLS:
                 # Answered in the lookup loop above, and not an outcome of the
@@ -755,6 +786,9 @@ class Orchestrator:
                 has_clarify = True
             elif tool_name == "FreeTextExplain":
                 has_explain = True
+
+        if unreadable and not tool_calls:
+            return [build_rebuff_toolcall(_UNREADABLE_REPLY_MESSAGE)], "rebuff"
 
         # Derive orchestrator_choice for backward compatibility
         if has_explain:
