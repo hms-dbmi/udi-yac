@@ -27,13 +27,14 @@ For each table resource:
 
 For each data field:
 
-| Field                    | Description                                                                                                                                                                                                                                                                                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`                  | Optional. Frictionless's standard field label, used wherever the column is shown to a person: generated chart titles, the tweak pickers, filter chips. Set it when the column name humanizes badly — `body_mass_index_value` becomes "Body Mass Index" on its own, but the label wanted is "BMI". Display only; specs and queries always key on `name`. |
-| `udi:cardinality`        | The number of unique values in the column.                                                                                                                                                                                                                                                                                                              |
-| `udi:unique`             | `true` if the value is unique for each row, `false` otherwise.                                                                                                                                                                                                                                                                                          |
-| `udi:data_type`          | One of `quantitative`, `ordinal`, or `nominal`.                                                                                                                                                                                                                                                                                                         |
-| `udi:overlapping_fields` | List of fields that are non-null on at least one row together. If all fields overlap, this should be `all`.                                                                                                                                                                                                                                             |
+| Field                    | Description                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`                  | Optional. Frictionless's standard field label, used wherever the column is shown to a person: generated chart titles, the tweak pickers, filter chips. Set it when the column name humanizes badly — `body_mass_index_value` becomes "Body Mass Index" on its own, but the label wanted is "BMI". Display only; specs and queries always key on `name`.         |
+| `udi:cardinality`        | The number of unique values in the column.                                                                                                                                                                                                                                                                                                                      |
+| `udi:unique`             | `true` if the value is unique for each row, `false` otherwise.                                                                                                                                                                                                                                                                                                  |
+| `udi:data_type`          | One of `quantitative`, `ordinal`, or `nominal`.                                                                                                                                                                                                                                                                                                                 |
+| `udi:time_format`        | Optional. How a date column stores its values, so charts, tables and filters show dates instead of raw numbers. The only value handled today is `epoch_ms` (milliseconds since 1970-01-01 UTC, e.g. HuBMAP's `created_timestamp`); declare such a column `udi:data_type: quantitative`. Display only — specs, queries and the LLM still see the stored numbers. |
+| `udi:overlapping_fields` | List of fields that are non-null on at least one row together. If all fields overlap, this should be `all`.                                                                                                                                                                                                                                                     |
 
 ## Entity relationships (foreignKeys) — modeling guidance
 
@@ -94,8 +95,11 @@ To refresh HuBMAP: re-run the four `curl`s against the portal `/udi/` endpoint
 into `./hubmap/`, then set the manifest's `udi:path` back to `"./data/hubmap/"`
 (consumers resolve it page-relative, i.e. against the served `/data` mount, not
 against the manifest's own location). The portal does not serve the display
-labels, so a refresh also drops the hand-authored field `title`s and the
-top-level `udi:labels` block — re-apply them from git history.
+labels or date formats, so a refresh also drops the hand-authored field `title`s,
+the top-level `udi:labels` block, and the `*_timestamp` fields'
+`"type": "integer"`, `"udi:data_type": "quantitative"` and
+`"udi:time_format": "epoch_ms"` (the portal declares them `string` / `nominal`)
+— re-apply them from git history.
 
 Afterwards, regenerate the parity goldens — they read `hubmap/donors.tsv` and
 `hubmap/samples.tsv`, so a refresh changes their expected rows:

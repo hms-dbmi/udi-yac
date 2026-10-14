@@ -292,6 +292,13 @@ describe('formatIntervalDomain', () => {
     expect(formatIntervalDomain(interval(42, 42))).toBe('42');
   });
 
+  it('renders an epoch-ms date range as dates', () => {
+    const [a, b] = [1637434970889, 1749678978392];
+    expect(formatIntervalDomain(interval(a, b), true)).toBe(
+      `${new Date(a).toLocaleDateString()} – ${new Date(b).toLocaleDateString()}`,
+    );
+  });
+
   it('degrades non-finite bounds from all-null columns', () => {
     // domainCompute.ts leaves these when every value in the column is null.
     expect(formatIntervalDomain(interval(Infinity, -Infinity))).toBe('no values');

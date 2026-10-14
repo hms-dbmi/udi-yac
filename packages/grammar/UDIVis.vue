@@ -36,6 +36,7 @@ import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
 import { orderCategories } from './domainCompute';
+import { timeColumns, isEpochMs } from './temporal';
 import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
 import { PICK_SIGNAL, pickDimTest, selectFields } from './pointSelect';
 const dataSourcesStore = useDataSourcesStore();
@@ -758,6 +759,11 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
   }
 
   const zeroBaselineFields = getZeroBaselineFields(spec);
+  // Epoch-ms date columns go to Vega-Lite as `temporal`, which formats the
+  // axis, tooltip and legend as dates. Only the Vega-Lite type changes: the
+  // spec's own type stays `quantitative`, so domains and brushes still work on
+  // the stored numbers.
+  const dateColumns = timeColumns(spec);
 
   const outputLayers = inputLayers.flatMap((layer, layerIndex) => {
     const mapping = Array.isArray(layer.mapping)
@@ -768,6 +774,10 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     const vegaEncoding: any = {};
     for (const map of mapping) {
       const { encoding } = map;
+      const isTime =
+        !('value' in map) &&
+        map.type === 'quantitative' &&
+        isEpochMs(dateColumns, map.field);
       if ('value' in map) {
         vegaEncoding[encoding] = {
           value: map.value,
@@ -777,13 +787,24 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         const escapedField = map.field.replace(/\./g, '\\.');
         vegaEncoding[encoding] = {
           field: escapedField,
-          type: map.type,
+          type: isTime ? 'temporal' : map.type,
         };
+        // Vega-Lite's default of a tick per 40px puts a time axis on quarters,
+        // then drops every other label to stop overlaps — on a range starting
+        // after January that drops every January, the ticks that print the
+        // year. A tick per 100px lands multi-year ranges on whole years.
+        if (isTime && encoding === 'x') {
+          vegaEncoding[encoding].axis = {
+            tickCount: { expr: 'ceil(width / 100)' },
+          };
+        }
       }
       if (
         (encoding === 'x' || encoding === 'y' || encoding === 'size') &&
         !('value' in map) &&
         map.type === 'quantitative' &&
+        // A time scale has no zero; Vega-Lite drops it with a warning.
+        !isTime &&
         layer.mark !== 'bar' &&
         layer.mark !== 'rect' &&
         !zeroBaselineFields.has(map.field)
@@ -975,15 +996,19 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       const hasYPair =
         mapping.some((m) => m.encoding === 'y') &&
         mapping.some((m) => m.encoding === 'y2');
+      // Bin-boundary ticks are raw numbers, which a time axis labels as
+      // minutes; its own ticks land on calendar boundaries instead.
       if (hasXPair) {
         markConfig.xOffset = 1;
         markConfig.x2Offset = -1;
-        alignAxisToBinBoundaries(vegaEncoding, mapping, 'x', 'x2');
+        if (vegaEncoding.x?.type !== 'temporal')
+          alignAxisToBinBoundaries(vegaEncoding, mapping, 'x', 'x2');
       }
       if (hasYPair) {
         markConfig.yOffset = 1;
         markConfig.y2Offset = -1;
-        alignAxisToBinBoundaries(vegaEncoding, mapping, 'y', 'y2');
+        if (vegaEncoding.y?.type !== 'temporal')
+          alignAxisToBinBoundaries(vegaEncoding, mapping, 'y', 'y2');
       }
     }
     // Nudge apart marks that would land on the same spot — two labels sharing a

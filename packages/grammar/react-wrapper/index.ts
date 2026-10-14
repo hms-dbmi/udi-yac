@@ -51,6 +51,8 @@ export type {
   RemoteVizResult,
   RemoteBackendConfig,
 } from '../queryBackend';
+export { setTimeFormats } from './temporal';
+export type { TimeFormats } from '../temporal';
 export { loadDataPackage } from './loadDataPackage';
 export type { SourceSpec, LoadDataPackageOptions } from '../loadDataPackage';
 export {

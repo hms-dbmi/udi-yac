@@ -7,6 +7,8 @@ import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext
 import type { DataSelection } from '../stores/dataFiltersStore';
 import { FilterTarget } from './FilterTarget';
 import { StepNumberInput } from './StepNumberInput';
+import { Input } from '@/components/ui/input';
+import { fromDateInputValue, toDateInputValue } from '@/utils/formatDate';
 import { cutPrecision } from '../utils/grouping';
 import type { DataFieldDomain } from '@/types/dataPackage';
 import type { RangeSelection } from 'udi-toolkit/react';
@@ -57,6 +59,7 @@ export function IntervalFilterComponent({
   const quantitativeSourceFields = useDataPackage((s) => s.quantitativeSourceFields);
   const getDomainForField = useDataPackage((s) => s.getDomainForField);
   const isValidIntervalFilter = useDataPackage((s) => s.isValidIntervalFilter);
+  const getTimeFormat = useDataPackage((s) => s.getTimeFormat);
   const setFilter = useDataFilters((s) => s.setFilter);
   const trackEvent = useTracker();
 
@@ -268,6 +271,40 @@ export function IntervalFilterComponent({
   const shownRange = rangeMinMax.hasRange ? thumbRange : localRange;
   const boundClass = 'udi:h-7 udi:w-24 udi:px-1.5 udi:text-sm udi:font-semibold';
 
+  // An epoch-ms date field is filtered by day: a date picker per bound, the
+  // lower taking in its whole first day and the upper its whole last day.
+  const isDate = getTimeFormat(entity, field) === 'epoch_ms';
+  const boundInput = (index: 0 | 1) => {
+    const label = `${index === 0 ? 'Minimum' : 'Maximum'} ${field}`;
+    if (!isDate) {
+      return (
+        <StepNumberInput
+          value={shownRange[index]}
+          precision={precision}
+          label={label}
+          disabled={!isValid}
+          className={boundClass}
+          onCommit={(value) => handleBoundCommit(index, value)}
+        />
+      );
+    }
+    return (
+      <Input
+        type="date"
+        aria-label={label}
+        disabled={!isValid}
+        className="udi:h-7 udi:w-36 udi:px-1.5 udi:text-sm udi:font-semibold"
+        value={toDateInputValue(shownRange[index])}
+        min={rangeMinMax.hasRange ? toDateInputValue(rangeMinMax.min) : undefined}
+        max={rangeMinMax.hasRange ? toDateInputValue(rangeMinMax.max) : undefined}
+        onChange={(e) => {
+          const ms = fromDateInputValue(e.target.value, index === 1);
+          if (ms !== null) handleBoundCommit(index, ms);
+        }}
+      />
+    );
+  };
+
   return (
     <div className="udi:space-y-2">
       <FilterTarget
@@ -279,23 +316,9 @@ export function IntervalFilterComponent({
         onFieldChange={handleFieldChange}
       />
       <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
-        <StepNumberInput
-          value={shownRange[0]}
-          precision={precision}
-          label={`Minimum ${field}`}
-          disabled={!isValid}
-          className={boundClass}
-          onCommit={(value) => handleBoundCommit(0, value)}
-        />
+        {boundInput(0)}
         <span className="udi:text-muted-foreground">to</span>
-        <StepNumberInput
-          value={shownRange[1]}
-          precision={precision}
-          label={`Maximum ${field}`}
-          disabled={!isValid}
-          className={boundClass}
-          onCommit={(value) => handleBoundCommit(1, value)}
-        />
+        {boundInput(1)}
         <Tooltip>
           <TooltipTrigger
             render={

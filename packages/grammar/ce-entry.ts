@@ -72,6 +72,10 @@ export type {
   RemoteBackendConfig,
 } from './queryBackend';
 
+// Date columns (`udi:time_format`), so charts and tables show dates.
+export { setTimeFormats } from './temporal';
+export type { TimeFormats } from './temporal';
+
 export interface QueryDataOptions {
   /** Maps entity names → canonical URLs, overriding URLs embedded in the spec. */
   sourceResolver?: Record<string, string>;

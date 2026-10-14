@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import type { DataSelections } from '../stores/dataFiltersStore';
+import type { DataSelection, DataSelections } from '../stores/dataFiltersStore';
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import type { ValidStatus } from '@/types/dataPackage';
-import { selectFilters } from './useFilterChips';
+import { formatSelectionFields, selectFilters } from './useFilterChips';
+import { formatDate } from '@/utils/formatDate';
 
 const valid = {
   isValidIntervalFilter: (): ValidStatus => ({ isValid: 'yes' }),
@@ -41,5 +42,31 @@ describe('selectFilters', () => {
     };
     const ids = selectFilters(data, {}, active, {}, noAge).map((f) => f.id);
     expect(ids).not.toContain('host-filter-a');
+  });
+});
+
+describe('formatSelectionFields', () => {
+  const same = (s: string) => s;
+  const sel: DataSelection = {
+    dataSourceKey: 'datasets',
+    type: 'interval',
+    selection: { created_timestamp: [1637434970889, 1749678978392], size: [1, 2] },
+  };
+
+  it("shows a date field's bounds as dates and other bounds as numbers", () => {
+    const chips = formatSelectionFields(
+      sel,
+      same,
+      same,
+      undefined,
+      (f) => f === 'created_timestamp',
+    );
+    expect(chips).toEqual([
+      {
+        label: 'created_timestamp',
+        value: `${formatDate(1637434970889)}\u2013${formatDate(1749678978392)}`,
+      },
+      { label: 'size', value: '1\u20132' },
+    ]);
   });
 });

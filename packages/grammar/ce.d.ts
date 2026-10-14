@@ -78,6 +78,10 @@ export type {
   RemoteBackendConfig,
 } from './dist/queryBackend';
 
+/** Date columns (`udi:time_format`), so charts and tables show dates. */
+export { setTimeFormats } from './dist/temporal';
+export type { TimeFormats } from './dist/temporal';
+
 /**
  * The palette the toolkit falls back to when no `palette` is supplied. Exported
  * so a consumer can spread it and override individual channels.

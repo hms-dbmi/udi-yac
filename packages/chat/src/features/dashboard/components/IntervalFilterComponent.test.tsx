@@ -9,7 +9,7 @@
  * just from opening and closing a menu.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import { UDIChatProvider, useDataPackage, useDataPackageStore } from '@/app/UDIChatContext';
@@ -28,6 +28,7 @@ const pkg = {
         fields: [
           { name: 'age', 'udi:data_type': 'quantitative' },
           { name: 'bmi', 'udi:data_type': 'quantitative' },
+          { name: 'created', 'udi:data_type': 'quantitative', 'udi:time_format': 'epoch_ms' },
         ],
       },
     },
@@ -52,7 +53,17 @@ const pkg = {
   ],
 } as unknown as DataPackage;
 
+const JAN_1_2020 = new Date(2020, 0, 1).getTime();
+const JAN_1_2021 = new Date(2021, 0, 1).getTime();
+
 const domains: DataFieldDomain[] = [
+  {
+    entity: 'Donor',
+    field: 'created',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: JAN_1_2020, max: JAN_1_2021 },
+  },
   {
     entity: 'Donor',
     field: 'age',
@@ -250,6 +261,25 @@ describe('IntervalFilterComponent — entity/field pickers', () => {
     // widget surfaces the invalid state rather than inventing a field.
     expect(onCommit).toHaveBeenCalledWith(
       expect.objectContaining({ dataSourceKey: 'Sample', selection: { age: [0, 100] } }),
+    );
+  });
+});
+
+describe('IntervalFilterComponent — epoch-ms date field', () => {
+  it('edits the bounds as dates, the upper one taking in its whole day', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+    const max = screen.getByLabelText('Maximum created') as HTMLInputElement;
+    expect(min.type).toBe('date');
+    expect([min.value, max.value]).toEqual(['2020-01-01', '2021-01-01']);
+
+    fireEvent.change(max, { target: { value: '2020-06-15' } });
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: { created: [JAN_1_2020, new Date(2020, 5, 15, 23, 59, 59, 999).getTime()] },
+      }),
     );
   });
 });

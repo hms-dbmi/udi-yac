@@ -56,7 +56,13 @@ def _make_package(tmp: Path) -> Path:
                         "schema": {
                             "fields": [
                                 {"name": "research_id", "udi:data_type": "nominal"},
-                                {"name": "visit_day", "udi:data_type": "quantitative"},
+                                # A date format with no description must still
+                                # reach the config: it's what the chat formats by.
+                                {
+                                    "name": "visit_day",
+                                    "udi:data_type": "quantitative",
+                                    "udi:time_format": "epoch_ms",
+                                },
                                 {"name": "kind", "udi:data_type": "nominal"},
                             ],
                             "foreignKeys": [
@@ -109,6 +115,9 @@ def test_seed_duckdb_round_trips(tmp_path):
     assert types["visit_day"] == "quantitative"
     assert types["kind"] == "nominal"
     assert visit["schema"]["foreignKeys"][0]["reference"]["resource"] == "Patient"
+    # So do date formats, and only on the fields that declare one.
+    formats = {f["name"]: f.get("udi:time_format") for f in visit["schema"]["fields"]}
+    assert formats == {"research_id": None, "visit_day": "epoch_ms", "kind": None}
     # Descriptions live only in the package, so they must survive the config.
     patient = next(r for r in meta["dataSchema"]["resources"] if r["name"] == "Patient")
     assert patient["description"] == "One row per patient."

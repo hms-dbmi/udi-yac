@@ -872,6 +872,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         }
 
         const partitions = inTable.partitions();
+        const column = inTable.column(field);
         for (let i = 0; i < partitions.length; i++) {
           const partition = partitions[i];
           // partition is a list of indices that define a group
@@ -879,7 +880,12 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           if (!partition || partition.length < 2) {
             continue; // skip empty or single-element partitions
           }
-          const values = partition.map((i) => inTable.get(field, i));
+          // Not `partition.map`: a partition is a Uint32Array, and its `.map`
+          // returns one too, truncating every value to an unsigned 32-bit
+          // integer (39.1 → 39; an epoch-ms date overflows, so its density
+          // came out 0 everywhere). `column.at` reads by backing-data index,
+          // which is what a partition holds.
+          const values = Array.from(partition, (row) => column?.at(row));
           const densityEstimates = density1d(values, {
             bandwidth,
             bins: samples,

@@ -1,4 +1,5 @@
 import UDIVis from './UDIVis.vue';
+import { setTimeFormats } from './temporal';
 
 // export const ActionsData = {
 //   onPinTask: fn(),
@@ -235,6 +236,104 @@ export const Checkboxes = {
       representation: {
         mark: 'checkbox',
         mapping: [{ field: 'sex', encoding: 'text', type: 'nominal' }],
+      },
+    },
+  },
+};
+
+// HuBMAP's `*_timestamp` columns hold epoch ms. Registering them as dates (what
+// chat does from the data package's `udi:time_format`) makes axes, tooltips and
+// table cells show dates; the specs themselves stay `quantitative`.
+const hubmapDates = {
+  beforeEach: () => {
+    setTimeFormats({
+      datasets: {
+        created_timestamp: 'epoch_ms',
+        published_timestamp: 'epoch_ms',
+        last_modified_timestamp: 'epoch_ms',
+      },
+    });
+    return () => setTimeFormats({});
+  },
+};
+
+const datasets = { name: 'datasets', source: './data/hubmap/datasets.tsv' };
+
+export const DateHistogram = {
+  ...hubmapDates,
+  args: {
+    spec: {
+      source: datasets,
+      transformation: [
+        { binby: { field: 'created_timestamp' } },
+        { rollup: { count: { op: 'count' } } },
+      ],
+      representation: {
+        mark: 'rect',
+        mapping: [
+          { encoding: 'x', field: 'start', type: 'quantitative' },
+          { encoding: 'x2', field: 'end', type: 'quantitative' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+        ],
+      },
+    },
+  },
+};
+
+export const DateAggregate = {
+  ...hubmapDates,
+  args: {
+    spec: {
+      source: datasets,
+      transformation: [
+        { groupby: 'dataset_type' },
+        {
+          rollup: {
+            first_published: { op: 'min', field: 'published_timestamp' },
+            last_published: { op: 'max', field: 'published_timestamp' },
+          },
+        },
+      ],
+      representation: [
+        {
+          mark: 'point',
+          mapping: [
+            { encoding: 'x', field: 'first_published', type: 'quantitative' },
+            { encoding: 'y', field: 'dataset_type', type: 'nominal' },
+          ],
+        },
+        {
+          mark: 'point',
+          mapping: [
+            { encoding: 'x', field: 'last_published', type: 'quantitative' },
+            { encoding: 'y', field: 'dataset_type', type: 'nominal' },
+          ],
+        },
+      ],
+    },
+  },
+};
+
+export const DateTable = {
+  ...hubmapDates,
+  args: {
+    spec: {
+      source: datasets,
+      transformation: [
+        { groupby: 'dataset_type' },
+        {
+          rollup: {
+            datasets: { op: 'count' },
+            newest: { op: 'max', field: 'created_timestamp' },
+            typical: { op: 'median', field: 'created_timestamp' },
+          },
+        },
+      ],
+      representation: {
+        mark: 'row',
+        mapping: [
+          { mark: 'text', encoding: 'text', field: '*', type: 'nominal' },
+        ],
       },
     },
   },
