@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 77
+Tools: 78
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -1331,6 +1331,12 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"end"}}}, {"rollup": {"count": {"op": "count"}}}], "representation": {"mark": "rect", "mapping": [{"encoding": "x", '
  '"field": "start", "type": "quantitative", "title": "<F>"}, {"encoding": "x2", "field": "end", "type": '
  '"quantitative"}, {"encoding": "y", "field": "count", "type": "quantitative", "domainWhenFiltered": "filtered"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
+ '"<F1>"}, "right": {"literal": null}}}, {"binby": {"field": "<F1:q>", "output": {"bin_start": "start", "bin_end": '
+ '"end"}}}, {"groupby": ["start", "end", "<F2>"]}, {"rollup": {"count": {"op": "count"}}}], "representation": {"mark": '
+ '"bar", "mapping": [{"encoding": "x", "field": "start", "type": "quantitative", "title": "<F1>"}, {"encoding": "x2", '
+ '"field": "end", "type": "quantitative"}, {"encoding": "y", "field": "count", "type": "quantitative"}, {"encoding": '
+ '"color", "field": "<F2:n>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
  '"<F>"}, "right": {"literal": null}}}, {"kde": {"field": "<F>", "output": {"sample": "<F>", "density": "density"}}}], '
  '"representation": {"mark": "area", "mapping": [{"encoding": "x", "field": "<F>", "type": "quantitative"}, '
@@ -4147,13 +4153,31 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
+ {'function': {'description': '[histogram] Shows the distribution of a quantitative field as a histogram whose bars '
+                              'are stacked by a nominal field, e.g. how many records fall in each time range, split by '
+                              'category. Design: Same equal-width bins as the plain histogram; binby then groupby adds '
+                              'the category to the bin keys. The renderer stacks bars that span x..x2 and carry a '
+                              'colour. Tasks: Compare how a distribution is composed across groups; see which group '
+                              'dominates each range. Query patterns: What is the distribution of <F1:q> for each '
+                              '<F2:n>?; Make a histogram of <F1:q>, stacked by <F2:n>.; How many <E> are there over '
+                              '<F1:q>, broken down by <F2:n>?',
+               'name': 'vis_071_histogram_histogram_stacked',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'field1': {'description': 'quantitative field.', 'type': 'string'},
+                                             'field2': {'description': 'nominal field, encodes color.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'field1', 'field2'],
+                              'type': 'object'}},
+  'type': 'function'},
  {'function': {'description': '[area] Shows the distribution of a quantitative field as a smooth density curve (KDE) '
                               'rendered as an area chart. Design: Kernel density estimation produces a smooth curve. '
                               'Area mark fills below the density line. Used for moderate cardinality (50-250) where a '
                               'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
                               'distribution; identify modes and overall density patterns. Query patterns: What is the '
                               'distribution of <F:q>?',
-               'name': 'vis_071_area_density',
+               'name': 'vis_072_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4167,7 +4191,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'datasets (50 or fewer values) where individual observations are meaningful and '
                               'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
                               'values, clusters, and outliers. Query patterns: What is the distribution of <F:q>?',
-               'name': 'vis_072_dot_distribution',
+               'name': 'vis_073_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4183,7 +4207,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
                               'tendency or spread. Query patterns: Is the distribution of <F1:q> similar for each '
                               '<F2:n>?',
-               'name': 'vis_073_grouped_area_density',
+               'name': 'vis_074_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4200,7 +4224,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
                               'groups; identify clusters and outliers within each group. Query patterns: Is the '
                               'distribution of <F1:q> similar for each <F2:n>?',
-               'name': 'vis_074_grouped_dot_distribution',
+               'name': 'vis_075_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4218,7 +4242,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a field; determine how many records have valid values and what proportion. Query '
                               'patterns: How many <E> records have a non-null <F:q|o|n>?; What percentage of <E> '
                               'records have a non-null <F:q|o|n>?',
-               'name': 'vis_075_table_count_null_nonnull',
+               'name': 'vis_076_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4234,7 +4258,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Assess data quality; determine how many records are missing a value and what '
                               'proportion. Query patterns: How many <E> records have a null <F:q|o|n>?; What '
                               'percentage of <E> records have a null <F:q|o|n>?',
-               'name': 'vis_076_table_count_null',
+               'name': 'vis_077_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4505,12 +4529,13 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_068_heatmap_basic': (68, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
  'vis_069_grouped_scatter_by_color': (69, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
  'vis_070_histogram_distribution': (70, {'entity': 'E', 'field': 'F'}),
- 'vis_071_area_density': (71, {'entity': 'E', 'field': 'F'}),
- 'vis_072_dot_distribution': (72, {'entity': 'E', 'field': 'F'}),
- 'vis_073_grouped_area_density': (73, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_074_grouped_dot_distribution': (74, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_075_table_count_null_nonnull': (75, {'entity': 'E', 'field': 'F'}),
- 'vis_076_table_count_null': (76, {'entity': 'E', 'field': 'F'})}
+ 'vis_071_histogram_histogram_stacked': (71, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_072_area_density': (72, {'entity': 'E', 'field': 'F'}),
+ 'vis_073_dot_distribution': (73, {'entity': 'E', 'field': 'F'}),
+ 'vis_074_grouped_area_density': (74, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_075_grouped_dot_distribution': (75, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_076_table_count_null_nonnull': (76, {'entity': 'E', 'field': 'F'}),
+ 'vis_077_table_count_null': (77, {'entity': 'E', 'field': 'F'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -4585,12 +4610,13 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_068_heatmap_basic': ['data_cube', 'heatmap'],
  'vis_069_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
  'vis_070_histogram_distribution': ['line_item', 'histogram'],
- 'vis_071_area_density': ['line_item', 'area'],
- 'vis_072_dot_distribution': ['line_item', 'dot'],
- 'vis_073_grouped_area_density': ['line_item', 'grouped_area'],
- 'vis_074_grouped_dot_distribution': ['line_item', 'grouped_dot'],
- 'vis_075_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_076_table_count_null': ['line_item', 'table']}
+ 'vis_071_histogram_histogram_stacked': ['line_item', 'histogram'],
+ 'vis_072_area_density': ['line_item', 'area'],
+ 'vis_073_dot_distribution': ['line_item', 'dot'],
+ 'vis_074_grouped_area_density': ['line_item', 'grouped_area'],
+ 'vis_075_grouped_dot_distribution': ['line_item', 'grouped_dot'],
+ 'vis_076_table_count_null_nonnull': ['line_item', 'table'],
+ 'vis_077_table_count_null': ['line_item', 'table']}
 
 
 # Entity keys per tool name that may share a table with another entity
@@ -4666,12 +4692,13 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_068_heatmap_basic': [],
  'vis_069_grouped_scatter_by_color': [],
  'vis_070_histogram_distribution': [],
- 'vis_071_area_density': [],
- 'vis_072_dot_distribution': [],
- 'vis_073_grouped_area_density': [],
- 'vis_074_grouped_dot_distribution': [],
- 'vis_075_table_count_null_nonnull': [],
- 'vis_076_table_count_null': []}
+ 'vis_071_histogram_histogram_stacked': [],
+ 'vis_072_area_density': [],
+ 'vis_073_dot_distribution': [],
+ 'vis_074_grouped_area_density': [],
+ 'vis_075_grouped_dot_distribution': [],
+ 'vis_076_table_count_null_nonnull': [],
+ 'vis_077_table_count_null': []}
 
 # User-facing text per tool name: (title_template, summary_template),
 # with placeholders rewritten to tokens the frontend resolves against
@@ -4883,19 +4910,22 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_070_histogram_distribution': ('Histogram of {col:field}',
                                     'Displays how many {entity} fall into each range of {col:field}, as adjacent '
                                     'bars.'),
- 'vis_071_area_density': ('Density plot of {enc:x}',
+ 'vis_071_histogram_histogram_stacked': ('Histogram of {col:field1} by {enc:color}',
+                                         'Displays how many {entity} fall into each range of {col:field1}, with each '
+                                         'bar split by {enc:color}.'),
+ 'vis_072_area_density': ('Density plot of {enc:x}',
                           'Displays where {entity} concentrate across {enc:x}, as a smooth curve.'),
- 'vis_072_dot_distribution': ('Dot plot of {enc:x}',
+ 'vis_073_dot_distribution': ('Dot plot of {enc:x}',
                               'Displays a point for each {entity:one} along a single {enc:x} axis.'),
- 'vis_073_grouped_area_density': ('Density plot of {enc:x} by {enc:color}',
+ 'vis_074_grouped_area_density': ('Density plot of {enc:x} by {enc:color}',
                                   'Displays where {entity} concentrate across {enc:x}, as one overlapping curve per '
                                   '{enc:color} category.'),
- 'vis_074_grouped_dot_distribution': ('Dot plot of {enc:x} by {enc:y}',
+ 'vis_075_grouped_dot_distribution': ('Dot plot of {enc:x} by {enc:y}',
                                       'Displays a point for each {entity:one} along {enc:x}, with one row per {enc:y} '
                                       'category.'),
- 'vis_075_table_count_null_nonnull': ('Table of {enc:text} completeness',
+ 'vis_076_table_count_null_nonnull': ('Table of {enc:text} completeness',
                                       'Displays how many {entity} have a value for {field:text}, and what percentage '
                                       'of them that is.'),
- 'vis_076_table_count_null': ('Table of missing {enc:text} values',
+ 'vis_077_table_count_null': ('Table of missing {enc:text} values',
                               'Displays how many {entity} are missing {field:text}, and what percentage of them that '
                               'is.')}

@@ -280,6 +280,46 @@ export const DateHistogram = {
   },
 };
 
+export const DateStackedHistogram = {
+  ...hubmapDates,
+  args: {
+    spec: {
+      source: datasets,
+      transformation: [
+        {
+          filter: {
+            op: '!=',
+            left: { field: 'published_timestamp' },
+            right: { literal: null },
+          },
+        },
+        {
+          binby: {
+            field: 'published_timestamp',
+            output: { bin_start: 'start', bin_end: 'end' },
+          },
+        },
+        { groupby: ['start', 'end', 'assay_category'] },
+        { rollup: { count: { op: 'count' } } },
+      ],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          {
+            encoding: 'x',
+            field: 'start',
+            type: 'quantitative',
+            title: 'published_timestamp',
+          },
+          { encoding: 'x2', field: 'end', type: 'quantitative' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+          { encoding: 'color', field: 'assay_category', type: 'nominal' },
+        ],
+      },
+    },
+  },
+};
+
 export const DateAggregate = {
   ...hubmapDates,
   args: {

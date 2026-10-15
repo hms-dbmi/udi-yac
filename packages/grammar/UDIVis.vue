@@ -1035,13 +1035,24 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       markConfig.strokeWidth = layer.strokeWidth;
     if (typeof layer.strokeOpacity === 'number')
       markConfig.strokeOpacity = layer.strokeOpacity;
-    if (layer.mark === 'rect') {
+    if (layer.mark === 'rect' || layer.mark === 'bar') {
       const hasXPair =
         mapping.some((m) => m.encoding === 'x') &&
         mapping.some((m) => m.encoding === 'x2');
       const hasYPair =
         mapping.some((m) => m.encoding === 'y') &&
         mapping.some((m) => m.encoding === 'y2');
+      // A bar spanning x..x2 with a quantitative height is a histogram's bin.
+      // Vega-Lite reads such a bar as a horizontal range (a thin line at each
+      // height) unless x is marked pre-binned; marked, the bins stand
+      // upright and a colour stacks them, as it stacks a plain bar chart.
+      if (
+        layer.mark === 'bar' &&
+        hasXPair &&
+        vegaEncoding.y?.type === 'quantitative'
+      ) {
+        vegaEncoding.x.bin = { binned: true };
+      }
       // Bin-boundary ticks are raw numbers, which a time axis labels as
       // minutes; its own ticks land on calendar boundaries instead. An axis
       // that already has its ticks (an age's whole years) keeps them.
