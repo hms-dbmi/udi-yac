@@ -382,6 +382,22 @@ shrinks the risk set by each point's whole count. With no censoring the product
 telescopes to `1 - events/cohort`, which is a useful check. The
 `rolling-log-exp-product` parity golden pins both executors.
 
+**Every survival curve carries a 95% band and a time horizon, both choices.**
+`_km_confidence_band` derives `ci lower`/`ci upper` as the log-log Greenwood
+interval (the lifelines/Stata default), `S^exp(±z·se)` with
+`se = sqrt(V)/|log S|`, written with `exp`/`log` only. Guard every `log`
+argument and divisor _inside_ the expression, not just with the surrounding
+branch, because SQL may evaluate a CASE branch it does not take. `_band_layer`
+draws the band as a stepped `area` (`y`/`y2`) under the curve. `_cut_at_horizon`
+filters rows past `<HORIZON>` _after_ the estimate, so the curve inside the
+window never changes, and the end label then reads the value at the horizon
+("53% at 5y"). Cube time is read as months. Choices resolve to literals (the
+estimator is a 1/0 flag, the horizon a number of years, the band a 1/0), so they
+fill a derive on their own and are read back as columns. `udiagent.choices` holds
+the registry, and the tweak panel and tool params pick new entries up as-is.
+`tests/test_kaplan_meier.py` pins the band to lifelines' values, and the
+`km-band-horizon` parity golden pins both executors.
+
 **Where an aggregate is taken decides its scope.** `Expr.agg` respects whatever
 grouping is in effect, so the same expression means "per stratum" after a
 `groupby` and "across the cohort" before one (a `rollup` leaves the table
