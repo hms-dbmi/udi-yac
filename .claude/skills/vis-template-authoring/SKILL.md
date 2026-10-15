@@ -401,9 +401,11 @@ the registry, and the tweak panel and tool params pick new entries up as-is.
 **Where an aggregate is taken decides its scope.** `Expr.agg` respects whatever
 grouping is in effect, so the same expression means "per stratum" after a
 `groupby` and "across the cohort" before one (a `rollup` leaves the table
-ungrouped). Annotations that must line up across strata — every curve's dashed
-lead-out reaching the same right edge — need the global form, computed before the
-stratum grouping and carried down as a column.
+ungrouped). Facts that must agree across strata, such as whether the time horizon
+cut the chart (so every label reads "at 5y" or none does), need the global form,
+computed before the stratum grouping and carried down as a column. Each curve's
+end label, by contrast, sits at that curve's own last observation (`curve end`),
+a per-stratum `max`.
 
 **Multi-value columns need `unnest`.** Some columns hold a `;`-delimited set
 (`"Leptomeningeal;Spine"`), so one row belongs to several categories. Grouping such

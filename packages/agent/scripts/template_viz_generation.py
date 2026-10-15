@@ -953,8 +953,8 @@ def _cube_survival_chart(stratified: bool = False):
             )
         }
     )
-    # Global while the table is still ungrouped, so every curve's label sits at
-    # the same right edge rather than at its own last time point.
+    # Global while the table is still ungrouped: whether the horizon cut the
+    # chart is a question about the whole cohort, not about one curve.
     chart = chart.derive({"cohort end": Expr.agg("max", "<D1>")})
 
     if stratified:
@@ -1012,9 +1012,10 @@ def _cube_survival_chart(stratified: bool = False):
     )
     chart = chart.derive(
         {
+            # At the curve's own end, like the line-level label.
             "label time": Expr.cond(
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.binop("*", Expr.field("window end"), Expr.lit(1.05)),
+                Expr.field("curve end"),
                 Expr.lit(None),
             )
         }
@@ -1099,7 +1100,7 @@ def _cube_survival_chart(stratified: bool = False):
 
 #: Fill opacity of the confidence band: enough to see where two strata's bands
 #: overlap, faint enough that the curves on top stay the thing being read.
-_BAND_OPACITY = 0.18
+_BAND_OPACITY = 0.12
 
 
 def _band_layer(chart, x_field, x_axis, colour, y_title="survival (%)"):
@@ -1321,9 +1322,9 @@ def _cut_at_horizon(chart, time_field, events, units_per_year):
     everyone followed past the horizon vanish from the risk set.
 
     Derives, for the annotations downstream:
-      `window end`   — where the x axis stops: the horizon when the follow-up
-                       runs past it, else the cohort's own end, so a short
-                       cohort is not padded with empty years.
+      `curve end`    — per curve, its last observed time inside the window:
+                       where the curve and its band stop, so where its end
+                       label is anchored.
       `curve cut`    — 1 when the horizon actually removed something, which is
                        when the end label has to say where it is reading.
       `events in window` — per curve, the events the label should count.
@@ -1356,11 +1357,7 @@ def _cut_at_horizon(chart, time_field, events, units_per_year):
     )
     return chart.derive(
         {
-            "window end": Expr.cond(
-                Expr.binop("==", Expr.field("curve cut"), Expr.lit(1)),
-                Expr.field("horizon time"),
-                Expr.field("cohort end"),
-            ),
+            "curve end": Expr.agg("max", time_field),
             "events in window": Expr.agg("sum", events),
         }
     )
@@ -1607,9 +1604,9 @@ def _survival_chart(
         }
     )
 
-    # Where the x axis ends, measured across the whole cohort rather than within
-    # one stratum: every curve's label has to sit at the same edge, not
-    # just a little past its own last event. Taken here because a rollup leaves
+    # How far the follow-up runs, measured across the whole cohort rather than
+    # within one stratum: whether the horizon cut the chart — and so whether
+    # every label says "at 5y" — is one answer for all curves. Taken here because a rollup leaves
     # the table ungrouped, so this aggregate is global; once the stratum grouping
     # below is applied, the same expression would give a per-curve maximum.
     chart = chart.derive({"cohort end": Expr.agg("max", "survival years")})
@@ -1639,12 +1636,11 @@ def _survival_chart(
     # the current grouping, giving a per-stratum final when stratified. Within
     # the window, so it is the curve's value at the horizon.
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
-    # Anchor for the end-of-line label. It sits at the cohort-wide right edge —
-    # the same x for every curve — plus a margin, at the curve's final height.
-    # Being the largest x in the data, it also sets where the axis stops. The
-    # curve and its band themselves end at the group's last observed time: there
-    # is no run-out joining them to the label, since past that time the estimate
-    # is not defined for the group, and a line drawn there read as one.
+    # Anchor for the end-of-line label: where this curve ends — its last observed
+    # time in the window — at its final height. The curve and its band stop
+    # there, since past it the estimate is not defined for the group, so the
+    # label is right-aligned to finish where the line does rather than floating
+    # at a shared right edge with nothing joining it to its curve.
     #
     # Kept for a stratum in which nobody reached the end event, too: its curve
     # runs flat along the top of the plot, and with the legend dropped in favour
@@ -1659,7 +1655,7 @@ def _survival_chart(
         {
             "label year": Expr.cond(
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.binop("*", Expr.field("window end"), Expr.lit(1.05)),
+                Expr.field("curve end"),
                 Expr.lit(None),
             )
         }

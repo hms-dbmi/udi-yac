@@ -21,11 +21,13 @@ from udiagent.vis_generate import (
 )
 
 
-def _line_rows(tmp_path, events_csv, patients_csv, **choices):
+def _line_rows(tmp_path, events_csv, patients_csv, *, _tool="_line_survival", **choices):
     """Run the single-curve event-log template on DuckDB; every output row.
 
     `choices` are optional tool arguments (estimator, time_horizon,
-    confidence_band); absent means each choice's default."""
+    confidence_band); absent means each choice's default. An `arm` column on
+    the event log becomes the stratifier, for the stratified templates."""
+    stratified = events_csv.startswith("subject,event,day,arm")
     events = tmp_path / "events.csv"
     events.write_text(events_csv)
     patients = tmp_path / "patients.csv"
@@ -44,6 +46,7 @@ def _line_rows(tmp_path, events_csv, patients_csv, **choices):
                             {"name": "event", "udi:data_type": "nominal"},
                             {"name": "day", "udi:data_type": "quantitative"},
                         ]
+                        + ([{"name": "arm", "udi:data_type": "nominal"}] if stratified else [])
                     },
                 },
                 {
@@ -62,13 +65,14 @@ def _line_rows(tmp_path, events_csv, patients_csv, **choices):
         }
     )
     _defs, dispatch, templates, _tags = _load_generated_tools()
-    tool = next(n for n in dispatch if n.endswith("_line_survival"))
+    tool = next(n for n in dispatch if n.endswith(_tool))
     idx, param_map = dispatch[tool]
     args = {
         "entity1": "events",
         "entity1_field1": "subject",
         "entity1_field2": "event",
         "entity1_field3": "day",
+        **({"entity1_field4": "arm"} if stratified else {}),
         "entity2": "patients",
         "entity2_field1": "subject",
         "entity2_field2": "status",
@@ -88,6 +92,13 @@ def _line_rows(tmp_path, events_csv, patients_csv, **choices):
     return engine.run_query(source=spec["source"], transformation=spec["transformation"])[
         "displayData"
     ]
+
+
+def _stratified_rows(tmp_path, events_csv, patients_csv, **choices):
+    """The baseline-stratified template, split by the event log's `arm`."""
+    return _line_rows(
+        tmp_path, events_csv, patients_csv, _tool="_line_survival_baseline", **choices
+    )
 
 
 def _line_level(tmp_path, events_csv, patients_csv, **choices):
@@ -346,9 +357,9 @@ def test_the_default_horizon_cuts_at_five_years_without_moving_the_curve(tmp_pat
     for subject in cut:
         for column in ("survival percentage", "ci lower", "ci upper"):
             assert cut[subject][column] == pytest.approx(full[subject][column])
-    # The axis stops at the horizon (the label anchors 5% past it), and the label
-    # reads the curve there, counting only the events inside the window.
-    assert max(r["label year"] or 0 for r in cut.values()) == pytest.approx(5 * 1.05)
+    # The label sits where the cut curve now ends — c, its last observation in
+    # the window — and reads it there, counting only the events inside it.
+    assert max(r["label year"] or 0 for r in cut.values()) == pytest.approx(1000 / 365.25)
     label = cut["a"]["final label"]
     assert label.startswith("53") and label.endswith("% at 5y (n=5, 2 events)"), label
 
@@ -361,14 +372,26 @@ def test_full_follow_up_is_the_uncut_chart(tmp_path):
 
 
 def test_a_horizon_past_the_follow_up_is_not_reported_as_a_cut(tmp_path):
-    """Ten years is longer than anyone was followed: nothing is removed, the axis
-    ends at the cohort's own end, and the label does not claim a horizon."""
+    """Ten years is longer than anyone was followed: nothing is removed, the
+    label sits at the last observation (e), and does not claim a horizon."""
     rows = _by_subject(_line_rows(tmp_path, *_LONG_FOLLOW_UP, time_horizon="10"))
     assert sorted(rows) == list("abcde")
     assert " at " not in rows["a"]["final label"]
-    assert max(r["label year"] or 0 for r in rows.values()) == pytest.approx(
-        3000 / 365.25 * 1.05
+    assert max(r["label year"] or 0 for r in rows.values()) == pytest.approx(3000 / 365.25)
+
+
+def test_each_stratum_labels_its_own_curve_end(tmp_path):
+    """A curve that stops early is labelled where it stops, not at the edge of
+    the longest one. Stratified run over the same follow-up, split so arm X
+    ends at day 1000 and arm Y at day 3000."""
+    events, patients = _LONG_FOLLOW_UP
+    arms = {"a": "X", "b": "X", "c": "X", "d": "Y", "e": "Y"}
+    events = "subject,event,day,arm\n" + "".join(
+        f"{line},{arms[line.split(',')[0]]}\n" for line in events.splitlines()[1:]
     )
+    rows = _stratified_rows(tmp_path, events, patients, time_horizon="full")
+    ends = {r["stratum"]: r["label year"] for r in rows if r["label year"] is not None}
+    assert ends == pytest.approx({"X": 1000 / 365.25, "Y": 3000 / 365.25})
 
 
 def test_a_cube_horizon_is_read_in_months(tmp_path):
