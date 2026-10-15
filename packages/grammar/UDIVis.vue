@@ -829,6 +829,16 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
             tickCount: { expr: 'ceil(width / 100)' },
           };
         }
+        // The tooltip reads the field's format, as tables and filter chips
+        // do; the axis keeps its own calendar labels. Without it a binned
+        // bar's range (start – end) is formatted as a plain number, even on a
+        // time scale: 1.76e+12 – 1.78e+12.
+        if (isTime) {
+          Object.assign(vegaEncoding[encoding], {
+            format: 'epoch_ms',
+            formatType: 'udiTime',
+          });
+        }
         // The other time formats (a year, an age in days, epoch seconds) keep
         // their quantitative scale in stored units, so domains, brushes and
         // filters are untouched; only the labels go through formatTime. A
