@@ -692,12 +692,18 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         ) as [number, number, number];
 
         const fieldKey = JSON.stringify(field);
-        const groupbyObject: { [key: string]: string } = {
+        const binColumns: { [key: string]: string } = {
           [bin_start]: `d => op.bin(d[${fieldKey}], ${binMin}, ${binMax}, ${binStep}, 0)`,
           [bin_end]: `d => op.bin(d[${fieldKey}], ${binMin}, ${binMax}, ${binStep}, 1)`,
         };
 
-        currentTable.table = inTable.groupby(groupbyObject);
+        // Bin edges become real columns, then the grouping, as the SQL compiler
+        // does: grouping by the computed keys alone left no `start`/`end`
+        // column for a later step to name, so a `groupby` adding a category
+        // to the bins (a stacked histogram) failed in the browser only.
+        currentTable.table = inTable
+          .derive(binColumns)
+          .groupby(bin_start, bin_end);
       } else if ('rollup' in transform) {
         const inTable = getInTable(transform.in);
         const aggregateFunctions: { [key: string]: TableExpr } = {};
