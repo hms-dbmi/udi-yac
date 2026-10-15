@@ -313,7 +313,9 @@ export function IntervalFilterComponent({
         onEntityChange={handleEntityChange}
         onFieldChange={handleFieldChange}
       />
-      <div className="udi:flex udi:items-center udi:gap-1.5 udi:text-sm">
+      {/* Wraps when two date inputs don't fit beside each other (the chat's
+          side panel is too narrow for them); number boxes stay on one line. */}
+      <div className="udi:flex udi:flex-wrap udi:items-center udi:gap-1.5 udi:text-sm">
         {boundInput(0)}
         <span className="udi:text-muted-foreground">to</span>
         {boundInput(1)}

@@ -63,7 +63,13 @@ export function DateBoundInput({
       type="date"
       aria-label={label}
       disabled={disabled}
-      className={cn('udi:h-7 udi:w-36 udi:px-1.5 udi:text-sm udi:font-semibold', className)}
+      // The browser's own width, which fits its date layout (Firefox's
+      // `12 / 21 / 2025` is wider than Chrome's `12/21/2025`); a fixed width
+      // that the row could shrink cut the year off.
+      className={cn(
+        'udi:h-7 udi:w-auto udi:shrink-0 udi:px-1.5 udi:text-sm udi:font-semibold',
+        className,
+      )}
       value={text}
       min={min != null ? toDateInputValue(min) : undefined}
       max={max != null ? toDateInputValue(max) : undefined}
