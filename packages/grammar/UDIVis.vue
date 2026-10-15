@@ -398,7 +398,19 @@ function setDefaultDomains(
       // @ts-expect-error: checking domainWhenFiltered
       const domainWhenFiltered: string | undefined = mapping.domainWhenFiltered;
       if (type === 'quantitative') {
-        if (mark === 'bar' && domainWhenFiltered !== 'full') continue;
+        // A bar spanning x..x2 is a histogram's bin (convertToVegaSpec marks
+        // it pre-binned), so its x is anchored like a rect histogram's below,
+        // or brushing it shrinks the axis to the bins that are left. Its y
+        // stays with Vega-Lite, which sizes stacked bins by their totals.
+        const channel: string = mapping.encoding;
+        const binnedBarX =
+          mark === 'bar' &&
+          (channel === 'x' || channel === 'x2') &&
+          (mappingList as Array<{ encoding: string }>).some(
+            (m) => m.encoding === 'x2',
+          );
+        if (mark === 'bar' && !binnedBarX && domainWhenFiltered !== 'full')
+          continue;
         // Rect marks (histograms) pair x with x2 and y with y2 on the
         // same scale. Without an explicit domain, vega-lite auto-fits
         // the scale to the *filtered* values flowing into the chart,
@@ -406,7 +418,7 @@ function setDefaultDomains(
         // domain that unions both ends from allData so bin edges stay
         // anchored. Skip the partner encoding (x2/y2) — it shares the
         // x/y scale and doesn't need its own domain.
-        if (mark === 'rect') {
+        if (mark === 'rect' || binnedBarX) {
           // TS 6 can infer `encoding` here without the previous
           // `@ts-expect-error: encoding is statically known` escape; the
           // unused directive was tripping TS2578 under the upgrade.
