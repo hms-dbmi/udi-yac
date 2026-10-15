@@ -3387,7 +3387,7 @@ def generate():
         spec=_survival_chart(),
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(None)],
-        title_template="Survival curve for <E2>",
+        title_template="<ENDPOINT> curve for <E2>",
         summary_template=(
             "Plots the share of <E2> still event-free over time, from the start "
             "event to the end event, reading each subject's events from <E1>."
@@ -3459,7 +3459,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.AT_START)],
         name_hint="survival_baseline",
-        title_template="Survival curves for <E2> by <E1.F4>",
+        title_template="<ENDPOINT> curves for <E2> by <E1.F4>",
         summary_template=(
             "Plots one curve per <E1.F4> value, read from each subject's start event, so every subject falls in exactly one group."
         ),
@@ -3542,7 +3542,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.AT_START)],
         name_hint="survival_baseline_multivalue",
-        title_template="Survival curves for <E2> by each <E1.F4> value",
+        title_template="<ENDPOINT> curves for <E2> by each <E1.F4> value",
         summary_template=(
             "Expands the <E1.F4> list on each subject's start event, so a subject counts toward every value it listed then and the curves overlap."
         ),
@@ -3619,7 +3619,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.EVER)],
         name_hint="survival_ever",
-        title_template="Survival curves for <E2> by every <E1.F4> ever recorded",
+        title_template="<ENDPOINT> curves for <E2> by every <E1.F4> ever recorded",
         summary_template=(
             "A subject joins every group whose <E1.F4> value appears anywhere on its timeline, so the curves overlap and do not add up to the whole cohort."
         ),
@@ -3699,7 +3699,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.EVER)],
         name_hint="survival_ever_multivalue",
-        title_template="Survival curves for <E2> by every <E1.F4> value ever listed",
+        title_template="<ENDPOINT> curves for <E2> by every <E1.F4> value ever listed",
         summary_template=(
             "Expands the delimited <E1.F4> column on every event, so a subject joins each value listed at any point and the curves overlap."
         ),
@@ -3776,7 +3776,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related",
-        title_template="Survival curves for <E3> by <E2.F>",
+        title_template="<ENDPOINT> curves for <E3> by <E2.F>",
         summary_template=(
             "Joins <E1> to <E2> on the subject id and plots one curve per <E2.F> value; a subject with several <E2> records joins a group for each."
         ),
@@ -3869,7 +3869,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related_numeric",
-        title_template="Survival curves for <E3> by <E2.F>",
+        title_template="<ENDPOINT> curves for <E3> by <E2.F>",
         summary_template=(
             "Joins <E1> to <E2> on the subject id and cuts <E2.F> into buckets at the supplied thresholds, one curve per bucket."
         ),
@@ -3962,7 +3962,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related_multivalue",
-        title_template="Survival curves for <E3> by each <E2.F> value",
+        title_template="<ENDPOINT> curves for <E3> by each <E2.F> value",
         summary_template=(
             "Joins <E1> to <E2> on the subject id, expands the delimited <E2.F> column, and plots one curve per value; the curves overlap."
         ),
@@ -4084,7 +4084,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.ANY_OF)],
         name_hint="survival_ever_matching",
-        title_template="Survival curves for <E3> by <E2.F>",
+        title_template="<ENDPOINT> curves for <E3> by <E2.F>",
         summary_template=(
             "Splits subjects by whether <E2> ever records one of the named <E2.F> values for them, against everyone else."
         ),
@@ -4173,7 +4173,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.PRESENCE)],
         name_hint="survival_presence",
-        title_template="Survival curves for <E3> by presence in <E2>",
+        title_template="<ENDPOINT> curves for <E3> by presence in <E2>",
         summary_template=(
             "Splits subjects by whether <E2> holds a row for them at all, giving two curves that together cover the whole cohort."
         ),
@@ -4257,7 +4257,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.PRESENCE_2X2)],
         name_hint="survival_presence_2x2",
-        title_template="Survival curves for <E4> by presence in <E2> and <E3>",
+        title_template="<ENDPOINT> curves for <E4> by presence in <E2> and <E3>",
         summary_template=(
             "Splits subjects four ways — <E2> only, <E3> only, both, neither — by whether each table holds a row for them."
         ),

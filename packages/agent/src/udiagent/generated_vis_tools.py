@@ -2658,6 +2658,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -2762,6 +2776,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -2949,6 +2977,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -3136,6 +3178,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -3324,6 +3380,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -3511,6 +3581,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -3710,6 +3794,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -3911,6 +4009,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -4111,6 +4223,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -4312,6 +4438,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -4429,6 +4569,20 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                 'band is drawn for Kaplan-Meier only.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
@@ -4946,6 +5100,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_051_line_sorted': (51, {'dimension': 'D', 'entity': 'E'}),
  'vis_052_line_survival': (52,
                            {'confidence_band': 'CI',
+                            'endpoint': 'ENDPOINT',
                             'entity1': 'E1',
                             'entity1_field1': 'E1.F1',
                             'entity1_field2': 'E1.F2',
@@ -4961,6 +5116,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                             'value3': 'V3'}),
  'vis_053_line_survival_baseline': (53,
                                     {'confidence_band': 'CI',
+                                     'endpoint': 'ENDPOINT',
                                      'entity1': 'E1',
                                      'entity1_field1': 'E1.F1',
                                      'entity1_field2': 'E1.F2',
@@ -4978,6 +5134,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                      'value3': 'V3'}),
  'vis_054_line_survival_baseline_multivalue': (54,
                                                {'confidence_band': 'CI',
+                                                'endpoint': 'ENDPOINT',
                                                 'entity1': 'E1',
                                                 'entity1_field1': 'E1.F1',
                                                 'entity1_field2': 'E1.F2',
@@ -4995,6 +5152,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                                 'value3': 'V3'}),
  'vis_055_line_survival_ever': (55,
                                 {'confidence_band': 'CI',
+                                 'endpoint': 'ENDPOINT',
                                  'entity1': 'E1',
                                  'entity1_field1': 'E1.F1',
                                  'entity1_field2': 'E1.F2',
@@ -5012,6 +5170,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                  'value3': 'V3'}),
  'vis_056_line_survival_ever_multivalue': (56,
                                            {'confidence_band': 'CI',
+                                            'endpoint': 'ENDPOINT',
                                             'entity1': 'E1',
                                             'entity1_field1': 'E1.F1',
                                             'entity1_field2': 'E1.F2',
@@ -5029,6 +5188,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'value3': 'V3'}),
  'vis_057_line_survival_related': (57,
                                    {'confidence_band': 'CI',
+                                    'endpoint': 'ENDPOINT',
                                     'entity1': 'E1',
                                     'entity1_field1': 'E1.F1',
                                     'entity1_field2': 'E1.F2',
@@ -5048,6 +5208,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                     'value3': 'V3'}),
  'vis_058_line_survival_related_numeric': (58,
                                            {'confidence_band': 'CI',
+                                            'endpoint': 'ENDPOINT',
                                             'entity1': 'E1',
                                             'entity1_field1': 'E1.F1',
                                             'entity1_field2': 'E1.F2',
@@ -5067,6 +5228,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'value3': 'V3'}),
  'vis_059_line_survival_related_multivalue': (59,
                                               {'confidence_band': 'CI',
+                                               'endpoint': 'ENDPOINT',
                                                'entity1': 'E1',
                                                'entity1_field1': 'E1.F1',
                                                'entity1_field2': 'E1.F2',
@@ -5086,6 +5248,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                                'value3': 'V3'}),
  'vis_060_line_survival_ever_matching': (60,
                                          {'confidence_band': 'CI',
+                                          'endpoint': 'ENDPOINT',
                                           'entity1': 'E1',
                                           'entity1_field1': 'E1.F1',
                                           'entity1_field2': 'E1.F2',
@@ -5105,6 +5268,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                           'value3': 'V3'}),
  'vis_061_line_survival_presence': (61,
                                     {'confidence_band': 'CI',
+                                     'endpoint': 'ENDPOINT',
                                      'entity1': 'E1',
                                      'entity1_field1': 'E1.F1',
                                      'entity1_field2': 'E1.F2',
@@ -5122,6 +5286,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                      'value3': 'V3'}),
  'vis_062_line_survival_presence_2x2': (62,
                                         {'confidence_band': 'CI',
+                                         'endpoint': 'ENDPOINT',
                                          'entity1': 'E1',
                                          'entity1_field1': 'E1.F1',
                                          'entity1_field2': 'E1.F2',
@@ -5482,42 +5647,44 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                               '{enc:color} category.'),
  'vis_051_line_sorted': ('Line chart of {enc:y} over {enc:x}',
                          'Displays how {enc:y} changes across {enc:x}, as a line.'),
- 'vis_052_line_survival': ('Survival curve for {ent:entity2}',
+ 'vis_052_line_survival': ('{bind:ENDPOINT} curve for {ent:entity2}',
                            'Plots the share of {ent:entity2} still event-free over time, from the start event to the '
                            "end event, reading each subject's events from {entity1}."),
- 'vis_053_line_survival_baseline': ('Survival curves for {ent:entity2} by {col:entity1_field4}',
+ 'vis_053_line_survival_baseline': ('{bind:ENDPOINT} curves for {ent:entity2} by {col:entity1_field4}',
                                     "Plots one curve per {col:entity1_field4} value, read from each subject's start "
                                     'event, so every subject falls in exactly one group.'),
- 'vis_054_line_survival_baseline_multivalue': ('Survival curves for {ent:entity2} by each {col:entity1_field4} value',
+ 'vis_054_line_survival_baseline_multivalue': ('{bind:ENDPOINT} curves for {ent:entity2} by each {col:entity1_field4} '
+                                               'value',
                                                "Expands the {col:entity1_field4} list on each subject's start event, "
                                                'so a subject counts toward every value it listed then and the curves '
                                                'overlap.'),
- 'vis_055_line_survival_ever': ('Survival curves for {ent:entity2} by every {col:entity1_field4} ever recorded',
+ 'vis_055_line_survival_ever': ('{bind:ENDPOINT} curves for {ent:entity2} by every {col:entity1_field4} ever recorded',
                                 'A subject joins every group whose {col:entity1_field4} value appears anywhere on its '
                                 'timeline, so the curves overlap and do not add up to the whole cohort.'),
- 'vis_056_line_survival_ever_multivalue': ('Survival curves for {ent:entity2} by every {col:entity1_field4} value ever '
-                                           'listed',
+ 'vis_056_line_survival_ever_multivalue': ('{bind:ENDPOINT} curves for {ent:entity2} by every {col:entity1_field4} '
+                                           'value ever listed',
                                            'Expands the delimited {col:entity1_field4} column on every event, so a '
                                            'subject joins each value listed at any point and the curves overlap.'),
- 'vis_057_line_survival_related': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+ 'vis_057_line_survival_related': ('{bind:ENDPOINT} curves for {ent:entity3} by {col:entity2_field}',
                                    'Joins {entity1} to {ent:entity2} on the subject id and plots one curve per '
                                    '{col:entity2_field} value; a subject with several {ent:entity2} records joins a '
                                    'group for each.'),
- 'vis_058_line_survival_related_numeric': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+ 'vis_058_line_survival_related_numeric': ('{bind:ENDPOINT} curves for {ent:entity3} by {col:entity2_field}',
                                            'Joins {entity1} to {ent:entity2} on the subject id and cuts '
                                            '{col:entity2_field} into buckets at the supplied thresholds, one curve per '
                                            'bucket.'),
- 'vis_059_line_survival_related_multivalue': ('Survival curves for {ent:entity3} by each {col:entity2_field} value',
+ 'vis_059_line_survival_related_multivalue': ('{bind:ENDPOINT} curves for {ent:entity3} by each {col:entity2_field} '
+                                              'value',
                                               'Joins {entity1} to {ent:entity2} on the subject id, expands the '
                                               'delimited {col:entity2_field} column, and plots one curve per value; '
                                               'the curves overlap.'),
- 'vis_060_line_survival_ever_matching': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+ 'vis_060_line_survival_ever_matching': ('{bind:ENDPOINT} curves for {ent:entity3} by {col:entity2_field}',
                                          'Splits subjects by whether {ent:entity2} ever records one of the named '
                                          '{col:entity2_field} values for them, against everyone else.'),
- 'vis_061_line_survival_presence': ('Survival curves for {ent:entity3} by presence in {ent:entity2}',
+ 'vis_061_line_survival_presence': ('{bind:ENDPOINT} curves for {ent:entity3} by presence in {ent:entity2}',
                                     'Splits subjects by whether {ent:entity2} holds a row for them at all, giving two '
                                     'curves that together cover the whole cohort.'),
- 'vis_062_line_survival_presence_2x2': ('Survival curves for {ent:entity4} by presence in {ent:entity2} and '
+ 'vis_062_line_survival_presence_2x2': ('{bind:ENDPOINT} curves for {ent:entity4} by presence in {ent:entity2} and '
                                         '{ent:entity3}',
                                         'Splits subjects four ways — {ent:entity2} only, {ent:entity3} only, both, '
                                         'neither — by whether each table holds a row for them.'),

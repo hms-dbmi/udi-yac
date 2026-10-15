@@ -121,6 +121,66 @@ class ChoiceError(ValueError):
     pass
 
 
+@dataclass(frozen=True)
+class TextLabel:
+    """A template slot that only NAMES what a chart shows, in its title.
+
+    Unlike a `Choice` it changes no computation, so it is deliberately not
+    offered in the tweak panel: flipping "overall" to "event-free" there would
+    relabel the chart without changing which events end its curves. It lives in
+    a template's title/summary text, never in its spec, and is filled in on the
+    server (`resolve_text_templates`) from the tool argument the model set.
+    """
+
+    #: Tool parameter name the model sends.
+    param: str
+    #: The text used when the model sends none.
+    default: str
+    #: option -> the text that replaces the placeholder.
+    options: dict[str, str]
+    #: Tool parameter description, for the model.
+    description: str
+
+
+#: Which survival endpoint a curve shows. The events that end a curve are the
+#: template's `value2` list — data values, which differ per dataset ("death",
+#: "Deceased"), so the endpoint cannot be read off them reliably. The model picks
+#: both from the same request, so it is asked to name the one it built.
+ENDPOINT = TextLabel(
+    param="endpoint",
+    default="Survival",
+    options={
+        "overall_survival": "Overall survival",
+        "event_free_survival": "Event-free survival",
+        "progression_free_survival": "Progression-free survival",
+    },
+    description=(
+        "OPTIONAL. Names the survival endpoint in the chart title, and must match "
+        "the end events in value2: 'overall_survival' when death alone ends the "
+        "curve; 'progression_free_survival' for progression or death; "
+        "'event_free_survival' for progression, recurrence, relapse, a second "
+        "malignancy or death. Omit it when the end events are none of these; the "
+        "title then just says 'Survival'."
+    ),
+)
+
+#: Placeholder key -> its label. Written `<ENDPOINT>` in a title template.
+LABELS: dict[str, TextLabel] = {"ENDPOINT": ENDPOINT}
+
+
+def resolve_label(key: str, value) -> str:
+    """The text a label placeholder resolves to. None/'' means its default."""
+    label = LABELS[key]
+    if not (isinstance(value, str) and value):
+        return label.default
+    if value not in label.options:
+        raise ChoiceError(
+            f"'{value}' is not a valid {label.param}; use one of "
+            f"{', '.join(repr(o) for o in label.options)}."
+        )
+    return label.options[value]
+
+
 def resolve_choice(key: str, value) -> dict:
     """The expression a choice placeholder resolves to. None/'' means default."""
     choice = CHOICES[key]

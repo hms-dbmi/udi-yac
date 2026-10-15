@@ -398,6 +398,16 @@ the registry, and the tweak panel and tool params pick new entries up as-is.
 `tests/test_kaplan_meier.py` pins the band to lifelines' values, and the
 `km-band-horizon` parity golden pins both executors.
 
+**A title can name what the model chose with a label.** The event-log survival
+titles start with `<ENDPOINT>` ("Overall survival curves for …"). That is a
+`choices.LABELS` entry: an optional enum tool param, registered from the
+title/summary text (`_add_label_params`), tokenised to `{bind:ENDPOINT}` and
+filled by `resolve_text_templates`, with "Survival" as the fallback when the
+model omits it. Use a label rather than a `Choice` when the value only describes
+the chart. A choice shows up in the tweak panel, and there a describing value
+would let a reader relabel a chart without changing what it computes. Use a
+label rather than splitting a template when only the wording differs.
+
 **Where an aggregate is taken decides its scope.** `Expr.agg` respects whatever
 grouping is in effect, so the same expression means "per stratum" after a
 `groupby` and "across the cohort" before one (a `rollup` leaves the table
