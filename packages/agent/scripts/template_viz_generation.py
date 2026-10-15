@@ -894,7 +894,7 @@ def _cube_survival_chart(stratified: bool = False):
     The line-level templates reconstruct each subject's span from an event log.
     A cube has no subjects to reconstruct: it already holds counts per
     (time, status) cell, so the curve is assembled by accumulating those counts
-    instead. Everything downstream of that — the step curve, the run-out, the
+    instead. Everything downstream of that — the step curve, the band, the
     label, the censoring ticks — is the same picture, so the same idioms are
     used deliberately rather than reinvented.
 
@@ -953,8 +953,8 @@ def _cube_survival_chart(stratified: bool = False):
             )
         }
     )
-    # Global while the table is still ungrouped, so every curve's run-out reaches
-    # the same right edge rather than only its own last time point.
+    # Global while the table is still ungrouped, so every curve's label sits at
+    # the same right edge rather than at its own last time point.
     chart = chart.derive({"cohort end": Expr.agg("max", "<D1>")})
 
     if stratified:
@@ -1016,23 +1016,6 @@ def _cube_survival_chart(stratified: bool = False):
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
                 Expr.binop("*", Expr.field("window end"), Expr.lit(1.05)),
                 Expr.lit(None),
-            )
-        }
-    )
-    chart = chart.derive(
-        {
-            "rule time": Expr.cond(
-                Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.field("label time"),
-                Expr.cond(
-                    Expr.binop(
-                        "==",
-                        Expr.field("survival percentage"),
-                        Expr.field("final percentage"),
-                    ),
-                    Expr.field("<D1>"),
-                    Expr.lit(None),
-                ),
             )
         }
     )
@@ -1102,9 +1085,6 @@ def _cube_survival_chart(stratified: bool = False):
         .y(field="survival percentage", title="event-free (%)", **pct_axis)
     )
     chart = colour(
-        chart.mark("line").x(field="rule time", **time_axis).y(field="final percentage", **pct_axis)
-    )
-    chart = colour(
         chart.mark("point")
         .x(field=_CUBE_CENSOR_TIME, **time_axis)
         .y(field="survival percentage", **pct_axis)
@@ -1145,8 +1125,8 @@ def _band_layer(chart, x_field, x_axis, colour, y_title="survival (%)"):
     )
 
 
-#: Above this final percentage an end label is drawn BELOW its rule instead of
-#: above it. The label sits ~9px over the line, and the plot's top edge is the
+#: Above this final percentage an end label is drawn BELOW the curve's final
+#: level instead of above it. The label sits ~9px over that level, and the plot's top edge is the
 #: 100% gridline, so near the top a lifted label is clipped by the plot and
 #: vanishes. In data units because pixel height is unknown when the spec is
 #: written; 85 leaves room even in a small review card.
@@ -1154,7 +1134,7 @@ _LABEL_FLIP_PERCENTAGE = 85
 
 
 def _end_labels(chart, x_field, x_axis, y_axis, colour):
-    """Draw the end-of-curve labels: above the rule, or below it near the top.
+    """Draw the end-of-curve labels: above the final level, or below it near the top.
 
     A text mark's offset is a constant of its layer, so "above unless that would
     leave the plot" is two layers, and each label is routed to exactly one of
@@ -1176,8 +1156,8 @@ def _end_labels(chart, x_field, x_axis, y_axis, colour):
     for field, dy in ((above, -9), (below, 10)):
         chart = colour(
             chart.mark("text")
-            # Right-aligned and nudged clear of the rule: a centred label would
-            # sit across the line and read as a strikethrough, and a left-aligned
+            # Right-aligned and nudged clear of the curve's level: a centred label
+            # would sit across a line and read as a strikethrough, and a left-aligned
             # one would run off the plot. A white halo keeps it readable where it
             # crosses another stratum's curve.
             .place(align="right", dy=dy)
@@ -1628,7 +1608,7 @@ def _survival_chart(
     )
 
     # Where the x axis ends, measured across the whole cohort rather than within
-    # one stratum: every curve's run-out has to reach the same edge, not
+    # one stratum: every curve's label has to sit at the same edge, not
     # just a little past its own last event. Taken here because a rollup leaves
     # the table ungrouped, so this aggregate is global; once the stratum grouping
     # below is applied, the same expression would give a per-curve maximum.
@@ -1659,18 +1639,19 @@ def _survival_chart(
     # the current grouping, giving a per-stratum final when stratified. Within
     # the window, so it is the curve's value at the horizon.
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
-    # Anchor for the end-of-line label, and the far end of the run-out rule.
-    # It sits at the cohort-wide right edge — the same x for every curve — plus a
-    # margin, so that even the longest curve (whose own last event *is* the
-    # cohort end) gets a visible run of dashes. Being the largest x in the data,
-    # it also sets where the axis stops.
+    # Anchor for the end-of-line label. It sits at the cohort-wide right edge —
+    # the same x for every curve — plus a margin, at the curve's final height.
+    # Being the largest x in the data, it also sets where the axis stops. The
+    # curve and its band themselves end at the group's last observed time: there
+    # is no run-out joining them to the label, since past that time the estimate
+    # is not defined for the group, and a line drawn there read as one.
     #
     # Kept for a stratum in which nobody reached the end event, too: its curve
     # runs flat along the top of the plot, and with the legend dropped in favour
     # of these labels, an unlabelled curve there could not be identified at all.
     # `_end_labels` draws it below the line, where the plot does not clip it.
     #
-    # Held on one row per group — the same `rank() == 1` row the rule borrows. A
+    # Held on one row per group — the `rank() == 1` row. A
     # text mark draws once per row it receives, so leaving this on every row would
     # stack dozens of copies of the label on the same point: opaque, heavier than
     # the font it declares, and no way to see anything behind it.
@@ -1683,15 +1664,6 @@ def _survival_chart(
             )
         }
     )
-    # The rule is a short run-out from the end of the curve to its label,
-    # rather than a full-width line cutting back across the descending curve.
-    #
-    # Only one row ever holds the final value (the last event), and a line mark
-    # needs two points — so the second endpoint is borrowed from an arbitrary
-    # other row. That is sound because this layer maps y to `final percentage`,
-    # which is constant across the group: any two rows give the same horizontal
-    # line, and only their x matters. Every other row is nulled out and dropped
-    # by vega-lite.
     # A group in which every subject reached the end event has nobody at day 0, so
     # its curve would begin at its first event partway across the chart. Draw the
     # missing flat segment at 100% explicitly: two borrowed rows again, using a
@@ -1731,23 +1703,6 @@ def _survival_chart(
                     Expr.lit(None),
                 ),
             ),
-        }
-    )
-    chart = chart.derive(
-        {
-            "rule year": Expr.cond(
-                Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.field("label year"),
-                Expr.cond(
-                    Expr.binop(
-                        "==",
-                        Expr.field("survival percentage"),
-                        Expr.field("final percentage"),
-                    ),
-                    Expr.field("survival years"),
-                    Expr.lit(None),
-                ),
-            )
         }
     )
     # No round() in the grammar: floor(x + 0.5) using the modulo operator, so the
@@ -1834,18 +1789,6 @@ def _survival_chart(
             domain={"min": 0, "max": 100},
             title="survival (%)",
         )
-    )
-    if stratum:
-        chart = chart.color(**stratum_colour)
-
-    chart = (
-        chart.mark("line")
-        # Solid, not dashed. The dashes were meant to read as "annotation, not
-        # data", but the run-out carries a real measured value — the final
-        # percentage held to the edge of observation — and a dashed line invited
-        # the opposite reading, that the value was uncertain or extrapolated.
-        .x(field="rule year", type="quantitative", title="survival years", domain={"min": 0})
-        .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
         chart = chart.color(**stratum_colour)
