@@ -1,13 +1,14 @@
 import type { DataSource, DataTransformation } from './GrammarTypes';
 
 /**
- * Date columns, so charts and tables show dates instead of the stored numbers.
+ * Time columns, so charts and tables show dates, years and ages instead of the
+ * stored numbers.
  *
- * A data package marks a date column with `udi:time_format` on the field. The
+ * A data package marks such a column with `udi:time_format` on the field. The
  * column keeps its data type (an epoch-ms column stays `quantitative`), so
  * transformations, selections and the SQL executor treat it as a number; only
- * the renderers read the format. Only `epoch_ms` is rendered today — a format
- * is passed through untouched until a renderer learns it.
+ * the renderers read the format. A format no formatter below knows is passed
+ * through and rendered as the plain number.
  */
 /** Entity → field → `udi:time_format`. */
 export type TimeFormats = Record<string, Record<string, string>>;
@@ -74,10 +75,43 @@ export function timeColumns(spec: {
   return columns;
 }
 
-/** Whether `field` holds epoch-ms dates — the one format the renderers handle. */
+/** Whether `field` holds epoch-ms dates, which charts draw on a time scale. */
 export function isEpochMs(
   columns: Map<string, string>,
   field: string,
 ): boolean {
   return columns.get(field) === 'epoch_ms';
+}
+
+export const DAYS_PER_YEAR = 365.25;
+
+// A Map rather than an object literal, so a format named like an Object
+// prototype key ("toString") is unknown rather than callable.
+const FORMATTERS = new Map<string, (value: number) => string>([
+  ['epoch_ms', (v) => new Date(v).toLocaleDateString()],
+  ['epoch_s', (v) => new Date(v * 1000).toLocaleDateString()],
+  // A calendar year: no thousands separator, and a mean year reads as a year.
+  ['year', (v) => String(Math.round(v))],
+  // A duration such as an age, read in years.
+  ['days', (v) => `${(v / DAYS_PER_YEAR).toFixed(1)} y`],
+]);
+
+/** A stored value as its `udi:time_format` reads: `epoch_ms`/`epoch_s` as the
+ *  local date, `year` as `1985`, `days` as `12.0 y`. Anything else — an unknown
+ *  format, or a missing value — as the plain value. Vega-Lite calls it for
+ *  axis, legend and tooltip labels, registered as `udiTime`. */
+export function formatTime(value: unknown, format: string): string {
+  const formatter = FORMATTERS.get(format);
+  return formatter && typeof value === 'number' && Number.isFinite(value)
+    ? formatter(value)
+    : String(value);
+}
+
+/** `field`'s time format, if `formatTime` knows it. */
+export function timeFormatOf(
+  columns: Map<string, string>,
+  field: string,
+): string | undefined {
+  const format = columns.get(field);
+  return format && FORMATTERS.has(format) ? format : undefined;
 }

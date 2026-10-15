@@ -8,7 +8,7 @@ import type { DataSelection } from '../stores/dataFiltersStore';
 import { FilterTarget } from './FilterTarget';
 import { StepNumberInput } from './StepNumberInput';
 import { Input } from '@/components/ui/input';
-import { fromDateInputValue, toDateInputValue } from '@/utils/formatDate';
+import { fromDateInputValue, toDateInputValue } from '@/utils/dateInput';
 import { cutPrecision } from '../utils/grouping';
 import type { DataFieldDomain } from '@/types/dataPackage';
 import type { RangeSelection } from 'udi-toolkit/react';
@@ -271,12 +271,14 @@ export function IntervalFilterComponent({
   const shownRange = rangeMinMax.hasRange ? thumbRange : localRange;
   const boundClass = 'udi:h-7 udi:w-24 udi:px-1.5 udi:text-sm udi:font-semibold';
 
-  // An epoch-ms date field is filtered by day: a date picker per bound, the
-  // lower taking in its whole first day and the upper its whole last day.
-  const isDate = getTimeFormat(entity, field) === 'epoch_ms';
+  // An epoch date field is filtered by day: a date picker per bound, the lower
+  // taking in its whole first day and the upper its whole last day. A year or
+  // an age keeps the number box, in its stored units.
+  const timeFormat = getTimeFormat(entity, field);
+  const msPerUnit = timeFormat === 'epoch_ms' ? 1 : timeFormat === 'epoch_s' ? 1000 : null;
   const boundInput = (index: 0 | 1) => {
     const label = `${index === 0 ? 'Minimum' : 'Maximum'} ${field}`;
-    if (!isDate) {
+    if (msPerUnit === null) {
       return (
         <StepNumberInput
           value={shownRange[index]}
@@ -294,12 +296,13 @@ export function IntervalFilterComponent({
         aria-label={label}
         disabled={!isValid}
         className="udi:h-7 udi:w-36 udi:px-1.5 udi:text-sm udi:font-semibold"
-        value={toDateInputValue(shownRange[index])}
-        min={rangeMinMax.hasRange ? toDateInputValue(rangeMinMax.min) : undefined}
-        max={rangeMinMax.hasRange ? toDateInputValue(rangeMinMax.max) : undefined}
+        value={toDateInputValue(shownRange[index] * msPerUnit)}
+        min={rangeMinMax.hasRange ? toDateInputValue(rangeMinMax.min * msPerUnit) : undefined}
+        max={rangeMinMax.hasRange ? toDateInputValue(rangeMinMax.max * msPerUnit) : undefined}
         onChange={(e) => {
           const ms = fromDateInputValue(e.target.value, index === 1);
-          if (ms !== null) handleBoundCommit(index, ms);
+          // Floored, so a day's last millisecond is its last second in epoch_s.
+          if (ms !== null) handleBoundCommit(index, Math.floor(ms / msPerUnit));
         }}
       />
     );

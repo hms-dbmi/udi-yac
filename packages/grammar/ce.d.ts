@@ -78,8 +78,8 @@ export type {
   RemoteBackendConfig,
 } from './dist/queryBackend';
 
-/** Date columns (`udi:time_format`), so charts and tables show dates. */
-export { setTimeFormats } from './dist/temporal';
+/** Time columns (`udi:time_format`), so charts and tables show dates, years and ages. */
+export { setTimeFormats, formatTime } from './dist/temporal';
 export type { TimeFormats } from './dist/temporal';
 
 /**

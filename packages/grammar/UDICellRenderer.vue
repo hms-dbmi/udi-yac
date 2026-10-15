@@ -16,7 +16,7 @@ import {
 } from './TableUtil';
 import type { UDIPalette } from './Palette';
 import { toTableRampInterpolator, toTableCategoryColors } from './Palette';
-import { isEpochMs } from './temporal';
+import { formatTime, timeFormatOf } from './temporal';
 
 // Define props
 
@@ -28,7 +28,7 @@ export interface UDICellRendererParams<
   udiColumnMapping: ExtendedRowMapping[];
   /** Consumer-supplied color palette, forwarded from TableComponent. */
   palette?: UDIPalette;
-  /** Date columns of the spec (`timeColumns`), forwarded from TableComponent. */
+  /** Time columns of the spec (`timeColumns`), forwarded from TableComponent. */
   timeColumns?: Map<string, string>;
 }
 
@@ -129,13 +129,11 @@ function getTextValue(layer: string) {
   const textMapping = rowMapping.find((m) => m.encoding === 'text');
   if (!textMapping) return null;
   let value = props.params.data?.[textMapping.field];
-  if (
-    typeof value === 'number' &&
-    props.params.timeColumns &&
-    isEpochMs(props.params.timeColumns, textMapping.field)
-  ) {
-    value = new Date(value).toLocaleDateString();
-  }
+  const timeFormat =
+    typeof value === 'number' && props.params.timeColumns
+      ? timeFormatOf(props.params.timeColumns, textMapping.field)
+      : undefined;
+  if (timeFormat) value = formatTime(value, timeFormat);
   if (value instanceof Date) {
     value = value.toLocaleDateString();
   }

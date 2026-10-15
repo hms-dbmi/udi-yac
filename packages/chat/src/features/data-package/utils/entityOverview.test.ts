@@ -294,9 +294,13 @@ describe('formatIntervalDomain', () => {
 
   it('renders an epoch-ms date range as dates', () => {
     const [a, b] = [1637434970889, 1749678978392];
-    expect(formatIntervalDomain(interval(a, b), true)).toBe(
+    expect(formatIntervalDomain(interval(a, b), 'epoch_ms')).toBe(
       `${new Date(a).toLocaleDateString()} – ${new Date(b).toLocaleDateString()}`,
     );
+  });
+
+  it('renders a year range without thousands separators', () => {
+    expect(formatIntervalDomain(interval(1900, 2026), 'year')).toBe('1900 – 2026');
   });
 
   it('degrades non-finite bounds from all-null columns', () => {

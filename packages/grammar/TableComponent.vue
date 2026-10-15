@@ -180,7 +180,7 @@ const colDefs = computed<ColDef[]>(() => {
         udiColumnMapping: groupedMapping[key],
         // forward the consumer palette so cell colors match the charts
         palette: effectivePalette.value,
-        // date columns, so cells show dates rather than epoch numbers
+        // time columns, so cells show dates, years and ages, not raw numbers
         timeColumns: dateColumns,
       },
       /* eslint-disable  @typescript-eslint/no-explicit-any */

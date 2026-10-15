@@ -27,6 +27,7 @@ import { isEmpty, debounce } from 'lodash';
 import type { UDIPalette } from './Palette';
 import { DEFAULT_PALETTE, toVegaRange, toVegaRamp } from './Palette';
 import { registerRampScheme } from './paletteScheme';
+import { formatTime } from './temporal';
 import {
   PICK_SIGNAL,
   type PickMode,
@@ -142,6 +143,9 @@ function buildVegaConfig(): Record<string, unknown> {
     text: { fontSize: 11 * s },
   };
   if (markColor != null) config.mark = { color: markColor };
+  // Lets an encoding name `formatType: 'udiTime'` (UDIVis does, for a year or
+  // an age column), registered as an expression function in vegaEmbed below.
+  config.customFormatTypes = true;
   return config;
 }
 
@@ -275,6 +279,7 @@ function initVegaChart() {
   vegaEmbed(vegaContainer.value, specObject as VisualizationSpec, {
     actions: props.hideActions ? false : true,
     config: buildVegaConfig(),
+    expressionFunctions: { udiTime: formatTime },
     ...(axis || legend
       ? {
           patch: (vgSpec) => {

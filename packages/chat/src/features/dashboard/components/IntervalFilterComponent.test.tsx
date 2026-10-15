@@ -29,6 +29,7 @@ const pkg = {
           { name: 'age', 'udi:data_type': 'quantitative' },
           { name: 'bmi', 'udi:data_type': 'quantitative' },
           { name: 'created', 'udi:data_type': 'quantitative', 'udi:time_format': 'epoch_ms' },
+          { name: 'created_s', 'udi:data_type': 'quantitative', 'udi:time_format': 'epoch_s' },
         ],
       },
     },
@@ -57,6 +58,13 @@ const JAN_1_2020 = new Date(2020, 0, 1).getTime();
 const JAN_1_2021 = new Date(2021, 0, 1).getTime();
 
 const domains: DataFieldDomain[] = [
+  {
+    entity: 'Donor',
+    field: 'created_s',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: JAN_1_2020 / 1000, max: JAN_1_2021 / 1000 },
+  },
   {
     entity: 'Donor',
     field: 'created',
@@ -279,6 +287,23 @@ describe('IntervalFilterComponent — epoch-ms date field', () => {
     expect(onCommit).toHaveBeenLastCalledWith(
       expect.objectContaining({
         selection: { created: [JAN_1_2020, new Date(2020, 5, 15, 23, 59, 59, 999).getTime()] },
+      }),
+    );
+  });
+
+  it('reads and writes epoch seconds, the upper bound on its last second', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created_s: [JAN_1_2020 / 1000, JAN_1_2021 / 1000] });
+
+    const max = screen.getByLabelText('Maximum created_s') as HTMLInputElement;
+    expect(max.value).toBe('2021-01-01');
+
+    fireEvent.change(max, { target: { value: '2020-06-15' } });
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: {
+          created_s: [JAN_1_2020 / 1000, new Date(2020, 5, 15, 23, 59, 59).getTime() / 1000],
+        },
       }),
     );
   });

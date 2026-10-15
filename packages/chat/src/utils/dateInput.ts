@@ -1,9 +1,3 @@
-/** An epoch-ms date as the reader's local date — what the toolkit's charts and
- *  tables show for an `epoch_ms` column (`udi:time_format`). */
-export function formatDate(ms: number): string {
-  return new Date(ms).toLocaleDateString();
-}
-
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** An epoch-ms date as an `<input type="date">` value (`YYYY-MM-DD`, local). */

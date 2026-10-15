@@ -15,7 +15,7 @@ import {
 } from '../stores/dataFiltersStore';
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import { selectBrushFilters } from './useBrushFilters';
-import { formatDate } from '@/utils/formatDate';
+import { formatTime } from 'udi-toolkit/react';
 
 /** A filter in place, whatever made it. `id` is what the store's filter
  *  actions (`setFilter`, `clearFilter`, `removeFilter`, ...) take. */
@@ -39,15 +39,15 @@ export interface ChipInfo {
 /**
  * Chip text for one selection. `labelFor` / `valueFor` are the data package's
  * display labels — a chip is chrome summarizing a filter, so it shows "CHOP"
- * where the filter itself still holds the full institution name. An `isDate`
- * field's bounds, stored as epoch ms, read as dates.
+ * where the filter itself still holds the full institution name. A field with
+ * a `timeFormat` (`udi:time_format`) shows its bounds as dates, years or ages.
  */
 export function formatSelectionFields(
   sel: DataSelection,
   labelFor: (field: string) => string,
   valueFor: (value: string) => string,
   domainOf: (field: string) => readonly unknown[] | undefined = () => undefined,
-  isDate: (field: string) => boolean = () => false,
+  timeFormat: (field: string) => string | undefined = () => undefined,
 ): { label: string; value: string }[] {
   const results: { label: string; value: string }[] = [];
   for (const [field, raw] of Object.entries(sel.selection ?? {})) {
@@ -58,7 +58,8 @@ export function formatSelectionFields(
         results.push({ label: labelFor(field), value: 'All' });
         continue;
       }
-      const bound = (n: number) => (isDate(field) ? formatDate(n) : n.toFixed(0));
+      const format = timeFormat(field);
+      const bound = (n: number) => (format ? formatTime(n, format) : n.toFixed(0));
       const minStr = typeof min === 'number' ? bound(min) : '...';
       const maxStr = typeof max === 'number' ? bound(max) : '...';
       results.push({ label: labelFor(field), value: `${minStr}\u2013${maxStr}` });
@@ -165,7 +166,7 @@ export function useFilterChips(): ChipInfo[] {
           )?.domain;
           return (domain as { values?: unknown[] } | undefined)?.values;
         },
-        (field) => dpState.getTimeFormat(selection.dataSourceKey, field) === 'epoch_ms',
+        (field) => dpState.getTimeFormat(selection.dataSourceKey, field),
       ).map(({ label, value }) => ({
         id,
         origin,

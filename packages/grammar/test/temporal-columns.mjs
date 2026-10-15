@@ -6,7 +6,13 @@
 //
 // Imports the TypeScript source directly — Node strips the types.
 import assert from 'node:assert/strict';
-import { setTimeFormats, timeColumns, isEpochMs } from '../temporal.ts';
+import {
+  setTimeFormats,
+  timeColumns,
+  isEpochMs,
+  formatTime,
+  timeFormatOf,
+} from '../temporal.ts';
 
 setTimeFormats({
   datasets: { created_timestamp: 'epoch_ms', published_timestamp: 'epoch_ms' },
@@ -70,5 +76,29 @@ setTimeFormats({ datasets: { start_datetime: '%Y-%m-%d %H:%M' } });
 cols = timeColumns({ source: datasets });
 assert.equal(cols.get('start_datetime'), '%Y-%m-%d %H:%M');
 assert.ok(!isEpochMs(cols, 'start_datetime'));
+assert.equal(timeFormatOf(cols, 'start_datetime'), undefined);
+assert.equal(formatTime(5, '%Y-%m-%d %H:%M'), '5');
+
+// An age in days keeps its format through an average, as a date does.
+setTimeFormats({ events: { age_at_event_days: 'days', birth_year: 'year' } });
+cols = timeColumns({
+  source: { name: 'events', source: './events.csv' },
+  transformation: [
+    { groupby: 'event_type' },
+    { rollup: { mean_age: { op: 'mean', field: 'age_at_event_days' } } },
+  ],
+});
+assert.equal(timeFormatOf(cols, 'mean_age'), 'days');
+assert.equal(timeFormatOf(cols, 'birth_year'), 'year');
+
+// Each format reads as what it stores.
+const ms = Date.UTC(2021, 10, 20, 12);
+assert.equal(formatTime(ms, 'epoch_ms'), new Date(ms).toLocaleDateString());
+assert.equal(formatTime(ms / 1000, 'epoch_s'), formatTime(ms, 'epoch_ms'));
+assert.equal(formatTime(1985.4, 'year'), '1985');
+assert.equal(formatTime(4383, 'days'), '12.0 y');
+// A missing value isn't read as 1970, and a prototype key isn't a format.
+assert.equal(formatTime(null, 'epoch_ms'), 'null');
+assert.equal(formatTime(5, 'toString'), '5');
 
 console.log('temporal-columns test passed ✓');

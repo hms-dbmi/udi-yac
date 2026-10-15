@@ -338,3 +338,58 @@ export const DateTable = {
     },
   },
 };
+
+// A year and an age in days, from a small synthetic fixture: they stay
+// quantitative and only their labels change (1985, not 1,985; 12.0 y, not 4383).
+const ageFormats = {
+  beforeEach: () => {
+    setTimeFormats({
+      ages: { birth_year: 'year', age_at_event_days: 'days' },
+    });
+    return () => setTimeFormats({});
+  },
+};
+
+const ages = { name: 'ages', source: './data/example_ages.csv' };
+
+export const AgeInDaysHistogram = {
+  ...ageFormats,
+  args: {
+    spec: {
+      source: ages,
+      transformation: [
+        { binby: { field: 'age_at_event_days' } },
+        { rollup: { count: { op: 'count' } } },
+      ],
+      representation: {
+        mark: 'rect',
+        mapping: [
+          { encoding: 'x', field: 'start', type: 'quantitative' },
+          { encoding: 'x2', field: 'end', type: 'quantitative' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+        ],
+      },
+    },
+  },
+};
+
+export const BirthYearScatter = {
+  ...ageFormats,
+  args: {
+    spec: {
+      source: ages,
+      representation: {
+        mark: 'point',
+        mapping: [
+          { encoding: 'x', field: 'birth_year', type: 'quantitative' },
+          { encoding: 'y', field: 'age_at_event_days', type: 'quantitative' },
+          {
+            encoding: 'color',
+            field: 'age_at_event_days',
+            type: 'quantitative',
+          },
+        ],
+      },
+    },
+  },
+};

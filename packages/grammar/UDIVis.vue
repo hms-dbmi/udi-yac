@@ -36,7 +36,13 @@ import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
 import { orderCategories } from './domainCompute';
-import { timeColumns, isEpochMs } from './temporal';
+import { scaleLinear } from 'd3-scale';
+import {
+  timeColumns,
+  isEpochMs,
+  timeFormatOf,
+  DAYS_PER_YEAR,
+} from './temporal';
 import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
 import { PICK_SIGNAL, pickDimTest, selectFields } from './pointSelect';
 const dataSourcesStore = useDataSourcesStore();
@@ -523,10 +529,12 @@ function numericDomainBounds(domain: unknown): {
   return {};
 }
 
-// How far a field's values span in the data — the fallback scale for a layer
-// that wants its labels separated but declares no explicit domain.
-function dataExtent(rows: unknown, field: string | undefined): number {
-  if (!Array.isArray(rows) || !field) return 0;
+// [min, max] of a field's numeric values in `rows`, or null when it has none.
+function fieldRange(
+  rows: unknown,
+  field: string | undefined,
+): [number, number] | null {
+  if (!Array.isArray(rows) || !field) return null;
   let min = Infinity;
   let max = -Infinity;
   for (const row of rows) {
@@ -535,7 +543,7 @@ function dataExtent(rows: unknown, field: string | undefined): number {
     if (value < min) min = value;
     if (value > max) max = value;
   }
-  return max > min ? max - min : 0;
+  return min <= max ? [min, max] : null;
 }
 
 /**
@@ -559,6 +567,17 @@ function buildLabelExpr(labels: Record<string, string>): string {
       `datum.label === ${quote(raw)} ? ${quote(label)} : ${fallback}`,
     'datum.label',
   );
+}
+
+// Axis ticks for an age in days, in days, falling on whole years (or nice
+// fractions of one): a days scale's own ticks (2000, 4000) read 5.5 y, 11.0 y.
+// ponytail: a span under a few months ticks finer than the label's one
+// decimal, so neighbouring labels can repeat.
+function wholeYearTicks([minDays, maxDays]: [number, number], count: number) {
+  return scaleLinear()
+    .domain([minDays / DAYS_PER_YEAR, maxDays / DAYS_PER_YEAR])
+    .ticks(count)
+    .map((years) => years * DAYS_PER_YEAR);
 }
 
 // Pin axis tick values to the union of the two paired bin-boundary fields
@@ -798,6 +817,33 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
             tickCount: { expr: 'ceil(width / 100)' },
           };
         }
+        // The other time formats (a year, an age in days, epoch seconds) keep
+        // their quantitative scale in stored units, so domains, brushes and
+        // filters are untouched; only the labels go through formatTime. A
+        // field-level formatType reaches the tooltip but not the guides, so
+        // the axis and legend each get it too.
+        const labelFormat =
+          !isTime && map.type === 'quantitative'
+            ? timeFormatOf(dateColumns, map.field)
+            : undefined;
+        if (labelFormat) {
+          const format = { format: labelFormat, formatType: 'udiTime' };
+          Object.assign(vegaEncoding[encoding], format);
+          if (encoding === 'x' || encoding === 'y') {
+            // From all rows, so the ticks hold still as filters change.
+            const extent =
+              labelFormat === 'days' &&
+              fieldRange(transformedDataFull.value, map.field);
+            vegaEncoding[encoding].axis = extent
+              ? {
+                  ...format,
+                  values: wholeYearTicks(extent, encoding === 'x' ? 8 : 5),
+                }
+              : format;
+          } else if (encoding === 'color' || encoding === 'size') {
+            vegaEncoding[encoding].legend = format;
+          }
+        }
       }
       if (
         (encoding === 'x' || encoding === 'y' || encoding === 'size') &&
@@ -997,17 +1043,24 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         mapping.some((m) => m.encoding === 'y') &&
         mapping.some((m) => m.encoding === 'y2');
       // Bin-boundary ticks are raw numbers, which a time axis labels as
-      // minutes; its own ticks land on calendar boundaries instead.
+      // minutes; its own ticks land on calendar boundaries instead. An axis
+      // that already has its ticks (an age's whole years) keeps them.
       if (hasXPair) {
         markConfig.xOffset = 1;
         markConfig.x2Offset = -1;
-        if (vegaEncoding.x?.type !== 'temporal')
+        if (
+          vegaEncoding.x?.type !== 'temporal' &&
+          vegaEncoding.x?.axis?.values == null
+        )
           alignAxisToBinBoundaries(vegaEncoding, mapping, 'x', 'x2');
       }
       if (hasYPair) {
         markConfig.yOffset = 1;
         markConfig.y2Offset = -1;
-        if (vegaEncoding.y?.type !== 'temporal')
+        if (
+          vegaEncoding.y?.type !== 'temporal' &&
+          vegaEncoding.y?.axis?.values == null
+        )
           alignAxisToBinBoundaries(vegaEncoding, mapping, 'y', 'y2');
       }
     }
@@ -1033,10 +1086,15 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         return map && 'domain' in map ? map.domain : undefined;
       };
       const bounds = numericDomainBounds(domainOf(axis));
+      // How far the field spans: the fallback scale for a layer that wants its
+      // labels separated but declares no explicit domain.
+      const range = fieldRange(vegaSpec.data.values, positionField);
       const span =
         bounds.min !== undefined && bounds.max !== undefined
           ? bounds.max - bounds.min
-          : dataExtent(vegaSpec.data.values, positionField);
+          : range
+            ? range[1] - range[0]
+            : 0;
       const minGap =
         typeof layer.avoidOverlap === 'number'
           ? layer.avoidOverlap
