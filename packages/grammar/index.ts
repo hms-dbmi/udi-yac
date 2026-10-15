@@ -45,6 +45,12 @@ export { describeTransformations } from './describeTransformations';
 export { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
 export type { LabelRow } from './labelLayout';
 
+// Time columns (`udi:time_format`): register a data package's dates, years and
+// ages so this build's UDIVis renders them. Each build entry (vue / ce / react)
+// holds its own copy of this state, so a Vue consumer must set it here.
+export { setTimeFormats, formatTime } from './temporal';
+export type { TimeFormats } from './temporal';
+
 // Query backend seam (local Arquero vs remote /v1/yac/query)
 export {
   setQueryBackend,

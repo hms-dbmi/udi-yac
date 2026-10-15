@@ -284,11 +284,46 @@ describe('IntervalFilterComponent — epoch-ms date field', () => {
     expect([min.value, max.value]).toEqual(['2020-01-01', '2021-01-01']);
 
     fireEvent.change(max, { target: { value: '2020-06-15' } });
+    fireEvent.blur(max);
     expect(onCommit).toHaveBeenLastCalledWith(
       expect.objectContaining({
         selection: { created: [JAN_1_2020, new Date(2020, 5, 15, 23, 59, 59, 999).getTime()] },
       }),
     );
+  });
+
+  it('waits for blur: a half-typed year is not committed, clamped to the range', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+
+    // What a date input reports while 2020 is typed into the year.
+    for (const value of ['0002-03-01', '0020-03-01', '0202-03-01', '2020-03-01']) {
+      fireEvent.change(min, { target: { value } });
+    }
+    expect(onCommit).not.toHaveBeenCalled();
+    fireEvent.blur(min);
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: { created: [new Date(2020, 2, 1).getTime(), JAN_1_2021] },
+      }),
+    );
+  });
+
+  it('keeps the bound when the date is cleared or the edit is cancelled', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+
+    fireEvent.change(min, { target: { value: '' } });
+    fireEvent.blur(min);
+    expect(min.value).toBe('2020-01-01');
+
+    fireEvent.change(min, { target: { value: '2020-05-05' } });
+    fireEvent.keyDown(min, { key: 'Escape' });
+    fireEvent.blur(min);
+    expect(min.value).toBe('2020-01-01');
+    expect(onCommit).not.toHaveBeenCalled();
   });
 
   it('reads and writes epoch seconds, the upper bound on its last second', () => {
@@ -299,6 +334,7 @@ describe('IntervalFilterComponent — epoch-ms date field', () => {
     expect(max.value).toBe('2021-01-01');
 
     fireEvent.change(max, { target: { value: '2020-06-15' } });
+    fireEvent.blur(max);
     expect(onCommit).toHaveBeenLastCalledWith(
       expect.objectContaining({
         selection: {

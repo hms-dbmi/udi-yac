@@ -44,6 +44,76 @@ assert.ok(isEpochMs(cols, 'newest'));
 assert.ok(isEpochMs(cols, 'typical'));
 assert.ok(!isEpochMs(cols, 'published_timestamp'));
 
+// Every aggregate reads the rollup's input, so an output written under a
+// date's name doesn't hide the date from the aggregates after it.
+for (const rollup of [
+  {
+    published_timestamp: { op: 'count' },
+    latest: { op: 'max', field: 'published_timestamp' },
+  },
+  {
+    latest: { op: 'max', field: 'published_timestamp' },
+    published_timestamp: { op: 'count' },
+  },
+]) {
+  cols = timeColumns({ source: datasets, transformation: [{ rollup }] });
+  assert.ok(isEpochMs(cols, 'latest'), JSON.stringify(rollup));
+  assert.ok(!isEpochMs(cols, 'published_timestamp'), JSON.stringify(rollup));
+}
+
+// A join keeps one copy of a same-named key and renames the other columns both
+// sides have to _1 / _2 — a date on each side keeps its format either way.
+const donors = { name: 'donors', source: './donors.tsv' };
+const samples = { name: 'samples', source: './samples.tsv' };
+setTimeFormats({
+  donors: { created_timestamp: 'epoch_ms', hubmap_id: 'epoch_ms' },
+  samples: {
+    created_timestamp: 'epoch_ms',
+    last_modified_timestamp: 'epoch_ms',
+  },
+});
+cols = timeColumns({
+  source: [donors, samples],
+  transformation: [{ in: ['donors', 'samples'], join: { on: 'hubmap_id' } }],
+});
+for (const c of [
+  'created_timestamp_1',
+  'created_timestamp_2',
+  'last_modified_timestamp',
+]) {
+  assert.ok(isEpochMs(cols, c), c);
+}
+assert.ok(isEpochMs(cols, 'hubmap_id'), 'the shared key is the left one');
+assert.ok(
+  !cols.has('hubmap_id_1') && !cols.has('hubmap_id_2'),
+  'a shared key is not renamed',
+);
+
+// A date on one side colliding with a non-date on the other formats only its own copy.
+setTimeFormats({ samples: { created_timestamp: 'epoch_ms' } });
+cols = timeColumns({
+  source: [donors, samples],
+  transformation: [{ in: ['donors', 'samples'], join: { on: 'hubmap_id' } }],
+});
+assert.ok(isEpochMs(cols, 'created_timestamp_2'));
+assert.ok(!isEpochMs(cols, 'created_timestamp_1'));
+
+// A step reads the formats of the table named by its `in`, not the first source's.
+cols = timeColumns({
+  source: [donors, samples],
+  transformation: [
+    {
+      in: 'samples',
+      rollup: { newest: { op: 'max', field: 'created_timestamp' } },
+    },
+  ],
+});
+assert.ok(isEpochMs(cols, 'newest'));
+setTimeFormats({
+  datasets: { created_timestamp: 'epoch_ms', published_timestamp: 'epoch_ms' },
+  donors: { last_modified_timestamp: 'epoch_ms' },
+});
+
 // A binby over a date gives date bin edges, named or default.
 cols = timeColumns({
   source: datasets,

@@ -7,8 +7,7 @@ import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext
 import type { DataSelection } from '../stores/dataFiltersStore';
 import { FilterTarget } from './FilterTarget';
 import { StepNumberInput } from './StepNumberInput';
-import { Input } from '@/components/ui/input';
-import { fromDateInputValue, toDateInputValue } from '@/utils/dateInput';
+import { DateBoundInput } from './DateBoundInput';
 import { cutPrecision } from '../utils/grouping';
 import type { DataFieldDomain } from '@/types/dataPackage';
 import type { RangeSelection } from 'udi-toolkit/react';
@@ -291,19 +290,15 @@ export function IntervalFilterComponent({
       );
     }
     return (
-      <Input
-        type="date"
-        aria-label={label}
+      <DateBoundInput
+        value={shownRange[index] * msPerUnit}
+        min={rangeMinMax.hasRange ? rangeMinMax.min * msPerUnit : undefined}
+        max={rangeMinMax.hasRange ? rangeMinMax.max * msPerUnit : undefined}
+        endOfDay={index === 1}
+        label={label}
         disabled={!isValid}
-        className="udi:h-7 udi:w-36 udi:px-1.5 udi:text-sm udi:font-semibold"
-        value={toDateInputValue(shownRange[index] * msPerUnit)}
-        min={rangeMinMax.hasRange ? toDateInputValue(rangeMinMax.min * msPerUnit) : undefined}
-        max={rangeMinMax.hasRange ? toDateInputValue(rangeMinMax.max * msPerUnit) : undefined}
-        onChange={(e) => {
-          const ms = fromDateInputValue(e.target.value, index === 1);
-          // Floored, so a day's last millisecond is its last second in epoch_s.
-          if (ms !== null) handleBoundCommit(index, Math.floor(ms / msPerUnit));
-        }}
+        // Floored, so a day's last millisecond is its last second in epoch_s.
+        onCommit={(ms) => handleBoundCommit(index, Math.floor(ms / msPerUnit))}
       />
     );
   };
