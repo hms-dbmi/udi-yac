@@ -53,10 +53,11 @@ ESTIMATOR = Choice(
         "basic": ("Basic (events / cohort)", _lit(0)),
     },
     description=(
-        "OPTIONAL. How the survival curve is estimated. Omit it for 'kaplan_meier', "
-        "the standard estimator, which drops censored subjects from the number at "
-        "risk. 'basic' divides events so far by the whole group instead — only when "
-        "the request asks for a crude, naive or cumulative-proportion curve."
+        "OPTIONAL — leave it out. The curve is always Kaplan-Meier, the standard "
+        "estimator, unless the user explicitly asks for a different one. Set "
+        "'basic' (events so far divided by the whole group) ONLY when the request "
+        "itself asks for a crude, naive or cumulative-proportion curve; never "
+        "choose it on your own judgement of the data."
     ),
     label="estimator",
 )
@@ -102,9 +103,10 @@ CONFIDENCE_BAND = Choice(
         "hide": ("Hide", _lit(0)),
     },
     description=(
-        "OPTIONAL. Whether the survival curve shows its 95% confidence band. Omit "
-        "it to show the band; 'hide' only when the request asks for the curve "
-        "without confidence intervals. The band is drawn for Kaplan-Meier only."
+        "OPTIONAL — leave it out. The 95% confidence band is always shown unless "
+        "the user explicitly asks to hide it ('without confidence intervals', 'no "
+        "CI band'). Set 'hide' ONLY for such a request; never hide it on your own "
+        "judgement, e.g. because the chart looks busy or the groups are small."
     ),
     label="confidence band",
 )

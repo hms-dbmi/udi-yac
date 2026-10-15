@@ -2650,12 +2650,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a given number of days.',
                'name': 'vis_052_line_survival',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -2700,14 +2703,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
@@ -2768,12 +2772,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'stops it.',
                'name': 'vis_053_line_survival_baseline',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -2820,14 +2827,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -2969,12 +2977,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'event that stops it.',
                'name': 'vis_054_line_survival_baseline_multivalue',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -3021,14 +3032,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -3170,12 +3182,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'stops it.',
                'name': 'vis_055_line_survival_ever',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -3222,14 +3237,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -3372,12 +3388,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'sees one row per (subject, value) pair and a subject joins every value it ever listed.',
                'name': 'vis_056_line_survival_ever_multivalue',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -3424,14 +3443,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -3573,12 +3593,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'relapse, second malignancy and death for event-free survival.',
                'name': 'vis_057_line_survival_related',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -3636,14 +3659,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -3786,12 +3810,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'recurrence, relapse, second malignancy and death for event-free survival.',
                'name': 'vis_058_line_survival_related_numeric',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -3849,14 +3876,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -4001,12 +4029,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'progression, recurrence, relapse, second malignancy and death for event-free survival.',
                'name': 'vis_059_line_survival_related_multivalue',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -4064,14 +4095,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -4215,12 +4247,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'malignancy and death for event-free survival.',
                'name': 'vis_060_line_survival_ever_matching',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -4278,14 +4313,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -4430,12 +4466,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'which value it holds.',
                'name': 'vis_061_line_survival_presence',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -4491,14 +4530,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
@@ -4561,12 +4601,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'death for event-free survival.',
                'name': 'vis_062_line_survival_presence_2x2',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
@@ -4632,14 +4675,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity4_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
@@ -4704,12 +4748,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'the cells add up to the cohort. The elapsed-time dimension must be quantitative.',
                'name': 'vis_063_line_survival_cube',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'dimension1': {'description': 'cube quantitative dimension, encodes '
@@ -4720,14 +4767,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                             'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
@@ -4767,12 +4815,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'falls fastest and how many subjects each curve rests on.',
                'name': 'vis_064_line_survival_cube_stratified',
                'parameters': {'additionalProperties': False,
-                              'properties': {'confidence_band': {'description': 'OPTIONAL. Whether the survival curve '
-                                                                                'shows its 95% confidence band. Omit '
-                                                                                "it to show the band; 'hide' only when "
-                                                                                'the request asks for the curve '
-                                                                                'without confidence intervals. The '
-                                                                                'band is drawn for Kaplan-Meier only.',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'dimension1': {'description': 'cube quantitative dimension, encodes '
@@ -4786,14 +4837,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                             'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
