@@ -16,6 +16,7 @@ import re
 from pathlib import Path
 
 from udiagent.choices import CHOICES as _CHOICES
+from udiagent.choices import LABELS as _LABELS
 from udiagent.vis_generate import PLACEHOLDER
 
 
@@ -372,6 +373,10 @@ def _tokenize_text_template(
     def replace(match: re.Match) -> str:
         ph = match.group(1)
         base = ph.split(":")[0] if ":" in ph else ph
+        # A label is text the server fills from the tool argument (see
+        # `resolve_text_templates`); it has no encoding or column to resolve.
+        if base in _LABELS:
+            return "{bind:" + base + "}"
         # Entities are never encodings — "<E> count" would otherwise bind <E>
         # to the count axis.
         if base in _ENTITY_TOKENS or _ENTITY_KEY.fullmatch(base):
@@ -475,6 +480,25 @@ def _add_choice_param(
         "description": choice.description,
     }
     param_map[choice.param] = key
+
+
+def _add_label_params(template: dict, properties: dict, param_map: dict) -> None:
+    """Register the optional enum parameter for each label placeholder
+    (`<ENDPOINT>`) the template's title or summary text uses.
+
+    Read from the TEXT, not the spec: a label names what the chart shows and
+    changes nothing it computes, so it never appears in the spec at all. Optional
+    for the same reason a choice is: its absence is an answer, the default text.
+    """
+    text = f"{template.get('title_template', '')} {template.get('summary_template', '')}"
+    for key in sorted(_extract_placeholders(text) & set(_LABELS)):
+        label = _LABELS[key]
+        properties[label.param] = {
+            "type": "string",
+            "enum": list(label.options),
+            "description": label.description,
+        }
+        param_map[label.param] = key
 
 
 def _add_grouping_param(
@@ -637,6 +661,8 @@ def _generate_single_entity_tool(
         required.append(param_name)
         param_map[param_name] = base
 
+    _add_label_params(template, properties, param_map)
+
     tool_def = {
         "type": "function",
         "function": {
@@ -762,6 +788,8 @@ def _generate_join_entity_tool(
         properties[param_name] = {"type": "string", "description": param_description}
         required.append(param_name)
         param_map[param_name] = base
+
+    _add_label_params(template, properties, param_map)
 
     tool_def = {
         "type": "function",

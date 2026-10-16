@@ -894,7 +894,7 @@ def _cube_survival_chart(stratified: bool = False):
     The line-level templates reconstruct each subject's span from an event log.
     A cube has no subjects to reconstruct: it already holds counts per
     (time, status) cell, so the curve is assembled by accumulating those counts
-    instead. Everything downstream of that — the step curve, the run-out, the
+    instead. Everything downstream of that — the step curve, the band, the
     label, the censoring ticks — is the same picture, so the same idioms are
     used deliberately rather than reinvented.
 
@@ -953,8 +953,8 @@ def _cube_survival_chart(stratified: bool = False):
             )
         }
     )
-    # Global while the table is still ungrouped, so every curve's run-out reaches
-    # the same right edge rather than only its own last time point.
+    # Global while the table is still ungrouped: whether the horizon cut the
+    # chart is a question about the whole cohort, not about one curve.
     chart = chart.derive({"cohort end": Expr.agg("max", "<D1>")})
 
     if stratified:
@@ -973,6 +973,9 @@ def _cube_survival_chart(stratified: bool = False):
     # against it: the at-risk count includes this point's censored subjects,
     # which is the Kaplan-Meier tie rule.
     chart = _kaplan_meier(chart, events=_CUBE_EVENTS, leaving="observed")
+    # The time dimension is read as MONTHS — what the cubes this targets bin
+    # follow-up in — so the horizon's years are scaled to it.
+    chart = _cut_at_horizon(chart, "<D1>", _CUBE_EVENTS, units_per_year=12)
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
     chart = chart.derive({"full survival": Expr.lit(100)})
     chart = chart.derive({"first time": Expr.agg("min", "<D1>")})
@@ -1009,27 +1012,11 @@ def _cube_survival_chart(stratified: bool = False):
     )
     chart = chart.derive(
         {
+            # At the curve's own end, like the line-level label.
             "label time": Expr.cond(
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
+                Expr.field("curve end"),
                 Expr.lit(None),
-            )
-        }
-    )
-    chart = chart.derive(
-        {
-            "rule time": Expr.cond(
-                Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.field("label time"),
-                Expr.cond(
-                    Expr.binop(
-                        "==",
-                        Expr.field("survival percentage"),
-                        Expr.field("final percentage"),
-                    ),
-                    Expr.field("<D1>"),
-                    Expr.lit(None),
-                ),
             )
         }
     )
@@ -1067,10 +1054,12 @@ def _cube_survival_chart(stratified: bool = False):
                 + ([Expr.lit(" ")] if stratified else [])
                 + [
                     Expr.field("final survival"),
-                    Expr.lit("% (n="),
+                    Expr.lit("%"),
+                    _horizon_note(),
+                    Expr.lit(" (n="),
                     Expr.field("subjects"),
                     Expr.lit(", "),
-                    Expr.field("deaths"),
+                    Expr.field("events in window"),
                     Expr.lit(" events)"),
                 ]
             )
@@ -1089,14 +1078,12 @@ def _cube_survival_chart(stratified: bool = False):
     chart = colour(
         chart.mark("line").x(field="drop time", **time_axis).y(field="drop percentage", **pct_axis)
     )
+    chart = _band_layer(chart, "<D1>", time_axis, colour, y_title="event-free (%)")
     chart = colour(
         chart.mark("line")
         .interpolate("step-after")
         .x(field="<D1>", **time_axis)
         .y(field="survival percentage", title="event-free (%)", **pct_axis)
-    )
-    chart = colour(
-        chart.mark("line").x(field="rule time", **time_axis).y(field="final percentage", **pct_axis)
     )
     chart = colour(
         chart.mark("point")
@@ -1111,8 +1098,36 @@ def _cube_survival_chart(stratified: bool = False):
     return chart
 
 
-#: Above this final percentage an end label is drawn BELOW its rule instead of
-#: above it. The label sits ~9px over the line, and the plot's top edge is the
+#: Fill opacity of the confidence band: enough to see where two strata's bands
+#: overlap, faint enough that the curves on top stay the thing being read.
+_BAND_OPACITY = 0.12
+
+
+def _band_layer(chart, x_field, x_axis, colour, y_title="survival (%)"):
+    """Draw the 95% confidence band (`ci lower`..`ci upper`) under a curve.
+
+    Stepped like the curve it surrounds — the bounds hold between events just as
+    the estimate does — and drawn before the curve so the line sits on top. A
+    hidden band has null bounds on every row, which draws nothing. Hovering it
+    shows both bounds, since the toolkit's tooltip lists every encoded field.
+    """
+    return colour(
+        chart.mark("area")
+        .interpolate("step-after")
+        .x(field=x_field, **x_axis)
+        .y(
+            field="ci lower",
+            type="quantitative",
+            domain={"min": 0, "max": 100},
+            title=y_title,
+        )
+        .y2(field="ci upper", type="quantitative")
+        .opacity(value=_BAND_OPACITY)
+    )
+
+
+#: Above this final percentage an end label is drawn BELOW the curve's final
+#: level instead of above it. The label sits ~9px over that level, and the plot's top edge is the
 #: 100% gridline, so near the top a lifted label is clipped by the plot and
 #: vanishes. In data units because pixel height is unknown when the spec is
 #: written; 85 leaves room even in a small review card.
@@ -1120,7 +1135,7 @@ _LABEL_FLIP_PERCENTAGE = 85
 
 
 def _end_labels(chart, x_field, x_axis, y_axis, colour):
-    """Draw the end-of-curve labels: above the rule, or below it near the top.
+    """Draw the end-of-curve labels: above the final level, or below it near the top.
 
     A text mark's offset is a constant of its layer, so "above unless that would
     leave the plot" is two layers, and each label is routed to exactly one of
@@ -1142,8 +1157,8 @@ def _end_labels(chart, x_field, x_axis, y_axis, colour):
     for field, dy in ((above, -9), (below, 10)):
         chart = colour(
             chart.mark("text")
-            # Right-aligned and nudged clear of the rule: a centred label would
-            # sit across the line and read as a strikethrough, and a left-aligned
+            # Right-aligned and nudged clear of the curve's level: a centred label
+            # would sit across a line and read as a strikethrough, and a left-aligned
             # one would run off the plot. A white halo keeps it readable where it
             # crosses another stratum's curve.
             .place(align="right", dy=dy)
@@ -1228,18 +1243,212 @@ def _kaplan_meier(chart, *, events="died", leaving=None):
             "km exhausted": Expr.cond(positive, Expr.lit(0), Expr.lit(1)),
         }
     )
+    # Greenwood's variance term for this row, d / (n (n - d)). A row with no
+    # events adds nothing; the row that exhausts the risk set (n = d) would
+    # divide by zero, and adds nothing either — the curve is 0 from there and so
+    # is its band. Ties need no special handling, as with the product:
+    # 1/(n(n-1)) + 1/((n-1)(n-2)) is 2/(n(n-2)), one step of two.
     chart = chart.derive(
         {
-            "km product": rolling(Expr.exp(Expr.agg("sum", "km log"))),
+            "greenwood term": Expr.cond(
+                Expr.binop(">", Expr.field("at risk"), Expr.field(events)),
+                Expr.binop(
+                    "/",
+                    Expr.field(events),
+                    Expr.binop(
+                        "*",
+                        Expr.field("at risk"),
+                        Expr.binop("-", Expr.field("at risk"), Expr.field(events)),
+                    ),
+                ),
+                Expr.lit(0),
+            )
+        }
+    )
+    chart = chart.derive(
+        {
+            "km log sum": rolling(Expr.agg("sum", "km log")),
             "km exhausted so far": rolling(Expr.agg("sum", "km exhausted")),
+            "greenwood sum": rolling(Expr.agg("sum", "greenwood term")),
             # For the basic estimator: events so far over the whole group.
             "events so far": rolling(Expr.agg("sum", events)),
         }
     )
-    # Which of the two draws the curve is a choice the reader can flip in the
-    # dashboard's tweak panel (`udiagent.choices.ESTIMATOR`, which reads the
-    # columns above). Unset, it is Kaplan-Meier.
-    return chart.derive({"survival percentage": "<ESTIMATOR>"})
+    chart = chart.derive(
+        {
+            "km percentage": Expr.cond(
+                Expr.binop(">", Expr.field("km exhausted so far"), Expr.lit(0)),
+                Expr.lit(0),
+                Expr.binop("*", Expr.exp(Expr.field("km log sum")), Expr.lit(100)),
+            )
+        }
+    )
+    chart = chart.derive(
+        {
+            "basic percentage": Expr.binop(
+                "*",
+                Expr.binop(
+                    "-",
+                    Expr.lit(1),
+                    Expr.binop("/", Expr.field("events so far"), Expr.field("subjects")),
+                ),
+                Expr.lit(100),
+            ),
+            # Which of the two draws the curve is a choice the reader can flip
+            # in the dashboard's tweak panel (`udiagent.choices.ESTIMATOR`): 1
+            # for Kaplan-Meier, the default.
+            "kaplan meier": "<ESTIMATOR>",
+        }
+    )
+    chart = chart.derive(
+        {
+            "survival percentage": Expr.cond(
+                Expr.binop("==", Expr.field("kaplan meier"), Expr.lit(1)),
+                Expr.field("km percentage"),
+                Expr.field("basic percentage"),
+            )
+        }
+    )
+    return _km_confidence_band(chart)
+
+
+def _cut_at_horizon(chart, time_field, events, units_per_year):
+    """Drop every row past the `<HORIZON>` choice, after the estimate is taken.
+
+    Cutting the rows rather than the input is what keeps the curve honest: the
+    running product, the risk set and the band were all computed over the whole
+    follow-up above, so each point left inside the window has exactly the value
+    it has on the uncut chart. Filtering the subjects first would instead make
+    everyone followed past the horizon vanish from the risk set.
+
+    Derives, for the annotations downstream:
+      `curve end`    — per curve, its last observed time inside the window:
+                       where the curve and its band stop, so where its end
+                       label is anchored.
+      `curve cut`    — 1 when the horizon actually removed something, which is
+                       when the end label has to say where it is reading.
+      `events in window` — per curve, the events the label should count.
+
+    `cohort end` must already be the cohort-wide maximum (taken while the table
+    was ungrouped), so every curve is cut against the same edge. A cube's time
+    dimension is in months, hence `units_per_year`.
+    """
+    # The choice resolves to an expression, so it fills a derive on its own and
+    # is read back as a column, like `<ESTIMATOR>`.
+    chart = chart.derive({"horizon years": "<HORIZON>"})
+    chart = chart.derive(
+        {
+            "horizon time": Expr.binop(
+                "*", Expr.field("horizon years"), Expr.lit(units_per_year)
+            )
+        }
+    )
+    chart = chart.derive(
+        {
+            "curve cut": Expr.cond(
+                Expr.binop(">", Expr.field("cohort end"), Expr.field("horizon time")),
+                Expr.lit(1),
+                Expr.lit(0),
+            )
+        }
+    )
+    chart = chart.filter(
+        Expr.binop("<=", Expr.field(time_field), Expr.field("horizon time"))
+    )
+    return chart.derive(
+        {
+            "curve end": Expr.agg("max", time_field),
+            "events in window": Expr.agg("sum", events),
+        }
+    )
+
+
+def _horizon_note():
+    """" at 5y" in the end label when the curve was cut, else nothing — so a
+    reader never takes a 5-year value for the end of follow-up."""
+    return Expr.cond(
+        Expr.binop("==", Expr.field("curve cut"), Expr.lit(1)),
+        Expr.concat([Expr.lit(" at "), Expr.field("horizon years"), Expr.lit("y")]),
+        Expr.lit(""),
+    )
+
+
+#: The 97.5th percentile of the standard normal: a two-sided 95% interval.
+_Z_95 = 1.959963984540054
+
+
+def _km_confidence_band(chart):
+    """Derive `ci lower` / `ci upper`, the 95% band around the Kaplan-Meier curve.
+
+    The log-log ("exponential Greenwood") interval, the Stata/SAS/lifelines
+    default: take theta = log(-log S), whose standard error by the delta method
+    is sqrt(V) / |log S| with V Greenwood's running sum, and map theta +/- z.se
+    back. That lands on S^exp(+/-z.se), which is always inside (0, 1) — unlike
+    S +/- z.se, which leaves the plot near either end of the curve. Written as
+    exp(log S * exp(+/-z.se)) since the grammar has `exp` and `log` and no power;
+    sqrt(V) likewise is exp(log(V) / 2).
+
+    Where log S is 0 (nobody has had the event yet, S = 1) the interval is
+    undefined and has no width to show, so both bounds sit on the curve; once the
+    risk set is exhausted the curve is 0 and so are they. Every argument to `log`
+    and every divisor is guarded INSIDE the expression, not just by the branch
+    around it: SQL may evaluate a CASE branch it does not take.
+
+    The band describes the Kaplan-Meier curve, so it is only shown while the
+    curve drawn IS that curve — the `<ESTIMATOR>` flag is Kaplan-Meier — and
+    while the `<CI>` choice asks for it. Otherwise both bounds are null, and
+    vega-lite draws nothing for null points.
+    """
+    has_width = Expr.binop("<", Expr.field("km log sum"), Expr.lit(0))
+    variance = Expr.cond(
+        Expr.binop(">", Expr.field("greenwood sum"), Expr.lit(0)),
+        Expr.field("greenwood sum"),
+        Expr.lit(1),
+    )
+    neg_log_s = Expr.cond(
+        has_width, Expr.binop("-", Expr.lit(0), Expr.field("km log sum")), Expr.lit(1)
+    )
+    chart = chart.derive(
+        {
+            "km log se": Expr.binop(
+                "/",
+                Expr.exp(Expr.binop("*", Expr.log(variance), Expr.lit(0.5))),
+                neg_log_s,
+            ),
+        }
+    )
+
+    def bound(sign):
+        # S^exp(sign * z * se), in percent. sign=+1 is the LOWER bound: the
+        # exponent exceeds 1 and S < 1, so the power is smaller.
+        power = Expr.exp(
+            Expr.binop("*", Expr.lit(sign * _Z_95), Expr.field("km log se"))
+        )
+        return Expr.binop(
+            "*",
+            Expr.exp(Expr.binop("*", Expr.field("km log sum"), power)),
+            Expr.lit(100),
+        )
+
+    chart = chart.derive({"ci requested": "<CI>"})
+    shown = Expr.binop(
+        "&&",
+        Expr.binop("==", Expr.field("ci requested"), Expr.lit(1)),
+        Expr.binop("==", Expr.field("kaplan meier"), Expr.lit(1)),
+    )
+
+    def guarded(sign):
+        return Expr.cond(
+            shown,
+            Expr.cond(
+                Expr.binop(">", Expr.field("km exhausted so far"), Expr.lit(0)),
+                Expr.lit(0),
+                Expr.cond(has_width, bound(sign), Expr.field("km percentage")),
+            ),
+            Expr.lit(None),
+        )
+
+    return chart.derive({"ci lower": guarded(1), "ci upper": guarded(-1)})
 
 
 def _survival_chart(
@@ -1395,9 +1604,9 @@ def _survival_chart(
         }
     )
 
-    # Where the x axis ends, measured across the whole cohort rather than within
-    # one stratum: every curve's run-out has to reach the same edge, not
-    # just a little past its own last event. Taken here because a rollup leaves
+    # How far the follow-up runs, measured across the whole cohort rather than
+    # within one stratum: whether the horizon cut the chart — and so whether
+    # every label says "at 5y" — is one answer for all curves. Taken here because a rollup leaves
     # the table ungrouped, so this aggregate is global; once the stratum grouping
     # below is applied, the same expression would give a per-curve maximum.
     chart = chart.derive({"cohort end": Expr.agg("max", "survival years")})
@@ -1421,22 +1630,24 @@ def _survival_chart(
         ]
     )
     chart = _kaplan_meier(chart)
+    chart = _cut_at_horizon(chart, "survival years", "died", units_per_year=1)
 
     # The curve only descends, so its minimum is its final value. `agg` respects
-    # the current grouping, giving a per-stratum final when stratified.
+    # the current grouping, giving a per-stratum final when stratified. Within
+    # the window, so it is the curve's value at the horizon.
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
-    # Anchor for the end-of-line label, and the far end of the run-out rule.
-    # It sits at the cohort-wide right edge — the same x for every curve — plus a
-    # margin, so that even the longest curve (whose own last event *is* the
-    # cohort end) gets a visible run of dashes. Being the largest x in the data,
-    # it also sets where the axis stops.
+    # Anchor for the end-of-line label: where this curve ends — its last observed
+    # time in the window — at its final height. The curve and its band stop
+    # there, since past it the estimate is not defined for the group, so the
+    # label is right-aligned to finish where the line does rather than floating
+    # at a shared right edge with nothing joining it to its curve.
     #
     # Kept for a stratum in which nobody reached the end event, too: its curve
     # runs flat along the top of the plot, and with the legend dropped in favour
     # of these labels, an unlabelled curve there could not be identified at all.
     # `_end_labels` draws it below the line, where the plot does not clip it.
     #
-    # Held on one row per group — the same `rank() == 1` row the rule borrows. A
+    # Held on one row per group — the `rank() == 1` row. A
     # text mark draws once per row it receives, so leaving this on every row would
     # stack dozens of copies of the label on the same point: opaque, heavier than
     # the font it declares, and no way to see anything behind it.
@@ -1444,20 +1655,11 @@ def _survival_chart(
         {
             "label year": Expr.cond(
                 Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.binop("*", Expr.field("cohort end"), Expr.lit(1.05)),
+                Expr.field("curve end"),
                 Expr.lit(None),
             )
         }
     )
-    # The rule is a short run-out from the end of the curve to its label,
-    # rather than a full-width line cutting back across the descending curve.
-    #
-    # Only one row ever holds the final value (the last event), and a line mark
-    # needs two points — so the second endpoint is borrowed from an arbitrary
-    # other row. That is sound because this layer maps y to `final percentage`,
-    # which is constant across the group: any two rows give the same horizontal
-    # line, and only their x matters. Every other row is nulled out and dropped
-    # by vega-lite.
     # A group in which every subject reached the end event has nobody at day 0, so
     # its curve would begin at its first event partway across the chart. Draw the
     # missing flat segment at 100% explicitly: two borrowed rows again, using a
@@ -1499,23 +1701,6 @@ def _survival_chart(
             ),
         }
     )
-    chart = chart.derive(
-        {
-            "rule year": Expr.cond(
-                Expr.binop("==", Expr.rank(), Expr.lit(1)),
-                Expr.field("label year"),
-                Expr.cond(
-                    Expr.binop(
-                        "==",
-                        Expr.field("survival percentage"),
-                        Expr.field("final percentage"),
-                    ),
-                    Expr.field("survival years"),
-                    Expr.lit(None),
-                ),
-            )
-        }
-    )
     # No round() in the grammar: floor(x + 0.5) using the modulo operator, so the
     # label reads "48" rather than "47.692307692307686".
     chart = chart.derive(
@@ -1546,10 +1731,12 @@ def _survival_chart(
                 + ([Expr.lit(" ")] if stratum else [])
                 + [
                     Expr.field("final survival"),
-                    Expr.lit("% (n="),
+                    Expr.lit("%"),
+                    _horizon_note(),
+                    Expr.lit(" (n="),
                     Expr.field("subjects"),
                     Expr.lit(", "),
-                    Expr.field("deaths"),
+                    Expr.field("events in window"),
                     Expr.lit(" events)"),
                 ]
             )
@@ -1576,6 +1763,13 @@ def _survival_chart(
     if stratum:
         chart = chart.color(**stratum_colour)
 
+    chart = _band_layer(
+        chart,
+        "survival years",
+        dict(type="quantitative", title="survival years", domain={"min": 0}),
+        (lambda c: c.color(**stratum_colour)) if stratum else (lambda c: c),
+    )
+
     chart = (
         chart.mark("line")
         # A survival curve is a step function: the fraction alive holds constant
@@ -1591,18 +1785,6 @@ def _survival_chart(
             domain={"min": 0, "max": 100},
             title="survival (%)",
         )
-    )
-    if stratum:
-        chart = chart.color(**stratum_colour)
-
-    chart = (
-        chart.mark("line")
-        # Solid, not dashed. The dashes were meant to read as "annotation, not
-        # data", but the run-out carries a real measured value — the final
-        # percentage held to the edge of observation — and a dashed line invited
-        # the opposite reading, that the value was uncertain or extrapolated.
-        .x(field="rule year", type="quantitative", title="survival years", domain={"min": 0})
-        .y(field="final percentage", type="quantitative", domain={"min": 0, "max": 100})
     )
     if stratum:
         chart = chart.color(**stratum_colour)
@@ -3205,7 +3387,7 @@ def generate():
         spec=_survival_chart(),
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(None)],
-        title_template="Survival curve for <E2>",
+        title_template="<ENDPOINT> curve for <E2>",
         summary_template=(
             "Plots the share of <E2> still event-free over time, from the start "
             "event to the end event, reading each subject's events from <E1>."
@@ -3277,7 +3459,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.AT_START)],
         name_hint="survival_baseline",
-        title_template="Survival curves for <E2> by <E1.F4>",
+        title_template="<ENDPOINT> curves for <E2> by <E1.F4>",
         summary_template=(
             "Plots one curve per <E1.F4> value, read from each subject's start event, so every subject falls in exactly one group."
         ),
@@ -3360,7 +3542,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.AT_START)],
         name_hint="survival_baseline_multivalue",
-        title_template="Survival curves for <E2> by each <E1.F4> value",
+        title_template="<ENDPOINT> curves for <E2> by each <E1.F4> value",
         summary_template=(
             "Expands the <E1.F4> list on each subject's start event, so a subject counts toward every value it listed then and the curves overlap."
         ),
@@ -3437,7 +3619,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.EVER)],
         name_hint="survival_ever",
-        title_template="Survival curves for <E2> by every <E1.F4> ever recorded",
+        title_template="<ENDPOINT> curves for <E2> by every <E1.F4> ever recorded",
         summary_template=(
             "A subject joins every group whose <E1.F4> value appears anywhere on its timeline, so the curves overlap and do not add up to the whole cohort."
         ),
@@ -3517,7 +3699,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.EVER)],
         name_hint="survival_ever_multivalue",
-        title_template="Survival curves for <E2> by every <E1.F4> value ever listed",
+        title_template="<ENDPOINT> curves for <E2> by every <E1.F4> value ever listed",
         summary_template=(
             "Expands the delimited <E1.F4> column on every event, so a subject joins each value listed at any point and the curves overlap."
         ),
@@ -3594,7 +3776,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related",
-        title_template="Survival curves for <E3> by <E2.F>",
+        title_template="<ENDPOINT> curves for <E3> by <E2.F>",
         summary_template=(
             "Joins <E1> to <E2> on the subject id and plots one curve per <E2.F> value; a subject with several <E2> records joins a group for each."
         ),
@@ -3687,7 +3869,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related_numeric",
-        title_template="Survival curves for <E3> by <E2.F>",
+        title_template="<ENDPOINT> curves for <E3> by <E2.F>",
         summary_template=(
             "Joins <E1> to <E2> on the subject id and cuts <E2.F> into buckets at the supplied thresholds, one curve per bucket."
         ),
@@ -3780,7 +3962,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.RELATED)],
         name_hint="survival_related_multivalue",
-        title_template="Survival curves for <E3> by each <E2.F> value",
+        title_template="<ENDPOINT> curves for <E3> by each <E2.F> value",
         summary_template=(
             "Joins <E1> to <E2> on the subject id, expands the delimited <E2.F> column, and plots one curve per value; the curves overlap."
         ),
@@ -3902,7 +4084,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.ANY_OF)],
         name_hint="survival_ever_matching",
-        title_template="Survival curves for <E3> by <E2.F>",
+        title_template="<ENDPOINT> curves for <E3> by <E2.F>",
         summary_template=(
             "Splits subjects by whether <E2> ever records one of the named <E2.F> values for them, against everyone else."
         ),
@@ -3991,7 +4173,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.PRESENCE)],
         name_hint="survival_presence",
-        title_template="Survival curves for <E3> by presence in <E2>",
+        title_template="<ENDPOINT> curves for <E3> by presence in <E2>",
         summary_template=(
             "Splits subjects by whether <E2> holds a row for them at all, giving two curves that together cover the whole cohort."
         ),
@@ -4075,7 +4257,7 @@ def generate():
         chart_type=ChartType.LINE,
         shared_entities=[_censor_entity(StratumReading.PRESENCE_2X2)],
         name_hint="survival_presence_2x2",
-        title_template="Survival curves for <E4> by presence in <E2> and <E3>",
+        title_template="<ENDPOINT> curves for <E4> by presence in <E2> and <E3>",
         summary_template=(
             "Splits subjects four ways — <E2> only, <E3> only, both, neither — by whether each table holds a row for them."
         ),

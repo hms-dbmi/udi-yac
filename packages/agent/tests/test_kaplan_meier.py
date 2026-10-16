@@ -21,7 +21,13 @@ from udiagent.vis_generate import (
 )
 
 
-def _line_level(tmp_path, events_csv, patients_csv, estimator=None):
+def _line_rows(tmp_path, events_csv, patients_csv, *, _tool="_line_survival", **choices):
+    """Run the single-curve event-log template on DuckDB; every output row.
+
+    `choices` are optional tool arguments (estimator, time_horizon,
+    confidence_band); absent means each choice's default. An `arm` column on
+    the event log becomes the stratifier, for the stratified templates."""
+    stratified = events_csv.startswith("subject,event,day,arm")
     events = tmp_path / "events.csv"
     events.write_text(events_csv)
     patients = tmp_path / "patients.csv"
@@ -40,6 +46,7 @@ def _line_level(tmp_path, events_csv, patients_csv, estimator=None):
                             {"name": "event", "udi:data_type": "nominal"},
                             {"name": "day", "udi:data_type": "quantitative"},
                         ]
+                        + ([{"name": "arm", "udi:data_type": "nominal"}] if stratified else [])
                     },
                 },
                 {
@@ -58,13 +65,14 @@ def _line_level(tmp_path, events_csv, patients_csv, estimator=None):
         }
     )
     _defs, dispatch, templates, _tags = _load_generated_tools()
-    tool = next(n for n in dispatch if n.endswith("_line_survival"))
+    tool = next(n for n in dispatch if n.endswith(_tool))
     idx, param_map = dispatch[tool]
     args = {
         "entity1": "events",
         "entity1_field1": "subject",
         "entity1_field2": "event",
         "entity1_field3": "day",
+        **({"entity1_field4": "arm"} if stratified else {}),
         "entity2": "patients",
         "entity2_field1": "subject",
         "entity2_field2": "status",
@@ -73,8 +81,7 @@ def _line_level(tmp_path, events_csv, patients_csv, estimator=None):
         "value2": ["death"],
         "value3": "alive",
     }
-    if estimator is not None:
-        args["estimator"] = estimator
+    args.update(choices)
     bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
     assert validate_bindings(templates[idx], bindings, schema) == []
     spec = instantiate_template(templates[idx], bindings, schema)
@@ -82,9 +89,20 @@ def _line_level(tmp_path, events_csv, patients_csv, estimator=None):
         DuckDBConnector(views={"events": str(events), "patients": str(patients)}),
         table_map={"events": "events", "patients": "patients"},
     )
-    rows = engine.run_query(source=spec["source"], transformation=spec["transformation"])[
+    return engine.run_query(source=spec["source"], transformation=spec["transformation"])[
         "displayData"
     ]
+
+
+def _stratified_rows(tmp_path, events_csv, patients_csv, **choices):
+    """The baseline-stratified template, split by the event log's `arm`."""
+    return _line_rows(
+        tmp_path, events_csv, patients_csv, _tool="_line_survival_baseline", **choices
+    )
+
+
+def _line_level(tmp_path, events_csv, patients_csv, **choices):
+    rows = _line_rows(tmp_path, events_csv, patients_csv, **choices)
     return {r["subject"]: r["survival percentage"] for r in rows}
 
 
@@ -148,13 +166,9 @@ def test_without_censoring_it_is_the_cohort_fraction(tmp_path):
     assert curve["e"] == 0
 
 
-def test_a_cube_curve_is_kaplan_meier_a_time_point_at_a_time(tmp_path):
-    """Time x status cells: at t=1, 2 events and 3 censored of 10; at t=2, 1
-    event of the 5 left (the censorings at t=1 count as at risk there — the tie
-    rule); at t=3, 2 events of 4. Kaplan-Meier: 0.8, 0.64, 0.32."""
+def _cube_rows(tmp_path, rows, **choices):
+    """Run the single-curve cube template on DuckDB over (time, status, n) cells."""
     cube = tmp_path / "cube.csv"
-    rows = [("1", "Event", 2), ("1", "Censored", 3), ("2", "Event", 1), ("3", "Event", 2),
-            ("3", "Censored", 2)]
     cube.write_text("time,status,n\n" + "".join(f"{t},{s},{n}\n" for t, s, n in rows))
     schema = parse_schema_from_dict(
         {
@@ -187,14 +201,24 @@ def test_a_cube_curve_is_kaplan_meier_a_time_point_at_a_time(tmp_path):
         "dimension2": "status",
         "value1": "Event",
         "value2": "Censored",
+        **choices,
     }
     bindings = {param_map[k]: v for k, v in args.items() if k in param_map}
     assert validate_bindings(templates[idx], bindings, schema) == []
     spec = instantiate_template(templates[idx], bindings, schema)
     engine = QueryEngine(DuckDBConnector(views={"cube": str(cube)}), table_map={"cube": "cube"})
-    out = engine.run_query(source=spec["source"], transformation=spec["transformation"])[
+    return engine.run_query(source=spec["source"], transformation=spec["transformation"])[
         "displayData"
     ]
+
+
+def test_a_cube_curve_is_kaplan_meier_a_time_point_at_a_time(tmp_path):
+    """Time x status cells: at t=1, 2 events and 3 censored of 10; at t=2, 1
+    event of the 5 left (the censorings at t=1 count as at risk there — the tie
+    rule); at t=3, 2 events of 4. Kaplan-Meier: 0.8, 0.64, 0.32."""
+    rows = [("1", "Event", 2), ("1", "Censored", 3), ("2", "Event", 1), ("3", "Event", 2),
+            ("3", "Censored", 2)]
+    out = _cube_rows(tmp_path, rows)
     curve = {r["time"]: r["survival percentage"] for r in out}
     assert curve == pytest.approx({1: 80.0, 2: 64.0, 3: 32.0})
     assert not any(math.isnan(r["survival percentage"]) for r in out)
@@ -235,3 +259,164 @@ def test_every_survival_tool_offers_the_estimator_as_an_optional_enum():
         parameters = tool["parameters"]
         assert parameters["properties"]["estimator"]["enum"] == ["kaplan_meier", "basic"]
         assert "estimator" not in parameters["required"], tool["name"]
+
+
+# --- the 95% confidence band ------------------------------------------------
+
+#: Eight subjects with a censoring before the tied deaths at day 200 and two
+#: after. Reference values below are from lifelines (KaplanMeierFitter,
+#: alpha=0.05), whose interval is the same log-log ("exponential Greenwood")
+#: one the templates draw.
+_GREENWOOD_COHORT = (
+    "subject,event,day\n"
+    + _starts(*"abcdefgh")
+    + "a,death,100\nc,death,200\nd,death,200\nf,death,400\n",
+    "subject,status,asof\n"
+    "a,deceased,100\nb,alive,150\nc,deceased,200\nd,deceased,200\n"
+    "e,alive,300\nf,deceased,400\ng,alive,500\nh,alive,600\n",
+)
+
+
+def _by_subject(rows):
+    return {r["subject"]: r for r in rows}
+
+
+def test_the_band_is_the_log_log_greenwood_interval(tmp_path):
+    """Matches lifelines at every step, including across the tied deaths: the
+    band after the second of them (d) is the band of one step of two."""
+    rows = _by_subject(_line_rows(tmp_path, *_GREENWOOD_COHORT))
+    expected = {
+        "a": (87.5, 38.7000014032, 98.1392965879),
+        "b": (87.5, 38.7000014032, 98.1392965879),  # a censoring moves nothing
+        "d": (58.3333333333, 18.0188891013, 84.4068691657),
+        "f": (38.8888888889, 6.3002811469, 72.4222755537),
+        "h": (38.8888888889, 6.3002811469, 72.4222755537),
+    }
+    for subject, (survival, lower, upper) in expected.items():
+        row = rows[subject]
+        assert row["survival percentage"] == pytest.approx(survival), subject
+        assert row["ci lower"] == pytest.approx(lower), subject
+        assert row["ci upper"] == pytest.approx(upper), subject
+
+
+def test_before_any_event_the_band_sits_on_the_curve(tmp_path):
+    """log S is 0 at 100%, so log-log is undefined: no width, no NaN."""
+    rows = _by_subject(
+        _line_rows(
+            tmp_path,
+            "subject,event,day\n" + _starts("a", "b", "c") + "c,death,30\n",
+            "subject,status,asof\na,alive,10\nb,alive,20\nc,deceased,30\n",
+        )
+    )
+    assert rows["a"]["ci lower"] == rows["a"]["ci upper"] == pytest.approx(100)
+
+
+def test_an_exhausted_risk_set_closes_the_band_at_zero(tmp_path):
+    """The last subject at risk dying makes n = d: Greenwood's term would divide
+    by zero, and log S is -Infinity. Both are guarded; the band is 0, not an
+    error or NaN."""
+    rows = _by_subject(
+        _line_rows(
+            tmp_path,
+            "subject,event,day\n" + _starts("a", "b") + "a,death,10\nb,death,20\n",
+            "subject,status,asof\na,deceased,10\nb,deceased,20\n",
+        )
+    )
+    assert rows["b"]["survival percentage"] == 0
+    assert rows["b"]["ci lower"] == rows["b"]["ci upper"] == 0
+    assert 0 < rows["a"]["ci lower"] < 50 < rows["a"]["ci upper"] <= 100
+
+
+@pytest.mark.parametrize(
+    "choices", [{"confidence_band": "hide"}, {"estimator": "basic"}], ids=["hidden", "basic"]
+)
+def test_the_band_is_null_when_hidden_or_not_kaplan_meier(tmp_path, choices):
+    """Greenwood describes the Kaplan-Meier curve, so under the basic estimator
+    there is no band at all — not even where the two curves agree, as they do
+    at a's 87.5% here."""
+    rows = _line_rows(tmp_path, *_GREENWOOD_COHORT, **choices)
+    assert all(r["ci lower"] is None and r["ci upper"] is None for r in rows)
+
+
+# --- the time horizon -------------------------------------------------------
+
+#: Followed for up to ~8 years, with one death after year 5 (d, day 2500).
+_LONG_FOLLOW_UP = (
+    "subject,event,day\n"
+    + _starts(*"abcde")
+    + "a,death,365\nc,death,1000\nd,death,2500\n",
+    "subject,status,asof\n"
+    "a,deceased,365\nb,alive,730\nc,deceased,1000\nd,deceased,2500\ne,alive,3000\n",
+)
+
+
+def test_the_default_horizon_cuts_at_five_years_without_moving_the_curve(tmp_path):
+    full = _by_subject(_line_rows(tmp_path, *_LONG_FOLLOW_UP, time_horizon="full"))
+    cut = _by_subject(_line_rows(tmp_path, *_LONG_FOLLOW_UP))
+    assert sorted(cut) == ["a", "b", "c"]  # d and e are past year 5
+    for subject in cut:
+        for column in ("survival percentage", "ci lower", "ci upper"):
+            assert cut[subject][column] == pytest.approx(full[subject][column])
+    # The label sits where the cut curve now ends — c, its last observation in
+    # the window — and reads it there, counting only the events inside it.
+    assert max(r["label year"] or 0 for r in cut.values()) == pytest.approx(1000 / 365.25)
+    label = cut["a"]["final label"]
+    assert label.startswith("53") and label.endswith("% at 5y (n=5, 2 events)"), label
+
+
+def test_full_follow_up_is_the_uncut_chart(tmp_path):
+    rows = _by_subject(_line_rows(tmp_path, *_LONG_FOLLOW_UP, time_horizon="full"))
+    assert sorted(rows) == list("abcde")
+    assert rows["a"]["final label"].endswith("% (n=5, 3 events)")
+    assert " at " not in rows["a"]["final label"]
+
+
+def test_a_horizon_past_the_follow_up_is_not_reported_as_a_cut(tmp_path):
+    """Ten years is longer than anyone was followed: nothing is removed, the
+    label sits at the last observation (e), and does not claim a horizon."""
+    rows = _by_subject(_line_rows(tmp_path, *_LONG_FOLLOW_UP, time_horizon="10"))
+    assert sorted(rows) == list("abcde")
+    assert " at " not in rows["a"]["final label"]
+    assert max(r["label year"] or 0 for r in rows.values()) == pytest.approx(3000 / 365.25)
+
+
+def test_each_stratum_labels_its_own_curve_end(tmp_path):
+    """A curve that stops early is labelled where it stops, not at the edge of
+    the longest one. Stratified run over the same follow-up, split so arm X
+    ends at day 1000 and arm Y at day 3000."""
+    events, patients = _LONG_FOLLOW_UP
+    arms = {"a": "X", "b": "X", "c": "X", "d": "Y", "e": "Y"}
+    events = "subject,event,day,arm\n" + "".join(
+        f"{line},{arms[line.split(',')[0]]}\n" for line in events.splitlines()[1:]
+    )
+    rows = _stratified_rows(tmp_path, events, patients, time_horizon="full")
+    ends = {r["stratum"]: r["label year"] for r in rows if r["label year"] is not None}
+    assert ends == pytest.approx({"X": 1000 / 365.25, "Y": 3000 / 365.25})
+
+
+def test_a_cube_horizon_is_read_in_months(tmp_path):
+    """A cube's time dimension is months: the 5-year default keeps time 60 and
+    drops 72, and a 1-year horizon drops everything after 12."""
+    cells = [("6", "Event", 1), ("12", "Censored", 1), ("60", "Event", 1),
+             ("72", "Event", 1), ("80", "Censored", 1)]
+    assert sorted(r["time"] for r in _cube_rows(tmp_path, cells)) == [6, 12, 60]
+    assert sorted(r["time"] for r in _cube_rows(tmp_path, cells, time_horizon="1")) == [6, 12]
+    assert len(_cube_rows(tmp_path, cells, time_horizon="full")) == 5
+
+
+def test_an_unknown_horizon_is_refused():
+    _defs, dispatch, templates, _tags = _load_generated_tools()
+    idx, _param_map = dispatch[next(n for n in dispatch if n.endswith("_line_survival"))]
+    errors = validate_bindings(templates[idx], {"HORIZON": "7"}, {"entities": {}})
+    assert any("not a valid time_horizon" in e for e in errors), errors
+
+
+def test_every_survival_tool_offers_the_horizon_and_band_as_optional_enums():
+    defs, _dispatch, _templates, _tags = _load_generated_tools()
+    survival = [d["function"] for d in defs if "_line_survival" in d["function"]["name"]]
+    for tool in survival:
+        properties = tool["parameters"]["properties"]
+        required = tool["parameters"]["required"]
+        assert properties["time_horizon"]["enum"] == ["1", "2", "3", "5", "10", "full"]
+        assert properties["confidence_band"]["enum"] == ["show", "hide"]
+        assert "time_horizon" not in required and "confidence_band" not in required
