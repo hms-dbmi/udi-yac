@@ -150,6 +150,23 @@ def test_response_describes_the_parameters_it_accepts(client, data_schema):
     body = response.json()
 
     assert body["params"] == [
+        # The confidence band: a choice like the estimator, shown by default.
+        {
+            "kind": "choice",
+            "param": "confidence_band",
+            "placeholder": "CI",
+            "entity": None,
+            "type": None,
+            "encodings": [],
+            "label": "confidence band",
+            "value": "show",
+            "field": None,
+            "fieldType": None,
+            "choices": [
+                {"value": "show", "label": "Show 95% CI"},
+                {"value": "hide", "label": "Hide"},
+            ],
+        },
         {
             "kind": "field",
             "param": "entity1_field4",
@@ -199,6 +216,27 @@ def test_response_describes_the_parameters_it_accepts(client, data_schema):
             "field": "organization_name",
             "fieldType": "nominal",
             "choices": None,
+        },
+        # The time span, at its 5-year default.
+        {
+            "kind": "choice",
+            "param": "time_horizon",
+            "placeholder": "HORIZON",
+            "entity": None,
+            "type": None,
+            "encodings": [],
+            "label": "time span",
+            "value": "5",
+            "field": None,
+            "fieldType": None,
+            "choices": [
+                {"value": "1", "label": "1 year"},
+                {"value": "2", "label": "2 years"},
+                {"value": "3", "label": "3 years"},
+                {"value": "5", "label": "5 years"},
+                {"value": "10", "label": "10 years"},
+                {"value": "full", "label": "Full follow-up"},
+            ],
         },
     ]
     # Echoed back so a client can send them straight into the next tweak.
