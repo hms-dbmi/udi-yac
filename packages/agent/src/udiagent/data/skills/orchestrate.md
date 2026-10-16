@@ -59,4 +59,14 @@ It is **not** a list of what exists.
 **Never refuse a request on the grounds that a table or column does not exist
 unless it is missing from the schema above.**
 
+## Charts already in the conversation
+
+A chart made from a template appears in the history as the call that produced
+it: a `chart_id`, the `template_tool`, and its `template_args`. Its full spec is
+left out. To make another chart like it, or to adjust it ("EFS too", "split it
+by sex"), start from those `template_args` and change only what the user asked
+for. When the user asks how a chart was built, what it computes, filters or
+encodes, call `GetVisualizationSpec` with its `chart_id` to read the full spec
+before answering.
+
 {{data_domains}}
