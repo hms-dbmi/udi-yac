@@ -10,7 +10,12 @@ import openai
 
 from udiagent.skills import Skill, load_skills, render_template
 from udiagent.grammar import load_grammar
-from udiagent.messages import normalize_tool_calls, split_tool_calls
+from udiagent.messages import (
+    GET_VISUALIZATION_SPEC,
+    normalize_tool_calls,
+    split_tool_calls,
+    visualization_calls,
+)
 from udiagent.schema import (
     parse_schema_from_dict,
     simplify_data_domains,
@@ -153,8 +158,8 @@ class OrchestratorResult:
     usage: Usage = field(default_factory=Usage)
 
 
-#: How many times the orchestrator may look up a column's values before it has
-#: to decide. Two is enough to check a table and a column; more means it is not
+#: How many times the orchestrator may look something up (a column's values, an
+#: earlier chart's spec) before it has to decide. Two is enough to check a table and a column; more means it is not
 #: converging, and a chart drawn on a good-enough guess beats another round trip.
 MAX_VALUE_LOOKUPS = 2
 
@@ -303,6 +308,32 @@ class Orchestrator:
         )
 
         return result
+
+    def _reveal_visualization_spec(self, tool_args, messages):
+        """Answer `GetVisualizationSpec`: the full spec the history left out.
+
+        The spec is already in the request — the client echoes every chart back
+        — it is only trimmed from what the model reads (see
+        `messages.compact_visualization_history`). So this reads it back, and
+        marks the chart revealed on `messages` (the orchestrator's own copy) so
+        the handler that answers the turn sees the full spec too.
+        """
+        chart_id = (tool_args.get("chart_id") or "").strip()
+        charts = list(visualization_calls(messages))
+        for candidate, tool_call in charts:
+            if candidate != chart_id:
+                continue
+            function = tool_call.get("function") or tool_call
+            meta = function.get("meta")
+            if isinstance(meta, dict):
+                meta["spec_revealed"] = True
+            arguments = function.get("arguments") or {}
+            if isinstance(arguments, str):
+                return arguments
+            spec = arguments.get("spec", arguments)
+            return spec if isinstance(spec, str) else json.dumps(spec)
+        known = ", ".join(c for c, _ in charts) or "none"
+        return f"No chart '{chart_id}' in this conversation. Charts: {known}."
 
     def _lookup_field_values(self, tool_args, data_domains):
         """Answer `ListFieldValues`: the values the prompt only sampled.
@@ -588,6 +619,10 @@ class Orchestrator:
         model=None,
         budget_check: Callable[["Usage"], str | None] | None = None,
     ):
+        # The handlers below each read the history afresh, so a chart revealed
+        # with GetVisualizationSpec is marked on this copy — never on the
+        # caller's messages — and every later read then shows its full spec.
+        messages = copy.deepcopy(messages)
         msgs = normalize_tool_calls(copy.deepcopy(messages))
 
         orchestrate_skill = self.skills["orchestrate"]
@@ -608,8 +643,8 @@ class Orchestrator:
 
         gpt_client = self.agent._get_gpt_client(openai_api_key)
 
-        # The model may ask for a column's full values before deciding. Those
-        # calls answer themselves and loop; every other tool is an outcome and
+        # The model may ask for a column's full values, or an earlier chart's
+        # full spec, before deciding. Those calls answer themselves and loop; every other tool is an outcome and
         # ends the turn. Bounded, because a model that keeps looking things up
         # is not converging and a chart is better than another lookup.
         for _lookup in range(MAX_VALUE_LOOKUPS + 1):
@@ -658,18 +693,22 @@ class Orchestrator:
             for tc in pending:
                 if tc in lookups:
                     args = json.loads(tc.function.arguments)
-                    answer = self._lookup_field_values(args, data_domains)
-                    logger.info(
-                        "field values looked up: %s.%s",
-                        args.get("entity"),
-                        args.get("field"),
-                    )
+                    if tc.function.name == GET_VISUALIZATION_SPEC:
+                        answer = self._reveal_visualization_spec(args, messages)
+                        logger.info("visualization spec revealed: %s", args.get("chart_id"))
+                    else:
+                        answer = self._lookup_field_values(args, data_domains)
+                        logger.info(
+                            "field values looked up: %s.%s",
+                            args.get("entity"),
+                            args.get("field"),
+                        )
                 else:
                     # Asked for alongside a lookup. Tell the model to ask again
-                    # once it has the values, rather than acting on it now and
-                    # returning two conflicting outcomes.
+                    # once it has what it looked up, rather than acting on it now
+                    # and returning two conflicting outcomes.
                     answer = (
-                        "Not run — you also asked to look up field values. "
+                        "Not run — you also asked to look something up. "
                         "Call this again if you still want it."
                     )
                 msgs.append(
