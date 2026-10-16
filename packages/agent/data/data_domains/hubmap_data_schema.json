@@ -92,9 +92,10 @@
           {
             "description": "",
             "name": "created_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 501,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": true
           },
           {
@@ -228,9 +229,10 @@
           {
             "description": "",
             "name": "last_modified_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 501,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": true
           },
           {
@@ -292,9 +294,10 @@
           {
             "description": "",
             "name": "published_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 0,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": false
           },
           {
@@ -477,9 +480,10 @@
           {
             "description": "",
             "name": "created_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 4575,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": false
           },
           {
@@ -581,9 +585,10 @@
           {
             "description": "",
             "name": "last_modified_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 4633,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": false
           },
           {
@@ -741,9 +746,10 @@
           {
             "description": "",
             "name": "published_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 0,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": false
           },
           {
@@ -1306,9 +1312,10 @@
           {
             "description": "",
             "name": "created_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 9529,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": false
           },
           {
@@ -1690,9 +1697,10 @@
           {
             "description": "",
             "name": "last_modified_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 9530,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": true
           },
           {
@@ -2578,9 +2586,10 @@
           {
             "description": "",
             "name": "published_timestamp",
-            "type": "string",
+            "type": "integer",
             "udi:cardinality": 9511,
-            "udi:data_type": "nominal",
+            "udi:data_type": "quantitative",
+            "udi:time_format": "epoch_ms",
             "udi:unique": false
           },
           {

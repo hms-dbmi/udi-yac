@@ -36,6 +36,13 @@ import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
 import { orderCategories } from './domainCompute';
+import { scaleLinear } from 'd3-scale';
+import {
+  timeColumns,
+  isEpochMs,
+  timeFormatOf,
+  DAYS_PER_YEAR,
+} from './temporal';
 import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
 import { PICK_SIGNAL, pickDimTest, selectFields } from './pointSelect';
 const dataSourcesStore = useDataSourcesStore();
@@ -391,7 +398,19 @@ function setDefaultDomains(
       // @ts-expect-error: checking domainWhenFiltered
       const domainWhenFiltered: string | undefined = mapping.domainWhenFiltered;
       if (type === 'quantitative') {
-        if (mark === 'bar' && domainWhenFiltered !== 'full') continue;
+        // A bar spanning x..x2 is a histogram's bin (convertToVegaSpec marks
+        // it pre-binned), so its x is anchored like a rect histogram's below,
+        // or brushing it shrinks the axis to the bins that are left. Its y
+        // stays with Vega-Lite, which sizes stacked bins by their totals.
+        const channel: string = mapping.encoding;
+        const binnedBarX =
+          mark === 'bar' &&
+          (channel === 'x' || channel === 'x2') &&
+          (mappingList as Array<{ encoding: string }>).some(
+            (m) => m.encoding === 'x2',
+          );
+        if (mark === 'bar' && !binnedBarX && domainWhenFiltered !== 'full')
+          continue;
         // Rect marks (histograms) pair x with x2 and y with y2 on the
         // same scale. Without an explicit domain, vega-lite auto-fits
         // the scale to the *filtered* values flowing into the chart,
@@ -399,7 +418,7 @@ function setDefaultDomains(
         // domain that unions both ends from allData so bin edges stay
         // anchored. Skip the partner encoding (x2/y2) — it shares the
         // x/y scale and doesn't need its own domain.
-        if (mark === 'rect') {
+        if (mark === 'rect' || binnedBarX) {
           // TS 6 can infer `encoding` here without the previous
           // `@ts-expect-error: encoding is statically known` escape; the
           // unused directive was tripping TS2578 under the upgrade.
@@ -522,10 +541,12 @@ function numericDomainBounds(domain: unknown): {
   return {};
 }
 
-// How far a field's values span in the data — the fallback scale for a layer
-// that wants its labels separated but declares no explicit domain.
-function dataExtent(rows: unknown, field: string | undefined): number {
-  if (!Array.isArray(rows) || !field) return 0;
+// [min, max] of a field's numeric values in `rows`, or null when it has none.
+function fieldRange(
+  rows: unknown,
+  field: string | undefined,
+): [number, number] | null {
+  if (!Array.isArray(rows) || !field) return null;
   let min = Infinity;
   let max = -Infinity;
   for (const row of rows) {
@@ -534,7 +555,7 @@ function dataExtent(rows: unknown, field: string | undefined): number {
     if (value < min) min = value;
     if (value > max) max = value;
   }
-  return max > min ? max - min : 0;
+  return min <= max ? [min, max] : null;
 }
 
 /**
@@ -558,6 +579,17 @@ function buildLabelExpr(labels: Record<string, string>): string {
       `datum.label === ${quote(raw)} ? ${quote(label)} : ${fallback}`,
     'datum.label',
   );
+}
+
+// Axis ticks for an age in days, in days, falling on whole years (or nice
+// fractions of one): a days scale's own ticks (2000, 4000) read 5.5 y, 11.0 y.
+// ponytail: a span under a few months ticks finer than the label's one
+// decimal, so neighbouring labels can repeat.
+function wholeYearTicks([minDays, maxDays]: [number, number], count: number) {
+  return scaleLinear()
+    .domain([minDays / DAYS_PER_YEAR, maxDays / DAYS_PER_YEAR])
+    .ticks(count)
+    .map((years) => years * DAYS_PER_YEAR);
 }
 
 // Pin axis tick values to the union of the two paired bin-boundary fields
@@ -758,6 +790,11 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
   }
 
   const zeroBaselineFields = getZeroBaselineFields(spec);
+  // Epoch-ms date columns go to Vega-Lite as `temporal`, which formats the
+  // axis, tooltip and legend as dates. Only the Vega-Lite type changes: the
+  // spec's own type stays `quantitative`, so domains and brushes still work on
+  // the stored numbers.
+  const dateColumns = timeColumns(spec);
 
   const outputLayers = inputLayers.flatMap((layer, layerIndex) => {
     const mapping = Array.isArray(layer.mapping)
@@ -768,6 +805,10 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     const vegaEncoding: any = {};
     for (const map of mapping) {
       const { encoding } = map;
+      const isTime =
+        !('value' in map) &&
+        map.type === 'quantitative' &&
+        isEpochMs(dateColumns, map.field);
       if ('value' in map) {
         vegaEncoding[encoding] = {
           value: map.value,
@@ -777,13 +818,61 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         const escapedField = map.field.replace(/\./g, '\\.');
         vegaEncoding[encoding] = {
           field: escapedField,
-          type: map.type,
+          type: isTime ? 'temporal' : map.type,
         };
+        // Vega-Lite's default of a tick per 40px puts a time axis on quarters,
+        // then drops every other label to stop overlaps — on a range starting
+        // after January that drops every January, the ticks that print the
+        // year. A tick per 100px lands multi-year ranges on whole years.
+        if (isTime && encoding === 'x') {
+          vegaEncoding[encoding].axis = {
+            tickCount: { expr: 'ceil(width / 100)' },
+          };
+        }
+        // The tooltip reads the field's format, as tables and filter chips
+        // do; the axis keeps its own calendar labels. Without it a binned
+        // bar's range (start – end) is formatted as a plain number, even on a
+        // time scale: 1.76e+12 – 1.78e+12.
+        if (isTime) {
+          Object.assign(vegaEncoding[encoding], {
+            format: 'epoch_ms',
+            formatType: 'udiTime',
+          });
+        }
+        // The other time formats (a year, an age in days, epoch seconds) keep
+        // their quantitative scale in stored units, so domains, brushes and
+        // filters are untouched; only the labels go through formatTime. A
+        // field-level formatType reaches the tooltip but not the guides, so
+        // the axis and legend each get it too.
+        const labelFormat =
+          !isTime && map.type === 'quantitative'
+            ? timeFormatOf(dateColumns, map.field)
+            : undefined;
+        if (labelFormat) {
+          const format = { format: labelFormat, formatType: 'udiTime' };
+          Object.assign(vegaEncoding[encoding], format);
+          if (encoding === 'x' || encoding === 'y') {
+            // From all rows, so the ticks hold still as filters change.
+            const extent =
+              labelFormat === 'days' &&
+              fieldRange(transformedDataFull.value, map.field);
+            vegaEncoding[encoding].axis = extent
+              ? {
+                  ...format,
+                  values: wholeYearTicks(extent, encoding === 'x' ? 8 : 5),
+                }
+              : format;
+          } else if (encoding === 'color' || encoding === 'size') {
+            vegaEncoding[encoding].legend = format;
+          }
+        }
       }
       if (
         (encoding === 'x' || encoding === 'y' || encoding === 'size') &&
         !('value' in map) &&
         map.type === 'quantitative' &&
+        // A time scale has no zero; Vega-Lite drops it with a warning.
+        !isTime &&
         layer.mark !== 'bar' &&
         layer.mark !== 'rect' &&
         !zeroBaselineFields.has(map.field)
@@ -968,22 +1057,44 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       markConfig.strokeWidth = layer.strokeWidth;
     if (typeof layer.strokeOpacity === 'number')
       markConfig.strokeOpacity = layer.strokeOpacity;
-    if (layer.mark === 'rect') {
+    if (layer.mark === 'rect' || layer.mark === 'bar') {
       const hasXPair =
         mapping.some((m) => m.encoding === 'x') &&
         mapping.some((m) => m.encoding === 'x2');
       const hasYPair =
         mapping.some((m) => m.encoding === 'y') &&
         mapping.some((m) => m.encoding === 'y2');
+      // A bar spanning x..x2 with a quantitative height is a histogram's bin.
+      // Vega-Lite reads such a bar as a horizontal range (a thin line at each
+      // height) unless x is marked pre-binned; marked, the bins stand
+      // upright and a colour stacks them, as it stacks a plain bar chart.
+      if (
+        layer.mark === 'bar' &&
+        hasXPair &&
+        vegaEncoding.y?.type === 'quantitative'
+      ) {
+        vegaEncoding.x.bin = { binned: true };
+      }
+      // Bin-boundary ticks are raw numbers, which a time axis labels as
+      // minutes; its own ticks land on calendar boundaries instead. An axis
+      // that already has its ticks (an age's whole years) keeps them.
       if (hasXPair) {
         markConfig.xOffset = 1;
         markConfig.x2Offset = -1;
-        alignAxisToBinBoundaries(vegaEncoding, mapping, 'x', 'x2');
+        if (
+          vegaEncoding.x?.type !== 'temporal' &&
+          vegaEncoding.x?.axis?.values == null
+        )
+          alignAxisToBinBoundaries(vegaEncoding, mapping, 'x', 'x2');
       }
       if (hasYPair) {
         markConfig.yOffset = 1;
         markConfig.y2Offset = -1;
-        alignAxisToBinBoundaries(vegaEncoding, mapping, 'y', 'y2');
+        if (
+          vegaEncoding.y?.type !== 'temporal' &&
+          vegaEncoding.y?.axis?.values == null
+        )
+          alignAxisToBinBoundaries(vegaEncoding, mapping, 'y', 'y2');
       }
     }
     // Nudge apart marks that would land on the same spot — two labels sharing a
@@ -1008,10 +1119,15 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         return map && 'domain' in map ? map.domain : undefined;
       };
       const bounds = numericDomainBounds(domainOf(axis));
+      // How far the field spans: the fallback scale for a layer that wants its
+      // labels separated but declares no explicit domain.
+      const range = fieldRange(vegaSpec.data.values, positionField);
       const span =
         bounds.min !== undefined && bounds.max !== undefined
           ? bounds.max - bounds.min
-          : dataExtent(vegaSpec.data.values, positionField);
+          : range
+            ? range[1] - range[0]
+            : 0;
       const minGap =
         typeof layer.avoidOverlap === 'number'
           ? layer.avoidOverlap

@@ -5650,6 +5650,246 @@
       }
     },
     {
+      "name": "binby-then-groupby",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "binby": {
+              "field": "body_mass_g",
+              "bins": 10,
+              "nice": true
+            }
+          },
+          {
+            "groupby": ["start", "end", "species"]
+          },
+          {
+            "rollup": {
+              "count": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "start": 3500,
+            "end": 4000,
+            "species": "Adelie",
+            "count": 58
+          },
+          {
+            "start": 3000,
+            "end": 3500,
+            "species": "Adelie",
+            "count": 47
+          },
+          {
+            "start": 4500,
+            "end": 5000,
+            "species": "Adelie",
+            "count": 8
+          },
+          {
+            "start": 4000,
+            "end": 4500,
+            "species": "Adelie",
+            "count": 31
+          },
+          {
+            "start": 2500,
+            "end": 3000,
+            "species": "Adelie",
+            "count": 7
+          },
+          {
+            "start": 3500,
+            "end": 4000,
+            "species": "Chinstrap",
+            "count": 35
+          },
+          {
+            "start": 3000,
+            "end": 3500,
+            "species": "Chinstrap",
+            "count": 15
+          },
+          {
+            "start": 4000,
+            "end": 4500,
+            "species": "Chinstrap",
+            "count": 13
+          },
+          {
+            "start": 2500,
+            "end": 3000,
+            "species": "Chinstrap",
+            "count": 2
+          },
+          {
+            "start": 4500,
+            "end": 5000,
+            "species": "Chinstrap",
+            "count": 3
+          },
+          {
+            "start": 4500,
+            "end": 5000,
+            "species": "Gentoo",
+            "count": 40
+          },
+          {
+            "start": 5500,
+            "end": 6000,
+            "species": "Gentoo",
+            "count": 29
+          },
+          {
+            "start": 4000,
+            "end": 4500,
+            "species": "Gentoo",
+            "count": 15
+          },
+          {
+            "start": 5000,
+            "end": 5500,
+            "species": "Gentoo",
+            "count": 34
+          },
+          {
+            "start": 6000,
+            "end": 6500,
+            "species": "Gentoo",
+            "count": 4
+          },
+          {
+            "start": 3500,
+            "end": 4000,
+            "species": "Gentoo",
+            "count": 1
+          }
+        ],
+        "allData": [
+          {
+            "start": 3500,
+            "end": 4000,
+            "species": "Adelie",
+            "count": 58
+          },
+          {
+            "start": 3000,
+            "end": 3500,
+            "species": "Adelie",
+            "count": 47
+          },
+          {
+            "start": 4500,
+            "end": 5000,
+            "species": "Adelie",
+            "count": 8
+          },
+          {
+            "start": 4000,
+            "end": 4500,
+            "species": "Adelie",
+            "count": 31
+          },
+          {
+            "start": 2500,
+            "end": 3000,
+            "species": "Adelie",
+            "count": 7
+          },
+          {
+            "start": 3500,
+            "end": 4000,
+            "species": "Chinstrap",
+            "count": 35
+          },
+          {
+            "start": 3000,
+            "end": 3500,
+            "species": "Chinstrap",
+            "count": 15
+          },
+          {
+            "start": 4000,
+            "end": 4500,
+            "species": "Chinstrap",
+            "count": 13
+          },
+          {
+            "start": 2500,
+            "end": 3000,
+            "species": "Chinstrap",
+            "count": 2
+          },
+          {
+            "start": 4500,
+            "end": 5000,
+            "species": "Chinstrap",
+            "count": 3
+          },
+          {
+            "start": 4500,
+            "end": 5000,
+            "species": "Gentoo",
+            "count": 40
+          },
+          {
+            "start": 5500,
+            "end": 6000,
+            "species": "Gentoo",
+            "count": 29
+          },
+          {
+            "start": 4000,
+            "end": 4500,
+            "species": "Gentoo",
+            "count": 15
+          },
+          {
+            "start": 5000,
+            "end": 5500,
+            "species": "Gentoo",
+            "count": 34
+          },
+          {
+            "start": 6000,
+            "end": 6500,
+            "species": "Gentoo",
+            "count": 4
+          },
+          {
+            "start": 3500,
+            "end": 4000,
+            "species": "Gentoo",
+            "count": 1
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "derive-percent-of-max",
       "spec": {
         "source": {

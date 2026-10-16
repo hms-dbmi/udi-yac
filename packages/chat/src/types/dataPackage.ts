@@ -17,6 +17,10 @@ export interface DataPackageResource {
       type?: string;
       'udi:cardinality'?: number;
       'udi:data_type'?: string;
+      /** How a time column stores its values: `epoch_ms`, `epoch_s`, `year`, or
+       *  `days` (a duration such as an age). The column keeps its
+       *  `udi:data_type`; only display reads this. */
+      'udi:time_format'?: string;
       'udi:overlapping_fields'?: string[] | 'all';
       'udi:unique'?: boolean;
     }>;

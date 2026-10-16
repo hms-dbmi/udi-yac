@@ -26,6 +26,7 @@ vi.mock('udi-toolkit/react', () => ({
   clearAllSelections: () => Promise.resolve(),
   loadDataPackage: () => Promise.resolve({ sources: [], fieldDomains: [] }),
   setQueryBackend: () => {},
+  setTimeFormats: () => Promise.resolve(),
   createRemoteBackend: () => ({}),
 }));
 
