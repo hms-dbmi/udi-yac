@@ -10,10 +10,8 @@ name: Release udi-toolkit
 #   2. git fetch origin main
 #      git tag udi-toolkit-v<version> origin/main && git push origin udi-toolkit-v<version>
 #
-# Publish udi-toolkit BEFORE releasing udi-yac when the toolkit version moved:
-# udi-yac's `workspace:*` dep is rewritten to the exact in-tree toolkit version
-# at publish time, so that version must already exist on npm. Let this run
-# finish before pushing the udi-yac tag.
+# Independent of udi-yac releases: udi-yac bundles the in-tree toolkit into its
+# own dist/, so neither package has to be published before the other.
 #
 # The filename is load-bearing — npm trusted publishing (OIDC) is bound to this
 # repository *and* this workflow filename. Renaming it breaks publishing.
