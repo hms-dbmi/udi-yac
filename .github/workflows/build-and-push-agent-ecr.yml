@@ -54,7 +54,11 @@ jobs:
 
   build-and-push:
     needs: test
-    runs-on: ubuntu-latest
+    # Native arm64 runner (free for public repos), so the image is linux/arm64
+    # without QEMU. The task definition must declare
+    # RuntimePlatform.CpuArchitecture: ARM64 to match, or tasks fail with
+    # "exec format error".
+    runs-on: ubuntu-24.04-arm
     permissions:
       id-token: write # OIDC for the AWS build role; only this job talks to AWS
       contents: read
