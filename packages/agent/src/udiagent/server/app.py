@@ -109,7 +109,9 @@ agent = UDIAgent(
     openai_api_key=config.openai_api_key,
     openai_base_url=config.openai_base_url,
     bedrock=config.udi_bedrock,
-    bedrock_region=config.aws_region,
+    # Gated: bedrock_region alone opts in, and ECS injects AWS_REGION into every
+    # task, so passing it unconditionally put every ECS deploy on Bedrock.
+    bedrock_region=config.aws_region if config.udi_bedrock else None,
     langfuse_public_key=config.langfuse_public_key,
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
