@@ -24,7 +24,7 @@ docker rm "$CONTAINER_NAME" 2>/dev/null || true
 echo "Starting new container..."
 docker run -d \
   --name "$CONTAINER_NAME" \
-  -p 80:80 \
+  -p 80:8000 \
   --env-file .env \
   --restart unless-stopped \
   "$IMAGE_NAME:$GIT_SHA"
