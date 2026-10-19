@@ -12,7 +12,6 @@ on:
       - "packages/grammar/**"
       - "apps/grammar-app/**"
       - "pnpm-lock.yaml"
-      - "scripts/gen_datapackage.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -51,6 +50,8 @@ jobs:
       # fetch cross-origin, so mirror it into the site at build time. The chat's
       # sync-data step copies sample-data/ into the build. Update Drive files
       # via "Manage versions" so these IDs stay valid, then re-run this workflow.
+      # datapackage.json is maintained by hand (scripts/gen_datapackage.py, then
+      # upload); the check below fails the build if its columns drift from the CSVs.
       - name: Fetch pcx data package from Google Drive
         run: |
           mkdir -p sample-data/pcx
@@ -58,7 +59,7 @@ jobs:
             curl -fsSL -o "sample-data/pcx/$name" \
               "https://drive.usercontent.google.com/download?id=$id&export=download"
           done <<'EOF'
-          157k7haoaMKQNcZtT5ZswnpjNE1YjnJeW data_dictionary.csv
+          1fWZS0NEwNPlwxBnwQR2nLg-OQTNtsbUg datapackage.json
           1O_A8Dim4FGassYQbHRegGzdmT1jAaPDF pcx_30_demographics_deid.csv
           1Zmrq567t5HOVH8kZUNqrdFINCsOCnCUk pcx_30_event_level_deid.csv
           1WceerE5BMQV74yV8kcSpY_GWemla-Qo- pcx_30_medical_therapy_level_deid.csv
@@ -67,8 +68,16 @@ jobs:
           1FEIdgtiTDBwYC7jgEwhTuVpUlfkX3mwg pcx_30_surgery_level_deid.csv
           1uDC03yUOei0Yf5MelWXvzpRR5JVg0C5G pcx_30_treatment_summary_deid.csv
           EOF
-          python3 scripts/gen_datapackage.py sample-data/pcx \
-            --strip pcx_30_ --strip _level_deid --strip _deid --parent Patient
+          python3 - <<'PY'
+          import csv, json, sys
+          d = "sample-data/pcx/"
+          pkg = json.load(open(d + "datapackage.json"))
+          for r in pkg["resources"]:
+              with open(d + r["path"], newline="", encoding="utf-8") as fh:
+                  header = next(csv.reader(fh))
+              if header != [f["name"] for f in r["schema"]["fields"]]:
+                  sys.exit(f"datapackage.json columns for {r['path']} differ from the CSV; regenerate and re-upload it")
+          PY
 
       - name: Build chat SPA
         run: pnpm --filter udi-yac build
