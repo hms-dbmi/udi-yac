@@ -12,6 +12,7 @@ on:
       - "packages/grammar/**"
       - "apps/grammar-app/**"
       - "pnpm-lock.yaml"
+      - "scripts/gen_datapackage.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -44,6 +45,30 @@ jobs:
 
       - name: Build udi-toolkit
         run: pnpm run build:toolkit
+
+      # pcx is kept out of git (.gitignore). The public copy lives in Google
+      # Drive (folder 1MPVN_fyqluIKAXdFElaGr8f2GV18og8o), which browsers cannot
+      # fetch cross-origin, so mirror it into the site at build time. The chat's
+      # sync-data step copies sample-data/ into the build. Update Drive files
+      # via "Manage versions" so these IDs stay valid, then re-run this workflow.
+      - name: Fetch pcx data package from Google Drive
+        run: |
+          mkdir -p sample-data/pcx
+          while read -r id name; do
+            curl -fsSL -o "sample-data/pcx/$name" \
+              "https://drive.usercontent.google.com/download?id=$id&export=download"
+          done <<'EOF'
+          157k7haoaMKQNcZtT5ZswnpjNE1YjnJeW data_dictionary.csv
+          1O_A8Dim4FGassYQbHRegGzdmT1jAaPDF pcx_30_demographics_deid.csv
+          1Zmrq567t5HOVH8kZUNqrdFINCsOCnCUk pcx_30_event_level_deid.csv
+          1WceerE5BMQV74yV8kcSpY_GWemla-Qo- pcx_30_medical_therapy_level_deid.csv
+          16RoZxbNHj0Tn0mdALfWexqlEjP3PJwcK pcx_30_patient_level_deid.csv
+          1bgSlCTTgkVrM4dfrjXz-iwVlXf_w5sxS pcx_30_radiation_level_deid.csv
+          1FEIdgtiTDBwYC7jgEwhTuVpUlfkX3mwg pcx_30_surgery_level_deid.csv
+          1uDC03yUOei0Yf5MelWXvzpRR5JVg0C5G pcx_30_treatment_summary_deid.csv
+          EOF
+          python3 scripts/gen_datapackage.py sample-data/pcx \
+            --strip pcx_30_ --strip _level_deid --strip _deid --parent Patient
 
       - name: Build chat SPA
         run: pnpm --filter udi-yac build
