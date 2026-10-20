@@ -85,8 +85,8 @@
       }
     },
     {
-      "label": "Dev: site",
-      "detail": "Landing page + docs (Astro Starlight, http://localhost:4321/udi-yac/). Its app/ and grammar/ links only resolve in the assembled Pages build.",
+      "label": "Dev: site docs",
+      "detail": "Landing page + docs alone (Astro Starlight, http://localhost:4321/udi-yac/)",
       "type": "shell",
       "command": "pnpm --filter udi-yac-site dev",
       "isBackground": true,
@@ -95,6 +95,32 @@
         "group": "dev",
         "panel": "dedicated"
       }
+    },
+    {
+      "label": "Dev: site app",
+      "detail": "The chat under /udi-yac/app/ on :5176, laid out as on Pages, for the site to proxy. Opens on pcx in browser mode whatever .env.local says.",
+      "type": "shell",
+      "command": "pnpm --filter udi-yac dev --port 5176 --strictPort",
+      "options": {
+        "env": {
+          "VITE_BASE": "/udi-yac/app/",
+          "VITE_UDI_DATA_PACKAGE": "/udi-yac/app/data/pcx/datapackage.json",
+          "VITE_UDI_REMOTE_PACKAGE": ""
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Dev: site",
+      "detail": "Landing page + docs with the chat at /udi-yac/app/ (http://localhost:4321/udi-yac/). Run Dev: grammar app too for /udi-yac/grammar/, and Dev: agent to ask questions.",
+      "dependsOn": ["Dev: site docs", "Dev: site app"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
     },
     {
       "label": "Dev: chat + agent",

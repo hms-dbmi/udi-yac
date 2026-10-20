@@ -16,8 +16,8 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
-import PackageCards from "../../components/PackageCards.astro";
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import PackageCards from '../../components/PackageCards.astro';
 
 ## Pick a dataset
 
@@ -29,21 +29,20 @@ Open a predefined session to see what YAC can do without an API key, or start a 
 
 <CardGrid>
   <Card title="Ask" icon="comment">
-    Type a question about the data. The agent chooses a chart from a library of
-    templates, binds it to your dataset's tables and fields, and adds it to the
-    dashboard.
+    Type a question about the data. The agent chooses a chart from a library of templates, binds it
+    to your dataset's tables and fields, and adds it to the dashboard.
   </Card>
   <Card title="Explore" icon="magnifier">
-    Charts are linked. Brush a range or click a bar to filter every other chart.
-    Swap the field a chart splits by from the dropdowns under it in the chat.
+    Charts are linked. Brush a range or click a bar to filter every other chart. Swap the field a
+    chart splits by from the dropdowns under it in the chat.
   </Card>
   <Card title="Keep" icon="document">
-    Save a session in your browser, or export it as a file to share. A session
-    brings back the conversation and the dashboard.
+    Save a session in your browser, or export it as a file to share. A session brings back the
+    conversation and the dashboard.
   </Card>
   <Card title="Bring it home" icon="puzzle">
-    The chat is an npm package (`udi-yac`) and the agent a Python one
-    (`udiagent`). See [Integrate](/udi-yac/docs/integrate/chat/).
+    The chat is an npm package (`udi-yac`) and the agent a Python one (`udiagent`). See
+    [Integrate](/udi-yac/docs/integrate/chat/).
   </Card>
 </CardGrid>
 
