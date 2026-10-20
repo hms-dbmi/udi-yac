@@ -69,6 +69,11 @@ def test_describe_no_filters():
     assert describe_filters([]) == "No filters are active."
 
 
+def test_describe_cleared_interval():
+    entry = {k: v for k, v in BRUSH.items() if k != "intervalRange"}
+    assert "no range set" in describe_filters([entry])
+
+
 def test_describe_point_filter_awaiting_values():
     text = describe_filters([{**GROUP3, "pointValues": [""]}])
     assert "no values picked yet" in text

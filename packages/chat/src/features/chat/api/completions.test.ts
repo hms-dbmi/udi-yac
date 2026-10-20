@@ -64,3 +64,26 @@ describe('queryLLM auth header', () => {
     expect(fetchMock.mock.calls[0][1].headers).not.toHaveProperty('Authorization');
   });
 });
+
+describe('queryLLM filter state', () => {
+  it('sends the active filters, and an empty list when there are none', async () => {
+    const filters = [
+      {
+        id: 'message-filter-1-0',
+        origin: 'chat' as const,
+        entity: 'Event',
+        field: 'diagnosis',
+        filterType: 'point' as const,
+        pointValues: ['Group 3'],
+        scope: { entity: 'Patient', match: 'any' as const },
+      },
+    ];
+    const fetchMock = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac' }, [], '{}', '[]', undefined, filters);
+    expect(body(fetchMock).filters).toEqual(filters);
+
+    const bare = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac' }, [], '{}', '[]');
+    expect(body(bare).filters).toEqual([]);
+  });
+});

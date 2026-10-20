@@ -60,7 +60,9 @@ def describe_condition(entry: dict) -> str:
     """``Entity.field`` and its values, in words."""
     column = f"{entry['entity']}.{entry['field']}"
     if entry["filterType"] == "interval":
-        rng = entry.get("intervalRange") or {}
+        rng = entry.get("intervalRange")
+        if not isinstance(rng, dict):
+            return f"{column} (no range set — the filter keeps every row)"
         return f"{column} between {rng.get('min')} and {rng.get('max')}"
     values = [v for v in entry.get("pointValues") or [] if v != ""]
     if not values:
