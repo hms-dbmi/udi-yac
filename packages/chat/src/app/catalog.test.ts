@@ -1,8 +1,9 @@
 /**
  * `sample-data/catalog.json` lists the packages and predefined sessions the
- * standalone app offers. A session is a frozen export: regenerate its package
- * with a table renamed and the session still parses, then renders nothing. So
- * beyond parsing, every chart's source must still be a table of its package.
+ * public site (apps/site) offers. A session is a frozen export: regenerate its
+ * package with a table renamed and the session still parses, then renders
+ * nothing. So beyond parsing, every chart's source must still be a table of
+ * its package.
  */
 import { describe, expect, it } from 'vitest';
 import catalog from '../../../../sample-data/catalog.json';
