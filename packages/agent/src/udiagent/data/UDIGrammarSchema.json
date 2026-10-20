@@ -544,7 +544,7 @@
         },
         "match": {
           "$ref": "#/definitions/FilterMatch",
-          "description": "Specifies whether to use 'all' or 'any' of the selected data in a 1-to-many mapping. Default is 'any'."
+          "description": "Specifies whether a target must relate to 'any', 'all' or 'none' of the selected data in a 1-to-many mapping. Default is 'any'.\n\nWith `source` equal to the filtered table and both keys naming a subject column (e.g. a patient id), the filter keeps every row of each subject that matches, not just the matching rows."
         },
         "name": {
           "description": "The name of the selection.",
@@ -589,8 +589,8 @@
       "description": "A filter expression: a structured expression (Expr) that evaluates to a boolean, or a data selection. The legacy raw Arquero string form is still accepted during migration (see Expr)."
     },
     "FilterMatch": {
-      "description": "A filter match type, which specifies how to match the filter data selection.",
-      "enum": ["all", "any"],
+      "description": "A filter match type, which specifies how to match the filter data selection across the rows each target key relates to: keep targets with at least one matching row ('any'), with every row matching ('all'), or with no matching row ('none').",
+      "enum": ["all", "any", "none"],
       "type": "string"
     },
     "GenericFieldMapping<ArcEncodingOptions>": {

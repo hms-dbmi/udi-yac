@@ -287,6 +287,16 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       return escape((d: Record<string, unknown>) => set.has(d[targetKey]));
     };
 
+    // 'none': rows whose key no matching origin row carries. A row with no key
+    // relates to nothing, so it is dropped — as SQL's NOT IN drops it.
+    if (selectionMatching === 'none') {
+      const set = new Set(filteredTable.array(originKey) as unknown[]);
+      return escape(
+        (d: Record<string, unknown>) =>
+          d[targetKey] != null && !set.has(d[targetKey]),
+      );
+    }
+
     // If the matching is 'any' or not specified, we just return the filter expression
     if (selectionMatching != 'all') {
       return keyIn(filteredTable.array(originKey) as string[]);
