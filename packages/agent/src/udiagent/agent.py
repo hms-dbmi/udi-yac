@@ -161,6 +161,14 @@ class UDIAgent:
             )
             return client.get_current_trace_id()
 
+    def langfuse_trace_url(self, trace_id: str) -> str | None:
+        """The trace's page in the LangFuse UI, or ``None`` without LangFuse.
+
+        The first call looks the project ID up over the network.
+        """
+        client = getattr(self, "_langfuse_client", None)
+        return client.get_trace_url(trace_id=trace_id) if client is not None else None
+
     def _init_server_model_connection(self, openai_api_key: str | None = None):
         """Instantiate the OpenAI client for GPT-based features.
 

@@ -205,6 +205,18 @@ class ServerConfig(BaseSettings):
             "Does not by itself enable tracing."
         ),
     )
+    udi_issue_report_webhook_url: str | None = Field(
+        default=None,
+        examples=['https://hooks.slack.com/services/T000/B000/XXXX'],
+        description=(
+            "Notified of every issue report (`POST /v1/yac/issue_report`): a "
+            "JSON POST with a Slack-style `text` summary plus the report's "
+            "note, source, contact and LangFuse trace link — never the "
+            "session. Works as-is with Slack and Teams incoming webhooks; "
+            "route it through Zapier or Power Automate for email. Needs "
+            "LangFuse, since reports are refused without it."
+        ),
+    )
 
     # --- Server-side query backends ---
     udi_query_backends: str | None = Field(
@@ -363,6 +375,15 @@ class ServerConfig(BaseSettings):
                 f"{', '.join(sorted(missing))} missing. Set all three to "
                 "enable tracing, or none to disable it."
             )
+        if self.udi_issue_report_webhook_url:
+            if not self.udi_issue_report_webhook_url.startswith(("https://", "http://")):
+                errors.append("UDI_ISSUE_REPORT_WEBHOOK_URL must be an http(s) URL.")
+            if missing:
+                # Reports are refused without LangFuse, so it would never fire.
+                errors.append(
+                    "UDI_ISSUE_REPORT_WEBHOOK_URL is set, but issue reports "
+                    "need LangFuse, which is not configured."
+                )
 
         # The OpenAI SDK refuses `provider=` alongside api_key/base_url, so
         # these cannot be reconciled at construction — they are a genuine

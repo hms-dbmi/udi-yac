@@ -26,7 +26,7 @@ REPORT = {
 
 
 @pytest.fixture
-def server(request):
+def server(request, monkeypatch):
     """The real app over a stub agent; ``langfuse`` is the client it holds."""
     with patch.object(UDIAgent, "__init__", lambda self, **kwargs: None):
         import udiagent.server.app as server_app
@@ -37,6 +37,8 @@ def server(request):
         agent._langfuse_client = getattr(request, "param", MagicMock())
         server_app.agent = agent
         server_app.orchestrator.agent = agent
+        # A developer's .env may name a real webhook; never post to it from tests.
+        monkeypatch.setattr(server_app.config, "udi_issue_report_webhook_url", None)
         yield server_app, TestClient(server_app.app)
 
 
@@ -226,3 +228,112 @@ def test_tool_is_sent_and_its_offer_returned_when_enabled():
 def test_tool_is_not_sent_when_disabled():
     tools, _ = _orchestrate(False, {"message": "", "summary": "", "user_requested": False})
     assert "OfferIssueReport" not in tools
+
+
+# ---------------------------------------------------------------------------
+# Webhook notification
+# ---------------------------------------------------------------------------
+
+WEBHOOK = "https://hooks.example.org/secret-token"
+
+
+@pytest.fixture
+def webhook(server, monkeypatch):
+    """The server with a webhook configured; yields the captured POSTs."""
+    server_app, client = server
+    monkeypatch.setattr(server_app.config, "udi_issue_report_webhook_url", WEBHOOK)
+    monkeypatch.setattr(server_app.agent, "record_issue_report", lambda **_: "trace-123")
+    monkeypatch.setattr(
+        server_app.agent, "langfuse_trace_url", lambda tid: f"https://lf.example/traces/{tid}"
+    )
+    sent = []
+
+    def fake_urlopen(req, timeout):
+        sent.append(req)
+        response = MagicMock()
+        response.__enter__.return_value.status = 200
+        return response
+
+    with patch("urllib.request.urlopen", fake_urlopen):
+        yield server_app, client, sent
+
+
+def test_webhook_gets_the_note_and_a_link_but_not_the_session(webhook):
+    _, client, sent = webhook
+    resp = _post(client)
+
+    assert resp.status_code == 200
+    (req,) = sent
+    assert req.full_url == WEBHOOK
+    body = json.loads(req.data)
+    assert body["report"] == {
+        "description": REPORT["description"],
+        "contact": REPORT["contact"],
+        "source": "menu",
+        "traceId": "trace-123",
+        "traceUrl": "https://lf.example/traces/trace-123",
+    }
+    assert "<https://lf.example/traces/trace-123|Open in LangFuse>" in body["text"]
+    assert "session" not in json.dumps(body["report"])
+
+
+def test_webhook_text_escapes_slack_markup(webhook):
+    _, client, sent = webhook
+    _post(client, {**REPORT, "description": "<!channel> broke & <http://x|y>"})
+
+    text = json.loads(sent[0].data)["text"]
+    assert "&lt;!channel&gt; broke &amp; &lt;http://x|y&gt;" in text
+    assert "<!channel>" not in text
+
+
+def test_webhook_failure_still_accepts_the_report_and_keeps_the_url_out_of_logs(
+    webhook, caplog
+):
+    server_app, client, _ = webhook
+
+    def failing_urlopen(req, timeout):
+        raise OSError(f"cannot reach {req.full_url}")
+
+    with (
+        patch("urllib.request.urlopen", failing_urlopen),
+        caplog.at_level(logging.INFO, logger=server_app.__name__),
+    ):
+        resp = _post(client)
+
+    assert resp.status_code == 200
+    logs = "\n".join(r.getMessage() for r in caplog.records)
+    assert "issue report webhook failed: OSError" in logs
+    assert "secret-token" not in logs
+
+
+def test_no_webhook_no_post(server):
+    _, client = server
+    with (
+        patch.object(UDIAgent, "record_issue_report", return_value="t"),
+        patch("urllib.request.urlopen") as urlopen,
+    ):
+        _post(client)
+    urlopen.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("overrides", "error"),
+    [
+        ({"udi_issue_report_webhook_url": "hooks.example.org/x"}, r"must be an http\(s\) URL"),
+        ({"langfuse_host": None}, "need LangFuse"),
+    ],
+)
+def test_webhook_config_is_checked_at_startup(overrides, error):
+    from pydantic import ValidationError
+
+    from udiagent.server.config import ServerConfig
+
+    base = {
+        "insecure_dev_mode": True,
+        "langfuse_public_key": "pk",
+        "langfuse_secret_key": "sk",
+        "langfuse_host": "https://lf.example",
+        "udi_issue_report_webhook_url": WEBHOOK,
+    }
+    with pytest.raises(ValidationError, match=error):
+        ServerConfig(**{**base, **overrides})

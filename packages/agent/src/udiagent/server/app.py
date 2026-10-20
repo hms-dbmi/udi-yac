@@ -12,13 +12,14 @@ Run with::
 import json
 import logging
 import os
+import urllib.request
 from dataclasses import asdict
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import APIError, AuthenticationError, OpenAIError
-from fastapi import FastAPI, Header, Depends, Request
+from fastapi import BackgroundTasks, FastAPI, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -686,9 +687,64 @@ def yac_vis_instantiate(
 MAX_ISSUE_REPORT_BYTES = 10 * 1024 * 1024
 
 
+def _slack_escape(text: str) -> str:
+    # The note is the user's text: escaped, it cannot @channel or forge links.
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _notify_issue_report(url: str, report: YACIssueReportRequest, trace_id: str | None):
+    """POST a summary of a recorded report to UDI_ISSUE_REPORT_WEBHOOK_URL.
+
+    Runs after the response, and a failure is only logged: the report is
+    already in LangFuse. The session stays there, behind its access control;
+    only the note, contact and a link go out.
+    """
+    trace_url = None
+    if trace_id:
+        try:
+            trace_url = agent.langfuse_trace_url(trace_id)
+        except Exception as exc:  # noqa: BLE001 - the link is optional
+            logger.warning("could not build the LangFuse trace URL: %s", type(exc).__name__)
+
+    where = {"menu": "Session menu", "chat": "chat", "crash": "crash screen"}[report.source]
+    lines = [f"*Issue report* from the {where}"]
+    lines += [f">{_slack_escape(line)}" for line in report.description.splitlines()]
+    if report.contact:
+        lines.append(f"Contact: {_slack_escape(report.contact)}")
+    if trace_url:
+        lines.append(f"<{trace_url}|Open in LangFuse>")
+    payload = {
+        "text": "\n".join(lines),
+        "report": {
+            "description": report.description,
+            "contact": report.contact,
+            "source": report.source,
+            "traceId": trace_id,
+            "traceUrl": trace_url,
+        },
+    }
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            logger.info("issue report webhook delivered (status=%d)", response.status)
+    except Exception as exc:  # noqa: BLE001 - logged, never raised
+        # Never log the URL: Slack's and Teams' embed their credentials.
+        logger.warning(
+            "issue report webhook failed: %s %s",
+            type(exc).__name__,
+            getattr(exc, "code", ""),
+        )
+
+
 @app.post("/v1/yac/issue_report")
 async def yac_issue_report(
     request: Request,
+    background_tasks: BackgroundTasks,
     token_payload: dict = Depends(verify_jwt),
     x_conversation_id: str | None = Header(None, alias="X-Conversation-Id"),
 ):
@@ -744,6 +800,10 @@ async def yac_issue_report(
         session=report.session,
         session_id=x_conversation_id,
     )
+    if config.udi_issue_report_webhook_url:
+        background_tasks.add_task(
+            _notify_issue_report, config.udi_issue_report_webhook_url, report, trace_id
+        )
     return {"traceId": trace_id}
 
 
