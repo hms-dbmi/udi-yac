@@ -85,8 +85,8 @@
       }
     },
     {
-      "label": "Dev: site docs",
-      "detail": "Landing page + docs alone (Astro Starlight, http://localhost:4321/udi-yac/)",
+      "label": "Dev: site server",
+      "detail": "Astro dev server for the landing page, docs and app page (http://localhost:4321/udi-yac/). The app page embeds the udi-yac library build; Dev: site keeps that build current.",
       "type": "shell",
       "command": "pnpm --filter udi-yac-site dev",
       "isBackground": true,
@@ -97,17 +97,10 @@
       }
     },
     {
-      "label": "Dev: site app",
-      "detail": "The chat under /udi-yac/app/ on :5176, laid out as on Pages, for the site to proxy. Opens on pcx in browser mode whatever .env.local says.",
+      "label": "Dev: chat library (watch)",
+      "detail": "Rebuilds the udi-yac library (packages/chat/dist) on every change, for the site's app page. Shares dist/ with the standalone build, so it overwrites one.",
       "type": "shell",
-      "command": "pnpm --filter udi-yac dev --port 5176 --strictPort",
-      "options": {
-        "env": {
-          "VITE_BASE": "/udi-yac/app/",
-          "VITE_UDI_DATA_PACKAGE": "/udi-yac/app/data/pcx/datapackage.json",
-          "VITE_UDI_REMOTE_PACKAGE": ""
-        }
-      },
+      "command": "pnpm --filter udi-yac exec vite build --mode lib --watch",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
@@ -117,17 +110,17 @@
     },
     {
       "label": "Dev: site",
-      "detail": "Landing page + docs with the chat at /udi-yac/app/ (http://localhost:4321/udi-yac/). /udi-yac/grammar/ also needs Dev: grammar app, and asking questions needs Dev: agent; Dev: all starts everything.",
-      "dependsOn": ["Dev: site docs", "Dev: site app"],
+      "detail": "Landing page, docs and the app page at /udi-yac/app/ (http://localhost:4321/udi-yac/). /udi-yac/grammar/ also needs Dev: grammar app, and asking questions needs Dev: agent; Dev: all starts everything.",
+      "dependsOn": ["Dev: site server", "Dev: chat library (watch)"],
       "dependsOrder": "parallel",
       "problemMatcher": []
     },
     {
       "label": "Dev: all",
-      "detail": "The whole public site locally, as Pages lays it out: landing + docs, the chat at /udi-yac/app/, the grammar demo at /udi-yac/grammar/, and the agent. Open http://localhost:4321/udi-yac/.",
+      "detail": "The whole public site locally, as Pages lays it out: landing, docs, the app at /udi-yac/app/, the grammar demo at /udi-yac/grammar/, and the agent. Open http://localhost:4321/udi-yac/.",
       "dependsOn": [
-        "Dev: site docs",
-        "Dev: site app",
+        "Dev: site server",
+        "Dev: chat library (watch)",
         "Dev: grammar app",
         "Dev: agent"
       ],

@@ -1,10 +1,12 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import react from '@astrojs/react';
 import starlight from '@astrojs/starlight';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 
-// Served at https://hms-dbmi.github.io/udi-yac/ next to the chat (app/) and the
-// grammar demo (grammar/), which pages.yml copies into the same artifact.
+// Served at https://hms-dbmi.github.io/udi-yac/. The site also serves the chat
+// at app/ (src/pages/app, embedding the udi-yac library); the grammar demo at
+// grammar/ is a separate build that pages.yml copies into the same artifact.
 // Starlight does not add `base` to links written in markdown, so links in the
 // content spell out /udi-yac/.
 /**
@@ -24,15 +26,15 @@ const devProxy = (port, task) => ({
         .writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' })
         .end(
           `Nothing is listening on localhost:${port}.\n\n` +
-            `Start the "${task}" VS Code task, or "Dev: all" for the whole site. ` +
+            `Start the "${task}" VS Code task, or "Dev: all" for everything. ` +
             'See "Local development" in apps/site/README.md.',
         );
     }),
 });
 
-/** GitHub Pages redirects /udi-yac/app to /udi-yac/app/; the proxied dev
- *  servers would 404 it instead (and a page served without the slash would
- *  resolve the chat's relative data paths one level too high). */
+/** GitHub Pages redirects /udi-yac/app to /udi-yac/app/. In dev the app page
+ *  would be served without the slash, resolving the chat's page-relative data
+ *  paths one level too high, and the proxied grammar demo would 404. */
 /** @type {import('vite').Plugin} */
 const devTrailingSlash = {
   name: 'udi-yac-dev-trailing-slash',
@@ -50,19 +52,24 @@ export default defineConfig({
   base: '/udi-yac',
   vite: {
     plugins: [devTrailingSlash],
+    // The app page reads the chat's own VITE_UDI_* settings (API URL, key
+    // prompt, model), from the chat's .env/.env.local in dev. Its data package
+    // vars are ignored here: the site picks packages from the catalog.
+    envPrefix: ['PUBLIC_', 'VITE_UDI_'],
+    envDir: '../../packages/chat',
     server: {
-      // Dev only: the app and the grammar demo are separate dev servers (see
-      // apps/site/README.md). Proxying them makes the site's links resolve in
-      // dev the way they do in the assembled Pages build. Astro strips `base`
-      // from HTTP requests before Vite's proxy sees them (websocket upgrades
-      // keep it), so each rule matches both forms and puts the prefix back.
+      // Dev only: the grammar demo is a separate dev server (see
+      // apps/site/README.md); proxying it makes the site's links resolve in dev
+      // the way they do in the assembled Pages build. Astro strips `base` from
+      // HTTP requests before Vite's proxy sees them (websocket upgrades keep
+      // it), so the rule matches both forms and puts the prefix back.
       proxy: {
-        '^/(udi-yac/)?app(/|$)': devProxy(5176, 'Dev: site app'),
         '^/(udi-yac/)?grammar(/|$)': devProxy(9000, 'Dev: grammar app'),
       },
     },
   },
   integrations: [
+    react(),
     starlight({
       title: 'YAC',
       description:
