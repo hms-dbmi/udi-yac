@@ -115,6 +115,40 @@ Generation validates every spec against the UDI grammar and reports any
 non-conforming templates (non-fatal; pass `--strict` to
 `template_viz_generation.py` to fail hard).
 
+### Reasoning models and the Responses API
+
+Five constructor parameters shape LLM requests. Their defaults send exactly
+what earlier releases sent, so nothing changes unless you set them. The server
+reads them from `UDI_OPENAI_API`, `UDI_REASONING_EFFORT`, `UDI_TEMPERATURE`
+(`omit` for `None`), `UDI_MAX_COMPLETION_TOKENS` and `UDI_VIS_TOOL_CHOICE`.
+
+```python
+agent = UDIAgent(
+    gpt_model_name="gpt-6.1-sol",
+    openai_api_key="sk-...",
+    openai_api="responses",       # gpt-6.1-sol only calls tools through Responses
+    reasoning_effort="low",       # passed through verbatim; None sends nothing
+    temperature=None,             # OpenAI rejects temperature when reasoning is on
+    max_completion_tokens=16384,  # reasoning tokens count against the cap
+    vis_tool_choice="required",   # pick a chart template instead of replying in prose
+)
+```
+
+The `"responses"` path translates each request and reply, so the orchestrator
+and visualization code are unaware of which API ran. Keep the default
+`"chat_completions"` for self-hosted backends (vLLM, Ollama) and Bedrock. When
+a call stops at the output cap, the server logs a warning naming the model; if
+that warning recurs, raise `max_completion_tokens`.
+
+`vis_tool_choice` applies only to the call that picks a chart template. With
+the default `"auto"` a model may answer without picking one, and the user gets
+a "no chart template fits" message; `gpt-6.1-sol` does this for about one chart
+request in seven. `"required"` makes it pick a template.
+
+Usage reporting includes `cache_write_tokens`: models that bill prompt-cache
+writes (GPT-5.6 and later, at 1.25× the input rate) report them, and the server
+returns them as `X-Usage-Cache-Write-Tokens`.
+
 ### Third-party OpenAI-compatible backends
 
 Point `openai_base_url` at any OpenAI-compatible chat-completions root and set
@@ -260,28 +294,33 @@ uv run --extra server fastapi run src/udiagent/server/app.py --port 8007
 
 <!-- BEGIN generated: env vars (scripts/gen_env_docs.py) -->
 
-| Variable                   | Default   | Description                                                                                                                                                                                                                                                                                                                                                                                           |
-| -------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `JWT_SECRET_KEY`           | —         | JWT signing key for self-issued tokens. Required unless `INSECURE_DEV_MODE=1` or `JWT_JWKS_URL` is set.                                                                                                                                                                                                                                                                                               |
-| `JWT_ALGORITHM`            | `HS256`   | JWT algorithm. Set to the identity provider's (e.g. `RS256`) when using `JWT_JWKS_URL`.                                                                                                                                                                                                                                                                                                               |
-| `JWT_JWKS_URL`             | —         | Verify externally issued tokens against an identity provider's JWKS endpoint instead of `JWT_SECRET_KEY`. Mutually exclusive with it.                                                                                                                                                                                                                                                                 |
-| `JWT_ISSUER`               | —         | Expected `iss` claim; validated only when set.                                                                                                                                                                                                                                                                                                                                                        |
-| `JWT_AUDIENCE`             | —         | Expected `aud` claim. Required with `JWT_JWKS_URL`.                                                                                                                                                                                                                                                                                                                                                   |
-| `INSECURE_DEV_MODE`        | `0`       | Skip JWT verification entirely. Development only — never set this in production.                                                                                                                                                                                                                                                                                                                      |
-| `UDI_CORS_ORIGINS`         | `*`       | Comma-separated list of browser origins allowed to call this server. Defaults to `*` (any origin). Note that credentialed requests are always permitted, so with `*` any site can call this server with a user's cookies — name your origins explicitly in production.                                                                                                                                |
-| `GPT_MODEL_NAME`           | `gpt-5.4` | Model for orchestration; with a custom base URL, that backend's model id. Callers may override it per-request only by supplying their own `X-OpenAI-Key`.                                                                                                                                                                                                                                             |
-| `OPENAI_API_KEY`           | —         | OpenAI API key. If unset, callers must supply one per-request via the `X-OpenAI-Key` header.                                                                                                                                                                                                                                                                                                          |
-| `OPENAI_BASE_URL`          | —         | Root of any OpenAI-compatible backend (Azure AI Foundry, Bedrock, OpenRouter, Ollama, vLLM). Must support function calling and JSON-schema structured outputs. For Bedrock this is the static-API-key path; see `UDI_BEDROCK` for an IAM role.                                                                                                                                                        |
-| `UDI_BEDROCK`              | `0`       | Authenticate to Amazon Bedrock with SigV4 from the default AWS credential chain (EC2 instance profile, ECS task role, `AWS_PROFILE`, `~/.aws/credentials`), so no key is stored. Mutually exclusive with `OPENAI_API_KEY` and `OPENAI_BASE_URL`. Per-request `X-OpenAI-Key` headers are refused with a 403 in this mode, so no prompt reaches api.openai.com. Requires the `udiagent[bedrock]` extra. |
-| `AWS_REGION`               | —         | AWS region for Bedrock; also determines the endpoint. Required with `UDI_BEDROCK`, though the AWS SDK will also accept `AWS_DEFAULT_REGION` or `~/.aws/config` — there is no instance metadata fallback. Set `AWS_BEDROCK_BASE_URL` instead to reach a PrivateLink endpoint.                                                                                                                          |
-| `LANGFUSE_PUBLIC_KEY`      | —         | LangFuse public key. Tracing is off unless all three are set.                                                                                                                                                                                                                                                                                                                                         |
-| `LANGFUSE_SECRET_KEY`      | —         | LangFuse secret key. Tracing is off unless all three are set.                                                                                                                                                                                                                                                                                                                                         |
-| `LANGFUSE_HOST`            | —         | LangFuse instance URL, e.g. `https://cloud.langfuse.com`.                                                                                                                                                                                                                                                                                                                                             |
-| `LANGFUSE_ENVIRONMENT`     | —         | Tags traces with an environment label (e.g. `production`). Does not by itself enable tracing.                                                                                                                                                                                                                                                                                                         |
-| `UDI_QUERY_BACKENDS`       | —         | Path to a JSON file mapping package names to StarRocks/DuckDB connections, served via `/v1/yac/query` and `/v1/yac/metadata`. Written by the seed scripts — see `dev/duckdb/README.md`. A relative path is tried against the working directory first, then against `packages/agent`, where the seed scripts write it.                                                                                 |
-| `UDI_METADATA_TTL_SECONDS` | `3600`    | TTL for the introspected-metadata cache.                                                                                                                                                                                                                                                                                                                                                              |
-| `UDI_LOG_DIR`              | —         | Where the rotating log file goes. Defaults to `<package root>/logs`; file logging is skipped if unwritable.                                                                                                                                                                                                                                                                                           |
-| `UDI_DATA_DIR`             | —         | Repo-level dev data for `/v1/yac/examples`. Defaults to `<package root>/data`; set this when installed from a wheel.                                                                                                                                                                                                                                                                                  |
+| Variable                    | Default            | Description                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JWT_SECRET_KEY`            | —                  | JWT signing key for self-issued tokens. Required unless `INSECURE_DEV_MODE=1` or `JWT_JWKS_URL` is set.                                                                                                                                                                                                                                                                                               |
+| `JWT_ALGORITHM`             | `HS256`            | JWT algorithm. Set to the identity provider's (e.g. `RS256`) when using `JWT_JWKS_URL`.                                                                                                                                                                                                                                                                                                               |
+| `JWT_JWKS_URL`              | —                  | Verify externally issued tokens against an identity provider's JWKS endpoint instead of `JWT_SECRET_KEY`. Mutually exclusive with it.                                                                                                                                                                                                                                                                 |
+| `JWT_ISSUER`                | —                  | Expected `iss` claim; validated only when set.                                                                                                                                                                                                                                                                                                                                                        |
+| `JWT_AUDIENCE`              | —                  | Expected `aud` claim. Required with `JWT_JWKS_URL`.                                                                                                                                                                                                                                                                                                                                                   |
+| `INSECURE_DEV_MODE`         | `0`                | Skip JWT verification entirely. Development only — never set this in production.                                                                                                                                                                                                                                                                                                                      |
+| `UDI_CORS_ORIGINS`          | `*`                | Comma-separated list of browser origins allowed to call this server. Defaults to `*` (any origin). Note that credentialed requests are always permitted, so with `*` any site can call this server with a user's cookies — name your origins explicitly in production.                                                                                                                                |
+| `GPT_MODEL_NAME`            | `gpt-5.4`          | Model for orchestration; with a custom base URL, that backend's model id. Callers may override it per-request only by supplying their own `X-OpenAI-Key`.                                                                                                                                                                                                                                             |
+| `OPENAI_API_KEY`            | —                  | OpenAI API key. If unset, callers must supply one per-request via the `X-OpenAI-Key` header.                                                                                                                                                                                                                                                                                                          |
+| `OPENAI_BASE_URL`           | —                  | Root of any OpenAI-compatible backend (Azure AI Foundry, Bedrock, OpenRouter, Ollama, vLLM). Must support function calling and JSON-schema structured outputs. For Bedrock this is the static-API-key path; see `UDI_BEDROCK` for an IAM role.                                                                                                                                                        |
+| `UDI_BEDROCK`               | `0`                | Authenticate to Amazon Bedrock with SigV4 from the default AWS credential chain (EC2 instance profile, ECS task role, `AWS_PROFILE`, `~/.aws/credentials`), so no key is stored. Mutually exclusive with `OPENAI_API_KEY` and `OPENAI_BASE_URL`. Per-request `X-OpenAI-Key` headers are refused with a 403 in this mode, so no prompt reaches api.openai.com. Requires the `udiagent[bedrock]` extra. |
+| `AWS_REGION`                | —                  | AWS region for Bedrock; also determines the endpoint. Required with `UDI_BEDROCK`, though the AWS SDK will also accept `AWS_DEFAULT_REGION` or `~/.aws/config` — there is no instance metadata fallback. Set `AWS_BEDROCK_BASE_URL` instead to reach a PrivateLink endpoint.                                                                                                                          |
+| `UDI_OPENAI_API`            | `chat_completions` | Which OpenAI-compatible endpoint to call: `chat_completions` or `responses`. Some OpenAI models (e.g. `gpt-6.1-sol`) only call tools through `responses`; self-hosted backends (vLLM, Ollama) generally want the default.                                                                                                                                                                             |
+| `UDI_REASONING_EFFORT`      | —                  | Reasoning effort sent with every request (`none`, `low`, `medium`, …), passed through as-is so new provider values work without a release. Unset sends nothing, leaving the model's default.                                                                                                                                                                                                          |
+| `UDI_TEMPERATURE`           | `0`                | Sampling temperature sent with every request, or `omit` to send none. OpenAI rejects a temperature whenever `UDI_REASONING_EFFORT` is anything but `none`, so set `omit` with reasoning models there.                                                                                                                                                                                                 |
+| `UDI_MAX_COMPLETION_TOKENS` | —                  | Output-token cap for every request, replacing the built-in ones (1024 for tool calls, 16384 for structured JSON). Reasoning tokens count against it, so raise it when reasoning is on.                                                                                                                                                                                                                |
+| `UDI_VIS_TOOL_CHOICE`       | `auto`             | Whether the chart-template call may answer without picking a template (`auto`, which then replies that no template fits) or must pick one (`required`). Some models (e.g. `gpt-6.1-sol`) reply in prose to many chart requests unless this is `required`.                                                                                                                                             |
+| `LANGFUSE_PUBLIC_KEY`       | —                  | LangFuse public key. Tracing is off unless all three are set.                                                                                                                                                                                                                                                                                                                                         |
+| `LANGFUSE_SECRET_KEY`       | —                  | LangFuse secret key. Tracing is off unless all three are set.                                                                                                                                                                                                                                                                                                                                         |
+| `LANGFUSE_HOST`             | —                  | LangFuse instance URL, e.g. `https://cloud.langfuse.com`.                                                                                                                                                                                                                                                                                                                                             |
+| `LANGFUSE_ENVIRONMENT`      | —                  | Tags traces with an environment label (e.g. `production`). Does not by itself enable tracing.                                                                                                                                                                                                                                                                                                         |
+| `UDI_QUERY_BACKENDS`        | —                  | Path to a JSON file mapping package names to StarRocks/DuckDB connections, served via `/v1/yac/query` and `/v1/yac/metadata`. Written by the seed scripts — see `dev/duckdb/README.md`. A relative path is tried against the working directory first, then against `packages/agent`, where the seed scripts write it.                                                                                 |
+| `UDI_METADATA_TTL_SECONDS`  | `3600`             | TTL for the introspected-metadata cache.                                                                                                                                                                                                                                                                                                                                                              |
+| `UDI_LOG_DIR`               | —                  | Where the rotating log file goes. Defaults to `<package root>/logs`; file logging is skipped if unwritable.                                                                                                                                                                                                                                                                                           |
+| `UDI_DATA_DIR`              | —                  | Repo-level dev data for `/v1/yac/examples`. Defaults to `<package root>/data`; set this when installed from a wheel.                                                                                                                                                                                                                                                                                  |
 
 <!-- END generated: env vars -->
 
@@ -375,16 +414,16 @@ would change.
 
 ### Server Endpoints
 
-| Endpoint                       | Method | Description                                           |
-| ------------------------------ | ------ | ----------------------------------------------------- |
-| `/`                            | GET    | API status and info                                   |
-| `/v1/yac/completions`          | POST   | Main orchestrator — routes user requests to tools     |
-| `/v1/yac/query`                | POST   | Server-side data: batched grammar→SQL query execution |
-| `/v1/yac/metadata`             | GET    | Server-side data: introspected dataSchema/dataDomains |
-| `/v1/yac/benchmark`            | POST   | Benchmark variant with optional orchestrator override |
-| `/v1/yac/examples`             | GET    | Example prompts from `data/example_prompts.json`      |
-| `/v1/yac/structured_functions` | GET    | Structured function registry                          |
-| `/v1/yac/benchmark_analysis`   | GET    | Latest benchmark analysis results                     |
+| Endpoint                       | Method | Description                                              |
+| ------------------------------ | ------ | -------------------------------------------------------- |
+| `/`                            | GET    | API status and info                                      |
+| `/v1/yac/completions`          | POST   | Main orchestrator — routes user requests to tools        |
+| `/v1/yac/query`                | POST   | Server-side data: batched grammar→SQL query execution    |
+| `/v1/yac/metadata`             | GET    | Server-side data: introspected dataSchema/dataDomains    |
+| `/v1/yac/benchmark`            | POST   | Benchmark variant; can skip routing for chart-only items |
+| `/v1/yac/examples`             | GET    | Example prompts from `data/example_prompts.json`         |
+| `/v1/yac/structured_functions` | GET    | Structured function registry                             |
+| `/v1/yac/benchmark_analysis`   | GET    | Newest benchmark analysis under `out/` (auth required)   |
 
 ### Server-side query backends
 
@@ -581,13 +620,15 @@ docker stop udi-agent 2>/dev/null; docker rm udi-agent 2>/dev/null
 docker run -d \
   --name udi-agent \
   --restart unless-stopped \
-  -p 80:80 \
+  -p 80:8000 \
   --env-file /home/ec2-user/.env \
   udi-agent
 ```
 
-The container listens on port 80 as a non-root user. Map it wherever your
-reverse proxy expects it (`-p 8007:80` for a local-only port). Logs go to
+The container listens on port 8000 as a non-root user — an unprivileged port,
+so it binds on runtimes that don't let non-root processes take ports below 1024.
+Map it wherever your reverse proxy expects it (`-p 8007:8000`
+for a local-only port). Logs go to
 `docker logs udi-agent` plus a rotating file at
 `/app/packages/agent/logs/udi_agent.log` inside the container.
 
@@ -619,8 +660,9 @@ Path A, which builds from source):
   this variable `/v1/yac/examples` returns `404`, which the chat UI tolerates by
   showing no example-prompt suggestions. Point it at a copy of that directory if
   you want them (it is ~2 MB, mostly benchmark fixtures).
-  `/v1/yac/benchmark_analysis` likewise reads `./out/` relative to the working
-  directory and is a benchmarking-only endpoint.
+  `/v1/yac/benchmark_analysis` likewise serves the newest
+  `out/**/benchmark_analysis.json` under the package directory, which a wheel
+  install doesn't have; it is a benchmarking-only endpoint.
 
 A minimal systemd unit:
 
@@ -787,29 +829,101 @@ uv run python scripts/regenerate_vis_tools.py --schema data/data_domains/SenNet_
 
 ## Benchmarking
 
+The runner posts each benchmark item to a running server's `/v1/yac/benchmark`
+endpoint, so **the server's configuration is what gets measured** — model, API
+path, reasoning effort, temperature and output cap all come from its
+environment (see [Reasoning models and the Responses API](#reasoning-models-and-the-responses-api)).
+Restart the server to benchmark another configuration.
+
 ### Step 0: Start the API server
 
+Use `fastapi run`, not `dev`: the reloader can restart the server mid-run. The
+runner sends a placeholder bearer token, so set `INSECURE_DEV_MODE=1`.
+
 ```bash
-uv run --extra server fastapi dev src/udiagent/server/app.py --port 8007 &
+INSECURE_DEV_MODE=1 uv run --extra server fastapi run src/udiagent/server/app.py --port 8007 &
 ```
 
 ### Step 1: Run tiny benchmark (1 example)
 
 ```bash
-uv run python -m udiagent.benchmark.runner --no-orchestrator --path ./data/benchmark_dqvis/tiny.jsonl
+uv run python -m udiagent.benchmark.runner --path ./data/benchmark_dqvis/tiny.jsonl
 ```
 
 ### Step 2: Run small benchmark (100 examples)
 
 ```bash
-uv run python -m udiagent.benchmark.runner --no-orchestrator --path ./data/benchmark_dqvis/small.jsonl --workers 5
+uv run python -m udiagent.benchmark.runner --path ./data/benchmark_dqvis/small.jsonl --workers 5 \
+  --description "what this run is" --out ./out/small-gpt-5.4
 ```
 
-Resume a failed run:
+Resume a run; items that failed or were refused (rate limit) are retried:
 
 ```bash
-uv run python -m udiagent.benchmark.runner --path ./data/benchmark_dqvis/small.jsonl --workers 5 --resume ./out/<TIMESTAMP>/benchmark_results.json
+uv run python -m udiagent.benchmark.runner --path ./data/benchmark_dqvis/small.jsonl --workers 5 \
+  --resume ./out/<RUN>/benchmark_results.json --out ./out/<RUN>
 ```
+
+`--no-orchestrator` skips the routing call and goes straight to chart
+generation, to measure that on its own. Use it only on visualization-only data
+such as the DQVis fixtures: the server refuses items that expect any other
+orchestrator choice, and those items are recorded as failures.
+
+Each run writes `benchmark_results.json` and `benchmark_analysis.json`. The
+analysis carries a `summary` — failures, tokens per item (prompt, cached, cache
+write, completion, reasoning), cache-hit percentage, LLM calls per item, cost
+(from `PRICES` in `benchmark/runner.py`; check them against OpenAI's pricing
+page), latency per item (mean, p50, p95) and per LLM operation, and how often
+the model asked a clarifying question — and its `metadata` records the model
+and settings the server reported.
+
+A clarifying question scores as a correct answer when the fields it offers
+include one the expected answer used: the request really was ambiguous, and in
+a blind review people rated those questions good. `clarify_percent` is the
+share of items answered with a question and `clarify_credited_percent` the
+share credited this way.
+
+### Comparing models
+
+The `*_vs_expected` scores compare against the fixtures' expected outputs, which
+an older generator produced; read them relatively, not as accuracy. To compare
+models against each other instead, run every configuration over the same items
+— ideally 3+ repeats each — and compare with one as the baseline:
+
+```bash
+# Keep UDI_* settings out of .env: inline values win over it, but a setting
+# left there leaks into every configuration that doesn't set its own.
+run_config() {  # <label> [ENV=VALUE ...]
+  local label=$1; shift
+  env INSECURE_DEV_MODE=1 "$@" uv run --extra server fastapi run src/udiagent/server/app.py --port 8007 &
+  local pid=$!
+  until curl -sf -o /dev/null http://127.0.0.1:8007/v1/yac/examples; do sleep 1; done
+  for p in data/benchmark_dqvis/small.jsonl data/benchmark.json; do
+    uv run python -m udiagent.benchmark.runner -p "$p" --label "$label" --description "$r" \
+      --out "out/bench/$label/$r/$(basename "${p%%.*}")"
+  done
+  kill $pid; wait $pid
+}
+for r in r0 r1 r2; do  # vary the order between repeats to spread out API-side load
+  run_config gpt-5.4 GPT_MODEL_NAME=gpt-5.4
+  run_config gpt-6-luna GPT_MODEL_NAME=gpt-6-luna UDI_REASONING_EFFORT=none
+  run_config gpt-6.1-sol GPT_MODEL_NAME=gpt-6.1-sol UDI_OPENAI_API=responses \
+    UDI_REASONING_EFFORT=low UDI_TEMPERATURE=omit UDI_MAX_COMPLETION_TOKENS=16384 \
+    UDI_VIS_TOOL_CHOICE=required
+done
+uv run python -m udiagent.benchmark.runner -a compare --baseline gpt-5.4 \
+  out/bench/*/*/*/benchmark_analysis.json > out/bench/compare.md
+```
+
+`compare` prints, per dataset, every run summary as mean ± sd across repeats,
+then an **agreement** table: each configuration's outputs scored item by item
+against the baseline's, with the baseline's output standing in for "expected"
+in the usual rubric (orchestrator choice, filter, chart spec), plus how often
+both picked the same visualization template. A clarifying question about a
+field the baseline used counts as agreeing. The baseline's own column scores
+its repeats against each other — the noise floor. Models are not deterministic
+even at temperature 0, so read a candidate's agreement against that floor, not
+against 1.0.
 
 ## License
 

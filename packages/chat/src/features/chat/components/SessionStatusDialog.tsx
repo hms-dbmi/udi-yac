@@ -33,15 +33,22 @@ export function SessionStatusDialog({
   const [open, setOpen] = useState(false);
   const usage = useConversation((s) => s.sessionUsage);
 
-  // Key/value rows for the usage table. Reasoning is only shown when > 0
-  // (models that don't report it stay clean); cached is always listed.
+  // Key/value rows for the usage table. Cache writes and reasoning are only
+  // shown when > 0 (models that don't report them stay clean); cached is always
+  // listed. Cache writes are billed at a premium, so they are split out of the
+  // uncached figure rather than counted twice.
   const num = (n: number) => n.toLocaleString();
   const usageRows: { label: string; value: string }[] = [
     {
       label: 'Prompt (uncached)',
-      value: num(Math.max(0, usage.promptTokens - usage.cachedPromptTokens)),
+      value: num(
+        Math.max(0, usage.promptTokens - usage.cachedPromptTokens - usage.cacheWriteTokens),
+      ),
     },
     { label: 'Prompt (cached)', value: num(usage.cachedPromptTokens) },
+    ...(usage.cacheWriteTokens > 0
+      ? [{ label: 'Prompt (cache write)', value: num(usage.cacheWriteTokens) }]
+      : []),
     { label: 'Completion', value: num(usage.completionTokens) },
     ...(usage.reasoningTokens > 0
       ? [{ label: 'Completion (reasoning)', value: num(usage.reasoningTokens) }]

@@ -6,6 +6,7 @@ const setQueryBackend = vi.fn();
 vi.mock('udi-toolkit/react', () => ({
   createRemoteBackend: (config: unknown) => createRemoteBackend(config),
   setQueryBackend: (backend: unknown) => setQueryBackend(backend),
+  setTimeFormats: async () => {},
   loadDataPackage: vi.fn(async () => ({ sourceFields: {} })),
 }));
 

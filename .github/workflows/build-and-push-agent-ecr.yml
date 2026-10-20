@@ -1,0 +1,95 @@
+name: Build and push agent image to ECR
+
+# Builds packages/agent's image and pushes it to ECR tagged with the commit SHA,
+# which is what deploy-agent-svc.yml deploys. Runs only for changes that can
+# alter the image, and only after the agent's tests pass, so every pushed tag
+# is a deployable build.
+#
+# Required repo variables (Settings > Secrets and variables > Actions > Variables):
+#   AWS_REGION           e.g. us-east-2
+#   AWS_BUILD_ROLE_ARN   arn of <iam-stack>-github-build (iam.yml output)
+#   ECR_REPOSITORY       ECR repo name, e.g. udi-agent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/agent/**"
+      - "packages/grammar-py/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/build-and-push-agent-ecr.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize pushes so 'latest' always ends up at the newest commit.
+concurrency:
+  group: build-agent-ecr
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/agent
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --extra server --extra langfuse --extra test --extra bedrock
+
+      - name: Run tests
+        run: uv run pytest tests/ -v
+
+  build-and-push:
+    needs: test
+    # Native arm64 runner (free for public repos), so the image is linux/arm64
+    # without QEMU. The task definition must declare
+    # RuntimePlatform.CpuArchitecture: ARM64 to match, or tasks fail with
+    # "exec format error".
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      id-token: write # OIDC for the AWS build role; only this job talks to AWS
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_BUILD_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          IMAGE="${REGISTRY}/${REPOSITORY}"
+          # Context is the repo root: the Dockerfile copies the workspace uv.lock
+          # (see root pyproject.toml [tool.uv.workspace]), same as deploy-agent.yml.
+          # The SHA tag is the deployable one; 'latest' (excluded from immutability
+          # in the ECR repo policy) is a convenience pointer only — the deploy
+          # workflow refuses it.
+          docker build -f packages/agent/Dockerfile -t "${IMAGE}:${SHA}" -t "${IMAGE}:latest" .
+          docker push "${IMAGE}:${SHA}"
+          docker push "${IMAGE}:latest"
+          echo "Pushed ${IMAGE}:${SHA}" >> "$GITHUB_STEP_SUMMARY"

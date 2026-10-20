@@ -11,7 +11,6 @@ Run with::
 
 import json
 import logging
-import os
 from dataclasses import asdict
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -72,6 +71,8 @@ config = ServerConfig.from_env()
 # has no data/ (only src/udiagent/data is packaged) and is often read-only —
 # hence the overrides. See the deployment guide in the package README.
 _DATA_DIR = Path(config.udi_data_dir or _PACKAGE_ROOT / "data")
+# Where the benchmark runner writes when run from the package directory.
+_OUTPUT_DIR = _PACKAGE_ROOT / "out"
 
 # --- Logging setup ---
 _log_dir = Path(config.udi_log_dir or _PACKAGE_ROOT / "logs")
@@ -109,11 +110,18 @@ agent = UDIAgent(
     openai_api_key=config.openai_api_key,
     openai_base_url=config.openai_base_url,
     bedrock=config.udi_bedrock,
-    bedrock_region=config.aws_region,
+    # Gated: bedrock_region alone opts in, and ECS injects AWS_REGION into every
+    # task, so passing it unconditionally put every ECS deploy on Bedrock.
+    bedrock_region=config.aws_region if config.udi_bedrock else None,
     langfuse_public_key=config.langfuse_public_key,
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
     langfuse_environment=config.langfuse_environment,
+    openai_api=config.udi_openai_api,
+    reasoning_effort=config.udi_reasoning_effort,
+    temperature=None if config.udi_temperature == "omit" else config.udi_temperature,
+    max_completion_tokens=config.udi_max_completion_tokens,
+    vis_tool_choice=config.udi_vis_tool_choice,
 )
 
 orchestrator = Orchestrator(
@@ -143,6 +151,7 @@ def _usage_headers(usage: Usage | None, model: str | None = None) -> dict[str, s
         "X-Usage-Completion-Tokens": str(usage.completion_tokens),
         "X-Usage-Total-Tokens": str(usage.total_tokens),
         "X-Usage-Cached-Prompt-Tokens": str(usage.cached_prompt_tokens),
+        "X-Usage-Cache-Write-Tokens": str(usage.cache_write_tokens),
         "X-Usage-Reasoning-Tokens": str(usage.reasoning_tokens),
         "X-Usage-Model": model or agent.gpt_model_name,
     }
@@ -199,8 +208,8 @@ async def _openai_config_error_handler(request, exc: OpenAIError):
 
     The OpenAI SDK raises a plain ``OpenAIError`` for client-construction and
     credential problems, and an ``APIError`` subclass for anything the API
-    itself returned. Only the former is a server-configuration fault, so real
-    API failures are re-raised and keep their existing handling.
+    itself returned. Only the former is a server-configuration fault; API
+    failures go to ``_openai_api_error_handler``.
 
     The common trigger is Bedrock SigV4 signing with no resolvable AWS
     credentials — the SDK resolves them per request, so this fails at request
@@ -208,9 +217,6 @@ async def _openai_config_error_handler(request, exc: OpenAIError):
     act on it); the actionable checklist goes to the log, where the operator
     is looking.
     """
-    if isinstance(exc, APIError):
-        raise exc
-
     if config.udi_bedrock:
         logger.error(
             "Bedrock request failed — could not resolve AWS credentials: %s "
@@ -238,6 +244,31 @@ async def _openai_config_error_handler(request, exc: OpenAIError):
     return JSONResponse(status_code=503, content={"error": detail})
 
 
+@app.exception_handler(APIError)
+async def _openai_api_error_handler(request, exc: APIError):
+    """Surface a failed LLM API call as a 502 instead of a bare 500.
+
+    Starlette builds its default 500 outside CORSMiddleware, so that response
+    has no CORS headers and a cross-origin browser reports only "NetworkError"
+    — the status and the reason never reach the frontend. Typical triggers: a
+    caller-supplied ``model`` the key cannot use, a rate limit, a timeout.
+
+    The provider's message is echoed only to a caller who sent their own key,
+    since it describes that key. On the server's credential it can name the
+    operator's account (a Bedrock access denial carries the role ARN), so it
+    goes to the log instead.
+    """
+    logger.warning("LLM API call failed: %s", exc)
+    if request.headers.get("X-OpenAI-Key"):
+        detail = f"The LLM API call failed: {exc.message}"
+    else:
+        detail = (
+            "The LLM API call failed. Please try again or contact the "
+            "administrator."
+        )
+    return JSONResponse(status_code=502, content={"error": detail})
+
+
 app.add_middleware(
     CORSMiddleware,
     # Defaults to ["*"] — any origin. Set UDI_CORS_ORIGINS to name the hosts
@@ -256,6 +287,7 @@ app.add_middleware(
         "X-Usage-Completion-Tokens",
         "X-Usage-Total-Tokens",
         "X-Usage-Cached-Prompt-Tokens",
+        "X-Usage-Cache-Write-Tokens",
         "X-Usage-Reasoning-Tokens",
         "X-Usage-Model",
     ],
@@ -685,18 +717,44 @@ def yac_benchmark(
     if refusal is not None:
         return refusal
 
-    result = orchestrator.run(
+    model = request.model if x_openai_key else None
+    # The runner's --no-orchestrator sends the expected choice. Only a chart
+    # can be produced without the routing call; anything else is refused
+    # rather than silently routed, which would mislabel the run.
+    if request.orchestrator_choice is None:
+        run = orchestrator.run
+    elif request.orchestrator_choice == "render-visualization":
+        run = orchestrator.run_visualization
+    else:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "Skipping the routing call is only supported for "
+                "orchestrator_choice 'render-visualization'."
+            },
+        )
+    result = run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
-        model=request.model if x_openai_key else None,
+        model=model,
     )
 
     return {
         "tool_calls": result.tool_calls,
         "orchestrator_choice": result.orchestrator_choice,
         "usage": asdict(result.usage),
+        # What actually ran, so a benchmark run is labelled by the server that
+        # served it rather than by whatever the runner was told.
+        "model": model or agent.gpt_model_name,
+        "llm_settings": {
+            "openai_api": agent.openai_api,
+            "reasoning_effort": agent.reasoning_effort,
+            "temperature": agent.temperature,
+            "max_completion_tokens": agent.max_completion_tokens,
+            "vis_tool_choice": agent.vis_tool_choice,
+        },
     }
 
 
@@ -726,14 +784,20 @@ def yac_structured_functions():
 
 
 @app.get("/v1/yac/benchmark_analysis")
-def yac_benchmark_analysis():
-    result_filename = "./out/benchmark_analysis.json"
-    if not os.path.exists(result_filename):
+def yac_benchmark_analysis(token_payload: dict = Depends(verify_jwt)):
+    """The most recently written benchmark analysis under the package's out/.
+
+    Behind auth like the benchmark itself: an analysis carries every prompt,
+    schema, domain and generated output of the run.
+    """
+    latest = max(
+        _OUTPUT_DIR.glob("**/benchmark_analysis.json"),
+        key=lambda path: path.stat().st_mtime,
+        default=None,
+    )
+    if latest is None:
         return JSONResponse(
-            content={"error": f"File {result_filename} not found."}, status_code=404
+            content={"error": "No benchmark analysis found."}, status_code=404
         )
-
-    with open(result_filename, "r") as f:
-        data = json.load(f)
-
-    return JSONResponse(content=data)
+    with latest.open() as f:
+        return JSONResponse(content=json.load(f))

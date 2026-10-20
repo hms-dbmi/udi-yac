@@ -36,6 +36,9 @@ RUN uv sync --frozen --package udiagent --extra server --extra langfuse --extra 
 
 WORKDIR /app/packages/agent
 
-EXPOSE 80
+# 8000, not 80: the process runs as the non-root `app` user, and runtimes that
+# keep the kernel default (ports < 1024 privileged — e.g. Fargate, unlike Docker)
+# would refuse the bind. Hosts map their own port onto it (`-p 80:8000`).
+EXPOSE 8000
 
-CMD ["uv", "run", "--frozen", "--no-sync", "fastapi", "run", "src/udiagent/server/app.py", "--port", "80", "--host", "0.0.0.0"]
+CMD ["uv", "run", "--frozen", "--no-sync", "fastapi", "run", "src/udiagent/server/app.py", "--port", "8000", "--host", "0.0.0.0"]

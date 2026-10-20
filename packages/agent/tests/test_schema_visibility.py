@@ -190,5 +190,5 @@ def test_the_lookup_tool_is_offered_and_marked_internal():
     as an outcome of the turn."""
     names = [t["function"]["name"] for t in ORCHESTRATOR_TOOLS]
     assert "ListFieldValues" in names
-    assert INTERNAL_ORCHESTRATOR_TOOLS == {"ListFieldValues"}
+    assert INTERNAL_ORCHESTRATOR_TOOLS == {"ListFieldValues", "GetVisualizationSpec"}
     assert MAX_VALUE_LOOKUPS >= 1

@@ -19,7 +19,7 @@ import jsonschema
 from udiagent.skills import Skill, load_skills, render_template, _package_data_path
 from udiagent.grammar import load_grammar
 from udiagent.schema import simplify_data_schema, simplify_data_domains
-from udiagent.choices import CHOICES, ChoiceError, resolve_choice
+from udiagent.choices import CHOICES, LABELS, ChoiceError, resolve_choice, resolve_label
 
 # A placeholder is `<NAME>`, where NAME is an uppercase-led token: `<E>`, `<F1:n>`,
 # `<V2>`, `<MARGINAL:D1,D2>`, `<E1.r.E2.id.from>`.
@@ -268,13 +268,13 @@ def _call_llm_with_tools(
     try:
         client = agent._get_gpt_client(openai_api_key)
         resp = _call_with_budget_guard(
-            client.chat.completions.create,
+            agent.create_completion,
             usage,
+            client,
             model=model or agent.gpt_model_name,
             messages=messages,
             tools=tools,
-            tool_choice="auto",
-            temperature=0.0,
+            tool_choice=agent.vis_tool_choice,
             max_completion_tokens=1024,
         )
         if usage is not None:
@@ -1342,6 +1342,15 @@ def validate_bindings(
                 )
             continue
 
+        # A label (<ENDPOINT>) only names the chart in its title; it is one of a
+        # fixed set of options too.
+        if key in LABELS:
+            try:
+                resolve_label(key, field_name)
+            except ChoiceError as exc:
+                errors.append(str(exc))
+            continue
+
         # A choice binds one of a fixed set of options, not a column. Optional:
         # absent or empty means the default.
         if key in CHOICES:
@@ -1926,8 +1935,16 @@ def resolve_text_templates(tool_name, bindings):
     if not title and not summary:
         return None
 
+    def bound(match):
+        key = match.group(1)
+        # A label (`<ENDPOINT>`) is always filled: unset means its default text.
+        # Validated before a chart is built, so an unknown option cannot reach here.
+        if key in LABELS:
+            return resolve_label(key, bindings.get(key))
+        return bindings.get(key, match.group(0))
+
     def fill(text):
-        return _BIND_TOKEN.sub(lambda m: bindings.get(m.group(1), m.group(0)), text)
+        return _BIND_TOKEN.sub(bound, text)
 
     return {"title": fill(title), "summary": fill(summary)}
 

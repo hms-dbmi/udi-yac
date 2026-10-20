@@ -191,6 +191,77 @@ class TestBudgetCheck:
 
 
 # ---------------------------------------------------------------------------
+# Visualization without the routing call
+# ---------------------------------------------------------------------------
+
+
+class TestRunVisualization:
+    def test_charts_the_latest_non_blank_user_request_without_routing(self):
+        orch, _ = _make_orchestrator()
+        chart = {"name": "RenderVisualization", "arguments": {"spec": "{}"}}
+        with (
+            patch.object(orch, "_handle_create_visualization", return_value=chart) as create,
+            patch.object(orch, "_orchestrate_tool_calls") as route,
+        ):
+            result = orch.run_visualization(
+                messages=[
+                    {"role": "user", "content": "old request"},
+                    {"role": "assistant", "content": "previous response"},
+                    {"role": "user", "content": " show a bar chart "},
+                    {"role": "user", "content": "   "},
+                ],
+                data_schema="{}",
+                data_domains="[]",
+            )
+        route.assert_not_called()
+        assert create.call_args.args[0] == {"description": "show a bar chart"}
+        assert result.tool_calls == [chart]
+        assert result.orchestrator_choice == "render-visualization"
+
+
+# ---------------------------------------------------------------------------
+# Unreadable tool arguments
+# ---------------------------------------------------------------------------
+
+
+MSG = [{"role": "user", "content": "hi"}]
+
+
+class TestUnreadableToolArguments:
+    """A reply cut off at the output cap carries truncated JSON arguments."""
+
+    def _run(self, *tool_calls):
+        orch, agent = _make_orchestrator()
+        agent.gpt_model.chat.completions.create = MagicMock(
+            return_value=_fake_completion(tool_calls=list(tool_calls))
+        )
+        return orch, orch.run(messages=MSG, data_schema="{}", data_domains="[]")
+
+    def test_truncated_arguments_become_a_rebuff_not_an_error(self, caplog):
+        _, result = self._run(
+            _fake_tool_call("CreateVisualization", '{"description": "dono')
+        )
+        assert result.orchestrator_choice == "rebuff"
+        assert "try again" in result.tool_calls[0]["arguments"]["message"]
+        assert "arguments are not a JSON object" in caplog.text
+
+    def test_readable_calls_still_run(self):
+        orch, agent = _make_orchestrator()
+        rebuff = {"name": "Rebuff", "arguments": {"message": "no"}}
+        agent.gpt_model.chat.completions.create = MagicMock(
+            return_value=_fake_completion(
+                tool_calls=[
+                    _fake_tool_call("CreateVisualization", '{"descr'),
+                    _fake_tool_call("Rebuff", '{"message": "no"}'),
+                ]
+            )
+        )
+        with patch.object(orch, "_handle_rebuff", return_value=rebuff):
+            result = orch.run(messages=MSG, data_schema="{}", data_domains="[]")
+        assert result.tool_calls == [rebuff]
+
+
+# ---------------------------------------------------------------------------
 # Rate-limit → BudgetExceededError
 # ---------------------------------------------------------------------------
 
@@ -277,7 +348,13 @@ class TestServerUsage:
     def test_completions_emits_usage_headers(self):
         from udiagent.orchestrator import OrchestratorResult
 
-        usage = Usage(prompt_tokens=11, completion_tokens=22, total_tokens=33)
+        usage = Usage(
+            prompt_tokens=11,
+            completion_tokens=22,
+            total_tokens=33,
+            cached_prompt_tokens=4,
+            cache_write_tokens=3,
+        )
         with patch.object(
             self.server_app.orchestrator,
             "run",
@@ -296,6 +373,8 @@ class TestServerUsage:
         assert resp.headers["X-Usage-Prompt-Tokens"] == "11"
         assert resp.headers["X-Usage-Completion-Tokens"] == "22"
         assert resp.headers["X-Usage-Total-Tokens"] == "33"
+        assert resp.headers["X-Usage-Cached-Prompt-Tokens"] == "4"
+        assert resp.headers["X-Usage-Cache-Write-Tokens"] == "3"
         assert resp.headers["X-Usage-Model"] == "gpt-test"
         # Body shape unchanged: bare list of tool_calls.
         body = resp.json()
@@ -457,3 +536,85 @@ class TestServerUsage:
         body = resp.json()
         assert body["usage"]["total_tokens"] == 3
         assert body["usage"]["operations"][0]["op"] == "orchestrate"
+
+    def test_benchmark_skips_routing_for_a_visualization_only_item(self):
+        from udiagent.orchestrator import OrchestratorResult
+
+        chart = OrchestratorResult(
+            tool_calls=[{"name": "RenderVisualization", "arguments": {"spec": "{}"}}],
+            orchestrator_choice="render-visualization",
+            usage=Usage(total_tokens=7),
+        )
+        body = self._body() | {"orchestrator_choice": "render-visualization"}
+        with (
+            patch.object(self.server_app.orchestrator, "run") as run,
+            patch.object(
+                self.server_app.orchestrator, "run_visualization", return_value=chart
+            ) as run_visualization,
+        ):
+            resp = self.client.post(
+                "/v1/yac/benchmark", json=body, headers={"Authorization": "Bearer test"}
+            )
+        assert resp.status_code == 200
+        run.assert_not_called()
+        run_visualization.assert_called_once_with(
+            messages=body["messages"],
+            data_schema=body["dataSchema"],
+            data_domains=body["dataDomains"],
+            openai_api_key=None,
+            model=None,
+        )
+        assert resp.json()["usage"]["total_tokens"] == 7
+
+    def test_benchmark_refuses_to_skip_routing_for_other_choices(self):
+        body = self._body() | {"orchestrator_choice": "get-subset-of-data"}
+        with (
+            patch.object(self.server_app.orchestrator, "run") as run,
+            patch.object(self.server_app.orchestrator, "run_visualization") as run_vis,
+        ):
+            resp = self.client.post(
+                "/v1/yac/benchmark", json=body, headers={"Authorization": "Bearer test"}
+            )
+        assert resp.status_code == 422
+        run.assert_not_called()
+        run_vis.assert_not_called()
+
+    def test_benchmark_analysis_serves_the_latest_under_the_package_out_dir(
+        self, monkeypatch, tmp_path
+    ):
+        import os
+
+        out = tmp_path / "out"
+        for name, score, mtime in (("old", 0.1, 1_000), ("new", 0.9, 2_000)):
+            path = out / name / "small" / "benchmark_analysis.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(f'{{"scores": {{"overall_score": {score}}}}}')
+            os.utime(path, (mtime, mtime))
+        monkeypatch.setattr(self.server_app, "_OUTPUT_DIR", out)
+        monkeypatch.chdir(tmp_path.parent)  # not where out/ is
+
+        resp = self.client.get(
+            "/v1/yac/benchmark_analysis", headers={"Authorization": "Bearer test"}
+        )
+        assert resp.status_code == 200
+        assert resp.json() == {"scores": {"overall_score": 0.9}}
+
+    def test_benchmark_analysis_missing_does_not_reveal_paths(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(self.server_app, "_OUTPUT_DIR", tmp_path / "out")
+        resp = self.client.get("/v1/yac/benchmark_analysis")
+        assert resp.status_code == 404
+        assert str(tmp_path) not in resp.text
+
+    def test_benchmark_analysis_requires_auth(self):
+        from fastapi import HTTPException
+
+        def deny():
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+
+        app = self.server_app.app
+        app.dependency_overrides[self.server_app.verify_jwt] = deny
+        try:
+            resp = self.client.get("/v1/yac/benchmark_analysis")
+        finally:
+            app.dependency_overrides.clear()
+        assert resp.status_code == 401

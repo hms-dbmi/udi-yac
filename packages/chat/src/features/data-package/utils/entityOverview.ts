@@ -14,6 +14,7 @@ import type {
   DataPackageResource,
   IntervalDomain,
 } from '@/types/dataPackage';
+import { formatTime } from 'udi-toolkit/react';
 
 export interface RelationshipLine {
   /** `out`: this entity references `target`. `in`: `target` references it. */
@@ -319,16 +320,18 @@ function formatNumber(n: number): string {
 }
 
 /**
- * Numeric range for an interval domain: `"1.2K – 4.1G"`.
+ * Numeric range for an interval domain: `"1.2K – 4.1G"`, or for a column with a
+ * `udi:time_format`, its dates, years or ages (`"1/1/2020 – 6/30/2024"`).
  *
  * All-null columns reach us as `{ min: Infinity, max: -Infinity }` from the
  * toolkit's domain worker, so non-finite bounds must degrade, not render.
  */
-export function formatIntervalDomain(domain: DataFieldDomain): string {
+export function formatIntervalDomain(domain: DataFieldDomain, timeFormat?: string): string {
   const { min, max } = domain.domain as IntervalDomain;
   if (!Number.isFinite(min) || !Number.isFinite(max)) return 'no values';
-  if (min === max) return formatNumber(min);
-  return `${formatNumber(min)} – ${formatNumber(max)}`;
+  const format = timeFormat ? (n: number) => formatTime(n, timeFormat) : formatNumber;
+  if (min === max) return format(min);
+  return `${format(min)} – ${format(max)}`;
 }
 
 /**

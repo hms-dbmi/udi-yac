@@ -17,6 +17,10 @@ export interface DataPackageResource {
       type?: string;
       'udi:cardinality'?: number;
       'udi:data_type'?: string;
+      /** How a time column stores its values: `epoch_ms`, `epoch_s`, `year`, or
+       *  `days` (a duration such as an age). The column keeps its
+       *  `udi:data_type`; only display reads this. */
+      'udi:time_format'?: string;
       'udi:overlapping_fields'?: string[] | 'all';
       'udi:unique'?: boolean;
     }>;
@@ -55,6 +59,9 @@ export interface DataPackage {
    * spec, a query or the LLM.
    */
   'udi:labels'?: Record<string, string>;
+  /** Example prompts shown in the chat. When absent, the agent's
+   *  `/v1/yac/examples` list is used. */
+  'udi:example_prompts'?: string[];
 }
 
 export type Row = Record<string, unknown>;

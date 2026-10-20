@@ -9,7 +9,7 @@
  * just from opening and closing a menu.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, type ReactNode } from 'react';
 import { UDIChatProvider, useDataPackage, useDataPackageStore } from '@/app/UDIChatContext';
@@ -28,6 +28,8 @@ const pkg = {
         fields: [
           { name: 'age', 'udi:data_type': 'quantitative' },
           { name: 'bmi', 'udi:data_type': 'quantitative' },
+          { name: 'created', 'udi:data_type': 'quantitative', 'udi:time_format': 'epoch_ms' },
+          { name: 'created_s', 'udi:data_type': 'quantitative', 'udi:time_format': 'epoch_s' },
         ],
       },
     },
@@ -52,7 +54,24 @@ const pkg = {
   ],
 } as unknown as DataPackage;
 
+const JAN_1_2020 = new Date(2020, 0, 1).getTime();
+const JAN_1_2021 = new Date(2021, 0, 1).getTime();
+
 const domains: DataFieldDomain[] = [
+  {
+    entity: 'Donor',
+    field: 'created_s',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: JAN_1_2020 / 1000, max: JAN_1_2021 / 1000 },
+  },
+  {
+    entity: 'Donor',
+    field: 'created',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: JAN_1_2020, max: JAN_1_2021 },
+  },
   {
     entity: 'Donor',
     field: 'age',
@@ -250,6 +269,78 @@ describe('IntervalFilterComponent — entity/field pickers', () => {
     // widget surfaces the invalid state rather than inventing a field.
     expect(onCommit).toHaveBeenCalledWith(
       expect.objectContaining({ dataSourceKey: 'Sample', selection: { age: [0, 100] } }),
+    );
+  });
+});
+
+describe('IntervalFilterComponent — epoch-ms date field', () => {
+  it('edits the bounds as dates, the upper one taking in its whole day', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+    const max = screen.getByLabelText('Maximum created') as HTMLInputElement;
+    expect(min.type).toBe('date');
+    expect([min.value, max.value]).toEqual(['2020-01-01', '2021-01-01']);
+
+    fireEvent.change(max, { target: { value: '2020-06-15' } });
+    fireEvent.blur(max);
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: { created: [JAN_1_2020, new Date(2020, 5, 15, 23, 59, 59, 999).getTime()] },
+      }),
+    );
+  });
+
+  it('waits for blur: a half-typed year is not committed, clamped to the range', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+
+    // What a date input reports while 2020 is typed into the year.
+    for (const value of ['0002-03-01', '0020-03-01', '0202-03-01', '2020-03-01']) {
+      fireEvent.change(min, { target: { value } });
+    }
+    expect(onCommit).not.toHaveBeenCalled();
+    fireEvent.blur(min);
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: { created: [new Date(2020, 2, 1).getTime(), JAN_1_2021] },
+      }),
+    );
+  });
+
+  it('keeps the bound when the date is cleared or the edit is cancelled', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+
+    fireEvent.change(min, { target: { value: '' } });
+    fireEvent.blur(min);
+    expect(min.value).toBe('2020-01-01');
+
+    fireEvent.change(min, { target: { value: '2020-05-05' } });
+    fireEvent.keyDown(min, { key: 'Escape' });
+    fireEvent.blur(min);
+    expect(min.value).toBe('2020-01-01');
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('reads and writes epoch seconds, the upper bound on its last second', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created_s: [JAN_1_2020 / 1000, JAN_1_2021 / 1000] });
+
+    const max = screen.getByLabelText('Maximum created_s') as HTMLInputElement;
+    expect(max.value).toBe('2021-01-01');
+
+    fireEvent.change(max, { target: { value: '2020-06-15' } });
+    fireEvent.blur(max);
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: {
+          created_s: [JAN_1_2020 / 1000, new Date(2020, 5, 15, 23, 59, 59).getTime() / 1000],
+        },
+      }),
     );
   });
 });

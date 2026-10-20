@@ -3,6 +3,7 @@
 import copy
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -10,7 +11,12 @@ import openai
 
 from udiagent.skills import Skill, load_skills, render_template
 from udiagent.grammar import load_grammar
-from udiagent.messages import normalize_tool_calls, split_tool_calls
+from udiagent.messages import (
+    GET_VISUALIZATION_SPEC,
+    normalize_tool_calls,
+    split_tool_calls,
+    visualization_calls,
+)
 from udiagent.schema import (
     parse_schema_from_dict,
     simplify_data_domains,
@@ -43,14 +49,16 @@ class Usage:
     completion_tokens: int = 0
     total_tokens: int = 0
     # Sub-counts broken out for cost visibility: cached input is billed at a
-    # discount; reasoning tokens are a subset of ``completion_tokens``. Both
+    # discount, and cache writes at a premium on models that charge for them
+    # (GPT-5.6+); reasoning tokens are a subset of ``completion_tokens``. All
     # are 0 on providers/models that don't report them.
     cached_prompt_tokens: int = 0
+    cache_write_tokens: int = 0
     reasoning_tokens: int = 0
     operations: list[dict] = field(default_factory=list)
 
     def add(self, op: str, resp_usage) -> None:
-        """Record usage from a ``chat.completions.create`` response."""
+        """Record usage from a chat-completion shaped response (see ``UDIAgent.create_completion``)."""
         if resp_usage is None:
             return
         prompt = int(getattr(resp_usage, "prompt_tokens", 0) or 0)
@@ -60,12 +68,14 @@ class Usage:
         )
         p_details = getattr(resp_usage, "prompt_tokens_details", None)
         cached = int(getattr(p_details, "cached_tokens", 0) or 0)
+        cache_write = int(getattr(p_details, "cache_write_tokens", 0) or 0)
         c_details = getattr(resp_usage, "completion_tokens_details", None)
         reasoning = int(getattr(c_details, "reasoning_tokens", 0) or 0)
         self.prompt_tokens += prompt
         self.completion_tokens += completion
         self.total_tokens += total
         self.cached_prompt_tokens += cached
+        self.cache_write_tokens += cache_write
         self.reasoning_tokens += reasoning
         self.operations.append(
             {
@@ -74,7 +84,11 @@ class Usage:
                 "completion_tokens": completion,
                 "total_tokens": total,
                 "cached_prompt_tokens": cached,
+                "cache_write_tokens": cache_write,
                 "reasoning_tokens": reasoning,
+                # Wall-clock seconds of the call, set by _call_with_budget_guard
+                # (None for a call made outside it).
+                "latency_s": self.__dict__.pop("_last_latency_s", None),
             }
         )
 
@@ -105,14 +119,23 @@ def _call_with_budget_guard(fn, usage: "Usage", /, *args, **kwargs):
 
     Non-quota ``APIStatusError``s propagate unchanged.
     """
+    start = time.perf_counter()
     try:
-        return fn(*args, **kwargs)
+        resp = fn(*args, **kwargs)
     except openai.RateLimitError as err:
         raise BudgetExceededError(_DEFAULT_BUDGET_MESSAGE, usage) from err
     except openai.APIStatusError as err:
         if _is_quota_error(err):
             raise BudgetExceededError(_DEFAULT_BUDGET_MESSAGE, usage) from err
         raise
+    if usage is not None:
+        # ponytail: handed to the usage.add() that follows every guarded call
+        # rather than threaded through each call site. Safe while one Usage
+        # has one call in flight (calls within a run are sequential); a
+        # concurrent caller would need the latency returned explicitly.
+        # Not a dataclass field, so asdict() never reports it.
+        usage._last_latency_s = round(time.perf_counter() - start, 3)
+    return resp
 
 
 def build_rebuff_toolcall(
@@ -144,6 +167,33 @@ def build_rebuff_toolcall(
     }
 
 
+_UNREADABLE_REPLY_MESSAGE = (
+    "Something went wrong while I was working out how to answer that. "
+    "Please try again, or rephrase your request."
+)
+
+
+def _tool_args(tc) -> dict | None:
+    """A tool call's arguments, or None when they aren't a JSON object.
+
+    A reply cut off at the output-token cap carries truncated arguments; a
+    model can also, rarely, emit malformed ones. Either way the call is
+    unusable, and it must not take the whole request down with it.
+    """
+    try:
+        args = json.loads(tc.function.arguments)
+    except (TypeError, json.JSONDecodeError):
+        args = None
+    if not isinstance(args, dict):
+        logger.warning(
+            "skipping %s: its arguments are not a JSON object (%d chars)",
+            tc.function.name,
+            len(tc.function.arguments or ""),
+        )
+        return None
+    return args
+
+
 @dataclass
 class OrchestratorResult:
     """Result of an orchestration run."""
@@ -153,8 +203,8 @@ class OrchestratorResult:
     usage: Usage = field(default_factory=Usage)
 
 
-#: How many times the orchestrator may look up a column's values before it has
-#: to decide. Two is enough to check a table and a column; more means it is not
+#: How many times the orchestrator may look something up (a column's values, an
+#: earlier chart's spec) before it has to decide. Two is enough to check a table and a column; more means it is not
 #: converging, and a chart drawn on a good-enough guess beats another round trip.
 MAX_VALUE_LOOKUPS = 2
 
@@ -223,6 +273,49 @@ class Orchestrator:
                 model=model,
                 budget_check=budget_check,
             )
+
+    def run_visualization(
+        self,
+        messages: list[dict],
+        data_schema: str,
+        data_domains: str,
+        openai_api_key: str | None = None,
+        model: str | None = None,
+        session_id: str | None = None,
+    ) -> OrchestratorResult:
+        """Build a chart for the latest user request, skipping the routing call.
+
+        For callers that already know the request wants a visualization, such
+        as visualization-only benchmarks measuring chart generation on its own.
+        The latest non-blank user message stands in for the description the
+        routing call would otherwise write.
+        """
+        description = next(
+            (
+                m["content"].strip()
+                for m in reversed(messages)
+                if m.get("role") == "user"
+                and isinstance(m.get("content"), str)
+                and m["content"].strip()
+            ),
+            "",
+        )
+        usage = Usage()
+        with self.agent.trace(session_id=session_id, name="visualization-run"):
+            tool_call = self._handle_create_visualization(
+                {"description": description} if description else {},
+                split_tool_calls(messages),
+                data_schema,
+                data_domains,
+                usage,
+                openai_api_key=openai_api_key,
+                model=model,
+            )
+        return OrchestratorResult(
+            tool_calls=[tool_call],
+            orchestrator_choice="render-visualization",
+            usage=usage,
+        )
 
     def _run(
         self,
@@ -303,6 +396,32 @@ class Orchestrator:
         )
 
         return result
+
+    def _reveal_visualization_spec(self, tool_args, messages):
+        """Answer `GetVisualizationSpec`: the full spec the history left out.
+
+        The spec is already in the request — the client echoes every chart back
+        — it is only trimmed from what the model reads (see
+        `messages.compact_visualization_history`). So this reads it back, and
+        marks the chart revealed on `messages` (the orchestrator's own copy) so
+        the handler that answers the turn sees the full spec too.
+        """
+        chart_id = (tool_args.get("chart_id") or "").strip()
+        charts = list(visualization_calls(messages))
+        for candidate, tool_call in charts:
+            if candidate != chart_id:
+                continue
+            function = tool_call.get("function") or tool_call
+            meta = function.get("meta")
+            if isinstance(meta, dict):
+                meta["spec_revealed"] = True
+            arguments = function.get("arguments") or {}
+            if isinstance(arguments, str):
+                return arguments
+            spec = arguments.get("spec", arguments)
+            return spec if isinstance(spec, str) else json.dumps(spec)
+        known = ", ".join(c for c, _ in charts) or "none"
+        return f"No chart '{chart_id}' in this conversation. Charts: {known}."
 
     def _lookup_field_values(self, tool_args, data_domains):
         """Answer `ListFieldValues`: the values the prompt only sampled.
@@ -396,11 +515,11 @@ class Orchestrator:
             msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("rebuff", getattr(resp, "usage", None))
@@ -462,11 +581,11 @@ class Orchestrator:
             msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("free_text_explain", getattr(resp, "usage", None))
@@ -588,6 +707,10 @@ class Orchestrator:
         model=None,
         budget_check: Callable[["Usage"], str | None] | None = None,
     ):
+        # The handlers below each read the history afresh, so a chart revealed
+        # with GetVisualizationSpec is marked on this copy — never on the
+        # caller's messages — and every later read then shows its full spec.
+        messages = copy.deepcopy(messages)
         msgs = normalize_tool_calls(copy.deepcopy(messages))
 
         orchestrate_skill = self.skills["orchestrate"]
@@ -608,19 +731,19 @@ class Orchestrator:
 
         gpt_client = self.agent._get_gpt_client(openai_api_key)
 
-        # The model may ask for a column's full values before deciding. Those
-        # calls answer themselves and loop; every other tool is an outcome and
+        # The model may ask for a column's full values, or an earlier chart's
+        # full spec, before deciding. Those calls answer themselves and loop; every other tool is an outcome and
         # ends the turn. Bounded, because a model that keeps looking things up
         # is not converging and a chart is better than another lookup.
         for _lookup in range(MAX_VALUE_LOOKUPS + 1):
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
                 tools=self.tools,
                 tool_choice="required",
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("orchestrate", getattr(resp, "usage", None))
@@ -657,19 +780,23 @@ class Orchestrator:
             )
             for tc in pending:
                 if tc in lookups:
-                    args = json.loads(tc.function.arguments)
-                    answer = self._lookup_field_values(args, data_domains)
-                    logger.info(
-                        "field values looked up: %s.%s",
-                        args.get("entity"),
-                        args.get("field"),
-                    )
+                    args = _tool_args(tc) or {}
+                    if tc.function.name == GET_VISUALIZATION_SPEC:
+                        answer = self._reveal_visualization_spec(args, messages)
+                        logger.info("visualization spec revealed: %s", args.get("chart_id"))
+                    else:
+                        answer = self._lookup_field_values(args, data_domains)
+                        logger.info(
+                            "field values looked up: %s.%s",
+                            args.get("entity"),
+                            args.get("field"),
+                        )
                 else:
                     # Asked for alongside a lookup. Tell the model to ask again
-                    # once it has the values, rather than acting on it now and
-                    # returning two conflicting outcomes.
+                    # once it has what it looked up, rather than acting on it now
+                    # and returning two conflicting outcomes.
                     answer = (
-                        "Not run — you also asked to look up field values. "
+                        "Not run — you also asked to look something up. "
                         "Call this again if you still want it."
                     )
                 msgs.append(
@@ -696,6 +823,7 @@ class Orchestrator:
         }
 
         tool_calls = []
+        unreadable = 0
         has_vis = False
         has_filter = False
         has_rebuff = False
@@ -704,7 +832,10 @@ class Orchestrator:
 
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
-            tool_args = json.loads(tc.function.arguments)
+            tool_args = _tool_args(tc)
+            if tool_args is None:
+                unreadable += 1
+                continue
 
             if tool_name in INTERNAL_ORCHESTRATOR_TOOLS:
                 # Answered in the lookup loop above, and not an outcome of the
@@ -737,6 +868,9 @@ class Orchestrator:
                 has_clarify = True
             elif tool_name == "FreeTextExplain":
                 has_explain = True
+
+        if unreadable and not tool_calls:
+            return [build_rebuff_toolcall(_UNREADABLE_REPLY_MESSAGE)], "rebuff"
 
         # Derive orchestrator_choice for backward compatibility
         if has_explain:

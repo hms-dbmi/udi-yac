@@ -41,7 +41,7 @@ The output must be a valid UDI Grammar JSON object with three top-level keys. On
 
 - **representation** (optional): visualization specification with:
   - `"mark"`: one of `"bar"`, `"line"`, `"point"`, `"area"`, `"arc"`, `"rect"`, `"text"`, `"geometry"`
-  - `"mapping"`: array of field mappings, each with `"encoding"` (e.g. `"x"`, `"y"`, `"color"`), `"field"` (string), and `"type"` (`"quantitative"`, `"nominal"`, `"ordinal"`, `"temporal"`)
+  - `"mapping"`: array of field mappings, each with `"encoding"` (e.g. `"x"`, `"y"`, `"color"`), `"field"` (string), and `"type"` (`"quantitative"`, `"nominal"`, `"ordinal"`)
 
 ## Reference Examples
 

@@ -110,7 +110,8 @@ def load_package(data_dir: Path) -> list[dict]:
             # cross-entity filtering depends on it — carry it through to the
             # backends config so /v1/yac/metadata can serve it. Descriptions
             # likewise exist only in the package, and are what tells the LLM
-            # what a column means.
+            # what a column means; so do date formats (`udi:time_format`), which
+            # make the chat show an epoch column's BIGINTs as dates.
             relationship_schema = {
                 key: schema[key]
                 for key in ("primaryKey", "foreignKeys")
@@ -119,9 +120,16 @@ def load_package(data_dir: Path) -> list[dict]:
             if resource.get("description"):
                 relationship_schema["description"] = resource["description"]
             described = [
-                {"name": f["name"], "description": f["description"]}
+                {
+                    "name": f["name"],
+                    **{
+                        key: f[key]
+                        for key in ("description", "udi:time_format")
+                        if f.get(key)
+                    },
+                }
                 for f in fields
-                if f.get("description")
+                if f.get("description") or f.get("udi:time_format")
             ]
             if described:
                 relationship_schema["fields"] = described

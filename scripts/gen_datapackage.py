@@ -15,7 +15,12 @@ something says days). Supply them with `--descriptions`, a data dictionary CSV
 with `table,field,description` columns — `table` is the CSV filename (or the
 humanized table name), and a row with a blank `field` describes the table
 itself. Kept beside the CSVs as `data_dictionary.csv`, it is picked up
-automatically, so a regenerated manifest does not lose them.
+automatically, so a regenerated manifest does not lose them. An optional
+`time_format` column marks a time column (`epoch_ms`, `epoch_s`, `year`, or
+`days` for a duration such as an age), written out as `udi:time_format` so the
+chat shows dates, years and ages instead of raw numbers. Likewise an
+`example_prompts.json` (a list of strings) beside the CSVs becomes the
+package's `udi:example_prompts`, the prompts the chat suggests.
 
 Writes <dir>/datapackage.json. See sample-data/readme.md for the format.
 Run `python3 scripts/gen_datapackage.py --selftest` to check the inference.
@@ -30,6 +35,11 @@ from pathlib import Path
 
 # Picked up as the default `--descriptions`, and never profiled as a table.
 DICTIONARY_NAME = "data_dictionary.csv"
+# Embedded as `udi:example_prompts` when present beside the CSVs.
+PROMPTS_NAME = "example_prompts.json"
+
+# The `udi:time_format` values the chat renders (udi-toolkit's formatTime).
+TIME_FORMATS = ("epoch_ms", "epoch_s", "year", "days")
 
 
 def humanize(stem: str, strips: list[str]) -> str:
@@ -199,24 +209,37 @@ def _annotate_cube(res: dict, measure: str) -> None:
             )
 
 
-def _load_descriptions(path: Path) -> dict[tuple[str, str], str]:
-    """Read a data dictionary CSV into ``{(table, field): text}``.
+def _load_descriptions(path: Path) -> dict[tuple[str, str], dict[str, str]]:
+    """Read a data dictionary CSV into ``{(table, field): metadata}``.
 
-    A blank `field` is the table's own description. Blank descriptions are
-    skipped, so a dictionary with gaps leaves those columns as profiled.
+    The metadata is the `description` and, from the optional `time_format`
+    column, `udi:time_format`. A blank `field` is the table's own description.
+    Blank cells are skipped, so a dictionary with gaps leaves those columns as
+    profiled. An unknown time format stops the run: a typo would otherwise
+    quietly leave the column showing raw numbers.
     """
+    entries = {}
     with path.open(newline="", encoding="utf-8") as fh:
-        return {
-            (row["table"].strip(), row["field"].strip()): row["description"].strip()
-            for row in csv.DictReader(fh)
-            if row["description"].strip()
-        }
+        for line, row in enumerate(csv.DictReader(fh), start=2):
+            meta = {}
+            if text := row["description"].strip():
+                meta["description"] = text
+            if time_format := (row.get("time_format") or "").strip():
+                if time_format not in TIME_FORMATS:
+                    sys.exit(
+                        f"{path}:{line}: time_format {time_format!r} is not one of "
+                        f"{', '.join(TIME_FORMATS)}"
+                    )
+                meta["udi:time_format"] = time_format
+            if meta:
+                entries[(row["table"].strip(), row["field"].strip())] = meta
+    return entries
 
 
 def _apply_descriptions(
-    resources: list[dict], descriptions: dict[tuple[str, str], str]
+    resources: list[dict], descriptions: dict[tuple[str, str], dict[str, str]]
 ) -> set[tuple[str, str]]:
-    """Fill in table and column `description`s. Returns the keys that matched.
+    """Fill in table `description`s and column metadata. Returns the keys that matched.
 
     A table is matched by its CSV filename or its humanized name: a dictionary
     exported alongside the data knows the files, while one written by hand
@@ -225,12 +248,13 @@ def _apply_descriptions(
     matched = set()
     for resource in resources:
         for table in (resource["path"], resource["name"]):
-            if text := descriptions.get((table, "")):
-                resource["description"] = text
+            if meta := descriptions.get((table, "")):
+                if "description" in meta:
+                    resource["description"] = meta["description"]
                 matched.add((table, ""))
             for field in resource["schema"]["fields"]:
-                if text := descriptions.get((table, field["name"])):
-                    field["description"] = text
+                if meta := descriptions.get((table, field["name"])):
+                    field.update(meta)
                     matched.add((table, field["name"]))
     return matched
 
@@ -241,7 +265,7 @@ def build_package(
     udi_path: str,
     strips: list[str],
     measure: str | None = None,
-    descriptions: dict[tuple[str, str], str] | None = None,
+    descriptions: dict[tuple[str, str], dict[str, str]] | None = None,
     preferred_parent: str | None = None,
 ) -> dict:
     resources = []
@@ -352,13 +376,39 @@ def _selftest() -> None:
     described["path"] = "wide_deid.csv"
     matched = _apply_descriptions(
         [described],
-        {("wide_deid.csv", ""): "a table", ("Wide", "x"): "an x", ("Wide", "nope"): "?"},
+        {
+            ("wide_deid.csv", ""): {"description": "a table"},
+            ("Wide", "x"): {"description": "an x"},
+            ("Wide", "nope"): {"description": "?"},
+        },
     )
     assert matched == {("wide_deid.csv", ""), ("Wide", "x")}, matched
     assert described["description"] == "a table", described
     by_name = {f["name"]: f for f in described["schema"]["fields"]}
     assert by_name["x"]["description"] == "an x", by_name["x"]
     assert by_name["id"]["description"] == "", by_name["id"]
+
+    # A dictionary's time_format reaches the field; an unknown one stops the run.
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        dictionary = Path(tmp) / DICTIONARY_NAME
+        dictionary.write_text(
+            "table,field,description,time_format\n"
+            "Ages,age_days,Age in days.,days\n"
+            "Ages,birth_year,,year\n"
+        )
+        entries = _load_descriptions(dictionary)
+        assert entries == {
+            ("Ages", "age_days"): {"description": "Age in days.", "udi:time_format": "days"},
+            ("Ages", "birth_year"): {"udi:time_format": "year"},
+        }, entries
+        dictionary.write_text("table,field,description,time_format\nAges,x,,dayz\n")
+        try:
+            _load_descriptions(dictionary)
+            raise AssertionError("an unknown time_format was accepted")
+        except SystemExit as e:
+            assert "dayz" in str(e), e
 
     print("selftest OK")
 
@@ -423,6 +473,12 @@ def main() -> None:
     pkg = build_package(
         csv_dir, name, udi_path, args.strip, args.measure, descriptions, args.parent
     )
+    prompts_path = csv_dir / PROMPTS_NAME
+    if prompts_path.is_file():
+        prompts = json.loads(prompts_path.read_text(encoding="utf-8"))
+        if not (isinstance(prompts, list) and all(isinstance(p, str) for p in prompts)):
+            sys.exit(f"{prompts_path} must be a JSON list of strings")
+        pkg["udi:example_prompts"] = prompts
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])

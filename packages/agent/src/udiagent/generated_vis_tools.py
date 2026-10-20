@@ -2,7 +2,7 @@
 Auto-generated visualization tool definitions.
 
 Generated from: src/udiagent/data/skills/template_visualizations.json
-Tools: 77
+Tools: 78
 
 Schema-independent: tool params are free-form strings resolved against the
 per-request data schema at runtime (see vis_generate._execute_generate).
@@ -274,42 +274,73 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": '
  '"km factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": '
  '{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
- '{"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", '
- '"field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"survival percentage": '
- '"<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
- '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
- '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
- 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
- '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
- '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": '
- '"==", "left": {"field": "survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival '
- 'years"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
- 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '{"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": '
+ '"died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": '
+ '{"op": "-", "left": {"field": "at risk"}, "right": {"field": "died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km '
+ 'log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", '
+ '"field": "greenwood term"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, '
+ '{"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, '
+ '"then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": '
+ '{"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, '
+ '"right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": '
+ '100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": '
+ '"kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic '
+ 'percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": '
+ '"log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": '
+ '"greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": '
+ '{"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": '
+ '"km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": '
+ '{"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", '
+ '"left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km '
+ 'exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": '
+ '"km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, '
+ '"right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": '
+ '{"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
+ '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 1}}}}, {"derive": {"curve '
+ 'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival years"}, "right": {"field": '
+ '"horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, "events in window": {"agg": '
+ '"sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, '
+ '{"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": '
+ '{"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
+ '"survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", '
+ '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, '
+ '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
+ 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "final survival"}, {"literal": "% (n="}, {"field": "subjects"}, {"literal": ", '
- '"}, {"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": {"label year above": {"if": {"op": ">=", "left": '
- '{"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": "label '
- 'year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, '
- '"then": {"field": "label year"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
+ '{"final label": {"concat": [{"field": "final survival"}, {"literal": "%"}, {"if": {"op": "==", "left": {"field": '
+ '"curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at "}, {"field": "horizon years"}, '
+ '{"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": "subjects"}, {"literal": ", "}, '
+ '{"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label year above": {"if": {"op": ">=", '
+ '"left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": '
+ '"label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": '
+ '85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
  '[{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
  '{"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}]}, {"mark": '
  '"line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", "title": "survival years", '
  '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
- '"max": 100}}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", '
- '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}], "interpolate": "step-after"}, {"mark": '
- '"line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", '
- '"domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, '
- '"max": 100}}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
- '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"max": 100}}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", "type": '
+ '"quantitative"}, {"encoding": "opacity", "value": 0.12}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
+ '[{"encoding": "x", "field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": '
+ '0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, '
+ '"title": "survival (%)"}], "interpolate": "step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": '
+ '"censor year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
  '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}]}, {"mark": "text", "mapping": '
  '[{"encoding": "x", "field": "label year above", "type": "quantitative", "title": "survival years", "domain": {"min": '
  '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
@@ -352,57 +383,88 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"left": {"field": "died"}, "right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": '
  '{"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": '
  '{"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, '
- '"then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": '
- '"exp", "args": [{"agg": "sum", "field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": '
- '"sum", "field": "km exhausted"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, '
- '{"derive": {"survival percentage": "<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": '
+ '"then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": '
+ '{"field": "at risk"}, "right": {"field": "died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": {"op": '
+ '"*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at risk"}, "right": {"field": "died"}}}}, '
+ '"else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, '
+ '"km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": '
+ '{"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, "events so far": {"rolling": {"expression": '
+ '{"agg": "sum", "field": "died"}}}}}, {"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted '
+ 'so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": '
+ '[{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": '
+ '{"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": '
+ '"subjects"}}}, "right": {"literal": 100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": '
+ '{"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, '
+ '"else": {"field": "basic percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": '
+ '"*", "left": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, '
+ '"then": {"field": "greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": '
+ '"<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": '
+ '{"field": "km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": '
+ '{"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": '
+ '{"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": '
+ '{"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", '
+ '"left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": '
+ '"*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": '
+ '1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km '
+ 'percentage"}}}, "else": {"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": '
+ '"ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": '
+ '{"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, '
+ '"then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, '
+ '"then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": '
+ '{"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": '
+ '"<HORIZON>"}}, {"derive": {"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": '
+ '1}}}}, {"derive": {"curve cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon '
+ 'time"}}, "then": {"literal": 1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival '
+ 'years"}, "right": {"field": "horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, '
+ '"events in window": {"agg": "sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": '
  '"survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
- '{"literal": 1}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": '
- '{"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": "min", '
- '"field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, '
- '{"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
- '{"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
- '"first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, "right": '
- '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", '
- '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": '
- '{"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival percentage"}, "right": '
- '{"field": "final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": '
- '{"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": '
- '{"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": '
- '"_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, '
- '{"literal": " "}, {"field": "final survival"}, {"literal": "% (n="}, {"field": "subjects"}, {"literal": ", "}, '
- '{"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": {"label year above": {"if": {"op": ">=", "left": '
- '{"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": "label '
- 'year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, '
- '"then": {"field": "label year"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": '
- '"color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": '
- '"x", "field": "drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
- '"y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
- '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '{"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": '
+ '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
+ 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
+ '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
+ '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
+ '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", '
+ '"left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", '
+ '"left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": '
+ '1}}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, '
+ '{"literal": "%"}, {"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": '
+ '[{"literal": " at "}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, '
+ '{"field": "subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": '
+ '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
+ '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
+ '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
+ '"omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", '
+ '"type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "stratum", "type": '
+ '"nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", '
  '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
  '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
  '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
- '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": '
- '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
- 'true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": '
- '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
- '{"encoding": "size", "value": 500}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
- 'true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year above", "type": "quantitative", '
- '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, '
- '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
  '[{"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E2.F2:n>"}, "right": {"literal": "<V3>"}}, '
  '"then": {"field": "<E2.F3:q>"}, "else": {"literal": null}}}, "in": "<E2>", "out": "<E2>__c"}, {"groupby": '
@@ -436,57 +498,88 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": "died"}, "right": {"field": "at risk"}}}}}, '
  '{"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": '
  '0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": '
- '"km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"km product": '
- '{"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", "field": "km log"}]}}}, "km exhausted so far": '
- '{"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, "events so far": {"rolling": {"expression": '
- '{"agg": "sum", "field": "died"}}}}}, {"derive": {"survival percentage": "<ESTIMATOR>"}}, {"derive": {"final '
- 'percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": '
- '{"literal": 1.05}}, "else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": '
- '{"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
- '"survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
- '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
- '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", '
- '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, '
- '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
- 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
- '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": '
- '"survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival years"}, "else": '
- '{"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": '
- '{"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": '
- '"%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"final label": {"concat": '
- '[{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "% (n="}, {"field": "subjects"}, '
- '{"literal": ", "}, {"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": {"label year above": {"if": {"op": '
- '">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": '
- '"label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": '
- '85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": '
- '"color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": '
- '"x", "field": "drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
- '"y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
- '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
- '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
- '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
- '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
- '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": '
- '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
- 'true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": '
- '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
- '{"encoding": "size", "value": 500}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
- 'true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year above", "type": "quantitative", '
- '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, '
- '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
+ '"km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood '
+ 'term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": "died"}}, "then": {"op": "/", "left": '
+ '{"field": "died"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at '
+ 'risk"}, "right": {"field": "died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", '
+ '"field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, '
+ '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"km percentage": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, {"derive": '
+ '{"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": '
+ '"events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}, "kaplan meier": "<ESTIMATOR>"}}, '
+ '{"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}, '
+ '"then": {"field": "km percentage"}, "else": {"field": "basic percentage"}}}}, {"derive": {"km log se": {"op": "/", '
+ '"left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": '
+ '"greenwood sum"}, "right": {"literal": 0}}, "then": {"field": "greenwood sum"}, "else": {"literal": 1}}]}, "right": '
+ '{"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": '
+ '{"op": "-", "left": {"literal": 0}, "right": {"field": "km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci '
+ 'requested": "<CI>"}}, {"derive": {"ci lower": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci '
+ 'requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": '
+ '1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": '
+ '{"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": '
+ '"*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": '
+ '[{"op": "*", "left": {"literal": 1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": '
+ '100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}, "ci upper": {"if": {"op": "&&", "left": '
+ '{"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": '
+ '"kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, '
+ '"right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, '
+ '"right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log '
+ 'sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": -1.959963984540054}, "right": {"field": "km '
+ 'log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}}}, '
+ '{"derive": {"horizon years": "<HORIZON>"}}, {"derive": {"horizon time": {"op": "*", "left": {"field": "horizon '
+ 'years"}, "right": {"literal": 1}}}}, {"derive": {"curve cut": {"if": {"op": ">", "left": {"field": "cohort end"}, '
+ '"right": {"field": "horizon time"}}, "then": {"literal": 1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", '
+ '"left": {"field": "survival years"}, "right": {"field": "horizon time"}}}, {"derive": {"curve end": {"agg": "max", '
+ '"field": "survival years"}, "events in window": {"agg": "sum", "field": "died"}}}, {"derive": {"final percentage": '
+ '{"agg": "min", "field": "survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full '
+ 'survival": {"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": '
+ '{"first percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", '
+ '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop '
+ 'year": {"if": {"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, '
+ '"else": {"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
+ '1}}, "then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": '
+ '{"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": '
+ '{"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": '
+ '{"literal": 1}}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final '
+ 'survival"}, {"literal": "%"}, {"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": '
+ '{"concat": [{"literal": " at "}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, '
+ '{"literal": " (n="}, {"field": "subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " '
+ 'events)"}]}}}, {"derive": {"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": '
+ '{"literal": 85}}, "then": {"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": '
+ '">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": '
+ '{"literal": null}}}}], "representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", '
+ '"type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full '
+ 'survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", '
+ '"type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", '
+ '"type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop '
+ 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", '
+ '"type": "nominal", "omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", '
+ '"type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci '
+ 'upper", "type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "stratum", '
+ '"type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": '
+ '"x", "field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
+ '{"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": '
+ '"survival (%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
  '[{"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E2.F2:n>"}, "right": {"literal": "<V3>"}}, '
  '"then": {"field": "<E2.F3:q>"}, "else": {"literal": null}}}, "in": "<E2>", "out": "<E2>__c"}, {"groupby": '
@@ -520,57 +613,88 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": '
  '"km factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": '
  '{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
- '{"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", '
- '"field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"survival percentage": '
- '"<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
- '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
- '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
- 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
- '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
- '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": '
- '"==", "left": {"field": "survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival '
- 'years"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
- 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '{"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": '
+ '"died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": '
+ '{"op": "-", "left": {"field": "at risk"}, "right": {"field": "died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km '
+ 'log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", '
+ '"field": "greenwood term"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, '
+ '{"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, '
+ '"then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": '
+ '{"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, '
+ '"right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": '
+ '100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": '
+ '"kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic '
+ 'percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": '
+ '"log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": '
+ '"greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": '
+ '{"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": '
+ '"km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": '
+ '{"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", '
+ '"left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km '
+ 'exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": '
+ '"km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, '
+ '"right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": '
+ '{"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
+ '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 1}}}}, {"derive": {"curve '
+ 'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival years"}, "right": {"field": '
+ '"horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, "events in window": {"agg": '
+ '"sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, '
+ '{"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": '
+ '{"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
+ '"survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", '
+ '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, '
+ '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
+ 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "% '
- '(n="}, {"field": "subjects"}, {"literal": ", "}, {"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": '
- '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
- '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
- '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
+ '{"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at '
+ '"}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": '
+ '"subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label year '
+ 'above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": '
+ 'null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
  '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
  '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
- '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": '
- '"stratum", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "point", "mapping": '
- '[{"encoding": "x", "field": "censor year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year above", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year below", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
- '"nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", '
- '"dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
- '"<E1.F4>", "align": "right"}}',
+ '"omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", '
+ '"type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "stratum", "type": '
+ '"nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
+ '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
  '[{"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E2.F2:n>"}, "right": {"literal": "<V3>"}}, '
  '"then": {"field": "<E2.F3:q>"}, "else": {"literal": null}}}, "in": "<E2>", "out": "<E2>__c"}, {"groupby": '
@@ -604,57 +728,88 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": '
  '"km factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": '
  '{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
- '{"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", '
- '"field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"survival percentage": '
- '"<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
- '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
- '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
- 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
- '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
- '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": '
- '"==", "left": {"field": "survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival '
- 'years"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
- 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '{"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": '
+ '"died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": '
+ '{"op": "-", "left": {"field": "at risk"}, "right": {"field": "died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km '
+ 'log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", '
+ '"field": "greenwood term"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, '
+ '{"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, '
+ '"then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": '
+ '{"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, '
+ '"right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": '
+ '100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": '
+ '"kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic '
+ 'percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": '
+ '"log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": '
+ '"greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": '
+ '{"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": '
+ '"km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": '
+ '{"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", '
+ '"left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km '
+ 'exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": '
+ '"km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, '
+ '"right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": '
+ '{"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
+ '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 1}}}}, {"derive": {"curve '
+ 'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival years"}, "right": {"field": '
+ '"horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, "events in window": {"agg": '
+ '"sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, '
+ '{"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": '
+ '{"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
+ '"survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", '
+ '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, '
+ '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
+ 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "% '
- '(n="}, {"field": "subjects"}, {"literal": ", "}, {"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": '
- '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
- '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
- '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
+ '{"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at '
+ '"}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": '
+ '"subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label year '
+ 'above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": '
+ 'null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
  '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
  '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
- '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": '
- '"stratum", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "point", "mapping": '
- '[{"encoding": "x", "field": "censor year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year above", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year below", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
- '"nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", '
- '"dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
- '"<E1.F4>", "align": "right"}}',
+ '"omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", '
+ '"type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "stratum", "type": '
+ '"nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
+ '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E1.F4>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
  '"source": "<E3.url>"}], "transformation": [{"join": {"on": ["<E1.F1>", "<E2.F1:n>"]}, "in": ["<E1>", "<E2>"], "out": '
  '"<E1>__<E2>"}, {"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E3.F2:n>"}, "right": {"literal": '
@@ -689,57 +844,88 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": '
  '"km factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": '
  '{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
- '{"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", '
- '"field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"survival percentage": '
- '"<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
- '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
- '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
- 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
- '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
- '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": '
- '"==", "left": {"field": "survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival '
- 'years"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
- 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '{"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": '
+ '"died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": '
+ '{"op": "-", "left": {"field": "at risk"}, "right": {"field": "died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km '
+ 'log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", '
+ '"field": "greenwood term"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, '
+ '{"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, '
+ '"then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": '
+ '{"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, '
+ '"right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": '
+ '100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": '
+ '"kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic '
+ 'percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": '
+ '"log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": '
+ '"greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": '
+ '{"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": '
+ '"km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": '
+ '{"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", '
+ '"left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km '
+ 'exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": '
+ '"km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, '
+ '"right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": '
+ '{"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
+ '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 1}}}}, {"derive": {"curve '
+ 'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival years"}, "right": {"field": '
+ '"horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, "events in window": {"agg": '
+ '"sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, '
+ '{"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": '
+ '{"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
+ '"survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", '
+ '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, '
+ '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
+ 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "% '
- '(n="}, {"field": "subjects"}, {"literal": ", "}, {"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": '
- '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
- '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
- '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
+ '{"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at '
+ '"}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": '
+ '"subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label year '
+ 'above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": '
+ 'null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
  '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
  '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
- '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": '
- '"stratum", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "point", "mapping": '
- '[{"encoding": "x", "field": "censor year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year above", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year below", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
- '"nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", '
- '"dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
- '"<E2.F>", "align": "right"}}',
+ '"omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", '
+ '"type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "stratum", "type": '
+ '"nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
+ '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2.F>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
  '"source": "<E3.url>"}], "transformation": [{"join": {"on": ["<E1.F1>", "<E2.F1:n>"]}, "in": ["<E1>", "<E2>"], "out": '
  '"<E1>__<E2>"}, {"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E3.F2:n>"}, "right": {"literal": '
@@ -774,57 +960,88 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": '
  '"km factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": '
  '{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
- '{"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", '
- '"field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"survival percentage": '
- '"<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
- '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
- '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
- 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
- '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
- '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": '
- '"==", "left": {"field": "survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival '
- 'years"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
- 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '{"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": '
+ '"died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": '
+ '{"op": "-", "left": {"field": "at risk"}, "right": {"field": "died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km '
+ 'log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", '
+ '"field": "greenwood term"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, '
+ '{"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, '
+ '"then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": '
+ '{"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, '
+ '"right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": '
+ '100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": '
+ '"kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic '
+ 'percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": '
+ '"log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": '
+ '"greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": '
+ '{"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": '
+ '"km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": '
+ '{"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", '
+ '"left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km '
+ 'exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": '
+ '"km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, '
+ '"right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": '
+ '{"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
+ '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 1}}}}, {"derive": {"curve '
+ 'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival years"}, "right": {"field": '
+ '"horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, "events in window": {"agg": '
+ '"sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, '
+ '{"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": '
+ '{"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
+ '"survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", '
+ '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, '
+ '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
+ 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "% '
- '(n="}, {"field": "subjects"}, {"literal": ", "}, {"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": '
- '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
- '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
- '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
+ '{"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at '
+ '"}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": '
+ '"subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label year '
+ 'above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": '
+ 'null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
  '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
  '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
- '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": '
- '"stratum", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "point", "mapping": '
- '[{"encoding": "x", "field": "censor year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year above", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year below", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
- '"nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", '
- '"dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
- '"<E2.F>", "align": "right"}}',
+ '"omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", '
+ '"type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "stratum", "type": '
+ '"nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
+ '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2.F>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
  '"source": "<E3.url>"}], "transformation": [{"join": {"on": ["<E1.F1>", "<E2.F1:n>"]}, "in": ["<E1>", "<E2>"], "out": '
  '"<E1>__<E2>"}, {"derive": {"censor day": {"if": {"op": "==", "left": {"field": "<E3.F2:n>"}, "right": {"literal": '
@@ -859,57 +1076,88 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": '
  '"km factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": '
  '{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
- '{"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", '
- '"field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"survival percentage": '
- '"<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": '
- '{"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}}}, {"derive": {"full survival": '
- '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
- 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
- '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
- '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
- '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
- '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "label year"}, "else": {"if": {"op": '
- '"==", "left": {"field": "survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "survival '
- 'years"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
- 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '{"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": '
+ '"died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": '
+ '{"op": "-", "left": {"field": "at risk"}, "right": {"field": "died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km '
+ 'log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", '
+ '"field": "greenwood term"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, '
+ '{"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, '
+ '"then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": '
+ '{"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, '
+ '"right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": '
+ '100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": '
+ '"kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic '
+ 'percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": '
+ '"log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": '
+ '"greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": '
+ '{"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": '
+ '"km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": '
+ '{"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", '
+ '"left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km '
+ 'exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": '
+ '"km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, '
+ '"right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": '
+ '{"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
+ '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 1}}}}, {"derive": {"curve '
+ 'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival years"}, "right": {"field": '
+ '"horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, "events in window": {"agg": '
+ '"sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, '
+ '{"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": '
+ '{"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
+ '"survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", '
+ '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, '
+ '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
+ 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
+ '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "% '
- '(n="}, {"field": "subjects"}, {"literal": ", "}, {"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": '
- '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
- '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
- '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
+ '{"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at '
+ '"}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": '
+ '"subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label year '
+ 'above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": '
+ 'null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
  '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
  '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", '
  '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
- '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": '
- '"stratum", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "point", "mapping": '
- '[{"encoding": "x", "field": "censor year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year above", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year below", "type": '
- '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
- '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
- '"nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", '
- '"dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": '
- '"<E2.F>", "align": "right"}}',
+ '"omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", '
+ '"type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "stratum", "type": '
+ '"nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
+ '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
+ '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2.F>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
  '"source": "<E3.url>"}], "transformation": [{"derive": {"membership tag": "<GROUPTAG:E2.F>"}, "in": "<E2>", "out": '
  '"<E2>__m"}, {"groupby": "<E2.F1:n>", "in": "<E2>__m"}, {"rollup": {"membership tag": {"op": "min", "field": '
@@ -943,57 +1191,88 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"right": {"op": "/", "left": {"field": "died"}, "right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": '
  '"log", "args": [{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"field": "km '
  'factor"}, "else": {"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": "km factor"}, "right": '
- '{"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"km product": {"rolling": '
- '{"expression": {"fn": "exp", "args": [{"agg": "sum", "field": "km log"}]}}}, "km exhausted so far": {"rolling": '
- '{"expression": {"agg": "sum", "field": "km exhausted"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", '
- '"field": "died"}}}}}, {"derive": {"survival percentage": "<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": '
- '"min", "field": "survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, '
- '"right": {"literal": 1}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": '
- '{"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": "min", '
- '"field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, '
- '{"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
- '{"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
- '"first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, "right": '
- '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", '
- '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": '
- '{"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival percentage"}, "right": '
- '{"field": "final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": '
- '{"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": '
- '{"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": '
- '"_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, '
- '{"literal": " "}, {"field": "final survival"}, {"literal": "% (n="}, {"field": "subjects"}, {"literal": ", "}, '
- '{"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": {"label year above": {"if": {"op": ">=", "left": '
- '{"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": "label '
- 'year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, '
- '"then": {"field": "label year"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": '
- '"color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": '
- '"x", "field": "drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
- '"y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", '
- '"field": "stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", '
+ '{"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", '
+ '"left": {"field": "at risk"}, "right": {"field": "died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": '
+ '{"op": "*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at risk"}, "right": {"field": '
+ '"died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": {"expression": {"agg": "sum", "field": '
+ '"km log"}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood '
+ 'sum": {"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, "events so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"km percentage": {"if": {"op": ">", "left": '
+ '{"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"op": "*", "left": '
+ '{"fn": "exp", "args": [{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, {"derive": {"basic percentage": '
+ '{"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": "events so far"}, '
+ '"right": {"field": "subjects"}}}, "right": {"literal": 100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival '
+ 'percentage": {"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km '
+ 'percentage"}, "else": {"field": "basic percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", '
+ '"args": [{"op": "*", "left": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": '
+ '{"literal": 0}}, "then": {"field": "greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, '
+ '"right": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": '
+ '{"literal": 0}, "right": {"field": "km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, '
+ '{"derive": {"ci lower": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": 1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": '
+ '"km percentage"}}}, "else": {"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": '
+ '{"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, '
+ '"right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": '
+ '0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, '
+ '"then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": '
+ '{"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": '
+ '"<HORIZON>"}}, {"derive": {"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": '
+ '1}}}}, {"derive": {"curve cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon '
+ 'time"}}, "then": {"literal": 1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival '
+ 'years"}, "right": {"field": "horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, '
+ '"events in window": {"agg": "sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": '
+ '"survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": '
+ '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
+ 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
+ '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
+ '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
+ '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", '
+ '"left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", '
+ '"left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": '
+ '1}}}}}, {"derive": {"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, '
+ '{"literal": "%"}, {"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": '
+ '[{"literal": " at "}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, '
+ '{"field": "subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": '
+ '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
+ '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
+ '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
+ '"omitLegend": true}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", '
+ '"type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "stratum", "type": '
+ '"nominal", "omitLegend": true}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", '
  '"field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": '
  '"y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
  '(%)"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
- '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": '
- '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
- 'true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": '
- '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
- '{"encoding": "size", "value": 500}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
- 'true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year above", "type": "quantitative", '
- '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, '
- '{"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": -9, '
- '"stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": '
- '"nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
- '0.7, "avoidOverlap": 8}], "title": {"text": "<E2.F>", "align": "right"}}',
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ 'year above", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": '
+ '"final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final '
+ 'label", "type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], '
+ '"align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": '
+ '"text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", '
+ '"field": "stratum", "type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2.F>", "align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
  '"source": "<E3.url>"}], "transformation": [{"groupby": "<E2.F1:n>", "in": "<E2>"}, {"rollup": {"in second table": '
  '{"op": "count"}}, "in": "<E2>", "out": "<E2>__by_subject"}, {"join": {"on": ["<E1.F1>", "<E2.F1>"], "kind": "left"}, '
@@ -1027,59 +1306,90 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"left": {"field": "died"}, "right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": '
  '{"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": '
  '{"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, '
- '"then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": '
- '"exp", "args": [{"agg": "sum", "field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": '
- '"sum", "field": "km exhausted"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": "died"}}}}}, '
- '{"derive": {"survival percentage": "<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": '
+ '"then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": '
+ '{"field": "at risk"}, "right": {"field": "died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": {"op": '
+ '"*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at risk"}, "right": {"field": "died"}}}}, '
+ '"else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, '
+ '"km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": '
+ '{"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, "events so far": {"rolling": {"expression": '
+ '{"agg": "sum", "field": "died"}}}}}, {"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted '
+ 'so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": '
+ '[{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": '
+ '{"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": '
+ '"subjects"}}}, "right": {"literal": 100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": '
+ '{"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, '
+ '"else": {"field": "basic percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": '
+ '"*", "left": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, '
+ '"then": {"field": "greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": '
+ '"<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": '
+ '{"field": "km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": '
+ '{"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": '
+ '{"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": '
+ '{"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", '
+ '"left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": '
+ '"*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": '
+ '1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km '
+ 'percentage"}}}, "else": {"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": '
+ '"ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": '
+ '{"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, '
+ '"then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, '
+ '"then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": '
+ '{"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": '
+ '"<HORIZON>"}}, {"derive": {"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": '
+ '1}}}}, {"derive": {"curve cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon '
+ 'time"}}, "then": {"literal": 1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival '
+ 'years"}, "right": {"field": "horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, '
+ '"events in window": {"agg": "sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": '
  '"survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
- '{"literal": 1}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": '
- '{"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": "min", '
- '"field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, '
- '{"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
- '{"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
- '"first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, "right": '
- '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", '
- '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": '
- '{"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival percentage"}, "right": '
- '{"field": "final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": '
- '{"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": '
- '{"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": '
- '"_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"final label": {"concat": [{"field": "group"}, '
- '{"literal": " "}, {"field": "final survival"}, {"literal": "% (n="}, {"field": "subjects"}, {"literal": ", "}, '
- '{"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": {"label year above": {"if": {"op": ">=", "left": '
- '{"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": "label '
- 'year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, '
- '"then": {"field": "label year"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": '
- '"color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2>", "No <E2>"]}]}, {"mark": "line", '
- '"mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", "title": "survival years", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2>", "No '
- '<E2>"]}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", '
- '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "group", '
- '"type": "nominal", "omitLegend": true, "domain": ["<E2>", "No <E2>"]}], "interpolate": "step-after"}, {"mark": '
- '"line", "mapping": [{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", '
- '"domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, '
- '"max": 100}}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2>", "No '
- '<E2>"]}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": '
- '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
- '{"encoding": "size", "value": 500}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, '
- '"domain": ["<E2>", "No <E2>"]}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year above", '
- '"type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final '
- 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", '
- '"type": "nominal"}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": '
- '["<E2>", "No <E2>"]}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, '
- '"avoidOverlap": 8}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year below", "type": '
+ '{"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": '
+ '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
+ 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
+ '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
+ '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
+ '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", '
+ '"left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", '
+ '"left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": '
+ '1}}}}}, {"derive": {"final label": {"concat": [{"field": "group"}, {"literal": " "}, {"field": "final survival"}, '
+ '{"literal": "%"}, {"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": '
+ '[{"literal": " at "}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, '
+ '{"field": "subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": '
+ '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
+ '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "group", "type": "nominal", '
+ '"omitLegend": true, "domain": ["<E2>", "No <E2>"]}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop '
+ 'year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop '
+ 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "group", '
+ '"type": "nominal", "omitLegend": true, "domain": ["<E2>", "No <E2>"]}]}, {"mark": "area", "mapping": [{"encoding": '
+ '"x", "field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
+ '{"encoding": "y", "field": "ci lower", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival '
+ '(%)"}, {"encoding": "y2", "field": "ci upper", "type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, '
+ '{"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2>", "No <E2>"]}], '
+ '"interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": '
+ '"group", "type": "nominal", "omitLegend": true, "domain": ["<E2>", "No <E2>"]}], "interpolate": "step-after"}, '
+ '{"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": "quantitative", "title": "survival '
+ 'years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": '
+ '"size", "value": 500}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": '
+ '["<E2>", "No <E2>"]}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label year above", "type": '
  '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
  '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
  '"nominal"}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2>", "No '
- '<E2>"]}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": '
- '8}], "title": {"text": "<E2>", "align": "right"}}',
+ '<E2>"]}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, '
+ '{"mark": "text", "mapping": [{"encoding": "x", "field": "label year below", "type": "quantitative", "title": '
+ '"survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": '
+ '"color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2>", "No <E2>"]}], "align": "right", '
+ '"dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<E2>", '
+ '"align": "right"}}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}, {"name": "<E3>", '
  '"source": "<E3.url>"}, {"name": "<E4>", "source": "<E4.url>"}], "transformation": [{"groupby": "<E2.F1:n>", "in": '
  '"<E2>"}, {"rollup": {"in second table": {"op": "count"}}, "in": "<E2>", "out": "<E2>__by_subject"}, {"join": {"on": '
@@ -1118,46 +1428,77 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"right": {"op": "/", "left": {"field": "died"}, "right": {"field": "at risk"}}}}}, {"derive": {"km log": {"fn": '
  '"log", "args": [{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"field": "km '
  'factor"}, "else": {"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": "km factor"}, "right": '
- '{"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"km product": {"rolling": '
- '{"expression": {"fn": "exp", "args": [{"agg": "sum", "field": "km log"}]}}}, "km exhausted so far": {"rolling": '
- '{"expression": {"agg": "sum", "field": "km exhausted"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", '
- '"field": "died"}}}}}, {"derive": {"survival percentage": "<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": '
- '"min", "field": "survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, '
- '"right": {"literal": 1}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, "else": '
- '{"literal": null}}}}, {"derive": {"full survival": {"literal": 100}}}, {"derive": {"first year": {"agg": "min", '
- '"field": "survival years"}}}, {"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, '
- '{"derive": {"lead year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
- '{"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
- '"first year"}, "else": {"literal": null}}}, "drop year": {"if": {"op": "<=", "left": {"window": "rank"}, "right": '
- '{"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", '
- '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": '
- '{"literal": null}}}}}, {"derive": {"rule year": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
- '1}}, "then": {"field": "label year"}, "else": {"if": {"op": "==", "left": {"field": "survival percentage"}, "right": '
- '{"field": "final percentage"}}, "then": {"field": "survival years"}, "else": {"literal": null}}}}}, {"derive": '
- '{"_label_offset": {"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": '
- '{"final survival": {"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": '
- '"_label_offset"}, "right": {"literal": 1}}}}}, {"derive": {"final label": {"concat": [{"field": "group"}, '
- '{"literal": " "}, {"field": "final survival"}, {"literal": "% (n="}, {"field": "subjects"}, {"literal": ", "}, '
- '{"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": {"label year above": {"if": {"op": ">=", "left": '
- '{"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": "label '
- 'year"}}, "label year below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, '
- '"then": {"field": "label year"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "lead year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": '
- '"color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2> + <E3>", "<E2> only", "<E3> '
- 'only", "Neither"]}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop year", "type": "quantitative", '
- '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": '
+ '{"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", '
+ '"left": {"field": "at risk"}, "right": {"field": "died"}}, "then": {"op": "/", "left": {"field": "died"}, "right": '
+ '{"op": "*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at risk"}, "right": {"field": '
+ '"died"}}}}, "else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": {"expression": {"agg": "sum", "field": '
+ '"km log"}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood '
+ 'sum": {"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, "events so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "died"}}}}}, {"derive": {"km percentage": {"if": {"op": ">", "left": '
+ '{"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"op": "*", "left": '
+ '{"fn": "exp", "args": [{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, {"derive": {"basic percentage": '
+ '{"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": "events so far"}, '
+ '"right": {"field": "subjects"}}}, "right": {"literal": 100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival '
+ 'percentage": {"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km '
+ 'percentage"}, "else": {"field": "basic percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", '
+ '"args": [{"op": "*", "left": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": '
+ '{"literal": 0}}, "then": {"field": "greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, '
+ '"right": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": '
+ '{"literal": 0}, "right": {"field": "km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, '
+ '{"derive": {"ci lower": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": 1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": '
+ '"km percentage"}}}, "else": {"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": '
+ '{"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, '
+ '"right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": '
+ '0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, '
+ '"then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": '
+ '{"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": '
+ '"<HORIZON>"}}, {"derive": {"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": '
+ '1}}}}, {"derive": {"curve cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon '
+ 'time"}}, "then": {"literal": 1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "survival '
+ 'years"}, "right": {"field": "horizon time"}}}, {"derive": {"curve end": {"agg": "max", "field": "survival years"}, '
+ '"events in window": {"agg": "sum", "field": "died"}}}, {"derive": {"final percentage": {"agg": "min", "field": '
+ '"survival percentage"}}}, {"derive": {"label year": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
+ '{"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, {"derive": {"full survival": '
+ '{"literal": 100}}}, {"derive": {"first year": {"agg": "min", "field": "survival years"}}}, {"derive": {"first '
+ 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead year": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": {"literal": null}}}, "drop year": {"if": '
+ '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first year"}, "else": '
+ '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
+ '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"_label_offset": {"op": "+", '
+ '"left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", '
+ '"left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": '
+ '1}}}}}, {"derive": {"final label": {"concat": [{"field": "group"}, {"literal": " "}, {"field": "final survival"}, '
+ '{"literal": "%"}, {"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": '
+ '[{"literal": " at "}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, '
+ '{"field": "subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": '
+ '{"label year above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": '
+ '{"literal": null}, "else": {"field": "label year"}}, "label year below": {"if": {"op": ">=", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 85}}, "then": {"field": "label year"}, "else": {"literal": null}}}}], '
+ '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead year", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "group", "type": "nominal", '
  '"omitLegend": true, "domain": ["<E2> + <E3>", "<E2> only", "<E3> only", "Neither"]}]}, {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "survival years", "type": "quantitative", "title": "survival years", "domain": {"min": '
- '0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}, '
- '"title": "survival (%)"}, {"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": '
- '["<E2> + <E3>", "<E2> only", "<E3> only", "Neither"]}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "rule year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
+ '[{"encoding": "x", "field": "drop year", "type": "quantitative", "title": "survival years", "domain": {"min": 0}}, '
+ '{"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
  '{"encoding": "color", "field": "group", "type": "nominal", "omitLegend": true, "domain": ["<E2> + <E3>", "<E2> '
- 'only", "<E3> only", "Neither"]}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": '
+ 'only", "<E3> only", "Neither"]}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "survival years", "type": '
+ '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "y2", "field": "ci upper", '
+ '"type": "quantitative"}, {"encoding": "opacity", "value": 0.12}, {"encoding": "color", "field": "group", "type": '
+ '"nominal", "omitLegend": true, "domain": ["<E2> + <E3>", "<E2> only", "<E3> only", "Neither"]}], "interpolate": '
+ '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "survival years", "type": "quantitative", '
+ '"title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}, "title": "survival (%)"}, {"encoding": "color", "field": "group", '
+ '"type": "nominal", "omitLegend": true, "domain": ["<E2> + <E3>", "<E2> only", "<E3> only", "Neither"]}], '
+ '"interpolate": "step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor year", "type": '
  '"quantitative", "title": "survival years", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", '
  '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
  '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
@@ -1186,52 +1527,83 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"literal": 1}, "right": {"op": "/", "left": {"field": "events"}, "right": {"field": "at risk"}}}}}, {"derive": {"km '
  'log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": '
  '{"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": "km '
- 'factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"km product": '
- '{"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", "field": "km log"}]}}}, "km exhausted so far": '
- '{"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, "events so far": {"rolling": {"expression": '
- '{"agg": "sum", "field": "events"}}}}}, {"derive": {"survival percentage": "<ESTIMATOR>"}}, {"derive": {"final '
- 'percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"full survival": {"literal": 100}}}, '
- '{"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, {"derive": {"first percentage": {"agg": "max", "field": '
- '"survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
- '{"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
- '{"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": {"op": "<=", '
- '"left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}, '
- '"drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "full '
- 'survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
- '"first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": {"field": "cohort end"}, "right": {"literal": 1.05}}, '
- '"else": {"literal": null}}}}, {"derive": {"rule time": {"if": {"op": "==", "left": {"window": "rank"}, "right": '
- '{"literal": 1}}, "then": {"field": "label time"}, "else": {"if": {"op": "==", "left": {"field": "survival '
- 'percentage"}, "right": {"field": "final percentage"}}, "then": {"field": "<D1>"}, "else": {"literal": null}}}}}, '
+ 'factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood term": '
+ '{"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": "events"}}, "then": {"op": "/", "left": '
+ '{"field": "events"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at '
+ 'risk"}, "right": {"field": "events"}}}}, "else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", '
+ '"field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, '
+ '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "events"}}}}}, {"derive": {"km percentage": '
+ '{"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, '
+ '"else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, '
+ '{"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": '
+ '{"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}, "kaplan meier": '
+ '"<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": '
+ '{"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic percentage"}}}}, {"derive": {"km log '
+ 'se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": "log", "args": [{"if": {"op": ">", '
+ '"left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": "greenwood sum"}, "else": '
+ '{"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": {"field": "km log sum"}, '
+ '"right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": "km log sum"}}, "else": '
+ '{"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": {"op": "&&", "left": {"op": '
+ '"==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan '
+ 'meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": '
+ '{"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": '
+ '{"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, '
+ '"right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, "right": {"field": "km log '
+ 'se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}, "ci '
+ 'upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, '
+ '"right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", '
+ '"left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": '
+ '"<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": '
+ '[{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": '
+ '-1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km '
+ 'percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": {"horizon '
+ 'time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 12}}}}, {"derive": {"curve cut": {"if": '
+ '{"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": 1}, "else": '
+ '{"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "<D1>"}, "right": {"field": "horizon time"}}}, '
+ '{"derive": {"curve end": {"agg": "max", "field": "<D1>"}, "events in window": {"agg": "sum", "field": "events"}}}, '
+ '{"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"full survival": '
+ '{"literal": 100}}}, {"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, {"derive": {"first percentage": '
+ '{"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, '
+ '"right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": {"op": '
+ '"<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": '
+ 'null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
+ '{"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, '
+ '"then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": "==", '
+ '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, '
  '{"derive": {"censor time": {"if": {"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, "then": '
  '{"field": "<D1>"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
  'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "final survival"}, {"literal": "% (n="}, {"field": "subjects"}, {"literal": ", '
- '"}, {"field": "deaths"}, {"literal": " events)"}]}}}, {"derive": {"label time above": {"if": {"op": ">=", "left": '
- '{"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": "label '
- 'time"}}, "label time below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, '
- '"then": {"field": "label time"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
+ '{"final label": {"concat": [{"field": "final survival"}, {"literal": "%"}, {"if": {"op": "==", "left": {"field": '
+ '"curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at "}, {"field": "horizon years"}, '
+ '{"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": "subjects"}, {"literal": ", "}, '
+ '{"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label time above": {"if": {"op": ">=", '
+ '"left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": null}, "else": {"field": '
+ '"label time"}}, "label time below": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": '
+ '85}}, "then": {"field": "label time"}, "else": {"literal": null}}}}], "representation": [{"mark": "line", "mapping": '
  '[{"encoding": "x", "field": "lead time", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
  '{"encoding": "y", "field": "full survival", "type": "quantitative", "domain": {"min": 0, "max": 100}}]}, {"mark": '
  '"line", "mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", "title": "time", "domain": '
  '{"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", '
- '"domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "title": "event-free (%)", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}], "interpolate": "step-after"}, {"mark": "line", "mapping": '
- '[{"encoding": "x", "field": "rule time", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}]}, {"mark": '
- '"point", "mapping": [{"encoding": "x", "field": "censor time", "type": "quantitative", "title": "time", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": '
- '500}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label time above", "type": "quantitative", "title": '
+ '100}}]}, {"mark": "area", "mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", '
+ '"domain": {"min": 0}}, {"encoding": "y", "field": "ci lower", "type": "quantitative", "domain": {"min": 0, "max": '
+ '100}, "title": "event-free (%)"}, {"encoding": "y2", "field": "ci upper", "type": "quantitative"}, {"encoding": '
+ '"opacity", "value": 0.12}], "interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": '
+ '"<D1>", "type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival '
+ 'percentage", "title": "event-free (%)", "type": "quantitative", "domain": {"min": 0, "max": 100}}], "interpolate": '
+ '"step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor time", "type": "quantitative", '
+ '"title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": "quantitative", '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, '
+ '{"encoding": "size", "value": 500}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label time above", '
+ '"type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", '
+ '"type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": '
+ '"nominal"}], "align": "right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": '
+ '8}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label time below", "type": "quantitative", "title": '
  '"time", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": '
  '{"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", "type": "nominal"}], "align": "right", "dy": '
- '-9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": "text", "mapping": '
- '[{"encoding": "x", "field": "label time below", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, '
- '{"encoding": "text", "field": "final label", "type": "nominal"}], "align": "right", "dy": 10, "stroke": "white", '
- '"strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}]}',
+ '10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}]}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2,D3>"}, {"derive": '
  '{"events": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, '
  '"else": {"literal": 0}}, "censored": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, '
@@ -1246,44 +1618,75 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '{"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "km '
  'factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": '
  '{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
- '{"literal": 1}}}}, {"derive": {"km product": {"rolling": {"expression": {"fn": "exp", "args": [{"agg": "sum", '
- '"field": "km log"}]}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "events"}}}}}, {"derive": {"survival '
- 'percentage": "<ESTIMATOR>"}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, '
- '{"derive": {"full survival": {"literal": 100}}}, {"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, '
- '{"derive": {"first percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead time": {"if": '
- '{"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": '
- '"==", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": '
- 'null}}}, "drop time": {"if": {"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": '
- '"first time"}, "else": {"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, '
- '"right": {"literal": 1}}, "then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": '
- '{"label time": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"op": "*", "left": '
- '{"field": "cohort end"}, "right": {"literal": 1.05}}, "else": {"literal": null}}}}, {"derive": {"rule time": {"if": '
- '{"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "label time"}, "else": {"if": '
- '{"op": "==", "left": {"field": "survival percentage"}, "right": {"field": "final percentage"}}, "then": {"field": '
- '"<D1>"}, "else": {"literal": null}}}}}, {"derive": {"censor time": {"if": {"op": ">", "left": {"field": "censored"}, '
- '"right": {"literal": 0}}, "then": {"field": "<D1>"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": '
- '{"op": "+", "left": {"field": "final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": '
- '{"op": "-", "left": {"field": "_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": '
- '{"literal": 1}}}}}, {"derive": {"final label": {"concat": [{"field": "<D3>"}, {"literal": " "}, {"field": "final '
- 'survival"}, {"literal": "% (n="}, {"field": "subjects"}, {"literal": ", "}, {"field": "deaths"}, {"literal": " '
- 'events)"}]}}}, {"derive": {"label time above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": '
- '{"literal": 85}}, "then": {"literal": null}, "else": {"field": "label time"}}, "label time below": {"if": {"op": '
- '">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"field": "label time"}, "else": '
- '{"literal": null}}}}], "representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead time", '
- '"type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", '
- '"omitLegend": true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", '
- '"title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", '
+ '{"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": '
+ '"events"}}, "then": {"op": "/", "left": {"field": "events"}, "right": {"op": "*", "left": {"field": "at risk"}, '
+ '"right": {"op": "-", "left": {"field": "at risk"}, "right": {"field": "events"}}}}, "else": {"literal": 0}}}}, '
+ '{"derive": {"km log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": '
+ '{"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": '
+ '{"agg": "sum", "field": "greenwood term"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": '
+ '"events"}}}}}, {"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": '
+ '{"literal": 0}}, "then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log '
+ 'sum"}]}, "right": {"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": '
+ '{"literal": 1}, "right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": "subjects"}}}, "right": '
+ '{"literal": 100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": '
+ '{"field": "kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic '
+ 'percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": '
+ '"log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": '
+ '"greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": '
+ '{"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": '
+ '"km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": '
+ '{"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", '
+ '"left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km '
+ 'exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": '
+ '"km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, '
+ '"right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": '
+ '{"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
+ '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 12}}}}, {"derive": {"curve '
+ 'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "<D1>"}, "right": {"field": "horizon '
+ 'time"}}}, {"derive": {"curve end": {"agg": "max", "field": "<D1>"}, "events in window": {"agg": "sum", "field": '
+ '"events"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"full '
+ 'survival": {"literal": 100}}}, {"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, {"derive": {"first '
+ 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": '
+ '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": '
+ '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
+ '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": '
+ '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": '
+ 'null}}}}, {"derive": {"censor time": {"if": {"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, '
+ '"then": {"field": "<D1>"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
+ '{"final label": {"concat": [{"field": "<D3>"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
+ '{"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at '
+ '"}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": '
+ '"subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label time '
+ 'above": {"if": {"op": ">=", "left": {"field": "final percentage"}, "right": {"literal": 85}}, "then": {"literal": '
+ 'null}, "else": {"field": "label time"}}, "label time below": {"if": {"op": ">=", "left": {"field": "final '
+ 'percentage"}, "right": {"literal": 85}}, "then": {"field": "label time"}, "else": {"literal": null}}}}], '
+ '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead time", "type": "quantitative", '
+ '"title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": "quantitative", '
  '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, '
+ '{"mark": "line", "mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", "title": "time", '
+ '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
+ '"max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "area", '
+ '"mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
+ '{"encoding": "y", "field": "ci lower", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": '
+ '"event-free (%)"}, {"encoding": "y2", "field": "ci upper", "type": "quantitative"}, {"encoding": "opacity", "value": '
+ '0.12}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, '
  '{"mark": "line", "mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", "domain": '
  '{"min": 0}}, {"encoding": "y", "field": "survival percentage", "title": "event-free (%)", "type": "quantitative", '
  '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], '
- '"interpolate": "step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "rule time", "type": '
- '"quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "final percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", '
- '"omitLegend": true}]}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor time", "type": '
+ '"interpolate": "step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor time", "type": '
  '"quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
  '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
  '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
@@ -1331,6 +1734,12 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"end"}}}, {"rollup": {"count": {"op": "count"}}}], "representation": {"mark": "rect", "mapping": [{"encoding": "x", '
  '"field": "start", "type": "quantitative", "title": "<F>"}, {"encoding": "x2", "field": "end", "type": '
  '"quantitative"}, {"encoding": "y", "field": "count", "type": "quantitative", "domainWhenFiltered": "filtered"}]}}',
+ '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
+ '"<F1>"}, "right": {"literal": null}}}, {"binby": {"field": "<F1:q>", "output": {"bin_start": "start", "bin_end": '
+ '"end"}}}, {"groupby": ["start", "end", "<F2>"]}, {"rollup": {"count": {"op": "count"}}}], "representation": {"mark": '
+ '"bar", "mapping": [{"encoding": "x", "field": "start", "type": "quantitative", "title": "<F1>"}, {"encoding": "x2", '
+ '"field": "end", "type": "quantitative"}, {"encoding": "y", "field": "count", "type": "quantitative"}, {"encoding": '
+ '"color", "field": "<F2:n>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": {"op": "!=", "left": {"field": '
  '"<F>"}, "right": {"literal": null}}}, {"kde": {"field": "<F>", "output": {"sample": "<F>", "density": "density"}}}], '
  '"representation": {"mark": "area", "mapping": [{"encoding": "x", "field": "<F>", "type": "quantitative"}, '
@@ -2247,7 +2656,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a given number of days.',
                'name': 'vis_052_line_survival',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -2275,16 +2709,27 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2333,7 +2778,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'stops it.',
                'name': 'vis_053_line_survival_baseline',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -2363,14 +2833,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -2453,6 +2924,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2502,7 +2983,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'event that stops it.',
                'name': 'vis_054_line_survival_baseline_multivalue',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -2532,14 +3038,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -2622,6 +3129,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2671,7 +3188,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'stops it.',
                'name': 'vis_055_line_survival_ever',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -2701,14 +3243,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -2791,6 +3334,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -2841,7 +3394,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'sees one row per (subject, value) pair and a subject joins every value it ever listed.',
                'name': 'vis_056_line_survival_ever_multivalue',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -2871,14 +3449,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity2_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -2961,6 +3540,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3010,7 +3599,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'relapse, second malignancy and death for event-free survival.',
                'name': 'vis_057_line_survival_related',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -3051,14 +3665,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -3141,6 +3756,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3191,7 +3816,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'recurrence, relapse, second malignancy and death for event-free survival.',
                'name': 'vis_058_line_survival_related_numeric',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -3232,14 +3882,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -3322,6 +3973,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3374,7 +4035,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'progression, recurrence, relapse, second malignancy and death for event-free survival.',
                'name': 'vis_059_line_survival_related_multivalue',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -3415,14 +4101,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -3505,6 +4192,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3556,7 +4253,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'malignancy and death for event-free survival.',
                'name': 'vis_060_line_survival_ever_matching',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -3597,14 +4319,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
                                              'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
@@ -3687,6 +4410,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3739,7 +4472,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'which value it holds.',
                'name': 'vis_061_line_survival_presence',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -3778,16 +4536,27 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity3_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3838,7 +4607,32 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'death for event-free survival.',
                'name': 'vis_062_line_survival_presence_2x2',
                'parameters': {'additionalProperties': False,
-                              'properties': {'entity1': {'description': 'The primary data entity (table).',
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the end events '
+                                                                         "in value2: 'overall_survival' when death "
+                                                                         'alone ends the curve; '
+                                                                         "'progression_free_survival' for progression "
+                                                                         "or death; 'event_free_survival' for "
+                                                                         'progression, recurrence, relapse, a second '
+                                                                         'malignancy or death. Omit it when the end '
+                                                                         'events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
+                                             'entity1': {'description': 'The primary data entity (table).',
                                                          'type': 'string'},
                                              'entity1_field1': {'description': 'nominal field — the JOIN KEY on this '
                                                                                'table: the column holding the shared '
@@ -3887,16 +4681,27 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                'values value3 name.',
                                                                 'type': 'string'},
                                              'entity4_field3': {'description': 'quantitative field.', 'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3949,7 +4754,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'the cells add up to the cohort. The elapsed-time dimension must be quantitative.',
                'name': 'vis_063_line_survival_cube',
                'parameters': {'additionalProperties': False,
-                              'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'dimension1': {'description': 'cube quantitative dimension, encodes '
                                                                            'x-axis.',
                                                             'type': 'string'},
                                              'dimension2': {'description': 'cube nominal dimension — the column whose '
@@ -3957,16 +4773,27 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                             'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -3994,7 +4821,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'falls fastest and how many subjects each curve rests on.',
                'name': 'vis_064_line_survival_cube_stratified',
                'parameters': {'additionalProperties': False,
-                              'properties': {'dimension1': {'description': 'cube quantitative dimension, encodes '
+                              'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
+                                                                                'confidence band is always shown '
+                                                                                'unless the user explicitly asks to '
+                                                                                "hide it ('without confidence "
+                                                                                "intervals', 'no CI band'). Set 'hide' "
+                                                                                'ONLY for such a request; never hide '
+                                                                                'it on your own judgement, e.g. '
+                                                                                'because the chart looks busy or the '
+                                                                                'groups are small.',
+                                                                 'enum': ['show', 'hide'],
+                                                                 'type': 'string'},
+                                             'dimension1': {'description': 'cube quantitative dimension, encodes '
                                                                            'x-axis.',
                                                             'type': 'string'},
                                              'dimension2': {'description': 'cube nominal dimension — the column whose '
@@ -4005,16 +4843,27 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                             'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
-                                             'estimator': {'description': 'OPTIONAL. How the survival curve is '
-                                                                          "estimated. Omit it for 'kaplan_meier', the "
-                                                                          'standard estimator, which drops censored '
-                                                                          "subjects from the number at risk. 'basic' "
-                                                                          'divides events so far by the whole group '
-                                                                          'instead — only when the request asks for a '
-                                                                          'crude, naive or cumulative-proportion '
-                                                                          'curve.',
+                                             'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
+                                                                          'always Kaplan-Meier, the standard '
+                                                                          'estimator, unless the user explicitly asks '
+                                                                          "for a different one. Set 'basic' (events so "
+                                                                          'far divided by the whole group) ONLY when '
+                                                                          'the request itself asks for a crude, naive '
+                                                                          'or cumulative-proportion curve; never '
+                                                                          'choose it on your own judgement of the '
+                                                                          'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
+                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
+                                                                             'the survival curve shows. Omit it for '
+                                                                             'the default of 5 years. Set it only when '
+                                                                             'the request names a different span '
+                                                                             "('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it asks for the "
+                                                                             "whole follow-up ('all follow-up', 'as "
+                                                                             "far as the data goes').",
+                                                              'enum': ['1', '2', '3', '5', '10', 'full'],
+                                                              'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
@@ -4147,13 +4996,31 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'field'],
                               'type': 'object'}},
   'type': 'function'},
+ {'function': {'description': '[histogram] Shows the distribution of a quantitative field as a histogram whose bars '
+                              'are stacked by a nominal field, e.g. how many records fall in each time range, split by '
+                              'category. Design: Same equal-width bins as the plain histogram; binby then groupby adds '
+                              'the category to the bin keys. The renderer stacks bars that span x..x2 and carry a '
+                              'colour. Tasks: Compare how a distribution is composed across groups; see which group '
+                              'dominates each range. Query patterns: What is the distribution of <F1:q> for each '
+                              '<F2:n>?; Make a histogram of <F1:q>, stacked by <F2:n>.; How many <E> are there over '
+                              '<F1:q>, broken down by <F2:n>?',
+               'name': 'vis_071_histogram_histogram_stacked',
+               'parameters': {'additionalProperties': False,
+                              'properties': {'entity': {'description': 'The data entity (table) to visualize.',
+                                                        'type': 'string'},
+                                             'field1': {'description': 'quantitative field.', 'type': 'string'},
+                                             'field2': {'description': 'nominal field, encodes color.',
+                                                        'type': 'string'}},
+                              'required': ['entity', 'field1', 'field2'],
+                              'type': 'object'}},
+  'type': 'function'},
  {'function': {'description': '[area] Shows the distribution of a quantitative field as a smooth density curve (KDE) '
                               'rendered as an area chart. Design: Kernel density estimation produces a smooth curve. '
                               'Area mark fills below the density line. Used for moderate cardinality (50-250) where a '
                               'smooth estimate is more informative than binning. Tasks: Characterize the shape of a '
                               'distribution; identify modes and overall density patterns. Query patterns: What is the '
                               'distribution of <F:q>?',
-               'name': 'vis_071_area_density',
+               'name': 'vis_072_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4167,7 +5034,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'datasets (50 or fewer values) where individual observations are meaningful and '
                               'overplotting is minimal. Tasks: Characterize the distribution; identify individual '
                               'values, clusters, and outliers. Query patterns: What is the distribution of <F:q>?',
-               'name': 'vis_072_dot_distribution',
+               'name': 'vis_073_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4183,7 +5050,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'layering. Tasks: Compare distribution shapes across groups; identify shifts in central '
                               'tendency or spread. Query patterns: Is the distribution of <F1:q> similar for each '
                               '<F2:n>?',
-               'name': 'vis_073_grouped_area_density',
+               'name': 'vis_074_grouped_area_density',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4200,7 +5067,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'small datasets (50 or fewer values per group). Tasks: Compare distributions across '
                               'groups; identify clusters and outliers within each group. Query patterns: Is the '
                               'distribution of <F1:q> similar for each <F2:n>?',
-               'name': 'vis_074_grouped_dot_distribution',
+               'name': 'vis_075_grouped_dot_distribution',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4218,7 +5085,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'a field; determine how many records have valid values and what proportion. Query '
                               'patterns: How many <E> records have a non-null <F:q|o|n>?; What percentage of <E> '
                               'records have a non-null <F:q|o|n>?',
-               'name': 'vis_075_table_count_null_nonnull',
+               'name': 'vis_076_table_count_null_nonnull',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4234,7 +5101,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'Assess data quality; determine how many records are missing a value and what '
                               'proportion. Query patterns: How many <E> records have a null <F:q|o|n>?; What '
                               'percentage of <E> records have a null <F:q|o|n>?',
-               'name': 'vis_076_table_count_null',
+               'name': 'vis_077_table_count_null',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4308,7 +5175,9 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_050_grouped_line_cdf': (50, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
  'vis_051_line_sorted': (51, {'dimension': 'D', 'entity': 'E'}),
  'vis_052_line_survival': (52,
-                           {'entity1': 'E1',
+                           {'confidence_band': 'CI',
+                            'endpoint': 'ENDPOINT',
+                            'entity1': 'E1',
                             'entity1_field1': 'E1.F1',
                             'entity1_field2': 'E1.F2',
                             'entity1_field3': 'E1.F3',
@@ -4317,11 +5186,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                             'entity2_field2': 'E2.F2',
                             'entity2_field3': 'E2.F3',
                             'estimator': 'ESTIMATOR',
+                            'time_horizon': 'HORIZON',
                             'value1': 'V1',
                             'value2': 'V2',
                             'value3': 'V3'}),
  'vis_053_line_survival_baseline': (53,
-                                    {'entity1': 'E1',
+                                    {'confidence_band': 'CI',
+                                     'endpoint': 'ENDPOINT',
+                                     'entity1': 'E1',
                                      'entity1_field1': 'E1.F1',
                                      'entity1_field2': 'E1.F2',
                                      'entity1_field3': 'E1.F3',
@@ -4332,11 +5204,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                      'entity2_field3': 'E2.F3',
                                      'estimator': 'ESTIMATOR',
                                      'grouping': 'GROUP',
+                                     'time_horizon': 'HORIZON',
                                      'value1': 'V1',
                                      'value2': 'V2',
                                      'value3': 'V3'}),
  'vis_054_line_survival_baseline_multivalue': (54,
-                                               {'entity1': 'E1',
+                                               {'confidence_band': 'CI',
+                                                'endpoint': 'ENDPOINT',
+                                                'entity1': 'E1',
                                                 'entity1_field1': 'E1.F1',
                                                 'entity1_field2': 'E1.F2',
                                                 'entity1_field3': 'E1.F3',
@@ -4347,11 +5222,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                                 'entity2_field3': 'E2.F3',
                                                 'estimator': 'ESTIMATOR',
                                                 'grouping': 'GROUP',
+                                                'time_horizon': 'HORIZON',
                                                 'value1': 'V1',
                                                 'value2': 'V2',
                                                 'value3': 'V3'}),
  'vis_055_line_survival_ever': (55,
-                                {'entity1': 'E1',
+                                {'confidence_band': 'CI',
+                                 'endpoint': 'ENDPOINT',
+                                 'entity1': 'E1',
                                  'entity1_field1': 'E1.F1',
                                  'entity1_field2': 'E1.F2',
                                  'entity1_field3': 'E1.F3',
@@ -4362,11 +5240,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                  'entity2_field3': 'E2.F3',
                                  'estimator': 'ESTIMATOR',
                                  'grouping': 'GROUP',
+                                 'time_horizon': 'HORIZON',
                                  'value1': 'V1',
                                  'value2': 'V2',
                                  'value3': 'V3'}),
  'vis_056_line_survival_ever_multivalue': (56,
-                                           {'entity1': 'E1',
+                                           {'confidence_band': 'CI',
+                                            'endpoint': 'ENDPOINT',
+                                            'entity1': 'E1',
                                             'entity1_field1': 'E1.F1',
                                             'entity1_field2': 'E1.F2',
                                             'entity1_field3': 'E1.F3',
@@ -4377,11 +5258,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'entity2_field3': 'E2.F3',
                                             'estimator': 'ESTIMATOR',
                                             'grouping': 'GROUP',
+                                            'time_horizon': 'HORIZON',
                                             'value1': 'V1',
                                             'value2': 'V2',
                                             'value3': 'V3'}),
  'vis_057_line_survival_related': (57,
-                                   {'entity1': 'E1',
+                                   {'confidence_band': 'CI',
+                                    'endpoint': 'ENDPOINT',
+                                    'entity1': 'E1',
                                     'entity1_field1': 'E1.F1',
                                     'entity1_field2': 'E1.F2',
                                     'entity1_field3': 'E1.F3',
@@ -4394,11 +5278,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                     'entity3_field3': 'E3.F3',
                                     'estimator': 'ESTIMATOR',
                                     'grouping': 'GROUP',
+                                    'time_horizon': 'HORIZON',
                                     'value1': 'V1',
                                     'value2': 'V2',
                                     'value3': 'V3'}),
  'vis_058_line_survival_related_numeric': (58,
-                                           {'entity1': 'E1',
+                                           {'confidence_band': 'CI',
+                                            'endpoint': 'ENDPOINT',
+                                            'entity1': 'E1',
                                             'entity1_field1': 'E1.F1',
                                             'entity1_field2': 'E1.F2',
                                             'entity1_field3': 'E1.F3',
@@ -4411,11 +5298,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'entity3_field3': 'E3.F3',
                                             'estimator': 'ESTIMATOR',
                                             'grouping': 'GROUP',
+                                            'time_horizon': 'HORIZON',
                                             'value1': 'V1',
                                             'value2': 'V2',
                                             'value3': 'V3'}),
  'vis_059_line_survival_related_multivalue': (59,
-                                              {'entity1': 'E1',
+                                              {'confidence_band': 'CI',
+                                               'endpoint': 'ENDPOINT',
+                                               'entity1': 'E1',
                                                'entity1_field1': 'E1.F1',
                                                'entity1_field2': 'E1.F2',
                                                'entity1_field3': 'E1.F3',
@@ -4428,11 +5318,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                                'entity3_field3': 'E3.F3',
                                                'estimator': 'ESTIMATOR',
                                                'grouping': 'GROUP',
+                                               'time_horizon': 'HORIZON',
                                                'value1': 'V1',
                                                'value2': 'V2',
                                                'value3': 'V3'}),
  'vis_060_line_survival_ever_matching': (60,
-                                         {'entity1': 'E1',
+                                         {'confidence_band': 'CI',
+                                          'endpoint': 'ENDPOINT',
+                                          'entity1': 'E1',
                                           'entity1_field1': 'E1.F1',
                                           'entity1_field2': 'E1.F2',
                                           'entity1_field3': 'E1.F3',
@@ -4445,11 +5338,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                           'entity3_field3': 'E3.F3',
                                           'estimator': 'ESTIMATOR',
                                           'grouping': 'GROUP',
+                                          'time_horizon': 'HORIZON',
                                           'value1': 'V1',
                                           'value2': 'V2',
                                           'value3': 'V3'}),
  'vis_061_line_survival_presence': (61,
-                                    {'entity1': 'E1',
+                                    {'confidence_band': 'CI',
+                                     'endpoint': 'ENDPOINT',
+                                     'entity1': 'E1',
                                      'entity1_field1': 'E1.F1',
                                      'entity1_field2': 'E1.F2',
                                      'entity1_field3': 'E1.F3',
@@ -4460,11 +5356,14 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                      'entity3_field2': 'E3.F2',
                                      'entity3_field3': 'E3.F3',
                                      'estimator': 'ESTIMATOR',
+                                     'time_horizon': 'HORIZON',
                                      'value1': 'V1',
                                      'value2': 'V2',
                                      'value3': 'V3'}),
  'vis_062_line_survival_presence_2x2': (62,
-                                        {'entity1': 'E1',
+                                        {'confidence_band': 'CI',
+                                         'endpoint': 'ENDPOINT',
+                                         'entity1': 'E1',
                                          'entity1_field1': 'E1.F1',
                                          'entity1_field2': 'E1.F2',
                                          'entity1_field3': 'E1.F3',
@@ -4477,22 +5376,27 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                          'entity4_field2': 'E4.F2',
                                          'entity4_field3': 'E4.F3',
                                          'estimator': 'ESTIMATOR',
+                                         'time_horizon': 'HORIZON',
                                          'value1': 'V1',
                                          'value2': 'V2',
                                          'value3': 'V3'}),
  'vis_063_line_survival_cube': (63,
-                                {'dimension1': 'D1',
+                                {'confidence_band': 'CI',
+                                 'dimension1': 'D1',
                                  'dimension2': 'D2',
                                  'entity': 'E',
                                  'estimator': 'ESTIMATOR',
+                                 'time_horizon': 'HORIZON',
                                  'value1': 'V1',
                                  'value2': 'V2'}),
  'vis_064_line_survival_cube_stratified': (64,
-                                           {'dimension1': 'D1',
+                                           {'confidence_band': 'CI',
+                                            'dimension1': 'D1',
                                             'dimension2': 'D2',
                                             'dimension3': 'D3',
                                             'entity': 'E',
                                             'estimator': 'ESTIMATOR',
+                                            'time_horizon': 'HORIZON',
                                             'value1': 'V1',
                                             'value2': 'V2'}),
  'vis_065_heatmap_count': (65, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
@@ -4505,12 +5409,13 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_068_heatmap_basic': (68, {'dimension1': 'D1', 'dimension2': 'D2', 'entity': 'E'}),
  'vis_069_grouped_scatter_by_color': (69, {'entity': 'E', 'field1': 'F1', 'field2': 'F2', 'field3': 'F3'}),
  'vis_070_histogram_distribution': (70, {'entity': 'E', 'field': 'F'}),
- 'vis_071_area_density': (71, {'entity': 'E', 'field': 'F'}),
- 'vis_072_dot_distribution': (72, {'entity': 'E', 'field': 'F'}),
- 'vis_073_grouped_area_density': (73, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_074_grouped_dot_distribution': (74, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
- 'vis_075_table_count_null_nonnull': (75, {'entity': 'E', 'field': 'F'}),
- 'vis_076_table_count_null': (76, {'entity': 'E', 'field': 'F'})}
+ 'vis_071_histogram_histogram_stacked': (71, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_072_area_density': (72, {'entity': 'E', 'field': 'F'}),
+ 'vis_073_dot_distribution': (73, {'entity': 'E', 'field': 'F'}),
+ 'vis_074_grouped_area_density': (74, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_075_grouped_dot_distribution': (75, {'entity': 'E', 'field1': 'F1', 'field2': 'F2'}),
+ 'vis_076_table_count_null_nonnull': (76, {'entity': 'E', 'field': 'F'}),
+ 'vis_077_table_count_null': (77, {'entity': 'E', 'field': 'F'})}
 
 
 # Tags per tool name (drives per-request template selection)
@@ -4585,12 +5490,13 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_068_heatmap_basic': ['data_cube', 'heatmap'],
  'vis_069_grouped_scatter_by_color': ['line_item', 'grouped_scatter'],
  'vis_070_histogram_distribution': ['line_item', 'histogram'],
- 'vis_071_area_density': ['line_item', 'area'],
- 'vis_072_dot_distribution': ['line_item', 'dot'],
- 'vis_073_grouped_area_density': ['line_item', 'grouped_area'],
- 'vis_074_grouped_dot_distribution': ['line_item', 'grouped_dot'],
- 'vis_075_table_count_null_nonnull': ['line_item', 'table'],
- 'vis_076_table_count_null': ['line_item', 'table']}
+ 'vis_071_histogram_histogram_stacked': ['line_item', 'histogram'],
+ 'vis_072_area_density': ['line_item', 'area'],
+ 'vis_073_dot_distribution': ['line_item', 'dot'],
+ 'vis_074_grouped_area_density': ['line_item', 'grouped_area'],
+ 'vis_075_grouped_dot_distribution': ['line_item', 'grouped_dot'],
+ 'vis_076_table_count_null_nonnull': ['line_item', 'table'],
+ 'vis_077_table_count_null': ['line_item', 'table']}
 
 
 # Entity keys per tool name that may share a table with another entity
@@ -4666,12 +5572,13 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_068_heatmap_basic': [],
  'vis_069_grouped_scatter_by_color': [],
  'vis_070_histogram_distribution': [],
- 'vis_071_area_density': [],
- 'vis_072_dot_distribution': [],
- 'vis_073_grouped_area_density': [],
- 'vis_074_grouped_dot_distribution': [],
- 'vis_075_table_count_null_nonnull': [],
- 'vis_076_table_count_null': []}
+ 'vis_071_histogram_histogram_stacked': [],
+ 'vis_072_area_density': [],
+ 'vis_073_dot_distribution': [],
+ 'vis_074_grouped_area_density': [],
+ 'vis_075_grouped_dot_distribution': [],
+ 'vis_076_table_count_null_nonnull': [],
+ 'vis_077_table_count_null': []}
 
 # User-facing text per tool name: (title_template, summary_template),
 # with placeholders rewritten to tokens the frontend resolves against
@@ -4819,42 +5726,44 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                               '{enc:color} category.'),
  'vis_051_line_sorted': ('Line chart of {enc:y} over {enc:x}',
                          'Displays how {enc:y} changes across {enc:x}, as a line.'),
- 'vis_052_line_survival': ('Survival curve for {ent:entity2}',
+ 'vis_052_line_survival': ('{bind:ENDPOINT} curve for {ent:entity2}',
                            'Plots the share of {ent:entity2} still event-free over time, from the start event to the '
                            "end event, reading each subject's events from {entity1}."),
- 'vis_053_line_survival_baseline': ('Survival curves for {ent:entity2} by {col:entity1_field4}',
+ 'vis_053_line_survival_baseline': ('{bind:ENDPOINT} curves for {ent:entity2} by {col:entity1_field4}',
                                     "Plots one curve per {col:entity1_field4} value, read from each subject's start "
                                     'event, so every subject falls in exactly one group.'),
- 'vis_054_line_survival_baseline_multivalue': ('Survival curves for {ent:entity2} by each {col:entity1_field4} value',
+ 'vis_054_line_survival_baseline_multivalue': ('{bind:ENDPOINT} curves for {ent:entity2} by each {col:entity1_field4} '
+                                               'value',
                                                "Expands the {col:entity1_field4} list on each subject's start event, "
                                                'so a subject counts toward every value it listed then and the curves '
                                                'overlap.'),
- 'vis_055_line_survival_ever': ('Survival curves for {ent:entity2} by every {col:entity1_field4} ever recorded',
+ 'vis_055_line_survival_ever': ('{bind:ENDPOINT} curves for {ent:entity2} by every {col:entity1_field4} ever recorded',
                                 'A subject joins every group whose {col:entity1_field4} value appears anywhere on its '
                                 'timeline, so the curves overlap and do not add up to the whole cohort.'),
- 'vis_056_line_survival_ever_multivalue': ('Survival curves for {ent:entity2} by every {col:entity1_field4} value ever '
-                                           'listed',
+ 'vis_056_line_survival_ever_multivalue': ('{bind:ENDPOINT} curves for {ent:entity2} by every {col:entity1_field4} '
+                                           'value ever listed',
                                            'Expands the delimited {col:entity1_field4} column on every event, so a '
                                            'subject joins each value listed at any point and the curves overlap.'),
- 'vis_057_line_survival_related': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+ 'vis_057_line_survival_related': ('{bind:ENDPOINT} curves for {ent:entity3} by {col:entity2_field}',
                                    'Joins {entity1} to {ent:entity2} on the subject id and plots one curve per '
                                    '{col:entity2_field} value; a subject with several {ent:entity2} records joins a '
                                    'group for each.'),
- 'vis_058_line_survival_related_numeric': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+ 'vis_058_line_survival_related_numeric': ('{bind:ENDPOINT} curves for {ent:entity3} by {col:entity2_field}',
                                            'Joins {entity1} to {ent:entity2} on the subject id and cuts '
                                            '{col:entity2_field} into buckets at the supplied thresholds, one curve per '
                                            'bucket.'),
- 'vis_059_line_survival_related_multivalue': ('Survival curves for {ent:entity3} by each {col:entity2_field} value',
+ 'vis_059_line_survival_related_multivalue': ('{bind:ENDPOINT} curves for {ent:entity3} by each {col:entity2_field} '
+                                              'value',
                                               'Joins {entity1} to {ent:entity2} on the subject id, expands the '
                                               'delimited {col:entity2_field} column, and plots one curve per value; '
                                               'the curves overlap.'),
- 'vis_060_line_survival_ever_matching': ('Survival curves for {ent:entity3} by {col:entity2_field}',
+ 'vis_060_line_survival_ever_matching': ('{bind:ENDPOINT} curves for {ent:entity3} by {col:entity2_field}',
                                          'Splits subjects by whether {ent:entity2} ever records one of the named '
                                          '{col:entity2_field} values for them, against everyone else.'),
- 'vis_061_line_survival_presence': ('Survival curves for {ent:entity3} by presence in {ent:entity2}',
+ 'vis_061_line_survival_presence': ('{bind:ENDPOINT} curves for {ent:entity3} by presence in {ent:entity2}',
                                     'Splits subjects by whether {ent:entity2} holds a row for them at all, giving two '
                                     'curves that together cover the whole cohort.'),
- 'vis_062_line_survival_presence_2x2': ('Survival curves for {ent:entity4} by presence in {ent:entity2} and '
+ 'vis_062_line_survival_presence_2x2': ('{bind:ENDPOINT} curves for {ent:entity4} by presence in {ent:entity2} and '
                                         '{ent:entity3}',
                                         'Splits subjects four ways — {ent:entity2} only, {ent:entity3} only, both, '
                                         'neither — by whether each table holds a row for them.'),
@@ -4883,19 +5792,22 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_070_histogram_distribution': ('Histogram of {col:field}',
                                     'Displays how many {entity} fall into each range of {col:field}, as adjacent '
                                     'bars.'),
- 'vis_071_area_density': ('Density plot of {enc:x}',
+ 'vis_071_histogram_histogram_stacked': ('Histogram of {col:field1} by {enc:color}',
+                                         'Displays how many {entity} fall into each range of {col:field1}, with each '
+                                         'bar split by {enc:color}.'),
+ 'vis_072_area_density': ('Density plot of {enc:x}',
                           'Displays where {entity} concentrate across {enc:x}, as a smooth curve.'),
- 'vis_072_dot_distribution': ('Dot plot of {enc:x}',
+ 'vis_073_dot_distribution': ('Dot plot of {enc:x}',
                               'Displays a point for each {entity:one} along a single {enc:x} axis.'),
- 'vis_073_grouped_area_density': ('Density plot of {enc:x} by {enc:color}',
+ 'vis_074_grouped_area_density': ('Density plot of {enc:x} by {enc:color}',
                                   'Displays where {entity} concentrate across {enc:x}, as one overlapping curve per '
                                   '{enc:color} category.'),
- 'vis_074_grouped_dot_distribution': ('Dot plot of {enc:x} by {enc:y}',
+ 'vis_075_grouped_dot_distribution': ('Dot plot of {enc:x} by {enc:y}',
                                       'Displays a point for each {entity:one} along {enc:x}, with one row per {enc:y} '
                                       'category.'),
- 'vis_075_table_count_null_nonnull': ('Table of {enc:text} completeness',
+ 'vis_076_table_count_null_nonnull': ('Table of {enc:text} completeness',
                                       'Displays how many {entity} have a value for {field:text}, and what percentage '
                                       'of them that is.'),
- 'vis_076_table_count_null': ('Table of missing {enc:text} values',
+ 'vis_077_table_count_null': ('Table of missing {enc:text} values',
                               'Displays how many {entity} are missing {field:text}, and what percentage of them that '
                               'is.')}

@@ -65,6 +65,7 @@ export function createConversationStore() {
           completionTokens: state.sessionUsage.completionTokens + usage.completionTokens,
           totalTokens: state.sessionUsage.totalTokens + usage.totalTokens,
           cachedPromptTokens: state.sessionUsage.cachedPromptTokens + usage.cachedPromptTokens,
+          cacheWriteTokens: state.sessionUsage.cacheWriteTokens + usage.cacheWriteTokens,
           reasoningTokens: state.sessionUsage.reasoningTokens + usage.reasoningTokens,
           requests: state.sessionUsage.requests + 1,
           lastModel: usage.model ?? state.sessionUsage.lastModel,

@@ -265,11 +265,42 @@ ORCHESTRATOR_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "GetVisualizationSpec",
+            "description": (
+                "Read the full UDI grammar specification of a chart already in this "
+                "conversation. Charts made from a template appear in the history as "
+                "the template call that produced them (template_tool and "
+                "template_args), with the spec itself omitted. Call this when you "
+                "need the exact specification — to answer a question about how a "
+                "chart was built, what it computes, filters or encodes. You do not "
+                "need it to make a new or adjusted chart: start from template_args. "
+                "This does not produce any visible output; you will get the spec "
+                "back and can then continue."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "chart_id": {
+                        "type": "string",
+                        "description": (
+                            "The chart's chart_id as shown in the history, "
+                            'e.g. "chart_1".'
+                        ),
+                    },
+                },
+                "required": ["chart_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
 
 #: Tools the orchestrator answers itself and loops on, rather than returning to
 #: the client. They gather context; they are not an outcome of the turn.
-INTERNAL_ORCHESTRATOR_TOOLS = {"ListFieldValues"}
+INTERNAL_ORCHESTRATOR_TOOLS = {"ListFieldValues", "GetVisualizationSpec"}
 
 
 # ---------------------------------------------------------------------------
