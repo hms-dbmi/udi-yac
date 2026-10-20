@@ -10,9 +10,9 @@ name: Release udi-yac (chat)
 #   2. git fetch origin main
 #      git tag udi-yac-v<version> origin/main && git push origin udi-yac-v<version>
 #
-# Release udi-toolkit FIRST whenever its version moved — udi-yac's `workspace:*`
-# dep on it is rewritten to the exact in-tree toolkit version at publish time.
-# The "Verify udi-toolkit dependency is published" step below enforces that.
+# No release ordering against udi-toolkit: it is a devDependency that the
+# library build bundles into dist/, so the published tarball never asks npm for
+# it and the in-tree toolkit version need not be published first.
 #
 # The filename is load-bearing — npm trusted publishing (OIDC) is bound to this
 # repository *and* this workflow filename. Renaming it breaks publishing.

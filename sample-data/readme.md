@@ -17,6 +17,7 @@ At the top level:
 | `udi:name`   | The name of the full data resource. Can be the same as `name`.                                                                                                                                                                                                                                                            |
 | `udi:path`   | The path of the data resources. It is assumed that all data resources are relative to this path. This can be a relative path, or a full remote URL.                                                                                                                                                                       |
 | `udi:labels` | Optional. Friendly labels for categorical **values**, raw → label (`{"Children's Hospital of Philadelphia": "CHOP"}`). Applied across every resource, so an institution renamed once covers `donors.group_name` and `samples.group_name` alike. Display only — the raw value is what reaches a spec, a query, or the LLM. |
+| `udi:example_prompts` | Optional. List of example prompts the chat suggests for this package. When absent, the chat asks the agent (`/v1/yac/examples`). `scripts/gen_datapackage.py` fills it from an `example_prompts.json` kept beside the CSVs. |
 
 For each table resource:
 

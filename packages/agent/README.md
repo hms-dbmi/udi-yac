@@ -581,13 +581,15 @@ docker stop udi-agent 2>/dev/null; docker rm udi-agent 2>/dev/null
 docker run -d \
   --name udi-agent \
   --restart unless-stopped \
-  -p 80:80 \
+  -p 80:8000 \
   --env-file /home/ec2-user/.env \
   udi-agent
 ```
 
-The container listens on port 80 as a non-root user. Map it wherever your
-reverse proxy expects it (`-p 8007:80` for a local-only port). Logs go to
+The container listens on port 8000 as a non-root user — an unprivileged port,
+so it binds on runtimes that don't let non-root processes take ports below 1024.
+Map it wherever your reverse proxy expects it (`-p 8007:8000`
+for a local-only port). Logs go to
 `docker logs udi-agent` plus a rotating file at
 `/app/packages/agent/logs/udi_agent.log` inside the container.
 

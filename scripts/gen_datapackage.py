@@ -18,7 +18,9 @@ itself. Kept beside the CSVs as `data_dictionary.csv`, it is picked up
 automatically, so a regenerated manifest does not lose them. An optional
 `time_format` column marks a time column (`epoch_ms`, `epoch_s`, `year`, or
 `days` for a duration such as an age), written out as `udi:time_format` so the
-chat shows dates, years and ages instead of raw numbers.
+chat shows dates, years and ages instead of raw numbers. Likewise an
+`example_prompts.json` (a list of strings) beside the CSVs becomes the
+package's `udi:example_prompts`, the prompts the chat suggests.
 
 Writes <dir>/datapackage.json. See sample-data/readme.md for the format.
 Run `python3 scripts/gen_datapackage.py --selftest` to check the inference.
@@ -33,6 +35,8 @@ from pathlib import Path
 
 # Picked up as the default `--descriptions`, and never profiled as a table.
 DICTIONARY_NAME = "data_dictionary.csv"
+# Embedded as `udi:example_prompts` when present beside the CSVs.
+PROMPTS_NAME = "example_prompts.json"
 
 # The `udi:time_format` values the chat renders (udi-toolkit's formatTime).
 TIME_FORMATS = ("epoch_ms", "epoch_s", "year", "days")
@@ -469,6 +473,12 @@ def main() -> None:
     pkg = build_package(
         csv_dir, name, udi_path, args.strip, args.measure, descriptions, args.parent
     )
+    prompts_path = csv_dir / PROMPTS_NAME
+    if prompts_path.is_file():
+        prompts = json.loads(prompts_path.read_text(encoding="utf-8"))
+        if not (isinstance(prompts, list) and all(isinstance(p, str) for p in prompts)):
+            sys.exit(f"{prompts_path} must be a JSON list of strings")
+        pkg["udi:example_prompts"] = prompts
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])

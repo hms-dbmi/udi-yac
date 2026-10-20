@@ -109,7 +109,9 @@ agent = UDIAgent(
     openai_api_key=config.openai_api_key,
     openai_base_url=config.openai_base_url,
     bedrock=config.udi_bedrock,
-    bedrock_region=config.aws_region,
+    # Gated: bedrock_region alone opts in, and ECS injects AWS_REGION into every
+    # task, so passing it unconditionally put every ECS deploy on Bedrock.
+    bedrock_region=config.aws_region if config.udi_bedrock else None,
     langfuse_public_key=config.langfuse_public_key,
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
@@ -199,8 +201,8 @@ async def _openai_config_error_handler(request, exc: OpenAIError):
 
     The OpenAI SDK raises a plain ``OpenAIError`` for client-construction and
     credential problems, and an ``APIError`` subclass for anything the API
-    itself returned. Only the former is a server-configuration fault, so real
-    API failures are re-raised and keep their existing handling.
+    itself returned. Only the former is a server-configuration fault; API
+    failures go to ``_openai_api_error_handler``.
 
     The common trigger is Bedrock SigV4 signing with no resolvable AWS
     credentials — the SDK resolves them per request, so this fails at request
@@ -208,9 +210,6 @@ async def _openai_config_error_handler(request, exc: OpenAIError):
     act on it); the actionable checklist goes to the log, where the operator
     is looking.
     """
-    if isinstance(exc, APIError):
-        raise exc
-
     if config.udi_bedrock:
         logger.error(
             "Bedrock request failed — could not resolve AWS credentials: %s "
@@ -236,6 +235,31 @@ async def _openai_config_error_handler(request, exc: OpenAIError):
         )
 
     return JSONResponse(status_code=503, content={"error": detail})
+
+
+@app.exception_handler(APIError)
+async def _openai_api_error_handler(request, exc: APIError):
+    """Surface a failed LLM API call as a 502 instead of a bare 500.
+
+    Starlette builds its default 500 outside CORSMiddleware, so that response
+    has no CORS headers and a cross-origin browser reports only "NetworkError"
+    — the status and the reason never reach the frontend. Typical triggers: a
+    caller-supplied ``model`` the key cannot use, a rate limit, a timeout.
+
+    The provider's message is echoed only to a caller who sent their own key,
+    since it describes that key. On the server's credential it can name the
+    operator's account (a Bedrock access denial carries the role ARN), so it
+    goes to the log instead.
+    """
+    logger.warning("LLM API call failed: %s", exc)
+    if request.headers.get("X-OpenAI-Key"):
+        detail = f"The LLM API call failed: {exc.message}"
+    else:
+        detail = (
+            "The LLM API call failed. Please try again or contact the "
+            "administrator."
+        )
+    return JSONResponse(status_code=502, content={"error": detail})
 
 
 app.add_middleware(

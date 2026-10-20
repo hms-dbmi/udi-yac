@@ -45,6 +45,40 @@ jobs:
       - name: Build udi-toolkit
         run: pnpm run build:toolkit
 
+      # pcx is kept out of git (.gitignore). The public copy lives in Google
+      # Drive (folder 1MPVN_fyqluIKAXdFElaGr8f2GV18og8o), which browsers cannot
+      # fetch cross-origin, so mirror it into the site at build time. The chat's
+      # sync-data step copies sample-data/ into the build. Update Drive files
+      # via "Manage versions" so these IDs stay valid, then re-run this workflow.
+      # datapackage.json is maintained by hand (scripts/gen_datapackage.py, then
+      # upload); the check below fails the build if its columns drift from the CSVs.
+      - name: Fetch pcx data package from Google Drive
+        run: |
+          mkdir -p sample-data/pcx
+          while read -r id name; do
+            curl -fsSL -o "sample-data/pcx/$name" \
+              "https://drive.usercontent.google.com/download?id=$id&export=download"
+          done <<'EOF'
+          1fWZS0NEwNPlwxBnwQR2nLg-OQTNtsbUg datapackage.json
+          1kpknXObB8D03QrkWkfgSAhZgrTyP3Lur pcx_30_demographics_deid.csv
+          1vMeFhl8ldoywBb_4QAxHoCz2DzVW6NaI pcx_30_event_level_deid.csv
+          1NsVcRdoX9PewN5kEBLveO4aBMrKOnd6w pcx_30_medical_therapy_level_deid.csv
+          1zcClZ8UNaQiK2gVC8DR_WsSLDVxCJujf pcx_30_patient_level_deid.csv
+          1B8LzxLAoKxud0qgsTlkgNlRCQZpzApQm pcx_30_radiation_level_deid.csv
+          1bzUNAs3Y0BVPa5ORv_k3jOeDKgPfyd2c pcx_30_surgery_level_deid.csv
+          1_Vok8i-hOeeG_a6MOurIXKugmiwNqH0Z pcx_30_treatment_summary_deid.csv
+          EOF
+          python3 - <<'PY'
+          import csv, json, sys
+          d = "sample-data/pcx/"
+          pkg = json.load(open(d + "datapackage.json"))
+          for r in pkg["resources"]:
+              with open(d + r["path"], newline="", encoding="utf-8") as fh:
+                  header = next(csv.reader(fh))
+              if header != [f["name"] for f in r["schema"]["fields"]]:
+                  sys.exit(f"datapackage.json columns for {r['path']} differ from the CSV; regenerate and re-upload it")
+          PY
+
       - name: Build chat SPA
         run: pnpm --filter udi-yac build
         env:

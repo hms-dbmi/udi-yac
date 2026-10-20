@@ -7,7 +7,9 @@ request runs on the requested model, without one it falls back to the server's
 
 from unittest.mock import MagicMock, patch
 
+import httpx2 as httpx
 import pytest
+from openai import NotFoundError
 from starlette.testclient import TestClient
 
 from udiagent.agent import UDIAgent
@@ -83,3 +85,32 @@ def test_omitted_model_falls_back_to_the_server_default(client_and_calls):
     assert response.status_code == 200
     assert calls[0]["model"] is None
     assert response.headers["X-Usage-Model"] == "server-default-model"
+
+
+def test_unusable_model_is_an_error_the_browser_can_read(client_and_calls):
+    """An API error must not escape as a bare 500: that response skips
+    CORSMiddleware, so a cross-origin browser sees only "NetworkError"."""
+    import udiagent.server.app as server_app
+
+    client, _ = client_and_calls
+    error = NotFoundError(
+        "The model `caller-picked-model` does not exist",
+        response=httpx.Response(404, request=httpx.Request("POST", "https://x")),
+        body=None,
+    )
+    headers = {"Authorization": "Bearer dev", "Origin": "https://example.org"}
+
+    with patch.object(server_app.orchestrator, "run", side_effect=error):
+        byok = client.post(
+            "/v1/yac/completions",
+            json=BODY,
+            headers={**headers, "X-OpenAI-Key": "sk-caller"},
+        )
+        server_key = client.post("/v1/yac/completions", json=BODY, headers=headers)
+
+    assert byok.status_code == 502
+    assert byok.headers["access-control-allow-origin"] == "https://example.org"
+    assert "does not exist" in byok.json()["error"]
+    # On the server's credential the provider's message stays in the log.
+    assert server_key.status_code == 502
+    assert "does not exist" not in server_key.json()["error"]

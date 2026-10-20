@@ -254,10 +254,14 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         for name, params in exposed.items()
         if "survival" in name
     }
-    # Every survival curve also offers its estimator (Kaplan-Meier or basic):
-    # how the curve is computed, rather than which column it reads.
-    assert all(params.count("estimator") == 1 for params in survival.values()), survival
-    survival = {k: [p for p in v if p != "estimator"] for k, v in survival.items()}
+    # Every survival curve also offers its estimator (Kaplan-Meier or basic), its
+    # time span and its confidence band: how the curve is computed and shown,
+    # rather than which column it reads.
+    choices = ("estimator", "time_horizon", "confidence_band")
+    assert all(
+        params.count(c) == 1 for params in survival.values() for c in choices
+    ), survival
+    survival = {k: [p for p in v if p not in choices] for k, v in survival.items()}
     assert survival == {
         "survival": [],
         # The stratifier sits on the event log, which is now the first side of a

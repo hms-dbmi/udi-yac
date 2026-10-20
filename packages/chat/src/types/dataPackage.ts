@@ -59,6 +59,9 @@ export interface DataPackage {
    * spec, a query or the LLM.
    */
   'udi:labels'?: Record<string, string>;
+  /** Example prompts shown in the chat. When absent, the agent's
+   *  `/v1/yac/examples` list is used. */
+  'udi:example_prompts'?: string[];
 }
 
 export type Row = Record<string, unknown>;

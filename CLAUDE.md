@@ -53,7 +53,7 @@ Local query backends (server-side data dev/testing): **DuckDB** (`dev/duckdb/REA
 
 ## CI / Releases (.github/workflows/)
 
-Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml` (also builds Storybook), `ci-grammar-app.yml` (PR-only build of the demo app), `ci-python.yml`. Combined GitHub Pages deploy (`pages.yml`): chat SPA at `/udi-yac/`, grammar demo at `/udi-yac/grammar/`. Releases are tagged per package — `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z` (`release-*.yml`). The `Main Branch Protection` ruleset requires a PR for every change to `main`, so **no release workflow bumps versions or pushes to `main`** — bump the version in a PR, merge it, then trigger the publish:
+Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml` (also builds Storybook), `ci-grammar-app.yml` (PR-only build of the demo app), `ci-python.yml`. Combined GitHub Pages deploy (`pages.yml`): chat SPA at `/udi-yac/`, grammar demo at `/udi-yac/grammar/`. The chat serves pcx, which stays out of git: `pages.yml` downloads the CSVs and `datapackage.json` from the public Google Drive folder by file ID at build time. Browsers can't fetch Drive files cross-origin. The Drive manifest is maintained by hand: regenerate it with `gen_datapackage.py` (it embeds `example_prompts.json` as `udi:example_prompts`) and upload it as a new version. The build fails if its columns drift from the CSVs. Repo var `VITE_UDI_DATA_PACKAGE=/udi-yac/data/pcx/datapackage.json`. Drive updates need a manual Pages re-run. Releases are tagged per package — `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z` (`release-*.yml`). The `Main Branch Protection` ruleset requires a PR for every change to `main`, so **no release workflow bumps versions or pushes to `main`** — bump the version in a PR, merge it, then trigger the publish:
 
 | Package          | Publish trigger                                                        |
 | ---------------- | ---------------------------------------------------------------------- |
@@ -62,7 +62,7 @@ Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml` (also builds Storyboo
 | `udiagent`       | publish a GitHub Release tagged `udiagent-vX.Y.Z`                      |
 | `udi-grammar-py` | `workflow_dispatch` (publishes whatever version `pyproject.toml` says) |
 
-Both npm workflows verify the tag matches the in-tree `package.json` version and fail if it doesn't. Their **filenames are load-bearing** — npm trusted publishing (OIDC) is bound to the repo _and_ workflow filename, so renaming them breaks publishing. **Release ordering**: `udi-yac`'s `workspace:*` dep on udi-toolkit is rewritten to the exact in-tree version at publish time, so publish udi-toolkit first whenever its version moved and let it finish before pushing the `udi-yac` tag (`release-chat.yml` pre-flights this and fails fast). `deploy-agent.yml` needs the self-hosted EC2 runner registered to this repo.
+Both npm workflows verify the tag matches the in-tree `package.json` version and fail if it doesn't. Their **filenames are load-bearing** — npm trusted publishing (OIDC) is bound to the repo _and_ workflow filename, so renaming them breaks publishing. **No release ordering**: `udi-yac` lists udi-toolkit only as a `devDependency` and its library build bundles the toolkit into `dist/`, so the published tarball never references udi-toolkit and the two packages publish independently. `deploy-agent.yml` needs the self-hosted EC2 runner registered to this repo.
 
 ## Architecture
 
@@ -74,7 +74,7 @@ JSON spec with three top-level keys: **`source`** (CSV data sources), **`transfo
 
 The agent generates charts from **templates**: partial grammar specs with placeholders (`<E>`, `<F:n>`, `<M>`, `<MARGINAL:D1,D2>`, `<E1.r.E2.id.from>`) bound to real fields at request time. Python is the source of truth — author in `packages/agent/scripts/template_viz_generation.py`, then `uv run python scripts/regenerate_vis_tools.py` (emits `data/skills/template_visualizations.json` → `generated_vis_tools.py`, both `DO NOT EDIT`). Placeholder resolution lives only in `udiagent.vis_generate._resolve_placeholder`. Tool names are derived from description keywords unless a template sets `name_hint`, which the survival variants do — their descriptions share a vocabulary, so derived names collide.
 
-A rendered chart carries its provenance: `meta.tool_used` + `meta.tool_args` on the `RenderVisualization` tool call, plus `meta.tweakable_params` (the _encoded_ field placeholders — see `template_tweakable_params`). Chat's tweak dropdowns use it to change a binding via `POST /v1/yac/vis_instantiate`, which re-resolves the template server-side, rather than rewriting the finished spec — a rewrite cannot follow a binding into `derive` expressions or the spec `title`, and renaming a groupby drops the column those still reference. Specs without provenance keep the older spec-rewrite path (`packages/chat/src/utils/specMutations.ts`).
+A rendered chart carries its provenance: `meta.tool_used` + `meta.tool_args` on the `RenderVisualization` tool call, plus `meta.tweakable_params` (the _encoded_ field placeholders — see `template_tweakable_params`). Chat's tweak dropdowns use it to change a binding via `POST /v1/yac/vis_instantiate`, which re-resolves the template server-side, rather than rewriting the finished spec — a rewrite cannot follow a binding into `derive` expressions or the spec `title`, and renaming a groupby drops the column those still reference. Specs without provenance keep the older spec-rewrite path (`packages/chat/src/utils/specMutations.ts`). Besides field bindings, a template can expose **choices** (`udiagent.choices`: `<ESTIMATOR>`, `<HORIZON>`, `<CI>`). These are optional enum tool params that resolve to literals and show up as tweak-panel dropdowns with no frontend change. The survival curves use them for the estimator, the time span (default 5 years, cut _after_ the estimate) and the 95% log-log Greenwood band. A **label** (`choices.LABELS`, e.g. `<ENDPOINT>`) is different: an optional enum the model sets that only fills title text server-side ("Overall survival curves for …"). It appears in `title_template`, never in the spec, and is deliberately kept out of the tweak panel, because changing it would relabel the chart without changing what it computes.
 
 **Dynamic stratification.** A stratified chart splits by a `stratum` column it derives, not by the stratifier itself, so the strata can be _groups_ of values rather than the field's raw domain: `<GROUP:E1.F4>` resolves to that derive expression (a nested `Expr.cond`, so it compiles for both executors). The payload — named nominal groups plus an auto `Other`, or ascending quantitative cut points, capped at 10 strata — is defined and validated in `udiagent.stratify`, travels as JSON in the template's optional `grouping` tool argument (so `toolArgs` stays a string map and no transport changed), and is edited by `StratifierGroupingControl` in chat, which draws the field's distribution and lets a reader drag the thresholds. No grouping resolves to the field itself, which is what keeps every pre-existing stratified chart unchanged; a _quantitative_ stratifier must be cut, since it has no categories to draw a curve for. A stratifier a subject has **several** of — a related table with one row per (subject, value) — needs `<GROUPTAG:…>`/`<GROUPLABEL:…>` instead, which reduce the match per subject _before_ labelling so the curves partition; grouping such a table row-wise puts a subject with a matching and a non-matching row in both curves.
 
@@ -105,6 +105,7 @@ User query → chat ChatPanel → POST /v1/yac/completions (udiagent.server)
 
 - **udi-toolkit** (`packages/grammar/`) exposes `UDIVis` plus headless APIs from `udi-toolkit/react` (and `/ce`): `loadDataPackage`, `queryData` (memoized per sources/transformations/selectionHash/tablesVersion; `{ displayDataOnly: true }` skips the allData pass), `subscribeToSelections`, `clearAllSelections`. All share one Pinia `DataSourcesStore` singleton. Sources, `*.stories.ts`, and `.storybook/` sit flat at the package root; Storybook deliberately loads `.storybook/vite.config.stub.ts` instead of the package's `vite.config.js` (the lib build — dts emit, vue/pinia externalized — would break the preview).
 - **chat** bridges the toolkit as a Vue Custom Element via `udi-toolkit/react`. Zustand stores are **vanilla** (`createStore`), instantiated per-provider in `src/app/UDIChatContext.tsx` — never import a store module directly into a component. Pinia is the single source of truth for brush selections; no React-side mirror. Path alias `@/` → `src/`. Debug mode: type `//admin` in chat input.
+- **Chart history sent to the model is compacted.** The client echoes each earlier chart back as a `RenderVisualization` call carrying its full spec. `normalize_tool_calls` (`udiagent.messages`) shows a template-made chart to the model as `chart_id` + `template_tool` + `template_args` instead (freehand charts keep their spec). The internal orchestrator tool `GetVisualizationSpec(chart_id)` reads a full spec back when a question needs it, and marks the chart revealed for the rest of the turn. A long spec made follow-ups reverse-engineer the template call, and the model misread its derived columns as options to set.
 - **agent** is a publishable library — configuration via constructor params, not env vars; server (`udiagent.server`, `[server]` extra) is a reference app; JWT auth (`INSECURE_DEV_MODE=1` skips in dev); langfuse optional via `_compat.py`, as is Bedrock SigV4 (`bedrock=True` → `openai.providers.bedrock`, `[bedrock]` extra).
 - Feature boundaries in chat follow bulletproof-react: `app/`, `features/{chat,dashboard,data-package,tool-calls}` with `index.ts` barrels, shared code in top-level `components/`/`stores/`/`types/`/`utils/`.
 
@@ -114,3 +115,32 @@ User query → chat ChatPanel → POST /v1/yac/completions (udiagent.server)
 - Vue 3 Composition API with `<script setup>` (grammar); React function components + hooks (chat).
 - Strict TypeScript; prefer `unknown` + narrowing over `any`.
 - Python ≥ 3.12 (agent) / ≥ 3.13 (grammar-py), managed via uv; pytest for tests.
+
+# AWS Guidance
+
+- Where these AWS rules conflict with the project's own instructions, the
+  project's instructions take precedence.
+- Prefer the AWS MCP Server for AWS interactions — it provides sandboxed
+  execution, observability, and audit logging. If unavailable, use the
+  AWS CLI directly.
+- Before starting a task, check whether a relevant AWS skill is available.
+  Load the skill with `retrieve_skill` and prefer its guidance over
+  general knowledge.
+- When uncertain about specific AWS details (API parameters, permissions,
+  limits, error codes), verify against documentation rather than guessing.
+  State uncertainty explicitly if you cannot confirm.
+- When creating infrastructure, prefer infrastructure-as-code (AWS CDK or
+  CloudFormation) over direct CLI commands.
+- When working with infrastructure, follow AWS Well-Architected Framework
+  principles.
+- Do not use em dashes in AWS resource names or descriptions. Use
+  hyphens instead.
+
+## Secret Safety
+
+- MUST load the `aws-secrets-manager` skill first for any secret,
+  credential, API key, token, or password task. MUST NOT call
+  `secretsmanager get-secret-value` or `batch-get-secret-value`, and MUST
+  NOT hit the Secrets Manager Agent daemon directly. MUST use
+  `{{resolve:secretsmanager:secret-id:SecretString:json-key}}` with
+  `asm-exec` so the secret resolves at runtime without entering context.

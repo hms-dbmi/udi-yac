@@ -316,6 +316,162 @@ const CASES = [
     },
   ],
   [
+    // The survival templates' confidence band and time horizon, in the shape
+    // they compile to: Greenwood's running sum and the log-log bounds as
+    // exp(log S * exp(+/-z * exp(log(V)/2) / -log S)), every log and divisor
+    // guarded inside its argument; the band gated by `&&`; then a FILTER on the
+    // still-grouped, still-ordered table, after which a group aggregate and
+    // rank() must see only the surviving rows; and a label whose middle part is
+    // a conditional concat. Age stands in for time, age over 40 for the event.
+    'km-band-horizon',
+    {
+      source: src('donors'),
+      transformation: (() => {
+        const f = (field) => ({ field });
+        const lit = (literal) => ({ literal });
+        const op = (o, left, right) => ({ op: o, left, right });
+        const cond = (i, t, e) => ({ if: i, then: t, else: e });
+        const roll = (o, field) => ({
+          rolling: { expression: { agg: o, field } },
+        });
+        const hasWidth = op('<', f('log_sum'), lit(0));
+        const se = op(
+          '/',
+          {
+            fn: 'exp',
+            args: [
+              op(
+                '*',
+                {
+                  fn: 'log',
+                  args: [
+                    cond(op('>', f('gw_sum'), lit(0)), f('gw_sum'), lit(1)),
+                  ],
+                },
+                lit(0.5),
+              ),
+            ],
+          },
+          cond(hasWidth, op('-', lit(0), f('log_sum')), lit(1)),
+        );
+        const bound = (sign) =>
+          cond(
+            op('&&', op('==', f('ci'), lit(1)), op('>', f('n'), lit(0))),
+            cond(
+              hasWidth,
+              op(
+                '*',
+                {
+                  fn: 'exp',
+                  args: [
+                    op('*', f('log_sum'), {
+                      fn: 'exp',
+                      args: [op('*', lit(sign * 1.959963984540054), se)],
+                    }),
+                  ],
+                },
+                lit(100),
+              ),
+              lit(100),
+            ),
+            lit(null),
+          );
+        return [
+          { filter: notNull('age_value') },
+          // Down to the three columns the case reads and a fifth of the rows
+          // (ages on a multiple of 5, which keeps ties), so the golden stays small.
+          { filter: op('==', op('%', f('age_value'), lit(5)), lit(0)) },
+          { groupby: ['sex', 'hubmap_id', 'age_value'] },
+          { rollup: { rows: { op: 'count' } } },
+          {
+            derive: {
+              died: cond(op('>', f('age_value'), lit(40)), lit(1), lit(0)),
+            },
+          },
+          { derive: { cohort_end: { agg: 'max', field: 'age_value' } } },
+          { groupby: 'sex' },
+          { derive: { n: { agg: 'count' } } },
+          {
+            orderby: [
+              { field: 'age_value', order: 'asc' },
+              { field: 'hubmap_id', order: 'asc' },
+            ],
+          },
+          {
+            derive: {
+              at_risk: op('+', op('-', f('n'), { window: 'rank' }), lit(1)),
+            },
+          },
+          {
+            derive: {
+              factor: op('-', lit(1), op('/', f('died'), f('at_risk'))),
+              gw_term: cond(
+                op('>', f('at_risk'), f('died')),
+                op(
+                  '/',
+                  f('died'),
+                  op('*', f('at_risk'), op('-', f('at_risk'), f('died'))),
+                ),
+                lit(0),
+              ),
+            },
+          },
+          {
+            derive: {
+              log_factor: {
+                fn: 'log',
+                args: [cond(op('>', f('factor'), lit(0)), f('factor'), lit(1))],
+              },
+            },
+          },
+          {
+            derive: {
+              log_sum: roll('sum', 'log_factor'),
+              gw_sum: roll('sum', 'gw_term'),
+            },
+          },
+          { derive: { ci: lit(1), horizon: lit(60) } },
+          { derive: { lower: bound(1), upper: bound(-1) } },
+          {
+            derive: {
+              cut: cond(op('>', f('cohort_end'), f('horizon')), lit(1), lit(0)),
+            },
+          },
+          { filter: op('<=', f('age_value'), f('horizon')) },
+          {
+            derive: {
+              events_in_window: { agg: 'sum', field: 'died' },
+              first_row: cond(
+                op('==', { window: 'rank' }, lit(1)),
+                lit(1),
+                lit(0),
+              ),
+            },
+          },
+          {
+            derive: {
+              label: {
+                concat: [
+                  f('sex'),
+                  cond(
+                    op('==', f('cut'), lit(1)),
+                    { concat: [lit(' at '), f('horizon'), lit('y')] },
+                    lit(''),
+                  ),
+                  lit(' ('),
+                  f('events_in_window'),
+                  lit(' events)'),
+                ],
+              },
+            },
+          },
+        ];
+      })(),
+    },
+    null,
+    true,
+  ],
+  [
     'groupby-derive-window-agg',
     {
       source: src('penguins'),

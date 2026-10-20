@@ -33,7 +33,7 @@ jobs:
           docker run -d \
             --name udi-agent \
             --restart unless-stopped \
-            -p 80:80 \
+            -p 80:8000 \
             --env-file /home/ec2-user/.env \
             udi-agent
 
