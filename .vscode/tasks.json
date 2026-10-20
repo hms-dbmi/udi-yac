@@ -85,6 +85,18 @@
       }
     },
     {
+      "label": "Dev: site",
+      "detail": "Landing page + docs (Astro Starlight, http://localhost:4321/udi-yac/). Its app/ and grammar/ links only resolve in the assembled Pages build.",
+      "type": "shell",
+      "command": "pnpm --filter udi-yac-site dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated"
+      }
+    },
+    {
       "label": "Dev: chat + agent",
       "detail": "Start the core dev stack (chat SPA + agent server) together",
       "dependsOn": ["Dev: agent", "Dev: chat"],
