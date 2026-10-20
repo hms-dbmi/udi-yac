@@ -43,6 +43,23 @@ OTHER_KEY = _generate_key()
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _no_langfuse_env(monkeypatch):
+    """Keep a developer's LangFuse keys out of these configs.
+
+    Importing the server app loads ``packages/agent/.env`` into the process
+    environment, and ``ServerConfig`` reads it, so a local LangFuse setup would
+    otherwise complete the partial configs these tests build on purpose.
+    """
+    for name in (
+        "LANGFUSE_PUBLIC_KEY",
+        "LANGFUSE_SECRET_KEY",
+        "LANGFUSE_HOST",
+        "LANGFUSE_BASE_URL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
 def _config(**overrides):
     base = dict(
         jwt_secret_key="",

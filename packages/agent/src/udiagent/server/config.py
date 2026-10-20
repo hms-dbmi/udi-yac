@@ -156,7 +156,7 @@ class ServerConfig(BaseSettings):
     )
     aws_region: str | None = Field(
         default=None,
-        # The only aliased field: AWS_DEFAULT_REGION is the AWS SDK's own
+        # Aliased (as is langfuse_host): AWS_DEFAULT_REGION is the AWS SDK's own
         # fallback, and honoring it here keeps this object an accurate record
         # of the region actually in force (the startup log and the credential
         # error handler both report it). AWS_REGION must be listed explicitly —
@@ -188,8 +188,14 @@ class ServerConfig(BaseSettings):
     )
     langfuse_host: str | None = Field(
         default=None,
+        # LANGFUSE_BASE_URL is the name current LangFuse SDKs and the LangFuse
+        # UI's setup snippet use; LANGFUSE_HOST is the older one. Honor both.
+        validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
         examples=['https://cloud.langfuse.com'],
-        description="LangFuse instance URL, e.g. `https://cloud.langfuse.com`.",
+        description=(
+            "LangFuse instance URL, e.g. `https://cloud.langfuse.com`. "
+            "`LANGFUSE_BASE_URL` is accepted too."
+        ),
     )
     langfuse_environment: str | None = Field(
         default=None,
