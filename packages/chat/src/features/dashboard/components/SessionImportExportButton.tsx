@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { Save, Upload, Download } from 'lucide-react';
+import { Bug, Save, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -19,14 +20,12 @@ import {
   useDashboardStore,
   useDataFiltersStore,
   useDataPackage,
+  useGlobalStore,
+  useIssueReporting,
   useTracker,
 } from '@/app/UDIChatContext';
 import { applySessionExport } from '../utils/applySessionExport';
-import {
-  buildSessionExport,
-  parseSessionExport,
-  type SessionExport,
-} from '../utils/dashboardSerialization';
+import { currentSessionExport, parseSessionExport } from '../utils/dashboardSerialization';
 
 function saveBlob(content: string, name: string) {
   const blob = new Blob([content], { type: 'application/json' });
@@ -51,26 +50,19 @@ export function SessionImportExportButton() {
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const globalStore = useGlobalStore();
+  const issueReporting = useIssueReporting();
   const trackEvent = useTracker();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleExport = useCallback(() => {
-    const state = dashboardStore.getState();
-    const conversation = conversationStore.getState();
-    const messages = conversation.messages;
-    const dashboard = state.exportDashboard();
-    const payload: SessionExport = buildSessionExport({
-      messages,
-      dashboard,
-      grid: { cols: state.gridCols, rowHeight: state.gridRowHeight },
-      sessionUsage: conversation.sessionUsage,
-    });
+    const payload = currentSessionExport(conversationStore.getState(), dashboardStore.getState());
     saveBlob(JSON.stringify(payload, null, 2), `udi-session_${timestamp()}.json`);
     trackEvent('session_exported', {
-      messageCount: messages.length,
-      vizCount: dashboard.visualizations.length,
-      itemCount: dashboard.layout.items.length,
+      messageCount: payload.conversation.messages.length,
+      vizCount: payload.visualizations.length,
+      itemCount: payload.layout.items.length,
     });
   }, [conversationStore, dashboardStore, trackEvent]);
 
@@ -138,6 +130,15 @@ export function SessionImportExportButton() {
             <Upload className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
             Import session
           </DropdownMenuItem>
+          {issueReporting && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => globalStore.getState().openIssueReport('', 'menu')}>
+                <Bug className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
+                Report an issue
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={errorMessage !== null} onOpenChange={(o) => !o && setErrorMessage(null)}>

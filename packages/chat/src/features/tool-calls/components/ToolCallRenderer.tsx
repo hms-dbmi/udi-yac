@@ -1,10 +1,16 @@
 import type { FlatToolCall, Message } from '@/types/messages';
-import type { FreeTextExplainArgs, RebuffArgs, ClarifyVariableArgs } from '../types';
+import type {
+  FreeTextExplainArgs,
+  RebuffArgs,
+  ClarifyVariableArgs,
+  OfferIssueReportArgs,
+} from '../types';
 import { FreeTextExplain } from './FreeTextExplain';
 import { RebuffNotice } from './RebuffNotice';
 import { VisualizationCard } from './VisualizationCard';
 import { FilterComponent } from './FilterComponent';
 import { ClarifyVariable } from './ClarifyVariable';
+import { IssueReportOffer } from './IssueReportOffer';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { Badge } from '@/components/ui/badge';
 
@@ -70,6 +76,10 @@ export function ToolCallRenderer({
     case 'ClarifyVariable': {
       const clarifyArgs = args as unknown as ClarifyVariableArgs;
       return <ClarifyVariable {...clarifyArgs} onSelectSuggestion={onSelectSuggestion} />;
+    }
+    case 'OfferIssueReport': {
+      const offerArgs = args as unknown as OfferIssueReportArgs;
+      return <IssueReportOffer {...offerArgs} />;
     }
     default:
       return (

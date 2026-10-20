@@ -375,16 +375,17 @@ would change.
 
 ### Server Endpoints
 
-| Endpoint                       | Method | Description                                           |
-| ------------------------------ | ------ | ----------------------------------------------------- |
-| `/`                            | GET    | API status and info                                   |
-| `/v1/yac/completions`          | POST   | Main orchestrator — routes user requests to tools     |
-| `/v1/yac/query`                | POST   | Server-side data: batched grammar→SQL query execution |
-| `/v1/yac/metadata`             | GET    | Server-side data: introspected dataSchema/dataDomains |
-| `/v1/yac/benchmark`            | POST   | Benchmark variant with optional orchestrator override |
-| `/v1/yac/examples`             | GET    | Example prompts from `data/example_prompts.json`      |
-| `/v1/yac/structured_functions` | GET    | Structured function registry                          |
-| `/v1/yac/benchmark_analysis`   | GET    | Latest benchmark analysis results                     |
+| Endpoint                       | Method | Description                                                     |
+| ------------------------------ | ------ | --------------------------------------------------------------- |
+| `/`                            | GET    | API status and info                                             |
+| `/v1/yac/completions`          | POST   | Main orchestrator — routes user requests to tools               |
+| `/v1/yac/query`                | POST   | Server-side data: batched grammar→SQL query execution           |
+| `/v1/yac/metadata`             | GET    | Server-side data: introspected dataSchema/dataDomains           |
+| `/v1/yac/issue_report`         | POST   | Record a user's issue report in LangFuse (503 without LangFuse) |
+| `/v1/yac/benchmark`            | POST   | Benchmark variant with optional orchestrator override           |
+| `/v1/yac/examples`             | GET    | Example prompts from `data/example_prompts.json`                |
+| `/v1/yac/structured_functions` | GET    | Structured function registry                                    |
+| `/v1/yac/benchmark_analysis`   | GET    | Latest benchmark analysis results                               |
 
 ### Server-side query backends
 

@@ -5,6 +5,7 @@ import type {
   DashboardExport,
   DashboardExportVisualization,
   DashboardLayout,
+  DashboardState,
 } from '../stores/dashboardStore';
 import { DEFAULT_CARD_H, DEFAULT_CARD_W, MIN_CARD_H, MIN_CARD_W } from './gridDefaults';
 import { packAllRowMajor } from './gridPacking';
@@ -254,6 +255,22 @@ export function buildSessionExport(args: {
     layout: args.dashboard.layout,
     ...(args.grid ? { grid: args.grid } : {}),
   };
+}
+
+/**
+ * The session as it stands, in the shape *Export session* writes. Takes store
+ * snapshots (`getState()`), so callers inside and outside the providers share it.
+ */
+export function currentSessionExport(
+  conversation: { messages: Message[]; sessionUsage?: SessionUsage },
+  dashboard: Pick<DashboardState, 'exportDashboard' | 'gridCols' | 'gridRowHeight'>,
+): SessionExport {
+  return buildSessionExport({
+    messages: conversation.messages,
+    dashboard: dashboard.exportDashboard(),
+    grid: { cols: dashboard.gridCols, rowHeight: dashboard.gridRowHeight },
+    sessionUsage: conversation.sessionUsage,
+  });
 }
 
 export interface PersistedLayoutSnapshot {

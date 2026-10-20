@@ -17,6 +17,7 @@ import {
   EntityIconsProvider,
   MascotProvider,
   ApiConfigProvider,
+  IssueReportingProvider,
   SplashMessagesProvider,
   TrackerProvider,
   useConversation,
@@ -37,6 +38,7 @@ import { Button } from '@/components/ui/button';
 import {
   extractAllUdiSpecsFromMessage,
   HOST_FILTER_PREFIX,
+  IssueReportDialog,
   useActiveFilters,
   type TemplateProvenance,
   type UDIFilter,
@@ -73,6 +75,7 @@ function UDIChatInner({
   initialSession,
   filters,
   onFiltersChange,
+  issueReporting,
 }: UDIChatConfig) {
   const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
@@ -282,6 +285,7 @@ function UDIChatInner({
     authToken,
     model,
     openAiKey: apiKey.openAiKey ?? undefined,
+    issueReporting: issueReporting === true,
   };
 
   return (
@@ -371,6 +375,7 @@ function UDIChatInner({
         <DashboardPanel seeding={seeding} />
         {readOnly && !readOnlyLocked && <ExploreDataButton onClick={exitReadOnly} />}
       </div>
+      {issueReporting && <IssueReportDialog />}
     </div>
   );
 }
@@ -496,24 +501,26 @@ function UDIChatValidated(props: UDIChatConfig) {
       <ChatRootProvider value={rootRef}>
         <UDIChatProvider readOnly={props.readOnly} fontScale={props.fontScale}>
           <ApiConfigProvider apiBaseUrl={props.apiBaseUrl} authToken={props.authToken}>
-            <TrackerProvider onEvent={props.onEvent}>
-              <DownloadActionsProvider actions={props.downloadActions}>
-                <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
-                  <EntityIconsProvider icons={props.entityIcons}>
-                    {/*
-                     * UDIToolkitProvider supersedes the previous local PaletteProvider:
-                     * it ships in udi-toolkit/react, sets palette on the React
-                     * Context that <UDIVis> already reads, and (optionally) auto-
-                     * loads a data package. We only use the palette half here —
-                     * the data package is still owned by dataPackageStore so the
-                     * existing rich state (loadingPhase, sourceFields, etc.) keeps
-                     * working unchanged.
-                     */}
-                    <ScaledRoot props={props} rootRef={rootRef} palette={themePalette} />
-                  </EntityIconsProvider>
-                </DownloadButtonLabelProvider>
-              </DownloadActionsProvider>
-            </TrackerProvider>
+            <IssueReportingProvider value={props.issueReporting === true}>
+              <TrackerProvider onEvent={props.onEvent}>
+                <DownloadActionsProvider actions={props.downloadActions}>
+                  <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
+                    <EntityIconsProvider icons={props.entityIcons}>
+                      {/*
+                       * UDIToolkitProvider supersedes the previous local PaletteProvider:
+                       * it ships in udi-toolkit/react, sets palette on the React
+                       * Context that <UDIVis> already reads, and (optionally) auto-
+                       * loads a data package. We only use the palette half here —
+                       * the data package is still owned by dataPackageStore so the
+                       * existing rich state (loadingPhase, sourceFields, etc.) keeps
+                       * working unchanged.
+                       */}
+                      <ScaledRoot props={props} rootRef={rootRef} palette={themePalette} />
+                    </EntityIconsProvider>
+                  </DownloadButtonLabelProvider>
+                </DownloadActionsProvider>
+              </TrackerProvider>
+            </IssueReportingProvider>
           </ApiConfigProvider>
         </UDIChatProvider>
       </ChatRootProvider>
@@ -523,7 +530,13 @@ function UDIChatValidated(props: UDIChatConfig) {
 
 export function UDIChat(props: UDIChatConfig) {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary
+      issueReport={
+        props.issueReporting
+          ? { apiBaseUrl: props.apiBaseUrl, authToken: props.authToken }
+          : undefined
+      }
+    >
       <UDIChatValidated {...props} />
     </ErrorBoundary>
   );

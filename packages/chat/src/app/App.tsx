@@ -25,6 +25,7 @@ function App() {
         model={env.model}
         readOnly={env.readOnly}
         initialSession={initialSession}
+        issueReporting={env.issueReporting}
       />
     </div>
   );

@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import { queryLLM, type QueryConfig, type ToolCallResponse } from '../api/completions';
-import { useConversationStore, useDataPackageStore, useTracker } from '@/app/UDIChatContext';
+import {
+  useConversationStore,
+  useDataPackageStore,
+  useGlobalStore,
+  useTracker,
+} from '@/app/UDIChatContext';
 import { generateEventId } from '@/lib/utils';
 import type { Message } from '@/types/messages';
 
@@ -33,6 +38,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
   const [error, setError] = useState<string | null>(null);
   const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
+  const globalStore = useGlobalStore();
   const trackEvent = useTracker();
   // The most recently minted turnId — reused by `retryLastUserMessage` so
   // a retry's `response_received` pairs back to the originating
@@ -96,6 +102,17 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           });
         }
 
+        // The user asked to report something: open the form straight away. Only
+        // here, on the live response, so replaying the transcript (a reload, a
+        // session import) never pops it; the chat card stays as the way back.
+        const offer = toolCalls.find((tc) => tc.name === 'OfferIssueReport');
+        if (config.issueReporting && offer?.arguments.user_requested === true) {
+          const summary = offer.arguments.summary;
+          globalStore
+            .getState()
+            .openIssueReport(typeof summary === 'string' ? summary : '', 'chat');
+        }
+
         if (toolCalls.some(isBudgetExceededRebuff)) {
           onQuotaRebuff?.(hadUserKey);
         } else {
@@ -113,7 +130,15 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
         setIsLoading(false);
       }
     },
-    [config, conversationStore, dataPackageStore, onQuotaRebuff, onNormalResponse, trackEvent],
+    [
+      config,
+      conversationStore,
+      dataPackageStore,
+      globalStore,
+      onQuotaRebuff,
+      onNormalResponse,
+      trackEvent,
+    ],
   );
 
   const sendMessage = useCallback(

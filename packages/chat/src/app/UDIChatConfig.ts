@@ -167,6 +167,16 @@ export interface UDIChatConfig {
    * left out.
    */
   onFiltersChange?: (filters: UDIFilter[]) => void;
+  /**
+   * Let users report a problem to the development team: a *Report an issue*
+   * item in the Session menu, a button on the crash screen, and an offer from
+   * the agent when the user asks to report something or says a result is
+   * wrong. A report sends the user's note and their session export to
+   * `POST /v1/yac/issue_report`, which records it in the agent's LangFuse.
+   * Off by default; switch it on only against an agent with LangFuse
+   * configured (without it the agent refuses reports, and never offers one).
+   */
+  issueReporting?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }

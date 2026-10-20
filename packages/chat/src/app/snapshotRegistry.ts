@@ -2,7 +2,7 @@ import type { StoreApi } from 'zustand';
 import type { ConversationState } from '@/features/chat/stores/conversationStore';
 import type { DashboardState } from '@/features/dashboard/stores/dashboardStore';
 import {
-  buildSessionExport,
+  currentSessionExport,
   type SessionExport,
 } from '@/features/dashboard/utils/dashboardSerialization';
 
@@ -36,9 +36,16 @@ export function captureCurrentSession(): SessionExport | null {
   const stores = registered;
   if (!stores) return null;
   try {
-    const messages = stores.conversation.getState().messages;
-    const dashboard = stores.dashboard.getState().exportDashboard();
-    return buildSessionExport({ messages, dashboard });
+    return currentSessionExport(stores.conversation.getState(), stores.dashboard.getState());
+  } catch {
+    return null;
+  }
+}
+
+/** The registered conversation's id, so a crash report lands in its trace session. */
+export function currentConversationId(): string | null {
+  try {
+    return registered?.conversation.getState().conversationId ?? null;
   } catch {
     return null;
   }

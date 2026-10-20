@@ -8,6 +8,8 @@ export { VizTweakComponent } from './components/VizTweakComponent';
 export { IntervalFilterComponent } from './components/IntervalFilterComponent';
 export { PointFilterComponent } from './components/PointFilterComponent';
 export { FilterControls, FilterCollapsible } from './components/FilterControls';
+export { IssueReportDialog, IssueReportForm } from './components/IssueReport';
+export { currentSessionExport } from './utils/dashboardSerialization';
 
 export {
   createDashboardStore,

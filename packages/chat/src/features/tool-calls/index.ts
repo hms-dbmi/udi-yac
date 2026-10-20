@@ -11,6 +11,7 @@ export type {
   RebuffArgs,
   ClarifyVariableArgs,
   FilterDataArgs,
+  OfferIssueReportArgs,
   TextSegment,
   CreateVisualizationArgs,
 } from './types';

@@ -119,6 +119,48 @@ class UDIAgent:
             ):
                 yield
 
+    @property
+    def langfuse_enabled(self) -> bool:
+        """Whether traces, and so issue reports, are recorded anywhere."""
+        return getattr(self, "_langfuse_client", None) is not None
+
+    def record_issue_report(
+        self,
+        *,
+        description: str,
+        contact: str | None,
+        source: str,
+        session: dict,
+        session_id: str | None = None,
+    ) -> str | None:
+        """Record a user's issue report as an ``issue-report`` trace.
+
+        ``session_id`` (the conversation ID) files it in the same LangFuse
+        session as the turns being reported. The session export goes up as a
+        JSON attachment rather than inline, so a long conversation neither
+        bloats the trace nor hits the ingestion size limit.
+
+        Returns the trace ID, or ``None`` when LangFuse is disabled.
+        """
+        client = getattr(self, "_langfuse_client", None)
+        if client is None:
+            return None
+        from langfuse import LangfuseMedia
+
+        with self.trace(session_id=session_id, name="issue-report"):
+            client.update_current_span(
+                input={
+                    "description": description,
+                    "contact": contact,
+                    "source": source,
+                    "session": LangfuseMedia(
+                        content_bytes=json.dumps(session).encode(),
+                        content_type="application/json",
+                    ),
+                }
+            )
+            return client.get_current_trace_id()
+
     def _init_server_model_connection(self, openai_api_key: str | None = None):
         """Instantiate the OpenAI client for GPT-based features.
 

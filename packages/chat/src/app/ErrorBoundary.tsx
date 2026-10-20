@@ -1,15 +1,23 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Download, RotateCcw } from 'lucide-react';
-import { captureCurrentSession } from './snapshotRegistry';
+import { Bug, Copy, Download, RotateCcw } from 'lucide-react';
+import { IssueReportForm } from '@/features/dashboard';
+import { captureCurrentSession, currentConversationId } from './snapshotRegistry';
 
 interface Props {
   children: ReactNode;
+  /**
+   * Where to send a crash report, when the host switched issue reporting on.
+   * Passed in rather than read from context: this boundary sits outside every
+   * provider.
+   */
+  issueReport?: { apiBaseUrl: string; authToken?: string | undefined } | undefined;
 }
 
 interface State {
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  reporting: boolean;
 }
 
 function saveBlob(content: string, name: string) {
@@ -29,7 +37,7 @@ function timestampForFilename(): string {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null, errorInfo: null };
+  state: State = { error: null, errorInfo: null, reporting: false };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
@@ -58,16 +66,16 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   private handleReset = () => {
-    this.setState({ error: null, errorInfo: null });
+    this.setState({ error: null, errorInfo: null, reporting: false });
   };
 
-  private handleExport = () => {
+  private buildCrashPayload() {
     const { error, errorInfo } = this.state;
     const session = captureCurrentSession();
     // The exported file is a superset of a regular session export — Import
     // session will accept it (it just ignores the extra `error` block) so
     // the bug report doubles as a reproduction artifact.
-    const payload = {
+    return {
       ...(session ?? { capturedSession: false }),
       error: error
         ? {
@@ -78,11 +86,18 @@ export class ErrorBoundary extends Component<Props, State> {
           }
         : null,
     };
-    saveBlob(JSON.stringify(payload, null, 2), `udi-error_${timestampForFilename()}.json`);
+  }
+
+  private handleExport = () => {
+    saveBlob(
+      JSON.stringify(this.buildCrashPayload(), null, 2),
+      `udi-error_${timestampForFilename()}.json`,
+    );
   };
 
   render() {
     if (!this.state.error) return this.props.children;
+    const { issueReport } = this.props;
 
     return (
       <div className="udi:flex udi:flex-col udi:items-center udi:justify-center udi:h-full udi:p-6 udi:gap-4">
@@ -102,11 +117,31 @@ export class ErrorBoundary extends Component<Props, State> {
             <Download className="udi:h-3.5 udi:w-3.5 udi:mr-1.5" />
             Export configuration
           </Button>
+          {issueReport && !this.state.reporting && (
+            <Button variant="outline" size="sm" onClick={() => this.setState({ reporting: true })}>
+              <Bug className="udi:h-3.5 udi:w-3.5 udi:mr-1.5" />
+              Report issue
+            </Button>
+          )}
           <Button size="sm" onClick={this.handleReset}>
             <RotateCcw className="udi:h-3.5 udi:w-3.5 udi:mr-1.5" />
             Retry
           </Button>
         </div>
+        {/* Inline, not a dialog: out here there is no chat root to portal into,
+            so a dialog would render without the design tokens. */}
+        {issueReport && this.state.reporting && (
+          <div className="udi:w-full udi:max-w-md">
+            <IssueReportForm
+              apiConfig={issueReport}
+              draft={this.state.error.message}
+              source="crash"
+              getSession={() => this.buildCrashPayload()}
+              getConversationId={currentConversationId}
+              onDone={() => this.setState({ reporting: false })}
+            />
+          </div>
+        )}
       </div>
     );
   }

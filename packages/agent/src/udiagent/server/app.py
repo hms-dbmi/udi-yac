@@ -21,6 +21,7 @@ from openai import APIError, AuthenticationError, OpenAIError
 from fastapi import FastAPI, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from udiagent.agent import UDIAgent
 from udiagent.orchestrator import (
@@ -38,6 +39,7 @@ from udiagent.server.auth import RAW_TOKEN_CLAIM, make_verify_jwt
 from udiagent.server.models import (
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
+    YACIssueReportRequest,
     YACQueryRequest,
     YACVisInstantiateRequest,
     YACVisInstantiateResponse,
@@ -375,6 +377,7 @@ def yac_completions(
         model=requested_model,
         budget_check=budget_check,
         session_id=x_conversation_id,
+        issue_reporting=request.issueReporting and agent.langfuse_enabled,
     )
     logger.info("orchestrator_choice: %s", result.orchestrator_choice)
     logger.info("usage: %s", result.usage)
@@ -675,6 +678,73 @@ def yac_vis_instantiate(
             spec_template, param_map, bindings, schema
         ),
     }
+
+
+# ponytail: checked after the body is buffered, so it caps what reaches
+# LangFuse, not what the process reads. A streaming cap (or a proxy limit) if
+# oversized uploads ever become a problem.
+MAX_ISSUE_REPORT_BYTES = 10 * 1024 * 1024
+
+
+@app.post("/v1/yac/issue_report")
+async def yac_issue_report(
+    request: Request,
+    token_payload: dict = Depends(verify_jwt),
+    x_conversation_id: str | None = Header(None, alias="X-Conversation-Id"),
+):
+    """Record a user's issue report, with their session export, in LangFuse.
+
+    Filed under the conversation's LangFuse session, next to the traces of the
+    turns being reported. Needs LangFuse: without it there is nowhere to put a
+    report, so the endpoint says so instead of accepting and dropping it.
+    """
+    if not agent.langfuse_enabled:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Issue reporting needs LangFuse, which this server has not configured."
+            },
+        )
+
+    raw = await request.body()
+    if len(raw) > MAX_ISSUE_REPORT_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "error": f"Issue report is too large ({len(raw)} bytes; "
+                f"limit {MAX_ISSUE_REPORT_BYTES})."
+            },
+        )
+    try:
+        report = YACIssueReportRequest.model_validate_json(raw)
+    except ValidationError as exc:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "Invalid issue report.",
+                "detail": exc.errors(
+                    include_input=False, include_url=False, include_context=False
+                ),
+            },
+        )
+
+    # Sizes only: the note, contact and session are the user's words and data.
+    logger.info(
+        "Received /v1/yac/issue_report (source=%s, byte_count=%d, "
+        "has_contact=%s, has_conversation_id=%s)",
+        report.source,
+        len(raw),
+        report.contact is not None,
+        x_conversation_id is not None,
+    )
+    trace_id = agent.record_issue_report(
+        description=report.description,
+        contact=report.contact,
+        source=report.source,
+        session=report.session,
+        session_id=x_conversation_id,
+    )
+    return {"traceId": trace_id}
 
 
 @app.post("/v1/yac/benchmark")
