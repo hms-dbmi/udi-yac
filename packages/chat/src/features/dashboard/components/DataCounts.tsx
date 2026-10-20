@@ -5,6 +5,7 @@ import type { DataTransformation } from 'udi-toolkit';
 import {
   useDataPackage,
   useDashboard,
+  useDashboardStore,
   useDataFilters,
   useDataFiltersStore,
   useDataPackageStore,
@@ -28,7 +29,9 @@ export function DataCounts() {
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const loadError = useDataPackage((s) => s.error);
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
+  const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
   const dataPackageStore = useDataPackageStore();
   const globalStore = useGlobalStore();
@@ -73,42 +76,20 @@ export function DataCounts() {
   // Build a count spec per entity (with named filters + rollup)
   const countSpecs = useMemo(() => {
     if (!dataPackage) return {};
-    const dashState = {
-      getNamedFilters: (ids: string[], source: string) => {
-        const uuidToSource = new Map<string, string>();
-        for (const v of activeVisualizations.values()) {
-          const src = v.interactiveSpec.source as { name?: string } | Array<{ name?: string }>;
-          const sn = Array.isArray(src) ? src[0]?.name : src?.name;
-          if (v.uuid && sn) uuidToSource.set(v.uuid, sn);
-        }
-        const dpState = dataPackageStore.getState();
-        const dfState = dataFiltersStore.getState();
-        const valid = dfState.getValidDataSelections({
-          isValidIntervalFilter: dpState.isValidIntervalFilter,
-          isValidPointFilter: dpState.isValidPointFilter,
-        });
-        const getSource = (id: string) => uuidToSource.get(id) ?? valid[id]?.dataSourceKey ?? null;
-
-        return ids
-          .map((id): DataTransformation | null => {
-            const origin = getSource(id);
-            if (!origin) return null;
-            if (origin !== source) {
-              const er = dpState.getEntityRelationship(origin, source);
-              if (!er) return null;
-              return { filter: { name: id, source: origin, entityRelationship: er } };
-            }
-            return { filter: { name: id, source } };
-          })
-          .filter((f): f is DataTransformation => f !== null);
-      },
-    };
-
     const specs: Record<string, QueryDataSpec> = {};
     for (const chip of chips) {
       const resource = dataPackage.resources.find((r) => r.name === chip.id);
       if (!resource) continue;
-      const namedFilters = dashState.getNamedFilters(filterIds, chip.id);
+      // The dashboard's own builder, so a count filters exactly as a chart
+      // of the same table does — subject scopes included.
+      const namedFilters = dashboardStore
+        .getState()
+        .getNamedFilters(
+          filterIds,
+          chip.id,
+          dataFiltersStore,
+          dataPackageStore,
+        ) as DataTransformation[];
       specs[chip.id] = {
         source: {
           name: chip.id,
@@ -118,7 +99,19 @@ export function DataCounts() {
       };
     }
     return specs;
-  }, [chips, filterIds, dataPackage, activeVisualizations, dataFiltersStore, dataPackageStore]);
+    // activeVisualizations / filterScopes are change triggers: getNamedFilters
+    // reads them out of the stores via getState(), which the linter cannot see.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    chips,
+    filterIds,
+    dataPackage,
+    activeVisualizations,
+    filterScopes,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
 
   // Build a filtered-data spec per entity (same filters, no rollup) for download export
   const exportSpecs = useMemo(() => {

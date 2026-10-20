@@ -790,6 +790,82 @@ describe('dashboardStore — cross-store filter propagation', () => {
     );
   });
 
+  it('a subject-scoped filter reaches every table through the subject key', () => {
+    const dashboard = createDashboardStore();
+    const dataFilters = createDataFiltersStore();
+    const dataPackage = createDataPackageStore();
+    const resource = (name: string, fk?: string) => ({
+      name,
+      path: `${name}.csv`,
+      'udi:row_count': 10,
+      schema: {
+        fields: [{ name: fk ?? 'id', 'udi:data_type': 'nominal' as const }],
+        foreignKeys: fk
+          ? [{ fields: [fk], reference: { resource: 'Patient', fields: ['id'] } }]
+          : [],
+      },
+    });
+    dataPackage.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          resource('Patient'),
+          resource('Event', 'patient_id'),
+          resource('Surgery', 'pid'),
+          resource('Site'),
+        ],
+      } as never,
+      loadingPhase: 'ready',
+    });
+    const id = 'message-filter-0-0';
+    dataFilters.getState().setDataSelection(id, {
+      dataSourceKey: 'Event',
+      type: 'point',
+      selection: { diagnosis: ['Group 3'] },
+    });
+    dataFilters.getState().setFilterScope(id, { entity: 'Patient', match: 'none' });
+
+    const entities = ['Event', 'Patient', 'Surgery', 'Site'];
+    entities.forEach((entity, i) =>
+      dashboard
+        .getState()
+        .addActiveVisualization(
+          0,
+          i,
+          makeSpec({ source: { name: entity, source: `${entity}.csv` } }),
+          '',
+          {},
+        ),
+    );
+    dashboard.getState().setFilterAllNullValues(false);
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+
+    const chatFilterOn = (i: number) =>
+      (
+        dashboard.getState().activeVisualizations.get(`0-${i}`)!.interactiveSpec as {
+          transformation: Array<{ filter?: { name?: string } }>;
+        }
+      ).transformation.find((t) => t.filter?.name === id)?.filter;
+    const scoped = (targetKey: string, originKey = 'patient_id') => ({
+      name: id,
+      source: 'Event',
+      entityRelationship: { originKey, targetKey },
+      match: 'none',
+    });
+
+    // Its own table too: every event of a matching patient stays.
+    expect(chatFilterOn(0)).toEqual(scoped('patient_id'));
+    expect(chatFilterOn(1)).toEqual(scoped('id'));
+    expect(chatFilterOn(2)).toEqual(scoped('pid'));
+    // No key to the subject, so nothing to filter by.
+    expect(chatFilterOn(3)).toBeUndefined();
+
+    // Back to row-level: the plain filter on its own table.
+    dataFilters.getState().setFilterScope(id, null);
+    dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+    expect(chatFilterOn(0)).toEqual({ name: id });
+  });
+
   it('filters every source a spec reads — the selection’s own table and the rest by bridge', () => {
     // A survival curve stratified by a field in a joined table reads two
     // entities, and both need restricting. The selection's own predicate has to

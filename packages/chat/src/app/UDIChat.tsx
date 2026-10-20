@@ -234,10 +234,18 @@ function UDIChatInner({
   // trigger this — each viz's own UUID is already in the filter list (from
   // activeVisualizations), so the filter structure is stable once set up.
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   useEffect(() => {
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
-  }, [dataSelections, activeVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
+  }, [
+    dataSelections,
+    filterScopes,
+    activeVisualizations,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
 
   // Host filters in. Held until the package is ready: before then the
   // validators can't place a filter's fields, and its chip would never show.

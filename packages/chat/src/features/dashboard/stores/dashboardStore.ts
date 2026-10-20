@@ -699,6 +699,28 @@ export function createDashboardStore() {
       return filterIdList.flatMap((id: string): object[] => {
         const originSourceName = getSourceName(id);
         if (!originSourceName) return [];
+        // A subject-scoped filter reaches every table through the subject's
+        // key, its own table included, so that table keeps every row of a
+        // matching subject. A table with no key to the subject is left alone.
+        const scope = dfState.filterScopes[id];
+        if (scope) {
+          return uniqueTargets.flatMap((target): object[] => {
+            const er = dpState.getSubjectRelationship(originSourceName, target, scope.entity);
+            if (!er) return [];
+            return [
+              {
+                filter: {
+                  name: id,
+                  source: originSourceName,
+                  entityRelationship: er,
+                  match: scope.match,
+                },
+                in: target,
+                out: target,
+              },
+            ];
+          });
+        }
         return uniqueTargets.flatMap((target): object[] => {
           if (target === originSourceName) {
             return [{ filter: { name: id }, in: target, out: target }];

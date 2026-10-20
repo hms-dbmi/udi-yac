@@ -89,6 +89,18 @@ export interface DataPackageState {
   isValidIntervalFilter: (entity: string, field: string) => ValidStatus;
   isValidPointFilter: (entity: string, field: string, values: unknown[]) => ValidStatus;
   getEntityRelationship: (originSource: string, targetSource: string) => EntityRelationship | null;
+  /**
+   * The relationship a filter on `originSource`, scoped to `subject`, filters
+   * `targetSource` through: both keys name the subject's id, as `origin`
+   * and `target` each hold it. Only direct foreign keys to or from the subject
+   * count — a shared-parent bridge joins on the parent's key, which is not the
+   * subject. `null` when either table cannot be keyed to the subject.
+   */
+  getSubjectRelationship: (
+    originSource: string,
+    targetSource: string,
+    subject: string,
+  ) => EntityRelationship | null;
   /** Key columns of an entity — primary key, foreign keys, and udi:unique
    *  fields, in schema field order. Used by the table view's "relevant
    *  fields" mode so rows stay identifiable. */
@@ -353,6 +365,39 @@ export function createDataPackageStore() {
         searchOneDirection(targetSource, originSource, true) ??
         searchSharedParent(originSource, targetSource)
       );
+    },
+
+    getSubjectRelationship: (
+      originSource: string,
+      targetSource: string,
+      subject: string,
+    ): EntityRelationship | null => {
+      const resources = get().dataPackage?.resources ?? [];
+      // The column on `entity` holding the subject's id, and the subject's
+      // column it refers to — through a FK either way round.
+      const subjectKey = (entity: string): { own: string; subject: string } | null => {
+        const fkFrom = (source: string, target: string) =>
+          resources
+            .find((r) => r.name === source)
+            ?.schema?.foreignKeys?.find((fk) => fk.reference.resource === target);
+        const forward = fkFrom(entity, subject);
+        if (forward) {
+          return { own: forward.fields.at(-1)!, subject: forward.reference.fields.at(-1)! };
+        }
+        const reverse = fkFrom(subject, entity);
+        if (reverse) {
+          return { own: reverse.reference.fields.at(-1)!, subject: reverse.fields.at(-1)! };
+        }
+        return null;
+      };
+      const origin = subjectKey(originSource);
+      if (!origin) return null;
+      if (targetSource === subject) return { originKey: origin.own, targetKey: origin.subject };
+      if (targetSource === originSource) return { originKey: origin.own, targetKey: origin.own };
+      const target = subjectKey(targetSource);
+      // Both must hold the same subject column, or the keys share no domain.
+      if (!target || target.subject !== origin.subject) return null;
+      return { originKey: origin.own, targetKey: target.own };
     },
 
     getKeyFields: (entity: string): string[] => {
