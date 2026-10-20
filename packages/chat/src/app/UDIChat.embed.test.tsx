@@ -247,6 +247,18 @@ describe('UDIChat — initialSession', () => {
   });
 });
 
+describe('UDIChat — apiBaseUrl', () => {
+  it('drops a trailing slash, so endpoints are not requested as //v1/...', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response('[]')));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<UDIChat {...seedConfig} apiBaseUrl="https://agent.example/" />);
+    await vi.waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('https://agent.example/v1/yac/examples'),
+    );
+    vi.unstubAllGlobals();
+  });
+});
+
 describe('UDIChat — host filters', () => {
   const sexFilter = {
     id: 'cohort',

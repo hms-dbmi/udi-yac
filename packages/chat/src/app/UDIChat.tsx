@@ -524,7 +524,12 @@ function UDIChatValidated(props: UDIChatConfig) {
 export function UDIChat(props: UDIChatConfig) {
   return (
     <ErrorBoundary>
-      <UDIChatValidated {...props} />
+      {/*
+       * Every endpoint is `${apiBaseUrl}/v1/...`, so a trailing slash asks for
+       * `//v1/...`, which the agent 404s. `?.` leaves a missing value for
+       * validateConfig to report.
+       */}
+      <UDIChatValidated {...props} apiBaseUrl={props.apiBaseUrl?.replace(/\/+$/, '')} />
     </ErrorBoundary>
   );
 }
