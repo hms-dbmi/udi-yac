@@ -1549,7 +1549,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "3.26.0"
+version = "3.33.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1559,9 +1559,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/07/cd478a4595282ac72e31090531bb37f8a1b6fd9cb45c1da6d6215078a4d9/openai-3.26.0.tar.gz", hash = "sha256:73b470c09cf2171dce930e36af01c6632241adda0120ad84302ad229f9130a5a", size = 1820994, upload-time = "2026-10-06T21:31:19.019Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/34/8d/ff5a4348116f667d04c90c12104028de2d5dc31e7bacfb9b18fcc8a7f0d1/openai-3.33.0.tar.gz", hash = "sha256:1865f5ce6a5c2f28a926303cb97f2489dba5ee7c7b7a45910d48466c10a187c4", size = 2230912, upload-time = "2026-10-17T00:30:21.045Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/37/08c6d71d542b079364221fcbaee863ead900b53cd89db17f4bd0ec83f41a/openai-3.26.0-py3-none-any.whl", hash = "sha256:050597ff71ff4025177405a41fa4019d4f9feae5826645b63b8e35b6e9a3c88b", size = 2164504, upload-time = "2026-10-06T21:31:16.415Z" },
+    { url = "https://files.pythonhosted.org/packages/af/af/afcdd2ddb36b1e015e72ae4150e70f5bd5e1655ac9aea77444f5cd23aab5/openai-3.33.0-py3-none-any.whl", hash = "sha256:a29d04e07dabcd9c94362e6339eb243c1181fd73d2d0432e1ff885a520b71664", size = 2258124, upload-time = "2026-10-17T00:30:18.691Z" },
 ]
 
 [package.optional-dependencies]
@@ -2572,7 +2572,7 @@ requires-dist = [
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = ">=4" },
     { name = "openai", specifier = ">=2.15.0" },
-    { name = "openai", extras = ["bedrock"], marker = "extra == 'bedrock'", specifier = ">=2.44.0" },
+    { name = "openai", extras = ["bedrock"], marker = "extra == 'bedrock'", specifier = ">=3.33.0" },
     { name = "pandas", marker = "extra == 'codegen'", specifier = ">=2.0.0" },
     { name = "pydantic-settings", marker = "extra == 'server'", specifier = ">=2.0" },
     { name = "pymysql", marker = "extra == 'starrocks'", specifier = ">=1.1.0" },
