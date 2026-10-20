@@ -53,7 +53,7 @@ Local query backends (server-side data dev/testing): **DuckDB** (`dev/duckdb/REA
 
 ## CI / Releases (.github/workflows/)
 
-Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml` (also builds Storybook), `ci-grammar-app.yml` (PR-only build of the demo app), `ci-python.yml`. Combined GitHub Pages deploy (`pages.yml`): chat SPA at `/udi-yac/`, grammar demo at `/udi-yac/grammar/`. Releases are tagged per package — `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z` (`release-*.yml`). The `Main Branch Protection` ruleset requires a PR for every change to `main`, so **no release workflow bumps versions or pushes to `main`** — bump the version in a PR, merge it, then trigger the publish:
+Path-filtered per package: `ci-chat.yml`, `ci-toolkit.yml` (also builds Storybook), `ci-grammar-app.yml` (PR-only build of the demo app), `ci-python.yml`. Combined GitHub Pages deploy (`pages.yml`): chat SPA at `/udi-yac/`, grammar demo at `/udi-yac/grammar/`. The chat serves pcx, which stays out of git: `pages.yml` downloads the CSVs and `datapackage.json` from the public Google Drive folder by file ID at build time. Browsers can't fetch Drive files cross-origin. The Drive manifest is maintained by hand: regenerate it with `gen_datapackage.py` (it embeds `example_prompts.json` as `udi:example_prompts`) and upload it as a new version. The build fails if its columns drift from the CSVs. Repo var `VITE_UDI_DATA_PACKAGE=/udi-yac/data/pcx/datapackage.json`. Drive updates need a manual Pages re-run. Releases are tagged per package — `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z` (`release-*.yml`). The `Main Branch Protection` ruleset requires a PR for every change to `main`, so **no release workflow bumps versions or pushes to `main`** — bump the version in a PR, merge it, then trigger the publish:
 
 | Package          | Publish trigger                                                        |
 | ---------------- | ---------------------------------------------------------------------- |
@@ -116,7 +116,6 @@ User query → chat ChatPanel → POST /v1/yac/completions (udiagent.server)
 - Strict TypeScript; prefer `unknown` + narrowing over `any`.
 - Python ≥ 3.12 (agent) / ≥ 3.13 (grammar-py), managed via uv; pytest for tests.
 
-
 # AWS Guidance
 
 - Where these AWS rules conflict with the project's own instructions, the
@@ -145,4 +144,3 @@ User query → chat ChatPanel → POST /v1/yac/completions (udiagent.server)
   NOT hit the Secrets Manager Agent daemon directly. MUST use
   `{{resolve:secretsmanager:secret-id:SecretString:json-key}}` with
   `asm-exec` so the secret resolves at runtime without entering context.
-

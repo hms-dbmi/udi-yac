@@ -15,7 +15,9 @@ something says days). Supply them with `--descriptions`, a data dictionary CSV
 with `table,field,description` columns — `table` is the CSV filename (or the
 humanized table name), and a row with a blank `field` describes the table
 itself. Kept beside the CSVs as `data_dictionary.csv`, it is picked up
-automatically, so a regenerated manifest does not lose them.
+automatically, so a regenerated manifest does not lose them. Likewise an
+`example_prompts.json` (a list of strings) beside the CSVs becomes the
+package's `udi:example_prompts`, the prompts the chat suggests.
 
 Writes <dir>/datapackage.json. See sample-data/readme.md for the format.
 Run `python3 scripts/gen_datapackage.py --selftest` to check the inference.
@@ -30,6 +32,8 @@ from pathlib import Path
 
 # Picked up as the default `--descriptions`, and never profiled as a table.
 DICTIONARY_NAME = "data_dictionary.csv"
+# Embedded as `udi:example_prompts` when present beside the CSVs.
+PROMPTS_NAME = "example_prompts.json"
 
 
 def humanize(stem: str, strips: list[str]) -> str:
@@ -423,6 +427,12 @@ def main() -> None:
     pkg = build_package(
         csv_dir, name, udi_path, args.strip, args.measure, descriptions, args.parent
     )
+    prompts_path = csv_dir / PROMPTS_NAME
+    if prompts_path.is_file():
+        prompts = json.loads(prompts_path.read_text(encoding="utf-8"))
+        if not (isinstance(prompts, list) and all(isinstance(p, str) for p in prompts)):
+            sys.exit(f"{prompts_path} must be a JSON list of strings")
+        pkg["udi:example_prompts"] = prompts
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])
