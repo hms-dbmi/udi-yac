@@ -722,27 +722,38 @@ def _slack_escape(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def _notify_issue_report(url: str, report: YACIssueReportRequest, trace_id: str | None):
+def _notify_issue_report(
+    url: str,
+    report: YACIssueReportRequest,
+    trace_id: str | None,
+    session_id: str | None,
+):
     """POST a summary of a recorded report to UDI_ISSUE_REPORT_WEBHOOK_URL.
 
     Runs after the response, and a failure is only logged: the report is
     already in LangFuse. The session stays there, behind its access control;
-    only the note, contact and a link go out.
+    only the note, contact and links go out — to the conversation the report
+    is about (its LangFuse session) and to the report itself.
     """
-    trace_url = None
+    trace_url = session_url = None
     if trace_id:
         try:
-            trace_url = agent.langfuse_trace_url(trace_id)
-        except Exception as exc:  # noqa: BLE001 - the link is optional
-            logger.warning("could not build the LangFuse trace URL: %s", type(exc).__name__)
+            trace_url, session_url = agent.langfuse_urls(trace_id, session_id)
+        except Exception as exc:  # noqa: BLE001 - the links are optional
+            logger.warning("could not build the LangFuse URLs: %s", type(exc).__name__)
 
     where = {"menu": "Session menu", "chat": "chat", "crash": "crash screen"}[report.source]
     lines = [f"*Issue report* from the {where}"]
     lines += [f">{_slack_escape(line)}" for line in report.description.splitlines()]
     if report.contact:
         lines.append(f"Contact: {_slack_escape(report.contact)}")
+    links = []
+    if session_url:
+        links.append(f"<{session_url}|Open the conversation in LangFuse>")
     if trace_url:
-        lines.append(f"<{trace_url}|Open in LangFuse>")
+        links.append(f"<{trace_url}|Open the report>")
+    if links:
+        lines.append(" · ".join(links))
     payload = {
         "text": "\n".join(lines),
         "report": {
@@ -751,6 +762,8 @@ def _notify_issue_report(url: str, report: YACIssueReportRequest, trace_id: str 
             "source": report.source,
             "traceId": trace_id,
             "traceUrl": trace_url,
+            "sessionId": session_id,
+            "sessionUrl": session_url,
         },
     }
     request = urllib.request.Request(
@@ -832,7 +845,11 @@ async def yac_issue_report(
     )
     if config.udi_issue_report_webhook_url:
         background_tasks.add_task(
-            _notify_issue_report, config.udi_issue_report_webhook_url, report, trace_id
+            _notify_issue_report,
+            config.udi_issue_report_webhook_url,
+            report,
+            trace_id,
+            x_conversation_id,
         )
     return {"traceId": trace_id}
 

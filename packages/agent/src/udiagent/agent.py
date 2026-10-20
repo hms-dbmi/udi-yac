@@ -5,6 +5,7 @@ import logging
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 from types import SimpleNamespace
+from urllib.parse import quote
 
 from udiagent._compat import get_openai_class, make_bedrock_provider
 
@@ -311,13 +312,23 @@ class UDIAgent:
             )
             return client.get_current_trace_id()
 
-    def langfuse_trace_url(self, trace_id: str) -> str | None:
-        """The trace's page in the LangFuse UI, or ``None`` without LangFuse.
+    def langfuse_urls(
+        self, trace_id: str, session_id: str | None = None
+    ) -> tuple[str | None, str | None]:
+        """``(trace_url, session_url)`` in the LangFuse UI.
 
-        The first call looks the project ID up over the network.
+        Either is ``None`` when there is nothing to link to: no LangFuse, or no
+        session ID. The first call looks the project ID up over the network.
         """
         client = getattr(self, "_langfuse_client", None)
-        return client.get_trace_url(trace_id=trace_id) if client is not None else None
+        trace_url = client.get_trace_url(trace_id=trace_id) if client is not None else None
+        if not trace_url or not session_id:
+            return trace_url, None
+        # ponytail: the SDK only builds trace URLs. A session's page sits beside
+        # them (/project/<id>/sessions/<sessionId>), so swap the last segment
+        # rather than reach into the client's private project-ID cache.
+        project_url = trace_url.rsplit("/traces/", 1)[0]
+        return trace_url, f"{project_url}/sessions/{quote(session_id, safe='')}"
 
     def _init_server_model_connection(self, openai_api_key: str | None = None):
         """Instantiate the OpenAI client for GPT-based features.

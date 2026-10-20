@@ -246,7 +246,9 @@ def webhook(server, monkeypatch):
     monkeypatch.setattr(server_app.config, "udi_issue_report_webhook_url", WEBHOOK)
     monkeypatch.setattr(server_app.agent, "record_issue_report", lambda **_: "trace-123")
     monkeypatch.setattr(
-        server_app.agent, "langfuse_trace_url", lambda tid: f"https://lf.example/traces/{tid}"
+        server_app.agent,
+        "langfuse_urls",
+        lambda tid, sid: (f"https://lf.example/traces/{tid}", f"https://lf.example/sessions/{sid}"),
     )
     sent = []
 
@@ -260,7 +262,7 @@ def webhook(server, monkeypatch):
         yield server_app, client, sent
 
 
-def test_webhook_gets_the_note_and_a_link_but_not_the_session(webhook):
+def test_webhook_gets_the_note_and_links_but_not_the_session(webhook):
     _, client, sent = webhook
     resp = _post(client)
 
@@ -274,9 +276,13 @@ def test_webhook_gets_the_note_and_a_link_but_not_the_session(webhook):
         "source": "menu",
         "traceId": "trace-123",
         "traceUrl": "https://lf.example/traces/trace-123",
+        "sessionId": "conv-1",
+        "sessionUrl": "https://lf.example/sessions/conv-1",
     }
-    assert "<https://lf.example/traces/trace-123|Open in LangFuse>" in body["text"]
-    assert "session" not in json.dumps(body["report"])
+    assert "<https://lf.example/sessions/conv-1|Open the conversation in LangFuse>" in body["text"]
+    assert "<https://lf.example/traces/trace-123|Open the report>" in body["text"]
+    # The export itself stays in LangFuse.
+    assert "messages" not in json.dumps(body)
 
 
 def test_webhook_text_escapes_slack_markup(webhook):
@@ -306,6 +312,20 @@ def test_webhook_failure_still_accepts_the_report_and_keeps_the_url_out_of_logs(
     logs = "\n".join(r.getMessage() for r in caplog.records)
     assert "issue report webhook failed: OSError" in logs
     assert "secret-token" not in logs
+
+
+def test_session_url_sits_beside_the_trace_url():
+    agent = UDIAgent.__new__(UDIAgent)
+    agent._langfuse_client = MagicMock()
+    agent._langfuse_client.get_trace_url.return_value = (
+        "https://lf.example/project/p1/traces/t1"
+    )
+
+    assert agent.langfuse_urls("t1", "conv/1 a") == (
+        "https://lf.example/project/p1/traces/t1",
+        "https://lf.example/project/p1/sessions/conv%2F1%20a",
+    )
+    assert agent.langfuse_urls("t1", None) == ("https://lf.example/project/p1/traces/t1", None)
 
 
 def test_no_webhook_no_post(server):
