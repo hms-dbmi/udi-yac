@@ -237,3 +237,52 @@ describe('FilterComponent — collapsing is removing', () => {
     expect(filters.getState().removedFilters['message-filter-0-0']).toBeUndefined();
   });
 });
+
+describe('FilterComponent — filter operations', () => {
+  const add = filterMessage('datasets', 'assay_type', ['CODEX']);
+  const opMessage = (args: Record<string, unknown>): Message => ({
+    role: 'assistant',
+    content: '',
+    tool_calls: [{ function: { name: 'FilterData', arguments: args as never } }],
+  });
+
+  function renderOps(messages: Message[], index: number) {
+    return render(
+      <UDIChatProvider>
+        <Harness domains={[assayType]} messages={messages}>
+          <FilterComponent message={messages[index]} messageIndex={index} toolCallIndex={0} />
+        </Harness>
+      </UDIChatProvider>,
+    );
+  }
+
+  it('shows a modify as the widget of the filter it changed', () => {
+    const modify = opMessage({
+      op: 'modify',
+      id: 'message-filter-0-0',
+      title: 'Dataset Assay Type',
+      entity: 'datasets',
+      field: 'assay_type',
+      filter: { filterType: 'point', intervalRange: { min: 0, max: 0 }, pointValues: ['MIBI'] },
+    });
+    renderOps([add, modify], 1);
+    expect(screen.getByRole('checkbox', { name: 'MIBI' })).toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'AF' }));
+    // The edit lands on the original filter, not a new one.
+    expect(Object.keys(filters.getState().dataSelections)).toEqual(['message-filter-0-0']);
+    expect(filters.getState().dataSelections['message-filter-0-0'].selection).toEqual({
+      assay_type: ['MIBI', 'AF'],
+    });
+  });
+
+  it('notes a remove and a clear in a line of text', () => {
+    renderOps([add, opMessage({ op: 'remove', id: 'message-filter-0-0', title: 'Assay' })], 1);
+    expect(screen.getByText('Removed the filter “Assay”.')).toBeTruthy();
+    expect(filters.getState().dataSelections).toEqual({});
+  });
+
+  it('notes a clear', () => {
+    renderOps([add, opMessage({ op: 'clear' })], 1);
+    expect(screen.getByText('Cleared the filters I made.')).toBeTruthy();
+  });
+});

@@ -16,6 +16,7 @@ import {
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import { selectBrushFilters } from './useBrushFilters';
 import { formatTime } from 'udi-toolkit/react';
+import { scopePhrase } from '../utils/filterScope';
 
 /** A filter in place, whatever made it. `id` is what the store's filter
  *  actions (`setFilter`, `clearFilter`, `removeFilter`, ...) take. */
@@ -32,6 +33,9 @@ export interface ChipInfo {
   type: string;
   label: string;
   value: string;
+  /** The scope in words ("Patient with any Event where"), or null when the
+   *  filter is about rows. */
+  scope: string | null;
   /** The whole filter the chip summarizes — its popover edits this. */
   selection: DataSelection;
 }
@@ -152,6 +156,7 @@ export function useFilterChips(): ChipInfo[] {
   // Subscribed, so a chip re-reads "All" once the domains it is checked
   // against arrive.
   const domains = useDataPackage((s) => s.dataFieldDomains);
+  const scopes = useDataFilters((s) => s.filterScopes);
 
   return useMemo<ChipInfo[]>(() => {
     const dpState = dataPackageStore.getState();
@@ -174,8 +179,9 @@ export function useFilterChips(): ChipInfo[] {
         type: selection.type,
         label,
         value,
+        scope: scopePhrase(scopes[id], selection.dataSourceKey),
         selection,
       })),
     );
-  }, [filters, dataPackageStore, domains]);
+  }, [filters, dataPackageStore, domains, scopes]);
 }
