@@ -16,9 +16,8 @@ __pycache__/
 *storybook.log
 storybook-static/
 
-sample-data/pcx
-# Derived from sample-data/pcx by scripts/normalize_cube_time.py — same private
-# clinical data, so it stays out of this public repo just like its source.
+# Derived from sample-data/pcx by scripts/normalize_cube_time.py — a local
+# working artifact; regenerate it rather than committing it.
 sample-data/pcx_efs_cube
 # Written by packages/agent/scripts/seed_starrocks.py (contains local connection details)
 packages/agent/starrocks-backends.json
