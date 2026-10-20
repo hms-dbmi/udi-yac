@@ -1426,6 +1426,162 @@
       }
     },
     {
+      "name": "binby-unit",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "body_mass_g"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "binby": {
+              "field": "body_mass_g",
+              "bins": 10,
+              "nice": true,
+              "unit": 365.25
+            }
+          },
+          {
+            "rollup": {
+              "count": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "start": 3652.5,
+            "end": 4017.75,
+            "count": 66
+          },
+          {
+            "start": 2922,
+            "end": 3287.25,
+            "count": 27
+          },
+          {
+            "start": 3287.25,
+            "end": 3652.5,
+            "count": 70
+          },
+          {
+            "start": 4383,
+            "end": 4748.25,
+            "count": 42
+          },
+          {
+            "start": 4017.75,
+            "end": 4383,
+            "count": 40
+          },
+          {
+            "start": 2556.75,
+            "end": 2922,
+            "count": 7
+          },
+          {
+            "start": 4748.25,
+            "end": 5113.5,
+            "count": 35
+          },
+          {
+            "start": 5478.75,
+            "end": 5844,
+            "count": 24
+          },
+          {
+            "start": 5113.5,
+            "end": 5478.75,
+            "count": 22
+          },
+          {
+            "start": 5844,
+            "end": 6209.25,
+            "count": 8
+          },
+          {
+            "start": 6209.25,
+            "end": 6574.5,
+            "count": 1
+          }
+        ],
+        "allData": [
+          {
+            "start": 3652.5,
+            "end": 4017.75,
+            "count": 66
+          },
+          {
+            "start": 2922,
+            "end": 3287.25,
+            "count": 27
+          },
+          {
+            "start": 3287.25,
+            "end": 3652.5,
+            "count": 70
+          },
+          {
+            "start": 4383,
+            "end": 4748.25,
+            "count": 42
+          },
+          {
+            "start": 4017.75,
+            "end": 4383,
+            "count": 40
+          },
+          {
+            "start": 2556.75,
+            "end": 2922,
+            "count": 7
+          },
+          {
+            "start": 4748.25,
+            "end": 5113.5,
+            "count": 35
+          },
+          {
+            "start": 5478.75,
+            "end": 5844,
+            "count": 24
+          },
+          {
+            "start": 5113.5,
+            "end": 5478.75,
+            "count": 22
+          },
+          {
+            "start": 5844,
+            "end": 6209.25,
+            "count": 8
+          },
+          {
+            "start": 6209.25,
+            "end": 6574.5,
+            "count": 1
+          }
+        ],
+        "isSubset": false
+      }
+    },
+    {
       "name": "derive-percent-of-max",
       "spec": {
         "source": {

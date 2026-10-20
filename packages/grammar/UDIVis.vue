@@ -41,6 +41,8 @@ import {
   timeColumns,
   isEpochMs,
   timeFormatOf,
+  withBinUnits,
+  binEdgeFormat,
   DAYS_PER_YEAR,
 } from './temporal';
 import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
@@ -147,7 +149,10 @@ async function render() {
   // adding mapping.domain) don't leak back through the CE props to the
   // host (React) — which would otherwise trigger a re-mount and lose
   // the brush/selection state.
-  parsedSpec.value = parseSpecification(JSON.parse(JSON.stringify(props.spec)));
+  // withBinUnits: a time column's histogram bins fall on whole years.
+  parsedSpec.value = withBinUnits(
+    parseSpecification(JSON.parse(JSON.stringify(props.spec))),
+  );
   // Load data sources BEFORE binding selections — binding can change
   // selectionHash which triggers the [loading, selectionHash] watcher.
   // If data isn't loaded yet that watcher would hit empty dataSources.
@@ -249,7 +254,10 @@ function buildVisualization(): void {
   // Re-parse from a fresh clone so any prior domain mutations (from
   // setDefaultDomains during a previous subset state) don't persist
   // when the filter is cleared.
-  parsedSpec.value = parseSpecification(JSON.parse(JSON.stringify(props.spec)));
+  // withBinUnits: a time column's histogram bins fall on whole years.
+  parsedSpec.value = withBinUnits(
+    parseSpecification(JSON.parse(JSON.stringify(props.spec))),
+  );
   const backend = getQueryBackend();
   if (backend.kind === 'remote') {
     const epoch = ++remoteQueryEpoch;
@@ -853,8 +861,12 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
           Object.assign(vegaEncoding[encoding], format);
           if (encoding === 'x' || encoding === 'y') {
             // From all rows, so the ticks hold still as filters change.
+            // A binned age (x paired with x2) ticks at its bar edges instead,
+            // which withBinUnits puts on whole years.
+            const binned = mapping.some((m) => m.encoding === `${encoding}2`);
             const extent =
               labelFormat === 'days' &&
+              !binned &&
               fieldRange(transformedDataFull.value, map.field);
             vegaEncoding[encoding].axis = extent
               ? {
@@ -1075,9 +1087,37 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       ) {
         vegaEncoding.x.bin = { binned: true };
       }
+      // Whole-year date bins read their edges as years: an edge lands up to
+      // 18 hours from 1 January (withBinUnits), so as a date it reads 12/31
+      // west of UTC. An epoch_ms axis keeps Vega's calendar ticks, so only its
+      // tooltip changes; an epoch_s axis ticks at the edges and changes too.
+      if (hasXPair) {
+        const fieldOf = (encoding: string) =>
+          (mapping as Array<{ encoding: string; field?: string }>).find(
+            (m) => m.encoding === encoding,
+          )?.field;
+        const [start, end] = [fieldOf('x'), fieldOf('x2')];
+        const row = transformedDataFull.value?.[0] as
+          Record<string, unknown> | undefined;
+        const edgeFormat =
+          start && end && row
+            ? binEdgeFormat(dateColumns.get(start), row[start], row[end])
+            : undefined;
+        if (edgeFormat) {
+          // x2 too: a rect's tooltip lists the end as its own row, where a
+          // pre-binned bar's folds it into x's range.
+          for (const channel of ['x', 'x2'])
+            Object.assign(vegaEncoding[channel], {
+              format: edgeFormat,
+              formatType: 'udiTime',
+            });
+          if (vegaEncoding.x.axis?.formatType === 'udiTime')
+            vegaEncoding.x.axis.format = edgeFormat;
+        }
+      }
       // Bin-boundary ticks are raw numbers, which a time axis labels as
       // minutes; its own ticks land on calendar boundaries instead. An axis
-      // that already has its ticks (an age's whole years) keeps them.
+      // that already has explicit ticks keeps them.
       if (hasXPair) {
         markConfig.xOffset = 1;
         markConfig.x2Offset = -1;

@@ -664,7 +664,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           .reify();
       } else if ('binby' in transform) {
         const inTable = getInTable(transform.in);
-        const { field, bins = 10, nice = true } = transform.binby;
+        const { field, bins = 10, nice = true, unit } = transform.binby;
         const { bin_start = 'start', bin_end = 'end' } = transform.binby
           .output ?? {
           bin_start: 'start',
@@ -686,10 +686,25 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           );
           extentTable = unfilteredInTable;
         }
-        const [binMin, binMax, binStep] = agg(
-          extentTable,
-          op.bins(field, bins, nice),
+        // A `unit` makes the width a nice multiple of it (whole years, for a
+        // time column) rather than of a power of ten: bin the values counted
+        // in units, then scale the edges back. The SQL compiler does the same.
+        const scale = unit ?? 1;
+        const unitTable = unit
+          ? extentTable.params({ binField: field, binUnit: unit }).derive({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              __binby_units: (d: any, $: any) => d[$.binField] / $.binUnit,
+            })
+          : extentTable;
+        const [unitMin, unitMax, unitStep] = agg(
+          unitTable,
+          op.bins(unit ? '__binby_units' : field, bins, nice),
         ) as [number, number, number];
+        const [binMin, binMax, binStep] = [
+          unitMin * scale,
+          unitMax * scale,
+          unitStep * scale,
+        ];
 
         const fieldKey = JSON.stringify(field);
         const binColumns: { [key: string]: string } = {

@@ -360,6 +360,20 @@ const CASES = [
     },
   ],
   [
+    // Bins as nice multiples of a unit (here 365.25, a year in days) rather
+    // than of a power of ten. A non-integer unit, so both executors must scale
+    // the edges back the same way.
+    'binby-unit',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        { binby: { field: 'body_mass_g', bins: 10, nice: true, unit: 365.25 } },
+        { rollup: { count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
     'derive-percent-of-max',
     {
       source: src('penguins'),

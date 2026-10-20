@@ -40,10 +40,20 @@ type Formats = Map<string, string>;
  * DataSourcesStore's PerformDataTransformations runs them, so each step reads
  * the formats of the table it actually reads.
  */
-export function timeColumns(spec: {
+export function timeColumns(spec: SpecLike): Formats {
+  return walkFormats(spec);
+}
+
+type SpecLike = {
   source: DataSource | DataSource[];
   transformation?: DataTransformation[] | undefined;
-}): Formats {
+};
+
+/** timeColumns' walk, calling `onStep` with the formats of each step's input. */
+function walkFormats(
+  spec: SpecLike,
+  onStep?: (t: DataTransformation, input: Formats, index: number) => void,
+): Formats {
   const sources = Array.isArray(spec.source) ? spec.source : [spec.source];
   const tables = new Map<string, Formats>(
     sources.map((source) => [
@@ -53,9 +63,10 @@ export function timeColumns(spec: {
   );
   let key = sources[0]?.name ?? '';
   let current: Formats = tables.get(key) ?? new Map();
-  for (const t of spec.transformation ?? []) {
+  for (const [index, t] of (spec.transformation ?? []).entries()) {
     const input =
       typeof t.in === 'string' ? (tables.get(t.in) ?? new Map()) : current;
+    onStep?.(t, input, index);
     // Outputs are written to a copy: every aggregate in a rollup reads the
     // input table, so one written under a date's name must not hide that
     // date from the aggregates after it.
@@ -132,6 +143,50 @@ function joinFormats(
   return output;
 }
 
+// One year in each format's stored unit: what a time column's histogram bins
+// are a nice multiple of. `year` needs none — its unit already is one.
+// ponytail: a 365.25-day year, so date bin edges fall within a day of 1 Jan;
+// exact calendar months and years would need time-unit binning.
+export const DAYS_PER_YEAR = 365.25;
+const YEAR_MS = DAYS_PER_YEAR * 86_400_000;
+const BIN_UNITS = new Map<string, number>([
+  ['epoch_ms', YEAR_MS],
+  ['epoch_s', YEAR_MS / 1000],
+  ['days', DAYS_PER_YEAR],
+]);
+
+/** The format a date bin's edges read in when the bins are whole years wide
+ *  (`epoch_ms_bin_year`), or undefined for any other column or width. */
+export function binEdgeFormat(
+  format: string | undefined,
+  start: unknown,
+  end: unknown,
+): string | undefined {
+  const unit = format && BIN_UNITS.get(format);
+  if (format === 'days' || !unit) return undefined;
+  if (typeof start !== 'number' || typeof end !== 'number') return undefined;
+  const years = (end - start) / unit;
+  return years >= 1 && Math.abs(years - Math.round(years)) < 1e-6
+    ? `${format}_bin_year`
+    : undefined;
+}
+
+/**
+ * The spec with each binby over a time column given that column's `unit` (one
+ * year), unless it sets its own: bins of 2,000 days or 5e10 ms fall between
+ * the whole years the axis is labelled in, and these fall on them.
+ */
+export function withBinUnits<T extends SpecLike>(spec: T): T {
+  if (!spec.transformation) return spec;
+  const transformation = [...spec.transformation];
+  walkFormats(spec, (t, input, index) => {
+    if (!('binby' in t) || t.binby.unit != null) return;
+    const unit = BIN_UNITS.get(input.get(t.binby.field) ?? '');
+    if (unit) transformation[index] = { ...t, binby: { ...t.binby, unit } };
+  });
+  return { ...spec, transformation };
+}
+
 /** Whether `field` holds epoch-ms dates, which charts draw on a time scale. */
 export function isEpochMs(
   columns: Map<string, string>,
@@ -139,8 +194,6 @@ export function isEpochMs(
 ): boolean {
   return columns.get(field) === 'epoch_ms';
 }
-
-export const DAYS_PER_YEAR = 365.25;
 
 // A Map rather than an object literal, so a format named like an Object
 // prototype key ("toString") is unknown rather than callable.
@@ -151,6 +204,11 @@ const FORMATTERS = new Map<string, (value: number) => string>([
   ['year', (v) => String(Math.round(v))],
   // A duration such as an age, read in years.
   ['days', (v) => `${(v / DAYS_PER_YEAR).toFixed(1)} y`],
+  // A date bin's edge, on a whole 365.25-day year from 1970 (withBinUnits),
+  // read as that year. As a date it would read 12/31 west of UTC: the edge
+  // lands up to 18 hours from 1 January.
+  ['epoch_ms_bin_year', (v) => String(1970 + Math.round(v / YEAR_MS))],
+  ['epoch_s_bin_year', (v) => String(1970 + Math.round((v * 1000) / YEAR_MS))],
 ]);
 
 /** A stored value as its `udi:time_format` reads: `epoch_ms`/`epoch_s` as the

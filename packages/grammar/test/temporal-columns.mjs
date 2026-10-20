@@ -12,6 +12,7 @@ import {
   isEpochMs,
   formatTime,
   timeFormatOf,
+  withBinUnits,
 } from '../temporal.ts';
 
 setTimeFormats({
@@ -170,5 +171,21 @@ assert.equal(formatTime(4383, 'days'), '12.0 y');
 // A missing value isn't read as 1970, and a prototype key isn't a format.
 assert.equal(formatTime(null, 'epoch_ms'), 'null');
 assert.equal(formatTime(5, 'toString'), '5');
+
+// A binby over a time column bins by whole years of its stored unit; one over
+// another column, or one that sets its own unit, is left as it is.
+setTimeFormats({
+  events: { age_days: 'days', created: 'epoch_ms', n: 'nope' },
+});
+const binned = (field, unit) =>
+  withBinUnits({
+    source: { name: 'events', source: './events.csv' },
+    transformation: [{ binby: { field, ...(unit ? { unit } : {}) } }],
+  }).transformation[0].binby.unit;
+assert.equal(binned('age_days'), 365.25);
+assert.equal(binned('created'), 365.25 * 86_400_000);
+assert.equal(binned('n'), undefined);
+assert.equal(binned('other'), undefined);
+assert.equal(binned('age_days', 7), 7);
 
 console.log('temporal-columns test passed ✓');
