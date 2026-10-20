@@ -3,6 +3,7 @@
 import copy
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -49,14 +50,16 @@ class Usage:
     completion_tokens: int = 0
     total_tokens: int = 0
     # Sub-counts broken out for cost visibility: cached input is billed at a
-    # discount; reasoning tokens are a subset of ``completion_tokens``. Both
+    # discount, and cache writes at a premium on models that charge for them
+    # (GPT-5.6+); reasoning tokens are a subset of ``completion_tokens``. All
     # are 0 on providers/models that don't report them.
     cached_prompt_tokens: int = 0
+    cache_write_tokens: int = 0
     reasoning_tokens: int = 0
     operations: list[dict] = field(default_factory=list)
 
     def add(self, op: str, resp_usage) -> None:
-        """Record usage from a ``chat.completions.create`` response."""
+        """Record usage from a chat-completion shaped response (see ``UDIAgent.create_completion``)."""
         if resp_usage is None:
             return
         prompt = int(getattr(resp_usage, "prompt_tokens", 0) or 0)
@@ -66,12 +69,14 @@ class Usage:
         )
         p_details = getattr(resp_usage, "prompt_tokens_details", None)
         cached = int(getattr(p_details, "cached_tokens", 0) or 0)
+        cache_write = int(getattr(p_details, "cache_write_tokens", 0) or 0)
         c_details = getattr(resp_usage, "completion_tokens_details", None)
         reasoning = int(getattr(c_details, "reasoning_tokens", 0) or 0)
         self.prompt_tokens += prompt
         self.completion_tokens += completion
         self.total_tokens += total
         self.cached_prompt_tokens += cached
+        self.cache_write_tokens += cache_write
         self.reasoning_tokens += reasoning
         self.operations.append(
             {
@@ -80,7 +85,11 @@ class Usage:
                 "completion_tokens": completion,
                 "total_tokens": total,
                 "cached_prompt_tokens": cached,
+                "cache_write_tokens": cache_write,
                 "reasoning_tokens": reasoning,
+                # Wall-clock seconds of the call, set by _call_with_budget_guard
+                # (None for a call made outside it).
+                "latency_s": self.__dict__.pop("_last_latency_s", None),
             }
         )
 
@@ -111,14 +120,23 @@ def _call_with_budget_guard(fn, usage: "Usage", /, *args, **kwargs):
 
     Non-quota ``APIStatusError``s propagate unchanged.
     """
+    start = time.perf_counter()
     try:
-        return fn(*args, **kwargs)
+        resp = fn(*args, **kwargs)
     except openai.RateLimitError as err:
         raise BudgetExceededError(_DEFAULT_BUDGET_MESSAGE, usage) from err
     except openai.APIStatusError as err:
         if _is_quota_error(err):
             raise BudgetExceededError(_DEFAULT_BUDGET_MESSAGE, usage) from err
         raise
+    if usage is not None:
+        # ponytail: handed to the usage.add() that follows every guarded call
+        # rather than threaded through each call site. Safe while one Usage
+        # has one call in flight (calls within a run are sequential); a
+        # concurrent caller would need the latency returned explicitly.
+        # Not a dataclass field, so asdict() never reports it.
+        usage._last_latency_s = round(time.perf_counter() - start, 3)
+    return resp
 
 
 def build_rebuff_toolcall(
@@ -148,6 +166,33 @@ def build_rebuff_toolcall(
         "name": "Rebuff",
         "arguments": arguments,
     }
+
+
+_UNREADABLE_REPLY_MESSAGE = (
+    "Something went wrong while I was working out how to answer that. "
+    "Please try again, or rephrase your request."
+)
+
+
+def _tool_args(tc) -> dict | None:
+    """A tool call's arguments, or None when they aren't a JSON object.
+
+    A reply cut off at the output-token cap carries truncated arguments; a
+    model can also, rarely, emit malformed ones. Either way the call is
+    unusable, and it must not take the whole request down with it.
+    """
+    try:
+        args = json.loads(tc.function.arguments)
+    except (TypeError, json.JSONDecodeError):
+        args = None
+    if not isinstance(args, dict):
+        logger.warning(
+            "skipping %s: its arguments are not a JSON object (%d chars)",
+            tc.function.name,
+            len(tc.function.arguments or ""),
+        )
+        return None
+    return args
 
 
 @dataclass
@@ -234,6 +279,49 @@ class Orchestrator:
                 budget_check=budget_check,
                 issue_reporting=issue_reporting,
             )
+
+    def run_visualization(
+        self,
+        messages: list[dict],
+        data_schema: str,
+        data_domains: str,
+        openai_api_key: str | None = None,
+        model: str | None = None,
+        session_id: str | None = None,
+    ) -> OrchestratorResult:
+        """Build a chart for the latest user request, skipping the routing call.
+
+        For callers that already know the request wants a visualization, such
+        as visualization-only benchmarks measuring chart generation on its own.
+        The latest non-blank user message stands in for the description the
+        routing call would otherwise write.
+        """
+        description = next(
+            (
+                m["content"].strip()
+                for m in reversed(messages)
+                if m.get("role") == "user"
+                and isinstance(m.get("content"), str)
+                and m["content"].strip()
+            ),
+            "",
+        )
+        usage = Usage()
+        with self.agent.trace(session_id=session_id, name="visualization-run"):
+            tool_call = self._handle_create_visualization(
+                {"description": description} if description else {},
+                split_tool_calls(messages),
+                data_schema,
+                data_domains,
+                usage,
+                openai_api_key=openai_api_key,
+                model=model,
+            )
+        return OrchestratorResult(
+            tool_calls=[tool_call],
+            orchestrator_choice="render-visualization",
+            usage=usage,
+        )
 
     def _run(
         self,
@@ -435,11 +523,11 @@ class Orchestrator:
             msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("rebuff", getattr(resp, "usage", None))
@@ -501,11 +589,11 @@ class Orchestrator:
             msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("free_text_explain", getattr(resp, "usage", None))
@@ -678,13 +766,13 @@ class Orchestrator:
         # is not converging and a chart is better than another lookup.
         for _lookup in range(MAX_VALUE_LOOKUPS + 1):
             resp = _call_with_budget_guard(
-                gpt_client.chat.completions.create,
+                self.agent.create_completion,
                 usage,
+                gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
                 tools=tools,
                 tool_choice="required",
-                temperature=0.0,
                 max_completion_tokens=1024,
             )
             usage.add("orchestrate", getattr(resp, "usage", None))
@@ -721,7 +809,7 @@ class Orchestrator:
             )
             for tc in pending:
                 if tc in lookups:
-                    args = json.loads(tc.function.arguments)
+                    args = _tool_args(tc) or {}
                     if tc.function.name == GET_VISUALIZATION_SPEC:
                         answer = self._reveal_visualization_spec(args, messages)
                         logger.info("visualization spec revealed: %s", args.get("chart_id"))
@@ -765,6 +853,7 @@ class Orchestrator:
         }
 
         tool_calls = []
+        unreadable = 0
         has_vis = False
         has_filter = False
         has_rebuff = False
@@ -774,7 +863,10 @@ class Orchestrator:
 
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
-            tool_args = json.loads(tc.function.arguments)
+            tool_args = _tool_args(tc)
+            if tool_args is None:
+                unreadable += 1
+                continue
 
             if tool_name in INTERNAL_ORCHESTRATOR_TOOLS:
                 # Answered in the lookup loop above, and not an outcome of the
@@ -809,6 +901,9 @@ class Orchestrator:
                 has_explain = True
             elif tool_name == "OfferIssueReport":
                 has_issue_report = True
+
+        if unreadable and not tool_calls:
+            return [build_rebuff_toolcall(_UNREADABLE_REPLY_MESSAGE)], "rebuff"
 
         # Derive orchestrator_choice for backward compatibility
         if has_explain:

@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import type { DataSelections } from '../stores/dataFiltersStore';
+import type { DataSelection, DataSelections } from '../stores/dataFiltersStore';
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import type { ValidStatus } from '@/types/dataPackage';
-import { selectFilters } from './useFilterChips';
+import { formatSelectionFields, selectFilters } from './useFilterChips';
+import { formatTime } from 'udi-toolkit/react';
 
 const valid = {
   isValidIntervalFilter: (): ValidStatus => ({ isValid: 'yes' }),
@@ -41,5 +42,34 @@ describe('selectFilters', () => {
     };
     const ids = selectFilters(data, {}, active, {}, noAge).map((f) => f.id);
     expect(ids).not.toContain('host-filter-a');
+  });
+});
+
+describe('formatSelectionFields', () => {
+  const same = (s: string) => s;
+  const sel: DataSelection = {
+    dataSourceKey: 'events',
+    type: 'interval',
+    selection: {
+      created_timestamp: [1637434970889, 1749678978392],
+      age_at_event_days: [365.25, 4383],
+      size: [1, 2],
+    },
+  };
+  const formats: Record<string, string> = {
+    created_timestamp: 'epoch_ms',
+    age_at_event_days: 'days',
+  };
+
+  it('shows a time field in its format and other bounds as numbers', () => {
+    const chips = formatSelectionFields(sel, same, same, undefined, (f) => formats[f]);
+    expect(chips).toEqual([
+      {
+        label: 'created_timestamp',
+        value: `${formatTime(1637434970889, 'epoch_ms')}\u2013${formatTime(1749678978392, 'epoch_ms')}`,
+      },
+      { label: 'age_at_event_days', value: '1.0 y\u201312.0 y' },
+      { label: 'size', value: '1\u20132' },
+    ]);
   });
 });

@@ -8,6 +8,7 @@ import { UDI_PALETTE_KEY } from './paletteInjectKey';
 import type { ColDef } from 'ag-grid-community';
 import { type ParsedUDIGrammar } from './Parser';
 import type { ExtendedRowMapping } from './TableUtil';
+import { timeColumns } from './temporal';
 import {
   computeFieldDomains,
   getDomainLookupKey,
@@ -168,6 +169,7 @@ const colDefs = computed<ColDef[]>(() => {
   );
 
   const keys = Object.keys(groupedMapping);
+  const dateColumns = props.spec ? timeColumns(props.spec) : undefined;
   return [
     ...keys.map((key) => ({
       headerName: key,
@@ -178,6 +180,8 @@ const colDefs = computed<ColDef[]>(() => {
         udiColumnMapping: groupedMapping[key],
         // forward the consumer palette so cell colors match the charts
         palette: effectivePalette.value,
+        // time columns, so cells show dates, years and ages, not raw numbers
+        timeColumns: dateColumns,
       },
       /* eslint-disable  @typescript-eslint/no-explicit-any */
       valueGetter: (params: any) => {

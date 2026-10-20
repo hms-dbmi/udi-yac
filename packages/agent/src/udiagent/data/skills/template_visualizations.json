@@ -1654,6 +1654,29 @@
     "summary_template": "Displays how many <E> fall into each range of <F>, as adjacent bars."
   },
   {
+    "query_templates": [
+      "What is the distribution of <F1:q> for each <F2:n>?",
+      "Make a histogram of <F1:q>, stacked by <F2:n>.",
+      "How many <E> are there over <F1:q>, broken down by <F2:n>?"
+    ],
+    "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F1>\"}, \"right\": {\"literal\": null}}}, {\"binby\": {\"field\": \"<F1:q>\", \"output\": {\"bin_start\": \"start\", \"bin_end\": \"end\"}}}, {\"groupby\": [\"start\", \"end\", \"<F2>\"]}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"start\", \"type\": \"quantitative\", \"title\": \"<F1>\"}, {\"encoding\": \"x2\", \"field\": \"end\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"<F2:n>\", \"type\": \"nominal\"}]}}",
+    "creation_method": "template",
+    "chart_type": "histogram",
+    "chart_complexity": "complex",
+    "spec_key_count": 26,
+    "task_types": ["Characterize_Distribution"],
+    "tags": ["line_item", "histogram"],
+    "description": "Shows the distribution of a quantitative field as a histogram whose bars are stacked by a nominal field, e.g. how many records fall in each time range, split by category.",
+    "design_considerations": "Same equal-width bins as the plain histogram; binby then groupby adds the category to the bin keys. The renderer stacks bars that span x..x2 and carry a colour.",
+    "tasks": "Compare how a distribution is composed across groups; see which group dominates each range.",
+    "review_hint": "Check that the stacks sum to the plain histogram's bar heights, and that a date field shows dates on the x axis.",
+    "preview_bindings": null,
+    "name_hint": "histogram_stacked",
+    "shared_entities": [],
+    "title_template": "Histogram of <F1> by <F2>",
+    "summary_template": "Displays how many <E> fall into each range of <F1>, with each bar split by <F2>."
+  },
+  {
     "query_templates": ["What is the distribution of <F:q>?"],
     "spec_template": "{\"source\": {\"name\": \"<E>\", \"source\": \"<E.url>\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"<F>\"}, \"right\": {\"literal\": null}}}, {\"kde\": {\"field\": \"<F>\", \"output\": {\"sample\": \"<F>\", \"density\": \"density\"}}}], \"representation\": {\"mark\": \"area\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"<F>\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"density\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
     "creation_method": "template",

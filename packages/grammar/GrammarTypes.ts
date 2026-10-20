@@ -200,6 +200,13 @@ export interface BinBy extends DataTransformationBase {
     nice?: boolean;
 
     /**
+     * Make the bin width a nice multiple of this many field units, rather than
+     * of a power of ten — e.g. `365.25` bins an age in days by whole years.
+     * Optional. The renderer sets it for a column with a `udi:time_format`.
+     */
+    unit?: number;
+
+    /**
      * Output field names for the bin start and end. Optional.
      */
     output?: {

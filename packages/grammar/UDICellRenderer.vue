@@ -16,6 +16,7 @@ import {
 } from './TableUtil';
 import type { UDIPalette } from './Palette';
 import { toTableRampInterpolator, toTableCategoryColors } from './Palette';
+import { formatTime, timeFormatOf } from './temporal';
 
 // Define props
 
@@ -27,6 +28,8 @@ export interface UDICellRendererParams<
   udiColumnMapping: ExtendedRowMapping[];
   /** Consumer-supplied color palette, forwarded from TableComponent. */
   palette?: UDIPalette;
+  /** Time columns of the spec (`timeColumns`), forwarded from TableComponent. */
+  timeColumns?: Map<string, string>;
 }
 
 export interface UDICellRendererProps {
@@ -126,6 +129,11 @@ function getTextValue(layer: string) {
   const textMapping = rowMapping.find((m) => m.encoding === 'text');
   if (!textMapping) return null;
   let value = props.params.data?.[textMapping.field];
+  const timeFormat =
+    typeof value === 'number' && props.params.timeColumns
+      ? timeFormatOf(props.params.timeColumns, textMapping.field)
+      : undefined;
+  if (timeFormat) value = formatTime(value, timeFormat);
   if (value instanceof Date) {
     value = value.toLocaleDateString();
   }

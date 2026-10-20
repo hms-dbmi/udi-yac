@@ -4745,6 +4745,40 @@ def generate():
         tasks="Characterize the shape of a distribution; identify modes, skewness, and gaps.",
     )
 
+    # Stacked histogram: the same bins, each split by a nominal field.
+    df = add_row(
+        df,
+        query_templates=[
+            "What is the distribution of <F1:q> for each <F2:n>?",
+            "Make a histogram of <F1:q>, stacked by <F2:n>.",
+            "How many <E> are there over <F1:q>, broken down by <F2:n>?",
+        ],
+        spec=(
+            Chart()
+            .source("<E>", "<E.url>")
+            .filter(Expr.not_null("<F1>"))
+            .binby(field="<F1:q>", output={"bin_start": "start", "bin_end": "end"})
+            .groupby(["start", "end", "<F2>"])
+            .rollup({"count": Op.count()})
+            .mark("bar")
+            .x(field="start", type="quantitative", title="<F1>")
+            .x2(field="end", type="quantitative")
+            .y(field="count", type="quantitative")
+            .color(field="<F2:n>", type="nominal")
+        ),
+        chart_type=ChartType.HISTOGRAM,
+        task_types=[
+            TaskType.CHARACTERIZE_DISTRIBUTION,
+        ],
+        description="Shows the distribution of a quantitative field as a histogram whose bars are stacked by a nominal field, e.g. how many records fall in each time range, split by category.",
+        title_template="Histogram of <F1> by <F2>",
+        summary_template="Displays how many <E> fall into each range of <F1>, with each bar split by <F2>.",
+        design_considerations="Same equal-width bins as the plain histogram; binby then groupby adds the category to the bin keys. The renderer stacks bars that span x..x2 and carry a colour.",
+        tasks="Compare how a distribution is composed across groups; see which group dominates each range.",
+        review_hint="Check that the stacks sum to the plain histogram's bar heights, and that a date field shows dates on the x axis.",
+        name_hint="histogram_stacked",
+    )
+
     # ---------------------------------------------------------------
     # KDE / Area chart
     # ---------------------------------------------------------------

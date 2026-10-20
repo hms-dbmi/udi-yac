@@ -26,6 +26,7 @@ vi.mock('udi-toolkit/react', () => ({
   clearAllSelections: () => Promise.resolve(),
   loadDataPackage: () => Promise.resolve({ sources: [], fieldDomains: [] }),
   setQueryBackend: () => {},
+  setTimeFormats: () => Promise.resolve(),
   createRemoteBackend: () => ({}),
 }));
 
@@ -267,6 +268,18 @@ describe('UDIChat — issue reporting', () => {
     await openSessionMenu();
     await userEvent.click(await screen.findByRole('menuitem', { name: /Report an issue/ }));
     expect(await screen.findByRole('dialog')).toHaveTextContent('Report an issue');
+  });
+});
+
+describe('UDIChat — apiBaseUrl', () => {
+  it('drops a trailing slash, so endpoints are not requested as //v1/...', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response('[]')));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<UDIChat {...seedConfig} apiBaseUrl="https://agent.example/" />);
+    await vi.waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('https://agent.example/v1/yac/examples'),
+    );
+    vi.unstubAllGlobals();
   });
 });
 

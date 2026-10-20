@@ -529,15 +529,15 @@ function UDIChatValidated(props: UDIChatConfig) {
 }
 
 export function UDIChat(props: UDIChatConfig) {
+  // Every endpoint is `${apiBaseUrl}/v1/...`, so a trailing slash asks for
+  // `//v1/...`, which the agent 404s. `?.` leaves a missing value for
+  // validateConfig to report.
+  const apiBaseUrl = props.apiBaseUrl?.replace(/\/+$/, '');
   return (
     <ErrorBoundary
-      issueReport={
-        props.issueReporting
-          ? { apiBaseUrl: props.apiBaseUrl, authToken: props.authToken }
-          : undefined
-      }
+      issueReport={props.issueReporting ? { apiBaseUrl, authToken: props.authToken } : undefined}
     >
-      <UDIChatValidated {...props} />
+      <UDIChatValidated {...props} apiBaseUrl={apiBaseUrl} />
     </ErrorBoundary>
   );
 }

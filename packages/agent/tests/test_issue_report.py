@@ -205,6 +205,8 @@ def _orchestrate(issue_reporting, tool_args):
     agent = SimpleNamespace(
         gpt_model_name="test-model",
         _get_gpt_client=lambda _key=None: client,
+        # Every LLM call goes through UDIAgent.create_completion.
+        create_completion=lambda c, **kw: c.chat.completions.create(**kw),
         trace=lambda **_kw: contextlib.nullcontext(),
     )
     result = Orchestrator(agent=agent).run(
