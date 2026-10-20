@@ -224,7 +224,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     selectionMatching?: FilterMatch | undefined;
     selectionEntityRelationship?: FilterEntityRelationship | null;
     selectionSourceKey?: string;
-  }): string | null {
+  }): string | ReturnType<typeof escape> | null {
     // Check that the filter is being applied
     const dataSelection = dataSelections.value[selectionName];
     if (!dataSelection || !dataSelection.selection) return null;
@@ -276,15 +276,20 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     const totalTable = relevantTable.dest.reify();
     const filteredTable = relevantTable.dest.filter(relevantFilter).reify();
 
+    // Rows whose key is one of `ids`. A set lookup rather than an expression
+    // OR-ing one `d[key] === id` per id: the ids come one per filtered origin
+    // row, so a brush over most of a large table wrote thousands of terms, and
+    // parsing that chain recursed once per term until the stack ran out
+    // ("too much recursion" in Firefox).
+    const keyIn = (ids: Iterable<unknown>) => {
+      const set = new Set(ids);
+      if (set.size === 0) return 'false';
+      return escape((d: Record<string, unknown>) => set.has(d[targetKey]));
+    };
+
     // If the matching is 'any' or not specified, we just return the filter expression
     if (selectionMatching != 'all') {
-      const originIds = filteredTable.array(originKey) as string[];
-
-      if (originIds.length === 0) return 'false';
-
-      return originIds
-        .map((id) => `d['${targetKey}'] === '${id}'`)
-        .join(' || ');
+      return keyIn(filteredTable.array(originKey) as string[]);
     }
 
     // Otherwise, the matching is 'all', meaning we need to find entities that satisfy the filter completely
@@ -307,15 +312,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       if (f > 0 && f === t) exclusiveOriginIds.push(id);
     }
 
-    // Return a list of OR-ed ids as a filter string for the target table
-    const orExpression =
-      exclusiveOriginIds.length > 0
-        ? exclusiveOriginIds
-            .map((id) => `d['${targetKey}'] === '${id}'`)
-            .join(' || ')
-        : 'false'; // nothing qualifies
-
-    return orExpression;
+    return keyIn(exclusiveOriginIds);
   }
 
   const loading = ref<boolean>(true);
@@ -667,7 +664,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           .reify();
       } else if ('binby' in transform) {
         const inTable = getInTable(transform.in);
-        const { field, bins = 10, nice = true } = transform.binby;
+        const { field, bins = 10, nice = true, unit } = transform.binby;
         const { bin_start = 'start', bin_end = 'end' } = transform.binby
           .output ?? {
           bin_start: 'start',
@@ -689,18 +686,39 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           );
           extentTable = unfilteredInTable;
         }
-        const [binMin, binMax, binStep] = agg(
-          extentTable,
-          op.bins(field, bins, nice),
+        // A `unit` makes the width a nice multiple of it (whole years, for a
+        // time column) rather than of a power of ten: bin the values counted
+        // in units, then scale the edges back. The SQL compiler does the same.
+        const scale = unit ?? 1;
+        const unitTable = unit
+          ? extentTable.params({ binField: field, binUnit: unit }).derive({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              __binby_units: (d: any, $: any) => d[$.binField] / $.binUnit,
+            })
+          : extentTable;
+        const [unitMin, unitMax, unitStep] = agg(
+          unitTable,
+          op.bins(unit ? '__binby_units' : field, bins, nice),
         ) as [number, number, number];
+        const [binMin, binMax, binStep] = [
+          unitMin * scale,
+          unitMax * scale,
+          unitStep * scale,
+        ];
 
         const fieldKey = JSON.stringify(field);
-        const groupbyObject: { [key: string]: string } = {
+        const binColumns: { [key: string]: string } = {
           [bin_start]: `d => op.bin(d[${fieldKey}], ${binMin}, ${binMax}, ${binStep}, 0)`,
           [bin_end]: `d => op.bin(d[${fieldKey}], ${binMin}, ${binMax}, ${binStep}, 1)`,
         };
 
-        currentTable.table = inTable.groupby(groupbyObject);
+        // Bin edges become real columns, then the grouping, as the SQL compiler
+        // does: grouping by the computed keys alone left no `start`/`end`
+        // column for a later step to name, so a `groupby` adding a category
+        // to the bins (a stacked histogram) failed in the browser only.
+        currentTable.table = inTable
+          .derive(binColumns)
+          .groupby(bin_start, bin_end);
       } else if ('rollup' in transform) {
         const inTable = getInTable(transform.in);
         const aggregateFunctions: { [key: string]: TableExpr } = {};
@@ -872,6 +890,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         }
 
         const partitions = inTable.partitions();
+        const column = inTable.column(field);
         for (let i = 0; i < partitions.length; i++) {
           const partition = partitions[i];
           // partition is a list of indices that define a group
@@ -879,7 +898,12 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           if (!partition || partition.length < 2) {
             continue; // skip empty or single-element partitions
           }
-          const values = partition.map((i) => inTable.get(field, i));
+          // Not `partition.map`: a partition is a Uint32Array, and its `.map`
+          // returns one too, truncating every value to an unsigned 32-bit
+          // integer (39.1 → 39; an epoch-ms date overflows, so its density
+          // came out 0 everywhere). `column.at` reads by backing-data index,
+          // which is what a partition holds.
+          const values = Array.from(partition, (row) => column?.at(row));
           const densityEstimates = density1d(values, {
             bandwidth,
             bins: samples,

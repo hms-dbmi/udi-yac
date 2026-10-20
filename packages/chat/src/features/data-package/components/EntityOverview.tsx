@@ -334,7 +334,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
         isKey: keyBadgeFields.has(field.name),
       };
       if (domain?.type === 'interval') {
-        num.push({ ...base, summary: formatIntervalDomain(domain) });
+        num.push({ ...base, summary: formatIntervalDomain(domain, field['udi:time_format']) });
         continue;
       }
       if (domain) {

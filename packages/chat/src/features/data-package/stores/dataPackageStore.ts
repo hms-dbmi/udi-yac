@@ -18,7 +18,9 @@ import {
   loadDataPackage,
   createRemoteBackend,
   setQueryBackend,
+  setTimeFormats,
   type SourceSpec,
+  type TimeFormats,
 } from 'udi-toolkit/react';
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready' | 'error';
@@ -105,6 +107,8 @@ export interface DataPackageState {
   /** A field's declared `udi:data_type` (quantitative / ordinal / nominal).
    *  Available straight from the schema, unlike domains, which load from CSVs. */
   getFieldDataType: (entity: string, field: string) => string | undefined;
+  /** A field's declared `udi:time_format` (e.g. `epoch_ms`), if it holds dates. */
+  getTimeFormat: (entity: string, field: string) => string | undefined;
   /** Whether a resource declares this column at all. `getFieldLabel` humanizes
    *  what it cannot find rather than reporting the miss, so a caller holding a
    *  column but not its entity — a chart title naming a column from one of
@@ -193,6 +197,18 @@ function computeQuantitativeSourceFields(dp: DataPackage | null): Record<string,
       .map((f) => f.name);
   }
   return fieldsMap;
+}
+
+/** Entity → field → `udi:time_format`, for the toolkit's date rendering. */
+function computeTimeFormats(dp: DataPackage): TimeFormats {
+  const formats: TimeFormats = {};
+  for (const resource of dp.resources ?? []) {
+    for (const f of resource.schema?.fields ?? []) {
+      const format = f['udi:time_format'];
+      if (format) (formats[resource.name] ??= {})[f.name] = format;
+    }
+  }
+  return formats;
 }
 
 function computeCategoricalSourceFields(dp: DataPackage | null): Record<string, string[]> | null {
@@ -380,6 +396,11 @@ export function createDataPackageStore() {
       return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:data_type'];
     },
 
+    getTimeFormat: (entity: string, field: string): string | undefined => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:time_format'];
+    },
+
     hasField: (entity: string, field: string): boolean => {
       const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
       return !!resource?.schema?.fields?.some((f) => f.name === field);
@@ -458,6 +479,8 @@ export function createDataPackageStore() {
             (r) => r['udi:row_count'] && r['udi:row_count']! > 0,
           );
         }
+        // Before applyDataPackage, so the first charts already render dates.
+        await setTimeFormats(computeTimeFormats(json));
         applyDataPackage(set, json);
         set({ loadingPhase: 'domains' });
         await loadDomainsFromCSVs(set, json, fetchOptions);
@@ -480,6 +503,7 @@ export function createDataPackageStore() {
             (r) => r['udi:row_count'] && r['udi:row_count'] > 0,
           ),
         };
+        await setTimeFormats(computeTimeFormats(filtered));
         applyDataPackage(set, filtered);
 
         if (precomputedDomains) {

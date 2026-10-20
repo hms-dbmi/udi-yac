@@ -733,6 +733,10 @@ class PipelineCompiler:
         fname = spec["field"]
         bins = spec.get("bins", 10)
         nice = spec.get("nice", True)
+        # A unit makes the bin width a nice multiple of it (whole years, for a
+        # time column): bin the values counted in units, then scale the edges
+        # back, as the Arquero executor does.
+        scale = float(spec.get("unit") or 1.0)
         output = spec.get("output") or {}
         start = output.get("bin_start", "start")
         end = output.get("bin_end", "end")
@@ -753,7 +757,10 @@ class PipelineCompiler:
         mx = rows[0]["mx"] if rows else None
         if mn is None or mx is None:
             raise UnsupportedQueryError(f"binby field '{fname}' has no data")
-        bin_min, _bin_max, bin_step = arquero_bins(float(mn), float(mx), bins, nice)
+        bin_min, _bin_max, bin_step = arquero_bins(
+            float(mn) / scale, float(mx) / scale, bins, nice
+        )
+        bin_min, bin_step = bin_min * scale, bin_step * scale
 
         in_ref = self._in_ref(st, transform.get("in"))
         # Arquero op.bin: step * floor((x - min) / step) + min  (offset 0 / 1)

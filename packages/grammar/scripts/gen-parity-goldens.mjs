@@ -501,6 +501,35 @@ const CASES = [
     },
   ],
   [
+    // A stacked histogram: binby, then a groupby adding a category to the bins.
+    // The browser executor once grouped by the bin keys without making them
+    // columns, so naming `start`/`end` again failed there and not in SQL.
+    'binby-then-groupby',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        { binby: { field: 'body_mass_g', bins: 10, nice: true } },
+        { groupby: ['start', 'end', 'species'] },
+        { rollup: { count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // Bins as nice multiples of a unit (here 365.25, a year in days) rather
+    // than of a power of ten. A non-integer unit, so both executors must scale
+    // the edges back the same way.
+    'binby-unit',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        { binby: { field: 'body_mass_g', bins: 10, nice: true, unit: 365.25 } },
+        { rollup: { count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
     'derive-percent-of-max',
     {
       source: src('penguins'),

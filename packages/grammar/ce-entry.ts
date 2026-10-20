@@ -72,6 +72,10 @@ export type {
   RemoteBackendConfig,
 } from './queryBackend';
 
+// Time columns (`udi:time_format`), so charts and tables show dates, years and ages.
+export { setTimeFormats, formatTime } from './temporal';
+export type { TimeFormats } from './temporal';
+
 export interface QueryDataOptions {
   /** Maps entity names → canonical URLs, overriding URLs embedded in the spec. */
   sourceResolver?: Record<string, string>;
