@@ -70,6 +70,10 @@ export default function AppShell() {
             model={env.VITE_UDI_MODEL?.trim() || undefined}
             dataPackagePath={selection.dataPackageUrl}
             initialSession={initialSession}
+            // A predefined session opens as a dashboard to look at; Explore
+            // Data opens the chat. Only once it has loaded: a failed load
+            // leaves nothing to look at.
+            readOnly={initialSession !== undefined}
             savedSessionsKey={pkg.id}
           />
         </main>

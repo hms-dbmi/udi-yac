@@ -17,7 +17,7 @@ The [home page](/udi-yac/) lists the datasets you can explore:
 
 Each dataset card offers two ways in:
 
-- **A predefined session** opens a conversation and dashboard someone has already built. You don't need an API key to look around in one (see below).
+- **A predefined session** opens, read-only, a dashboard someone has already built. You don't need an API key to look around in one (see below).
 - **New session** opens an empty dashboard, ready for your questions.
 
 Inside the app, the bar at the top switches dataset or session at any time. Switching reloads the page, so anything you have not [saved](/udi-yac/docs/using/sessions/) is lost.
@@ -33,7 +33,7 @@ The public site uses your own OpenAI key to answer questions. Until you add one,
 - Each question sends the agent your conversation and the dataset's structure (table and field names, descriptions and field values), not its rows.
 - The key icon at the top of the chat opens **API Key & Usage**. It shows the tokens this conversation has used, and **Clear key** removes the key from this browser.
 
-**Without a key** you can still open a predefined session and explore it: charts render, filters and brushing work, and the dropdowns under each chart can still change its fields, because those changes don't call the model. Only asking a new question needs the key.
+**Without a key** you can still open a predefined session: it opens read-only, and its charts, filters and brushing all work. Select **Explore Data** to open the chat. The dropdowns under each chart then change its fields without calling the model, so they work without a key too. Only asking a new question needs the key.
 
 ## Ask a question
 

@@ -9,7 +9,9 @@ A **session** is a conversation together with the dashboard it built: the chat, 
 
 ## Predefined sessions
 
-Some datasets come with sessions already built, listed on their card on the [home page](/udi-yac/) and in the **Session** picker at the top of the app. Opening one is the quickest way to see what YAC can do, and it needs no API key. You can keep asking questions from where the session leaves off once you add a key.
+Some datasets come with sessions already built, listed on their card on the [home page](/udi-yac/) and in the **Session** picker at the top of the app. Opening one is the quickest way to see what YAC can do, and it needs no API key.
+
+A predefined session opens **read-only**: the dashboard fills the page, and brushing, filters, the table view and each chart's info still work, while the chat and the editing controls are hidden. Select **Explore Data** (bottom right) to open the chat and carry on from where the session leaves off. Its charts and filters stay; the conversation that built them is hidden from the chat.
 
 | Dataset                      | Session         | What it covers                                                                                                              |
 | ---------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -19,7 +21,7 @@ Your changes to a predefined session are not saved back to it. Save your own cop
 
 ## Save in this browser
 
-Open the **Session** menu above the dashboard and choose **Saved in browser…**.
+Open the **Session** menu above the dashboard and choose **Saved in browser…**. In a predefined session, select **Explore Data** first: read-only hides the menu.
 
 - Type a name and select **Save** to store the current session.
 - The list below shows what you have saved for this dataset, newest first. **Load** replaces the current conversation and dashboard with the saved one. The trash icon deletes it.
