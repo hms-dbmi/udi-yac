@@ -6,6 +6,7 @@ import type {
   DashboardExportVisualization,
   DashboardLayout,
 } from '../stores/dashboardStore';
+import type { ExportedFilterState } from '../stores/dataFiltersStore';
 import { DEFAULT_CARD_H, DEFAULT_CARD_W, MIN_CARD_H, MIN_CARD_W } from './gridDefaults';
 import { packAllRowMajor } from './gridPacking';
 
@@ -24,6 +25,10 @@ export interface SessionExport {
   /** Optional grid configuration (cols + row height). Old exports omit it
    *  and the importer falls back to current defaults. */
   grid?: { cols: number; rowHeight: number };
+  /** The chat filters as the user left them. Older exports omit it, and
+   *  their filters are rebuilt from the messages alone, row-level unless a
+   *  FilterData call said otherwise. */
+  filters?: ExportedFilterState;
 }
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -191,6 +196,37 @@ function parseSessionUsage(raw: unknown): SessionUsage {
   };
 }
 
+const SCOPE_MATCHES = new Set(['any', 'all', 'none']);
+
+/** Lenient: an entry that isn't a well-formed selection or scope is dropped,
+ *  and that filter falls back to what its messages say. */
+function parseFilterState(raw: unknown): ExportedFilterState | undefined {
+  if (!isObject(raw)) return undefined;
+  const selections: ExportedFilterState['selections'] = {};
+  for (const [id, sel] of Object.entries(isObject(raw.selections) ? raw.selections : {})) {
+    if (
+      isObject(sel) &&
+      typeof sel.dataSourceKey === 'string' &&
+      (sel.type === 'point' || sel.type === 'interval') &&
+      (sel.selection === null || isObject(sel.selection))
+    ) {
+      selections[id] = sel as unknown as ExportedFilterState['selections'][string];
+    }
+  }
+  const scopes: ExportedFilterState['scopes'] = {};
+  for (const [id, scope] of Object.entries(isObject(raw.scopes) ? raw.scopes : {})) {
+    if (
+      isObject(scope) &&
+      typeof scope.entity === 'string' &&
+      SCOPE_MATCHES.has(scope.match as string)
+    ) {
+      scopes[id] = { entity: scope.entity, match: scope.match as 'any' | 'all' | 'none' };
+    }
+  }
+  const removed = isStringArray(raw.removed) ? raw.removed : [];
+  return { selections, scopes, removed };
+}
+
 export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
   if (!isObject(raw)) return { ok: false, error: 'Expected a JSON object at the top level' };
   if (raw.version !== SESSION_EXPORT_VERSION)
@@ -222,6 +258,7 @@ export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
   ) {
     grid = { cols: raw.grid.cols, rowHeight: raw.grid.rowHeight };
   }
+  const filters = parseFilterState(raw.filters);
   return {
     ok: true,
     value: {
@@ -234,6 +271,7 @@ export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
       visualizations,
       layout: layoutResult.value,
       ...(grid ? { grid } : {}),
+      ...(filters ? { filters } : {}),
     },
   };
 }
@@ -243,6 +281,7 @@ export function buildSessionExport(args: {
   dashboard: DashboardExport;
   grid?: { cols: number; rowHeight: number };
   sessionUsage?: SessionUsage;
+  filters?: ExportedFilterState;
 }): SessionExport {
   return {
     version: SESSION_EXPORT_VERSION,
@@ -254,6 +293,7 @@ export function buildSessionExport(args: {
     visualizations: args.dashboard.visualizations,
     layout: args.dashboard.layout,
     ...(args.grid ? { grid: args.grid } : {}),
+    ...(args.filters ? { filters: args.filters } : {}),
   };
 }
 

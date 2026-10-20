@@ -65,6 +65,7 @@ export function SessionImportExportButton() {
       dashboard,
       grid: { cols: state.gridCols, rowHeight: state.gridRowHeight },
       sessionUsage: conversation.sessionUsage,
+      filters: dataFiltersStore.getState().exportFilterState(),
     });
     saveBlob(JSON.stringify(payload, null, 2), `udi-session_${timestamp()}.json`);
     trackEvent('session_exported', {
@@ -72,7 +73,7 @@ export function SessionImportExportButton() {
       vizCount: dashboard.visualizations.length,
       itemCount: dashboard.layout.items.length,
     });
-  }, [conversationStore, dashboardStore, trackEvent]);
+  }, [conversationStore, dashboardStore, dataFiltersStore, trackEvent]);
 
   const handlePickFile = useCallback(() => {
     fileInputRef.current?.click();

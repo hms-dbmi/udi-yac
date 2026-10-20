@@ -33,6 +33,12 @@ export function applySessionExport(
   stores.dataFilters?.getState().resetFilters();
   const conversation = stores.conversation.getState();
   conversation.loadConversation(session.conversation.messages);
+  // The user's edits on top of what the messages rebuild.
+  if (session.filters) {
+    stores.dataFilters
+      ?.getState()
+      .restoreFilterState(session.filters, session.conversation.messages);
+  }
   if (session.conversation.sessionUsage) {
     conversation.setSessionUsage(session.conversation.sessionUsage);
   }

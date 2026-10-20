@@ -88,6 +88,18 @@ export function isValidSelection(sel: DataSelection, validate: ValidateFilterFn)
   );
 }
 
+/**
+ * The chat filters as the user left them, for a session export. The messages
+ * alone rebuild only what the agent asked for; this carries the user's edits,
+ * scope changes and removals on top. Brushes stay with their charts, and host
+ * filters with the host page.
+ */
+export interface ExportedFilterState {
+  selections: DataSelections;
+  scopes: Record<string, FilterScope>;
+  removed: string[];
+}
+
 export interface DataFiltersState {
   dataSelections: DataSelections;
   internalDataSelections: DataSelections;
@@ -131,6 +143,10 @@ export interface DataFiltersState {
   syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => void;
   /** Set or (with `null`) drop a filter's scope. */
   setFilterScope: (id: string, scope: FilterScope | null) => void;
+  exportFilterState: () => ExportedFilterState;
+  /** Put exported chat filters back, and mark every FilterData call in
+   *  `messages` applied so the next sync does not redo — and undo — them. */
+  restoreFilterState: (state: ExportedFilterState, messages: Message[]) => void;
   /** Mirror brush selections in. `messageCount` anchors each brush filter that
    *  gets its first value here (see `brushAnchors`). */
   updateInternalDataSelections: (newFilters: DataSelections, messageCount?: number) => void;
@@ -412,6 +428,34 @@ export function createDataFiltersStore() {
           removedFilters: removed,
         });
       }
+    },
+
+    exportFilterState: () => {
+      const { dataSelections, filterScopes, removedFilters } = get();
+      const isChat = ([k]: [string, unknown]) => k.startsWith('message-filter-');
+      return {
+        selections: Object.fromEntries(Object.entries(dataSelections).filter(isChat)),
+        scopes: Object.fromEntries(Object.entries(filterScopes).filter(isChat)),
+        removed: Object.keys(removedFilters).filter((k) => k.startsWith('message-filter-')),
+      };
+    },
+
+    restoreFilterState: (exported: ExportedFilterState, messages: Message[]) => {
+      const applied: Record<string, true> = {};
+      messages.forEach((message, i) => {
+        for (const { toolCallIndex } of extractFilterOperationsFromMessage(message)) {
+          applied[messageFilterKeyWithToolCall(i, toolCallIndex, message)] = true;
+        }
+      });
+      set((s) => ({
+        dataSelections: { ...s.dataSelections, ...exported.selections },
+        filterScopes: { ...s.filterScopes, ...exported.scopes },
+        removedFilters: {
+          ...s.removedFilters,
+          ...Object.fromEntries(exported.removed.map((id) => [id, true as const])),
+        },
+        appliedFilterOps: { ...s.appliedFilterOps, ...applied },
+      }));
     },
 
     setFilterScope: (id: string, scope: FilterScope | null) =>
