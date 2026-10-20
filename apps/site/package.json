@@ -1,0 +1,21 @@
+{
+  "name": "udi-yac-site",
+  "private": true,
+  "type": "module",
+  "description": "Landing page and docs for YAC, published at /udi-yac/ on GitHub Pages",
+  "scripts": {
+    "sync-docs": "node scripts/sync-docs.mjs",
+    "dev": "pnpm run sync-docs && astro dev",
+    "build": "pnpm run sync-docs && astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.0",
+    "astro": "^7.4.0",
+    "sharp": "^0.35.0",
+    "starlight-typedoc": "^0.23.0",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.14.0",
+    "typescript": "~6.0.3"
+  }
+}

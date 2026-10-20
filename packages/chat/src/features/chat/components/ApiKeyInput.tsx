@@ -52,7 +52,8 @@ export function ApiKeyInput({ onSubmit }: ApiKeyInputProps) {
       </div>
       {error && <p className="udi:text-xs udi:text-destructive udi:mt-1">{error}</p>}
       <p className="udi:text-xs udi:text-muted-foreground udi:mt-1.5">
-        Your key is sent to the backend via the X-OpenAI-Key header and is not stored.
+        Your key stays in this browser and goes to the backend with each request, in the
+        X-OpenAI-Key header. The backend does not keep it.
       </p>
     </div>
   );

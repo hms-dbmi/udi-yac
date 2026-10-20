@@ -8,6 +8,8 @@ Formerly four separate repositories, merged with full commit history preserved v
 git log "$(git log --merges --grep="Add 'packages/chat/'" -n1 --format=%H)^2"
 ```
 
+**Try it:** [hms-dbmi.github.io/udi-yac](https://hms-dbmi.github.io/udi-yac/), with sample datasets, predefined sessions and [docs](https://hms-dbmi.github.io/udi-yac/docs/using/).
+
 ## Packages
 
 | Directory                                    | Published as                                                        | Stack                    | Role                                       |
@@ -102,3 +104,7 @@ Dev/test data packages live once at [`sample-data/`](sample-data) (the single so
 ## Releases
 
 Tags are per-package: `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z`. Because `udi-yac` depends on `udi-toolkit: workspace:*` (rewritten to the exact in-tree version at publish time), **publish udi-toolkit before udi-yac** whenever the toolkit version moved.
+
+## Citation
+
+Lange D, Gao S, Sui P, Misner P, van den Brandt A, Money A, Akhmetov N, Choy L, Zitnik M, Gehlenborg N. **YAC: Bridging Natural Language and Interactive Visual Exploration with Generative AI for Biomedical Data Discovery.** arXiv:2509.19182, 2025. [doi:10.48550/arXiv.2509.19182](https://doi.org/10.48550/arXiv.2509.19182). BibTeX is on the [landing page](https://hms-dbmi.github.io/udi-yac/#cite-yac); GitHub's **Cite this repository** reads [`CITATION.cff`](CITATION.cff).
