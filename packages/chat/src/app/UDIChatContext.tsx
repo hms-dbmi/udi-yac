@@ -222,6 +222,31 @@ export function useDownloadButtonLabel(): string {
 }
 
 // ---------------------------------------------------------------------------
+// Consumer-provided key for sessions saved in the browser
+// ---------------------------------------------------------------------------
+
+const SavedSessionsKeyContext = createContext<string | undefined>(undefined);
+
+export function SavedSessionsKeyProvider({
+  storageKey,
+  children,
+}: {
+  storageKey: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <SavedSessionsKeyContext.Provider value={storageKey || undefined}>
+      {children}
+    </SavedSessionsKeyContext.Provider>
+  );
+}
+
+/** `undefined` when the consumer did not opt in to saved sessions. */
+export function useSavedSessionsKey(): string | undefined {
+  return useContext(SavedSessionsKeyContext);
+}
+
+// ---------------------------------------------------------------------------
 // Consumer-provided entity icon overrides
 // ---------------------------------------------------------------------------
 

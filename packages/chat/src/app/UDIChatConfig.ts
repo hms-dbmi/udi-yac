@@ -151,6 +151,14 @@ export interface UDIChatConfig {
    */
   initialSession?: unknown;
   /**
+   * Turns on "Saved in browser" in the dashboard's Session menu: the user can
+   * save the current session under a name, and load or delete the sessions
+   * saved under this key. They live in this origin's `localStorage`, and a
+   * session only makes sense against the data package it was built on, so
+   * use one key per package. Unset, the menu offers file export/import only.
+   */
+  savedSessionsKey?: string;
+  /**
    * Filters set by the embedding page. Each shows as a chip in the Filters
    * bar and filters every chart, like a chat filter; the user can adjust,
    * clear or remove it there. Entries are matched by `id` and applied again

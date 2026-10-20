@@ -1,0 +1,32 @@
+{
+  "packages": [
+    {
+      "id": "pcx",
+      "title": "Clinical cancer cohort (pcx)",
+      "description": "De-identified clinical records for 969 patients across 7 linked tables: demographics, disease events, medical therapy, radiation, surgery, survival and treatment summary.",
+      "datapackage": "pcx/datapackage.json",
+      "sessions": [
+        {
+          "id": "demo",
+          "title": "Cohort tour",
+          "description": "Age at diagnosis, treatment sequencing, survival by diagnosis cohort, resection extent, radiation sites and disease events.",
+          "path": "pcx/sessions/demo.json"
+        }
+      ]
+    },
+    {
+      "id": "hubmap",
+      "title": "HuBMAP",
+      "description": "Donor, sample and dataset metadata from the Human BioMolecular Atlas Program portal.",
+      "datapackage": "hubmap/datapackage.json",
+      "sessions": []
+    },
+    {
+      "id": "penguins",
+      "title": "Palmer penguins",
+      "description": "Body measurements for 344 penguins of three species: a small, single-table dataset to try YAC on.",
+      "datapackage": "penguins/datapackage.json",
+      "sessions": []
+    }
+  ]
+}

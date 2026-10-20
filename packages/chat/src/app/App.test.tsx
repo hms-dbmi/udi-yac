@@ -1,10 +1,11 @@
 /**
  * @vitest-environment jsdom
  *
- * The standalone app's one piece of real logic: `VITE_UDI_INITIAL_SESSION`
- * names a file, and render is held until that fetch settles. Rendering early
- * is not merely blank — `UDIChat` restores the persisted layout when
- * `initialSession` is null, so a late arrival would overwrite itself.
+ * The standalone app's two pieces of real logic. A session file (from
+ * `VITE_UDI_INITIAL_SESSION` or a catalog `?session=`) holds the render until
+ * its fetch settles. Rendering early is not merely blank — `UDIChat` restores
+ * the persisted layout when `initialSession` is null, so a late arrival would
+ * overwrite itself. And `?package=` picks the data package from the catalog.
  *
  * `env` reads `import.meta.env` at module load, so each case stubs the
  * variable and then imports App fresh.
@@ -74,5 +75,55 @@ describe('App — initial session', () => {
     expect(await screen.findByTestId('udi-chat')).toBeTruthy();
     expect(chatProps.mock.lastCall?.[0].initialSession).toBeUndefined();
     expect(error).toHaveBeenCalled();
+  });
+});
+
+describe('App — catalog selection', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('opens a catalog package from ?package=, ignoring the env package', async () => {
+    vi.stubEnv('VITE_UDI_INITIAL_SESSION', '');
+    vi.stubEnv('VITE_UDI_REMOTE_PACKAGE', 'somewhere-else');
+    window.history.replaceState(null, '', '/?package=penguins');
+    await renderApp();
+    const props = chatProps.mock.calls[0][0];
+    expect(props.dataPackagePath).toBe(`${location.origin}/data/penguins/datapackage.json`);
+    expect(props.remotePackage).toBeUndefined();
+    expect(props.savedSessionsKey).toBe('penguins');
+  });
+
+  it('seeds the chosen predefined session', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve({ version: 1 }) }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/?package=pcx&session=demo');
+    await renderApp();
+    expect(await screen.findByTestId('udi-chat')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(`${location.origin}/data/pcx/sessions/demo.json`);
+  });
+
+  it('falls back to the env package for an unknown id, with no saved-sessions key', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubEnv('VITE_UDI_INITIAL_SESSION', '');
+    vi.stubEnv('VITE_UDI_REMOTE_PACKAGE', '');
+    vi.stubEnv('VITE_UDI_DATA_PACKAGE', 'https://example.org/datapackage.json');
+    window.history.replaceState(null, '', '/?package=nope');
+    await renderApp();
+    const props = chatProps.mock.calls[0][0];
+    expect(props.dataPackagePath).toBe('https://example.org/datapackage.json');
+    expect(props.savedSessionsKey).toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('recognises the env package as a catalog entry', async () => {
+    vi.stubEnv('VITE_UDI_INITIAL_SESSION', '');
+    vi.stubEnv('VITE_UDI_REMOTE_PACKAGE', '');
+    vi.stubEnv('VITE_UDI_DATA_PACKAGE', '/data/hubmap/datapackage.json');
+    await renderApp();
+    expect(chatProps.mock.calls[0][0].savedSessionsKey).toBe('hubmap');
+    expect(screen.getByLabelText<HTMLSelectElement>('Dataset').value).toBe('hubmap');
   });
 });
