@@ -356,9 +356,9 @@ class TestCredentialFailureResponse:
         exc = APIConnectionError(request=httpx.Request("POST", "https://example.com"))
         with patch.object(self.server_app, "config", _config(openai_api_key="sk")):
             with self._raising(exc):
-                response = self._post(self._client(raise_server_exceptions=False))
+                response = self._post(self._client())
 
-        assert response.status_code == 500
+        assert response.status_code == 502
 
     def test_authentication_error_still_maps_to_401(self):
         """Registering a handler on the base class must not steal subclasses."""
