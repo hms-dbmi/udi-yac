@@ -1858,7 +1858,15 @@ def _parse_request_schema(data_schema):
         return {"base_path": "./", "entities": {}, "relationships": []}
 
 
-def _retry_turns(rejected):
+_RETRY_CLOSING = (
+    "Call the tool again with those problems fixed. Keep every "
+    "argument that was not named above exactly as it was. Do not "
+    "repeat a call that has already been rejected above — if a "
+    "template cannot work here, choose a different one."
+)
+
+
+def _retry_turns(rejected, closing=_RETRY_CLOSING):
     """The conversation turns telling the model what has already been refused.
 
     Every rejection, not just the newest. With only the latest error in view the
@@ -1903,17 +1911,7 @@ def _retry_turns(rejected):
                 ),
             }
         )
-    turns.append(
-        {
-            "role": "user",
-            "content": (
-                "Call the tool again with those problems fixed. Keep every "
-                "argument that was not named above exactly as it was. Do not "
-                "repeat a call that has already been rejected above — if a "
-                "template cannot work here, choose a different one."
-            ),
-        }
-    )
+    turns.append({"role": "user", "content": closing})
     return turns
 
 _BIND_TOKEN = re.compile(r"\{bind:([^}]+)\}")

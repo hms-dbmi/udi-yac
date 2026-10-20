@@ -23,30 +23,31 @@ def test_create_visualization_does_not_ask_for_a_title():
     assert params["required"] == ["description"]
 
 
-def test_filter_data_still_names_its_filter():
+def _operation_properties():
+    from udiagent.filters import APPLY_FILTER_OPERATIONS_TOOL
+
+    params = APPLY_FILTER_OPERATIONS_TOOL["function"]["parameters"]
+    return params["properties"]["operations"]["items"]
+
+
+def test_filter_operations_still_name_their_filter():
     """A filter chip has no spec to build a name from, so this title stays."""
-    params = _tool("FilterData")["parameters"]
-    assert "title" in params["properties"]
+    assert "title" in _operation_properties()["properties"]
 
 
-def test_filter_data_without_values_asks_for_them():
-    """"Filter by radiation type" names a field but no values. FilterData may
-    omit them, and the handler then passes an empty list — the chat's widget
-    lists the field's values to pick from. A blank string instead would be a
-    live filter on "" and empty the dashboard."""
-    from udiagent.orchestrator import Orchestrator
+def test_filter_without_values_asks_for_them():
+    """"Filter by radiation type" names a field but no values. An add may omit
+    them, and becomes a filter with an empty list — the chat's widget lists the
+    field's values to pick from. A blank string instead would be a live filter
+    on "" and empty the dashboard."""
+    from udiagent.filters import operation_tool_calls
 
-    params = _tool("FilterData")["parameters"]
-    assert "pointValues" not in params["required"]
-    result = Orchestrator._handle_filter_data(
-        None,
-        {"entity": "Radiation", "field": "radiation_type", "filterType": "point"},
-        messages=[],
-        data_schema="",
-        data_domains="",
-        usage=None,
+    assert _operation_properties()["required"] == ["op"]
+    (call,) = operation_tool_calls(
+        [{"op": "add", "entity": "Radiation", "field": "radiation_type", "filterType": "point"}],
+        [],
     )
-    assert result["arguments"]["filter"]["pointValues"] == []
+    assert call["arguments"]["filter"]["pointValues"] == []
 
 
 def test_clarify_variable_is_for_fields_not_values():

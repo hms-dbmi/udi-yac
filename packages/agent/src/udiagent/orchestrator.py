@@ -1,6 +1,7 @@
 """Orchestrator — routes user requests to the appropriate tool handlers."""
 
 import copy
+import functools
 import json
 import logging
 import time
@@ -10,7 +11,17 @@ from typing import Callable
 import openai
 
 from udiagent.skills import Skill, load_skills, render_template
-from udiagent.filters import describe_filters, normalize_filters
+from udiagent.filters import (
+    APPLY_FILTER_OPERATIONS,
+    APPLY_FILTER_OPERATIONS_TOOL,
+    FILTER_RETRY_CLOSING,
+    MAX_FILTER_ATTEMPTS,
+    describe_filters,
+    filter_failure_args,
+    normalize_filters,
+    operation_tool_calls,
+    validate_operations,
+)
 from udiagent.grammar import load_grammar
 from udiagent.messages import (
     GET_VISUALIZATION_SPEC,
@@ -33,6 +44,7 @@ from udiagent.tools import (
     ORCHESTRATOR_TOOLS,
     function_call_render_visualization,
 )
+from udiagent.vis_generate import _parse_request_schema, _retry_turns
 
 logger = logging.getLogger(__name__)
 
@@ -683,23 +695,74 @@ class Orchestrator:
         usage,
         openai_api_key=None,
         model=None,
+        current_filters=(),
     ):
-        filter_obj = {
-            "filterType": tool_args["filterType"],
-            "intervalRange": tool_args.get("intervalRange", {"min": 0, "max": 0}),
-            # Omitted values leave the filter in place with nothing picked, so
-            # the chat widget lists the field's values for the user to choose.
-            "pointValues": tool_args.get("pointValues", []),
-        }
-        return {
-            "name": "FilterData",
-            "arguments": {
-                "title": tool_args.get("title", ""),
-                "entity": tool_args["entity"],
-                "field": tool_args["field"],
-                "filter": filter_obj,
+        """Turn the routed filter request into validated filter operations.
+
+        A call of its own, with the schema, the domains and the current filter
+        state in view, so the change can be checked against all three before
+        it reaches the client. An invalid set is sent back with its errors,
+        every earlier rejection included, as in visualization generation; one
+        that never validates becomes a FreeTextExplain naming the problems
+        rather than a filter that silently matches nothing.
+
+        Returns one ``FilterData`` tool call per operation, or that message.
+        """
+        current = list(current_filters)
+        request = (tool_args.get("request") or "").strip() or next(
+            (
+                m["content"]
+                for m in reversed(messages)
+                if m.get("role") == "user" and isinstance(m.get("content"), str)
+            ),
+            "",
+        )
+        rendered = render_template(
+            self.skills["filter"].instructions,
+            {
+                "request": request,
+                "current_filters": describe_filters(current),
+                "data_schema": simplify_data_schema(data_schema),
+                "data_domains": simplify_data_domains(data_domains),
             },
-        }
+        )
+        msgs = normalize_tool_calls(copy.deepcopy(messages))
+        msgs.insert(0, {"role": "system", "content": rendered})
+        schema = _parse_request_schema(data_schema)
+        gpt_client = self.agent._get_gpt_client(openai_api_key)
+
+        rejected = []
+        errors = ["No filter change came back."]
+        for _attempt in range(MAX_FILTER_ATTEMPTS):
+            retry = (
+                _retry_turns(rejected, closing=FILTER_RETRY_CLOSING) if rejected else []
+            )
+            resp = _call_with_budget_guard(
+                self.agent.create_completion,
+                usage,
+                gpt_client,
+                model=model or self.agent.gpt_model_name,
+                messages=msgs + retry,
+                tools=[APPLY_FILTER_OPERATIONS_TOOL],
+                tool_choice="required",
+                max_completion_tokens=1024,
+            )
+            usage.add("filter", getattr(resp, "usage", None))
+            calls = resp.choices[0].message.tool_calls or []
+            args = _tool_args(calls[0]) if calls else None
+            if args is None:
+                errors = ["No filter change came back."]
+                continue
+            operations = args.get("operations")
+            errors = validate_operations(operations, schema, data_domains, current)
+            if not errors:
+                return operation_tool_calls(operations, current)
+            rejected.append((APPLY_FILTER_OPERATIONS, args, errors))
+
+        logger.warning(
+            "filter change rejected after %d attempts: %s", MAX_FILTER_ATTEMPTS, errors
+        )
+        return {"name": "FreeTextExplain", "arguments": filter_failure_args(errors)}
 
     # ------------------------------------------------------------------
     # Core orchestration logic
@@ -830,7 +893,9 @@ class Orchestrator:
             "ClarifyVariable": self._handle_clarify_variable,
             "FreeTextExplain": self._handle_free_text_explain,
             "CreateVisualization": self._handle_create_visualization,
-            "FilterData": self._handle_filter_data,
+            "FilterData": functools.partial(
+                self._handle_filter_data, current_filters=filters
+            ),
         }
 
         tool_calls = []
@@ -867,7 +932,8 @@ class Orchestrator:
                 openai_api_key=openai_api_key,
                 model=model,
             )
-            tool_calls.append(result)
+            # The filter step answers with one call per operation.
+            tool_calls.extend(result if isinstance(result, list) else [result])
 
             if tool_name == "CreateVisualization":
                 has_vis = True

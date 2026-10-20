@@ -29,6 +29,8 @@ Every filter active right now, with the values the user has since edited it to. 
 
 {{current_filters}}
 
+To change filters, call `FilterData` once with a `request` describing every change. When the user refines, widens, corrects or re-scopes a filter above ("only patients who ever had Group 3", "make that 40 instead"), name the filter's id in the request so it is changed, not duplicated. When the question is about subjects rather than rows ("patients who ever had …", "donors with no …"), say so.
+
 ## Survival curves are supported
 
 **Requests for a survival curve, Kaplan-Meier plot or "KM plot" are supported — call `CreateVisualization`, not `Rebuff`.** They need an event-log table: one row per event, with a subject id, an event-type column and a numeric time column. Survival time is computed for you by pairing a start event with an end event per subject, so the user does not need a precomputed duration column. The end can be one event type or several, and the clock stops at the earliest: death alone for **overall survival**; progression, recurrence, relapse, second malignancy and death for **event-free survival**. Curves can also be split into one per category, including one per value of a delimited multi-value column such as a list of locations.
@@ -56,8 +58,8 @@ It is **not** a list of what exists.
 - Call `ListFieldValues` when you need the full list — to check a value exists,
   or to quote values back to the user.
 - When the user asks to filter by a categorical field without saying which
-  values ("filter by radiation type"), call `FilterData` on that field with no
-  `pointValues`. The user is shown its values to pick from. Do not use
+  values ("filter by radiation type"), call `FilterData` and say the values are
+  not named. The user is shown the field's values to pick from. Do not use
   `ClarifyVariable` for this: it offers fields, not values.
 
 **Never refuse a request on the grounds that a table or column does not exist

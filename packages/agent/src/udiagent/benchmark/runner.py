@@ -332,8 +332,8 @@ def check_filter_rubric(rubric, expected, output, data_domains):
     expected_tool_calls = expected.get("tool_calls", [])
     output_tool_calls = output.get("tool_calls", [])
 
-    expected_filter_call = _find_call(expected_tool_calls, "FilterData")
-    output_filter_call = _find_call(output_tool_calls, "FilterData")
+    expected_filter_call = _find_filter_definition(expected_tool_calls)
+    output_filter_call = _find_filter_definition(output_tool_calls)
     if expected_filter_call is None:
         # The reference itself chose to filter but produced no filter (possible
         # when the reference is another model's run): nothing to score against.
@@ -581,6 +581,24 @@ def check_vis_rubric(rubric, expected, output, data_domains):
 def _find_call(tool_calls, name):
     """The first tool call with this name, or None."""
     return next((call for call in tool_calls if call.get("name") == name), None)
+
+
+def _find_filter_definition(tool_calls):
+    """The first FilterData call that defines a filter, or None.
+
+    An add or a modify carries the entity, field and values the rubric scores;
+    a remove or clear carries none of them. An add has no ``op``, like every
+    FilterData call made before filter operations existed.
+    """
+    return next(
+        (
+            call
+            for call in tool_calls
+            if call.get("name") == "FilterData"
+            and (call.get("arguments") or {}).get("op", "add") in ("add", "modify")
+        ),
+        None,
+    )
 
 
 def _clarify_candidates(output):
