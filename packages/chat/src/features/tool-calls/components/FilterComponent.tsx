@@ -5,6 +5,7 @@ import { diagnoseFilter, type FilterProbe } from '@/features/data-package';
 import {
   FilterCollapsible,
   FilterControls,
+  extractFilterOperationsFromMessage,
   filterSpecForToolCall,
   messageFilterKeyWithToolCall,
   messageFilterKey as mkFilterKey,
@@ -33,17 +34,27 @@ export function FilterComponent({
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const entityNames = useDataPackage((s) => s.entityNames);
 
+  const operation = useMemo(
+    () =>
+      extractFilterOperationsFromMessage(message).find(
+        (f) => toolCallIndex == null || f.toolCallIndex === toolCallIndex,
+      )?.args ?? null,
+    [message, toolCallIndex],
+  );
   const filterArgs = useMemo(
     () => filterSpecForToolCall(message, toolCallIndex),
     [message, toolCallIndex],
   );
   const filterType = filterArgs?.filter?.filterType ?? null;
 
+  // A modify redefines an existing filter in place, so its widget controls
+  // that filter rather than one of its own.
   const filterKey = useMemo(() => {
+    if (filterArgs?.op === 'modify' && filterArgs.id) return filterArgs.id;
     return toolCallIndex != null
       ? messageFilterKeyWithToolCall(messageIndex, toolCallIndex, message)
       : mkFilterKey(messageIndex, message);
-  }, [messageIndex, toolCallIndex, message]);
+  }, [messageIndex, toolCallIndex, message, filterArgs]);
 
   const dataSelection = dataSelections[filterKey] ?? null;
 
@@ -78,6 +89,19 @@ export function FilterComponent({
         : null,
     [probe, sourceFields, entityNames, dataFieldDomains, loadingPhase],
   );
+
+  if (operation?.op === 'remove') {
+    return (
+      <p className="udi:p-2 udi:text-sm udi:text-muted-foreground">
+        Removed the filter{operation.title ? ` “${operation.title}”` : ''}.
+      </p>
+    );
+  }
+  if (operation?.op === 'clear') {
+    return (
+      <p className="udi:p-2 udi:text-sm udi:text-muted-foreground">Cleared the filters I made.</p>
+    );
+  }
 
   if (!filterType || !probe || !diagnosis) return null;
 

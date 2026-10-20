@@ -3,8 +3,8 @@ import {
   createDataFiltersStore,
   containsFilterCall,
   extractAllFilterSpecsFromMessage,
+  extractFilterOperationsFromMessage,
   extractFilterSpecFromMessage,
-  generateFilterMessage,
   messageFilterKey,
   messageFilterKeyWithToolCall,
   filterSpecForToolCall,
@@ -162,26 +162,6 @@ describe('extractAllFilterSpecsFromMessage', () => {
     const spec = extractFilterSpecFromMessage(m);
     expect(spec?.filter.filterType).toBe('interval');
     expect(spec?.filter.intervalRange).toEqual({ min: 10, max: 90 });
-  });
-});
-
-describe('generateFilterMessage', () => {
-  it('returns null when the selection is empty', () => {
-    const sel: DataSelection = { dataSourceKey: 'donors', type: 'interval', selection: {} };
-    expect(generateFilterMessage('k', sel)).toBeNull();
-  });
-
-  it('emits one FilterData tool call per selected field with a linkedVisFilterId', () => {
-    const sel: DataSelection = {
-      dataSourceKey: 'donors',
-      type: 'interval',
-      selection: { age: [10, 90], weight: [50, 80] },
-    };
-    const m = generateFilterMessage('brush-k', sel);
-    expect(m?.role).toBe('user');
-    expect(m?.linkedVisFilterId).toBe('brush-k');
-    expect(m?.tool_calls).toHaveLength(2);
-    expect(m?.tool_calls?.[0].function.name).toBe('FilterData');
   });
 });
 
@@ -637,36 +617,190 @@ describe('dataFiltersStore', () => {
     });
   });
 
-  describe('syncSelectionsBackToMessages', () => {
-    it('writes the store interval ranges back into the message tool call args', () => {
-      const store = createDataFiltersStore();
-      const messages: Message[] = [filterMessage('donors', 'age', 0, 100)];
-      store.getState().setDataSelection('message-filter-0-0', {
-        dataSourceKey: 'donors',
-        type: 'interval',
-        selection: { age: [25, 75] },
-      });
-      store.getState().syncSelectionsBackToMessages(messages);
-      const args = messages[0].tool_calls![0].function.arguments as unknown as {
-        filter: { intervalRange: { min: number; max: number } };
+  describe('filter operations', () => {
+    /** One assistant message carrying these FilterData calls. */
+    function opsMessage(...args: Record<string, unknown>[]): Message {
+      return {
+        role: 'assistant',
+        content: '',
+        tool_calls: args.map((a) => ({
+          function: { name: 'FilterData', arguments: a as unknown as Record<string, string> },
+        })),
       };
-      expect(args.filter.intervalRange).toEqual({ min: 25, max: 75 });
+    }
+    const group3 = {
+      title: 'Diagnosis',
+      entity: 'Event',
+      field: 'diagnosis',
+      filter: {
+        filterType: 'point',
+        intervalRange: { min: 0, max: 0 },
+        pointValues: ['Group 3'],
+      },
+    };
+    const patientScope = { entity: 'Patient', match: 'any' };
+
+    function synced(messages: Message[]) {
+      const store = createDataFiltersStore();
+      store.getState().syncFiltersFromMessages(messages, alwaysValid);
+      return store;
+    }
+
+    it('extracts every operation in order, and only definitions as specs', () => {
+      const m = opsMessage(group3, { op: 'remove', id: 'message-filter-0-0' }, { op: 'clear' });
+      expect(extractFilterOperationsFromMessage(m).map((o) => o.args.op)).toEqual([
+        undefined,
+        'remove',
+        'clear',
+      ]);
+      expect(extractAllFilterSpecsFromMessage(m).map((o) => o.toolCallIndex)).toEqual([0]);
     });
 
-    it('ignores selections whose key does not encode a message index', () => {
+    it('records the scope an add carries', () => {
+      const store = synced([opsMessage({ ...group3, scope: patientScope })]);
+      expect(store.getState().filterScopes).toEqual({ 'message-filter-0-0': patientScope });
+    });
+
+    it('modifies a filter in place: same id, new values and scope', () => {
+      const store = synced([
+        opsMessage(group3),
+        opsMessage({
+          ...group3,
+          op: 'modify',
+          id: 'message-filter-0-0',
+          filter: { ...group3.filter, pointValues: ['Group 4'] },
+          scope: patientScope,
+        }),
+      ]);
+      const { dataSelections, filterScopes } = store.getState();
+      expect(Object.keys(dataSelections)).toEqual(['message-filter-0-0']);
+      expect(dataSelections['message-filter-0-0'].selection).toEqual({ diagnosis: ['Group 4'] });
+      expect(filterScopes['message-filter-0-0']).toEqual(patientScope);
+    });
+
+    it('a modify without a scope makes the filter row-level again', () => {
+      const store = synced([
+        opsMessage({ ...group3, scope: patientScope }),
+        opsMessage({ ...group3, op: 'modify', id: 'message-filter-0-0' }),
+      ]);
+      expect(store.getState().filterScopes).toEqual({});
+    });
+
+    it('removes a filter, and clears only chat filters', () => {
       const store = createDataFiltersStore();
-      const messages: Message[] = [filterMessage('donors', 'age', 0, 100)];
-      store.getState().setDataSelection('brush-foo', {
-        dataSourceKey: 'donors',
-        type: 'interval',
-        selection: { age: [25, 75] },
+      store
+        .getState()
+        .applyExternalFilters([
+          { id: 'site', dataSourceKey: 'Event', type: 'point', selection: { site: ['A'] } },
+        ]);
+      const messages = [
+        opsMessage(group3, group3),
+        opsMessage({ op: 'remove', id: 'message-filter-0-1' }),
+      ];
+      store.getState().syncFiltersFromMessages(messages, alwaysValid);
+      expect(Object.keys(store.getState().dataSelections).sort()).toEqual([
+        'host-filter-site',
+        'message-filter-0-0',
+      ]);
+
+      store
+        .getState()
+        .syncFiltersFromMessages([...messages, opsMessage({ op: 'clear' })], alwaysValid);
+      expect(Object.keys(store.getState().dataSelections)).toEqual(['host-filter-site']);
+    });
+
+    it('never touches a brush or host filter, whatever the call says', () => {
+      const store = createDataFiltersStore();
+      store
+        .getState()
+        .applyExternalFilters([
+          { id: 'site', dataSourceKey: 'Event', type: 'point', selection: { site: ['A'] } },
+        ]);
+      store
+        .getState()
+        .syncFiltersFromMessages(
+          [
+            opsMessage(
+              { ...group3, op: 'modify', id: 'host-filter-site' },
+              { op: 'remove', id: 'host-filter-site' },
+            ),
+          ],
+          alwaysValid,
+        );
+      expect(store.getState().dataSelections['host-filter-site'].selection).toEqual({
+        site: ['A'],
       });
-      // Should not throw and should not mutate the message.
-      store.getState().syncSelectionsBackToMessages(messages);
-      const args = messages[0].tool_calls![0].function.arguments as unknown as {
-        filter: { intervalRange: { min: number; max: number } };
+    });
+
+    it('applies each operation once, so later syncs keep the user’s edits', () => {
+      const messages = [
+        opsMessage(group3),
+        opsMessage({ ...group3, op: 'modify', id: 'message-filter-0-0', scope: patientScope }),
+      ];
+      const store = synced(messages);
+      const edited: DataSelection = {
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { diagnosis: ['SHH'] },
       };
-      expect(args.filter.intervalRange).toEqual({ min: 0, max: 100 });
+      store.getState().setFilter('message-filter-0-0', edited);
+      store.getState().setFilterScope('message-filter-0-0', null);
+
+      store
+        .getState()
+        .syncFiltersFromMessages([...messages, { role: 'user', content: 'thanks' }], alwaysValid);
+
+      expect(store.getState().dataSelections['message-filter-0-0']).toEqual(edited);
+      expect(store.getState().filterScopes).toEqual({});
+    });
+
+    it('a reset replays the conversation to the same final state', () => {
+      const messages = [
+        opsMessage(group3, { ...group3, field: 'site' }),
+        opsMessage(
+          { ...group3, op: 'modify', id: 'message-filter-0-0', scope: patientScope },
+          { op: 'remove', id: 'message-filter-0-1' },
+        ),
+        opsMessage({ ...group3, field: 'grade' }),
+      ];
+      const store = synced(messages);
+      const before = store.getState();
+
+      store.getState().resetFilters();
+      store.getState().syncFiltersFromMessages(messages, alwaysValid);
+
+      expect(store.getState().dataSelections).toEqual(before.dataSelections);
+      expect(store.getState().filterScopes).toEqual(before.filterScopes);
+      expect(Object.keys(before.dataSelections).sort()).toEqual([
+        'message-filter-0-0',
+        'message-filter-2-0',
+      ]);
+    });
+
+    it('a modify of a filter that is gone does nothing', () => {
+      const store = synced([
+        opsMessage(group3),
+        opsMessage({ op: 'remove', id: 'message-filter-0-0' }),
+        opsMessage({ ...group3, op: 'modify', id: 'message-filter-0-0' }),
+      ]);
+      expect(store.getState().dataSelections).toEqual({});
+    });
+
+    it('host filters carry their scope in and drop it with the filter', () => {
+      const store = createDataFiltersStore();
+      const host = {
+        id: 'site',
+        dataSourceKey: 'Event',
+        type: 'point' as const,
+        selection: { site: ['A'] },
+        scope: { entity: 'Patient', match: 'none' as const },
+      };
+      store.getState().applyExternalFilters([host]);
+      expect(store.getState().filterScopes['host-filter-site']).toEqual(host.scope);
+      store.getState().resetFilters();
+      expect(store.getState().filterScopes['host-filter-site']).toEqual(host.scope);
+      store.getState().applyExternalFilters([]);
+      expect(store.getState().filterScopes).toEqual({});
     });
   });
 });

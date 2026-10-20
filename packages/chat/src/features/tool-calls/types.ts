@@ -63,7 +63,28 @@ export interface FreeTextExplainArgs {
 // ---------------------------------------------------------------------------
 // FilterData
 // ---------------------------------------------------------------------------
+/** How a subject-scoped filter tests a subject's rows: at least one passes,
+ *  every one does, or none does. */
+export type FilterMatch = 'any' | 'all' | 'none';
+
+/**
+ * A filter tested per subject (e.g. per patient) rather than per row. Absent
+ * means row-level: a chart of the filtered table keeps the matching rows. With
+ * a scope it keeps every row of each subject that matches.
+ */
+export interface FilterScope {
+  entity: string;
+  match: FilterMatch;
+}
+
+/**
+ * A FilterData call that defines a filter. `op` is absent on an add, as on
+ * every call made before filter operations existed; a `modify` redefines the
+ * filter `id` in place, keeping its id and its chip.
+ */
 export interface FilterDataArgs {
+  op?: 'add' | 'modify';
+  id?: string;
   title: string;
   entity: string;
   field: string;
@@ -75,7 +96,22 @@ export interface FilterDataArgs {
     };
     pointValues: string[];
   };
+  scope?: FilterScope | null;
 }
+
+/** A FilterData call that removes the filter `id`. */
+export interface FilterRemoveArgs {
+  op: 'remove';
+  id: string;
+  title?: string;
+}
+
+/** A FilterData call that removes every filter the agent made. */
+export interface FilterClearArgs {
+  op: 'clear';
+}
+
+export type FilterOperationArgs = FilterDataArgs | FilterRemoveArgs | FilterClearArgs;
 
 // ---------------------------------------------------------------------------
 // CreateVisualization

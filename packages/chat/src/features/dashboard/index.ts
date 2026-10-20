@@ -22,6 +22,8 @@ export {
   createDataFiltersStore,
   extractFilterSpecFromMessage,
   extractAllFilterSpecsFromMessage,
+  extractFilterOperationsFromMessage,
+  isFilterDefinition,
   filterSpecForToolCall,
   messageFilterKeyWithToolCall,
   messageFilterKey,

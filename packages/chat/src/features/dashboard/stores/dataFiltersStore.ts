@@ -1,19 +1,19 @@
 import { createStore } from 'zustand/vanilla';
-import type {
-  DataSelection,
-  DataSelections,
-  RangeSelection,
-  PointSelection,
-} from 'udi-toolkit/react';
+import type { DataSelection, DataSelections } from 'udi-toolkit/react';
 import type { Message, ToolCall } from '@/types/messages';
 import type { ValidStatus } from '@/types/dataPackage';
-import type { FilterDataArgs } from '@/features/tool-calls';
+import type { FilterDataArgs, FilterOperationArgs, FilterScope } from '@/features/tool-calls';
 import { normalizePointValues } from '@/features/data-package';
 
 export type { DataSelection, DataSelections };
 
 export interface ExtractedFilter {
   args: FilterDataArgs;
+  toolCallIndex: number;
+}
+
+export interface ExtractedFilterOperation {
+  args: FilterOperationArgs;
   toolCallIndex: number;
 }
 
@@ -47,6 +47,8 @@ export type FilterOrigin = 'chat' | 'chart' | 'host';
 export interface UDIFilter extends DataSelection {
   id: string;
   origin?: FilterOrigin;
+  /** Test the filter per subject rather than per row; absent is row-level. */
+  scope?: FilterScope | null;
 }
 
 /** `dataSelections` key prefix for filters set through the `filters` prop. */
@@ -90,6 +92,20 @@ export interface DataFiltersState {
   dataSelections: DataSelections;
   internalDataSelections: DataSelections;
   /**
+   * The scope of each chat or host filter that has one, keyed like
+   * `dataSelections`. A filter with no entry is row-level. Kept beside the
+   * selections rather than in them: a selection is the toolkit's shape, bound
+   * into Pinia as is.
+   */
+  filterScopes: Record<string, FilterScope>;
+  /**
+   * The FilterData calls already applied, keyed `message-filter-{i}-{j}`. Each
+   * applies once, so re-syncing after a later message never undoes an edit
+   * the user made since — and a reset clears this, so a replay rebuilds the
+   * same state.
+   */
+  appliedFilterOps: Record<string, true>;
+  /**
    * Filters the user removed (chip gone, chat item collapsed), keyed by filter
    * id: the chat/host key, an interval brush's viz uuid, or `${uuid}::${field}`
    * for a point brush. A removed filter is also emptied, so it drops nothing;
@@ -109,8 +125,12 @@ export interface DataFiltersState {
   hoveredFilter: HoveredFilter | null;
 
   getValidDataSelections: (validate: ValidateFilterFn) => DataSelections;
+  /** Apply every FilterData call not yet applied, in order: an add creates
+   *  `message-filter-{i}-{j}`, a modify redefines its target in place, a remove
+   *  deletes it and a clear deletes every chat filter. */
   syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => void;
-  syncSelectionsBackToMessages: (messages: Message[]) => void;
+  /** Set or (with `null`) drop a filter's scope. */
+  setFilterScope: (id: string, scope: FilterScope | null) => void;
   /** Mirror brush selections in. `messageCount` anchors each brush filter that
    *  gets its first value here (see `brushAnchors`). */
   updateInternalDataSelections: (newFilters: DataSelections, messageCount?: number) => void;
@@ -160,18 +180,15 @@ export function messageFilterKey(messageIndex: number, message?: Message): strin
   return messageFilterKeyWithToolCall(messageIndex, 0, message);
 }
 
-function messageIndexFromKey(filterKey: string): number | null {
-  const match = filterKey.match(/message-filter-(\d+)/);
-  return match ? parseInt(match[1]) : null;
-}
-
 export function containsFilterCall(message: Message): boolean {
   return message.tool_calls?.some((call) => getToolCallName(call) === 'FilterData') ?? false;
 }
 
-export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFilter[] {
+/** Every FilterData call in a message, in order: adds, modifies, removes and
+ *  clears alike. */
+export function extractFilterOperationsFromMessage(message: Message): ExtractedFilterOperation[] {
   if (!message.tool_calls?.length) return [];
-  const results: ExtractedFilter[] = [];
+  const results: ExtractedFilterOperation[] = [];
   for (let i = 0; i < message.tool_calls.length; i++) {
     const call = message.tool_calls[i];
     if (getToolCallName(call) !== 'FilterData') continue;
@@ -180,6 +197,17 @@ export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFil
     results.push({ args: normalizeFilterArgs(args), toolCallIndex: i });
   }
   return results;
+}
+
+export function isFilterDefinition(args: FilterOperationArgs): args is FilterDataArgs {
+  return args.op === undefined || args.op === 'add' || args.op === 'modify';
+}
+
+/** The FilterData calls in a message that define a filter (adds and modifies). */
+export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFilter[] {
+  return extractFilterOperationsFromMessage(message).filter((f): f is ExtractedFilter =>
+    isFilterDefinition(f.args),
+  );
 }
 
 export function extractFilterSpecFromMessage(message: Message): FilterDataArgs | null {
@@ -207,7 +235,8 @@ export function filterSpecForToolCall(
 
 /** Normalize legacy `{ entity, field, min, max }` format into the current
  *  `{ entity, field, filter: { filterType, intervalRange, pointValues } }` shape. */
-function normalizeFilterArgs(args: Record<string, unknown>): FilterDataArgs {
+function normalizeFilterArgs(args: Record<string, unknown>): FilterOperationArgs {
+  if (args.op === 'remove' || args.op === 'clear') return args as unknown as FilterOperationArgs;
   const legacy = args as {
     title?: string;
     entity?: string;
@@ -230,42 +259,29 @@ function normalizeFilterArgs(args: Record<string, unknown>): FilterDataArgs {
   };
 }
 
-export function generateFilterMessage(key: string, selection: DataSelection): Message | null {
-  const sel = selection.selection;
-  if (sel == null || Object.keys(sel).length === 0) return null;
-  const tool_calls: ToolCall[] = Object.keys(sel).map((field) => {
-    const value = sel[field];
-    const filter =
-      selection.type === 'interval'
-        ? {
-            filterType: 'interval' as const,
-            intervalRange: {
-              min: (value as RangeSelection[string])[0],
-              max: (value as RangeSelection[string])[1],
-            },
-            pointValues: [] as string[],
-          }
-        : {
-            filterType: 'point' as const,
-            intervalRange: { min: 0, max: 0 },
-            pointValues: value as PointSelection[string],
-          };
+/**
+ * The selection a FilterData definition asks for, or null when the data
+ * package rules its field out.
+ */
+function selectionFromArgs(args: FilterDataArgs, validate: ValidateFilterFn): DataSelection | null {
+  if (args.filter.filterType === 'interval') {
+    if (!isAdmissible(validate.isValidIntervalFilter(args.entity, args.field))) return null;
     return {
-      function: {
-        name: 'FilterData',
-        arguments: {
-          entity: selection.dataSourceKey,
-          field,
-          filter,
-        },
-      },
+      dataSourceKey: args.entity,
+      type: 'interval',
+      selection: { [args.field]: [args.filter.intervalRange.min, args.filter.intervalRange.max] },
     };
-  });
+  }
+  if (!isAdmissible(validate.isValidPointFilter(args.entity, args.field, args.filter.pointValues)))
+    return null;
+  // A filter asked for without values ("filter by radiation type") arrives as
+  // `[]`, or as `[""]` from older agents. Either way it is present with nothing
+  // picked, so its widget lists the values to choose from; a literal "" would
+  // filter to blanks and empty every chart.
   return {
-    role: 'user' as const,
-    content: '',
-    linkedVisFilterId: key,
-    tool_calls,
+    dataSourceKey: args.entity,
+    type: 'point',
+    selection: { [args.field]: normalizePointValues(args.filter.pointValues) },
   };
 }
 
@@ -320,6 +336,8 @@ export function createDataFiltersStore() {
   return createStore<DataFiltersState>()((set, get) => ({
     dataSelections: {},
     internalDataSelections: {},
+    filterScopes: {},
+    appliedFilterOps: {},
     removedFilters: {},
     brushAnchors: {},
     hoveredFilter: null,
@@ -335,89 +353,74 @@ export function createDataFiltersStore() {
     },
 
     syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => {
-      const current = get().dataSelections;
+      const state = get();
+      const next = { ...state.dataSelections };
+      const scopes = { ...state.filterScopes };
+      const applied = { ...state.appliedFilterOps };
+      const removed = { ...state.removedFilters };
       let changed = false;
-      const next = { ...current };
+
+      const setScope = (id: string, scope: FilterScope | null | undefined) => {
+        if (scope) scopes[id] = { entity: scope.entity, match: scope.match };
+        else delete scopes[id];
+      };
+      const drop = (id: string) => {
+        delete next[id];
+        delete scopes[id];
+        delete removed[id];
+      };
 
       for (let i = 0; i < messages.length; i++) {
         const message = messages[i];
         if (!message || !containsFilterCall(message)) continue;
-        const filters = extractAllFilterSpecsFromMessage(message);
-        for (const { args: filterSpec, toolCallIndex } of filters) {
+        for (const { args, toolCallIndex } of extractFilterOperationsFromMessage(message)) {
           const key = messageFilterKeyWithToolCall(i, toolCallIndex, message);
-          if (key in next) continue;
+          if (applied[key]) continue;
+          applied[key] = true;
+          changed = true;
 
-          if (filterSpec.filter.filterType === 'interval') {
-            if (!isAdmissible(validate.isValidIntervalFilter(filterSpec.entity, filterSpec.field)))
-              continue;
-            next[key] = {
-              dataSourceKey: filterSpec.entity,
-              type: 'interval',
-              selection: {
-                [filterSpec.field]: [
-                  filterSpec.filter.intervalRange.min,
-                  filterSpec.filter.intervalRange.max,
-                ],
-              },
-            };
-            changed = true;
+          if (args.op === 'clear') {
+            for (const id of Object.keys(next)) {
+              if (id.startsWith('message-filter-')) drop(id);
+            }
+          } else if (args.op === 'remove') {
+            if (args.id.startsWith('message-filter-')) drop(args.id);
+          } else if (args.op === 'modify') {
+            // Only a chat filter that is still here: the agent never edits a
+            // brush or host filter, and a filter removed since is gone.
+            if (!args.id?.startsWith('message-filter-') || !(args.id in next)) continue;
+            const selection = selectionFromArgs(args, validate);
+            if (!selection) continue;
+            next[args.id] = selection;
+            setScope(args.id, args.scope);
+            delete removed[args.id];
           } else {
-            if (
-              !isAdmissible(
-                validate.isValidPointFilter(
-                  filterSpec.entity,
-                  filterSpec.field,
-                  filterSpec.filter.pointValues,
-                ),
-              )
-            )
-              continue;
-            // A filter asked for without values ("filter by radiation type")
-            // arrives as `[]`, or as `[""]` from older agents. Either way it is
-            // present with nothing picked, so its widget lists the values to
-            // choose from; a literal "" would filter to blanks and empty every
-            // chart.
-            next[key] = {
-              dataSourceKey: filterSpec.entity,
-              type: 'point',
-              selection: {
-                [filterSpec.field]: normalizePointValues(filterSpec.filter.pointValues),
-              },
-            };
-            changed = true;
+            // An add that is already here came in with a restored session.
+            if (key in next) continue;
+            const selection = selectionFromArgs(args, validate);
+            if (!selection) continue;
+            next[key] = selection;
+            setScope(key, args.scope);
           }
         }
       }
-      if (changed) set({ dataSelections: next });
+      if (changed) {
+        set({
+          dataSelections: next,
+          filterScopes: scopes,
+          appliedFilterOps: applied,
+          removedFilters: removed,
+        });
+      }
     },
 
-    syncSelectionsBackToMessages: (messages: Message[]) => {
-      const { dataSelections } = get();
-      for (const [selectionKey, selection] of Object.entries(dataSelections)) {
-        const idx = messageIndexFromKey(selectionKey);
-        if (idx === null) continue;
-        const message = messages[idx];
-        if (!message?.tool_calls) continue;
-        for (const toolCall of message.tool_calls) {
-          if (getToolCallName(toolCall) !== 'FilterData') continue;
-          const args = getToolCallArgs(toolCall);
-          if (!args || args.entity !== selection.dataSourceKey) continue;
-          if (selection.type !== 'interval') continue;
-          // Narrow the unknown-valued arg bag down to the shape FilterData
-          // tool-call arguments are expected to have.
-          const filterArg = args.filter as
-            { intervalRange?: { min: number; max: number } } | undefined;
-          if (!filterArg?.intervalRange) continue;
-          for (const [selectionField, intervalSelection] of Object.entries(
-            selection.selection ?? {},
-          )) {
-            if (args.field !== selectionField) continue;
-            filterArg.intervalRange.min = intervalSelection[0] as number;
-            filterArg.intervalRange.max = intervalSelection[1] as number;
-          }
-        }
-      }
-    },
+    setFilterScope: (id: string, scope: FilterScope | null) =>
+      set((s) => {
+        const filterScopes = { ...s.filterScopes };
+        if (scope) filterScopes[id] = scope;
+        else delete filterScopes[id];
+        return { filterScopes };
+      }),
 
     updateInternalDataSelections: (newFilters: DataSelections, messageCount?: number) => {
       const { internalDataSelections: current, removedFilters, brushAnchors } = get();
@@ -496,8 +499,9 @@ export function createDataFiltersStore() {
     },
 
     applyExternalFilters: (filters: UDIFilter[]) => {
-      const { dataSelections, removedFilters } = get();
+      const { dataSelections, filterScopes, removedFilters } = get();
       const next = { ...dataSelections };
+      const scopes = { ...filterScopes };
       const removed = { ...removedFilters };
       const seen = new Set<string>();
       let changed = false;
@@ -512,10 +516,13 @@ export function createDataFiltersStore() {
           type: f.type,
           selection: f.selection,
         };
-        const json = JSON.stringify(selection);
+        const scope = f.scope ? { entity: f.scope.entity, match: f.scope.match } : null;
+        const json = JSON.stringify([selection, scope]);
         if (appliedHostFilters.get(key) === json) continue;
         appliedHostFilters.set(key, json);
         next[key] = selection;
+        if (scope) scopes[key] = scope;
+        else delete scopes[key];
         delete removed[key];
         changed = true;
       }
@@ -523,19 +530,21 @@ export function createDataFiltersStore() {
         if (seen.has(key)) continue;
         appliedHostFilters.delete(key);
         delete next[key];
+        delete scopes[key];
         delete removed[key];
         changed = true;
       }
-      if (changed) set({ dataSelections: next, removedFilters: removed });
+      if (changed) set({ dataSelections: next, filterScopes: scopes, removedFilters: removed });
     },
 
     // Host filters belong to the embedding page, not the conversation, so a
     // reset or conversation switch keeps them.
     resetFilters: () => {
+      const isHost = ([k]: [string, unknown]) => k.startsWith(HOST_FILTER_PREFIX);
       set((s) => ({
-        dataSelections: Object.fromEntries(
-          Object.entries(s.dataSelections).filter(([k]) => k.startsWith(HOST_FILTER_PREFIX)),
-        ),
+        dataSelections: Object.fromEntries(Object.entries(s.dataSelections).filter(isHost)),
+        filterScopes: Object.fromEntries(Object.entries(s.filterScopes).filter(isHost)),
+        appliedFilterOps: {},
         internalDataSelections: {},
         removedFilters: {},
         brushAnchors: {},

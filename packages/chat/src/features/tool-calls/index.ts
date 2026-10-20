@@ -11,6 +11,11 @@ export type {
   RebuffArgs,
   ClarifyVariableArgs,
   FilterDataArgs,
+  FilterRemoveArgs,
+  FilterClearArgs,
+  FilterOperationArgs,
+  FilterMatch,
+  FilterScope,
   TextSegment,
   CreateVisualizationArgs,
 } from './types';
