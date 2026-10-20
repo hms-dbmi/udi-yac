@@ -216,6 +216,16 @@ class ServerConfig(BaseSettings):
             "tokens count against it, so raise it when reasoning is on."
         ),
     )
+    udi_vis_tool_choice: Literal["auto", "required"] = Field(
+        default="auto",
+        examples=['required'],
+        description=(
+            "Whether the chart-template call may answer without picking a "
+            "template (`auto`, which then replies that no template fits) or "
+            "must pick one (`required`). Some models (e.g. `gpt-6.1-sol`) "
+            "reply in prose to many chart requests unless this is `required`."
+        ),
+    )
 
     # --- Observability (all-or-nothing) ---
     langfuse_public_key: str | None = Field(
