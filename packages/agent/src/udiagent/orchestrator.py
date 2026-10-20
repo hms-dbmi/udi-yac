@@ -10,6 +10,7 @@ from typing import Callable
 import openai
 
 from udiagent.skills import Skill, load_skills, render_template
+from udiagent.filters import describe_filters, normalize_filters
 from udiagent.grammar import load_grammar
 from udiagent.messages import (
     GET_VISUALIZATION_SPEC,
@@ -244,6 +245,7 @@ class Orchestrator:
         model: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
         session_id: str | None = None,
+        filters: list[dict] | None = None,
     ) -> OrchestratorResult:
         """Run the orchestrator on a user request.
 
@@ -260,6 +262,9 @@ class Orchestrator:
             session_id: Optional per-conversation ID used to group this run's
                 LLM calls into a single LangFuse trace/session. No-op when
                 LangFuse is disabled.
+            filters: The active filters as the client holds them, edits and
+                all (see ``udiagent.filters``). ``None`` means the caller did
+                not say, which the prompt reports as no active filters.
 
         Returns:
             An ``OrchestratorResult`` with tool_calls, orchestrator_choice, and usage.
@@ -272,6 +277,7 @@ class Orchestrator:
                 openai_api_key=openai_api_key,
                 model=model,
                 budget_check=budget_check,
+                filters=filters,
             )
 
     def run_visualization(
@@ -325,6 +331,7 @@ class Orchestrator:
         openai_api_key: str | None = None,
         model: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
+        filters: list[dict] | None = None,
     ) -> OrchestratorResult:
         usage = Usage()
 
@@ -347,6 +354,7 @@ class Orchestrator:
                 openai_api_key=openai_api_key,
                 model=model,
                 budget_check=budget_check,
+                filters=normalize_filters(filters),
             )
         except BudgetExceededError as err:
             if budget_check is None:
@@ -706,7 +714,9 @@ class Orchestrator:
         openai_api_key=None,
         model=None,
         budget_check: Callable[["Usage"], str | None] | None = None,
+        filters: list[dict] | None = None,
     ):
+        filters = filters or []
         # The handlers below each read the history afresh, so a chart revealed
         # with GetVisualizationSpec is marked on this copy — never on the
         # caller's messages — and every later read then shows its full spec.
@@ -725,6 +735,7 @@ class Orchestrator:
             {
                 "data_schema": simplify_data_schema(data_schema),
                 "data_domains": simplify_data_domains(data_domains),
+                "current_filters": describe_filters(filters),
             },
         )
         msgs.insert(0, {"role": "system", "content": rendered})

@@ -405,6 +405,7 @@ def yac_completions(
         model=requested_model,
         budget_check=budget_check,
         session_id=x_conversation_id,
+        filters=request.filters,
     )
     logger.info("orchestrator_choice: %s", result.orchestrator_choice)
     logger.info("usage: %s", result.usage)
