@@ -6486,6 +6486,468 @@
       }
     },
     {
+      "name": "named-filter-subject-same-table-any",
+      "spec": {
+        "source": {
+          "name": "samples",
+          "source": "hubmap/samples.tsv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_sample",
+              "source": "samples",
+              "match": "any",
+              "entityRelationship": {
+                "originKey": "donor.hubmap_id",
+                "targetKey": "donor.hubmap_id"
+              }
+            }
+          },
+          {
+            "groupby": "sample_category"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_sample": {
+          "dataSourceKey": "samples",
+          "selection": {
+            "created_timestamp": [1690000000000, 1800000000000]
+          },
+          "type": "interval"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sample_category": "block",
+            "n": 1079
+          },
+          {
+            "sample_category": "section",
+            "n": 1846
+          },
+          {
+            "sample_category": "organ",
+            "n": 333
+          },
+          {
+            "sample_category": "suspension",
+            "n": 185
+          }
+        ],
+        "allData": [
+          {
+            "sample_category": "section",
+            "n": 2659
+          },
+          {
+            "sample_category": "block",
+            "n": 1660
+          },
+          {
+            "sample_category": "organ",
+            "n": 601
+          },
+          {
+            "sample_category": "suspension",
+            "n": 222
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
+      "name": "named-filter-subject-cross-table-any",
+      "spec": {
+        "source": {
+          "name": "donors",
+          "source": "hubmap/donors.tsv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_sample",
+              "source": "samples",
+              "match": "any",
+              "entityRelationship": {
+                "originKey": "donor.hubmap_id",
+                "targetKey": "hubmap_id"
+              }
+            }
+          },
+          {
+            "groupby": "sex"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_sample": {
+          "dataSourceKey": "samples",
+          "selection": {
+            "created_timestamp": [1690000000000, 1800000000000]
+          },
+          "type": "interval"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sex": "Female",
+            "n": 153
+          },
+          {
+            "sex": "Unknown",
+            "n": 7
+          },
+          {
+            "sex": "Male",
+            "n": 130
+          }
+        ],
+        "allData": [
+          {
+            "sex": "Female",
+            "n": 284
+          },
+          {
+            "sex": "Unknown",
+            "n": 8
+          },
+          {
+            "sex": "Male",
+            "n": 209
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
+      "name": "named-filter-subject-same-table-all",
+      "spec": {
+        "source": {
+          "name": "samples",
+          "source": "hubmap/samples.tsv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_sample",
+              "source": "samples",
+              "match": "all",
+              "entityRelationship": {
+                "originKey": "donor.hubmap_id",
+                "targetKey": "donor.hubmap_id"
+              }
+            }
+          },
+          {
+            "groupby": "sample_category"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_sample": {
+          "dataSourceKey": "samples",
+          "selection": {
+            "created_timestamp": [1690000000000, 1800000000000]
+          },
+          "type": "interval"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sample_category": "block",
+            "n": 548
+          },
+          {
+            "sample_category": "section",
+            "n": 877
+          },
+          {
+            "sample_category": "organ",
+            "n": 216
+          },
+          {
+            "sample_category": "suspension",
+            "n": 107
+          }
+        ],
+        "allData": [
+          {
+            "sample_category": "section",
+            "n": 2659
+          },
+          {
+            "sample_category": "block",
+            "n": 1660
+          },
+          {
+            "sample_category": "organ",
+            "n": 601
+          },
+          {
+            "sample_category": "suspension",
+            "n": 222
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
+      "name": "named-filter-subject-cross-table-all",
+      "spec": {
+        "source": {
+          "name": "donors",
+          "source": "hubmap/donors.tsv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_sample",
+              "source": "samples",
+              "match": "all",
+              "entityRelationship": {
+                "originKey": "donor.hubmap_id",
+                "targetKey": "hubmap_id"
+              }
+            }
+          },
+          {
+            "groupby": "sex"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_sample": {
+          "dataSourceKey": "samples",
+          "selection": {
+            "created_timestamp": [1690000000000, 1800000000000]
+          },
+          "type": "interval"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sex": "Female",
+            "n": 104
+          },
+          {
+            "sex": "Unknown",
+            "n": 7
+          },
+          {
+            "sex": "Male",
+            "n": 73
+          }
+        ],
+        "allData": [
+          {
+            "sex": "Female",
+            "n": 284
+          },
+          {
+            "sex": "Unknown",
+            "n": 8
+          },
+          {
+            "sex": "Male",
+            "n": 209
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
+      "name": "named-filter-subject-same-table-none",
+      "spec": {
+        "source": {
+          "name": "samples",
+          "source": "hubmap/samples.tsv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_sample",
+              "source": "samples",
+              "match": "none",
+              "entityRelationship": {
+                "originKey": "donor.hubmap_id",
+                "targetKey": "donor.hubmap_id"
+              }
+            }
+          },
+          {
+            "groupby": "sample_category"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_sample": {
+          "dataSourceKey": "samples",
+          "selection": {
+            "created_timestamp": [1690000000000, 1800000000000]
+          },
+          "type": "interval"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sample_category": "section",
+            "n": 813
+          },
+          {
+            "sample_category": "organ",
+            "n": 268
+          },
+          {
+            "sample_category": "suspension",
+            "n": 37
+          },
+          {
+            "sample_category": "block",
+            "n": 581
+          }
+        ],
+        "allData": [
+          {
+            "sample_category": "section",
+            "n": 2659
+          },
+          {
+            "sample_category": "block",
+            "n": 1660
+          },
+          {
+            "sample_category": "organ",
+            "n": 601
+          },
+          {
+            "sample_category": "suspension",
+            "n": 222
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
+      "name": "named-filter-subject-cross-table-none",
+      "spec": {
+        "source": {
+          "name": "donors",
+          "source": "hubmap/donors.tsv"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "name": "sel_sample",
+              "source": "samples",
+              "match": "none",
+              "entityRelationship": {
+                "originKey": "donor.hubmap_id",
+                "targetKey": "hubmap_id"
+              }
+            }
+          },
+          {
+            "groupby": "sex"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": {
+        "sel_sample": {
+          "dataSourceKey": "samples",
+          "selection": {
+            "created_timestamp": [1690000000000, 1800000000000]
+          },
+          "type": "interval"
+        }
+      },
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "sex": "Female",
+            "n": 131
+          },
+          {
+            "sex": "Male",
+            "n": 79
+          },
+          {
+            "sex": "Unknown",
+            "n": 1
+          }
+        ],
+        "allData": [
+          {
+            "sex": "Female",
+            "n": 284
+          },
+          {
+            "sex": "Unknown",
+            "n": 8
+          },
+          {
+            "sex": "Male",
+            "n": 209
+          }
+        ],
+        "isSubset": true
+      }
+    },
+    {
       "name": "named-filter-skipped-missing-field",
       "spec": {
         "source": {
