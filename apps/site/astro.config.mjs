@@ -7,12 +7,27 @@ import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 // grammar demo (grammar/), which pages.yml copies into the same artifact.
 // Starlight does not add `base` to links written in markdown, so links in the
 // content spell out /udi-yac/.
-/** @param {number} port */
-const devProxy = (port) => ({
+/**
+ * @param {number} port
+ * @param {string} task The VS Code task that serves this port, named in the
+ *   page shown when nothing is listening (Vite's own is a blank 502).
+ */
+const devProxy = (port, task) => ({
   target: `http://localhost:${port}`,
   ws: true,
   /** @param {string} path */
   rewrite: (path) => (path.startsWith('/udi-yac/') ? path : `/udi-yac${path}`),
+  configure: (proxy) =>
+    proxy.on('error', (_err, _req, res) => {
+      if (!('writeHead' in res) || res.headersSent) return;
+      res
+        .writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' })
+        .end(
+          `Nothing is listening on localhost:${port}.\n\n` +
+            `Start the "${task}" VS Code task, or "Dev: all" for the whole site. ` +
+            'See "Local development" in apps/site/README.md.',
+        );
+    }),
 });
 
 /** GitHub Pages redirects /udi-yac/app to /udi-yac/app/; the proxied dev
@@ -36,15 +51,14 @@ export default defineConfig({
   vite: {
     plugins: [devTrailingSlash],
     server: {
-      // Dev only. The `Dev: site` VS Code task also runs the chat under
-      // /udi-yac/app/ on :5176; `Dev: grammar app` serves /udi-yac/grammar/ on
-      // :9000. Proxying both makes the site's links into them resolve in dev
-      // the way they do in the assembled Pages build. Astro strips `base` from
-      // HTTP requests before Vite's proxy sees them (websocket upgrades keep
-      // it), so each rule matches both forms and puts the prefix back.
+      // Dev only: the app and the grammar demo are separate dev servers (see
+      // apps/site/README.md). Proxying them makes the site's links resolve in
+      // dev the way they do in the assembled Pages build. Astro strips `base`
+      // from HTTP requests before Vite's proxy sees them (websocket upgrades
+      // keep it), so each rule matches both forms and puts the prefix back.
       proxy: {
-        '^/(udi-yac/)?app(/|$)': devProxy(5176),
-        '^/(udi-yac/)?grammar(/|$)': devProxy(9000),
+        '^/(udi-yac/)?app(/|$)': devProxy(5176, 'Dev: site app'),
+        '^/(udi-yac/)?grammar(/|$)': devProxy(9000, 'Dev: grammar app'),
       },
     },
   },

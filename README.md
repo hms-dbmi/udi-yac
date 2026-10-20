@@ -30,7 +30,9 @@ Former homes: [udi-grammar](https://github.com/hms-dbmi/udi-grammar), [udi-chat-
 node scripts/setup.mjs      # or: pnpm setup
 ```
 
-This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:grammar`, `pnpm dev:storybook`).
+This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:grammar`, `pnpm dev:storybook`, `pnpm dev:site`).
+
+**The whole public site** (landing page, docs, chat at `/udi-yac/app/`, grammar demo at `/udi-yac/grammar/`) runs with the **Dev: all** task at <http://localhost:4321/udi-yac/>. The site's dev server proxies the app and grammar paths to their own dev servers, so those links only work while the chat (`:5176`, **Dev: site app**) and grammar demo (`:9000`, **Dev: grammar app**) are running. See [`apps/site/README.md`](apps/site/README.md#local-development).
 
 Manual/CI steps — JavaScript/TypeScript (pnpm workspace, `udi-toolkit` consumed via `workspace:*`, so build it before the chat app):
 
