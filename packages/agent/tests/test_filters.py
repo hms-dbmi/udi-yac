@@ -561,3 +561,24 @@ def test_filter_summary_logs_shapes_not_fields_or_values():
         "Medulloblastoma" not in summary and "cns_integrated_diagnosis" not in summary
     )
     assert filter_summary([]) == "0"
+
+
+def test_past_filter_calls_point_at_the_current_state():
+    """A past FilterData call is answered in the history with a reply that says
+    it may be stale, not a bare OK the model reads as "this filter is on"."""
+    from udiagent.messages import FILTER_CALL_REPLY, normalize_tool_calls
+
+    msgs = normalize_tool_calls(
+        [
+            {"role": "user", "content": "filter to group 3"},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": operation_tool_calls([ADD_GROUP3], [])
+                + [{"name": "FreeTextExplain", "arguments": {"text": ["hi"]}}],
+            },
+        ]
+    )
+    replies = [m["content"] for m in msgs if m["role"] == "tool"]
+    assert replies == [FILTER_CALL_REPLY, "OK"]
+    assert "Current filters" in FILTER_CALL_REPLY

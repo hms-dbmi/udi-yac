@@ -87,6 +87,15 @@ def split_tool_calls(messages: list[dict]) -> list[dict]:
     return new_messages
 
 
+#: The reply a past FilterData call gets in the history. A bare "OK" read as
+#: "this filter is on", and the model answered "which filters are on?" from its
+#: own earlier call even with the edited state in front of it.
+FILTER_CALL_REPLY = (
+    "Applied when made. The user may have edited or removed this filter since; "
+    "the Current filters section is the present state."
+)
+
+
 def normalize_tool_calls(messages: list[dict], *, compact_charts: bool = True) -> list[dict]:
     """Reformat tool_calls into valid OpenAI function-calling format and
     inject synthetic tool-response messages where missing.
@@ -162,7 +171,11 @@ def normalize_tool_calls(messages: list[dict], *, compact_charts: bool = True) -
                     {
                         "role": "tool",
                         "tool_call_id": tc["id"],
-                        "content": "OK",
+                        "content": (
+                            FILTER_CALL_REPLY
+                            if tc["function"]["name"] == "FilterData"
+                            else "OK"
+                        ),
                     }
                 )
 
