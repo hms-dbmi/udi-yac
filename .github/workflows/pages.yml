@@ -62,13 +62,14 @@ jobs:
         run: pnpm --filter udi-grammar-app build
 
       # Datasets and sessions come from sample-data/catalog.json; these set
-      # only the agent connection.
+      # only the agent connection. Issue reports need LangFuse on that agent.
       - name: Build landing page, docs and app page
         run: pnpm --filter udi-yac-site build
         env:
           VITE_UDI_API_BASE_URL: ${{ vars.VITE_UDI_API_BASE_URL }}
           VITE_UDI_MODEL: ${{ vars.VITE_UDI_MODEL }}
           VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
+          VITE_UDI_ISSUE_REPORTING: "true"
 
       - name: Assemble site
         run: |

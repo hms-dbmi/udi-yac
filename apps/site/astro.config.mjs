@@ -53,7 +53,7 @@ export default defineConfig({
   vite: {
     plugins: [devTrailingSlash],
     // The app page reads the chat's own VITE_UDI_* settings (API URL, key
-    // prompt, model), from the chat's .env/.env.local in dev. Its data package
+    // prompt, model, issue reporting), from the chat's .env/.env.local in dev. Its data package
     // vars are ignored here: the site picks packages from the catalog.
     envPrefix: ['PUBLIC_', 'VITE_UDI_'],
     envDir: '../../packages/chat',
