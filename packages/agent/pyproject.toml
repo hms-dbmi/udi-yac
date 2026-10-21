@@ -16,12 +16,11 @@ dependencies = [
 langfuse = [
     "langfuse>=4",
 ]
-# Amazon Bedrock SigV4 auth (IAM instance profile / task role). The floor is
-# pinned here rather than on the core dependency so consumers who don't need
-# Bedrock keep the looser openai>=2.15.0; openai.providers.bedrock landed in
-# 2.44.0. openai[bedrock] rather than a bare botocore pin tracks upstream.
+# Amazon Bedrock SigV4 auth (IAM instance profile / task role). Unpinned: the
+# core openai floor already covers openai.providers.bedrock (added in 2.44.0).
+# openai[bedrock] rather than a bare botocore pin tracks upstream.
 bedrock = [
-    "openai[bedrock]>=2.44.0",
+    "openai[bedrock]",
 ]
 server = [
     "fastapi[standard]>=0.143.0",
