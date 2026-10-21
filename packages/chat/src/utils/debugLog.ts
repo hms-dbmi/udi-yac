@@ -3,13 +3,18 @@
  * `packages/chat/logs/udi-debug.log` by the dev server (vite-plugin-debug-log.ts).
  *
  * Off unless the dev server runs with `VITE_UDI_DEBUG_LOG=1`; library and
- * production builds compile it away. The toolkit reports through the same log
+ * production builds compile it away, and tests never enable it. The toolkit reports through the same log
  * via `globalThis.__UDI_DEBUG_LOG__`, a hook it calls only when present.
  *
  * Each event: `{t, seq, src, event, ...data}` — `t` is ms since the page
  * loaded, `seq` orders events logged in the same millisecond.
  */
-const ENABLED = import.meta.env.DEV && import.meta.env.VITE_UDI_DEBUG_LOG === '1';
+// Never under Vitest, which loads `.env.local` too: the log's batched fetch
+// would land in tests' fetch mocks.
+const ENABLED =
+  import.meta.env.DEV &&
+  import.meta.env.MODE !== 'test' &&
+  import.meta.env.VITE_UDI_DEBUG_LOG === '1';
 const ROUTE = '/__udi-debug-log';
 
 type Event = Record<string, unknown>;
