@@ -61,17 +61,18 @@ export function DataCounts() {
       .filter((c): c is NonNullable<typeof c> => c !== null);
   }, [dataPackage, entityNames, mergedIcons]);
 
-  // Build filter IDs (same logic as dashboardStore.getFilterIds)
+  // The filters in place (as dashboardStore.getFilterIds, with the package's
+  // own validators). `dataSelections` is a change trigger: they are read out
+  // of the store via getState(), which the linter cannot see.
   const filterIds = useMemo(() => {
-    const vizIds = Array.from(activeVisualizations.values()).map((v) => v.uuid);
     const dpState = dataPackageStore.getState();
     const validSelections = dataFiltersStore.getState().getValidDataSelections({
       isValidIntervalFilter: dpState.isValidIntervalFilter,
       isValidPointFilter: dpState.isValidPointFilter,
     });
-    const externalIds = Object.keys(validSelections);
-    return Array.from(new Set([...vizIds, ...externalIds])).sort();
-  }, [activeVisualizations, dataSelections, dataFiltersStore, dataPackageStore]);
+    return Object.keys(validSelections).sort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataSelections, dataFiltersStore, dataPackageStore]);
 
   // Build a count spec per entity (with named filters + rollup)
   const countSpecs = useMemo(() => {

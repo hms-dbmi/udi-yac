@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from 'react';
 import { queryLLM, type QueryConfig, type ToolCallResponse } from '../api/completions';
 import {
   useConversationStore,
-  useDashboardStore,
   useDataFiltersStore,
   useDataPackageStore,
   useTracker,
@@ -41,7 +40,6 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
   const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
   const dataFiltersStore = useDataFiltersStore();
-  const dashboardStore = useDashboardStore();
   const trackEvent = useTracker();
   // The most recently minted turnId — reused by `retryLastUserMessage` so
   // a retry's `response_received` pairs back to the originating
@@ -62,16 +60,10 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
       // The filters as they are now, edits and brushes included — the
       // transcript only has the FilterData calls as first made.
       const filters = agentFilterState(
-        selectFilters(
-          dfState.dataSelections,
-          dfState.internalDataSelections,
-          dashboardStore.getState().activeVisualizations,
-          dfState.removedFilters,
-          {
-            isValidIntervalFilter: dpState.isValidIntervalFilter,
-            isValidPointFilter: dpState.isValidPointFilter,
-          },
-        ),
+        selectFilters(dfState.dataSelections, dfState.filterOrigins, dfState.removedFilters, {
+          isValidIntervalFilter: dpState.isValidIntervalFilter,
+          isValidPointFilter: dpState.isValidPointFilter,
+        }),
         dfState.filterScopes,
         messages,
       );
@@ -145,7 +137,6 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
       conversationStore,
       dataPackageStore,
       dataFiltersStore,
-      dashboardStore,
       onQuotaRebuff,
       onNormalResponse,
       trackEvent,

@@ -1,7 +1,11 @@
 import type { FilterScope } from '@/features/tool-calls';
 import type { Message } from '@/types/messages';
 import type { ActiveFilter } from '../hooks/useFilterChips';
-import { extractAllFilterSpecsFromMessage, type FilterOrigin } from '../stores/dataFiltersStore';
+import {
+  columnFilterKey,
+  extractAllFilterSpecsFromMessage,
+  type FilterOrigin,
+} from '../stores/dataFiltersStore';
 
 /**
  * One field of one active filter, as the agent reads it (`udiagent.filters`).
@@ -21,16 +25,14 @@ export interface AgentFilterEntry {
   scope?: FilterScope;
 }
 
-/** The title each chat filter was given, keyed by filter id. A modify's title
- *  replaces its target's. */
+/** The title the agent last gave each column's filter, keyed by filter id. */
 function chatFilterTitles(messages: Message[]): Record<string, string> {
   const titles: Record<string, string> = {};
-  messages.forEach((message, i) => {
-    for (const { args, toolCallIndex } of extractAllFilterSpecsFromMessage(message)) {
-      const id = args.op === 'modify' && args.id ? args.id : `message-filter-${i}-${toolCallIndex}`;
-      if (args.title) titles[id] = args.title;
+  for (const message of messages) {
+    for (const { args } of extractAllFilterSpecsFromMessage(message)) {
+      if (args.title) titles[columnFilterKey(args.entity, args.field)] = args.title;
     }
-  });
+  }
   return titles;
 }
 

@@ -15,12 +15,11 @@ function FilterBubble({ children }: { children: ReactNode }) {
 }
 
 /**
- * The chat's adjustment widget for one visualization brush filter, presented
- * like an LLM-originated `FilterData` filter — collapsing it removes the
- * filter, expanding restores it cleared. Brush selections live in the shared
- * Pinia store (mirrored into `dataFiltersStore.internalDataSelections`), not
- * the conversation, so these never leak into the LLM message history.
- * MessageList places each at the point in the chat where the brush was made.
+ * The chat's adjustment widget for a filter a chart created, presented like an
+ * LLM-originated `FilterData` filter — collapsing it removes the filter,
+ * expanding restores it cleared. A chart's clicks and brushes are written into
+ * the column filters, not the conversation, so these never leak into the LLM
+ * message history. MessageList places each where the chart made it.
  */
 export function BrushFilterWidget({ brush }: { brush: BrushFilter }) {
   return (

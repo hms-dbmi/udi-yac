@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { UDIVis, describeTransformations } from 'udi-toolkit/react';
-import type { DataSelections } from 'udi-toolkit/react';
+import type { DataSelection, DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
@@ -31,6 +31,11 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ActiveVisualization } from '../stores/dashboardStore';
 import { selectionHasValue } from '../stores/dataFiltersStore';
+import {
+  chartCoversFilter,
+  chartSelectFields,
+  composeChartSelection,
+} from '../utils/chartSelection';
 import { usePalette } from 'udi-toolkit/react';
 import {
   useConversation,
@@ -92,10 +97,13 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // message). Hover never scrolls — the chat's jump button does that.
   const isSelfHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
   const isMessageHovered = useDashboard((s) => s.hoveredMessageVizKey === vizKey);
-  // Or when one of this card's brush filters is hovered — its chip, or its
-  // widget in the chat. A brush filter's id is the viz uuid, or
-  // `${uuid}::${field}` for a point selection.
-  const isFilterHovered = useDataFilters((s) => s.hoveredFilter?.id.split('::')[0] === viz.uuid);
+  // What this chart selects on, read back from its interactive spec.
+  const selectFields = useMemo(() => chartSelectFields(viz.interactiveSpec), [viz.interactiveSpec]);
+  // Or when a filter on a column it selects on is hovered — its chip, or its
+  // widget in the chat — whichever chart or message set it.
+  const isFilterHovered = useDataFilters(
+    (s) => !!s.hoveredFilter && chartCoversFilter(selectFields, s.hoveredFilter.id),
+  );
   const isHovered = isSelfHovered || isMessageHovered || isFilterHovered;
 
   // "Show visualization in dashboard" pressed on this card's chat message.
@@ -145,37 +153,53 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     return `${src}|${repr}`;
   }, [plainSpec]);
 
-  // Pass the full selection set — including this viz's OWN brush (keyed by its
-  // uuid) — back to UDIVis. Feeding the own selection back lets an edit made
-  // elsewhere (the chat adjustment widget, or clearing the toolbar chip) drive
-  // this chart's rendered brush, and makes UDIVis bind the value into the
-  // shared Pinia DataSourcesStore. UDIVis treats an external selection equal to
+  // This chart's own selection (keyed by its uuid), composed from the column
+  // filters on its fields — whoever set them. Fed back to UDIVis with every
+  // filter, it draws a filter set in chat or on another chart as this chart's
+  // brush, and binds the filters into the shared Pinia DataSourcesStore where
+  // the named filters resolve. UDIVis treats an external selection equal to
   // its current one as a no-op, so live brushing doesn't loop.
-  const externalSelections = useMemo(
-    () => JSON.parse(JSON.stringify(selections)) as DataSelections,
-    [selections],
+  const ownSelection = useMemo(
+    () => (selectFields ? composeChartSelection(selectFields, selections) : null),
+    [selectFields, selections],
   );
+  const externalSelections = useMemo(() => {
+    const all = JSON.parse(JSON.stringify(selections)) as DataSelections;
+    if (ownSelection) all[viz.uuid] = JSON.parse(JSON.stringify(ownSelection));
+    return all;
+  }, [selections, ownSelection, viz.uuid]);
 
   const handleClose = useCallback(() => {
     dashboardStore.getState().closeVisualization(vizKey, memoryBankStore);
     trackEvent('visualization_closed', { hasTitle: !!viz.title, renamed: !!viz.userTitle });
   }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title, viz.userTitle]);
 
-  // Mirror brush/click selections out of the shared Pinia DataSourcesStore into
-  // dataFiltersStore.internalDataSelections (keyed by viz uuid), matching the
-  // LLM-filter path. The filter toolbar and chat adjustment widgets read brush
-  // selections from there (see useBrushFilters). Cross-chart filtering still
-  // works via the shared Pinia store + named-filter entries in each viz's
-  // interactiveSpec.transformation.
-  // The message count anchors a new brush filter's chat widget where it happened.
+  // Write this chart's click or brush into the column filters on its fields.
+  // UDIVis reports every selection in Pinia on any change, so only this
+  // chart's own entry is read, and only when it changed since the last report:
+  // a report triggered by another chart can carry this chart's selection from
+  // before a filter edit has been drawn back, and applying that would undo the
+  // edit. The first report (the mount binding the composed selection) is only
+  // recorded. The message count anchors a filter the chart creates in the chat.
+  const lastOwnRef = useRef<string | undefined>(undefined);
   const handleSelectionChange = useCallback(
     (newSelections: DataSelections) => {
-      const plain = JSON.parse(JSON.stringify(newSelections)) as DataSelections;
+      if (!selectFields) return;
+      const own = newSelections[viz.uuid] ?? null;
+      const json = JSON.stringify(own);
+      const previous = lastOwnRef.current;
+      lastOwnRef.current = json;
+      if (previous === undefined || previous === json) return;
       dataFiltersStore
         .getState()
-        .updateInternalDataSelections(plain, conversationStore.getState().messages.length);
+        .applyChartSelection(
+          selectFields.entity,
+          selectFields.fields,
+          own ? (JSON.parse(json) as DataSelection) : null,
+          conversationStore.getState().messages.length,
+        );
     },
-    [dataFiltersStore, conversationStore],
+    [dataFiltersStore, conversationStore, selectFields, viz.uuid],
   );
 
   // When this viz's own brush is cleared externally (e.g. removing its chip in
@@ -187,7 +211,6 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // during render" pattern rather than an effect.
   // "Has a value", not "non-null": clearing a filter empties it to
   // `{field: []}`, which filters nothing but would leave the drawn rect.
-  const ownSelection = selections[viz.uuid];
   const ownHasBrush = ownSelection != null && selectionHasValue(ownSelection);
   const [trackedHasBrush, setTrackedHasBrush] = useState(ownHasBrush);
   const [brushResetKey, setBrushResetKey] = useState(0);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useDashboard, useDataFilters, useGlobal } from '@/app/UDIChatContext';
 import { DashboardGrid } from './DashboardGrid';
@@ -39,7 +39,6 @@ function DashboardHeader() {
 export function DashboardPanel({ seeding = false }: { seeding?: boolean }) {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dataSelections = useDataFilters((s) => s.dataSelections);
-  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
   const readOnly = useGlobal((s) => s.readOnly);
   // Read-only has no header, so the sticky band holds only the Filters section;
   // with nothing filtered it would be an empty white strip.
@@ -70,17 +69,11 @@ export function DashboardPanel({ seeding = false }: { seeding?: boolean }) {
     return () => observer.disconnect();
   }, []);
 
-  // Selections passed down to each visualization's UDIVis: LLM-set filters
-  // (`dataSelections`) merged with mirrored brush selections
-  // (`internalDataSelections`, keyed by viz uuid). Threading the brush values
-  // back through the `selections` prop lets a chip-clear or chat-widget edit
-  // round-trip to the source viz's UDIVis and back into the shared Pinia store
-  // (updating counts and clearing the rendered brush). UDIVis treats a bind
-  // equal to its current selection as a no-op, so live brushing doesn't loop.
-  const mergedSelections = useMemo(
-    () => ({ ...dataSelections, ...internalDataSelections }),
-    [dataSelections, internalDataSelections],
-  );
+  // Every filter, passed down to each visualization's UDIVis, which binds them
+  // into the shared Pinia store where the named filters resolve. Each card adds
+  // its own selection, composed from the column filters on its fields, so a
+  // chip-clear or chat edit redraws its brush (see DashboardCard).
+  const mergedSelections = dataSelections;
 
   const hasEntries = activeVisualizations.size > 0;
 

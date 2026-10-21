@@ -28,6 +28,8 @@ export {
   messageFilterKeyWithToolCall,
   messageFilterKey,
   HOST_FILTER_PREFIX,
+  columnFilterKey,
+  isColumnFilterKey,
   type DataFiltersState,
   type FilterOrigin,
   type UDIFilter,

@@ -224,7 +224,11 @@ function parseFilterState(raw: unknown): ExportedFilterState | undefined {
     }
   }
   const removed = isStringArray(raw.removed) ? raw.removed : [];
-  return { selections, scopes, removed };
+  const origins: NonNullable<ExportedFilterState['origins']> = {};
+  for (const [id, origin] of Object.entries(isObject(raw.origins) ? raw.origins : {})) {
+    if (origin === 'chat' || origin === 'chart') origins[id] = origin;
+  }
+  return { selections, scopes, removed, ...(Object.keys(origins).length ? { origins } : {}) };
 }
 
 export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {

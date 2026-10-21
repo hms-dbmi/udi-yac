@@ -29,6 +29,23 @@ function makeSpec(overrides: Partial<Record<string, unknown>> = {}): UDIGrammar 
   } as unknown as UDIGrammar;
 }
 
+/** A chart click on `entity.field`, as DashboardCard writes it; its filter id. */
+function chartFilter(
+  store: ReturnType<typeof createDataFiltersStore>,
+  entity: string,
+  field: string,
+) {
+  store
+    .getState()
+    .applyChartSelection(
+      entity,
+      [field],
+      { dataSourceKey: entity, type: 'point', selection: { [field]: ['x'] } },
+      0,
+    );
+  return `col:${entity}.${field}`;
+}
+
 describe('injectInteractivity', () => {
   it('adds an interval select for quantitative x/y encodings', () => {
     const spec = makeSpec();
@@ -589,7 +606,7 @@ describe('dashboardStore — cross-store filter propagation', () => {
     return dp;
   }
 
-  it('getFilterIds combines active viz uuids with valid external selection keys', () => {
+  it('getFilterIds lists the valid filters, not the charts', () => {
     const dashboard = createDashboardStore();
     const dataFilters = createDataFiltersStore();
     const dataPackage = buildDataPackageStoreWith([
@@ -613,9 +630,10 @@ describe('dashboardStore — cross-store filter propagation', () => {
       selection: { age_value: [0, 50] },
     });
 
-    // Use the real dataPackage validators
+    // Use the real dataPackage validators. A chart's own selection is not a
+    // filter: its clicks are written into column filters.
     const ids = dashboard.getState().getFilterIds(dataFilters);
-    expect(ids).toContain(active.uuid);
+    expect(ids).not.toContain(active.uuid);
     expect(ids).toContain('message-filter-1-0');
     // Verify alphabetical sort and dedupe are applied.
     const sorted = [...ids].sort();
@@ -761,10 +779,11 @@ describe('dashboardStore — cross-store filter propagation', () => {
     dashboard
       .getState()
       .addActiveVisualization(0, 1, specFor('Surgery'), '', { Surgery: ['research_id'] });
+    // A click on the first chart, written into its column's filter.
+    const eventUuid = chartFilter(dataFilters, 'Event', 'research_id');
     dashboard.getState().setFilterAllNullValues(false);
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 
-    const eventUuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
     const surgeryViz = dashboard.getState().activeVisualizations.get('0-1')!;
     const filters = (
       surgeryViz.interactiveSpec as { transformation: Array<{ filter?: unknown }> }
@@ -935,10 +954,11 @@ describe('dashboardStore — cross-store filter propagation', () => {
       Event: ['research_id'],
       Therapy: ['protocol'],
     });
+    // A click on the first chart, written into its column's filter.
+    const therapyUuid = chartFilter(dataFilters, 'Therapy', 'protocol');
     dashboard.getState().setFilterAllNullValues(false);
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 
-    const therapyUuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
     const filters = (
       dashboard.getState().activeVisualizations.get('0-1')!.interactiveSpec as {
         transformation: Array<{ filter?: unknown }>;
@@ -1061,10 +1081,11 @@ describe('dashboardStore — cross-store filter propagation', () => {
         },
       );
     dashboard.getState().addActiveVisualization(0, 1, survival, '', { Event: ['research_id'] });
+    // A click on the first chart, written into its column's filter.
+    const patientUuid = chartFilter(dataFilters, 'Patient', 'age_at_diagnosis');
     dashboard.getState().setFilterAllNullValues(false);
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 
-    const patientUuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
     const transforms = (
       dashboard.getState().activeVisualizations.get('0-1')!.interactiveSpec as unknown as {
         transformation: Array<Record<string, unknown>>;
@@ -1170,10 +1191,11 @@ describe('dashboardStore — cross-store filter propagation', () => {
         },
       );
     dashboard.getState().addActiveVisualization(0, 1, presence, '', { Event: ['research_id'] });
+    // A click on the first chart, written into its column's filter.
+    const radUuid = chartFilter(dataFilters, 'Radiation', 'total_radiation_dose');
     dashboard.getState().setFilterAllNullValues(false);
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 
-    const radUuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
     const transforms = (
       dashboard.getState().activeVisualizations.get('0-1')!.interactiveSpec as unknown as {
         transformation: Array<Record<string, unknown>>;
@@ -1225,10 +1247,11 @@ describe('dashboardStore — cross-store filter propagation', () => {
     const dataFilters = createDataFiltersStore();
     const spec = makeSpec({ source: { name: 'Event', source: 'Event.csv' } });
     dashboard.getState().addActiveVisualization(0, 0, spec, '', { Event: ['research_id'] });
+    // A click on the first chart, written into its column's filter.
+    const uuid = chartFilter(dataFilters, 'Event', 'research_id');
     dashboard.getState().setFilterAllNullValues(false);
     dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
 
-    const uuid = dashboard.getState().activeVisualizations.get('0-0')!.uuid;
     const filters = (
       dashboard.getState().activeVisualizations.get('0-0')!.interactiveSpec as unknown as {
         transformation: Array<Record<string, unknown>>;

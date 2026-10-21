@@ -21,14 +21,14 @@ describe('agentFilterState', () => {
       role: 'assistant',
       content: '',
       tool_calls: [
-        filterCall({ ...definition, op: 'modify', id: 'message-filter-1-0', title: 'Dx' }),
+        filterCall({ ...definition, op: 'modify', id: 'col:Event.diagnosis', title: 'Dx' }),
       ],
     },
   ];
   const active: ActiveFilter[] = [
     {
       // The user has since edited the values: the entry carries the edit.
-      id: 'message-filter-1-0',
+      id: 'col:Event.diagnosis',
       origin: 'chat',
       selection: { dataSourceKey: 'Event', type: 'point', selection: { diagnosis: ['SHH'] } },
     },
@@ -46,9 +46,9 @@ describe('agentFilterState', () => {
 
   it('lists one entry per field, with current values, titles and scopes', () => {
     const scope = { entity: 'Patient', match: 'all' as const };
-    expect(agentFilterState(active, { 'message-filter-1-0': scope }, messages)).toEqual([
+    expect(agentFilterState(active, { 'col:Event.diagnosis': scope }, messages)).toEqual([
       {
-        id: 'message-filter-1-0',
+        id: 'col:Event.diagnosis',
         origin: 'chat',
         title: 'Dx',
         entity: 'Event',

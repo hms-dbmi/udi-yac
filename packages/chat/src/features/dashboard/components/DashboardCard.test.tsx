@@ -27,7 +27,7 @@ import {
   useGlobalStore,
 } from '@/app/UDIChatContext';
 import type { UDIGrammar } from 'udi-toolkit/react';
-import type { DataSelection } from '../stores/dataFiltersStore';
+import type { DataSelection, DataSelections } from '../stores/dataFiltersStore';
 import { DashboardCard } from './DashboardCard';
 
 const countBySex = {
@@ -191,7 +191,8 @@ describe('DashboardCard — read-only mode', () => {
   });
 });
 
-/** A card whose own brush a test can drive, the way a chip's Clear does. */
+/** A card whose own brush a test can drive through the column filter it shows,
+ *  the way a chip's Clear does. */
 let setOwnBrush: (sel: DataSelection['selection']) => void;
 function BrushHarness() {
   const store = useDashboardStore();
@@ -202,9 +203,16 @@ function BrushHarness() {
   }, [store]);
   const viz = useDashboard((s) => s.activeVisualizations.get('0-0'));
   if (!viz) return null;
-  const selections = {
-    [viz.uuid]: { dataSourceKey: 'donors', type: 'interval' as const, selection: brush },
-  };
+  const selections: DataSelections =
+    brush == null
+      ? {}
+      : {
+          'col:donors.donor_count': {
+            dataSourceKey: 'donors',
+            type: 'interval' as const,
+            selection: brush,
+          },
+        };
   return <DashboardCard vizKey="0-0" viz={viz} selections={selections} />;
 }
 

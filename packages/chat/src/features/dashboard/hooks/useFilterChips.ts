@@ -1,10 +1,5 @@
 import { useMemo } from 'react';
-import {
-  useDashboard,
-  useDataFilters,
-  useDataPackage,
-  useDataPackageStore,
-} from '@/app/UDIChatContext';
+import { useDataFilters, useDataPackage, useDataPackageStore } from '@/app/UDIChatContext';
 import {
   HOST_FILTER_PREFIX,
   isChatFilterKey,
@@ -13,8 +8,6 @@ import {
   type DataSelections,
   type FilterOrigin,
 } from '../stores/dataFiltersStore';
-import type { ActiveVisualization } from '../stores/dashboardStore';
-import { selectBrushFilters } from './useBrushFilters';
 import { formatTime } from 'udi-toolkit/react';
 import { scopePhrase } from '../utils/filterScope';
 
@@ -91,16 +84,15 @@ export function formatSelectionFields(
 type Validate = Parameters<typeof isValidSelection>[1];
 
 /**
- * Every filter currently in place, in chip order: the chat's FilterData
- * selections and the host's `filters` that the package admits, then brush/click
- * selections on active visualizations. Cleared (all-inclusive) filters are
- * included — they keep their chip — and removed ones are not. Exported for
- * unit testing; components use `useActiveFilters`.
+ * Every filter currently in place, one per column (set in chat or on a chart),
+ * then the host's — in the order they were made. Filters the package rules
+ * out are skipped. Cleared (all-inclusive) filters are included — they keep
+ * their chip — and removed ones are not. A chart-made filter outlives its
+ * chart. Exported for unit testing; components use `useActiveFilters`.
  */
 export function selectFilters(
   dataSelections: DataSelections,
-  internalDataSelections: DataSelections,
-  activeVisualizations: Map<string, ActiveVisualization>,
+  filterOrigins: Record<string, 'chat' | 'chart'>,
   removedFilters: Record<string, true>,
   validate: Validate,
 ): ActiveFilter[] {
@@ -108,11 +100,10 @@ export function selectFilters(
   for (const [id, selection] of Object.entries(dataSelections)) {
     if (!isChatFilterKey(id) || removedFilters[id]) continue;
     if (!isValidSelection(selection, validate)) continue;
-    result.push({ id, origin: id.startsWith(HOST_FILTER_PREFIX) ? 'host' : 'chat', selection });
-  }
-  for (const brush of selectBrushFilters(internalDataSelections, activeVisualizations)) {
-    if (removedFilters[brush.id]) continue;
-    result.push({ id: brush.id, origin: 'chart', selection: brush.selection });
+    const origin: FilterOrigin = id.startsWith(HOST_FILTER_PREFIX)
+      ? 'host'
+      : (filterOrigins[id] ?? 'chat');
+    result.push({ id, origin, selection });
   }
   return result;
 }
@@ -120,29 +111,16 @@ export function selectFilters(
 export function useActiveFilters(): ActiveFilter[] {
   const dataPackageStore = useDataPackageStore();
   const dataSelections = useDataFilters((s) => s.dataSelections);
-  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
+  const filterOrigins = useDataFilters((s) => s.filterOrigins);
   const removedFilters = useDataFilters((s) => s.removedFilters);
-  const activeVisualizations = useDashboard((s) => s.activeVisualizations);
 
   return useMemo(() => {
     const dpState = dataPackageStore.getState();
-    return selectFilters(
-      dataSelections,
-      internalDataSelections,
-      activeVisualizations,
-      removedFilters,
-      {
-        isValidIntervalFilter: dpState.isValidIntervalFilter,
-        isValidPointFilter: dpState.isValidPointFilter,
-      },
-    );
-  }, [
-    dataSelections,
-    internalDataSelections,
-    activeVisualizations,
-    removedFilters,
-    dataPackageStore,
-  ]);
+    return selectFilters(dataSelections, filterOrigins, removedFilters, {
+      isValidIntervalFilter: dpState.isValidIntervalFilter,
+      isValidPointFilter: dpState.isValidPointFilter,
+    });
+  }, [dataSelections, filterOrigins, removedFilters, dataPackageStore]);
 }
 
 /**

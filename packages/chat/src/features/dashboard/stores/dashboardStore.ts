@@ -638,16 +638,14 @@ export function createDashboardStore() {
     requestJumpToMessage: (key) =>
       set((s) => ({ jumpToMessage: { key, nonce: (s.jumpToMessage?.nonce ?? 0) + 1 } })),
 
+    // The column and host filters. A chart's own selection is not a filter:
+    // its click or brush is written into the column filters on its fields.
     getFilterIds: (dataFiltersStore) => {
-      const vizFilterIDs = Array.from(get().activeVisualizations.values()).map((v) => v.uuid);
       const validSelections = dataFiltersStore.getState().getValidDataSelections({
         isValidIntervalFilter: () => ({ isValid: 'yes' }),
         isValidPointFilter: () => ({ isValid: 'yes' }),
       });
-      const externalIds = Object.keys(validSelections);
-      const ids = Array.from(new Set([...vizFilterIDs, ...externalIds]));
-      ids.sort();
-      return ids;
+      return Object.keys(validSelections).sort();
     },
 
     getNamedFilters: (
@@ -657,13 +655,6 @@ export function createDashboardStore() {
       dataPackageStore,
       specSourceNames = [currentSourceName],
     ) => {
-      const state = get();
-      const uuidToSource = new Map<string, string>();
-      for (const v of state.activeVisualizations.values()) {
-        const sourceName = getSpecSourceName(v.interactiveSpec);
-        if (v.uuid && sourceName) uuidToSource.set(v.uuid, sourceName);
-      }
-
       const dpState = dataPackageStore.getState();
       const dfState = dataFiltersStore.getState();
       const validSelections = dfState.getValidDataSelections({
@@ -671,9 +662,7 @@ export function createDashboardStore() {
         isValidPointFilter: dpState.isValidPointFilter,
       });
 
-      const getSourceName = (id: string) => {
-        return uuidToSource.get(id) ?? validSelections[id]?.dataSourceKey ?? null;
-      };
+      const getSourceName = (id: string) => validSelections[id]?.dataSourceKey ?? null;
 
       // Every entity the spec reads gets restricted. Aiming a selection at one
       // table cannot be right, because two different things have to happen and
@@ -748,15 +737,12 @@ export function createDashboardStore() {
     updateSpecFilters: (dataFiltersStore, dataPackageStore) => {
       const state = get();
       const dpState = dataPackageStore.getState();
-      const filterIdList = (() => {
-        const vizFilterIDs = Array.from(state.activeVisualizations.values()).map((v) => v.uuid);
-        const validSelections = dataFiltersStore.getState().getValidDataSelections({
+      const filterIdList = Object.keys(
+        dataFiltersStore.getState().getValidDataSelections({
           isValidIntervalFilter: dpState.isValidIntervalFilter,
           isValidPointFilter: dpState.isValidPointFilter,
-        });
-        const externalIds = Object.keys(validSelections);
-        return Array.from(new Set([...vizFilterIDs, ...externalIds])).sort();
-      })();
+        }),
+      ).sort();
 
       let changed = false;
       const next = new Map(state.activeVisualizations);
@@ -764,9 +750,9 @@ export function createDashboardStore() {
       for (const [key, viz] of next) {
         const currentSourceName = getSpecSourceName(viz.interactiveSpec);
 
-        // Include the viz's own brush UUID so the source chart also filters
-        // its own data. Previously excluded to avoid re-render side effects,
-        // but those are now handled upstream:
+        // Every filter applies to every chart, including the one whose click
+        // or brush set it, so the source chart also filters its own data.
+        // Re-render side effects of that are handled upstream:
         //   - deep-clone of props.spec in UDIVis.vue render() prevents spec
         //     mutations from leaking back to React's specKey (no remount)
         //   - save/restore of per-channel signals in VegaLite.vue

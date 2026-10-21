@@ -3,6 +3,7 @@ import { UnmatchedFilterNotice } from './UnmatchedFilterNotice';
 import { useDataFilters, useDataPackage } from '@/app/UDIChatContext';
 import { diagnoseFilter, type FilterProbe } from '@/features/data-package';
 import {
+  columnFilterKey,
   FilterCollapsible,
   FilterControls,
   extractFilterOperationsFromMessage,
@@ -47,10 +48,12 @@ export function FilterComponent({
   );
   const filterType = filterArgs?.filter?.filterType ?? null;
 
-  // A modify redefines an existing filter in place, so its widget controls
-  // that filter rather than one of its own.
+  // One filter per column, whichever call set it last — so every widget for a
+  // column, an add's or a modify's, controls the same filter.
   const filterKey = useMemo(() => {
-    if (filterArgs?.op === 'modify' && filterArgs.id) return filterArgs.id;
+    if (filterArgs?.entity && filterArgs.field) {
+      return columnFilterKey(filterArgs.entity, filterArgs.field);
+    }
     return toolCallIndex != null
       ? messageFilterKeyWithToolCall(messageIndex, toolCallIndex, message)
       : mkFilterKey(messageIndex, message);
@@ -105,8 +108,8 @@ export function FilterComponent({
 
   if (!filterType || !probe || !diagnosis) return null;
 
-  // Brush-origin messages key into `internalDataSelections`, so the lookup here
-  // is always empty — diagnosing one would render a spurious notice.
+  // Brush messages from old sessions (`linkedVisFilterId`) carry no filter of
+  // their own — diagnosing one would render a spurious notice.
   if (message.linkedVisFilterId != null) return null;
 
   if (diagnosis.kind === 'loading') return null;

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import type { DataSelection, DataSelections } from '../stores/dataFiltersStore';
-import type { ActiveVisualization } from '../stores/dashboardStore';
 import type { ValidStatus } from '@/types/dataPackage';
 import { formatSelectionFields, selectFilters } from './useFilterChips';
 import { formatTime } from 'udi-toolkit/react';
@@ -10,26 +9,21 @@ const valid = {
   isValidPointFilter: (): ValidStatus => ({ isValid: 'yes' }),
 };
 
-const active = new Map([
-  ['0-0', { uuid: 'uuid-1', userPrompt: 'p' } as unknown as ActiveVisualization],
-]);
-
 const data: DataSelections = {
-  'message-filter-0-0': { dataSourceKey: 'donors', type: 'point', selection: { sex: [] } },
-  'message-filter-1-0': { dataSourceKey: 'donors', type: 'point', selection: { race: ['x'] } },
+  'col:donors.sex': { dataSourceKey: 'donors', type: 'point', selection: { sex: [] } },
+  'col:donors.race': { dataSourceKey: 'donors', type: 'point', selection: { race: ['x'] } },
   'host-filter-a': { dataSourceKey: 'donors', type: 'interval', selection: { age: [1, 2] } },
+  'col:donors.weight': { dataSourceKey: 'donors', type: 'interval', selection: { weight: [] } },
 };
-const internal: DataSelections = {
-  'uuid-1': { dataSourceKey: 'donors', type: 'interval', selection: { weight: [] } },
-};
+const origins = { 'col:donors.sex': 'chat', 'col:donors.weight': 'chart' } as const;
 
 describe('selectFilters', () => {
   it('lists cleared filters, tags each origin, and leaves removed ones out', () => {
-    const result = selectFilters(data, internal, active, { 'message-filter-1-0': true }, valid);
+    const result = selectFilters(data, origins, { 'col:donors.race': true }, valid);
     expect(result.map((f) => [f.id, f.origin])).toEqual([
-      ['message-filter-0-0', 'chat'],
+      ['col:donors.sex', 'chat'],
       ['host-filter-a', 'host'],
-      ['uuid-1', 'chart'],
+      ['col:donors.weight', 'chart'],
     ]);
   });
 
@@ -40,7 +34,7 @@ describe('selectFilters', () => {
         isValid: field === 'age' ? 'no' : 'yes',
       }),
     };
-    const ids = selectFilters(data, {}, active, {}, noAge).map((f) => f.id);
+    const ids = selectFilters(data, origins, {}, noAge).map((f) => f.id);
     expect(ids).not.toContain('host-filter-a');
   });
 });

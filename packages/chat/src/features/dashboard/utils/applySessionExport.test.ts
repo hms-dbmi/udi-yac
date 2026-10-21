@@ -139,7 +139,7 @@ describe('applySessionExport — filters', () => {
       ],
     },
   ];
-  const id = 'message-filter-1-0';
+  const id = 'col:Event.diagnosis';
 
   /** Load a session the way the app does: apply it, then the sync effect runs. */
   function load(exported: SessionExport) {
@@ -185,6 +185,57 @@ describe('applySessionExport — filters', () => {
     );
     expect(restored.dataSelections[id].selection).toEqual({ diagnosis: ['Group 3'] });
     expect(restored.filterScopes).toEqual({});
+  });
+
+  it('round-trips a filter a chart made, which no message records', () => {
+    const original = createDataFiltersStore();
+    original
+      .getState()
+      .applyChartSelection(
+        'Patient',
+        ['sex'],
+        { dataSourceKey: 'Patient', type: 'point', selection: { sex: ['F'] } },
+        1,
+      );
+    const exported = parseSessionExport(
+      JSON.parse(
+        JSON.stringify(
+          buildSessionExport({
+            messages,
+            dashboard: { visualizations: [], layout: { items: [] } },
+            filters: original.getState().exportFilterState(),
+          }),
+        ),
+      ),
+    );
+    if (!exported.ok) throw new Error(exported.error);
+
+    const restored = load(exported.value);
+    expect(restored.dataSelections['col:Patient.sex'].selection).toEqual({ sex: ['F'] });
+    expect(restored.filterOrigins['col:Patient.sex']).toBe('chart');
+  });
+
+  it('re-keys an export saved before column ids', () => {
+    const legacy = session({
+      conversation: { messages },
+      visualizations: [],
+      layout: { items: [] },
+      filters: {
+        selections: {
+          'message-filter-1-0': {
+            dataSourceKey: 'Event',
+            type: 'point',
+            selection: { diagnosis: ['SHH'] },
+          },
+        },
+        scopes: { 'message-filter-1-0': { entity: 'Patient', match: 'none' } },
+        removed: [],
+      },
+    });
+    const restored = load(legacy);
+    expect(Object.keys(restored.dataSelections)).toEqual([id]);
+    expect(restored.dataSelections[id].selection).toEqual({ diagnosis: ['SHH'] });
+    expect(restored.filterScopes[id]).toEqual({ entity: 'Patient', match: 'none' });
   });
 
   it('drops a malformed scope rather than the session', () => {
