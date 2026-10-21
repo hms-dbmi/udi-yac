@@ -56,12 +56,12 @@ def test_describe_states_ids_origins_values_and_scope():
     text = describe_filters(
         [{**GROUP3, "scope": {"entity": "Patient", "match": "any"}}, BRUSH]
     )
-    assert "- id: message-filter-1-0 (made by you, editable)" in text
+    assert "- id: message-filter-1-0 (set in chat, editable)" in text
     assert (
         "Event.cns_integrated_diagnosis is one of: 'Medulloblastoma, Group 3'" in text
     )
     assert "scope: Patient with any Event rows matching" in text
-    assert "- id: udi_1_1 (a chart brush, read-only)" in text
+    assert "- id: udi_1_1 (set on a chart, editable)" in text
     assert "Patient.age between 2 and 10" in text
     assert "scope: rows" in text
 
@@ -204,7 +204,15 @@ DOMAINS = json.dumps(
         },
     ]
 )
-CURRENT = [GROUP3, BRUSH]
+HOST = {
+    "id": "host-filter-site",
+    "origin": "host",
+    "entity": "Patient",
+    "field": "id",
+    "filterType": "point",
+    "pointValues": ["p1"],
+}
+CURRENT = [GROUP3, BRUSH, HOST]
 ADD_GROUP3 = {
     "op": "add",
     "title": "Diagnosis",
@@ -296,8 +304,8 @@ def test_add_may_leave_values_for_the_user_to_pick():
             {"op": "remove", "id": "message-filter-9-9"},
             "No filter has id 'message-filter-9-9'",
         ),
-        ({"op": "remove", "id": BRUSH["id"]}, "is read-only (a chart brush"),
-        ({**ADD_GROUP3, "op": "modify", "id": BRUSH["id"]}, "is read-only"),
+        ({"op": "remove", "id": HOST["id"]}, "is read-only (set by the host page"),
+        ({**ADD_GROUP3, "op": "modify", "id": HOST["id"]}, "is read-only"),
         (
             {**ADD_GROUP3, "scope": {"entity": "Site", "match": "any"}},
             "no foreign key to or from 'Site'",
@@ -318,6 +326,24 @@ def test_invalid_operations_are_named(op, expected):
     assert len(errors) >= 1
     assert expected in errors[0]
     assert errors[0].startswith("Operation 1")
+
+
+def test_chart_filters_can_be_modified_and_removed():
+    """Chat and chart filters are one filter per column; either is editable."""
+    assert _errors({"op": "remove", "id": BRUSH["id"]}) == []
+    assert (
+        _errors(
+            {
+                "op": "modify",
+                "id": BRUSH["id"],
+                "entity": "Patient",
+                "field": "age",
+                "filterType": "interval",
+                "intervalRange": {"min": 3, "max": 8},
+            }
+        )
+        == []
+    )
 
 
 def test_a_filter_changed_twice_is_rejected():
@@ -434,7 +460,7 @@ def test_filter_step_retries_with_the_errors_then_succeeds():
 
 
 def test_filter_step_gives_up_with_a_clear_message():
-    bad = {"operations": [{"op": "remove", "id": BRUSH["id"]}]}
+    bad = {"operations": [{"op": "remove", "id": HOST["id"]}]}
     result, create = _run_filter_step(
         [_tool_call(APPLY_FILTER_OPERATIONS, bad)] * MAX_FILTER_ATTEMPTS
     )

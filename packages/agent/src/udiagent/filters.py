@@ -26,10 +26,14 @@ ORIGINS = ("chat", "host", "chart")
 SCOPE_MATCHES = ("any", "all", "none")
 
 _ORIGIN_LABELS = {
-    "chat": "made by you, editable",
+    "chat": "set in chat, editable",
+    "chart": "set on a chart, editable",
     "host": "set by the host page, read-only",
-    "chart": "a chart brush, read-only",
 }
+
+#: Filters the agent may modify or remove. Chat and chart filters are one
+#: filter per column, whoever set them last; the host page owns its own.
+EDITABLE_ORIGINS = ("chat", "chart")
 
 
 def normalize_filters(raw) -> list[dict]:
@@ -96,7 +100,11 @@ def filter_summary(filters) -> str:
             parts.append("<invalid>")
             continue
         if entry.get("filterType") == "interval":
-            shape = "interval" if isinstance(entry.get("intervalRange"), dict) else "interval:unset"
+            shape = (
+                "interval"
+                if isinstance(entry.get("intervalRange"), dict)
+                else "interval:unset"
+            )
         else:
             shape = f"point:{len(entry.get('pointValues') or [])}"
         scope = entry.get("scope")
@@ -387,7 +395,7 @@ def validate_operations(
     if not isinstance(operations, list) or not operations:
         return ["Give at least one operation."]
     origins = {f["id"]: f["origin"] for f in current}
-    chat_ids = sorted(i for i, o in origins.items() if o == "chat")
+    editable_ids = sorted(i for i, o in origins.items() if o in EDITABLE_ORIGINS)
     values = _value_lists(data_domains)
     touched: set[str] = set()
     errors: list[str] = []
@@ -400,9 +408,11 @@ def validate_operations(
         if kind in ("modify", "remove"):
             target = op.get("id")
             if target not in origins:
-                known = ", ".join(chat_ids) or "none"
-                problems.append(f"No filter has id '{target}'. Your filters: {known}.")
-            elif origins[target] != "chat":
+                known = ", ".join(editable_ids) or "none"
+                problems.append(
+                    f"No filter has id '{target}'. Editable filters: {known}."
+                )
+            elif origins[target] not in EDITABLE_ORIGINS:
                 problems.append(
                     f"Filter '{target}' is read-only ({_ORIGIN_LABELS[origins[target]]}). "
                     f"Add a new filter instead."
