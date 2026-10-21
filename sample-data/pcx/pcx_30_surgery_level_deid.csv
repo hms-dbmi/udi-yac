@@ -1,0 +1,1289 @@
+organization_name,research_id,age_at_surgery_days,extent_of_tumor_resection,is_initial_treatment
+Akron Children's Hospital,C7227726,5541,Gross/Near total resection,yes
+Akron Children's Hospital,C7457859,2285,Biopsy only,yes
+Akron Children's Hospital,C7457859,2296,Gross/Near total resection,yes
+Akron Children's Hospital,C7612224,572,Gross/Near total resection,yes
+Akron Children's Hospital,C7860561,3325,Gross/Near total resection,yes
+CBTN Non-Consortium Member,C1038366,169,Gross/Near total resection,yes
+CBTN Non-Consortium Member,C2653602,2400,Partial resection,yes
+CBTN Non-Consortium Member,C3084963,1005,Unavailable,yes
+CBTN Non-Consortium Member,C3420753,3355,Gross/Near total resection,yes
+CBTN Non-Consortium Member,C3612264,2799,Unavailable,yes
+CBTN Non-Consortium Member,C3612387,4615,Unavailable,yes
+CBTN Non-Consortium Member,C3612510,3623,Unavailable,yes
+CBTN Non-Consortium Member,C3612879,2021,Unavailable,yes
+CBTN Non-Consortium Member,C3613002,3054,Unavailable,yes
+CBTN Non-Consortium Member,C3613125,989,Unavailable,yes
+CBTN Non-Consortium Member,C3613248,5495,Unavailable,yes
+CBTN Non-Consortium Member,C3613371,1032,Unavailable,yes
+CBTN Non-Consortium Member,C3613494,2072,Unavailable,yes
+CBTN Non-Consortium Member,C3613617,2486,Unavailable,yes
+CBTN Non-Consortium Member,C3613740,1420,Unavailable,yes
+CBTN Non-Consortium Member,C3613863,952,Unavailable,yes
+CBTN Non-Consortium Member,C3613986,1715,Unavailable,yes
+CBTN Non-Consortium Member,C3614109,3162,Unavailable,yes
+CBTN Non-Consortium Member,C3614355,2272,Unavailable,yes
+CBTN Non-Consortium Member,C3614478,1792,Unavailable,yes
+CBTN Non-Consortium Member,C3614601,5516,Unavailable,yes
+CBTN Non-Consortium Member,C3614724,1923,Unavailable,yes
+CBTN Non-Consortium Member,C3614847,3970,Unavailable,yes
+CBTN Non-Consortium Member,C3614970,3211,Unavailable,yes
+CBTN Non-Consortium Member,C3615093,4197,Unavailable,yes
+CBTN Non-Consortium Member,C4062936,1228,Gross/Near total resection,yes
+CBTN Non-Consortium Member,C4062936,1570,Gross/Near total resection,yes
+CBTN Non-Consortium Member,C7782456,17,Biopsy only,yes
+Children's Hospital Los Angeles,C8832261,1546,N/A,no
+Children's Hospital Los Angeles,C8832261,213,Gross/Near total resection,yes
+Children's Hospital Los Angeles,C8832261,363,Gross/Near total resection,yes
+Children's Hospital of Atlanta (CHOA),C7848753,1609,Gross/Near total resection,yes
+Children's Hospital of Atlanta (CHOA),C8128455,2769,Gross/Near total resection,yes
+Children's Hospital of Atlanta (CHOA),C8578635,199,Gross/Near total resection,yes
+Children's Hospital of Atlanta (CHOA),C8578881,1627,Gross/Near total resection,yes
+Children's Hospital of Atlanta (CHOA),C8579127,735,Gross/Near total resection,yes
+Children's Hospital of Atlanta (CHOA),C8579373,1297,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C1066164,3089,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C1075635,2836,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C1169730,1315,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C1169730,1475,Partial resection,no
+Children's National Medical Center (CNMC),C1169730,996,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C1235904,1729,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2317443,129,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2400222,3348,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2400222,4600,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C2414490,3066,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2492595,3846,Partial resection,yes
+Children's National Medical Center (CNMC),C2567010,2151,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2567010,3867,Biopsy only,yes
+Children's National Medical Center (CNMC),C2567010,4546,Partial resection,no
+Children's National Medical Center (CNMC),C2607354,1912,Partial resection,yes
+Children's National Medical Center (CNMC),C2607600,2592,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2645361,4246,Partial resection,no
+Children's National Medical Center (CNMC),C2645361,5977,Partial resection,no
+Children's National Medical Center (CNMC),C2645361,7353,Partial resection,no
+Children's National Medical Center (CNMC),C2645361,7961,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C2645484,1546,Biopsy only,yes
+Children's National Medical Center (CNMC),C2645484,825,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2645607,6433,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2645853,2858,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2661843,4381,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2661843,5730,Biopsy only,yes
+Children's National Medical Center (CNMC),C2661843,6920,Partial resection,no
+Children's National Medical Center (CNMC),C2690133,1041,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2691978,1892,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2691978,2595,Partial resection,yes
+Children's National Medical Center (CNMC),C2691978,2685,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C2694069,610,Partial resection,yes
+Children's National Medical Center (CNMC),C2694192,784,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2694192,898,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2734905,3982,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2735151,1420,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2735151,2567,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2735274,2228,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2735766,1913,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2735889,480,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2735889,777,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2740809,1167,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2746098,4699,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2746098,5381,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2783613,487,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2783613,535,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2833920,1492,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C2834166,2031,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3161346,5165,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3164790,475,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3230472,507,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3400827,3451,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3400950,2164,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3410298,5975,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3410544,2059,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3410913,1364,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3445845,983,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3521244,253,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3521244,68,Biopsy only,yes
+Children's National Medical Center (CNMC),C3588648,2375,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3641169,504,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3641169,774,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3678069,2650,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3680160,5159,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3732066,2113,Biopsy only,yes
+Children's National Medical Center (CNMC),C3768966,3270,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3768966,3827,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3769458,2164,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3769458,2931,Biopsy only,no
+Children's National Medical Center (CNMC),C3769458,3515,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C3769950,2875,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3808695,3414,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3808695,6100,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3808695,7923,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C3808818,4693,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3811647,11248,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C3811647,11769,Partial resection,no
+Children's National Medical Center (CNMC),C3811647,6005,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C3811647,9895,Biopsy only,no
+Children's National Medical Center (CNMC),C4059861,1516,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4062321,5336,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4220376,519,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4744725,2245,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4852965,2607,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4853088,533,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4889496,2417,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4974243,4781,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4974243,554,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C4985313,2779,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C5226639,1347,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C5360832,1755,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C5792193,434,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C6919980,543,Partial resection,yes
+Children's National Medical Center (CNMC),C7111983,3157,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7111983,3184,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7219239,3525,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7271391,666,Partial resection,yes
+Children's National Medical Center (CNMC),C7369791,2763,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7559334,271,Biopsy only,yes
+Children's National Medical Center (CNMC),C7559334,400,Biopsy only,yes
+Children's National Medical Center (CNMC),C7559334,515,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C7588362,2256,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7592175,3592,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7687131,3162,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7705827,1434,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7705827,2567,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7705827,5438,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C7706442,1413,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7706442,1837,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7706442,1915,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C7706442,2221,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C7706565,3766,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7747770,6284,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7749984,886,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7758717,1588,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7775814,2634,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C7963143,2286,Biopsy only,yes
+Children's National Medical Center (CNMC),C7963143,2918,Unavailable,no
+Children's National Medical Center (CNMC),C8027964,4031,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C8027964,7174,Partial resection,no
+Children's National Medical Center (CNMC),C8150718,1212,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8150718,1789,Partial resection,no
+Children's National Medical Center (CNMC),C8167077,1589,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8167077,2499,Partial resection,no
+Children's National Medical Center (CNMC),C8167077,2857,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C8274579,3155,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8527467,3760,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8579619,1819,Partial resection,yes
+Children's National Medical Center (CNMC),C8579619,1837,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8622177,2466,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8626851,3143,Partial resection,yes
+Children's National Medical Center (CNMC),C8626851,3154,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8684907,3107,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8684907,4520,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C8684907,4884,Gross/Near total resection,no
+Children's National Medical Center (CNMC),C8732877,5822,Partial resection,yes
+Children's National Medical Center (CNMC),C8738289,1596,Gross/Near total resection,yes
+Children's National Medical Center (CNMC),C994701,730,Gross/Near total resection,yes
+Dayton Children's Hospital,C3207963,370,Gross/Near total resection,yes
+Dayton Children's Hospital,C3493200,146,Biopsy only,yes
+Dayton Children's Hospital,C3634281,1093,Gross/Near total resection,yes
+Dayton Children's Hospital,C4053834,753,Gross/Near total resection,yes
+Dayton Children's Hospital,C4053957,3238,Partial resection,yes
+Dayton Children's Hospital,C4053957,4891,Biopsy only,no
+Dayton Children's Hospital,C5490351,3598,Gross/Near total resection,yes
+Dayton Children's Hospital,C5490597,4100,Gross/Near total resection,yes
+Dayton Children's Hospital,C5490597,4473,Partial resection,yes
+Dayton Children's Hospital,C5490597,4667,Gross/Near total resection,no
+Dayton Children's Hospital,C6784065,6353,Gross/Near total resection,yes
+Dayton Children's Hospital,C6784188,231,Gross/Near total resection,yes
+Hackensack,C1265301,266,Partial resection,yes
+Hackensack,C2596407,7566,Gross/Near total resection,yes
+Hackensack,C2723712,171,Partial resection,yes
+Hackensack,C2723712,187,Partial resection,yes
+Hackensack,C3732927,586,Gross/Near total resection,yes
+Hackensack,C3735510,5094,Gross/Near total resection,yes
+Hackensack,C3735510,5959,Partial resection,yes
+Hackensack,C3736740,3214,Gross/Near total resection,yes
+Hackensack,C3875238,743,Gross/Near total resection,yes
+Hackensack,C3924192,4855,Gross/Near total resection,yes
+Hackensack,C4309674,2534,Gross/Near total resection,yes
+Hackensack,C5935242,1040,Partial resection,yes
+Hudson Institute,C2419410,3939,Partial resection,yes
+Hudson Institute,C2457294,645,Partial resection,yes
+Hudson Institute,C2457540,534,Unavailable,yes
+Hudson Institute,C2540442,541,Partial resection,yes
+Intermountain Primary Children's Hospital,C7226127,3118,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C7274835,2032,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C7333629,2353,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C7366716,3327,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C7901274,3074,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C7935837,466,Partial resection,yes
+Intermountain Primary Children's Hospital,C8104962,3180,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C8105085,3184,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C8435094,1149,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C8492412,6369,Gross/Near total resection,yes
+Intermountain Primary Children's Hospital,C8778633,108,Partial resection,yes
+Intermountain Primary Children's Hospital,C8778633,194,Gross/Near total resection,yes
+Johns Hopkins All Children's Hospital,C7953795,1840,Gross/Near total resection,yes
+Johns Hopkins All Children's Hospital,C7953795,2574,Gross/Near total resection,yes
+Johns Hopkins Medicine,C3466755,6135,Gross/Near total resection,yes
+Johns Hopkins Medicine,C3466878,3796,Gross/Near total resection,yes
+Johns Hopkins Medicine,C3587418,233,Partial resection,yes
+Johns Hopkins Medicine,C4028742,1123,Gross/Near total resection,yes
+Lurie Children's Hospital,C1002081,2059,Gross/Near total resection,yes
+Lurie Children's Hospital,C1025205,252,Partial resection,yes
+Lurie Children's Hospital,C105042,1663,Gross/Near total resection,yes
+Lurie Children's Hospital,C1188918,1021,Gross/Near total resection,yes
+Lurie Children's Hospital,C1188918,5041,Partial resection,yes
+Lurie Children's Hospital,C138498,2590,Gross/Near total resection,yes
+Lurie Children's Hospital,C144033,785,Gross/Near total resection,yes
+Lurie Children's Hospital,C144402,1285,Gross/Near total resection,yes
+Lurie Children's Hospital,C144525,299,Biopsy only,yes
+Lurie Children's Hospital,C144648,113,Gross/Near total resection,yes
+Lurie Children's Hospital,C144771,54,Partial resection,yes
+Lurie Children's Hospital,C144894,685,Gross/Near total resection,yes
+Lurie Children's Hospital,C145017,286,Gross/Near total resection,yes
+Lurie Children's Hospital,C145140,1141,Gross/Near total resection,yes
+Lurie Children's Hospital,C145263,233,Partial resection,yes
+Lurie Children's Hospital,C145263,309,Partial resection,yes
+Lurie Children's Hospital,C145386,951,Unavailable,yes
+Lurie Children's Hospital,C145509,1102,Gross/Near total resection,yes
+Lurie Children's Hospital,C145509,1182,Gross/Near total resection,yes
+Lurie Children's Hospital,C177981,6086,Gross/Near total resection,yes
+Lurie Children's Hospital,C178104,1599,Gross/Near total resection,yes
+Lurie Children's Hospital,C178227,1096,Gross/Near total resection,yes
+Lurie Children's Hospital,C178350,3879,Gross/Near total resection,yes
+Lurie Children's Hospital,C178473,1696,Gross/Near total resection,yes
+Lurie Children's Hospital,C178596,3113,Gross/Near total resection,yes
+Lurie Children's Hospital,C178719,1137,Partial resection,yes
+Lurie Children's Hospital,C178965,3559,Unavailable,yes
+Lurie Children's Hospital,C179088,3870,Gross/Near total resection,yes
+Lurie Children's Hospital,C179457,3955,Gross/Near total resection,yes
+Lurie Children's Hospital,C179580,2031,Gross/Near total resection,yes
+Lurie Children's Hospital,C179703,1282,Unavailable,yes
+Lurie Children's Hospital,C179703,1711,Unavailable,yes
+Lurie Children's Hospital,C179826,2678,Gross/Near total resection,yes
+Lurie Children's Hospital,C179826,3198,Unavailable,yes
+Lurie Children's Hospital,C180072,949,Gross/Near total resection,yes
+Lurie Children's Hospital,C180195,1335,Gross/Near total resection,yes
+Lurie Children's Hospital,C180318,1446,Partial resection,yes
+Lurie Children's Hospital,C180441,780,Partial resection,yes
+Lurie Children's Hospital,C180564,4237,Gross/Near total resection,yes
+Lurie Children's Hospital,C180564,7328,Gross/Near total resection,yes
+Lurie Children's Hospital,C180687,475,Gross/Near total resection,yes
+Lurie Children's Hospital,C180687,496,Unavailable,yes
+Lurie Children's Hospital,C180933,2369,Gross/Near total resection,yes
+Lurie Children's Hospital,C181056,3423,Gross/Near total resection,yes
+Lurie Children's Hospital,C181056,7042,Gross/Near total resection,yes
+Lurie Children's Hospital,C181179,696,Gross/Near total resection,yes
+Lurie Children's Hospital,C181302,3187,Partial resection,yes
+Lurie Children's Hospital,C181425,2418,Partial resection,yes
+Lurie Children's Hospital,C182286,230,Gross/Near total resection,yes
+Lurie Children's Hospital,C183270,990,Unavailable,yes
+Lurie Children's Hospital,C183393,314,Partial resection,yes
+Lurie Children's Hospital,C183516,4076,Partial resection,yes
+Lurie Children's Hospital,C193110,7272,Not Applicable,no
+Lurie Children's Hospital,C2342412,3389,Gross/Near total resection,yes
+Lurie Children's Hospital,C2407602,3386,Gross/Near total resection,yes
+Lurie Children's Hospital,C2408832,4906,Gross/Near total resection,yes
+Lurie Children's Hospital,C2438598,3049,Gross/Near total resection,yes
+Lurie Children's Hospital,C2444133,692,Gross/Near total resection,yes
+Lurie Children's Hospital,C2446101,404,Gross/Near total resection,yes
+Lurie Children's Hospital,C2460369,1813,Gross/Near total resection,yes
+Lurie Children's Hospital,C2460369,1900,Gross/Near total resection,no
+Lurie Children's Hospital,C2460369,920,Gross/Near total resection,yes
+Lurie Children's Hospital,C2461107,1326,Gross/Near total resection,yes
+Lurie Children's Hospital,C2461107,2817,Partial resection,no
+Lurie Children's Hospital,C2488167,1334,Gross/Near total resection,yes
+Lurie Children's Hospital,C2510307,2750,Gross/Near total resection,yes
+Lurie Children's Hospital,C2539827,766,Gross/Near total resection,yes
+Lurie Children's Hospital,C2539827,956,Gross/Near total resection,yes
+Lurie Children's Hospital,C2548560,5317,Gross/Near total resection,yes
+Lurie Children's Hospital,C2568609,3061,Gross/Near total resection,yes
+Lurie Children's Hospital,C2642040,1198,Gross/Near total resection,yes
+Lurie Children's Hospital,C2769837,1624,Gross/Near total resection,yes
+Lurie Children's Hospital,C300612,222,Gross/Near total resection,yes
+Lurie Children's Hospital,C300612,409,Partial resection,yes
+Lurie Children's Hospital,C300858,4058,Gross/Near total resection,yes
+Lurie Children's Hospital,C3374259,6595,Gross/Near total resection,yes
+Lurie Children's Hospital,C3374259,6626,Gross/Near total resection,yes
+Lurie Children's Hospital,C3374259,6829,Biopsy only,no
+Lurie Children's Hospital,C3376596,3904,Gross/Near total resection,yes
+Lurie Children's Hospital,C3376596,4992,Gross/Near total resection,no
+Lurie Children's Hospital,C3376596,5271,Gross/Near total resection,no
+Lurie Children's Hospital,C3376842,1407,Gross/Near total resection,yes
+Lurie Children's Hospital,C3379056,3957,Partial resection,yes
+Lurie Children's Hospital,C3379056,5555,Gross/Near total resection,no
+Lurie Children's Hospital,C3379794,7221,Partial resection,yes
+Lurie Children's Hospital,C3379794,7238,Gross/Near total resection,yes
+Lurie Children's Hospital,C3379917,3955,Gross/Near total resection,yes
+Lurie Children's Hospital,C3380286,2831,Gross/Near total resection,yes
+Lurie Children's Hospital,C3380901,279,Gross/Near total resection,yes
+Lurie Children's Hospital,C3381885,2156,Gross/Near total resection,yes
+Lurie Children's Hospital,C3382008,1940,Gross/Near total resection,yes
+Lurie Children's Hospital,C3405132,2845,Gross/Near total resection,yes
+Lurie Children's Hospital,C3405255,3790,Gross/Near total resection,yes
+Lurie Children's Hospital,C3411651,2147,Gross/Near total resection,yes
+Lurie Children's Hospital,C3411651,7912,Gross/Near total resection,yes
+Lurie Children's Hospital,C3464049,1301,Gross/Near total resection,yes
+Lurie Children's Hospital,C3559989,2808,Gross/Near total resection,yes
+Lurie Children's Hospital,C3567000,2794,Gross/Near total resection,yes
+Lurie Children's Hospital,C3653469,1008,Partial resection,yes
+Lurie Children's Hospital,C3653469,1054,Partial resection,yes
+Lurie Children's Hospital,C3653715,4193,Gross/Near total resection,yes
+Lurie Children's Hospital,C3740799,1003,Gross/Near total resection,yes
+Lurie Children's Hospital,C3749286,4080,Gross/Near total resection,yes
+Lurie Children's Hospital,C3753468,4169,Gross/Near total resection,yes
+Lurie Children's Hospital,C3821364,4003,Gross/Near total resection,yes
+Lurie Children's Hospital,C3865521,1848,Gross/Near total resection,yes
+Lurie Children's Hospital,C398643,1067,Gross/Near total resection,yes
+Lurie Children's Hospital,C4024806,2593,Gross/Near total resection,yes
+Lurie Children's Hospital,C4073883,1634,Gross/Near total resection,yes
+Lurie Children's Hospital,C4133784,780,Gross/Near total resection,yes
+Lurie Children's Hospital,C4153095,7195,Gross/Near total resection,yes
+Lurie Children's Hospital,C417585,2759,Gross/Near total resection,yes
+Lurie Children's Hospital,C4234644,936,Gross/Near total resection,yes
+Lurie Children's Hospital,C4309428,3468,Partial resection,yes
+Lurie Children's Hospital,C4309428,3971,Partial resection,yes
+Lurie Children's Hospital,C477240,1694,Partial resection,yes
+Lurie Children's Hospital,C478962,4284,Partial resection,yes
+Lurie Children's Hospital,C5022090,3621,Gross/Near total resection,yes
+Lurie Children's Hospital,C5022090,5615,Biopsy only,yes
+Lurie Children's Hospital,C5027502,81,Biopsy only,yes
+Lurie Children's Hospital,C5054685,2783,Gross/Near total resection,yes
+Lurie Children's Hospital,C515124,4963,Gross/Near total resection,yes
+Lurie Children's Hospital,C5214954,1887,Gross/Near total resection,yes
+Lurie Children's Hospital,C522504,4729,Gross/Near total resection,yes
+Lurie Children's Hospital,C5304498,6361,Partial resection,yes
+Lurie Children's Hospital,C550056,3803,Partial resection,yes
+Lurie Children's Hospital,C553131,294,Partial resection,yes
+Lurie Children's Hospital,C5555664,1918,Gross/Near total resection,yes
+Lurie Children's Hospital,C556575,3049,Gross/Near total resection,yes
+Lurie Children's Hospital,C557682,964,Gross/Near total resection,yes
+Lurie Children's Hospital,C5594286,7247,Gross/Near total resection,yes
+Lurie Children's Hospital,C5594286,9423,Biopsy only,yes
+Lurie Children's Hospital,C5623314,4753,Partial resection,yes
+Lurie Children's Hospital,C565431,2320,Gross/Near total resection,yes
+Lurie Children's Hospital,C567522,3503,Partial resection,yes
+Lurie Children's Hospital,C5700066,2941,Biopsy only,no
+Lurie Children's Hospital,C5700066,589,Partial resection,yes
+Lurie Children's Hospital,C5700066,78,Gross/Near total resection,yes
+Lurie Children's Hospital,C587325,624,Partial resection,yes
+Lurie Children's Hospital,C596058,2554,Gross/Near total resection,yes
+Lurie Children's Hospital,C596058,3286,Partial resection,yes
+Lurie Children's Hospital,C596058,3960,Partial resection,no
+Lurie Children's Hospital,C607251,1689,Partial resection,yes
+Lurie Children's Hospital,C607251,2009,Biopsy only,yes
+Lurie Children's Hospital,C614016,1498,Unavailable,yes
+Lurie Children's Hospital,C617952,4850,Gross/Near total resection,yes
+Lurie Children's Hospital,C618567,2520,Gross/Near total resection,yes
+Lurie Children's Hospital,C618690,2325,Gross/Near total resection,yes
+Lurie Children's Hospital,C618813,532,Gross/Near total resection,yes
+Lurie Children's Hospital,C6192804,2010,Gross/Near total resection,yes
+Lurie Children's Hospital,C6193173,1569,Gross/Near total resection,yes
+Lurie Children's Hospital,C6201168,1526,Gross/Near total resection,yes
+Lurie Children's Hospital,C6201291,3926,Gross/Near total resection,yes
+Lurie Children's Hospital,C626685,3799,Gross/Near total resection,yes
+Lurie Children's Hospital,C6431055,2823,Gross/Near total resection,yes
+Lurie Children's Hospital,C6431055,3906,Biopsy only,no
+Lurie Children's Hospital,C648333,2379,Partial resection,yes
+Lurie Children's Hospital,C648333,2989,Partial resection,yes
+Lurie Children's Hospital,C651039,1321,Gross/Near total resection,yes
+Lurie Children's Hospital,C6512727,1034,Gross/Near total resection,yes
+Lurie Children's Hospital,C6513219,3175,Gross/Near total resection,yes
+Lurie Children's Hospital,C6519123,1399,Gross/Near total resection,yes
+Lurie Children's Hospital,C6519123,3776,Biopsy only,no
+Lurie Children's Hospital,C6519123,4172,Biopsy only,no
+Lurie Children's Hospital,C652638,2988,Gross/Near total resection,yes
+Lurie Children's Hospital,C6695874,1294,Gross/Near total resection,yes
+Lurie Children's Hospital,C6715062,520,Gross/Near total resection,yes
+Lurie Children's Hospital,C6715554,1184,Gross/Near total resection,yes
+Lurie Children's Hospital,C6715554,5983,Partial resection,no
+Lurie Children's Hospital,C6830928,972,Gross/Near total resection,yes
+Lurie Children's Hospital,C6929451,3803,Gross/Near total resection,yes
+Lurie Children's Hospital,C699378,3222,Partial resection,yes
+Lurie Children's Hospital,C6995994,481,Gross/Near total resection,yes
+Lurie Children's Hospital,C7008048,2492,Gross/Near total resection,yes
+Lurie Children's Hospital,C7008048,2497,Gross/Near total resection,yes
+Lurie Children's Hospital,C7125882,531,Partial resection,yes
+Lurie Children's Hospital,C7271637,3275,Gross/Near total resection,yes
+Lurie Children's Hospital,C7332768,2443,Gross/Near total resection,yes
+Lurie Children's Hospital,C7348512,5050,Biopsy only,yes
+Lurie Children's Hospital,C7348512,5058,Gross/Near total resection,yes
+Lurie Children's Hospital,C740214,2640,Gross/Near total resection,yes
+Lurie Children's Hospital,C740214,4237,Gross/Near total resection,yes
+Lurie Children's Hospital,C743535,1921,Gross/Near total resection,yes
+Lurie Children's Hospital,C743535,860,Gross/Near total resection,yes
+Lurie Children's Hospital,C8013450,1948,Gross/Near total resection,yes
+Lurie Children's Hospital,C8013450,6676,Partial resection,no
+Lurie Children's Hospital,C8167569,3153,Gross/Near total resection,yes
+Lurie Children's Hospital,C817950,1514,Gross/Near total resection,yes
+Lurie Children's Hospital,C833202,2066,Gross/Near total resection,yes
+Lurie Children's Hospital,C8427960,1034,Biopsy only,yes
+Lurie Children's Hospital,C8585400,650,Gross/Near total resection,yes
+Lurie Children's Hospital,C870348,376,Gross/Near total resection,yes
+Lurie Children's Hospital,C870471,3363,Gross/Near total resection,yes
+Lurie Children's Hospital,C908478,525,Gross/Near total resection,yes
+Lurie Children's Hospital,C908478,881,Partial resection,yes
+Lurie Children's Hospital,C960999,3804,Gross/Near total resection,yes
+Lurie Children's Hospital,C960999,4853,Gross/Near total resection,yes
+Lurie Children's Hospital,C982401,744,Gross/Near total resection,yes
+Lurie Children's Hospital,C992610,1615,Gross/Near total resection,yes
+Lurie Children's Hospital,C997653,1030,Partial resection,yes
+Maria Fareri Children's Hospital at Westchester Medical Center,C7104972,951,Partial resection,yes
+Maria Fareri Children's Hospital at Westchester Medical Center,C7105095,3702,Gross/Near total resection,yes
+Maria Fareri Children's Hospital at Westchester Medical Center,C7817511,1172,Gross/Near total resection,yes
+Maria Fareri Children's Hospital at Westchester Medical Center,C7817511,1217,N/A,yes
+Maria Fareri Children's Hospital at Westchester Medical Center,C7817757,6164,Gross/Near total resection,yes
+Meyer Children's Hospital,C1063458,3108,Unavailable,yes
+Meyer Children's Hospital,C1063458,4791,Partial resection,yes
+Meyer Children's Hospital,C1205277,3640,Partial resection,yes
+Meyer Children's Hospital,C2403912,1423,Partial resection,yes
+Meyer Children's Hospital,C2404158,1300,Gross/Near total resection,yes
+Meyer Children's Hospital,C2404158,720,Partial resection,yes
+Meyer Children's Hospital,C2404773,4469,Partial resection,yes
+Meyer Children's Hospital,C2405388,251,Partial resection,yes
+Meyer Children's Hospital,C2704155,2058,Partial resection,yes
+Meyer Children's Hospital,C292371,882,Gross/Near total resection,yes
+Meyer Children's Hospital,C293601,3712,Partial resection,yes
+Meyer Children's Hospital,C3253719,1789,Partial resection,yes
+Meyer Children's Hospital,C3256302,1229,Partial resection,yes
+Meyer Children's Hospital,C333453,1113,Gross/Near total resection,yes
+Meyer Children's Hospital,C3471675,5025,Gross/Near total resection,yes
+Meyer Children's Hospital,C3473274,1547,Gross/Near total resection,yes
+Meyer Children's Hospital,C3473397,1637,Gross/Near total resection,yes
+Meyer Children's Hospital,C3571674,3918,Gross/Near total resection,yes
+Meyer Children's Hospital,C3572043,3163,Gross/Near total resection,yes
+Meyer Children's Hospital,C4065150,4945,Partial resection,yes
+Meyer Children's Hospital,C409221,722,Gross/Near total resection,yes
+Meyer Children's Hospital,C409836,1680,Gross/Near total resection,yes
+Meyer Children's Hospital,C411066,3336,Gross/Near total resection,yes
+Meyer Children's Hospital,C4417668,1764,Gross/Near total resection,yes
+Meyer Children's Hospital,C4418529,1430,Gross/Near total resection,yes
+Meyer Children's Hospital,C4420251,1433,Gross/Near total resection,yes
+Meyer Children's Hospital,C457560,2513,Gross/Near total resection,yes
+Meyer Children's Hospital,C654114,129,Gross/Near total resection,yes
+Meyer Children's Hospital,C705282,2272,Gross/Near total resection,yes
+Meyer Children's Hospital,C7366347,2557,Gross/Near total resection,yes
+Meyer Children's Hospital,C7366593,2922,Gross/Near total resection,yes
+Meyer Children's Hospital,C7374957,4018,Partial resection,yes
+Meyer Children's Hospital,C7374957,4034,Unavailable,yes
+Meyer Children's Hospital,C7374957,4399,Gross/Near total resection,no
+Meyer Children's Hospital,C7376187,1659,Unavailable,yes
+Meyer Children's Hospital,C7376187,2724,Unavailable,yes
+Meyer Children's Hospital,C7376187,2846,Unavailable,no
+Meyer Children's Hospital,C7376187,4383,Unavailable,no
+Meyer Children's Hospital,C7391931,31,Gross/Near total resection,yes
+Meyer Children's Hospital,C7401894,1296,Unavailable,yes
+Meyer Children's Hospital,C7401894,2191,Gross/Near total resection,yes
+Meyer Children's Hospital,C7402140,243,Partial resection,yes
+Meyer Children's Hospital,C7411980,5692,Partial resection,yes
+Meyer Children's Hospital,C7424157,2122,Unavailable,yes
+Meyer Children's Hospital,C7456383,3094,Unavailable,yes
+Meyer Children's Hospital,C7467576,1796,Gross/Near total resection,yes
+Meyer Children's Hospital,C7467822,709,Partial resection,yes
+Meyer Children's Hospital,C7468191,3106,Gross/Near total resection,no
+Meyer Children's Hospital,C7468191,Not Reported,Unavailable,no
+Meyer Children's Hospital,C773424,2511,Gross/Near total resection,yes
+Meyer Children's Hospital,C773547,1076,Partial resection,yes
+Meyer Children's Hospital,C773793,1433,Partial resection,yes
+Meyer Children's Hospital,C773793,1540,Gross/Near total resection,yes
+Meyer Children's Hospital,C823608,167,Gross/Near total resection,yes
+Meyer Children's Hospital,C823731,4406,Partial resection,yes
+Meyer Children's Hospital,C942672,4917,Partial resection,yes
+Meyer Children's Hospital,C979203,1008,Gross/Near total resection,yes
+Meyer Children's Hospital,C979203,880,Biopsy only,yes
+Meyer Children's Hospital,C979695,3385,Partial resection,yes
+NYU Langone Health,C8827095,2534,Gross/Near total resection,yes
+Nicklaus Children's Hospital,C8398932,6388,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C4108569,2633,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C4127634,2192,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C4853457,4795,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C4853703,4463,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C5332419,4799,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C5889978,1225,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C6067590,2862,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C6067590,5643,Gross/Near total resection,no
+OHSU Doernbecher Children's Hospital,C6316173,1015,Partial resection,yes
+OHSU Doernbecher Children's Hospital,C6316296,5467,Gross/Near total resection,yes
+OHSU Doernbecher Children's Hospital,C7842726,2328,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C3991596,4675,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C4274373,6364,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C4274742,3963,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C4274742,585,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C4274865,5172,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C4274988,2104,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C4719387,811,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C5259849,5480,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C5259972,1878,Partial resection,yes
+Orlando Health Arnold Palmer Hospital,C6110148,882,Gross/Near total resection,yes
+Orlando Health Arnold Palmer Hospital,C6809526,14497,Biopsy only,yes
+Orlando Health Arnold Palmer Hospital,C6809526,2734,Partial resection,yes
+Orlando Health Arnold Palmer Hospital,C7638177,6166,Gross/Near total resection,yes
+Seattle Children's Hospital,C103074,8203,Partial resection,yes
+Seattle Children's Hospital,C103074,8219,Gross/Near total resection,yes
+Seattle Children's Hospital,C104058,4526,Gross/Near total resection,yes
+Seattle Children's Hospital,C104427,394,Gross/Near total resection,yes
+Seattle Children's Hospital,C1056939,3204,Gross/Near total resection,no
+Seattle Children's Hospital,C1056939,641,Gross/Near total resection,yes
+Seattle Children's Hospital,C1056939,768,Gross/Near total resection,yes
+Seattle Children's Hospital,C1056939,776,Gross/Near total resection,no
+Seattle Children's Hospital,C1057185,6136,Gross/Near total resection,yes
+Seattle Children's Hospital,C1057185,7410,Gross/Near total resection,yes
+Seattle Children's Hospital,C1057431,2090,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070100,5024,Partial resection,yes
+Seattle Children's Hospital,C1070100,5032,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070100,6989,Biopsy only,yes
+Seattle Children's Hospital,C1070223,6590,Partial resection,yes
+Seattle Children's Hospital,C1070223,6607,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070223,6611,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070346,1027,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070346,1337,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070346,663,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070838,2106,Gross/Near total resection,yes
+Seattle Children's Hospital,C1154847,517,Partial resection,yes
+Seattle Children's Hospital,C1154847,633,Partial resection,yes
+Seattle Children's Hospital,C1154847,633,Unavailable,yes
+Seattle Children's Hospital,C1155462,1516,Gross/Near total resection,yes
+Seattle Children's Hospital,C1155462,2706,Partial resection,no
+Seattle Children's Hospital,C1155585,4322,Gross/Near total resection,yes
+Seattle Children's Hospital,C1155585,4329,Biopsy only,yes
+Seattle Children's Hospital,C1183875,6394,Gross/Near total resection,yes
+Seattle Children's Hospital,C123123,836,Partial resection,yes
+Seattle Children's Hospital,C1253493,1997,Gross/Near total resection,yes
+Seattle Children's Hospital,C1253862,3137,Partial resection,yes
+Seattle Children's Hospital,C1253862,3217,Partial resection,yes
+Seattle Children's Hospital,C1253862,4425,Partial resection,no
+Seattle Children's Hospital,C1253862,5086,Biopsy only,no
+Seattle Children's Hospital,C141696,3977,Partial resection,yes
+Seattle Children's Hospital,C141696,5041,Partial resection,yes
+Seattle Children's Hospital,C141696,5710,Partial resection,no
+Seattle Children's Hospital,C141942,163,Partial resection,yes
+Seattle Children's Hospital,C142557,1032,Partial resection,yes
+Seattle Children's Hospital,C142803,641,Gross/Near total resection,yes
+Seattle Children's Hospital,C143172,4044,Gross/Near total resection,yes
+Seattle Children's Hospital,C143418,1882,Gross/Near total resection,yes
+Seattle Children's Hospital,C143541,292,Gross/Near total resection,yes
+Seattle Children's Hospital,C147354,3458,Gross/Near total resection,yes
+Seattle Children's Hospital,C147477,2428,Gross/Near total resection,yes
+Seattle Children's Hospital,C147846,2565,Gross/Near total resection,yes
+Seattle Children's Hospital,C147846,3045,Gross/Near total resection,yes
+Seattle Children's Hospital,C147969,1876,Gross/Near total resection,yes
+Seattle Children's Hospital,C148215,202,Partial resection,yes
+Seattle Children's Hospital,C148215,5999,Biopsy only,yes
+Seattle Children's Hospital,C148584,1897,Gross/Near total resection,yes
+Seattle Children's Hospital,C148707,575,Gross/Near total resection,yes
+Seattle Children's Hospital,C148830,605,Gross/Near total resection,yes
+Seattle Children's Hospital,C148953,1042,Gross/Near total resection,yes
+Seattle Children's Hospital,C149076,560,Not Applicable,no
+Seattle Children's Hospital,C149199,4238,Gross/Near total resection,yes
+Seattle Children's Hospital,C149568,196,Partial resection,yes
+Seattle Children's Hospital,C149568,35,Partial resection,yes
+Seattle Children's Hospital,C153012,2790,Gross/Near total resection,yes
+Seattle Children's Hospital,C153135,1931,Gross/Near total resection,yes
+Seattle Children's Hospital,C153504,3000,Unavailable,yes
+Seattle Children's Hospital,C154365,5709,Gross/Near total resection,yes
+Seattle Children's Hospital,C169248,2153,Gross/Near total resection,yes
+Seattle Children's Hospital,C169248,3139,Gross/Near total resection,yes
+Seattle Children's Hospital,C169248,9081,Gross/Near total resection,no
+Seattle Children's Hospital,C169371,3132,Gross/Near total resection,yes
+Seattle Children's Hospital,C169863,2902,Gross/Near total resection,yes
+Seattle Children's Hospital,C170109,6345,Gross/Near total resection,yes
+Seattle Children's Hospital,C170232,3142,Gross/Near total resection,yes
+Seattle Children's Hospital,C170355,3695,Gross/Near total resection,yes
+Seattle Children's Hospital,C171462,805,Gross/Near total resection,yes
+Seattle Children's Hospital,C173799,4640,Gross/Near total resection,yes
+Seattle Children's Hospital,C175398,1056,Unavailable,yes
+Seattle Children's Hospital,C175521,4674,Gross/Near total resection,yes
+Seattle Children's Hospital,C225951,1336,Partial resection,yes
+Seattle Children's Hospital,C226074,147,Gross/Near total resection,yes
+Seattle Children's Hospital,C226443,2560,Partial resection,no
+Seattle Children's Hospital,C2332203,4746,Gross/Near total resection,yes
+Seattle Children's Hospital,C2332203,5782,Gross/Near total resection,yes
+Seattle Children's Hospital,C2333064,545,Gross/Near total resection,yes
+Seattle Children's Hospital,C2333310,490,Partial resection,yes
+Seattle Children's Hospital,C2355081,4996,Gross/Near total resection,yes
+Seattle Children's Hospital,C2355081,6552,Biopsy only,yes
+Seattle Children's Hospital,C2358156,395,Gross/Near total resection,yes
+Seattle Children's Hospital,C2463690,1272,Gross/Near total resection,yes
+Seattle Children's Hospital,C2544870,5124,Gross/Near total resection,yes
+Seattle Children's Hospital,C2571192,1168,Biopsy only,yes
+Seattle Children's Hospital,C2571192,802,Gross/Near total resection,yes
+Seattle Children's Hospital,C2571315,1277,Gross/Near total resection,yes
+Seattle Children's Hospital,C2605755,557,Partial resection,yes
+Seattle Children's Hospital,C2696529,912,Gross/Near total resection,yes
+Seattle Children's Hospital,C2698251,1431,Gross/Near total resection,yes
+Seattle Children's Hospital,C2784966,10542,Gross/Near total resection,yes
+Seattle Children's Hospital,C2784966,8530,Gross/Near total resection,yes
+Seattle Children's Hospital,C2852616,5664,Gross/Near total resection,yes
+Seattle Children's Hospital,C2892714,1033,Gross/Near total resection,yes
+Seattle Children's Hospital,C298890,6257,Gross/Near total resection,yes
+Seattle Children's Hospital,C303810,1123,Gross/Near total resection,yes
+Seattle Children's Hospital,C303810,3061,Biopsy only,no
+Seattle Children's Hospital,C303810,3079,Gross/Near total resection,no
+Seattle Children's Hospital,C303810,5987,Biopsy only,no
+Seattle Children's Hospital,C310206,2648,Gross/Near total resection,yes
+Seattle Children's Hospital,C310206,5687,Partial resection,yes
+Seattle Children's Hospital,C310206,7912,Partial resection,no
+Seattle Children's Hospital,C3388527,1192,Partial resection,yes
+Seattle Children's Hospital,C3544368,571,Partial resection,yes
+Seattle Children's Hospital,C3544737,4624,Gross/Near total resection,yes
+Seattle Children's Hospital,C3631329,4278,Partial resection,yes
+Seattle Children's Hospital,C3631329,4287,Gross/Near total resection,yes
+Seattle Children's Hospital,C3631329,4329,Gross/Near total resection,yes
+Seattle Children's Hospital,C3631698,9216,Partial resection,yes
+Seattle Children's Hospital,C3631698,9255,Partial resection,yes
+Seattle Children's Hospital,C3631698,9260,Gross/Near total resection,yes
+Seattle Children's Hospital,C371583,2538,Gross/Near total resection,yes
+Seattle Children's Hospital,C3717306,3855,Partial resection,yes
+Seattle Children's Hospital,C3884586,3630,Gross/Near total resection,yes
+Seattle Children's Hospital,C4031571,1187,Partial resection,yes
+Seattle Children's Hospital,C4031694,3365,Gross/Near total resection,yes
+Seattle Children's Hospital,C4033539,1537,Gross/Near total resection,no
+Seattle Children's Hospital,C4033539,737,Biopsy only,no
+Seattle Children's Hospital,C4034523,1562,Partial resection,yes
+Seattle Children's Hospital,C4034646,1785,Partial resection,yes
+Seattle Children's Hospital,C4103649,2122,Gross/Near total resection,yes
+Seattle Children's Hospital,C4104018,167,Partial resection,yes
+Seattle Children's Hospital,C4104018,663,Gross/Near total resection,no
+Seattle Children's Hospital,C4344483,3009,Gross/Near total resection,yes
+Seattle Children's Hospital,C5254437,1481,Biopsy only,yes
+Seattle Children's Hospital,C5254437,1989,Partial resection,yes
+Seattle Children's Hospital,C5492565,4669,Gross/Near total resection,yes
+Seattle Children's Hospital,C558912,1026,Partial resection,yes
+Seattle Children's Hospital,C558912,1039,Partial resection,yes
+Seattle Children's Hospital,C558912,1183,Unavailable,yes
+Seattle Children's Hospital,C5623560,1726,Partial resection,yes
+Seattle Children's Hospital,C5624052,149,Partial resection,yes
+Seattle Children's Hospital,C5624052,78,Biopsy only,yes
+Seattle Children's Hospital,C602700,1385,Partial resection,yes
+Seattle Children's Hospital,C602700,3963,Gross/Near total resection,yes
+Seattle Children's Hospital,C603069,218,Gross/Near total resection,yes
+Seattle Children's Hospital,C6083703,2915,Gross/Near total resection,yes
+Seattle Children's Hospital,C622257,1750,Gross/Near total resection,yes
+Seattle Children's Hospital,C647349,761,Partial resection,yes
+Seattle Children's Hospital,C676746,6444,Gross/Near total resection,yes
+Seattle Children's Hospital,C677115,3630,Gross/Near total resection,yes
+Seattle Children's Hospital,C6958725,897,Gross/Near total resection,yes
+Seattle Children's Hospital,C700977,7628,Gross/Near total resection,yes
+Seattle Children's Hospital,C701223,3248,Biopsy only,yes
+Seattle Children's Hospital,C701223,3248,Gross/Near total resection,yes
+Seattle Children's Hospital,C701469,737,Partial resection,yes
+Seattle Children's Hospital,C7093902,916,Gross/Near total resection,yes
+Seattle Children's Hospital,C724962,4428,Gross/Near total resection,yes
+Seattle Children's Hospital,C725331,4973,Biopsy only,yes
+Seattle Children's Hospital,C725331,4985,Partial resection,yes
+Seattle Children's Hospital,C7302756,1698,Gross/Near total resection,yes
+Seattle Children's Hospital,C7457490,1195,Gross/Near total resection,yes
+Seattle Children's Hospital,C758541,2820,Partial resection,yes
+Seattle Children's Hospital,C758541,4584,Biopsy only,no
+Seattle Children's Hospital,C7611978,1447,Gross/Near total resection,yes
+Seattle Children's Hospital,C7617267,1182,Partial resection,yes
+Seattle Children's Hospital,C7617267,2015,Gross/Near total resection,no
+Seattle Children's Hospital,C782649,4007,Biopsy only,yes
+Seattle Children's Hospital,C782649,4144,Gross/Near total resection,yes
+Seattle Children's Hospital,C782895,2013,Partial resection,yes
+Seattle Children's Hospital,C784371,8286,Gross/Near total resection,yes
+Seattle Children's Hospital,C797655,2186,Gross/Near total resection,yes
+Seattle Children's Hospital,C8183559,3490,Gross/Near total resection,yes
+Seattle Children's Hospital,C836769,4295,Partial resection,yes
+Seattle Children's Hospital,C837630,1279,Biopsy only,yes
+Seattle Children's Hospital,C837630,1769,Gross/Near total resection,no
+Seattle Children's Hospital,C837630,194,Gross/Near total resection,yes
+Seattle Children's Hospital,C837630,77,Biopsy only,yes
+Seattle Children's Hospital,C8379990,4368,Partial resection,yes
+Seattle Children's Hospital,C8405943,3540,Gross/Near total resection,yes
+Seattle Children's Hospital,C8419104,796,Biopsy only,yes
+Seattle Children's Hospital,C8419104,803,Gross/Near total resection,yes
+Seattle Children's Hospital,C8432019,1686,Gross/Near total resection,yes
+Seattle Children's Hospital,C8432019,2197,Gross/Near total resection,yes
+Seattle Children's Hospital,C8432142,994,Gross/Near total resection,yes
+Seattle Children's Hospital,C849561,3022,Gross/Near total resection,yes
+Seattle Children's Hospital,C849561,733,Gross/Near total resection,yes
+Seattle Children's Hospital,C8735460,4160,Gross/Near total resection,yes
+Seattle Children's Hospital,C912414,2888,Partial resection,yes
+Seattle Children's Hospital,C912414,2909,Gross/Near total resection,yes
+Seattle Children's Hospital,C912660,1851,Gross/Near total resection,yes
+Seattle Children's Hospital,C912660,2841,Gross/Near total resection,yes
+Seattle Children's Hospital,C912660,3037,Gross/Near total resection,no
+Seattle Children's Hospital,C923607,1392,Gross/Near total resection,yes
+Seattle Children's Hospital,C948330,5918,Gross/Near total resection,yes
+Seattle Children's Hospital,C991257,3724,Gross/Near total resection,yes
+Seattle Children's Hospital,C99507,1999,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C1014381,4758,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C2337369,1345,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C2488782,2491,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C2602680,1638,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C2602680,1934,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C2660736,2774,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C2684844,1441,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C2898495,2602,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3224691,3579,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3224691,5774,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3224691,6497,Biopsy only,no
+Stanford Lucile Packard Children's Hospital,C3224814,1829,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3518784,2514,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3522105,6741,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3638094,373,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3638094,677,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3638340,3319,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3638340,4896,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3638586,2334,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C3841167,2783,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C4084953,1124,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C4085199,1212,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C4085199,1789,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C4097622,368,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C4470927,891,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C4472157,1169,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C6344955,3472,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C6345324,3194,Partial resection,yes
+Stanford Lucile Packard Children's Hospital,C6345447,320,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C6889968,2164,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C7376433,1714,Gross/Near total resection,yes
+Stanford Lucile Packard Children's Hospital,C7862775,4126,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1003065,4413,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1003188,5465,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C101721,428,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1026804,5299,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1031847,1458,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1032093,1135,Biopsy only,no
+The Children's Hospital of Philadelphia,C1032093,819,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1036644,711,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1054725,3260,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1060629,4673,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1100235,306,Partial resection,yes
+The Children's Hospital of Philadelphia,C1100235,554,Partial resection,yes
+The Children's Hospital of Philadelphia,C115743,116,Partial resection,yes
+The Children's Hospital of Philadelphia,C121893,382,Not Reported,yes
+The Children's Hospital of Philadelphia,C1223973,3336,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1232952,3126,Partial resection,yes
+The Children's Hospital of Philadelphia,C1232952,3155,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C1248204,2149,Biopsy only,yes
+The Children's Hospital of Philadelphia,C1277601,684,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C136653,1620,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C136653,3509,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C140712,1506,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C140712,1904,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C146247,1221,Partial resection,yes
+The Children's Hospital of Philadelphia,C15252,604,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C16113,5282,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C17466,5666,Partial resection,yes
+The Children's Hospital of Philadelphia,C18081,715,Partial resection,yes
+The Children's Hospital of Philadelphia,C18819,883,Biopsy only,yes
+The Children's Hospital of Philadelphia,C196554,345,Biopsy only,yes
+The Children's Hospital of Philadelphia,C196554,544,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C20049,2850,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C20049,596,Partial resection,yes
+The Children's Hospital of Philadelphia,C20910,2644,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C20910,3743,Partial resection,yes
+The Children's Hospital of Philadelphia,C21402,1384,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C21402,1573,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C21402,3504,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C21402,4443,Biopsy only,no
+The Children's Hospital of Philadelphia,C21402,4647,Partial resection,no
+The Children's Hospital of Philadelphia,C21402,4898,Biopsy only,no
+The Children's Hospital of Philadelphia,C216603,1258,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C216603,7884,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C217095,2994,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C217095,4367,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C217095,4367,Partial resection,no
+The Children's Hospital of Philadelphia,C217095,4773,Biopsy only,no
+The Children's Hospital of Philadelphia,C21894,1736,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C21894,5394,Biopsy only,yes
+The Children's Hospital of Philadelphia,C22263,4068,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C227058,506,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C22755,3437,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C22878,2238,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C22878,5694,Partial resection,yes
+The Children's Hospital of Philadelphia,C230994,3026,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2313753,381,Partial resection,yes
+The Children's Hospital of Philadelphia,C2313753,583,Partial resection,yes
+The Children's Hospital of Philadelphia,C2318673,1475,Partial resection,yes
+The Children's Hospital of Philadelphia,C2322117,128,Partial resection,yes
+The Children's Hospital of Philadelphia,C2322117,1460,Biopsy only,no
+The Children's Hospital of Philadelphia,C2322117,303,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2322117,308,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2322117,724,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2322117,900,Partial resection,no
+The Children's Hospital of Philadelphia,C2338845,4534,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2346471,3655,Partial resection,yes
+The Children's Hospital of Philadelphia,C2346471,3715,Partial resection,yes
+The Children's Hospital of Philadelphia,C2381034,6521,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C24108,1059,Partial resection,yes
+The Children's Hospital of Philadelphia,C24108,1100,Partial resection,yes
+The Children's Hospital of Philadelphia,C24108,1185,Biopsy only,yes
+The Children's Hospital of Philadelphia,C24108,1197,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2442411,1204,Partial resection,yes
+The Children's Hospital of Philadelphia,C2442411,1616,Partial resection,yes
+The Children's Hospital of Philadelphia,C245754,4595,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C245754,8061,Partial resection,yes
+The Children's Hospital of Philadelphia,C2479926,3270,Partial resection,yes
+The Children's Hospital of Philadelphia,C2479926,3827,Partial resection,yes
+The Children's Hospital of Philadelphia,C2479926,4230,Partial resection,no
+The Children's Hospital of Philadelphia,C2479926,4389,Partial resection,no
+The Children's Hospital of Philadelphia,C2501205,1481,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C25092,2038,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2536506,672,Partial resection,yes
+The Children's Hospital of Philadelphia,C2536506,677,Partial resection,yes
+The Children's Hospital of Philadelphia,C2536998,1142,Partial resection,yes
+The Children's Hospital of Philadelphia,C2536998,1737,Biopsy only,yes
+The Children's Hospital of Philadelphia,C2554956,1441,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2556555,5448,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2556555,7028,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C25830,5534,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C25830,6555,Partial resection,no
+The Children's Hospital of Philadelphia,C25830,6992,Partial resection,no
+The Children's Hospital of Philadelphia,C2595915,2456,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2646837,2839,Unavailable,yes
+The Children's Hospital of Philadelphia,C2646837,2843,Unavailable,yes
+The Children's Hospital of Philadelphia,C2646837,2939,Partial resection,yes
+The Children's Hospital of Philadelphia,C2658645,-1,Partial resection,no
+The Children's Hospital of Philadelphia,C2658645,-1,Unavailable,no
+The Children's Hospital of Philadelphia,C2698005,348,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2698005,973,Partial resection,yes
+The Children's Hospital of Philadelphia,C270354,320,Unavailable,yes
+The Children's Hospital of Philadelphia,C270723,3312,Partial resection,yes
+The Children's Hospital of Philadelphia,C270723,3332,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C270723,3877,Partial resection,yes
+The Children's Hospital of Philadelphia,C270723,4021,Partial resection,no
+The Children's Hospital of Philadelphia,C27552,3856,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C27552,6931,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C2774019,1853,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2786688,1985,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2848188,219,Biopsy only,no
+The Children's Hospital of Philadelphia,C2848188,256,Partial resection,no
+The Children's Hospital of Philadelphia,C2848188,29,Biopsy only,no
+The Children's Hospital of Philadelphia,C28905,4234,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2896773,4254,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2897019,1794,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2897142,5980,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C29028,3655,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C2981889,365,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3003906,122,Biopsy only,no
+The Children's Hospital of Philadelphia,C30135,1366,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C308730,4601,Partial resection,yes
+The Children's Hospital of Philadelphia,C312912,6576,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C312912,7095,Partial resection,yes
+The Children's Hospital of Philadelphia,C3169587,2697,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3198492,3453,Partial resection,yes
+The Children's Hospital of Philadelphia,C3198492,3455,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C33948,2014,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C33948,8517,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C33948,8517,Partial resection,yes
+The Children's Hospital of Philadelphia,C33948,8688,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C33948,8688,Partial resection,no
+The Children's Hospital of Philadelphia,C33948,9322,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C3406239,1140,N/A,no
+The Children's Hospital of Philadelphia,C3406239,1511,Partial resection,no
+The Children's Hospital of Philadelphia,C3406239,659,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3408822,1636,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3409560,2782,Partial resection,yes
+The Children's Hospital of Philadelphia,C3409560,2806,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3418416,479,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3422106,183,Partial resection,yes
+The Children's Hospital of Philadelphia,C3422106,25,Biopsy only,yes
+The Children's Hospital of Philadelphia,C3474996,6821,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3474996,7866,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3474996,8913,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C3519645,953,Partial resection,yes
+The Children's Hospital of Philadelphia,C3552978,3335,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3559497,1523,Biopsy only,yes
+The Children's Hospital of Philadelphia,C3559497,1533,Partial resection,yes
+The Children's Hospital of Philadelphia,C3651501,346,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3665154,6703,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3665400,1544,Partial resection,yes
+The Children's Hospital of Philadelphia,C3665400,1550,Partial resection,yes
+The Children's Hospital of Philadelphia,C3665400,1571,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C374412,190,Partial resection,yes
+The Children's Hospital of Philadelphia,C3755559,1131,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C3755559,454,Biopsy only,yes
+The Children's Hospital of Philadelphia,C3755559,461,Biopsy only,yes
+The Children's Hospital of Philadelphia,C3755559,739,Partial resection,yes
+The Children's Hospital of Philadelphia,C3755928,5557,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3767367,3790,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C377979,3424,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C377979,6706,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C377979,9360,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C3816813,637,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3859863,4099,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3860232,1366,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3860232,2576,Partial resection,yes
+The Children's Hospital of Philadelphia,C3943503,964,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C396306,562,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C396552,480,Partial resection,yes
+The Children's Hospital of Philadelphia,C396552,494,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3971178,3357,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C39729,1235,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3979173,5706,Partial resection,yes
+The Children's Hospital of Philadelphia,C3979173,5797,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C3980157,5087,Partial resection,yes
+The Children's Hospital of Philadelphia,C3980157,5110,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C40098,86,Partial resection,yes
+The Children's Hospital of Philadelphia,C4021731,543,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4049406,2705,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4063305,7024,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C406761,1038,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C40713,2589,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4082862,7927,Partial resection,yes
+The Children's Hospital of Philadelphia,C4082862,7951,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4093563,1048,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4093563,2097,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C41328,13275,Partial resection,yes
+The Children's Hospital of Philadelphia,C41328,13333,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4174251,4346,Biopsy only,yes
+The Children's Hospital of Philadelphia,C4190733,1446,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4190856,6575,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C419553,4854,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C419553,6590,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4261089,4151,Partial resection,yes
+The Children's Hospital of Philadelphia,C4261089,4176,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4261089,4209,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4316685,4000,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C432222,495,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4333905,1502,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4345713,4442,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C44403,1888,Partial resection,yes
+The Children's Hospital of Philadelphia,C4463301,2043,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4463916,580,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4483473,1017,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C45141,6676,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C45879,265,Partial resection,yes
+The Children's Hospital of Philadelphia,C45879,271,Partial resection,yes
+The Children's Hospital of Philadelphia,C466293,2082,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C466293,383,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C48216,2265,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C49077,4535,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C49077,6032,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C4964157,1190,Biopsy only,no
+The Children's Hospital of Philadelphia,C4964157,1247,Partial resection,no
+The Children's Hospital of Philadelphia,C50184,2404,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C50799,3408,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5136234,5272,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5136849,6833,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5137218,1526,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C528285,4018,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C528285,4352,Partial resection,yes
+The Children's Hospital of Philadelphia,C52890,4389,Partial resection,yes
+The Children's Hospital of Philadelphia,C528900,640,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C529515,790,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C531483,759,Partial resection,yes
+The Children's Hospital of Philadelphia,C533082,5174,Biopsy only,yes
+The Children's Hospital of Philadelphia,C533082,761,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C533451,976,Unavailable,yes
+The Children's Hospital of Philadelphia,C53628,3542,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C537141,4321,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C540462,444,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C540585,1157,Unavailable,yes
+The Children's Hospital of Philadelphia,C540585,3529,Unavailable,yes
+The Children's Hospital of Philadelphia,C542061,8309,Unavailable,no
+The Children's Hospital of Philadelphia,C542061,Not Reported,Unavailable,no
+The Children's Hospital of Philadelphia,C542307,1682,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C542307,2536,Partial resection,yes
+The Children's Hospital of Philadelphia,C542307,6169,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C543045,3712,Unavailable,yes
+The Children's Hospital of Philadelphia,C54366,2404,Partial resection,yes
+The Children's Hospital of Philadelphia,C54366,8544,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C543906,3561,Unavailable,yes
+The Children's Hospital of Philadelphia,C547965,1035,Unavailable,yes
+The Children's Hospital of Philadelphia,C548457,730,Unavailable,yes
+The Children's Hospital of Philadelphia,C548457,Not Reported,Unavailable,no
+The Children's Hospital of Philadelphia,C5489736,79,Partial resection,yes
+The Children's Hospital of Philadelphia,C5489736,88,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5490105,3361,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5490228,3399,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C549441,2495,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C549441,5478,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C551040,6270,Unavailable,no
+The Children's Hospital of Philadelphia,C552762,2191,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C55350,2574,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C55350,3616,Partial resection,yes
+The Children's Hospital of Philadelphia,C553500,1036,Unavailable,yes
+The Children's Hospital of Philadelphia,C554607,1522,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C554607,2132,Unavailable,yes
+The Children's Hospital of Philadelphia,C557559,4505,Unavailable,yes
+The Children's Hospital of Philadelphia,C557559,6881,Unavailable,yes
+The Children's Hospital of Philadelphia,C558051,3349,Unavailable,yes
+The Children's Hospital of Philadelphia,C558420,2463,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C55965,3987,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C55965,5022,Partial resection,yes
+The Children's Hospital of Philadelphia,C56088,4869,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C56211,5235,Unavailable,yes
+The Children's Hospital of Philadelphia,C56211,5278,Partial resection,yes
+The Children's Hospital of Philadelphia,C5623068,809,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5633277,3357,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C563340,458,Unavailable,yes
+The Children's Hospital of Philadelphia,C563586,1155,Unavailable,yes
+The Children's Hospital of Philadelphia,C563709,3834,Unavailable,yes
+The Children's Hospital of Philadelphia,C57564,4288,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5801049,126,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5801172,1141,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C584619,2327,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C58548,4240,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C58917,1575,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C5964147,2447,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C59655,2982,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C6002523,2313,Partial resection,yes
+The Children's Hospital of Philadelphia,C6009411,2390,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C607743,738,Partial resection,yes
+The Children's Hospital of Philadelphia,C6109902,1075,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C6176814,2813,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C6207441,2774,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C623979,5119,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C625086,2637,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C625086,3479,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C625086,3800,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C625086,5174,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C6254181,4093,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C626070,291,Partial resection,yes
+The Children's Hospital of Philadelphia,C626070,535,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C626193,170,Partial resection,yes
+The Children's Hospital of Philadelphia,C6476073,4747,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C6538311,274,Unavailable,yes
+The Children's Hospital of Philadelphia,C6538311,2807,Partial resection,no
+The Children's Hospital of Philadelphia,C6538311,897,Partial resection,yes
+The Children's Hospital of Philadelphia,C6538311,973,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C663708,5688,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C663708,6279,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C6735357,5153,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C67527,3680,Biopsy only,yes
+The Children's Hospital of Philadelphia,C67527,3722,Partial resection,yes
+The Children's Hospital of Philadelphia,C6769797,1710,Unavailable,yes
+The Children's Hospital of Philadelphia,C6769797,4236,N/A,no
+The Children's Hospital of Philadelphia,C68265,2212,Partial resection,yes
+The Children's Hospital of Philadelphia,C6830682,3671,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C6854052,756,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C6908049,1097,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C692613,3606,Partial resection,yes
+The Children's Hospital of Philadelphia,C698517,1484,Partial resection,yes
+The Children's Hospital of Philadelphia,C698640,350,Partial resection,yes
+The Children's Hospital of Philadelphia,C701838,3300,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C7041012,3497,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C7218378,1078,Partial resection,yes
+The Children's Hospital of Philadelphia,C7218378,922,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C72570,3557,Partial resection,yes
+The Children's Hospital of Philadelphia,C7351464,2539,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C7351587,530,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C740337,1887,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C740337,2983,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C741198,2100,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C7483812,2534,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C752883,11609,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C752883,11707,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C752883,4230,Unavailable,yes
+The Children's Hospital of Philadelphia,C75399,5620,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C7542975,2935,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C760017,110,Biopsy only,yes
+The Children's Hospital of Philadelphia,C76875,3651,Partial resection,yes
+The Children's Hospital of Philadelphia,C7726245,3789,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C7785162,1256,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C794457,2696,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C794457,3912,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C794457,4403,Partial resection,no
+The Children's Hospital of Philadelphia,C794457,4737,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C798270,1846,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8013204,4501,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8104470,4598,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8146167,1808,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C81918,1171,Partial resection,yes
+The Children's Hospital of Philadelphia,C82164,1923,Biopsy only,yes
+The Children's Hospital of Philadelphia,C82164,1936,Partial resection,yes
+The Children's Hospital of Philadelphia,C8219967,1548,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C83517,3671,Unavailable,yes
+The Children's Hospital of Philadelphia,C83517,4402,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8361663,7195,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8361663,9063,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8474331,1510,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8474331,1693,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C84747,5075,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C84747,6727,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C84747,7398,Partial resection,no
+The Children's Hospital of Philadelphia,C850914,6118,Unavailable,no
+The Children's Hospital of Philadelphia,C851283,486,Unavailable,yes
+The Children's Hospital of Philadelphia,C851406,4716,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8516766,4270,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C854112,1219,Partial resection,no
+The Children's Hospital of Philadelphia,C854112,245,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C854112,610,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C85854,826,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8607048,2876,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8659569,1821,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C8660430,2655,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C876375,128,Biopsy only,yes
+The Children's Hospital of Philadelphia,C876375,5,Biopsy only,yes
+The Children's Hospital of Philadelphia,C8776050,1982,Partial resection,yes
+The Children's Hospital of Philadelphia,C880803,343,Partial resection,yes
+The Children's Hospital of Philadelphia,C8882691,1694,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C914505,4170,Partial resection,yes
+The Children's Hospital of Philadelphia,C914505,4208,N/A,yes
+The Children's Hospital of Philadelphia,C914505,4864,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C964566,2841,Partial resection,yes
+The Children's Hospital of Philadelphia,C964566,2847,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C964566,3456,Biopsy only,yes
+The Children's Hospital of Philadelphia,C972438,2050,Partial resection,yes
+The Children's Hospital of Philadelphia,C972438,2860,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C973545,2031,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C974652,1564,Gross/Near total resection,yes
+The Children's Hospital of Philadelphia,C974652,3289,Gross/Near total resection,no
+The Children's Hospital of Philadelphia,C99630,5344,Partial resection,yes
+UAB,C3199845,2109,Gross/Near total resection,yes
+UAB,C3203658,4601,Partial resection,yes
+UAB,C3203904,4573,Gross/Near total resection,yes
+UAB,C3430101,5259,Gross/Near total resection,yes
+UAB,C4161705,1261,Gross/Near total resection,yes
+UAB,C4161705,1385,Gross/Near total resection,yes
+UAB,C4729473,1192,Biopsy only,yes
+UAB,C4729473,1194,Gross/Near total resection,yes
+UAB,C7026006,2328,Partial resection,yes
+UCSF Benioff Children's Hospital,C1010445,557,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C1203063,6034,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C2457171,1451,Unavailable,no
+UCSF Benioff Children's Hospital,C2509200,3538,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C2550528,969,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C2552619,3336,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C4154940,1800,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C4154940,2367,Partial resection,yes
+UCSF Benioff Children's Hospital,C4548909,6185,Partial resection,yes
+UCSF Benioff Children's Hospital,C7596111,854,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C7768188,1052,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C7768188,849,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C7769295,2968,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C8241861,6174,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C8257113,3168,Unavailable,yes
+UCSF Benioff Children's Hospital,C8257113,4696,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C886092,362,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C886092,662,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C921639,1351,Gross/Near total resection,yes
+UCSF Benioff Children's Hospital,C921639,1876,Partial resection,no
+UNC Lineberger Comprehensive Cancer Center,C7863513,787,Gross/Near total resection,yes
+University of Iowa,C7223175,4297,Gross/Near total resection,yes
+University of Iowa,C7223175,4297,Partial resection,yes
+University of Iowa,C7223913,739,Biopsy only,yes
+University of Iowa,C7224036,836,Partial resection,yes
+University of Iowa,C7224036,9179,Biopsy only,yes
+University of Iowa,C7415055,7288,Gross/Near total resection,yes
+University of Iowa,C7532766,241,Gross/Near total resection,yes
+University of Iowa,C7532766,5537,Partial resection,yes
+University of Iowa,C7705950,3676,Gross/Near total resection,yes
+University of Iowa,C7754535,2093,Gross/Near total resection,yes
+University of Iowa,C8028456,132,Partial resection,yes
+University of Michigan C.S. Mott Children's Hospital,C4105125,2228,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4105248,2188,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4105371,408,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4105494,1013,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4105617,3192,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4105863,3807,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4106970,3018,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4107216,5398,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4107708,47,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4108077,4617,Gross/Near total resection,yes
+University of Michigan C.S. Mott Children's Hospital,C4110045,116,Biopsy only,yes
+University of Michigan C.S. Mott Children's Hospital,C4113366,2011,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4114350,3468,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4114965,1057,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4115580,3969,Unavailable,yes
+University of Michigan C.S. Mott Children's Hospital,C4120869,3992,Biopsy only,yes
+University of Michigan C.S. Mott Children's Hospital,C4122099,7723,Biopsy only,yes
+University of Michigan C.S. Mott Children's Hospital,C4122345,656,Biopsy only,yes
+University of Michigan C.S. Mott Children's Hospital,C4122468,691,Biopsy only,yes
+University of Michigan C.S. Mott Children's Hospital,C4122591,3548,Not Reported,yes
+University of Michigan C.S. Mott Children's Hospital,C4123821,5493,Biopsy only,no
+University of Michigan C.S. Mott Children's Hospital,C4124805,1431,Biopsy only,yes
+University of Michigan C.S. Mott Children's Hospital,C4124928,803,Biopsy only,yes
+University of Pittsburgh,C1010076,754,Partial resection,yes
+University of Pittsburgh,C1064319,3275,Gross/Near total resection,yes
+University of Pittsburgh,C107994,2907,Gross/Near total resection,yes
+University of Pittsburgh,C107994,4899,Gross/Near total resection,yes
+University of Pittsburgh,C1168131,2087,Gross/Near total resection,yes
+University of Pittsburgh,C1168131,4598,Gross/Near total resection,yes
+University of Pittsburgh,C122262,2859,Gross/Near total resection,yes
+University of Pittsburgh,C1262718,3061,Gross/Near total resection,yes
+University of Pittsburgh,C129273,-1,Unavailable,no
+University of Pittsburgh,C129273,1816,Not Applicable,no
+University of Pittsburgh,C129519,3683,Unavailable,yes
+University of Pittsburgh,C129519,3816,Unavailable,yes
+University of Pittsburgh,C129642,2241,Gross/Near total resection,yes
+University of Pittsburgh,C129642,2638,Unavailable,yes
+University of Pittsburgh,C129765,4491,Unavailable,yes
+University of Pittsburgh,C129888,6063,Gross/Near total resection,yes
+University of Pittsburgh,C130011,1067,Gross/Near total resection,yes
+University of Pittsburgh,C130134,415,Gross/Near total resection,yes
+University of Pittsburgh,C130257,1605,Gross/Near total resection,yes
+University of Pittsburgh,C130380,5861,Gross/Near total resection,yes
+University of Pittsburgh,C138006,4452,Gross/Near total resection,yes
+University of Pittsburgh,C2358033,769,Partial resection,yes
+University of Pittsburgh,C2541918,5938,Gross/Near total resection,yes
+University of Pittsburgh,C2567502,54,Gross/Near total resection,yes
+University of Pittsburgh,C2666394,1447,Gross/Near total resection,yes
+University of Pittsburgh,C3273768,4159,Gross/Near total resection,yes
+University of Pittsburgh,C3279303,1963,Gross/Near total resection,yes
+University of Pittsburgh,C340341,4206,Gross/Near total resection,yes
+University of Pittsburgh,C340341,5287,Gross/Near total resection,yes
+University of Pittsburgh,C340341,5287,Partial resection,yes
+University of Pittsburgh,C3651747,3024,Gross/Near total resection,yes
+University of Pittsburgh,C3775608,358,Partial resection,yes
+University of Pittsburgh,C3775608,367,Gross/Near total resection,yes
+University of Pittsburgh,C3776100,1865,Gross/Near total resection,yes
+University of Pittsburgh,C3777699,4732,Gross/Near total resection,yes
+University of Pittsburgh,C3904635,6318,Gross/Near total resection,yes
+University of Pittsburgh,C3905865,3490,Partial resection,yes
+University of Pittsburgh,C413034,5110,Gross/Near total resection,yes
+University of Pittsburgh,C4157892,2780,Partial resection,yes
+University of Pittsburgh,C4513239,3361,Gross/Near total resection,yes
+University of Pittsburgh,C4874367,1126,Gross/Near total resection,yes
+University of Pittsburgh,C4884084,3169,Partial resection,yes
+University of Pittsburgh,C4884084,4115,Gross/Near total resection,yes
+University of Pittsburgh,C5361078,4412,Gross/Near total resection,yes
+University of Pittsburgh,C607005,3580,Gross/Near total resection,yes
+University of Pittsburgh,C6277182,1438,Gross/Near total resection,yes
+University of Pittsburgh,C665061,3266,Gross/Near total resection,yes
+University of Pittsburgh,C6693414,3297,Gross/Near total resection,yes
+University of Pittsburgh,C710325,3475,Gross/Near total resection,yes
+University of Pittsburgh,C7272621,172,Partial resection,yes
+University of Pittsburgh,C7272621,177,Partial resection,yes
+University of Pittsburgh,C7272867,2750,Gross/Near total resection,yes
+University of Pittsburgh,C7272990,431,Gross/Near total resection,yes
+University of Pittsburgh,C7273113,4791,Partial resection,yes
+University of Pittsburgh,C7273605,3371,Gross/Near total resection,yes
+University of Pittsburgh,C7273851,475,Gross/Near total resection,yes
+University of Pittsburgh,C7712346,2805,Partial resection,yes
+University of Pittsburgh,C820287,1475,Gross/Near total resection,yes
+University of Pittsburgh,C8516028,2003,Gross/Near total resection,yes
+University of Pittsburgh,C8517012,4604,Gross/Near total resection,yes
+University of Pittsburgh,C944886,306,Partial resection,yes
+University of Pittsburgh,C96801,4075,Gross/Near total resection,yes
+Wake Forest Baptist Medical Center,C3335145,1404,Partial resection,yes
+Wake Forest Baptist Medical Center,C3335145,2420,Partial resection,yes
+Wake Forest Baptist Medical Center,C3335145,4610,Unavailable,yes
+Wake Forest Baptist Medical Center,C3461835,3706,Gross/Near total resection,yes
+Wake Forest Baptist Medical Center,C3941166,591,Gross/Near total resection,yes
+Wake Forest Baptist Medical Center,C3941166,947,Partial resection,yes
+Washington University in St. Louis,C7226496,5527,Gross/Near total resection,yes
+Washington University in St. Louis,C7226865,2397,Gross/Near total resection,yes
+Washington University in St. Louis,C7226988,3955,Biopsy only,no
+Washington University in St. Louis,C7227111,1362,Gross/Near total resection,yes
+Washington University in St. Louis,C7227234,5705,Gross/Near total resection,yes
+Washington University in St. Louis,C7227357,2844,Gross/Near total resection,yes
+Washington University in St. Louis,C7415547,3654,Gross/Near total resection,yes
+Washington University in St. Louis,C7415670,1728,Gross/Near total resection,yes
+Washington University in St. Louis,C7422312,2655,Gross/Near total resection,yes
+Washington University in St. Louis,C7422558,3120,Gross/Near total resection,yes
+Washington University in St. Louis,C7424772,2216,Gross/Near total resection,yes
+Washington University in St. Louis,C7543221,716,Gross/Near total resection,yes
+Washington University in St. Louis,C7543467,2744,Partial resection,yes
+Washington University in St. Louis,C7543467,3289,Partial resection,yes
+Washington University in St. Louis,C7553307,3094,Biopsy only,yes
+Washington University in St. Louis,C7553307,3094,Gross/Near total resection,yes
+Washington University in St. Louis,C7553307,3374,Gross/Near total resection,yes
+Washington University in St. Louis,C7559457,5441,Partial resection,yes
+Washington University in St. Louis,C7784301,3793,Gross/Near total resection,yes
+Washington University in St. Louis,C7831656,1966,Gross/Near total resection,yes
+Washington University in St. Louis,C7947891,2799,Gross/Near total resection,yes
+Weill Cornell Medical College,C1044147,395,Biopsy only,yes
+Weill Cornell Medical College,C1229139,983,Gross/Near total resection,yes
+Weill Cornell Medical College,C1254600,1735,Gross/Near total resection,yes
+Weill Cornell Medical College,C3436989,616,Gross/Near total resection,yes
+Weill Cornell Medical College,C3706359,133,Gross/Near total resection,yes
+Weill Cornell Medical College,C4704750,707,Partial resection,yes
+Weill Cornell Medical College,C5228607,4050,Gross/Near total resection,yes
+Weill Cornell Medical College,C5291214,5250,Gross/Near total resection,yes
+Weill Cornell Medical College,C6432039,119,Gross/Near total resection,yes
+Weill Cornell Medical College,C6433392,951,Gross/Near total resection,yes
+Weill Cornell Medical College,C7037568,2975,Gross/Near total resection,yes
+Weill Cornell Medical College,C973914,4592,Gross/Near total resection,yes
+Weill Cornell Medical College,C974037,484,Gross/Near total resection,yes
