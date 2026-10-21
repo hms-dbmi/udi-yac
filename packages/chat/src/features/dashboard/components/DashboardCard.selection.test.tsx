@@ -106,8 +106,9 @@ describe('DashboardCard — selections are column filters', () => {
   });
 
   it('writes its clicks into the column filters, once each', () => {
-    // The mount binding the composed selection: only recorded.
-    act(() => vis.onSelectionChange({ [uuid]: point({}) }));
+    // The mount binding the selection it was handed: nothing new.
+    act(() => vis.onSelectionChange({ [uuid]: { ...point({}), selection: null } }));
+    act(frame);
     expect(filters.getState().dataSelections).toEqual({});
 
     act(() => vis.onSelectionChange({ [uuid]: point({ sex: ['M'], race: ['Asian'] }) }));
@@ -129,6 +130,14 @@ describe('DashboardCard — selections are column filters', () => {
     );
     act(frame);
     expect(filters.getState().dataSelections['col:donors.sex']).toEqual(point({ sex: ['F'] }));
+  });
+
+  // The reported bug: a new, unfiltered chart reports nothing at mount, so its
+  // first report is the user's first click — and it was skipped as the mount's.
+  it('writes a new chart’s very first click', () => {
+    act(() => vis.onSelectionChange({ [uuid]: point({ sex: ['M'] }) }));
+    act(frame);
+    expect(filters.getState().dataSelections).toEqual({ 'col:donors.sex': point({ sex: ['M'] }) });
   });
 
   it('writes only the latest of the reports made within one frame', () => {

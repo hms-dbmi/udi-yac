@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { UDIVis, describeTransformations } from 'udi-toolkit/react';
 import type { DataSelection, DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
@@ -179,26 +179,34 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // chart's own entry is read, and only when it changed since the last report:
   // a report triggered by another chart can carry this chart's selection from
   // before a filter edit has been drawn back, and applying that would undo the
-  // edit. The first report (the mount binding the composed selection) is only
-  // recorded. The message count anchors a filter the chart creates in the chat.
+  // edit. Until the chart has reported, "last" is the selection it was handed
+  // (ownSelection): the mount binding it reports nothing new. Skipping the
+  // first report instead dropped a new chart's first click, since an
+  // unfiltered chart has no mount report. Only `.selection` is compared — the
+  // toolkit and the composed copy order their other keys differently. The
+  // message count anchors a filter the chart creates in the chat.
   //
   // A brush reports on every pointer move, and each write re-renders every
   // card and re-queries every chart. So writes are coalesced to one per
   // animation frame: the latest selection of the frame is the one applied.
   const lastOwnRef = useRef<string | undefined>(undefined);
+  const handedRef = useRef<string>('null');
+  useLayoutEffect(() => {
+    handedRef.current = JSON.stringify(ownSelection?.selection ?? null);
+  }, [ownSelection]);
   const pendingOwnRef = useRef<string | null>(null);
   const frameRef = useRef<number | null>(null);
   const handleSelectionChange = useCallback(
     (newSelections: DataSelections) => {
       if (!selectFields) return;
       const own = newSelections[viz.uuid] ?? null;
-      const json = JSON.stringify(own);
-      const previous = lastOwnRef.current;
-      lastOwnRef.current = json;
-      const action = previous === undefined ? 'first' : previous === json ? 'unchanged' : 'apply';
+      const key = JSON.stringify(own?.selection ?? null);
+      const previous = lastOwnRef.current ?? handedRef.current;
+      lastOwnRef.current = key;
+      const action = previous === key ? 'unchanged' : 'apply';
       debugLog('chat', 'card-report', { viz: viz.uuid, action, own });
       if (action !== 'apply') return;
-      pendingOwnRef.current = json;
+      pendingOwnRef.current = JSON.stringify(own);
       frameRef.current ??= requestAnimationFrame(() => {
         frameRef.current = null;
         const latest = pendingOwnRef.current;
