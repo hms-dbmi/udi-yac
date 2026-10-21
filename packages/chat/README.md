@@ -135,6 +135,7 @@ Embedding in another app? Two things worth knowing up front:
 | `fontScale`           | `number?`              | Text size multiplier (1–2) for every chart, table and label. Overrides and hides the viewer's own Text size setting; omit it to leave text size to the viewer.                                                                                   |
 | `readOnly`            | `boolean \| 'locked'?` | Start with the chat collapsed to a rail and every editing control hidden. `'locked'` removes the way back out. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                      |
 | `initialSession`      | `unknown?`             | A session export to seed the dashboard and conversation with. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                                                                       |
+| `savedSessionsKey`    | `string?`              | Adds **Saved in browser…** to the dashboard's Session menu: save the current session by name, then load or delete it later. Stored in `localStorage` under this key, so use one key per data package.                                            |
 | `filters`             | `UDIFilter[]?`         | Filters set by the embedding page. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                                                |
 | `onFiltersChange`     | `(filters) => void`    | Called with every filter in place whenever one changes. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                           |
 | `className`           | `string?`              | CSS class for the root element                                                                                                                                                                                                                   |
@@ -610,7 +611,7 @@ src/
         ChatInput.tsx               # Message input
         MessageList.tsx             # Message history with auto-scroll
         MessageBubble.tsx           # Single message + tool call tabs
-        ConversationList.tsx        # Sidebar with saved session files
+        ConversationList.tsx        # Debug sidebar (`//admin`): new conversation
         ApiKeyInput.tsx             # OpenAI API key input
       hooks/
         useChatApi.ts               # LLM API integration hook

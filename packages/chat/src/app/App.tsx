@@ -25,6 +25,9 @@ function App() {
         model={env.model}
         readOnly={env.readOnly}
         initialSession={initialSession}
+        // One saved-sessions list per data package: a session only renders
+        // against the package it was built on.
+        savedSessionsKey={env.remotePackage ?? env.dataPackagePath}
       />
     </div>
   );

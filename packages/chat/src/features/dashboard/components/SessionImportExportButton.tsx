@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Save, Upload, Download } from 'lucide-react';
+import { Save, Upload, Download, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -19,9 +19,11 @@ import {
   useDashboardStore,
   useDataFiltersStore,
   useDataPackage,
+  useSavedSessionsKey,
   useTracker,
 } from '@/app/UDIChatContext';
 import { applySessionExport } from '../utils/applySessionExport';
+import { SavedSessionsDialog } from './SavedSessionsDialog';
 import {
   buildSessionExport,
   parseSessionExport,
@@ -52,27 +54,58 @@ export function SessionImportExportButton() {
   const dataFiltersStore = useDataFiltersStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
   const trackEvent = useTracker();
+  const savedSessionsKey = useSavedSessionsKey();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [savedOpen, setSavedOpen] = useState(false);
 
-  const handleExport = useCallback(() => {
+  const snapshotSession = useCallback((): SessionExport => {
     const state = dashboardStore.getState();
     const conversation = conversationStore.getState();
-    const messages = conversation.messages;
-    const dashboard = state.exportDashboard();
-    const payload: SessionExport = buildSessionExport({
-      messages,
-      dashboard,
+    return buildSessionExport({
+      messages: conversation.messages,
+      dashboard: state.exportDashboard(),
       grid: { cols: state.gridCols, rowHeight: state.gridRowHeight },
       sessionUsage: conversation.sessionUsage,
     });
+  }, [conversationStore, dashboardStore]);
+
+  const handleExport = useCallback(() => {
+    const payload = snapshotSession();
     saveBlob(JSON.stringify(payload, null, 2), `udi-session_${timestamp()}.json`);
     trackEvent('session_exported', {
-      messageCount: messages.length,
-      vizCount: dashboard.visualizations.length,
-      itemCount: dashboard.layout.items.length,
+      messageCount: payload.conversation.messages.length,
+      vizCount: payload.visualizations.length,
+      itemCount: payload.layout.items.length,
     });
-  }, [conversationStore, dashboardStore, trackEvent]);
+  }, [snapshotSession, trackEvent]);
+
+  /** File import and browser-saved sessions both arrive unparsed. */
+  const importSession = useCallback(
+    (raw: unknown, source: 'file' | 'browser') => {
+      const parsed = parseSessionExport(raw);
+      if (!parsed.ok) {
+        setErrorMessage(parsed.error);
+        return;
+      }
+      applySessionExport(
+        parsed.value,
+        {
+          conversation: conversationStore,
+          dashboard: dashboardStore,
+          dataFilters: dataFiltersStore,
+        },
+        sourceFields,
+      );
+      trackEvent('session_imported', {
+        source,
+        messageCount: parsed.value.conversation.messages.length,
+        vizCount: parsed.value.visualizations.length,
+        itemCount: parsed.value.layout.items.length,
+      });
+    },
+    [conversationStore, dashboardStore, dataFiltersStore, sourceFields, trackEvent],
+  );
 
   const handlePickFile = useCallback(() => {
     fileInputRef.current?.click();
@@ -84,31 +117,12 @@ export function SessionImportExportButton() {
       event.target.value = '';
       if (!file) return;
       try {
-        const text = await file.text();
-        const parsed = parseSessionExport(JSON.parse(text));
-        if (!parsed.ok) {
-          setErrorMessage(parsed.error);
-          return;
-        }
-        applySessionExport(
-          parsed.value,
-          {
-            conversation: conversationStore,
-            dashboard: dashboardStore,
-            dataFilters: dataFiltersStore,
-          },
-          sourceFields,
-        );
-        trackEvent('session_imported', {
-          messageCount: parsed.value.conversation.messages.length,
-          vizCount: parsed.value.visualizations.length,
-          itemCount: parsed.value.layout.items.length,
-        });
+        importSession(JSON.parse(await file.text()), 'file');
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : 'Failed to read file');
       }
     },
-    [conversationStore, dashboardStore, dataFiltersStore, sourceFields, trackEvent],
+    [importSession],
   );
 
   return (
@@ -138,8 +152,22 @@ export function SessionImportExportButton() {
             <Upload className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
             Import session
           </DropdownMenuItem>
+          {savedSessionsKey && (
+            <DropdownMenuItem onClick={() => setSavedOpen(true)}>
+              <HardDrive className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
+              Saved in browser…
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {savedSessionsKey && savedOpen && (
+        <SavedSessionsDialog
+          storageKey={savedSessionsKey}
+          onClose={() => setSavedOpen(false)}
+          snapshot={snapshotSession}
+          onLoad={(raw) => importSession(raw, 'browser')}
+        />
+      )}
       <Dialog open={errorMessage !== null} onOpenChange={(o) => !o && setErrorMessage(null)}>
         <DialogContent>
           <DialogHeader>

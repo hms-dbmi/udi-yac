@@ -6,6 +6,7 @@ on:
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
+      - "sample-data/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-chat.yml"
@@ -14,6 +15,7 @@ on:
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
+      - "sample-data/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-chat.yml"
