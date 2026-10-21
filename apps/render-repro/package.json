@@ -18,12 +18,12 @@
     "*.{ts,tsx,js,jsx,json,css,md,html,yaml,yml}": "prettier --write"
   },
   "dependencies": {
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "udi-toolkit": "workspace:*",
     "vega": "^6.4.0",
     "vega-embed": "^7.3.0",
-    "vega-lite": "^6.4.3"
+    "vega-lite": "^6.5.0"
   },
   "devDependencies": {
     "@types/node": "^24.19.1",
@@ -31,6 +31,6 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "typescript": "~6.0.3",
-    "vite": "^8.3.3"
+    "vite": "^8.3.4"
   }
 }
