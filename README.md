@@ -8,6 +8,8 @@ Formerly four separate repositories, merged with full commit history preserved v
 git log "$(git log --merges --grep="Add 'packages/chat/'" -n1 --format=%H)^2"
 ```
 
+**Try it:** [hms-dbmi.github.io/udi-yac](https://hms-dbmi.github.io/udi-yac/), with sample datasets, predefined sessions and [docs](https://hms-dbmi.github.io/udi-yac/docs/using/).
+
 ## Packages
 
 | Directory                                    | Published as                                                        | Stack                    | Role                                       |
@@ -28,7 +30,9 @@ Former homes: [udi-grammar](https://github.com/hms-dbmi/udi-grammar), [udi-chat-
 node scripts/setup.mjs      # or: pnpm setup
 ```
 
-This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:grammar`, `pnpm dev:storybook`).
+This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:grammar`, `pnpm dev:storybook`, `pnpm dev:site`).
+
+**The whole public site** (landing page, docs, the app page at `/udi-yac/app/`, grammar demo at `/udi-yac/grammar/`) runs with the **Dev: all** task at <http://localhost:4321/udi-yac/>. The site's app page embeds the `udi-yac` library build, so it needs **Dev: chat library (watch)** running to pick up chat changes. Its grammar link is proxied to the grammar demo's own dev server (`:9000`, **Dev: grammar app**) and works only while that runs. See [`apps/site/README.md`](apps/site/README.md#local-development). The standalone chat (**Dev: chat**) is separate and is configured only by its env vars, so point `VITE_UDI_DATA_PACKAGE` at any data package to try it.
 
 Manual/CI steps — JavaScript/TypeScript (pnpm workspace, `udi-toolkit` consumed via `workspace:*`, so build it before the chat app):
 
@@ -102,3 +106,7 @@ Dev/test data packages live once at [`sample-data/`](sample-data) (the single so
 ## Releases
 
 Tags are per-package: `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z`. Because `udi-yac` depends on `udi-toolkit: workspace:*` (rewritten to the exact in-tree version at publish time), **publish udi-toolkit before udi-yac** whenever the toolkit version moved.
+
+## Citation
+
+Lange D, Gao S, Sui P, Misner P, van den Brandt A, Money A, Akhmetov N, Choy L, Zitnik M, Gehlenborg N. **YAC: Bridging Natural Language and Interactive Visual Exploration with Generative AI for Biomedical Data Discovery.** arXiv:2509.19182, 2025. [doi:10.48550/arXiv.2509.19182](https://doi.org/10.48550/arXiv.2509.19182). BibTeX is on the [landing page](https://hms-dbmi.github.io/udi-yac/#cite-yac); GitHub's **Cite this repository** reads [`CITATION.cff`](CITATION.cff).

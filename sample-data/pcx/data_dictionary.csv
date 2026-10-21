@@ -1,0 +1,75 @@
+table,field,description,time_format
+pcx_30_demographics_deid.csv,,"Patient demographic and cohort information, including birth year, race, ethnicity, sex, geographic area, and the diagnosis and data source cohorts the patient belongs to.",
+pcx_30_demographics_deid.csv,organization_name,Name of the institution that contributed the patient's data to this release.,
+pcx_30_demographics_deid.csv,research_id,De-identified patient research identifier.,
+pcx_30_demographics_deid.csv,given_name,De-identification placeholder for the patient's first name; contains no real name information.,
+pcx_30_demographics_deid.csv,family_name,De-identification placeholder for the patient's last name; contains no real name information.,
+pcx_30_demographics_deid.csv,birth_year,Patient's year of birth. Month and day are removed for de-identification.,year
+pcx_30_demographics_deid.csv,race,Patient's race as reported by the contributing institution.,
+pcx_30_demographics_deid.csv,ethnicity,Patient's ethnicity as reported by the contributing institution.,
+pcx_30_demographics_deid.csv,gender,Patient's administrative sex as recorded by the contributing institution.,
+pcx_30_demographics_deid.csv,address_postal_code,"Patient's residential ZIP code, partially masked for de-identification.",
+pcx_30_demographics_deid.csv,diagnosis_type_cohort,The patient's primary diagnosis group used to define the cohort for this release.,
+pcx_30_demographics_deid.csv,data_type_cohort,"The source cohort the patient's data came from: 'radiant' for RADIANT patients, 'cbtn-non-radiant' for CBTN patients not in RADIANT.",
+pcx_30_event_level_deid.csv,,"Disease events across the patient's cancer journey, including initial diagnosis, progression, recurrence, second malignancy, and death, with the diagnosis, tumor location, and metastasis status recorded at each event.",
+pcx_30_event_level_deid.csv,organization_name,Name of the institution that contributed the patient's data to this release.,
+pcx_30_event_level_deid.csv,research_id,De-identified patient research identifier.,
+pcx_30_event_level_deid.csv,event_type,"The type of diagnosis-related event determined via surgery, imaging, or clinical observation.",
+pcx_30_event_level_deid.csv,age_at_event_days,Patient age in days at the diagnosis-related event. A value of -1 indicates an unknown date.,days
+pcx_30_event_level_deid.csv,metastasis,Whether metastatic disease was present at the time of the event.,
+pcx_30_event_level_deid.csv,metastasis_location,The site of the metastasis.,
+pcx_30_event_level_deid.csv,metastasis_location_other,Free-text value supplied when the coded metastasis_location does not cover the finding (the site of the metastasis).,
+pcx_30_event_level_deid.csv,cns_diagnosis_category,The diagnosis at the time of the event (broad diagnosis category).,
+pcx_30_event_level_deid.csv,cns_integrated_diagnosis,"The diagnosis at the time of the event (WHO integrated histologic plus molecular diagnosis). A more specific molecular subtype from OpenPedCan replaces the CBTN value in two cases: where CBTN recorded only a non-specific ""NOS or NEC"" value, and where CBTN recorded ""Medulloblastoma, non-WNT/non-SHH"" and OpenPedCan identified Group 3 or Group 4 (which are non-WNT/non-SHH subtypes, so this narrows the diagnosis rather than contradicting it). cns_integrated_diagnosis_source records which source won.",
+pcx_30_event_level_deid.csv,cns_integrated_diagnosis_source,"Which source supplied cns_integrated_diagnosis on this row: 'CBTN' where the value is as CBTN recorded it, or 'OpenPedCan' where a more specific molecular subtype from openpedcan_histologies_annotated replaced it, matched on the event's biospecimen sample ID. OpenPedCan wins in two cases: a non-specific CBTN ""NOS or NEC"" value, and a CBTN ""Medulloblastoma, non-WNT/non-SHH"" value that OpenPedCan narrows to Group 3 or Group 4.",
+pcx_30_event_level_deid.csv,tumor_locations,The anatomical site of the tumor.,
+pcx_30_event_level_deid.csv,tumor_location_other,Free-text value supplied when the coded tumor_locations does not cover the finding (the anatomical site of the tumor).,
+pcx_30_medical_therapy_level_deid.csv,,"Systemic therapy treatment, including the treatment protocol, whether the patient was enrolled on that protocol, the treatment timing expressed as patient age in days, the chemotherapy agents administered, and whether the regimen was part of the patient's initial treatment.",
+pcx_30_medical_therapy_level_deid.csv,organization_name,Name of the institution that contributed the patient's data to this release.,
+pcx_30_medical_therapy_level_deid.csv,research_id,De-identified patient research identifier.,
+pcx_30_medical_therapy_level_deid.csv,protocol_name_and_arm,Name of the treatment protocol the patient is enrolled on or being treated in accordance with.,
+pcx_30_medical_therapy_level_deid.csv,protocol_name,"The protocol name alone, taken from protocol_name_and_arm by splitting on the first colon. When the value has no colon the whole value is repeated here, so a sentinel such as Not Applicable, Not Reported or Other appears unchanged. The same trial appears both with and without an arm, and all of its rows share one protocol_name, so this column can be grouped on.",
+pcx_30_medical_therapy_level_deid.csv,protocol_arm,"The arm, stratum or regimen within the protocol, taken from protocol_name_and_arm by splitting on the first colon; any further colons are kept, for example Stratum N1: Standard Risk. Not Applicable when the value has no colon, which covers both a protocol that genuinely has no arm and a protocol that is itself unrecorded, so read protocol_name before treating this as an absence of arm.",
+pcx_30_medical_therapy_level_deid.csv,chemotherapy_type,Whether the regimen followed a treatment protocol (with or without enrollment) or other standard of care.,
+pcx_30_medical_therapy_level_deid.csv,age_at_regimen_start_days,Patient age in days at the start of the medical therapy regimen.,days
+pcx_30_medical_therapy_level_deid.csv,age_at_regimen_stop_days,Patient age in days at the end of the medical therapy regimen.,days
+pcx_30_medical_therapy_level_deid.csv,chemotherapy_agents,Therapeutic agent being administered.,
+pcx_30_medical_therapy_level_deid.csv,is_initial_treatment,"yes/no column indicating whether this regimen was part of the patient's initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+pcx_30_patient_level_deid.csv,,"Patient survival information, including the most recent known vital status and the patient age in days at which it was determined.",
+pcx_30_patient_level_deid.csv,research_id,De-identified patient research identifier.,
+pcx_30_patient_level_deid.csv,age_at_vital_status_days,Patient age in days at the most recent known vital status.,days
+pcx_30_patient_level_deid.csv,vital_status,"The patient's most recent known vital status, as of the patient age in age_at_vital_status_days.",
+pcx_30_radiation_level_deid.csv,,"Radiation therapy treatment, including the treatment timing expressed as patient age in days, the field or site treated, the radiation method delivered, the prescribed dose, and whether the course was part of the patient's initial treatment.",
+pcx_30_radiation_level_deid.csv,organization_name,Name of the institution that contributed the patient's data to this release.,
+pcx_30_radiation_level_deid.csv,research_id,De-identified patient research identifier.,
+pcx_30_radiation_level_deid.csv,age_at_radiation_start_days,Patient age in days at the start of the radiation round.,days
+pcx_30_radiation_level_deid.csv,age_at_radiation_stop_days,Patient age in days at the end of the radiation round.,days
+pcx_30_radiation_level_deid.csv,radiation_site,Field or site of radiation.,
+pcx_30_radiation_level_deid.csv,radiation_site_other,Free-text value supplied when the coded radiation_site does not cover the finding (field or site of radiation).,
+pcx_30_radiation_level_deid.csv,radiation_type,Method or type of radiation delivered.,
+pcx_30_radiation_level_deid.csv,radiation_type_other,Free-text value supplied when the coded radiation_type does not cover the finding (method or type of radiation delivered).,
+pcx_30_radiation_level_deid.csv,total_radiation_dose,Dose of craniospinal radiation given.,
+pcx_30_radiation_level_deid.csv,total_radiation_dose_unit,Unit of measure for total_radiation_dose (dose of craniospinal radiation given).,
+pcx_30_radiation_level_deid.csv,total_radiation_dose_focal,Total radiation given to the primary site.,
+pcx_30_radiation_level_deid.csv,total_radiation_dose_focal_unit,Unit of measure for total_radiation_dose_focal (total radiation given to the primary site).,
+pcx_30_radiation_level_deid.csv,is_initial_treatment,"yes/no column indicating whether this radiation course was part of the patient's initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death), based on the course start age. 'no' also covers rows where this could not be determined.",
+pcx_30_surgery_level_deid.csv,,"Tumor-directed surgery, including the patient age in days at the procedure, the extent of tumor resection achieved, and whether the surgery was part of the patient's initial treatment.",
+pcx_30_surgery_level_deid.csv,organization_name,Name of the institution that contributed the patient's data to this release.,
+pcx_30_surgery_level_deid.csv,research_id,De-identified patient research identifier.,
+pcx_30_surgery_level_deid.csv,age_at_surgery_days,Patient age in days when the tumor-related surgery (resection or biopsy) was performed. A value of -1 indicates an unknown date.,days
+pcx_30_surgery_level_deid.csv,extent_of_tumor_resection,Extent of tumor resection performed during the surgery.,
+pcx_30_surgery_level_deid.csv,is_initial_treatment,"yes/no column indicating whether this surgery was part of the patient's initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+pcx_30_treatment_summary_deid.csv,,"Summary measures of each patient's initial treatment, including patient age in days at initial diagnosis and at first event, the age in days at the first-ever and first-initial radiation and chemotherapy, the age at first-ever methotrexate, whether each was part of initial treatment, and the order in which radiation and chemotherapy were given.",
+pcx_30_treatment_summary_deid.csv,research_id,De-identified patient research identifier.,
+pcx_30_treatment_summary_deid.csv,organization_name,Name of the institution that contributed the patient's data to this release.,
+pcx_30_treatment_summary_deid.csv,age_at_initial_dx_days,Patient age in days at initial CNS diagnosis. A value of -1 indicates an unknown date.,days
+pcx_30_treatment_summary_deid.csv,age_at_first_event_days,"Patient age in days at first event that is of event type progression, recurrence, second malignancy, or deceased. A value of -1 indicates an unknown date.",days
+pcx_30_treatment_summary_deid.csv,age_at_first_radiation_ever_days,"Patient age in days at the start of the patient's first radiation treatment ever, whether or not it was part of initial treatment.",days
+pcx_30_treatment_summary_deid.csv,age_at_initial_radiation_days,Patient age in days at the start of the first radiation treatment that was part of the patient's initial treatment. Null when no radiation fell within the initial treatment window.,days
+pcx_30_treatment_summary_deid.csv,age_at_first_chemo_ever_days,"Patient age in days at the start of the patient's first chemotherapy regimen ever, for any agent, whether or not it was part of initial treatment.",days
+pcx_30_treatment_summary_deid.csv,age_at_initial_chemo_days,Patient age in days at the start of the first chemotherapy regimen that was part of the patient's initial treatment. Null when no chemotherapy fell within the initial treatment window.,days
+pcx_30_treatment_summary_deid.csv,age_at_first_methotrexate_ever_days,"Patient age in days at the start of the patient's first methotrexate regimen ever, whether or not it was part of initial treatment.",days
+pcx_30_treatment_summary_deid.csv,had_initial_radiation,"Yes/No column indicating whether the patient had radiation as part of their initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+pcx_30_treatment_summary_deid.csv,had_initial_chemo,"Yes/No column indicating whether the patient had chemotherapy, for any agent, as part of their initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+pcx_30_treatment_summary_deid.csv,had_initial_methotrexate,"Yes/No column indicating whether the patient had methotrexate as part of their initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+pcx_30_treatment_summary_deid.csv,initial_treatment_order,"The order of initial treatments the patient received, specific to radiation, chemotherapy, both, or neither. Values: radiation_before_chemotherapy, chemo_before_radiation, radiation_and_chemo_same_day, chemo_only_no_initial_radiation, radiation_only_no_initial_chemo, no_initial_radiation_or_chemo.",

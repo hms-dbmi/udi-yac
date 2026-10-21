@@ -49,9 +49,10 @@ interface ImportMetaEnv {
    * Path or URL to a session export — the JSON written by the dashboard’s
    * `Session → Export session` action. Fetched at startup and used to seed
    * the dashboard and the conversation behind it. Anything under `public/`
-   * is served from the site root, so `public/demo-session.json` is
-   * `/demo-session.json`. A malformed file fails loudly through the
-   * ErrorBoundary; a missing one only logs, and the dashboard starts empty.
+   * is served from the site root, so the pcx demo session (synced from
+   * `sample-data/`) is `/data/pcx/sessions/demo.json`. A malformed file
+   * fails loudly through the ErrorBoundary; a missing one only logs, and the
+   * dashboard starts empty.
    */
   readonly VITE_UDI_INITIAL_SESSION?: string;
   /**

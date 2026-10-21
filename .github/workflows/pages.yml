@@ -1,7 +1,8 @@
 name: Deploy to GitHub Pages
 
 # Combined Pages site:
-#   /            ← chat SPA (packages/chat)
+#   /            ← landing page + docs (apps/site, Astro Starlight)
+#   /app/        ← the chat, embedded by apps/site from the udi-yac library
 #   /grammar/    ← quasar demo app (apps/grammar-app)
 
 on:
@@ -11,7 +12,15 @@ on:
       - "packages/chat/**"
       - "packages/grammar/**"
       - "apps/grammar-app/**"
+      - "apps/site/**"
+      - "sample-data/**"
+      # The docs copy these in (apps/site/scripts/sync-docs.mjs)
+      - "packages/agent/README.md"
+      - "packages/agent/src/udiagent/query/README.md"
+      - "packages/agent/src/udiagent/data/skills/template_visualizations.json"
+      - "packages/grammar-py/README.md"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -45,64 +54,32 @@ jobs:
       - name: Build udi-toolkit
         run: pnpm run build:toolkit
 
-      # pcx is kept out of git (.gitignore). The public copy lives in Google
-      # Drive (folder 1MPVN_fyqluIKAXdFElaGr8f2GV18og8o), which browsers cannot
-      # fetch cross-origin, so mirror it into the site at build time. The chat's
-      # sync-data step copies sample-data/ into the build. Update Drive files
-      # via "Manage versions" so these IDs stay valid, then re-run this workflow.
-      # datapackage.json is maintained by hand (scripts/gen_datapackage.py, then
-      # upload); the check below fails the build if its columns drift from the CSVs.
-      - name: Fetch pcx data package from Google Drive
-        run: |
-          mkdir -p sample-data/pcx
-          while read -r id name; do
-            curl -fsSL -o "sample-data/pcx/$name" \
-              "https://drive.usercontent.google.com/download?id=$id&export=download"
-          done <<'EOF'
-          1fWZS0NEwNPlwxBnwQR2nLg-OQTNtsbUg datapackage.json
-          1kpknXObB8D03QrkWkfgSAhZgrTyP3Lur pcx_30_demographics_deid.csv
-          1vMeFhl8ldoywBb_4QAxHoCz2DzVW6NaI pcx_30_event_level_deid.csv
-          1NsVcRdoX9PewN5kEBLveO4aBMrKOnd6w pcx_30_medical_therapy_level_deid.csv
-          1zcClZ8UNaQiK2gVC8DR_WsSLDVxCJujf pcx_30_patient_level_deid.csv
-          1B8LzxLAoKxud0qgsTlkgNlRCQZpzApQm pcx_30_radiation_level_deid.csv
-          1bzUNAs3Y0BVPa5ORv_k3jOeDKgPfyd2c pcx_30_surgery_level_deid.csv
-          1_Vok8i-hOeeG_a6MOurIXKugmiwNqH0Z pcx_30_treatment_summary_deid.csv
-          EOF
-          python3 - <<'PY'
-          import csv, json, sys
-          d = "sample-data/pcx/"
-          pkg = json.load(open(d + "datapackage.json"))
-          for r in pkg["resources"]:
-              with open(d + r["path"], newline="", encoding="utf-8") as fh:
-                  header = next(csv.reader(fh))
-              if header != [f["name"] for f in r["schema"]["fields"]]:
-                  sys.exit(f"datapackage.json columns for {r['path']} differ from the CSV; regenerate and re-upload it")
-          PY
-
-      - name: Build chat SPA
-        run: pnpm --filter udi-yac build
-        env:
-          VITE_BASE: ${{ vars.VITE_BASE || '/udi-yac/' }}
-          VITE_UDI_API_BASE_URL: ${{ vars.VITE_UDI_API_BASE_URL }}
-          VITE_UDI_DATA_PACKAGE: ${{ vars.VITE_UDI_DATA_PACKAGE }}
-          VITE_UDI_REMOTE_PACKAGE: ${{ vars.VITE_UDI_REMOTE_PACKAGE }}
-          VITE_UDI_MODEL: ${{ vars.VITE_UDI_MODEL }}
-          VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
+      # The site's app page embeds the library build, not the standalone SPA.
+      - name: Build udi-yac library
+        run: pnpm --filter udi-yac build:lib
 
       - name: Build grammar demo app
         run: pnpm --filter udi-grammar-app build
 
+      # Datasets and sessions come from sample-data/catalog.json; these set
+      # only the agent connection.
+      - name: Build landing page, docs and app page
+        run: pnpm --filter udi-yac-site build
+        env:
+          VITE_UDI_API_BASE_URL: ${{ vars.VITE_UDI_API_BASE_URL }}
+          VITE_UDI_MODEL: ${{ vars.VITE_UDI_MODEL }}
+          VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
+
       - name: Assemble site
         run: |
-          mkdir site
-          cp -r packages/chat/dist/* site/
-          mkdir site/grammar
-          cp -r apps/grammar-app/dist/spa/* site/grammar/
+          mkdir -p _site/grammar
+          cp -r apps/site/dist/* _site/
+          cp -r apps/grammar-app/dist/spa/* _site/grammar/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ./site
+          path: ./_site
 
   deploy:
     needs: build
