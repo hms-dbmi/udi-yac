@@ -369,8 +369,8 @@ importers:
         specifier: ^4.0.2
         version: 4.0.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       shadcn:
-        specifier: ^4.22.0
-        version: 4.22.0
+        specifier: ^4.22.1
+        version: 4.22.1
       tailwind-merge:
         specifier: ^3.7.0
         version: 3.7.0
@@ -5190,8 +5190,8 @@ packages:
     peerDependencies:
       postcss: 8.5.29
 
-  postcss-selector-parser@6.1.5:
-    resolution: {integrity: sha512-TEHFzb5KRDKaOgJ4TYE+0jyJtFbjLvkdVOu0fZ2b6MTWzoqZd4Le+61aEppWkvTlYePgOX4ATL1wsAIPMLTw6Q==}
+  postcss-selector-parser@6.1.4:
+    resolution: {integrity: sha512-bIoJLOmjCO1S9XdY/DcnR5hJxvrDir1PbGChrzXG3vw0/FOliy/fA3dmdhQ441kah4gKv+TwckGzex6wNS5cnQ==}
     engines: {node: '>=4'}
 
   postcss-selector-parser@7.1.6:
@@ -5700,8 +5700,8 @@ packages:
   setprototypeof@1.2.0:
     resolution: {integrity: sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==}
 
-  shadcn@4.22.0:
-    resolution: {integrity: sha512-QKR3XUnatWlgo8IbZqGHrpsxjgdsfpPSAvJvLntQqAxPEf5U2sNsjDYLAS2xmFrOkC9lpj5UpZbrh/BuHrE2CQ==}
+  shadcn@4.22.1:
+    resolution: {integrity: sha512-LbB4Lro+b0qSVki/tgL5edtKylEnXe1ppxMJC12d7NHPgaT+eSgJGMQULwP72V7X9tbiUq7xfx3VDAfB7jdGoA==}
     engines: {node: '>=20.18.1'}
     hasBin: true
 
@@ -11837,9 +11837,9 @@ snapshots:
   postcss-nested@6.2.0(postcss@8.5.29):
     dependencies:
       postcss: 8.5.29
-      postcss-selector-parser: 6.1.5
+      postcss-selector-parser: 6.1.4
 
-  postcss-selector-parser@6.1.5:
+  postcss-selector-parser@6.1.4:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
@@ -12459,7 +12459,7 @@ snapshots:
 
   setprototypeof@1.2.0: {}
 
-  shadcn@4.22.0:
+  shadcn@4.22.1:
     dependencies:
       '@babel/core': 7.29.7
       '@babel/parser': 7.29.9
