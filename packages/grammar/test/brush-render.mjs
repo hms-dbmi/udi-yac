@@ -148,6 +148,51 @@ assert.ok(
   `resolved brush y matches field b range (${resolved.y})`,
 );
 
+// --- A selection on ONE field of an xy brush (VegaLite.vue draw-back) ---
+// A filter set in chat on `a` alone, shown on an a × b chart. Writing only the
+// x channel leaves Vega's tuple null and draws nothing, so draw-back spans the
+// open channel fully; read back, a full-span channel is no constraint.
+const full = (scale) => {
+  const [r0, r1] = scale.range();
+  return [Math.min(r0, r1), Math.max(r0, r1)];
+};
+const xOnly = new vega.View(vega.parse(spec), { renderer: 'none' });
+await xOnly.runAsync();
+xOnly.signal('br_x', [xOnly.scale('x')(1000), xOnly.scale('x')(2000)]);
+await xOnly.runAsync();
+assert.equal(
+  xOnly.signal('br_tuple'),
+  null,
+  'one channel alone forms no tuple',
+);
+
+// Both channels in the same pulse, as updateVegaChartSelection writes them
+// before its single runAsync: Vega rebuilds the tuple on `br_a || br_b`
+// changing, which a later write to the second channel alone doesn't do.
+const view1 = new vega.View(vega.parse(spec), { renderer: 'none' });
+await view1.runAsync();
+view1.signal('br_x', [view1.scale('x')(1000), view1.scale('x')(2000)]);
+view1.signal('br_y', full(view1.scale('y')));
+await view1.runAsync();
+assert.ok(
+  view1.signal('br_tuple'),
+  'spanning the open channel forms the tuple',
+);
+const spansAll = (px, scale) => {
+  const [lo, hi] = full(scale);
+  return (
+    Math.abs(Math.min(...px) - lo) < 0.5 && Math.abs(Math.max(...px) - hi) < 0.5
+  );
+};
+assert.ok(
+  spansAll(view1.signal('br_y'), view1.scale('y')),
+  'open channel reads as full span',
+);
+assert.ok(
+  !spansAll(view1.signal('br_x'), view1.scale('x')),
+  'the set channel does not',
+);
+
 // The crosshair UDIVis gives a brushable chart: on the view (its background)
 // and on the brushed layer's marks, beside the palette's frame stroke rather
 // than replacing it; the brush rect keeps its own `move` cursor.

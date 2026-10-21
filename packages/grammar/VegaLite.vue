@@ -321,6 +321,10 @@ function initVegaChart() {
             );
             // Skip degenerate ranges (single-point click before drag starts)
             if (Math.abs(dataRange[1] - dataRange[0]) < 1e-9) continue;
+            // A channel spanning its whole scale constrains nothing. It is
+            // also what draw-back writes to the axis a one-field selection
+            // leaves open, which must not come back as a filter on it.
+            if (spansWholeScale(pixelRange, tf.channel as 'x' | 'y')) continue;
             const dataField = fieldMap?.[tf.field] ?? tf.field;
             combined[dataField] = dataRange;
           }
@@ -916,24 +920,11 @@ function updateVegaChartSelection(
   }
 
   const rangeSelection = (selection.selection ?? {}) as RangeSelection;
-  const fieldEntries = Object.entries(rangeSelection);
+  const written = new Set<'x' | 'y'>();
 
-  for (let i = 0; i < fieldEntries.length; i++) {
-    const [field, range] = fieldEntries[i];
-    if (!Array.isArray(range) || range.length !== 2) continue;
-    const vegaField = reverseFieldMap[field] ?? field;
-
-    // Resolve the channel by field match; fall back to the tuple entry at the
-    // same position when the field name doesn't line up (keeps a 2D brush
-    // working even if the stored keys and encoding fields diverge).
-    let channel = tupleFields.find((t) => t.field === vegaField)?.channel;
-    if (channel !== 'x' && channel !== 'y') {
-      channel = tupleFields[i]?.channel;
-    }
-    if (channel !== 'x' && channel !== 'y') continue;
-
+  const writeChannel = (channel: 'x' | 'y', testNew: [number, number]) => {
+    if (!vegaView.value) return;
     const signalKeyFull = `${signalKeyStart}_${channel}`;
-    const testNew = toPixelRange(range, channel);
 
     // Skip only when the current signal is a usable 2-number tuple that
     // already matches — otherwise (empty/null/uninitialised) always write,
@@ -951,12 +942,54 @@ function updateVegaChartSelection(
         closeEnough(Math.min(...currentVal), Math.min(...testNew)) &&
         closeEnough(Math.max(...currentVal), Math.max(...testNew))
       ) {
-        continue;
+        return;
       }
     }
 
     vegaView.value.signal(signalKeyFull, testNew);
+  };
+
+  for (const [field, range] of Object.entries(rangeSelection)) {
+    if (!Array.isArray(range) || range.length !== 2) continue;
+    const vegaField = reverseFieldMap[field] ?? field;
+    // By field only. A field this chart doesn't brush has no channel here —
+    // falling back to the tuple entry at the same position drew one chart's
+    // range against another axis's scale once selections were shared.
+    const channel = tupleFields.find((t) => t.field === vegaField)?.channel;
+    if (channel !== 'x' && channel !== 'y') continue;
+    writeChannel(channel, toPixelRange(range, channel));
+    written.add(channel);
   }
+
+  // A 2-D brush only draws once both channels hold a range (Vega forms its
+  // tuple from both). A selection on one of its fields — a filter set in chat
+  // on age, shown on an age × weight chart — leaves the other axis open: span
+  // it fully, which reads back as no constraint (see spansWholeScale).
+  if (written.size === 0) return;
+  for (const { channel } of tupleFields) {
+    if ((channel === 'x' || channel === 'y') && !written.has(channel)) {
+      writeChannel(channel, fullPixelRange(channel));
+    }
+  }
+}
+
+function fullPixelRange(channel: 'x' | 'y'): [number, number] {
+  if (!vegaView.value) return [0, 0];
+  const [a, b] = vegaView.value.scale(channel).range() as [number, number];
+  return [Math.min(a, b), Math.max(a, b)];
+}
+
+function spansWholeScale(
+  pixelRange: [number, number],
+  channel: 'x' | 'y',
+): boolean {
+  if (!vegaView.value) return false;
+  const [lo, hi] = fullPixelRange(channel);
+  const eps = 0.5;
+  return (
+    Math.abs(Math.min(...pixelRange) - lo) < eps &&
+    Math.abs(Math.max(...pixelRange) - hi) < eps
+  );
 }
 
 function toPixelRange(
