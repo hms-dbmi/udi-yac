@@ -65,6 +65,8 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
 
   function bindExternalDataSelections(
     externalSelections: DataSelections,
+    /** Who is binding, for the debug log only. */
+    from = 'UDIVis',
   ): void {
     let changed = false;
     for (const [selectionName, selection] of Object.entries(
@@ -77,7 +79,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         continue; // identical — skip to avoid reactive churn
       }
       dataSelections.value[selectionName] = selection;
-      debugLog('bind-external', { name: selectionName, selection });
+      debugLog('bind-external', { name: selectionName, selection, from });
       changed = true;
     }
     if (changed) {

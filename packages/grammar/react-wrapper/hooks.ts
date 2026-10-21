@@ -5,7 +5,11 @@ import {
 } from './UDIToolkitProvider';
 import type { UDIPalette } from '../Palette';
 import type { DataSelections } from '../DataSourcesStore';
-import type { QueryDataSpec, QueryDataResult, QueryDataOptions } from '../ce-entry';
+import type {
+  QueryDataSpec,
+  QueryDataResult,
+  QueryDataOptions,
+} from '../ce-entry';
 import { queryData } from './queryData';
 import {
   subscribeToSelections,
@@ -125,8 +129,9 @@ export interface UseQueryDataSingleOptions extends UseQueryDataBaseOptions {
   onResult?: (result: QueryDataResult | null) => void;
 }
 
-export interface UseQueryDataMapOptions<K extends string = string>
-  extends UseQueryDataBaseOptions {
+export interface UseQueryDataMapOptions<
+  K extends string = string,
+> extends UseQueryDataBaseOptions {
   /**
    * Per-key callback. Fires once per spec entry per pump cycle. Same trade-
    * off as the single-spec form — supplying it skips the per-entity React
@@ -189,16 +194,17 @@ export function useQueryData(
 
   // Aggregate state keyed by spec entry. For the single-spec form, the
   // internal key is the empty string; the public return value unwraps it.
-  const [results, setResults] = React.useState<Record<string, UseQueryDataResult>>(
-    () =>
-      inputShapeIsSingle
-        ? { '': INITIAL_LOADING_RESULT }
-        : Object.fromEntries(
-            Object.keys(input as Record<string, QueryDataSpec>).map((k) => [
-              k,
-              INITIAL_LOADING_RESULT,
-            ]),
-          ),
+  const [results, setResults] = React.useState<
+    Record<string, UseQueryDataResult>
+  >(() =>
+    inputShapeIsSingle
+      ? { '': INITIAL_LOADING_RESULT }
+      : Object.fromEntries(
+          Object.keys(input as Record<string, QueryDataSpec>).map((k) => [
+            k,
+            INITIAL_LOADING_RESULT,
+          ]),
+        ),
   );
 
   // Content fingerprint of the spec(s) so changes trigger a re-run without
@@ -221,9 +227,11 @@ export function useQueryData(
         requested = false;
         const curInput = inputRef.current;
         const curOptions = optionsRef.current;
-        const curSelections = curOptions?.selections;
         const onResult = curOptions?.onResult as
-          | ((keyOrResult: string | QueryDataResult | null, result?: QueryDataResult | null) => void)
+          | ((
+              keyOrResult: string | QueryDataResult | null,
+              result?: QueryDataResult | null,
+            ) => void)
           | undefined;
 
         const entries: Array<[string, QueryDataSpec]> = inputShapeIsSingle
@@ -235,7 +243,14 @@ export function useQueryData(
           let out: QueryDataResult | null = null;
           let errMessage: string | null = null;
           try {
-            out = await queryData(spec, curSelections, curOptions);
+            // The latest selections for each query, not the cycle's: queryData
+            // writes them into the shared store, and a snapshot taken before
+            // the earlier queries' awaits could overwrite a newer filter.
+            out = await queryData(
+              spec,
+              optionsRef.current?.selections,
+              curOptions,
+            );
           } catch (e) {
             errMessage = e instanceof Error ? e.message : String(e);
           }
@@ -248,7 +263,10 @@ export function useQueryData(
             if (inputShapeIsSingle) {
               (onResult as (result: QueryDataResult | null) => void)(out);
             } else {
-              (onResult as (k: string, result: QueryDataResult | null) => void)(key, out);
+              (onResult as (k: string, result: QueryDataResult | null) => void)(
+                key,
+                out,
+              );
             }
           } else {
             // Stateful mode: commit each entry's result into the aggregate
