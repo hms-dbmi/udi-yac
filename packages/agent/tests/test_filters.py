@@ -506,3 +506,39 @@ def test_rubric_scores_the_filter_a_modify_defines():
     rubric = check_rubric(expected, output, json.loads(DOMAINS))
     assert all(item["pass"] for item in rubric.values()), rubric
     assert "filter_point_value" in rubric
+
+
+def test_explain_answers_from_the_current_filters_not_the_history():
+    """Asked "which filters are on?" after the user edited one in the UI, the
+    explain call must see the edit: its history still holds the original call."""
+    edited = {**GROUP3, "pointValues": ["Medulloblastoma, SHH"]}
+    history = [
+        {"role": "user", "content": "filter to group 3"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": operation_tool_calls([ADD_GROUP3], []),
+        },
+        {"role": "user", "content": "what filters are on?"},
+    ]
+    routed = _tool_call(
+        "FreeTextExplain",
+        {"user_request": "what filters are on?", "response_type": "general"},
+    )
+    orch, create = _filter_orchestrator([routed])
+    answer = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(tool_calls=None, content="One filter: SHH.")
+            )
+        ],
+        usage=None,
+    )
+    create.side_effect = [_fake_completion([routed]), answer]
+
+    result = orch.run(history, json.dumps(RAW_SCHEMA), DOMAINS, filters=[edited])
+
+    assert result.tool_calls[0]["name"] == "FreeTextExplain"
+    explain_prompt = create.call_args_list[1].kwargs["messages"][0]["content"]
+    assert "'Medulloblastoma, SHH'" in explain_prompt
+    assert GROUP3["id"] in explain_prompt

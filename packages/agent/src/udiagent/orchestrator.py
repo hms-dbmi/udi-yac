@@ -570,6 +570,7 @@ class Orchestrator:
         usage,
         openai_api_key=None,
         model=None,
+        current_filters=(),
     ):
         available_tools = "\n".join(
             f"- {t['function']['name']}: {t['function']['description']}"
@@ -594,6 +595,9 @@ class Orchestrator:
                     "available_tools": available_tools,
                     "data_schema": data_schema_simple,
                     "data_domains": data_domains_simple,
+                    # "Which filters are on?" is answered here too, and the
+                    # history only has the FilterData calls as first made.
+                    "current_filters": describe_filters(list(current_filters)),
                     "structured_functions": get_function_signatures(),
                 },
             )
@@ -891,7 +895,9 @@ class Orchestrator:
         tool_dispatch = {
             "Rebuff": self._handle_rebuff,
             "ClarifyVariable": self._handle_clarify_variable,
-            "FreeTextExplain": self._handle_free_text_explain,
+            "FreeTextExplain": functools.partial(
+                self._handle_free_text_explain, current_filters=filters
+            ),
             "CreateVisualization": self._handle_create_visualization,
             "FilterData": functools.partial(
                 self._handle_filter_data, current_filters=filters
