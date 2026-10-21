@@ -75,6 +75,7 @@ export default function AppShell() {
             // leaves nothing to look at.
             readOnly={initialSession !== undefined}
             savedSessionsKey={pkg.id}
+            issueReporting={bool(env.VITE_UDI_ISSUE_REPORTING, false)}
           />
         </main>
       )}
