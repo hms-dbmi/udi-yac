@@ -99,12 +99,24 @@ class TestServerConfigForwardsLangfuse:
         assert cfg.langfuse_secret_key == "sk-lf-env"
         assert cfg.langfuse_host == "https://env.example.com"
 
+    def test_from_env_accepts_langfuse_base_url(self, monkeypatch):
+        """The name current LangFuse SDKs and the LangFuse UI's snippet use."""
+        from udiagent.server.config import ServerConfig
+
+        monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-lf-env")
+        monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-lf-env")
+        monkeypatch.delenv("LANGFUSE_HOST", raising=False)
+        monkeypatch.setenv("LANGFUSE_BASE_URL", "https://base.example.com")
+
+        assert ServerConfig.from_env().langfuse_host == "https://base.example.com"
+
     def test_from_env_unset_yields_none(self, monkeypatch):
         from udiagent.server.config import ServerConfig
 
         monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
         monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
         monkeypatch.delenv("LANGFUSE_HOST", raising=False)
+        monkeypatch.delenv("LANGFUSE_BASE_URL", raising=False)
 
         cfg = ServerConfig.from_env()
         assert cfg.langfuse_public_key is None

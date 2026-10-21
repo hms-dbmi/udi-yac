@@ -247,6 +247,30 @@ describe('UDIChat — initialSession', () => {
   });
 });
 
+describe('UDIChat — issue reporting', () => {
+  const openSessionMenu = () => userEvent.click(screen.getByRole('button', { name: /Session/ }));
+
+  it('is in the Session menu when the host switches it on', async () => {
+    render(<UDIChat {...config} issueReporting />);
+    await openSessionMenu();
+    expect(await screen.findByRole('menuitem', { name: /Report an issue/ })).toBeTruthy();
+  });
+
+  it('is not there by default', async () => {
+    render(<UDIChat {...config} />);
+    await openSessionMenu();
+    expect(await screen.findByRole('menuitem', { name: /Export session/ })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: /Report an issue/ })).toBeNull();
+  });
+
+  it('opens the report dialog from the menu', async () => {
+    render(<UDIChat {...config} issueReporting />);
+    await openSessionMenu();
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Report an issue/ }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Report an issue');
+  });
+});
+
 describe('UDIChat — apiBaseUrl', () => {
   it('drops a trailing slash, so endpoints are not requested as //v1/...', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('[]')));

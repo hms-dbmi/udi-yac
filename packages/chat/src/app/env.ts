@@ -54,4 +54,5 @@ export const env = {
   model: str(import.meta.env.VITE_UDI_MODEL),
   readOnly: readOnly(import.meta.env.VITE_UDI_READ_ONLY),
   initialSessionUrl: str(import.meta.env.VITE_UDI_INITIAL_SESSION),
+  issueReporting: bool(import.meta.env.VITE_UDI_ISSUE_REPORTING, false),
 };

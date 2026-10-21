@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { Save, Upload, Download, HardDrive } from 'lucide-react';
+import { Bug, Save, Upload, Download, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -19,13 +20,15 @@ import {
   useDashboardStore,
   useDataFiltersStore,
   useDataPackage,
+  useGlobalStore,
+  useIssueReporting,
   useSavedSessionsKey,
   useTracker,
 } from '@/app/UDIChatContext';
 import { applySessionExport } from '../utils/applySessionExport';
 import { SavedSessionsDialog } from './SavedSessionsDialog';
 import {
-  buildSessionExport,
+  currentSessionExport,
   parseSessionExport,
   type SessionExport,
 } from '../utils/dashboardSerialization';
@@ -53,22 +56,19 @@ export function SessionImportExportButton() {
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const globalStore = useGlobalStore();
+  const issueReporting = useIssueReporting();
   const trackEvent = useTracker();
   const savedSessionsKey = useSavedSessionsKey();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [savedOpen, setSavedOpen] = useState(false);
 
-  const snapshotSession = useCallback((): SessionExport => {
-    const state = dashboardStore.getState();
-    const conversation = conversationStore.getState();
-    return buildSessionExport({
-      messages: conversation.messages,
-      dashboard: state.exportDashboard(),
-      grid: { cols: state.gridCols, rowHeight: state.gridRowHeight },
-      sessionUsage: conversation.sessionUsage,
-    });
-  }, [conversationStore, dashboardStore]);
+  const snapshotSession = useCallback(
+    (): SessionExport =>
+      currentSessionExport(conversationStore.getState(), dashboardStore.getState()),
+    [conversationStore, dashboardStore],
+  );
 
   const handleExport = useCallback(() => {
     const payload = snapshotSession();
@@ -157,6 +157,15 @@ export function SessionImportExportButton() {
               <HardDrive className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
               Saved in browser…
             </DropdownMenuItem>
+          )}
+          {issueReporting && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => globalStore.getState().openIssueReport('', 'menu')}>
+                <Bug className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
+                Report an issue
+              </DropdownMenuItem>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>

@@ -74,6 +74,13 @@ export const ENV_VARS = [
       'Path or URL to a session export — the JSON written by the dashboard’s `Session → Export session` action. Fetched at startup and used to seed the dashboard and the conversation behind it. Anything under `public/` is served from the site root, so the pcx demo session (synced from `sample-data/`) is `/data/pcx/sessions/demo.json`. A malformed file fails loudly through the ErrorBoundary; a missing one only logs, and the dashboard starts empty.',
   },
   {
+    name: 'VITE_UDI_ISSUE_REPORTING',
+    docDefault: 'false',
+    example: 'true',
+    description:
+      'Let users report a problem to the development team (Session menu, crash screen, and an offer from the agent). Reports go to the agent’s `POST /v1/yac/issue_report`, which records them in LangFuse, so turn this on only against an agent with LangFuse configured.',
+  },
+  {
     name: 'VITE_BASE',
     docDefault: '/',
     example: '/udi-yac/',

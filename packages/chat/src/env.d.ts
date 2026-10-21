@@ -56,6 +56,13 @@ interface ImportMetaEnv {
    */
   readonly VITE_UDI_INITIAL_SESSION?: string;
   /**
+   * Let users report a problem to the development team (Session menu, crash
+   * screen, and an offer from the agent). Reports go to the agent’s `POST
+   * /v1/yac/issue_report`, which records them in LangFuse, so turn this on
+   * only against an agent with LangFuse configured.
+   */
+  readonly VITE_UDI_ISSUE_REPORTING?: string;
+  /**
    * Public base path for the built SPA (read in `vite.config.ts`, build-time
    * only). The library build always uses `./`.
    */

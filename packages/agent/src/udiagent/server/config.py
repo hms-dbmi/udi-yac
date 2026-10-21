@@ -157,7 +157,7 @@ class ServerConfig(BaseSettings):
     )
     aws_region: str | None = Field(
         default=None,
-        # The only aliased field: AWS_DEFAULT_REGION is the AWS SDK's own
+        # Aliased (as is langfuse_host): AWS_DEFAULT_REGION is the AWS SDK's own
         # fallback, and honoring it here keeps this object an accurate record
         # of the region actually in force (the startup log and the credential
         # error handler both report it). AWS_REGION must be listed explicitly —
@@ -241,8 +241,14 @@ class ServerConfig(BaseSettings):
     )
     langfuse_host: str | None = Field(
         default=None,
+        # LANGFUSE_BASE_URL is the name current LangFuse SDKs and the LangFuse
+        # UI's setup snippet use; LANGFUSE_HOST is the older one. Honor both.
+        validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
         examples=['https://cloud.langfuse.com'],
-        description="LangFuse instance URL, e.g. `https://cloud.langfuse.com`.",
+        description=(
+            "LangFuse instance URL, e.g. `https://cloud.langfuse.com`. "
+            "`LANGFUSE_BASE_URL` is accepted too."
+        ),
     )
     langfuse_environment: str | None = Field(
         default=None,
@@ -250,6 +256,18 @@ class ServerConfig(BaseSettings):
         description=(
             "Tags traces with an environment label (e.g. `production`). "
             "Does not by itself enable tracing."
+        ),
+    )
+    udi_issue_report_webhook_url: str | None = Field(
+        default=None,
+        examples=['https://hooks.slack.com/services/T000/B000/XXXX'],
+        description=(
+            "Notified of every issue report (`POST /v1/yac/issue_report`): a "
+            "JSON POST with a Slack-style `text` summary plus the report's "
+            "note, source, contact and LangFuse trace link — never the "
+            "session. Works as-is with Slack and Teams incoming webhooks; "
+            "route it through Zapier or Power Automate for email. Needs "
+            "LangFuse, since reports are refused without it."
         ),
     )
 
@@ -410,6 +428,15 @@ class ServerConfig(BaseSettings):
                 f"{', '.join(sorted(missing))} missing. Set all three to "
                 "enable tracing, or none to disable it."
             )
+        if self.udi_issue_report_webhook_url:
+            if not self.udi_issue_report_webhook_url.startswith(("https://", "http://")):
+                errors.append("UDI_ISSUE_REPORT_WEBHOOK_URL must be an http(s) URL.")
+            if missing:
+                # Reports are refused without LangFuse, so it would never fire.
+                errors.append(
+                    "UDI_ISSUE_REPORT_WEBHOOK_URL is set, but issue reports "
+                    "need LangFuse, which is not configured."
+                )
 
         # The OpenAI SDK refuses `provider=` alongside api_key/base_url, so
         # these cannot be reconciled at construction — they are a genuine

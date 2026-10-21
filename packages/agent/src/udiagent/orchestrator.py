@@ -29,6 +29,7 @@ from udiagent.structured_functions import (
 )
 from udiagent.tools import (
     INTERNAL_ORCHESTRATOR_TOOLS,
+    OFFER_ISSUE_REPORT_TOOL,
     ORCHESTRATOR_TOOLS,
     function_call_render_visualization,
 )
@@ -244,6 +245,7 @@ class Orchestrator:
         model: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
         session_id: str | None = None,
+        issue_reporting: bool = False,
     ) -> OrchestratorResult:
         """Run the orchestrator on a user request.
 
@@ -260,6 +262,9 @@ class Orchestrator:
             session_id: Optional per-conversation ID used to group this run's
                 LLM calls into a single LangFuse trace/session. No-op when
                 LangFuse is disabled.
+            issue_reporting: Offer the ``OfferIssueReport`` tool, which lets the
+                client open its report form. Pass it only when the client can
+                send reports and something records them.
 
         Returns:
             An ``OrchestratorResult`` with tool_calls, orchestrator_choice, and usage.
@@ -272,6 +277,7 @@ class Orchestrator:
                 openai_api_key=openai_api_key,
                 model=model,
                 budget_check=budget_check,
+                issue_reporting=issue_reporting,
             )
 
     def run_visualization(
@@ -325,6 +331,7 @@ class Orchestrator:
         openai_api_key: str | None = None,
         model: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
+        issue_reporting: bool = False,
     ) -> OrchestratorResult:
         usage = Usage()
 
@@ -347,6 +354,7 @@ class Orchestrator:
                 openai_api_key=openai_api_key,
                 model=model,
                 budget_check=budget_check,
+                issue_reporting=issue_reporting,
             )
         except BudgetExceededError as err:
             if budget_check is None:
@@ -693,6 +701,25 @@ class Orchestrator:
             },
         }
 
+    def _handle_offer_issue_report(
+        self,
+        tool_args,
+        messages,
+        data_schema,
+        data_domains,
+        usage,
+        openai_api_key=None,
+        model=None,
+    ):
+        return {
+            "name": "OfferIssueReport",
+            "arguments": {
+                "message": tool_args.get("message", ""),
+                "summary": tool_args.get("summary", ""),
+                "user_requested": bool(tool_args.get("user_requested", False)),
+            },
+        }
+
     # ------------------------------------------------------------------
     # Core orchestration logic
     # ------------------------------------------------------------------
@@ -706,7 +733,9 @@ class Orchestrator:
         openai_api_key=None,
         model=None,
         budget_check: Callable[["Usage"], str | None] | None = None,
+        issue_reporting: bool = False,
     ):
+        tools = [*self.tools, OFFER_ISSUE_REPORT_TOOL] if issue_reporting else self.tools
         # The handlers below each read the history afresh, so a chart revealed
         # with GetVisualizationSpec is marked on this copy — never on the
         # caller's messages — and every later read then shows its full spec.
@@ -742,7 +771,7 @@ class Orchestrator:
                 gpt_client,
                 model=model or self.agent.gpt_model_name,
                 messages=msgs,
-                tools=self.tools,
+                tools=tools,
                 tool_choice="required",
                 max_completion_tokens=1024,
             )
@@ -820,6 +849,7 @@ class Orchestrator:
             "FreeTextExplain": self._handle_free_text_explain,
             "CreateVisualization": self._handle_create_visualization,
             "FilterData": self._handle_filter_data,
+            "OfferIssueReport": self._handle_offer_issue_report,
         }
 
         tool_calls = []
@@ -829,6 +859,7 @@ class Orchestrator:
         has_rebuff = False
         has_clarify = False
         has_explain = False
+        has_issue_report = False
 
         for tc in choice.message.tool_calls:
             tool_name = tc.function.name
@@ -868,6 +899,8 @@ class Orchestrator:
                 has_clarify = True
             elif tool_name == "FreeTextExplain":
                 has_explain = True
+            elif tool_name == "OfferIssueReport":
+                has_issue_report = True
 
         if unreadable and not tool_calls:
             return [build_rebuff_toolcall(_UNREADABLE_REPLY_MESSAGE)], "rebuff"
@@ -883,6 +916,8 @@ class Orchestrator:
             orchestrator_choice = "both"
         elif has_filter:
             orchestrator_choice = "get-subset-of-data"
+        elif has_issue_report and not has_vis:
+            orchestrator_choice = "offer-issue-report"
         else:
             orchestrator_choice = "render-visualization"
 

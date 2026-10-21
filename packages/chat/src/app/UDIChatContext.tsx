@@ -196,6 +196,23 @@ export function useApiConfig(): ApiConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Issue reporting (opt-in)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the host switched on issue reporting (`issueReporting`). Off by
+ * default, and so off in a component rendered without the provider: reports go
+ * to the agent's LangFuse, which not every deployment has.
+ */
+const IssueReportingContext = createContext(false);
+
+export const IssueReportingProvider = IssueReportingContext.Provider;
+
+export function useIssueReporting(): boolean {
+  return useContext(IssueReportingContext);
+}
+
+// ---------------------------------------------------------------------------
 // Consumer-provided Download button label
 // ---------------------------------------------------------------------------
 
