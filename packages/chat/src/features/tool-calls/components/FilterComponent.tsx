@@ -7,23 +7,18 @@ import {
   FilterCollapsible,
   FilterControls,
   extractFilterOperationsFromMessage,
-  filterSpecForToolCall,
-  messageFilterKeyWithToolCall,
-  messageFilterKey as mkFilterKey,
+  isFilterDefinition,
 } from '@/features/dashboard';
 import type { Message } from '@/types/messages';
-import { debugLog } from '@/utils/debugLog';
 
 interface FilterComponentProps {
   message: Message;
-  messageIndex: number;
   toolCallIndex?: number;
   tweakable?: boolean;
 }
 
 export function FilterComponent({
   message,
-  messageIndex,
   toolCallIndex,
   tweakable = true,
 }: FilterComponentProps) {
@@ -43,24 +38,13 @@ export function FilterComponent({
       )?.args ?? null,
     [message, toolCallIndex],
   );
-  const filterArgs = useMemo(
-    () => filterSpecForToolCall(message, toolCallIndex),
-    [message, toolCallIndex],
-  );
+  const filterArgs = operation && isFilterDefinition(operation) ? operation : null;
   const filterType = filterArgs?.filter?.filterType ?? null;
 
   // One filter per column, whichever call set it last — so every widget for a
   // column, an add's or a modify's, controls the same filter.
-  const filterKey = useMemo(() => {
-    if (filterArgs?.entity && filterArgs.field) {
-      return columnFilterKey(filterArgs.entity, filterArgs.field);
-    }
-    return toolCallIndex != null
-      ? messageFilterKeyWithToolCall(messageIndex, toolCallIndex, message)
-      : mkFilterKey(messageIndex, message);
-  }, [messageIndex, toolCallIndex, message, filterArgs]);
-
-  const dataSelection = dataSelections[filterKey] ?? null;
+  const filterKey = filterArgs ? columnFilterKey(filterArgs.entity, filterArgs.field) : null;
+  const dataSelection = (filterKey && dataSelections[filterKey]) || null;
 
   // Diagnose the STORED selection once one exists, falling back to what the
   // assistant asked for. Re-diagnosing the original args forever would leave
@@ -107,7 +91,7 @@ export function FilterComponent({
     );
   }
 
-  if (!filterType || !probe || !diagnosis) return null;
+  if (!filterKey || !filterType || !probe || !diagnosis) return null;
 
   // Brush messages from old sessions (`linkedVisFilterId`) carry no filter of
   // their own — diagnosing one would render a spurious notice.
@@ -139,7 +123,6 @@ export function FilterComponent({
   // Removed since — by the agent, or with the chart that last set it. Say so
   // rather than leave the message an empty bubble.
   if (!dataSelection) {
-    debugLog('chat', 'filter-widget-empty', { filterKey, messageIndex, toolCallIndex });
     return (
       <p className="udi:p-2 udi:text-sm udi:text-muted-foreground">
         This filter{filterArgs?.title ? ` (“${filterArgs.title}”)` : ''} has since been removed.

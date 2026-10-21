@@ -33,9 +33,4 @@ export function scopeSubjects(dataPackage: DataPackage | null, entity: string): 
   return Array.from(new Set([...parents, ...children])).filter((n) => n && n !== entity);
 }
 
-export const SCOPE_OPTIONS: Array<{ value: 'rows' | FilterMatch; label: string }> = [
-  { value: 'rows', label: 'rows' },
-  { value: 'any', label: 'any' },
-  { value: 'all', label: 'all' },
-  { value: 'none', label: 'none' },
-];
+export const SCOPE_OPTIONS: Array<'rows' | FilterMatch> = ['rows', 'any', 'all', 'none'];

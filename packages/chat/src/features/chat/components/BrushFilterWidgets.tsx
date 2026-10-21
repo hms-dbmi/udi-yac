@@ -39,20 +39,14 @@ export function BrushFilterWidget({ brush }: { brush: BrushFilter }) {
  */
 export function HiddenFilterWidget({
   message,
-  messageIndex,
   toolCallIndex,
 }: {
   message: Message;
-  messageIndex: number;
   toolCallIndex: number;
 }) {
   return (
     <FilterBubble>
-      <FilterComponent
-        message={message}
-        messageIndex={messageIndex}
-        toolCallIndex={toolCallIndex}
-      />
+      <FilterComponent message={message} toolCallIndex={toolCallIndex} />
     </FilterBubble>
   );
 }

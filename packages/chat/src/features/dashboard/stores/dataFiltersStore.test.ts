@@ -5,7 +5,6 @@ import {
   extractAllFilterSpecsFromMessage,
   extractFilterOperationsFromMessage,
   extractFilterSpecFromMessage,
-  messageFilterKey,
   messageFilterKeyWithToolCall,
   filterSpecForToolCall,
   selectionHasValue,
@@ -65,15 +64,13 @@ const pointSel = (selection: Record<string, string[]>): DataSelection => ({
 const pointMessage = (entity: string, field: string, values: string[]) =>
   filterMessage(entity, field, 0, 0, { filterType: 'point', pointValues: values });
 
-describe('messageFilterKey helpers', () => {
+describe('messageFilterKeyWithToolCall', () => {
   it('builds the default key from indices when no linkedVisFilterId is set', () => {
-    expect(messageFilterKey(3)).toBe('message-filter-3-0');
     expect(messageFilterKeyWithToolCall(3, 2)).toBe('message-filter-3-2');
   });
 
   it('prefers linkedVisFilterId when present on the message', () => {
     const m: Message = { role: 'user', content: '', linkedVisFilterId: 'brush-abc' };
-    expect(messageFilterKey(0, m)).toBe('brush-abc');
     expect(messageFilterKeyWithToolCall(0, 1, m)).toBe('brush-abc');
   });
 });
@@ -144,7 +141,6 @@ describe('extractAllFilterSpecsFromMessage', () => {
     };
     expect(filterSpecForToolCall(m, 2)?.entity).toBe('samples');
     expect(filterSpecForToolCall(m, 0)?.entity).toBe('donors');
-    // Mirrors messageFilterKey's own fallback to tool call 0.
     expect(filterSpecForToolCall(m)?.entity).toBe('donors');
     expect(filterSpecForToolCall(m, 1)).toBeNull();
     expect(filterSpecForToolCall({ role: 'user', content: '' })).toBeNull();
@@ -470,7 +466,7 @@ describe('dataFiltersStore', () => {
   });
 
   describe('getValidDataSelections', () => {
-    it('drops selections that are not message-filter-prefixed', () => {
+    it('drops selections that are not filters', () => {
       const store = createDataFiltersStore();
       store.getState().setDataSelection('brush-not-from-message', {
         dataSourceKey: 'donors',
@@ -482,12 +478,12 @@ describe('dataFiltersStore', () => {
 
     it('drops empty and all-empty-array selections', () => {
       const store = createDataFiltersStore();
-      store.getState().setDataSelection('message-filter-0-0', {
+      store.getState().setDataSelection('col:donors.weight', {
         dataSourceKey: 'donors',
         type: 'interval',
         selection: {},
       });
-      store.getState().setDataSelection('message-filter-1-0', {
+      store.getState().setDataSelection('col:donors.age', {
         dataSourceKey: 'donors',
         type: 'interval',
         selection: { age: [] },
@@ -497,7 +493,7 @@ describe('dataFiltersStore', () => {
 
     it('drops selections the validator rejects', () => {
       const store = createDataFiltersStore();
-      store.getState().setDataSelection('message-filter-0-0', {
+      store.getState().setDataSelection('col:donors.age', {
         dataSourceKey: 'donors',
         type: 'interval',
         selection: { age: [0, 10] },
@@ -526,25 +522,25 @@ describe('dataFiltersStore', () => {
     // while filtering nothing.
     it('keeps selections the validator cannot verify', () => {
       const store = createDataFiltersStore();
-      store.getState().setDataSelection('message-filter-0-0', {
+      store.getState().setDataSelection('col:donors.donor_id', {
         dataSourceKey: 'donors',
         type: 'point',
         selection: { donor_id: ['HBM123'] },
       });
       expect(Object.keys(store.getState().getValidDataSelections(alwaysUnknown))).toEqual([
-        'message-filter-0-0',
+        'col:donors.donor_id',
       ]);
     });
 
     it('keeps point selections that pass validation', () => {
       const store = createDataFiltersStore();
-      store.getState().setDataSelection('message-filter-0-0', {
+      store.getState().setDataSelection('col:donors.sex', {
         dataSourceKey: 'donors',
         type: 'point',
         selection: { sex: ['male'] },
       });
       const valid = store.getState().getValidDataSelections(alwaysValid);
-      expect(Object.keys(valid)).toEqual(['message-filter-0-0']);
+      expect(Object.keys(valid)).toEqual(['col:donors.sex']);
     });
   });
 

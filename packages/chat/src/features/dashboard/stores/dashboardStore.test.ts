@@ -624,7 +624,7 @@ describe('dashboardStore — cross-store filter propagation', () => {
       .addActiveVisualization(0, 0, makeSpec(), '', { donors: ['age_value', 'weight_value'] });
     const active = dashboard.getState().activeVisualizations.get('0-0')!;
 
-    dataFilters.getState().setDataSelection('message-filter-1-0', {
+    dataFilters.getState().setDataSelection('col:donors.age_value', {
       dataSourceKey: 'donors',
       type: 'interval',
       selection: { age_value: [0, 50] },
@@ -632,9 +632,9 @@ describe('dashboardStore — cross-store filter propagation', () => {
 
     // Use the real dataPackage validators. A chart's own selection is not a
     // filter: its clicks are written into column filters.
-    const ids = dashboard.getState().getFilterIds(dataFilters);
+    const ids = dashboard.getState().getFilterIds(dataFilters, dataPackage);
     expect(ids).not.toContain(active.uuid);
-    expect(ids).toContain('message-filter-1-0');
+    expect(ids).toContain('col:donors.age_value');
     // Verify alphabetical sort and dedupe are applied.
     const sorted = [...ids].sort();
     expect(ids).toEqual(sorted);
@@ -836,7 +836,7 @@ describe('dashboardStore — cross-store filter propagation', () => {
       } as never,
       loadingPhase: 'ready',
     });
-    const id = 'message-filter-0-0';
+    const id = 'col:Event.diagnosis';
     dataFilters.getState().setDataSelection(id, {
       dataSourceKey: 'Event',
       type: 'point',

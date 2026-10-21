@@ -10,7 +10,7 @@ import {
 interface SnapshotStores {
   conversation: StoreApi<ConversationState>;
   dashboard: StoreApi<DashboardState>;
-  dataFilters?: StoreApi<DataFiltersState>;
+  dataFilters: StoreApi<DataFiltersState>;
 }
 
 // Module-level singleton so the ErrorBoundary (which sits OUTSIDE
@@ -41,7 +41,7 @@ export function captureCurrentSession(): SessionExport | null {
     return currentSessionExport(
       stores.conversation.getState(),
       stores.dashboard.getState(),
-      stores.dataFilters?.getState(),
+      stores.dataFilters.getState(),
     );
   } catch {
     return null;

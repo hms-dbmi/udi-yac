@@ -81,13 +81,6 @@ export const ENV_VARS = [
       'Let users report a problem to the development team (Session menu, crash screen, and an offer from the agent). Reports go to the agent’s `POST /v1/yac/issue_report`, which records them in LangFuse, so turn this on only against an agent with LangFuse configured.',
   },
   {
-    name: 'VITE_UDI_DEBUG_LOG',
-    docDefault: null,
-    example: '1',
-    description:
-      'Dev server only. `1` records filter and selection events — chart clicks and brushes, filter-store writes, the toolkit’s brush draw-back — as JSON lines in `packages/chat/logs/udi-debug.log` (gitignored), so a session can be read back after testing. The events can hold data values.',
-  },
-  {
     name: 'VITE_BASE',
     docDefault: '/',
     example: '/udi-yac/',

@@ -58,7 +58,6 @@ import { hasTweakableFields } from '../utils/tweakability';
 import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
 import { sortCategoriesByTotal } from '../utils/categorySort';
 import { useJumpTarget } from '@/hooks/useJumpTarget';
-import { debugLog } from '@/utils/debugLog';
 
 /** Whether the spec already draws a table: no representation (the toolkit then
  *  lists every column) or only row layers. Such a card has no chart to toggle
@@ -203,9 +202,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       const key = JSON.stringify(own?.selection ?? null);
       const previous = lastOwnRef.current ?? handedRef.current;
       lastOwnRef.current = key;
-      const action = previous === key ? 'unchanged' : 'apply';
-      debugLog('chat', 'card-report', { viz: viz.uuid, action, own });
-      if (action !== 'apply') return;
+      if (previous === key) return;
       pendingOwnRef.current = JSON.stringify(own);
       frameRef.current ??= requestAnimationFrame(() => {
         frameRef.current = null;
@@ -230,13 +227,6 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     },
     [],
   );
-
-  // A brush cleared elsewhere (a chip removed, a filter emptied) is dropped by
-  // the toolkit in place when this selection loses its value — the card no
-  // longer remounts the chart for it, which flashed it blank and unfiltered.
-  useEffect(() => {
-    debugLog('chat', 'card-drawback', { viz: viz.uuid, own: ownSelection });
-  }, [viz.uuid, ownSelection]);
 
   const [showTweak, setShowTweak] = useState(false);
   // While the title is being renamed the header collapses to just the field

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createConversationStore } from '@/features/chat/stores/conversationStore';
 import { createDashboardStore } from '@/features/dashboard/stores/dashboardStore';
+import { createDataFiltersStore } from '@/features/dashboard/stores/dataFiltersStore';
 import {
   __resetSnapshotRegistryForTests,
   captureCurrentSession,
@@ -11,6 +12,8 @@ afterEach(() => {
   __resetSnapshotRegistryForTests();
 });
 
+const dataFilters = createDataFiltersStore();
+
 describe('snapshotRegistry', () => {
   it('returns null when no source has been registered', () => {
     expect(captureCurrentSession()).toBeNull();
@@ -20,7 +23,7 @@ describe('snapshotRegistry', () => {
     const conversation = createConversationStore();
     const dashboard = createDashboardStore();
     conversation.getState().addMessage({ role: 'user', content: 'hello' });
-    registerSnapshotSource({ conversation, dashboard });
+    registerSnapshotSource({ conversation, dashboard, dataFilters });
 
     const snapshot = captureCurrentSession();
     expect(snapshot).not.toBeNull();
@@ -33,11 +36,11 @@ describe('snapshotRegistry', () => {
   it('returns the latest registered source on overwrite', () => {
     const c1 = createConversationStore();
     c1.getState().addMessage({ role: 'user', content: 'first' });
-    registerSnapshotSource({ conversation: c1, dashboard: createDashboardStore() });
+    registerSnapshotSource({ conversation: c1, dashboard: createDashboardStore(), dataFilters });
 
     const c2 = createConversationStore();
     c2.getState().addMessage({ role: 'user', content: 'second' });
-    registerSnapshotSource({ conversation: c2, dashboard: createDashboardStore() });
+    registerSnapshotSource({ conversation: c2, dashboard: createDashboardStore(), dataFilters });
 
     expect(captureCurrentSession()?.conversation.messages[0].content).toBe('second');
   });
@@ -56,7 +59,7 @@ describe('snapshotRegistry', () => {
         },
       }),
     } as typeof dashboard;
-    registerSnapshotSource({ conversation, dashboard: broken });
+    registerSnapshotSource({ conversation, dashboard: broken, dataFilters });
     expect(captureCurrentSession()).toBeNull();
   });
 });

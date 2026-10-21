@@ -62,15 +62,7 @@ export function ToolCallRenderer({
       return <RebuffNotice message={rebuffArgs.message} />;
     }
     case 'FilterData': {
-      if (message && messageIndex != null) {
-        return (
-          <FilterComponent
-            message={message}
-            messageIndex={messageIndex}
-            toolCallIndex={toolCallIndex}
-          />
-        );
-      }
+      if (message) return <FilterComponent message={message} toolCallIndex={toolCallIndex} />;
       return <Badge variant="secondary">Filter</Badge>;
     }
     case 'ClarifyVariable': {

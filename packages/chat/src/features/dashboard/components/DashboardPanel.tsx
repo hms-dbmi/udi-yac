@@ -69,12 +69,6 @@ export function DashboardPanel({ seeding = false }: { seeding?: boolean }) {
     return () => observer.disconnect();
   }, []);
 
-  // Every filter, passed down to each visualization's UDIVis, which binds them
-  // into the shared Pinia store where the named filters resolve. Each card adds
-  // its own selection, composed from the column filters on its fields, so a
-  // chip-clear or chat edit redraws its brush (see DashboardCard).
-  const mergedSelections = dataSelections;
-
   const hasEntries = activeVisualizations.size > 0;
 
   // No entries → skip the ScrollArea. A consumer-provided tall mascot (or
@@ -144,7 +138,7 @@ export function DashboardPanel({ seeding = false }: { seeding?: boolean }) {
               these gutters, so the grid insets from both panel edges while the
               dashboard background still spans the full width. */}
           <div className="udi:px-3">
-            <DashboardGrid selections={mergedSelections} />
+            <DashboardGrid selections={dataSelections} />
           </div>
         </div>
       </ScrollArea>

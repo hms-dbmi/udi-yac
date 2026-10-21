@@ -73,12 +73,12 @@ function Harness({ children }: { children: ReactNode }) {
       loadingPhase: 'ready',
     });
     const store = dataFiltersStore.getState();
-    store.setDataSelection('message-filter-0-0', {
+    store.setDataSelection('col:datasets.assay_type', {
       dataSourceKey: 'datasets',
       type: 'point',
       selection: { assay_type: ['CODEX', 'MIBI'] },
     });
-    store.setDataSelection('message-filter-1-0', {
+    store.setDataSelection('col:datasets.file_size', {
       dataSourceKey: 'datasets',
       type: 'interval',
       selection: { file_size: [10, 50] },
@@ -120,7 +120,7 @@ describe('FilterToolbar', () => {
     await userEvent.click(assayChip());
     const selectAll = screen.getByRole('checkbox', { name: '2 of 3 selected' });
     expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
-    const assay = () => filters.getState().dataSelections['message-filter-0-0'].selection;
+    const assay = () => filters.getState().dataSelections['col:datasets.assay_type'].selection;
 
     // From mixed, a click checks the rest.
     await userEvent.click(selectAll);
@@ -142,7 +142,7 @@ describe('FilterToolbar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove filter' }));
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(assayChip()).toBeTruthy();
-    expect(filters.getState().removedFilters['message-filter-0-0']).toBeUndefined();
+    expect(filters.getState().removedFilters['col:datasets.assay_type']).toBeUndefined();
 
     await userEvent.click(assayChip());
     await userEvent.click(screen.getByRole('button', { name: 'Remove filter' }));
@@ -150,7 +150,7 @@ describe('FilterToolbar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
 
     expect(screen.queryByRole('button', { name: /Assay Type/ })).toBeNull();
-    expect(filters.getState().removedFilters['message-filter-0-0']).toBe(true);
+    expect(filters.getState().removedFilters['col:datasets.assay_type']).toBe(true);
   });
 
   it('Reset clears every filter and keeps every chip', async () => {
@@ -165,7 +165,7 @@ describe('FilterToolbar', () => {
     renderToolbar();
     await userEvent.hover(assayChip());
     expect(filters.getState().hoveredFilter).toEqual({
-      id: 'message-filter-0-0',
+      id: 'col:datasets.assay_type',
       from: 'toolbar',
     });
     // Hovering from the toolbar lights the chat widget, not the chip itself.
@@ -174,7 +174,7 @@ describe('FilterToolbar', () => {
     expect(filters.getState().hoveredFilter).toBeNull();
 
     // The chat widget hovered: its chip lights.
-    act(() => filters.getState().setHoveredFilter({ id: 'message-filter-0-0', from: 'chat' }));
+    act(() => filters.getState().setHoveredFilter({ id: 'col:datasets.assay_type', from: 'chat' }));
     expect(assayChip().className).toMatch(/ring-2/);
     expect(screen.getByRole('button', { name: /File Size/ }).className).not.toMatch(/ring-2/);
   });
@@ -184,7 +184,7 @@ describe('FilterToolbar', () => {
     await userEvent.click(screen.getByRole('button', { name: /File Size/ }));
     expect(screen.queryByRole('button', { name: 'Clear all' })).toBeNull();
 
-    const range = () => filters.getState().dataSelections['message-filter-1-0'].selection;
+    const range = () => filters.getState().dataSelections['col:datasets.file_size'].selection;
     const min = screen.getByRole('spinbutton', { name: 'Minimum file_size' });
     const max = screen.getByRole('spinbutton', { name: 'Maximum file_size' });
     await userEvent.clear(min);
@@ -239,7 +239,7 @@ describe('FilterToolbar', () => {
     };
     renderToolbar({
       children: (
-        <FilterControls filterId="message-filter-0-0" selection={assay} tweakable={false} />
+        <FilterControls filterId="col:datasets.assay_type" selection={assay} tweakable={false} />
       ),
     });
     await userEvent.click(assayChip());
@@ -251,7 +251,7 @@ describe('FilterToolbar', () => {
     await userEvent.click(within(popover).getByText('AF'));
 
     expect(screen.getByRole('dialog')).toBe(popover);
-    expect(filters.getState().dataSelections['message-filter-0-0'].selection).toEqual({
+    expect(filters.getState().dataSelections['col:datasets.assay_type'].selection).toEqual({
       assay_type: ['CODEX', 'MIBI', 'AF'],
     });
   });
@@ -263,6 +263,6 @@ describe('FilterToolbar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
 
     expect(screen.queryByRole('button', { name: /Assay Type/ })).toBeNull();
-    expect(filters.getState().removedFilters['message-filter-0-0']).toBe(true);
+    expect(filters.getState().removedFilters['col:datasets.assay_type']).toBe(true);
   });
 });
