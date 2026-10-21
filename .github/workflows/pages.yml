@@ -1,7 +1,8 @@
 name: Deploy to GitHub Pages
 
 # Combined Pages site:
-#   /            ← chat SPA (packages/chat)
+#   /            ← landing page + docs (apps/site, Astro Starlight)
+#   /app/        ← the chat, embedded by apps/site from the udi-yac library
 #   /grammar/    ← quasar demo app (apps/grammar-app)
 
 on:
@@ -11,8 +12,15 @@ on:
       - "packages/chat/**"
       - "packages/grammar/**"
       - "apps/grammar-app/**"
+      - "apps/site/**"
       - "sample-data/**"
+      # The docs copy these in (apps/site/scripts/sync-docs.mjs)
+      - "packages/agent/README.md"
+      - "packages/agent/src/udiagent/query/README.md"
+      - "packages/agent/src/udiagent/data/skills/template_visualizations.json"
+      - "packages/grammar-py/README.md"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -46,30 +54,32 @@ jobs:
       - name: Build udi-toolkit
         run: pnpm run build:toolkit
 
-      - name: Build chat SPA
-        run: pnpm --filter udi-yac build
-        env:
-          VITE_BASE: ${{ vars.VITE_BASE || '/udi-yac/' }}
-          VITE_UDI_API_BASE_URL: ${{ vars.VITE_UDI_API_BASE_URL }}
-          VITE_UDI_DATA_PACKAGE: ${{ vars.VITE_UDI_DATA_PACKAGE }}
-          VITE_UDI_REMOTE_PACKAGE: ${{ vars.VITE_UDI_REMOTE_PACKAGE }}
-          VITE_UDI_MODEL: ${{ vars.VITE_UDI_MODEL }}
-          VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
+      # The site's app page embeds the library build, not the standalone SPA.
+      - name: Build udi-yac library
+        run: pnpm --filter udi-yac build:lib
 
       - name: Build grammar demo app
         run: pnpm --filter udi-grammar-app build
 
+      # Datasets and sessions come from sample-data/catalog.json; these set
+      # only the agent connection.
+      - name: Build landing page, docs and app page
+        run: pnpm --filter udi-yac-site build
+        env:
+          VITE_UDI_API_BASE_URL: ${{ vars.VITE_UDI_API_BASE_URL }}
+          VITE_UDI_MODEL: ${{ vars.VITE_UDI_MODEL }}
+          VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
+
       - name: Assemble site
         run: |
-          mkdir site
-          cp -r packages/chat/dist/* site/
-          mkdir site/grammar
-          cp -r apps/grammar-app/dist/spa/* site/grammar/
+          mkdir -p _site/grammar
+          cp -r apps/site/dist/* _site/
+          cp -r apps/grammar-app/dist/spa/* _site/grammar/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ./site
+          path: ./_site
 
   deploy:
     needs: build
