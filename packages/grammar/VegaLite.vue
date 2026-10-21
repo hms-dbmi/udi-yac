@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { debugLog } from './debugLog';
+import { debugLog as debugLogRaw, nextDebugInstanceId } from './debugLog';
 import {
   computed,
   markRaw,
@@ -225,6 +225,14 @@ function parseSpec(): { success: boolean; specObject?: VegaSpecShim } {
 
 const ignore = ref(false);
 
+// Which component instance and which embedded view an event came from: a
+// chart can be remounted, or re-embed its view, mid-gesture.
+const instanceId = nextDebugInstanceId();
+let viewId = 0;
+function debugLog(event: string, data: Record<string, unknown> = {}): void {
+  debugLogRaw(event, { instance: instanceId, view: viewId, ...data });
+}
+
 // While the pointer is down on this chart, the brush being dragged is the
 // source of truth for this chart's own selections. A chart filtered by its own
 // brush rebuilds on every move, and the external selection it is handed back
@@ -233,14 +241,22 @@ const ignore = ref(false);
 // rebuilds keep the brush's pixels, draw-back leaves it alone, and the release
 // redraws it once from the external selection, which by then has caught up.
 let pointerDown = false;
+// A data update that arrived mid-drag, applied on release.
+let rebuildPending = false;
 function onChartPointerDown(): void {
   pointerDown = true;
+  debugLog('pointer-down');
 }
 function onChartPointerUp(): void {
   if (!pointerDown) return;
   pointerDown = false;
-  debugLog('brush-release', { names: props.signalKeys ?? [] });
-  void updateVegaChartSelections();
+  debugLog('brush-release', { names: props.signalKeys ?? [], rebuildPending });
+  if (rebuildPending) {
+    rebuildPending = false;
+    void updateVegaChart();
+  } else {
+    void updateVegaChartSelections();
+  }
 }
 
 function formatVegaSignalKey(raw: string): string {
@@ -282,6 +298,8 @@ function initVegaChart() {
   heightIsContainer = specMaybeSized.height === 'container';
 
   embeddedSpecShape = specShape(specObject);
+  viewId += 1;
+  debugLog('embed');
   if (specObject.data && specObject.data.values) {
     delete specObject.data.values;
   }
@@ -781,11 +799,24 @@ onBeforeUnmount(() => {
     resizeObserver.disconnect();
     resizeObserver = null;
   }
+  // A view left running outlives its canvas: mid-drag, its window-level
+  // pointer listeners kept extending the brush against a detached canvas and
+  // writing the result into the shared selection.
+  debugLog('unmount');
+  vegaView.value?.finalize();
+  vegaView.value = null;
 });
 
 // Update data in the existing Vega view, preserving brush/selection state.
 async function updateVegaChart() {
   if (!vegaView.value) return;
+  // Rebuilding under a brush being dragged breaks Vega's gesture (see
+  // onChartPointerDown); the release applies it.
+  if (pointerDown) {
+    rebuildPending = true;
+    debugLog('chart-rebuild-deferred');
+    return;
+  }
   const { success, specObject } = parseSpec();
   if (!success || isEmpty(specObject)) return;
 

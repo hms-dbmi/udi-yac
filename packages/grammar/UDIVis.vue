@@ -141,18 +141,28 @@ onMounted(() => {
   render();
 });
 
+/** The sources the mounted chart was built from (see render). */
+let loadedSourcesKey: string | null = null;
+
 async function render() {
   // console.log('udivis render');
   if (!props.spec) return; // CE may mount before spec prop is set
-  instanceReady.value = false;
   // Deep clone props.spec so internal mutations (e.g. setDefaultDomains
   // adding mapping.domain) don't leak back through the CE props to the
   // host (React) — which would otherwise trigger a re-mount and lose
   // the brush/selection state.
   // withBinUnits: a time column's histogram bins fall on whole years.
-  parsedSpec.value = withBinUnits(
+  const nextSpec = withBinUnits(
     parseSpecification(JSON.parse(JSON.stringify(props.spec))),
   );
+  // Only a spec reading other sources has anything to wait for. Dropping the
+  // ready flag unmounts the chart, and a host rewrites the spec whenever its
+  // filters change — on a brush's first move, too: the chart was torn down
+  // under the user's drag.
+  const sourcesKey = JSON.stringify(nextSpec.source);
+  if (sourcesKey !== loadedSourcesKey) instanceReady.value = false;
+  loadedSourcesKey = sourcesKey;
+  parsedSpec.value = nextSpec;
   // Load data sources BEFORE binding selections — binding can change
   // selectionHash which triggers the [loading, selectionHash] watcher.
   // If data isn't loaded yet that watcher would hit empty dataSources.

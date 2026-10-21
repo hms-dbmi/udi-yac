@@ -22,3 +22,10 @@ export function debugLog(
     data,
   );
 }
+
+let lastInstanceId = 0;
+
+/** A fresh id per component instance, to tell instances apart in the log. */
+export function nextDebugInstanceId(): number {
+  return ++lastInstanceId;
+}
