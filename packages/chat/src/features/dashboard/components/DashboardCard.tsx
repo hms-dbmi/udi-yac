@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ActiveVisualization } from '../stores/dashboardStore';
-import { selectionHasValue } from '../stores/dataFiltersStore';
 import {
   chartCoversFilter,
   chartSelectFields,
@@ -224,28 +223,12 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     [],
   );
 
-  // When this viz's own brush is cleared externally (e.g. removing its chip in
-  // the filter toolbar), UDIVis offers no programmatic way to drop a rendered
-  // brush rectangle. Remounting the component via a key change is the simplest
-  // reliable reset. We track the brush's presence in state and bump the key on
-  // the true→false transition only, so an active brush — or another viz's
-  // brush — never triggers a remount loop. This uses React's "adjust state
-  // during render" pattern rather than an effect.
-  // "Has a value", not "non-null": clearing a filter empties it to
-  // `{field: []}`, which filters nothing but would leave the drawn rect.
+  // A brush cleared elsewhere (a chip removed, a filter emptied) is dropped by
+  // the toolkit in place when this selection loses its value — the card no
+  // longer remounts the chart for it, which flashed it blank and unfiltered.
   useEffect(() => {
     debugLog('chat', 'card-drawback', { viz: viz.uuid, own: ownSelection });
   }, [viz.uuid, ownSelection]);
-  const ownHasBrush = ownSelection != null && selectionHasValue(ownSelection);
-  const [trackedHasBrush, setTrackedHasBrush] = useState(ownHasBrush);
-  const [brushResetKey, setBrushResetKey] = useState(0);
-  if (ownHasBrush !== trackedHasBrush) {
-    setTrackedHasBrush(ownHasBrush);
-    if (!ownHasBrush) {
-      debugLog('chat', 'card-remount', { viz: viz.uuid });
-      setBrushResetKey((k) => k + 1);
-    }
-  }
 
   const [showTweak, setShowTweak] = useState(false);
   // While the title is being renamed the header collapses to just the field
@@ -584,7 +567,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
         )}
         <UDIVis
           className="udi:block udi:h-full udi:w-full"
-          key={`${isTableView ? `table-${specKey}` : specKey}-${brushResetKey}`}
+          key={isTableView ? `table-${specKey}` : specKey}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
           onSelectionChange={handleSelectionChange}

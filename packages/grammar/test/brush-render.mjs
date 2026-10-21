@@ -193,6 +193,15 @@ assert.ok(
   'the set channel does not',
 );
 
+// --- Clearing a drawn brush in place (VegaLite.vue draw-back clear) ---
+// Writing [0, 0] to every channel, as Vega-Lite's own double-click clear does,
+// empties the brush store, so the rectangle goes without re-embedding.
+view1.signal('br_x', [0, 0]);
+view1.signal('br_y', [0, 0]);
+await view1.runAsync();
+assert.equal(view1.signal('br_tuple'), null, 'a cleared brush forms no tuple');
+assert.equal(view1.data('br_store').length, 0, 'and its store is empty');
+
 // The crosshair UDIVis gives a brushable chart: on the view (its background)
 // and on the brushed layer's marks, beside the palette's frame stroke rather
 // than replacing it; the brush rect keeps its own `move` cursor.

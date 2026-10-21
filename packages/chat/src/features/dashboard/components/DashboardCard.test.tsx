@@ -217,7 +217,9 @@ function BrushHarness() {
 }
 
 describe('DashboardCard — dropping a cleared brush', () => {
-  it('remounts the chart when its own brush is emptied, and not again when it goes null', async () => {
+  // The toolkit clears the drawn brush in place; remounting the chart for it
+  // flashed the card blank, then unfiltered, on every clear.
+  it('keeps the chart mounted when its own brush is emptied or removed', async () => {
     render(
       <UDIChatProvider>
         <BrushHarness />
@@ -225,12 +227,10 @@ describe('DashboardCard — dropping a cleared brush', () => {
     );
     const drawn = await screen.findByTestId('udi-vis');
 
-    // Cleared to `{field: []}`: filters nothing, but the rect is still drawn.
     act(() => setOwnBrush({ donor_count: [] }));
-    const cleared = screen.getByTestId('udi-vis');
-    expect(cleared).not.toBe(drawn);
+    expect(screen.getByTestId('udi-vis')).toBe(drawn);
 
     act(() => setOwnBrush(null));
-    expect(screen.getByTestId('udi-vis')).toBe(cleared);
+    expect(screen.getByTestId('udi-vis')).toBe(drawn);
   });
 });

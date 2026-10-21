@@ -1013,6 +1013,11 @@ function updateVegaChartSelection(
 
   const rangeSelection = (selection.selection ?? {}) as RangeSelection;
   const written = new Set<'x' | 'y'>();
+  const hasValue = Object.values(rangeSelection).some(
+    (r) => Array.isArray(r) && r.length === 2,
+  );
+  const hadValue = externalHadValue[selectionName] ?? false;
+  externalHadValue[selectionName] = hasValue;
 
   const writeChannel = (channel: 'x' | 'y', testNew: [number, number]) => {
     if (!vegaView.value) return;
@@ -1063,6 +1068,21 @@ function updateVegaChartSelection(
       ),
   });
 
+  // Cleared elsewhere (a chip removed, a filter emptied): drop the drawn brush
+  // in place, as Vega-Lite's own double-click clear does, rather than have the
+  // host remount the chart, which flashed it blank and then unfiltered. Only
+  // on the change from a value to none: a brush just drawn, whose external
+  // copy has not caught up yet, is not one to erase.
+  if (!hasValue) {
+    if (hadValue) {
+      for (const { channel } of tupleFields) {
+        if (channel === 'x' || channel === 'y') writeChannel(channel, [0, 0]);
+      }
+      debugLog('drawback-clear', { name: selectionName });
+    }
+    return;
+  }
+
   // A 2-D brush only draws once both channels hold a range (Vega forms its
   // tuple from both). A selection on one of its fields — a filter set in chat
   // on age, shown on an age × weight chart — leaves the other axis open: span
@@ -1074,6 +1094,10 @@ function updateVegaChartSelection(
     }
   }
 }
+
+/** Whether each own brush's external selection held a range when last
+ *  applied (see updateVegaChartSelection's clear). */
+const externalHadValue: Record<string, boolean> = {};
 
 function fullPixelRange(channel: 'x' | 'y'): [number, number] {
   if (!vegaView.value) return [0, 0];
