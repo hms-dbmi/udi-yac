@@ -9,7 +9,7 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "udi:row_count": 969,
+      "udi:row_count": 970,
       "udi:column_count": 11,
       "schema": {
         "fields": [
@@ -26,7 +26,7 @@
             "name": "research_id",
             "type": "string",
             "description": "De-identified patient research identifier.",
-            "udi:cardinality": 969,
+            "udi:cardinality": 970,
             "udi:unique": true,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -35,7 +35,7 @@
             "name": "given_name",
             "type": "string",
             "description": "De-identification placeholder for the patient's first name; contains no real name information.",
-            "udi:cardinality": 969,
+            "udi:cardinality": 970,
             "udi:unique": true,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -44,7 +44,7 @@
             "name": "family_name",
             "type": "string",
             "description": "De-identification placeholder for the patient's last name; contains no real name information.",
-            "udi:cardinality": 969,
+            "udi:cardinality": 970,
             "udi:unique": true,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -145,7 +145,7 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "udi:row_count": 1868,
+      "udi:row_count": 1869,
       "udi:column_count": 12,
       "schema": {
         "fields": [
@@ -162,7 +162,7 @@
             "name": "research_id",
             "type": "string",
             "description": "De-identified patient research identifier.",
-            "udi:cardinality": 969,
+            "udi:cardinality": 970,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -287,7 +287,7 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "udi:row_count": 1282,
+      "udi:row_count": 1283,
       "udi:column_count": 10,
       "schema": {
         "fields": [
@@ -304,7 +304,7 @@
             "name": "research_id",
             "type": "string",
             "description": "De-identified patient research identifier.",
-            "udi:cardinality": 814,
+            "udi:cardinality": 815,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -349,7 +349,7 @@
             "name": "age_at_regimen_start_days",
             "type": "string",
             "description": "Patient age in days at the start of the medical therapy regimen.",
-            "udi:cardinality": 1051,
+            "udi:cardinality": 1052,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all",
@@ -359,7 +359,7 @@
             "name": "age_at_regimen_stop_days",
             "type": "string",
             "description": "Patient age in days at the end of the medical therapy regimen.",
-            "udi:cardinality": 908,
+            "udi:cardinality": 909,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all",
@@ -412,7 +412,7 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "udi:row_count": 969,
+      "udi:row_count": 970,
       "udi:column_count": 3,
       "schema": {
         "fields": [
@@ -420,7 +420,7 @@
             "name": "research_id",
             "type": "string",
             "description": "De-identified patient research identifier.",
-            "udi:cardinality": 969,
+            "udi:cardinality": 970,
             "udi:unique": true,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -429,7 +429,7 @@
             "name": "age_at_vital_status_days",
             "type": "number",
             "description": "Patient age in days at the most recent known vital status.",
-            "udi:cardinality": 903,
+            "udi:cardinality": 904,
             "udi:unique": false,
             "udi:data_type": "quantitative",
             "udi:overlapping_fields": "all",
@@ -460,7 +460,7 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "udi:row_count": 785,
+      "udi:row_count": 786,
       "udi:column_count": 13,
       "schema": {
         "fields": [
@@ -477,7 +477,7 @@
             "name": "research_id",
             "type": "string",
             "description": "De-identified patient research identifier.",
-            "udi:cardinality": 669,
+            "udi:cardinality": 670,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -486,7 +486,7 @@
             "name": "age_at_radiation_start_days",
             "type": "string",
             "description": "Patient age in days at the start of the radiation round.",
-            "udi:cardinality": 657,
+            "udi:cardinality": 658,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all",
@@ -496,7 +496,7 @@
             "name": "age_at_radiation_stop_days",
             "type": "string",
             "description": "Patient age in days at the end of the radiation round.",
-            "udi:cardinality": 642,
+            "udi:cardinality": 643,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all",
@@ -560,7 +560,7 @@
             "name": "total_radiation_dose_focal",
             "type": "string",
             "description": "Total radiation given to the primary site.",
-            "udi:cardinality": 130,
+            "udi:cardinality": 131,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -612,7 +612,7 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "udi:row_count": 1288,
+      "udi:row_count": 1289,
       "udi:column_count": 5,
       "schema": {
         "fields": [
@@ -629,7 +629,7 @@
             "name": "research_id",
             "type": "string",
             "description": "De-identified patient research identifier.",
-            "udi:cardinality": 953,
+            "udi:cardinality": 954,
             "udi:unique": false,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -691,7 +691,7 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "udi:row_count": 969,
+      "udi:row_count": 970,
       "udi:column_count": 13,
       "schema": {
         "fields": [
@@ -699,7 +699,7 @@
             "name": "research_id",
             "type": "string",
             "description": "De-identified patient research identifier.",
-            "udi:cardinality": 969,
+            "udi:cardinality": 970,
             "udi:unique": true,
             "udi:data_type": "nominal",
             "udi:overlapping_fields": "all"
@@ -737,7 +737,7 @@
             "name": "age_at_first_radiation_ever_days",
             "type": "number",
             "description": "Patient age in days at the start of the patient's first radiation treatment ever, whether or not it was part of initial treatment.",
-            "udi:cardinality": 571,
+            "udi:cardinality": 572,
             "udi:unique": false,
             "udi:data_type": "quantitative",
             "udi:overlapping_fields": "all",
@@ -747,7 +747,7 @@
             "name": "age_at_initial_radiation_days",
             "type": "number",
             "description": "Patient age in days at the start of the first radiation treatment that was part of the patient's initial treatment. Null when no radiation fell within the initial treatment window.",
-            "udi:cardinality": 506,
+            "udi:cardinality": 508,
             "udi:unique": false,
             "udi:data_type": "quantitative",
             "udi:overlapping_fields": "all",
@@ -757,7 +757,7 @@
             "name": "age_at_first_chemo_ever_days",
             "type": "number",
             "description": "Patient age in days at the start of the patient's first chemotherapy regimen ever, for any agent, whether or not it was part of initial treatment.",
-            "udi:cardinality": 697,
+            "udi:cardinality": 698,
             "udi:unique": false,
             "udi:data_type": "quantitative",
             "udi:overlapping_fields": "all",
@@ -767,7 +767,7 @@
             "name": "age_at_initial_chemo_days",
             "type": "number",
             "description": "Patient age in days at the start of the first chemotherapy regimen that was part of the patient's initial treatment. Null when no chemotherapy fell within the initial treatment window.",
-            "udi:cardinality": 658,
+            "udi:cardinality": 659,
             "udi:unique": false,
             "udi:data_type": "quantitative",
             "udi:overlapping_fields": "all",

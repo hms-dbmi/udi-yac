@@ -418,6 +418,7 @@ Lurie Children's Hospital,C8427960,1034,Biopsy only,yes
 Lurie Children's Hospital,C8585400,650,Gross/Near total resection,yes
 Lurie Children's Hospital,C870348,376,Gross/Near total resection,yes
 Lurie Children's Hospital,C870471,3363,Gross/Near total resection,yes
+Lurie Children's Hospital,C8888964,2443,Gross/Near total resection,yes
 Lurie Children's Hospital,C908478,525,Gross/Near total resection,yes
 Lurie Children's Hospital,C908478,881,Partial resection,yes
 Lurie Children's Hospital,C960999,3804,Gross/Near total resection,yes
@@ -592,7 +593,7 @@ Seattle Children's Hospital,C175398,1056,Unavailable,yes
 Seattle Children's Hospital,C175521,4674,Gross/Near total resection,yes
 Seattle Children's Hospital,C225951,1336,Partial resection,yes
 Seattle Children's Hospital,C226074,147,Gross/Near total resection,yes
-Seattle Children's Hospital,C226443,2560,Partial resection,no
+Seattle Children's Hospital,C226443,2560,Partial resection,yes
 Seattle Children's Hospital,C2332203,4746,Gross/Near total resection,yes
 Seattle Children's Hospital,C2332203,5782,Gross/Near total resection,yes
 Seattle Children's Hospital,C2333064,545,Gross/Near total resection,yes
