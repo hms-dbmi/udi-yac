@@ -238,8 +238,9 @@ function debugLog(event: string, data: Record<string, unknown> = {}): void {
 // brush rebuilds on every move, and the external selection it is handed back
 // (the host's copy of that brush) trails the drag by a render; redrawing the
 // brush from it mid-drag pulled it back a step on each move. So during a drag
-// rebuilds keep the brush's pixels, draw-back leaves it alone, and the release
-// redraws it once from the external selection, which by then has caught up.
+// rebuilds keep the brush's pixels, draw-back leaves it alone, a re-embed
+// (which would drop the gesture) waits, and the release redraws the brush once
+// from the external selection, which by then has caught up.
 let pointerDown = false;
 // A data update that arrived mid-drag, applied on release.
 let rebuildPending = false;
@@ -810,13 +811,6 @@ onBeforeUnmount(() => {
 // Update data in the existing Vega view, preserving brush/selection state.
 async function updateVegaChart() {
   if (!vegaView.value) return;
-  // Rebuilding under a brush being dragged breaks Vega's gesture (see
-  // onChartPointerDown); the release applies it.
-  if (pointerDown) {
-    rebuildPending = true;
-    debugLog('chart-rebuild-deferred');
-    return;
-  }
   const { success, specObject } = parseSpec();
   if (!success || isEmpty(specObject)) return;
 
@@ -826,6 +820,14 @@ async function updateVegaChart() {
   // through the old spec. The changeset path below stays the fast one for the
   // case it was built for: a brush, where only the rows change.
   if (specShape(specObject) !== embeddedSpecShape) {
+    // A re-embed replaces the view, and with it the gesture of a brush being
+    // dragged (see onChartPointerDown): wait for the release. Swapping rows in
+    // place, below, is safe mid-drag, so the chart still follows its brush.
+    if (pointerDown) {
+      rebuildPending = true;
+      debugLog('chart-reembed-deferred');
+      return;
+    }
     vegaView.value.finalize();
     vegaView.value = null;
     // Re-applies props.selections itself, as the resize re-embed does.

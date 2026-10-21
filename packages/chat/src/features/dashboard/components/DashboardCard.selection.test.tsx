@@ -78,8 +78,19 @@ const point = (selection: Record<string, string[]>) => ({
   selection,
 });
 
+// Writes are coalesced per animation frame; `frame()` runs the queued ones.
+let frames: FrameRequestCallback[] = [];
+const frame = () => {
+  const queued = frames;
+  frames = [];
+  queued.forEach((cb) => cb(0));
+};
+
 describe('DashboardCard — selections are column filters', () => {
   beforeEach(() => {
+    frames = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb));
+    vi.stubGlobal('cancelAnimationFrame', () => undefined);
     render(
       <UDIChatProvider>
         <Harness />
@@ -100,6 +111,7 @@ describe('DashboardCard — selections are column filters', () => {
     expect(filters.getState().dataSelections).toEqual({});
 
     act(() => vis.onSelectionChange({ [uuid]: point({ sex: ['M'], race: ['Asian'] }) }));
+    act(frame);
     expect(filters.getState().dataSelections).toEqual({
       'col:donors.sex': point({ sex: ['M'] }),
       'col:donors.race': point({ race: ['Asian'] }),
@@ -115,6 +127,19 @@ describe('DashboardCard — selections are column filters', () => {
         other_chart: point({ x: ['1'] }),
       }),
     );
+    act(frame);
     expect(filters.getState().dataSelections['col:donors.sex']).toEqual(point({ sex: ['F'] }));
+  });
+
+  it('writes only the latest of the reports made within one frame', () => {
+    act(() => vis.onSelectionChange({ [uuid]: point({}) }));
+    act(() => {
+      vis.onSelectionChange({ [uuid]: point({ sex: ['M'] }) });
+      vis.onSelectionChange({ [uuid]: point({ sex: ['F'] }) });
+    });
+    expect(filters.getState().dataSelections).toEqual({});
+    expect(frames).toHaveLength(1);
+    act(frame);
+    expect(filters.getState().dataSelections).toEqual({ 'col:donors.sex': point({ sex: ['F'] }) });
   });
 });

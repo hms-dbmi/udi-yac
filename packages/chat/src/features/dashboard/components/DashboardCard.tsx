@@ -182,7 +182,13 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // before a filter edit has been drawn back, and applying that would undo the
   // edit. The first report (the mount binding the composed selection) is only
   // recorded. The message count anchors a filter the chart creates in the chat.
+  //
+  // A brush reports on every pointer move, and each write re-renders every
+  // card and re-queries every chart. So writes are coalesced to one per
+  // animation frame: the latest selection of the frame is the one applied.
   const lastOwnRef = useRef<string | undefined>(undefined);
+  const pendingOwnRef = useRef<string | null>(null);
+  const frameRef = useRef<number | null>(null);
   const handleSelectionChange = useCallback(
     (newSelections: DataSelections) => {
       if (!selectFields) return;
@@ -193,16 +199,29 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       const action = previous === undefined ? 'first' : previous === json ? 'unchanged' : 'apply';
       debugLog('chat', 'card-report', { viz: viz.uuid, action, own });
       if (action !== 'apply') return;
-      dataFiltersStore
-        .getState()
-        .applyChartSelection(
-          selectFields.entity,
-          selectFields.fields,
-          own ? (JSON.parse(json) as DataSelection) : null,
-          conversationStore.getState().messages.length,
-        );
+      pendingOwnRef.current = json;
+      frameRef.current ??= requestAnimationFrame(() => {
+        frameRef.current = null;
+        const latest = pendingOwnRef.current;
+        pendingOwnRef.current = null;
+        if (latest == null) return;
+        dataFiltersStore
+          .getState()
+          .applyChartSelection(
+            selectFields.entity,
+            selectFields.fields,
+            JSON.parse(latest) as DataSelection | null,
+            conversationStore.getState().messages.length,
+          );
+      });
     },
     [dataFiltersStore, conversationStore, selectFields, viz.uuid],
+  );
+  useEffect(
+    () => () => {
+      if (frameRef.current != null) cancelAnimationFrame(frameRef.current);
+    },
+    [],
   );
 
   // When this viz's own brush is cleared externally (e.g. removing its chip in
