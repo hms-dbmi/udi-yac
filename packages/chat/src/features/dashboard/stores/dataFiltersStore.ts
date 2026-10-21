@@ -4,6 +4,7 @@ import type { Message, ToolCall } from '@/types/messages';
 import type { ValidStatus } from '@/types/dataPackage';
 import type { FilterDataArgs, FilterOperationArgs, FilterScope } from '@/features/tool-calls';
 import { normalizePointValues } from '@/features/data-package';
+import { debugLog } from '@/utils/debugLog';
 
 export type { DataSelection, DataSelections };
 
@@ -458,6 +459,7 @@ export function createDataFiltersStore() {
           if (applied[opKey]) continue;
           applied[opKey] = true;
           changed = true;
+          debugLog('chat', 'filter-op', { opKey, op: args.op ?? 'add', args });
 
           if (args.op === 'clear') {
             for (const id of Object.keys(next)) {
@@ -558,6 +560,7 @@ export function createDataFiltersStore() {
       const anchors = { ...state.brushAnchors };
       let changed = false;
       const values = (selection?.selection ?? {}) as Record<string, unknown>;
+      const log: Record<string, string> = {};
 
       for (const field of fields) {
         const id = columnFilterKey(entity, field);
@@ -571,6 +574,7 @@ export function createDataFiltersStore() {
           origins[id] = 'chart';
           delete removed[id];
           if (!current && messageCount != null) anchors[id] = messageCount;
+          log[id] = current ? 'replaced' : 'created';
           changed = true;
         } else if (current && selectionHasValue(current)) {
           // A chart's selection no longer covering this column. A filter the
@@ -581,12 +585,15 @@ export function createDataFiltersStore() {
             delete origins[id];
             delete scopes[id];
             delete removed[id];
+            log[id] = 'dropped';
           } else {
             next[id] = emptySelection(current);
+            log[id] = 'emptied';
           }
           changed = true;
         }
       }
+      debugLog('chat', 'chart-write', { entity, fields, selection, changes: log });
       if (changed) {
         set({
           dataSelections: next,

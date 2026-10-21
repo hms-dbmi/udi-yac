@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UDIVis, describeTransformations } from 'udi-toolkit/react';
 import type { DataSelection, DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,7 @@ import { hasTweakableFields } from '../utils/tweakability';
 import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
 import { sortCategoriesByTotal } from '../utils/categorySort';
 import { useJumpTarget } from '@/hooks/useJumpTarget';
+import { debugLog } from '@/utils/debugLog';
 
 /** Whether the spec already draws a table: no representation (the toolkit then
  *  lists every column) or only row layers. Such a card has no chart to toggle
@@ -189,7 +190,9 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
       const json = JSON.stringify(own);
       const previous = lastOwnRef.current;
       lastOwnRef.current = json;
-      if (previous === undefined || previous === json) return;
+      const action = previous === undefined ? 'first' : previous === json ? 'unchanged' : 'apply';
+      debugLog('chat', 'card-report', { viz: viz.uuid, action, own });
+      if (action !== 'apply') return;
       dataFiltersStore
         .getState()
         .applyChartSelection(
@@ -211,12 +214,18 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // during render" pattern rather than an effect.
   // "Has a value", not "non-null": clearing a filter empties it to
   // `{field: []}`, which filters nothing but would leave the drawn rect.
+  useEffect(() => {
+    debugLog('chat', 'card-drawback', { viz: viz.uuid, own: ownSelection });
+  }, [viz.uuid, ownSelection]);
   const ownHasBrush = ownSelection != null && selectionHasValue(ownSelection);
   const [trackedHasBrush, setTrackedHasBrush] = useState(ownHasBrush);
   const [brushResetKey, setBrushResetKey] = useState(0);
   if (ownHasBrush !== trackedHasBrush) {
     setTrackedHasBrush(ownHasBrush);
-    if (!ownHasBrush) setBrushResetKey((k) => k + 1);
+    if (!ownHasBrush) {
+      debugLog('chat', 'card-remount', { viz: viz.uuid });
+      setBrushResetKey((k) => k + 1);
+    }
   }
 
   const [showTweak, setShowTweak] = useState(false);

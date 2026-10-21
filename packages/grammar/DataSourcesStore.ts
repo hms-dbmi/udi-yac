@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { debugLog } from './debugLog';
 import { density1d, nrd } from 'fast-kde';
 import { cloneDeep, isEqual } from 'lodash';
 import type {
@@ -76,6 +77,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         continue; // identical — skip to avoid reactive churn
       }
       dataSelections.value[selectionName] = selection;
+      debugLog('bind-external', { name: selectionName, selection });
       changed = true;
     }
     if (changed) {
@@ -132,6 +134,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     }
     const current = dataSelections.value[selectionName].selection;
     if (isEqual(current, selection)) return; // no change — skip reactive churn
+    debugLog('selection-write', { name: selectionName, selection });
     dataSelections.value[selectionName].selection = selection;
     const hashObj: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(dataSelections.value)) {

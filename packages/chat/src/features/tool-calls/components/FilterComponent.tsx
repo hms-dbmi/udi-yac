@@ -12,6 +12,7 @@ import {
   messageFilterKey as mkFilterKey,
 } from '@/features/dashboard';
 import type { Message } from '@/types/messages';
+import { debugLog } from '@/utils/debugLog';
 
 interface FilterComponentProps {
   message: Message;
@@ -135,7 +136,10 @@ export function FilterComponent({
     );
   }
 
-  if (!dataSelection) return null;
+  if (!dataSelection) {
+    debugLog('chat', 'filter-widget-empty', { filterKey, messageIndex, toolCallIndex });
+    return null;
+  }
 
   return (
     <FilterCollapsible filterId={filterKey} selection={dataSelection}>

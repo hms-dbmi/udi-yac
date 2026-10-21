@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { debugLog } from './debugLog';
 import {
   computed,
   markRaw,
@@ -339,9 +340,23 @@ function initVegaChart() {
           // Listen on each per-channel signal and combine all channels
           for (const channel of channels) {
             const channelSignal = `${signalKeyFormatted}_${channel}`;
-            view.addSignalListener(channelSignal, () => {
-              if (ignore.value) return;
-              routeSelectionUpdate(signalKey, buildCombinedSelection());
+            view.addSignalListener(channelSignal, (_name, value) => {
+              if (ignore.value) {
+                debugLog('brush-signal-ignored', {
+                  name: signalKey,
+                  channel,
+                  px: value,
+                });
+                return;
+              }
+              const combined = buildCombinedSelection();
+              debugLog('brush-signal', {
+                name: signalKey,
+                channel,
+                px: value,
+                combined,
+              });
+              routeSelectionUpdate(signalKey, combined);
             });
           }
         } else {
@@ -770,6 +785,15 @@ async function updateVegaChart() {
   // no-external-selection case only.
   const hasExternal = (signalKey: string) =>
     props.selections?.[signalKey]?.selection != null;
+  debugLog('chart-rebuild', {
+    names: props.signalKeys ?? [],
+    external: Object.fromEntries(
+      (props.signalKeys ?? []).map((k) => [
+        k,
+        props.selections?.[k]?.selection ?? null,
+      ]),
+    ),
+  });
   const savedSignals: Record<string, unknown> = {};
   for (const signalKey of props.signalKeys ?? []) {
     if (hasExternal(signalKey)) continue;
@@ -960,6 +984,16 @@ function updateVegaChartSelection(
     writeChannel(channel, toPixelRange(range, channel));
     written.add(channel);
   }
+  debugLog('drawback', {
+    name: selectionName,
+    selection: rangeSelection,
+    written: [...written],
+    fill: tupleFields
+      .map((t) => t.channel)
+      .filter(
+        (c) => (c === 'x' || c === 'y') && written.size > 0 && !written.has(c),
+      ),
+  });
 
   // A 2-D brush only draws once both channels hold a range (Vega forms its
   // tuple from both). A selection on one of its fields — a filter set in chat

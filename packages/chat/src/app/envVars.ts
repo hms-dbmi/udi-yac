@@ -74,6 +74,13 @@ export const ENV_VARS = [
       'Path or URL to a session export — the JSON written by the dashboard’s `Session → Export session` action. Fetched at startup and used to seed the dashboard and the conversation behind it. Anything under `public/` is served from the site root, so `public/demo-session.json` is `/demo-session.json`. A malformed file fails loudly through the ErrorBoundary; a missing one only logs, and the dashboard starts empty.',
   },
   {
+    name: 'VITE_UDI_DEBUG_LOG',
+    docDefault: null,
+    example: '1',
+    description:
+      'Dev server only. `1` records filter and selection events — chart clicks and brushes, filter-store writes, the toolkit’s brush draw-back — as JSON lines in `packages/chat/logs/udi-debug.log` (gitignored), so a session can be read back after testing. The events can hold data values.',
+  },
+  {
     name: 'VITE_BASE',
     docDefault: '/',
     example: '/udi-yac/',
