@@ -3,7 +3,7 @@
     {
       "id": "pcx",
       "title": "Clinical cancer cohort (pcx)",
-      "description": "De-identified clinical records for 969 patients across 7 linked tables: demographics, disease events, medical therapy, radiation, surgery, survival and treatment summary.",
+      "description": "De-identified clinical records for 970 patients across 7 linked tables: demographics, disease events, medical therapy, radiation, surgery, survival and treatment summary.",
       "datapackage": "pcx/datapackage.json",
       "sessions": [
         {
@@ -11,6 +11,12 @@
           "title": "Cohort tour",
           "description": "Age at diagnosis, treatment sequencing, survival by diagnosis cohort, resection extent, radiation sites and disease events.",
           "path": "pcx/sessions/demo.json"
+        },
+        {
+          "id": "overview",
+          "title": "Dashboard overview",
+          "description": "Patients by data cohort and diagnosis cohort, and by organization.",
+          "path": "pcx/sessions/overview.json"
         }
       ]
     },

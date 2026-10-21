@@ -11,7 +11,7 @@ The [home page](/udi-yac/) lists the datasets you can explore:
 
 | Dataset                          | What it holds                                                                                                                                                        |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Clinical cancer cohort (pcx)** | De-identified records for 969 patients in 7 linked tables: demographics, disease events, medical therapy, radiation, surgery, survival and a treatment summary.      |
+| **Clinical cancer cohort (pcx)** | De-identified records for 970 patients in 7 linked tables: demographics, disease events, medical therapy, radiation, surgery, survival and a treatment summary.      |
 | **HuBMAP**                       | Donor, sample and dataset metadata from the [Human BioMolecular Atlas Program](https://portal.hubmapconsortium.org/) portal. The largest dataset here (about 11 MB). |
 | **Palmer penguins**              | Body measurements for 344 penguins. One small table, good for a first try.                                                                                           |
 

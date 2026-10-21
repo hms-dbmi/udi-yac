@@ -269,6 +269,7 @@ Lurie Children's Hospital,C8167569,3228,3268,Craniospinal with focal boost,Not A
 Lurie Children's Hospital,C833202,2094,2138,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5412,cGy,yes
 Lurie Children's Hospital,C8427960,1105,1148,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,4500,cGy,no
 Lurie Children's Hospital,C870471,3401,3451,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2341 ,cGy,5408 ,cGy,yes
+Lurie Children's Hospital,C8888964,2483,2524,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,4756,cGy,yes
 Lurie Children's Hospital,C908478,1112,1154,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,no
 Lurie Children's Hospital,C960999,3835,3879,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
 Lurie Children's Hospital,C960999,6012,6037,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,4018 ,cGy,no
@@ -387,7 +388,7 @@ Seattle Children's Hospital,C173799,4667,4716,Craniospinal with focal boost,Not 
 Seattle Children's Hospital,C175521,4713,4757,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340,cGy,5400,cGy,yes
 Seattle Children's Hospital,C225951,1530,1575,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5580,cGy,yes
 Seattle Children's Hospital,C226074,229,277,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,yes
-Seattle Children's Hospital,C226443,2582,2585,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,720 ,cGy,Unavailable,cGy,no
+Seattle Children's Hospital,C226443,2582,2585,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,720 ,cGy,Unavailable,cGy,yes
 Seattle Children's Hospital,C2332203,4773,4816,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
 Seattle Children's Hospital,C2332203,5835,7699,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5040,cGy,no
 Seattle Children's Hospital,C2355081,5024,5066,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes

@@ -162,7 +162,7 @@ C21894,The Children's Hospital of Philadelphia,1736,,1925,1925,1755,1755,1755,ye
 C22263,The Children's Hospital of Philadelphia,4068,,4095,4095,4095,4095,,yes,yes,no,radiation_and_chemo_same_day
 C225951,Seattle Children's Hospital,1336,,1530,1530,1344,1344,1344,yes,yes,yes,chemo_before_radiation
 C226074,Seattle Children's Hospital,147,,229,229,166,166,166,yes,yes,yes,chemo_before_radiation
-C226443,Seattle Children's Hospital,2560,2555,2582,,,,,no,no,no,no_initial_radiation_or_chemo
+C226443,Seattle Children's Hospital,2560,2582,2582,2582,,,,yes,no,no,radiation_only_no_initial_chemo
 C227058,The Children's Hospital of Philadelphia,506,1083,1002,1002,524,524,524,yes,yes,yes,chemo_before_radiation
 C22755,The Children's Hospital of Philadelphia,3437,5022,3468,3468,3438,3438,,yes,yes,no,chemo_before_radiation
 C22878,The Children's Hospital of Philadelphia,2238,5694,,,5720,,,no,no,no,no_initial_radiation_or_chemo
@@ -942,6 +942,7 @@ C8832261,Children's Hospital Los Angeles,213,363,608,,246,246,246,no,yes,yes,che
 C886092,UCSF Benioff Children's Hospital,362,662,705,,383,383,,no,yes,no,chemo_only_no_initial_radiation
 C8876295,CBTN Non-Consortium Member,3548,,,,,,,no,no,no,no_initial_radiation_or_chemo
 C8882691,The Children's Hospital of Philadelphia,1694,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8888964,Lurie Children's Hospital,2443,,2483,2483,2483,2483,,yes,yes,no,radiation_and_chemo_same_day
 C908478,Lurie Children's Hospital,525,881,1112,,547,547,547,no,yes,yes,chemo_only_no_initial_radiation
 C912414,Seattle Children's Hospital,2888,,2926,2926,2933,2933,,yes,yes,no,radiation_before_chemotherapy
 C912660,Seattle Children's Hospital,1851,2841,1881,1881,1883,1883,,yes,yes,no,radiation_before_chemotherapy
