@@ -81,6 +81,30 @@ def describe_scope(entry: dict) -> str:
     return f"{subject} with {match} {entry['entity']} rows matching"
 
 
+def filter_summary(filters) -> str:
+    """The filter state for a log line: ids and shapes, never fields or values.
+
+    Field names and values can identify patients, and the server logs neither
+    (it logs the schema and domains only as character counts). A value count
+    is enough to tell an edited filter from the one first made.
+    """
+    if not isinstance(filters, list):
+        return "none"
+    parts = []
+    for entry in filters:
+        if not isinstance(entry, dict):
+            parts.append("<invalid>")
+            continue
+        if entry.get("filterType") == "interval":
+            shape = "interval" if isinstance(entry.get("intervalRange"), dict) else "interval:unset"
+        else:
+            shape = f"point:{len(entry.get('pointValues') or [])}"
+        scope = entry.get("scope")
+        match = scope.get("match") if isinstance(scope, dict) else "rows"
+        parts.append(f"{entry.get('id')}({entry.get('origin')},{shape},{match})")
+    return f"{len(parts)} [{', '.join(parts)}]" if parts else "0"
+
+
 def describe_filters(filters: list[dict]) -> str:
     """The current filter state as prompt text."""
     if not filters:

@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from udiagent.agent import UDIAgent
+from udiagent.filters import filter_summary
 from udiagent.orchestrator import (
     BudgetExceededError,
     Orchestrator,
@@ -357,11 +358,12 @@ def yac_completions(
     logger.info(
         "Received /v1/yac/completions request "
         "(message_count=%d, schema_char_count=%d, domain_char_count=%d, "
-        "has_conversation_id=%s)",
+        "has_conversation_id=%s, filters=%s)",
         len(request.messages),
         len(request.dataSchema),
         len(request.dataDomains),
         x_conversation_id is not None,
+        filter_summary(request.filters),
     )
 
     refusal = _reject_byok_in_bedrock_mode(x_openai_key)

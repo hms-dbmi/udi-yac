@@ -12,6 +12,7 @@ from udiagent.filters import (
     APPLY_FILTER_OPERATIONS,
     MAX_FILTER_ATTEMPTS,
     describe_filters,
+    filter_summary,
     normalize_filters,
     operation_tool_calls,
     validate_operations,
@@ -542,3 +543,21 @@ def test_explain_answers_from_the_current_filters_not_the_history():
     explain_prompt = create.call_args_list[1].kwargs["messages"][0]["content"]
     assert "'Medulloblastoma, SHH'" in explain_prompt
     assert GROUP3["id"] in explain_prompt
+
+
+def test_filter_summary_logs_shapes_not_fields_or_values():
+    summary = filter_summary(
+        [
+            {**GROUP3, "scope": {"entity": "Patient", "match": "any"}},
+            BRUSH,
+            {**BRUSH, "intervalRange": None},
+        ]
+    )
+    assert summary == (
+        "3 [message-filter-1-0(chat,point:1,any), udi_1_1(chart,interval,rows), "
+        "udi_1_1(chart,interval:unset,rows)]"
+    )
+    assert (
+        "Medulloblastoma" not in summary and "cns_integrated_diagnosis" not in summary
+    )
+    assert filter_summary([]) == "0"

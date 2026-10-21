@@ -18,6 +18,7 @@ from udiagent.filters import (
     MAX_FILTER_ATTEMPTS,
     describe_filters,
     filter_failure_args,
+    filter_summary,
     normalize_filters,
     operation_tool_calls,
     validate_operations,
@@ -601,6 +602,12 @@ class Orchestrator:
                     "structured_functions": get_function_signatures(),
                 },
             )
+            logger.info(
+                "explain prompt: current filters=%s", filter_summary(list(current_filters))
+            )
+            logger.debug(
+                "explain prompt current filters:\n%s", describe_filters(list(current_filters))
+            )
             gpt_client = self.agent._get_gpt_client(openai_api_key)
             msgs = normalize_tool_calls(copy.deepcopy(messages))
             msgs.insert(0, {"role": "system", "content": rendered})
@@ -730,6 +737,7 @@ class Orchestrator:
                 "data_domains": simplify_data_domains(data_domains),
             },
         )
+        logger.info("filter prompt: current filters=%s", filter_summary(current))
         msgs = normalize_tool_calls(copy.deepcopy(messages))
         msgs.insert(0, {"role": "system", "content": rendered})
         schema = _parse_request_schema(data_schema)
@@ -805,6 +813,8 @@ class Orchestrator:
                 "current_filters": describe_filters(filters),
             },
         )
+        logger.info("orchestrate prompt: current filters=%s", filter_summary(filters))
+        logger.debug("orchestrate prompt current filters:\n%s", describe_filters(filters))
         msgs.insert(0, {"role": "system", "content": rendered})
 
         gpt_client = self.agent._get_gpt_client(openai_api_key)
