@@ -2,10 +2,12 @@ import { useCallback, useRef, useState } from 'react';
 import { queryLLM, type QueryConfig, type ToolCallResponse } from '../api/completions';
 import {
   useConversationStore,
+  useDataFiltersStore,
   useDataPackageStore,
   useGlobalStore,
   useTracker,
 } from '@/app/UDIChatContext';
+import { agentFilterState, selectFilters } from '@/features/dashboard';
 import { generateEventId } from '@/lib/utils';
 import type { Message } from '@/types/messages';
 
@@ -38,6 +40,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
   const [error, setError] = useState<string | null>(null);
   const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
+  const dataFiltersStore = useDataFiltersStore();
   const globalStore = useGlobalStore();
   const trackEvent = useTracker();
   // The most recently minted turnId — reused by `retryLastUserMessage` so
@@ -55,6 +58,17 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
   const runCompletion = useCallback(
     async (messages: Message[], turnId: string) => {
       const dpState = dataPackageStore.getState();
+      const dfState = dataFiltersStore.getState();
+      // The filters as they are now, edits and brushes included — the
+      // transcript only has the FilterData calls as first made.
+      const filters = agentFilterState(
+        selectFilters(dfState.dataSelections, dfState.filterOrigins, dfState.removedFilters, {
+          isValidIntervalFilter: dpState.isValidIntervalFilter,
+          isValidPointFilter: dpState.isValidPointFilter,
+        }),
+        dfState.filterScopes,
+        messages,
+      );
       const hadUserKey = !!config.openAiKey;
       const startedAt = performance.now();
 
@@ -68,6 +82,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
           dpState.dataPackageString,
           dpState.dataDomainsString,
           conversationStore.getState().conversationId,
+          filters,
         );
 
         conversationStore.getState().addUsage(usage);
@@ -134,6 +149,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
       config,
       conversationStore,
       dataPackageStore,
+      dataFiltersStore,
       globalStore,
       onQuotaRebuff,
       onNormalResponse,

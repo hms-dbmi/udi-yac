@@ -66,8 +66,12 @@ export function SessionImportExportButton() {
 
   const snapshotSession = useCallback(
     (): SessionExport =>
-      currentSessionExport(conversationStore.getState(), dashboardStore.getState()),
-    [conversationStore, dashboardStore],
+      currentSessionExport(
+        conversationStore.getState(),
+        dashboardStore.getState(),
+        dataFiltersStore.getState(),
+      ),
+    [conversationStore, dashboardStore, dataFiltersStore],
   );
 
   const handleExport = useCallback(() => {

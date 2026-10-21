@@ -1,4 +1,5 @@
 import type { Message, ToolCallMeta } from '@/types/messages';
+import type { AgentFilterEntry } from '@/features/dashboard';
 import { httpError } from '@/utils/httpError';
 
 export interface QueryConfig {
@@ -37,6 +38,7 @@ function constructQueryBody(
   model: string | undefined,
   dataSchema: string,
   dataDomains: string,
+  filters: AgentFilterEntry[],
   issueReporting?: boolean,
 ) {
   const processed = structuredClone(messages).map((msg) => {
@@ -61,6 +63,7 @@ function constructQueryBody(
     messages: processed,
     dataSchema,
     dataDomains,
+    filters,
   };
 }
 
@@ -109,12 +112,20 @@ export async function queryLLM(
   dataSchema: string,
   dataDomains: string,
   conversationId?: string,
+  filters: AgentFilterEntry[] = [],
 ): Promise<QueryResult> {
   // The server honors a requested model only alongside a caller-supplied key —
   // whoever pays for the tokens picks the model. Sending it without a key would
   // just be ignored, so don't. Otherwise the server's GPT_MODEL_NAME applies.
   const model = config.openAiKey ? config.model : undefined;
-  const body = constructQueryBody(messages, model, dataSchema, dataDomains, config.issueReporting);
+  const body = constructQueryBody(
+    messages,
+    model,
+    dataSchema,
+    dataDomains,
+    filters,
+    config.issueReporting,
+  );
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   // Only when we were actually given a token. A deployment that proxies the

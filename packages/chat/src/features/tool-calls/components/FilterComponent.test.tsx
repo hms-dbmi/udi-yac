@@ -168,7 +168,7 @@ describe('FilterComponent — a filter the data cannot satisfy', () => {
     renderFilter(filterMessage('datasets', 'assay_type', ['Xenium']));
     fireEvent.click(screen.getByRole('checkbox', { name: 'CODEX' }));
 
-    expect(filters.getState().dataSelections['message-filter-0-0']).toEqual({
+    expect(filters.getState().dataSelections['col:datasets.assay_type']).toEqual({
       dataSourceKey: 'datasets',
       type: 'point',
       selection: { assay_type: ['CODEX'] },
@@ -209,7 +209,7 @@ describe('FilterComponent — filters the data can satisfy', () => {
 
     fireEvent.click(codex);
 
-    expect(filters.getState().dataSelections['message-filter-0-0'].selection).toEqual({
+    expect(filters.getState().dataSelections['col:datasets.assay_type'].selection).toEqual({
       assay_type: [],
     });
     // An empty selection is mid-interaction, not a failure — the widget must
@@ -229,11 +229,67 @@ describe('FilterComponent — collapsing is removing', () => {
     fireEvent.click(header);
     expect(header).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('checkbox', { name: 'CODEX' })).toBeNull();
-    expect(filters.getState().removedFilters['message-filter-0-0']).toBe(true);
+    expect(filters.getState().removedFilters['col:datasets.assay_type']).toBe(true);
 
     fireEvent.click(header);
     expect(header).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('checkbox', { name: 'CODEX' })).not.toBeChecked();
-    expect(filters.getState().removedFilters['message-filter-0-0']).toBeUndefined();
+    expect(filters.getState().removedFilters['col:datasets.assay_type']).toBeUndefined();
+  });
+});
+
+describe('FilterComponent — filter operations', () => {
+  const add = filterMessage('datasets', 'assay_type', ['CODEX']);
+  const opMessage = (args: Record<string, unknown>): Message => ({
+    role: 'assistant',
+    content: '',
+    tool_calls: [{ function: { name: 'FilterData', arguments: args as never } }],
+  });
+
+  function renderOps(messages: Message[], index: number) {
+    return render(
+      <UDIChatProvider>
+        <Harness domains={[assayType]} messages={messages}>
+          <FilterComponent message={messages[index]} messageIndex={index} toolCallIndex={0} />
+        </Harness>
+      </UDIChatProvider>,
+    );
+  }
+
+  it('shows a modify as the widget of the filter it changed', () => {
+    const modify = opMessage({
+      op: 'modify',
+      id: 'col:datasets.assay_type',
+      title: 'Dataset Assay Type',
+      entity: 'datasets',
+      field: 'assay_type',
+      filter: { filterType: 'point', intervalRange: { min: 0, max: 0 }, pointValues: ['MIBI'] },
+    });
+    renderOps([add, modify], 1);
+    expect(screen.getByRole('checkbox', { name: 'MIBI' })).toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'AF' }));
+    // The edit lands on the original filter, not a new one.
+    expect(Object.keys(filters.getState().dataSelections)).toEqual(['col:datasets.assay_type']);
+    expect(filters.getState().dataSelections['col:datasets.assay_type'].selection).toEqual({
+      assay_type: ['MIBI', 'AF'],
+    });
+  });
+
+  it('notes a remove and a clear in a line of text', () => {
+    renderOps([add, opMessage({ op: 'remove', id: 'col:datasets.assay_type', title: 'Assay' })], 1);
+    expect(screen.getByText('Removed the filter “Assay”.')).toBeTruthy();
+    expect(filters.getState().dataSelections).toEqual({});
+  });
+
+  it('says so where the filter was added, once it has been removed', () => {
+    renderOps([add, opMessage({ op: 'remove', id: 'col:datasets.assay_type' })], 0);
+    expect(
+      screen.getByText(/This filter \(“Dataset Assay Type”\) has since been removed\./),
+    ).toBeTruthy();
+  });
+
+  it('notes a clear', () => {
+    renderOps([add, opMessage({ op: 'clear' })], 1);
+    expect(screen.getByText('Cleared the filters I made.')).toBeTruthy();
   });
 });

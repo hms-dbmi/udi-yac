@@ -24,10 +24,14 @@ export {
   createDataFiltersStore,
   extractFilterSpecFromMessage,
   extractAllFilterSpecsFromMessage,
+  extractFilterOperationsFromMessage,
+  isFilterDefinition,
   filterSpecForToolCall,
   messageFilterKeyWithToolCall,
   messageFilterKey,
   HOST_FILTER_PREFIX,
+  columnFilterKey,
+  isColumnFilterKey,
   type DataFiltersState,
   type FilterOrigin,
   type UDIFilter,
@@ -56,7 +60,8 @@ export {
   type BrushFilter,
 } from './hooks/useBrushFilters';
 
-export { useActiveFilters, type ActiveFilter } from './hooks/useFilterChips';
+export { useActiveFilters, selectFilters, type ActiveFilter } from './hooks/useFilterChips';
+export { agentFilterState, type AgentFilterEntry } from './utils/agentFilterState';
 
 export type {
   DownloadAction,

@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { UDIVis, describeTransformations } from 'udi-toolkit/react';
-import type { DataSelections } from 'udi-toolkit/react';
+import type { DataSelection, DataSelections } from 'udi-toolkit/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
@@ -30,7 +30,11 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ActiveVisualization } from '../stores/dashboardStore';
-import { selectionHasValue } from '../stores/dataFiltersStore';
+import {
+  chartCoversFilter,
+  chartSelectFields,
+  composeChartSelection,
+} from '../utils/chartSelection';
 import { usePalette } from 'udi-toolkit/react';
 import {
   useConversation,
@@ -54,6 +58,7 @@ import { hasTweakableFields } from '../utils/tweakability';
 import { buildRelevantRowMapping } from '../utils/relevantTableMapping';
 import { sortCategoriesByTotal } from '../utils/categorySort';
 import { useJumpTarget } from '@/hooks/useJumpTarget';
+import { debugLog } from '@/utils/debugLog';
 
 /** Whether the spec already draws a table: no representation (the toolkit then
  *  lists every column) or only row layers. Such a card has no chart to toggle
@@ -92,10 +97,13 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // message). Hover never scrolls — the chat's jump button does that.
   const isSelfHovered = useDashboard((s) => s.hoveredVisualizationIndex === vizKey);
   const isMessageHovered = useDashboard((s) => s.hoveredMessageVizKey === vizKey);
-  // Or when one of this card's brush filters is hovered — its chip, or its
-  // widget in the chat. A brush filter's id is the viz uuid, or
-  // `${uuid}::${field}` for a point selection.
-  const isFilterHovered = useDataFilters((s) => s.hoveredFilter?.id.split('::')[0] === viz.uuid);
+  // What this chart selects on, read back from its interactive spec.
+  const selectFields = useMemo(() => chartSelectFields(viz.interactiveSpec), [viz.interactiveSpec]);
+  // Or when a filter on a column it selects on is hovered — its chip, or its
+  // widget in the chat — whichever chart or message set it.
+  const isFilterHovered = useDataFilters(
+    (s) => !!s.hoveredFilter && chartCoversFilter(selectFields, s.hoveredFilter.id),
+  );
   const isHovered = isSelfHovered || isMessageHovered || isFilterHovered;
 
   // "Show visualization in dashboard" pressed on this card's chat message.
@@ -145,56 +153,90 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
     return `${src}|${repr}`;
   }, [plainSpec]);
 
-  // Pass the full selection set — including this viz's OWN brush (keyed by its
-  // uuid) — back to UDIVis. Feeding the own selection back lets an edit made
-  // elsewhere (the chat adjustment widget, or clearing the toolbar chip) drive
-  // this chart's rendered brush, and makes UDIVis bind the value into the
-  // shared Pinia DataSourcesStore. UDIVis treats an external selection equal to
+  // This chart's own selection (keyed by its uuid), composed from the column
+  // filters on its fields — whoever set them. Fed back to UDIVis with every
+  // filter, it draws a filter set in chat or on another chart as this chart's
+  // brush, and binds the filters into the shared Pinia DataSourcesStore where
+  // the named filters resolve. UDIVis treats an external selection equal to
   // its current one as a no-op, so live brushing doesn't loop.
-  const externalSelections = useMemo(
-    () => JSON.parse(JSON.stringify(selections)) as DataSelections,
-    [selections],
+  const ownSelection = useMemo(
+    () => (selectFields ? composeChartSelection(selectFields, selections) : null),
+    [selectFields, selections],
   );
+  const externalSelections = useMemo(() => {
+    const all = JSON.parse(JSON.stringify(selections)) as DataSelections;
+    if (ownSelection) all[viz.uuid] = JSON.parse(JSON.stringify(ownSelection));
+    return all;
+  }, [selections, ownSelection, viz.uuid]);
 
   const handleClose = useCallback(() => {
     dashboardStore.getState().closeVisualization(vizKey, memoryBankStore);
     trackEvent('visualization_closed', { hasTitle: !!viz.title, renamed: !!viz.userTitle });
   }, [dashboardStore, vizKey, memoryBankStore, trackEvent, viz.title, viz.userTitle]);
 
-  // Mirror brush/click selections out of the shared Pinia DataSourcesStore into
-  // dataFiltersStore.internalDataSelections (keyed by viz uuid), matching the
-  // LLM-filter path. The filter toolbar and chat adjustment widgets read brush
-  // selections from there (see useBrushFilters). Cross-chart filtering still
-  // works via the shared Pinia store + named-filter entries in each viz's
-  // interactiveSpec.transformation.
-  // The message count anchors a new brush filter's chat widget where it happened.
+  // Write this chart's click or brush into the column filters on its fields.
+  // UDIVis reports every selection in Pinia on any change, so only this
+  // chart's own entry is read, and only when it changed since the last report:
+  // a report triggered by another chart can carry this chart's selection from
+  // before a filter edit has been drawn back, and applying that would undo the
+  // edit. Until the chart has reported, "last" is the selection it was handed
+  // (ownSelection): the mount binding it reports nothing new. Skipping the
+  // first report instead dropped a new chart's first click, since an
+  // unfiltered chart has no mount report. Only `.selection` is compared — the
+  // toolkit and the composed copy order their other keys differently. The
+  // message count anchors a filter the chart creates in the chat.
+  //
+  // A brush reports on every pointer move, and each write re-renders every
+  // card and re-queries every chart. So writes are coalesced to one per
+  // animation frame: the latest selection of the frame is the one applied.
+  const lastOwnRef = useRef<string | undefined>(undefined);
+  const handedRef = useRef<string>('null');
+  useLayoutEffect(() => {
+    handedRef.current = JSON.stringify(ownSelection?.selection ?? null);
+  }, [ownSelection]);
+  const pendingOwnRef = useRef<string | null>(null);
+  const frameRef = useRef<number | null>(null);
   const handleSelectionChange = useCallback(
     (newSelections: DataSelections) => {
-      const plain = JSON.parse(JSON.stringify(newSelections)) as DataSelections;
-      dataFiltersStore
-        .getState()
-        .updateInternalDataSelections(plain, conversationStore.getState().messages.length);
+      if (!selectFields) return;
+      const own = newSelections[viz.uuid] ?? null;
+      const key = JSON.stringify(own?.selection ?? null);
+      const previous = lastOwnRef.current ?? handedRef.current;
+      lastOwnRef.current = key;
+      const action = previous === key ? 'unchanged' : 'apply';
+      debugLog('chat', 'card-report', { viz: viz.uuid, action, own });
+      if (action !== 'apply') return;
+      pendingOwnRef.current = JSON.stringify(own);
+      frameRef.current ??= requestAnimationFrame(() => {
+        frameRef.current = null;
+        const latest = pendingOwnRef.current;
+        pendingOwnRef.current = null;
+        if (latest == null) return;
+        dataFiltersStore
+          .getState()
+          .applyChartSelection(
+            selectFields.entity,
+            selectFields.fields,
+            JSON.parse(latest) as DataSelection | null,
+            conversationStore.getState().messages.length,
+          );
+      });
     },
-    [dataFiltersStore, conversationStore],
+    [dataFiltersStore, conversationStore, selectFields, viz.uuid],
+  );
+  useEffect(
+    () => () => {
+      if (frameRef.current != null) cancelAnimationFrame(frameRef.current);
+    },
+    [],
   );
 
-  // When this viz's own brush is cleared externally (e.g. removing its chip in
-  // the filter toolbar), UDIVis offers no programmatic way to drop a rendered
-  // brush rectangle. Remounting the component via a key change is the simplest
-  // reliable reset. We track the brush's presence in state and bump the key on
-  // the true→false transition only, so an active brush — or another viz's
-  // brush — never triggers a remount loop. This uses React's "adjust state
-  // during render" pattern rather than an effect.
-  // "Has a value", not "non-null": clearing a filter empties it to
-  // `{field: []}`, which filters nothing but would leave the drawn rect.
-  const ownSelection = selections[viz.uuid];
-  const ownHasBrush = ownSelection != null && selectionHasValue(ownSelection);
-  const [trackedHasBrush, setTrackedHasBrush] = useState(ownHasBrush);
-  const [brushResetKey, setBrushResetKey] = useState(0);
-  if (ownHasBrush !== trackedHasBrush) {
-    setTrackedHasBrush(ownHasBrush);
-    if (!ownHasBrush) setBrushResetKey((k) => k + 1);
-  }
+  // A brush cleared elsewhere (a chip removed, a filter emptied) is dropped by
+  // the toolkit in place when this selection loses its value — the card no
+  // longer remounts the chart for it, which flashed it blank and unfiltered.
+  useEffect(() => {
+    debugLog('chat', 'card-drawback', { viz: viz.uuid, own: ownSelection });
+  }, [viz.uuid, ownSelection]);
 
   const [showTweak, setShowTweak] = useState(false);
   // While the title is being renamed the header collapses to just the field
@@ -533,7 +575,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
         )}
         <UDIVis
           className="udi:block udi:h-full udi:w-full"
-          key={`${isTableView ? `table-${specKey}` : specKey}-${brushResetKey}`}
+          key={isTableView ? `table-${specKey}` : specKey}
           spec={isTableView ? tableSpec : plainSpec}
           selections={externalSelections}
           onSelectionChange={handleSelectionChange}

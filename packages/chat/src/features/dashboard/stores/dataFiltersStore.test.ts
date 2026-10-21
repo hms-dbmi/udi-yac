@@ -3,8 +3,8 @@ import {
   createDataFiltersStore,
   containsFilterCall,
   extractAllFilterSpecsFromMessage,
+  extractFilterOperationsFromMessage,
   extractFilterSpecFromMessage,
-  generateFilterMessage,
   messageFilterKey,
   messageFilterKeyWithToolCall,
   filterSpecForToolCall,
@@ -55,6 +55,15 @@ function filterMessage(
   };
   return { role: 'assistant', content: '', tool_calls: [tool_call] };
 }
+
+const pointSel = (selection: Record<string, string[]>): DataSelection => ({
+  dataSourceKey: 'donors',
+  type: 'point',
+  selection,
+});
+
+const pointMessage = (entity: string, field: string, values: string[]) =>
+  filterMessage(entity, field, 0, 0, { filterType: 'point', pointValues: values });
 
 describe('messageFilterKey helpers', () => {
   it('builds the default key from indices when no linkedVisFilterId is set', () => {
@@ -165,40 +174,20 @@ describe('extractAllFilterSpecsFromMessage', () => {
   });
 });
 
-describe('generateFilterMessage', () => {
-  it('returns null when the selection is empty', () => {
-    const sel: DataSelection = { dataSourceKey: 'donors', type: 'interval', selection: {} };
-    expect(generateFilterMessage('k', sel)).toBeNull();
-  });
-
-  it('emits one FilterData tool call per selected field with a linkedVisFilterId', () => {
-    const sel: DataSelection = {
-      dataSourceKey: 'donors',
-      type: 'interval',
-      selection: { age: [10, 90], weight: [50, 80] },
-    };
-    const m = generateFilterMessage('brush-k', sel);
-    expect(m?.role).toBe('user');
-    expect(m?.linkedVisFilterId).toBe('brush-k');
-    expect(m?.tool_calls).toHaveLength(2);
-    expect(m?.tool_calls?.[0].function.name).toBe('FilterData');
-  });
-});
-
 describe('dataFiltersStore', () => {
-  it('resetFilters clears both internal and external selections', () => {
+  it('resetFilters clears the conversation’s filters, their origins and anchors', () => {
     const store = createDataFiltersStore();
-    store.getState().setDataSelection('message-filter-0-0', {
+    store.getState().setDataSelection('col:donors.age', {
       dataSourceKey: 'donors',
       type: 'interval',
       selection: { age: [0, 10] },
     });
-    store.getState().updateInternalDataSelections({
-      brush1: { dataSourceKey: 'donors', type: 'interval', selection: { age: [0, 10] } },
-    });
+    store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['Female'] }), 2);
     store.getState().resetFilters();
-    expect(store.getState().dataSelections).toEqual({});
-    expect(store.getState().internalDataSelections).toEqual({});
+    const s = store.getState();
+    expect(s.dataSelections).toEqual({});
+    expect(s.filterOrigins).toEqual({});
+    expect(s.brushAnchors).toEqual({});
   });
 
   it('setDataSelection adds/overwrites by key', () => {
@@ -216,64 +205,124 @@ describe('dataFiltersStore', () => {
     expect(store.getState().dataSelections['message-filter-0-0'].selection!.age).toEqual([5, 20]);
   });
 
-  // A brush filter's chat widget sits where the brush was made: the message
-  // count when it first gets a value, per filter id (a point brush splits per
-  // field), kept through edits and removal until a reset.
-  it('anchors each brush filter at the message count of its first value', () => {
-    const store = createDataFiltersStore();
-    const point = (selection: Record<string, string[]>): DataSelection => ({
-      dataSourceKey: 'donors',
-      type: 'point',
-      selection,
+  describe('applyChartSelection', () => {
+    const id = 'col:donors.sex';
+
+    it('writes each field into its column filter, anchored where the chart made it', () => {
+      const store = createDataFiltersStore();
+      store
+        .getState()
+        .applyChartSelection(
+          'donors',
+          ['sex', 'race'],
+          pointSel({ sex: ['F'], race: ['Asian'] }),
+          3,
+        );
+      const s = store.getState();
+      expect(s.dataSelections).toEqual({
+        [id]: pointSel({ sex: ['F'] }),
+        'col:donors.race': pointSel({ race: ['Asian'] }),
+      });
+      expect(s.filterOrigins).toEqual({ [id]: 'chart', 'col:donors.race': 'chart' });
+      expect(s.brushAnchors).toEqual({ [id]: 3, 'col:donors.race': 3 });
     });
-    store.getState().updateInternalDataSelections({ u1: point({ sex: ['Female'] }) }, 3);
-    expect(store.getState().brushAnchors).toEqual({ 'u1::sex': 3 });
 
-    // A second field picked later gets its own, later anchor; the first stays.
-    store
-      .getState()
-      .updateInternalDataSelections({ u1: point({ sex: ['Male'], race: ['Asian'] }) }, 7);
-    expect(store.getState().brushAnchors).toEqual({ 'u1::sex': 3, 'u1::race': 7 });
+    it('replaces a chat filter on the same column, keeping its scope and widget', () => {
+      const store = createDataFiltersStore();
+      store.getState().syncFiltersFromMessages([pointMessage('donors', 'sex', ['M'])], alwaysValid);
+      store.getState().setFilterScope(id, { entity: 'Patient', match: 'any' });
 
-    // Removed and brushed again: still where it first happened.
-    store.getState().removeFilter('u1::sex');
-    store
-      .getState()
-      .updateInternalDataSelections({ u1: point({ sex: ['Female'], race: ['Asian'] }) }, 9);
-    expect(store.getState().brushAnchors['u1::sex']).toBe(3);
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['F'] }), 5);
+      const s = store.getState();
+      expect(Object.keys(s.dataSelections)).toEqual([id]);
+      expect(s.dataSelections[id].selection).toEqual({ sex: ['F'] });
+      expect(s.filterOrigins[id]).toBe('chart');
+      expect(s.filterScopes[id]).toEqual({ entity: 'Patient', match: 'any' });
+      // Its widget is the chat message's: no chart anchor.
+      expect(s.brushAnchors).toEqual({});
+    });
 
-    // An empty selection anchors nothing; a reset forgets every anchor.
-    store.getState().updateInternalDataSelections({ u2: point({ sex: [] }) }, 9);
-    expect(store.getState().brushAnchors).not.toHaveProperty('u2::sex');
-    store.getState().resetFilters();
-    expect(store.getState().brushAnchors).toEqual({});
-  });
+    it('a chart clearing its selection drops its own filters and empties chat ones', () => {
+      const store = createDataFiltersStore();
+      store.getState().syncFiltersFromMessages([pointMessage('donors', 'sex', ['M'])], alwaysValid);
+      store.getState().applyChartSelection('donors', ['race'], pointSel({ race: ['Asian'] }), 1);
 
-  it('updateInternalDataSelections skips keys prefixed with message-filter-', () => {
-    const store = createDataFiltersStore();
-    store.getState().updateInternalDataSelections({
-      'message-filter-0-0': {
+      store.getState().applyChartSelection('donors', ['sex', 'race'], null, 2);
+      const s = store.getState();
+      expect(s.dataSelections).toEqual({ [id]: pointSel({ sex: [] }) });
+      expect(s.filterOrigins).toEqual({ [id]: 'chat' });
+    });
+
+    // The empty-bubble report: a range made in chat, moved on a chart, then
+    // cleared on that chart. Dropping it left the chat message with nothing.
+    it('a chart clearing a filter a message shows empties it, even after changing it', () => {
+      const store = createDataFiltersStore();
+      store
+        .getState()
+        .syncFiltersFromMessages([filterMessage('donors', 'age', 0, 100)], alwaysValid);
+      const range = (min: number, max: number): DataSelection => ({
         dataSourceKey: 'donors',
         type: 'interval',
-        selection: { age: [0, 10] },
-      },
-      brush1: { dataSourceKey: 'donors', type: 'interval', selection: { age: [0, 10] } },
-    });
-    expect(store.getState().internalDataSelections).toEqual({
-      brush1: { dataSourceKey: 'donors', type: 'interval', selection: { age: [0, 10] } },
-    });
-  });
+        selection: { age: [min, max] },
+      });
+      store.getState().applyChartSelection('donors', ['age'], range(20, 40), 1);
+      expect(store.getState().filterOrigins['col:donors.age']).toBe('chart');
 
-  it('updateInternalDataSelections is a no-op when values are unchanged', () => {
-    const store = createDataFiltersStore();
-    store.getState().updateInternalDataSelections({
-      brush1: { dataSourceKey: 'donors', type: 'interval', selection: { age: [0, 10] } },
+      store.getState().applyChartSelection('donors', ['age'], null, 2);
+      expect(store.getState().dataSelections['col:donors.age']).toEqual({
+        dataSourceKey: 'donors',
+        type: 'interval',
+        selection: { age: [] },
+      });
     });
-    const before = store.getState().internalDataSelections;
-    store.getState().updateInternalDataSelections({
-      brush1: { dataSourceKey: 'donors', type: 'interval', selection: { age: [0, 10] } },
+
+    it('a chat add claims a chart-made filter: its widget is now the message', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['F'] }), 1);
+      expect(store.getState().brushAnchors).toEqual({ [id]: 1 });
+      store.getState().syncFiltersFromMessages([pointMessage('donors', 'sex', ['M'])], alwaysValid);
+      expect(store.getState().brushAnchors).toEqual({});
+      // So clearing it on the chart now empties rather than drops it.
+      store.getState().applyChartSelection('donors', ['sex'], null, 2);
+      expect(store.getState().dataSelections[id]).toEqual(pointSel({ sex: [] }));
     });
-    expect(store.getState().internalDataSelections).toBe(before);
+
+    it('a fresh value re-activates a removed filter', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['F'] }), 1);
+      store.getState().removeFilter(id);
+      expect(store.getState().removedFilters[id]).toBe(true);
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['M'] }), 2);
+      expect(store.getState().removedFilters[id]).toBeUndefined();
+      // Still anchored where the chart first made it.
+      expect(store.getState().brushAnchors[id]).toBe(1);
+    });
+
+    it('is a no-op when the values are what the filter already holds', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['F'] }), 1);
+      const before = store.getState().dataSelections;
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['F'] }), 4);
+      expect(store.getState().dataSelections).toBe(before);
+    });
+
+    it('a brush writes an interval over a point filter on the same column', () => {
+      const store = createDataFiltersStore();
+      store.getState().setDataSelection('col:donors.age', pointSel({ age: ['30'] }));
+      store
+        .getState()
+        .applyChartSelection(
+          'donors',
+          ['age'],
+          { dataSourceKey: 'donors', type: 'interval', selection: { age: [20, 40] } },
+          1,
+        );
+      expect(store.getState().dataSelections['col:donors.age']).toEqual({
+        dataSourceKey: 'donors',
+        type: 'interval',
+        selection: { age: [20, 40] },
+      });
+    });
   });
 
   it("clearFilter empties an LLM filter's fields, keeping the key and the field names", () => {
@@ -306,34 +355,6 @@ describe('dataFiltersStore', () => {
     });
   });
 
-  it('clearFilter with a `uuid::field` key empties only that field of a split point filter', () => {
-    const store = createDataFiltersStore();
-    store.getState().updateInternalDataSelections({
-      'uuid-1': {
-        dataSourceKey: 'Event',
-        type: 'point',
-        selection: { organization_name: ['CHOP'], event_type: ['Deceased'] },
-      },
-    });
-
-    store.getState().clearFilter('uuid-1::event_type');
-    // Sibling field keeps filtering; the cleared one stays in place, empty —
-    // its chip reads "All" and its widget stays for re-selection.
-    expect(store.getState().internalDataSelections['uuid-1'].selection).toEqual({
-      organization_name: ['CHOP'],
-      event_type: [],
-    });
-  });
-
-  it('clearFilter empties an interval brush rather than nulling it', () => {
-    const store = createDataFiltersStore();
-    store.getState().updateInternalDataSelections({
-      'uuid-1': { dataSourceKey: 'donors', type: 'interval', selection: { age: [10, 20] } },
-    });
-    store.getState().clearFilter('uuid-1');
-    expect(store.getState().internalDataSelections['uuid-1'].selection).toEqual({ age: [] });
-  });
-
   describe('remove / restore', () => {
     const point = (values: string[]): DataSelection => ({
       dataSourceKey: 'donors',
@@ -354,59 +375,24 @@ describe('dataFiltersStore', () => {
       expect(store.getState().dataSelections['message-filter-0-0'].selection).toEqual({ sex: [] });
     });
 
-    it('a fresh brush value re-activates a removed brush, and a later empty write keeps it', () => {
-      const store = createDataFiltersStore();
-      const brush = (values: string[]): DataSelection => ({
-        dataSourceKey: 'Event',
-        type: 'point',
-        selection: { organization_name: values },
-      });
-      store.getState().updateInternalDataSelections({ 'uuid-1': brush(['CHOP']) });
-      store.getState().removeFilter('uuid-1::organization_name');
-      expect(store.getState().removedFilters['uuid-1::organization_name']).toBe(true);
-
-      // The chart emits a new click.
-      store.getState().updateInternalDataSelections({ 'uuid-1': brush(['UCSF']) });
-      expect(store.getState().removedFilters['uuid-1::organization_name']).toBeUndefined();
-
-      // Unticking the last value must not silently re-remove it.
-      store.getState().setFilter('uuid-1::organization_name', brush([]));
-      expect(store.getState().removedFilters['uuid-1::organization_name']).toBeUndefined();
-    });
-
-    it('setFilter merges a split point field back into its brush', () => {
-      const store = createDataFiltersStore();
-      store.getState().updateInternalDataSelections({
-        'uuid-1': {
-          dataSourceKey: 'Event',
-          type: 'point',
-          selection: { organization_name: ['CHOP'], event_type: ['Deceased'] },
-        },
-      });
-      store.getState().setFilter('uuid-1::event_type', {
-        dataSourceKey: 'Event',
-        type: 'point',
-        selection: { event_type: ['Recurrence'] },
-      });
-      expect(store.getState().internalDataSelections['uuid-1'].selection).toEqual({
-        organization_name: ['CHOP'],
-        event_type: ['Recurrence'],
-      });
-    });
-
-    it('clearAllFilters empties both maps and keeps every key and flag', () => {
+    it('clearAllFilters empties every filter and keeps every key and flag', () => {
       const store = createDataFiltersStore();
       store.getState().setDataSelection('message-filter-0-0', point(['male']));
       store.getState().setDataSelection('message-filter-1-0', point(['female']));
       store.getState().removeFilter('message-filter-1-0');
-      store.getState().updateInternalDataSelections({
-        'uuid-1': { dataSourceKey: 'donors', type: 'interval', selection: { age: [1, 2] } },
-      });
+      store
+        .getState()
+        .applyChartSelection(
+          'donors',
+          ['age'],
+          { dataSourceKey: 'donors', type: 'interval', selection: { age: [1, 2] } },
+          0,
+        );
 
       store.getState().clearAllFilters();
       const s = store.getState();
       expect(s.dataSelections['message-filter-0-0'].selection).toEqual({ sex: [] });
-      expect(s.internalDataSelections['uuid-1'].selection).toEqual({ age: [] });
+      expect(s.dataSelections['col:donors.age'].selection).toEqual({ age: [] });
       expect(s.removedFilters).toEqual({ 'message-filter-1-0': true });
     });
   });
@@ -465,14 +451,13 @@ describe('dataFiltersStore', () => {
       expect(store.getState().removedFilters).toEqual({});
     });
 
-    it('is applied to the data, and kept out of the brush map', () => {
+    it('is applied to the data, and a chart never writes over it', () => {
       const store = createDataFiltersStore();
       store.getState().applyExternalFilters([host('a', ['male'])]);
-      store.getState().updateInternalDataSelections({
-        'host-filter-a': { dataSourceKey: 'donors', type: 'point', selection: { sex: ['x'] } },
-      });
-      expect(store.getState().internalDataSelections).toEqual({});
-      expect(Object.keys(store.getState().getValidDataSelections(alwaysValid))).toEqual([
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['x'] }), 0);
+      expect(store.getState().dataSelections['host-filter-a'].selection).toEqual({ sex: ['male'] });
+      expect(Object.keys(store.getState().getValidDataSelections(alwaysValid)).sort()).toEqual([
+        'col:donors.sex',
         'host-filter-a',
       ]);
     });
@@ -568,11 +553,12 @@ describe('dataFiltersStore', () => {
       const store = createDataFiltersStore();
       const messages: Message[] = [filterMessage('donors', 'age', 0, 100)];
       store.getState().syncFiltersFromMessages(messages, alwaysValid);
-      expect(store.getState().dataSelections['message-filter-0-0']).toEqual({
+      expect(store.getState().dataSelections['col:donors.age']).toEqual({
         dataSourceKey: 'donors',
         type: 'interval',
         selection: { age: [0, 100] },
       });
+      expect(store.getState().filterOrigins['col:donors.age']).toBe('chat');
     });
 
     it('skips messages whose selections fail validation', () => {
@@ -594,7 +580,7 @@ describe('dataFiltersStore', () => {
         ],
         alwaysUnknown,
       );
-      expect(store.getState().dataSelections['message-filter-0-0']).toEqual({
+      expect(store.getState().dataSelections['col:donors.donor_id']).toEqual({
         dataSourceKey: 'donors',
         type: 'point',
         selection: { donor_id: ['HBM123'] },
@@ -617,56 +603,262 @@ describe('dataFiltersStore', () => {
           ],
           alwaysValid,
         );
-        const selection = store.getState().dataSelections['message-filter-0-0'];
+        const selection = store.getState().dataSelections['col:radiation.radiation_type'];
         expect(selection.selection).toEqual({ radiation_type: [] });
         expect(selectionHasValue(selection)).toBe(false);
       },
     );
 
-    it('does not overwrite an existing selection for the same key', () => {
+    it('an add replaces what its column held, a chart filter included', () => {
       const store = createDataFiltersStore();
-      store.getState().setDataSelection('message-filter-0-0', {
-        dataSourceKey: 'donors',
-        type: 'interval',
-        selection: { age: [5, 50] },
-      });
+      store
+        .getState()
+        .applyChartSelection(
+          'donors',
+          ['age'],
+          { dataSourceKey: 'donors', type: 'interval', selection: { age: [5, 50] } },
+          0,
+        );
       store
         .getState()
         .syncFiltersFromMessages([filterMessage('donors', 'age', 0, 100)], alwaysValid);
-      expect(store.getState().dataSelections['message-filter-0-0'].selection!.age).toEqual([5, 50]);
+      expect(store.getState().dataSelections['col:donors.age'].selection!.age).toEqual([0, 100]);
+      expect(store.getState().filterOrigins['col:donors.age']).toBe('chat');
     });
   });
 
-  describe('syncSelectionsBackToMessages', () => {
-    it('writes the store interval ranges back into the message tool call args', () => {
-      const store = createDataFiltersStore();
-      const messages: Message[] = [filterMessage('donors', 'age', 0, 100)];
-      store.getState().setDataSelection('message-filter-0-0', {
-        dataSourceKey: 'donors',
-        type: 'interval',
-        selection: { age: [25, 75] },
-      });
-      store.getState().syncSelectionsBackToMessages(messages);
-      const args = messages[0].tool_calls![0].function.arguments as unknown as {
-        filter: { intervalRange: { min: number; max: number } };
+  describe('filter operations', () => {
+    /** One assistant message carrying these FilterData calls. */
+    function opsMessage(...args: Record<string, unknown>[]): Message {
+      return {
+        role: 'assistant',
+        content: '',
+        tool_calls: args.map((a) => ({
+          function: { name: 'FilterData', arguments: a as unknown as Record<string, string> },
+        })),
       };
-      expect(args.filter.intervalRange).toEqual({ min: 25, max: 75 });
+    }
+    const group3 = {
+      title: 'Diagnosis',
+      entity: 'Event',
+      field: 'diagnosis',
+      filter: {
+        filterType: 'point',
+        intervalRange: { min: 0, max: 0 },
+        pointValues: ['Group 3'],
+      },
+    };
+    const patientScope = { entity: 'Patient', match: 'any' };
+    const DX = 'col:Event.diagnosis';
+
+    function synced(messages: Message[]) {
+      const store = createDataFiltersStore();
+      store.getState().syncFiltersFromMessages(messages, alwaysValid);
+      return store;
+    }
+
+    it('extracts every operation in order, and only definitions as specs', () => {
+      const m = opsMessage(group3, { op: 'remove', id: 'message-filter-0-0' }, { op: 'clear' });
+      expect(extractFilterOperationsFromMessage(m).map((o) => o.args.op)).toEqual([
+        undefined,
+        'remove',
+        'clear',
+      ]);
+      expect(extractAllFilterSpecsFromMessage(m).map((o) => o.toolCallIndex)).toEqual([0]);
     });
 
-    it('ignores selections whose key does not encode a message index', () => {
+    it('records the scope an add carries', () => {
+      const store = synced([opsMessage({ ...group3, scope: patientScope })]);
+      expect(store.getState().filterScopes).toEqual({ [DX]: patientScope });
+    });
+
+    // A modify names its target by column id; one written before column ids
+    // names the add's `message-filter-{i}-{j}`, which still lands.
+    it.each([[DX], ['message-filter-0-0']])(
+      'modifies a filter in place: same id, new values and scope (id %s)',
+      (id) => {
+        const store = synced([
+          opsMessage(group3),
+          opsMessage({
+            ...group3,
+            op: 'modify',
+            id,
+            filter: { ...group3.filter, pointValues: ['Group 4'] },
+            scope: patientScope,
+          }),
+        ]);
+        const { dataSelections, filterScopes } = store.getState();
+        expect(Object.keys(dataSelections)).toEqual([DX]);
+        expect(dataSelections[DX].selection).toEqual({ diagnosis: ['Group 4'] });
+        expect(filterScopes[DX]).toEqual(patientScope);
+      },
+    );
+
+    it('two adds on one column are one filter: the later replaces the earlier', () => {
+      const later = { ...group3, filter: { ...group3.filter, pointValues: ['SHH'] } };
+      const store = synced([opsMessage(group3), opsMessage(later)]);
+      expect(Object.keys(store.getState().dataSelections)).toEqual([DX]);
+      expect(store.getState().dataSelections[DX].selection).toEqual({ diagnosis: ['SHH'] });
+    });
+
+    it('modifies and removes a filter a chart made', () => {
       const store = createDataFiltersStore();
-      const messages: Message[] = [filterMessage('donors', 'age', 0, 100)];
-      store.getState().setDataSelection('brush-foo', {
-        dataSourceKey: 'donors',
-        type: 'interval',
-        selection: { age: [25, 75] },
+      store
+        .getState()
+        .applyChartSelection(
+          'Event',
+          ['diagnosis'],
+          { dataSourceKey: 'Event', type: 'point', selection: { diagnosis: ['SHH'] } },
+          0,
+        );
+      store
+        .getState()
+        .syncFiltersFromMessages([opsMessage({ ...group3, op: 'modify', id: DX })], alwaysValid);
+      expect(store.getState().dataSelections[DX].selection).toEqual({ diagnosis: ['Group 3'] });
+      expect(store.getState().filterOrigins[DX]).toBe('chat');
+
+      store
+        .getState()
+        .syncFiltersFromMessages(
+          [opsMessage({ ...group3, op: 'modify', id: DX }), opsMessage({ op: 'remove', id: DX })],
+          alwaysValid,
+        );
+      expect(store.getState().dataSelections).toEqual({});
+    });
+
+    it('a modify can move a filter to another column', () => {
+      const store = synced([
+        opsMessage(group3),
+        opsMessage({ ...group3, op: 'modify', id: DX, field: 'site' }),
+      ]);
+      expect(Object.keys(store.getState().dataSelections)).toEqual(['col:Event.site']);
+    });
+
+    it('a modify without a scope makes the filter row-level again', () => {
+      const store = synced([
+        opsMessage({ ...group3, scope: patientScope }),
+        opsMessage({ ...group3, op: 'modify', id: DX }),
+      ]);
+      expect(store.getState().filterScopes).toEqual({});
+    });
+
+    it('removes a filter, and clears every chat and chart filter but no host one', () => {
+      const store = createDataFiltersStore();
+      store
+        .getState()
+        .applyExternalFilters([
+          { id: 'site', dataSourceKey: 'Event', type: 'point', selection: { site: ['A'] } },
+        ]);
+      const messages = [
+        opsMessage(group3, { ...group3, field: 'site' }),
+        opsMessage({ op: 'remove', id: 'col:Event.site' }),
+      ];
+      store.getState().syncFiltersFromMessages(messages, alwaysValid);
+      expect(Object.keys(store.getState().dataSelections).sort()).toEqual([DX, 'host-filter-site']);
+      store
+        .getState()
+        .applyChartSelection(
+          'Event',
+          ['grade'],
+          { dataSourceKey: 'Event', type: 'point', selection: { grade: ['2'] } },
+          2,
+        );
+
+      store
+        .getState()
+        .syncFiltersFromMessages([...messages, opsMessage({ op: 'clear' })], alwaysValid);
+      expect(Object.keys(store.getState().dataSelections)).toEqual(['host-filter-site']);
+    });
+
+    it('never touches a host filter, whatever the call says', () => {
+      const store = createDataFiltersStore();
+      store
+        .getState()
+        .applyExternalFilters([
+          { id: 'site', dataSourceKey: 'Event', type: 'point', selection: { site: ['A'] } },
+        ]);
+      store
+        .getState()
+        .syncFiltersFromMessages(
+          [
+            opsMessage(
+              { ...group3, op: 'modify', id: 'host-filter-site' },
+              { op: 'remove', id: 'host-filter-site' },
+            ),
+          ],
+          alwaysValid,
+        );
+      expect(store.getState().dataSelections['host-filter-site'].selection).toEqual({
+        site: ['A'],
       });
-      // Should not throw and should not mutate the message.
-      store.getState().syncSelectionsBackToMessages(messages);
-      const args = messages[0].tool_calls![0].function.arguments as unknown as {
-        filter: { intervalRange: { min: number; max: number } };
+    });
+
+    it('applies each operation once, so later syncs keep the user’s edits', () => {
+      const messages = [
+        opsMessage(group3),
+        opsMessage({ ...group3, op: 'modify', id: DX, scope: patientScope }),
+      ];
+      const store = synced(messages);
+      const edited: DataSelection = {
+        dataSourceKey: 'Event',
+        type: 'point',
+        selection: { diagnosis: ['SHH'] },
       };
-      expect(args.filter.intervalRange).toEqual({ min: 0, max: 100 });
+      store.getState().setFilter(DX, edited);
+      store.getState().setFilterScope(DX, null);
+
+      store
+        .getState()
+        .syncFiltersFromMessages([...messages, { role: 'user', content: 'thanks' }], alwaysValid);
+
+      expect(store.getState().dataSelections[DX]).toEqual(edited);
+      expect(store.getState().filterScopes).toEqual({});
+    });
+
+    it('a reset replays the conversation to the same final state', () => {
+      const messages = [
+        opsMessage(group3, { ...group3, field: 'site' }),
+        opsMessage(
+          { ...group3, op: 'modify', id: 'message-filter-0-0', scope: patientScope },
+          { op: 'remove', id: 'message-filter-0-1' },
+        ),
+        opsMessage({ ...group3, field: 'grade' }),
+      ];
+      const store = synced(messages);
+      const before = store.getState();
+
+      store.getState().resetFilters();
+      store.getState().syncFiltersFromMessages(messages, alwaysValid);
+
+      expect(store.getState().dataSelections).toEqual(before.dataSelections);
+      expect(store.getState().filterScopes).toEqual(before.filterScopes);
+      expect(Object.keys(before.dataSelections).sort()).toEqual([DX, 'col:Event.grade']);
+    });
+
+    it('a modify of a filter that is gone does nothing', () => {
+      const store = synced([
+        opsMessage(group3),
+        opsMessage({ op: 'remove', id: 'message-filter-0-0' }),
+        opsMessage({ ...group3, op: 'modify', id: 'message-filter-0-0' }),
+      ]);
+      expect(store.getState().dataSelections).toEqual({});
+    });
+
+    it('host filters carry their scope in and drop it with the filter', () => {
+      const store = createDataFiltersStore();
+      const host = {
+        id: 'site',
+        dataSourceKey: 'Event',
+        type: 'point' as const,
+        selection: { site: ['A'] },
+        scope: { entity: 'Patient', match: 'none' as const },
+      };
+      store.getState().applyExternalFilters([host]);
+      expect(store.getState().filterScopes['host-filter-site']).toEqual(host.scope);
+      store.getState().resetFilters();
+      expect(store.getState().filterScopes['host-filter-site']).toEqual(host.scope);
+      store.getState().applyExternalFilters([]);
+      expect(store.getState().filterScopes).toEqual({});
     });
   });
 });

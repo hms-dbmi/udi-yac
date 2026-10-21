@@ -381,9 +381,12 @@ export interface Filter extends DataTransformationBase {
 export type FilterExpression = string | Expr | FilterDataSelection;
 
 /**
- * A filter match type, which specifies how to match the filter data selection.
+ * A filter match type, which specifies how to match the filter data selection
+ * across the rows each target key relates to: keep targets with at least one
+ * matching row ('any'), with every row matching ('all'), or with no matching
+ * row ('none').
  */
-export type FilterMatch = 'all' | 'any';
+export type FilterMatch = 'all' | 'any' | 'none';
 
 /**
  * A data selection used for filtering.
@@ -405,8 +408,12 @@ export interface FilterDataSelection {
   entityRelationship?: FilterEntityRelationship;
 
   /**
-   * Specifies whether to use 'all' or 'any' of the selected data in a 1-to-many mapping.
-   * Default is 'any'.
+   * Specifies whether a target must relate to 'any', 'all' or 'none' of the
+   * selected data in a 1-to-many mapping. Default is 'any'.
+   *
+   * With `source` equal to the filtered table and both keys naming a subject
+   * column (e.g. a patient id), the filter keeps every row of each subject
+   * that matches, not just the matching rows.
    */
   match?: FilterMatch;
 }

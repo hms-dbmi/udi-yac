@@ -63,6 +63,13 @@ interface ImportMetaEnv {
    */
   readonly VITE_UDI_ISSUE_REPORTING?: string;
   /**
+   * Dev server only. `1` records filter and selection events — chart clicks
+   * and brushes, filter-store writes, the toolkit’s brush draw-back — as
+   * JSON lines in `packages/chat/logs/udi-debug.log` (gitignored), so a
+   * session can be read back after testing. The events can hold data values.
+   */
+  readonly VITE_UDI_DEBUG_LOG?: string;
+  /**
    * Public base path for the built SPA (read in `vite.config.ts`, build-time
    * only). The library build always uses `./`.
    */

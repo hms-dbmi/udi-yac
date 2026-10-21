@@ -78,8 +78,14 @@ amount of state to mirror Arquero exactly:
   resolve against the request's `selections`. Same-entity → a predicate;
   cross-entity → a semi-join on `entityRelationship` (`targetKey IN (SELECT
 originKey FROM source WHERE pred)`); `match: 'all'` → `GROUP BY originKey
-HAVING count(matching) = count(total)`. An empty point value-list means **no
-  constraint** on that field (matches Arquero), not "match nothing".
+HAVING count(matching) = count(total)`; `match: 'none'` → `targetKey NOT IN
+(SELECT originKey FROM source WHERE pred AND originKey IS NOT NULL)`, which
+  drops rows with a null key. The subquery always reads the source as loaded,
+  never a pipeline intermediate. A semi-join whose `source` is the filtered
+  table itself, keyed on a subject column both sides, is a **per-subject
+  scope**: it keeps every row of each subject that matches. An empty point
+  value-list means **no constraint** on that field (matches Arquero), not
+  "match nothing".
 - `kde` must be the last op; the engine post-processes its rows in Python.
 
 ### 2.2 `QueryEngine` (`engine.py`)

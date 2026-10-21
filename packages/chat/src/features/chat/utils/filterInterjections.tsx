@@ -27,17 +27,20 @@ export function filterInterjections(
   brushAnchors: Record<string, number>,
 ): Interjection[] {
   const hidden = messages.slice(0, hiddenCount).flatMap((message, messageIndex) =>
-    extractAllFilterSpecsFromMessage(message).map(({ toolCallIndex }) => ({
-      at: messageIndex + 0.5,
-      key: `hidden-filter-${messageIndex}-${toolCallIndex}`,
-      node: (
-        <HiddenFilterWidget
-          message={message}
-          messageIndex={messageIndex}
-          toolCallIndex={toolCallIndex}
-        />
-      ),
-    })),
+    // A modify's widget is its target's, which its own add already shows.
+    extractAllFilterSpecsFromMessage(message)
+      .filter(({ args }) => args.op !== 'modify')
+      .map(({ toolCallIndex }) => ({
+        at: messageIndex + 0.5,
+        key: `hidden-filter-${messageIndex}-${toolCallIndex}`,
+        node: (
+          <HiddenFilterWidget
+            message={message}
+            messageIndex={messageIndex}
+            toolCallIndex={toolCallIndex}
+          />
+        ),
+      })),
   );
   const brushWidgets = brushes.map((brush) => ({
     at: Math.min(brushAnchors[brush.id] ?? messages.length, messages.length),

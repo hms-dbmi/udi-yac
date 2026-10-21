@@ -58,4 +58,49 @@ for (const match of ['any', 'all']) {
   assert.equal(donors.at(-1).hubmap_id, 'D299', match);
 }
 
+// 'none' keeps the donors with no dataset in the brush.
+const unbrushed = store.getDataObject(
+  ['donors'],
+  [
+    {
+      filter: {
+        name: 'brush',
+        source: 'datasets',
+        match: 'none',
+        entityRelationship: { originKey: 'donor_id', targetKey: 'hubmap_id' },
+      },
+      in: 'donors',
+      out: 'donors',
+    },
+  ],
+).displayData;
+assert.equal(unbrushed.length, 200);
+assert.equal(unbrushed[0].hubmap_id, 'D300');
+
+// Subject scope on the selection's own table: keyed on the donor, the filter
+// keeps every dataset of a matching donor. The brush now ends halfway through
+// D299's datasets, so D299 matches 'any' but not 'all'.
+store.bindExternalDataSelections({
+  brush: { dataSourceKey: 'datasets', type: 'interval', selection: { t: [0, 59_899] } },
+});
+const expected = { any: 60_000, all: 59_800, none: 40_000 };
+for (const [match, rows] of Object.entries(expected)) {
+  const datasets = store.getDataObject(
+    ['datasets'],
+    [
+      {
+        filter: {
+          name: 'brush',
+          source: 'datasets',
+          match,
+          entityRelationship: { originKey: 'donor_id', targetKey: 'donor_id' },
+        },
+        in: 'datasets',
+        out: 'datasets',
+      },
+    ],
+  ).displayData;
+  assert.equal(datasets.length, rows, match);
+}
+
 console.log('cross-entity-filter: all assertions passed');

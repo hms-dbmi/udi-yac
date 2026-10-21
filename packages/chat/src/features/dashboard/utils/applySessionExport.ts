@@ -27,12 +27,18 @@ export function applySessionExport(
   stores: SessionTargetStores,
   sourceFields: Record<string, string[]> | null,
 ): void {
-  // The imported messages reuse `message-filter-{i}-{j}` keys, which
-  // syncFiltersFromMessages skips while present — without a reset, imported
-  // filters would inherit the old session's values and removed flags.
+  // Without a reset, imported filters would inherit the old session's values,
+  // removed flags and applied-call record, and the import's own calls would be
+  // skipped as already applied.
   stores.dataFilters?.getState().resetFilters();
   const conversation = stores.conversation.getState();
   conversation.loadConversation(session.conversation.messages);
+  // The user's edits on top of what the messages rebuild.
+  if (session.filters) {
+    stores.dataFilters
+      ?.getState()
+      .restoreFilterState(session.filters, session.conversation.messages);
+  }
   if (session.conversation.sessionUsage) {
     conversation.setSessionUsage(session.conversation.sessionUsage);
   }

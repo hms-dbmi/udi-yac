@@ -661,6 +661,73 @@ const CASES = [
       },
     },
   ],
+  // Subject scope: a selection on samples, matched per donor. On samples
+  // itself (keyed on the donor column both sides) it keeps every sample of a
+  // matching donor; on donors it keeps the donors themselves. Samples created
+  // since mid-2023 split the donors three ways: some have only those, some
+  // only older ones, some both.
+  ...['any', 'all', 'none'].flatMap((match) => [
+    [
+      `named-filter-subject-same-table-${match}`,
+      {
+        source: src('samples'),
+        transformation: [
+          {
+            filter: {
+              name: 'sel_sample',
+              source: 'samples',
+              match,
+              entityRelationship: {
+                originKey: 'donor.hubmap_id',
+                targetKey: 'donor.hubmap_id',
+              },
+            },
+          },
+          { groupby: 'sample_category' },
+          { rollup: { n: { op: 'count' } } },
+        ],
+      },
+      {
+        sel_sample: {
+          dataSourceKey: 'samples',
+          selection: {
+            created_timestamp: [1_690_000_000_000, 1_800_000_000_000],
+          },
+          type: 'interval',
+        },
+      },
+    ],
+    [
+      `named-filter-subject-cross-table-${match}`,
+      {
+        source: src('donors'),
+        transformation: [
+          {
+            filter: {
+              name: 'sel_sample',
+              source: 'samples',
+              match,
+              entityRelationship: {
+                originKey: 'donor.hubmap_id',
+                targetKey: 'hubmap_id',
+              },
+            },
+          },
+          { groupby: 'sex' },
+          { rollup: { n: { op: 'count' } } },
+        ],
+      },
+      {
+        sel_sample: {
+          dataSourceKey: 'samples',
+          selection: {
+            created_timestamp: [1_690_000_000_000, 1_800_000_000_000],
+          },
+          type: 'interval',
+        },
+      },
+    ],
+  ]),
   [
     // A brush whose fields don't exist in the target table (e.g. landed on
     // an aggregated output column): the filter is SKIPPED, not an error —

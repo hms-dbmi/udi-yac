@@ -148,10 +148,17 @@ function UDIChatInner({
     seededRef.current = true;
     applySessionExport(
       parsedInitialSession.value,
-      { conversation: conversationStore, dashboard: dashboardStore },
+      { conversation: conversationStore, dashboard: dashboardStore, dataFilters: dataFiltersStore },
       dataPackageStore.getState().sourceFields,
     );
-  }, [parsedInitialSession, loadingPhase, conversationStore, dashboardStore, dataPackageStore]);
+  }, [
+    parsedInitialSession,
+    loadingPhase,
+    conversationStore,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
   // Until then the dashboard is not empty, only not filled yet.
   const seeding =
     parsedInitialSession?.ok === true && loadingPhase !== 'ready' && loadingPhase !== 'error';
@@ -238,10 +245,18 @@ function UDIChatInner({
   // trigger this — each viz's own UUID is already in the filter list (from
   // activeVisualizations), so the filter structure is stable once set up.
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   useEffect(() => {
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
-  }, [dataSelections, activeVisualizations, dashboardStore, dataFiltersStore, dataPackageStore]);
+  }, [
+    dataSelections,
+    filterScopes,
+    activeVisualizations,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
 
   // Host filters in. Held until the package is ready: before then the
   // validators can't place a filter's fields, and its chip would never show.

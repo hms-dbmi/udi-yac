@@ -65,6 +65,29 @@ describe('queryLLM auth header', () => {
   });
 });
 
+describe('queryLLM filter state', () => {
+  it('sends the active filters, and an empty list when there are none', async () => {
+    const filters = [
+      {
+        id: 'message-filter-1-0',
+        origin: 'chat' as const,
+        entity: 'Event',
+        field: 'diagnosis',
+        filterType: 'point' as const,
+        pointValues: ['Group 3'],
+        scope: { entity: 'Patient', match: 'any' as const },
+      },
+    ];
+    const fetchMock = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac' }, [], '{}', '[]', undefined, filters);
+    expect(body(fetchMock).filters).toEqual(filters);
+
+    const bare = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac' }, [], '{}', '[]');
+    expect(body(bare).filters).toEqual([]);
+  });
+});
+
 /** The agent may offer an issue report only when the host switched reporting on. */
 describe('queryLLM issue reporting flag', () => {
   it('sends the flag when issue reporting is on', async () => {

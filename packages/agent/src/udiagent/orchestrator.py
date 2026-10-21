@@ -1,6 +1,7 @@
 """Orchestrator — routes user requests to the appropriate tool handlers."""
 
 import copy
+import functools
 import json
 import logging
 import time
@@ -10,6 +11,18 @@ from typing import Callable
 import openai
 
 from udiagent.skills import Skill, load_skills, render_template
+from udiagent.filters import (
+    APPLY_FILTER_OPERATIONS,
+    APPLY_FILTER_OPERATIONS_TOOL,
+    FILTER_RETRY_CLOSING,
+    MAX_FILTER_ATTEMPTS,
+    describe_filters,
+    filter_failure_args,
+    filter_summary,
+    normalize_filters,
+    operation_tool_calls,
+    validate_operations,
+)
 from udiagent.grammar import load_grammar
 from udiagent.messages import (
     GET_VISUALIZATION_SPEC,
@@ -33,6 +46,7 @@ from udiagent.tools import (
     ORCHESTRATOR_TOOLS,
     function_call_render_visualization,
 )
+from udiagent.vis_generate import _parse_request_schema, _retry_turns
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +259,7 @@ class Orchestrator:
         model: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
         session_id: str | None = None,
+        filters: list[dict] | None = None,
         issue_reporting: bool = False,
     ) -> OrchestratorResult:
         """Run the orchestrator on a user request.
@@ -262,6 +277,9 @@ class Orchestrator:
             session_id: Optional per-conversation ID used to group this run's
                 LLM calls into a single LangFuse trace/session. No-op when
                 LangFuse is disabled.
+            filters: The active filters as the client holds them, edits and
+                all (see ``udiagent.filters``). ``None`` means the caller did
+                not say, which the prompt reports as no active filters.
             issue_reporting: Offer the ``OfferIssueReport`` tool, which lets the
                 client open its report form. Pass it only when the client can
                 send reports and something records them.
@@ -277,6 +295,7 @@ class Orchestrator:
                 openai_api_key=openai_api_key,
                 model=model,
                 budget_check=budget_check,
+                filters=filters,
                 issue_reporting=issue_reporting,
             )
 
@@ -331,6 +350,7 @@ class Orchestrator:
         openai_api_key: str | None = None,
         model: str | None = None,
         budget_check: Callable[["Usage"], str | None] | None = None,
+        filters: list[dict] | None = None,
         issue_reporting: bool = False,
     ) -> OrchestratorResult:
         usage = Usage()
@@ -354,6 +374,7 @@ class Orchestrator:
                 openai_api_key=openai_api_key,
                 model=model,
                 budget_check=budget_check,
+                filters=normalize_filters(filters),
                 issue_reporting=issue_reporting,
             )
         except BudgetExceededError as err:
@@ -558,6 +579,7 @@ class Orchestrator:
         usage,
         openai_api_key=None,
         model=None,
+        current_filters=(),
     ):
         available_tools = "\n".join(
             f"- {t['function']['name']}: {t['function']['description']}"
@@ -582,8 +604,17 @@ class Orchestrator:
                     "available_tools": available_tools,
                     "data_schema": data_schema_simple,
                     "data_domains": data_domains_simple,
+                    # "Which filters are on?" is answered here too, and the
+                    # history only has the FilterData calls as first made.
+                    "current_filters": describe_filters(list(current_filters)),
                     "structured_functions": get_function_signatures(),
                 },
+            )
+            logger.info(
+                "explain prompt: current filters=%s", filter_summary(list(current_filters))
+            )
+            logger.debug(
+                "explain prompt current filters:\n%s", describe_filters(list(current_filters))
             )
             gpt_client = self.agent._get_gpt_client(openai_api_key)
             msgs = normalize_tool_calls(copy.deepcopy(messages))
@@ -683,23 +714,75 @@ class Orchestrator:
         usage,
         openai_api_key=None,
         model=None,
+        current_filters=(),
     ):
-        filter_obj = {
-            "filterType": tool_args["filterType"],
-            "intervalRange": tool_args.get("intervalRange", {"min": 0, "max": 0}),
-            # Omitted values leave the filter in place with nothing picked, so
-            # the chat widget lists the field's values for the user to choose.
-            "pointValues": tool_args.get("pointValues", []),
-        }
-        return {
-            "name": "FilterData",
-            "arguments": {
-                "title": tool_args.get("title", ""),
-                "entity": tool_args["entity"],
-                "field": tool_args["field"],
-                "filter": filter_obj,
+        """Turn the routed filter request into validated filter operations.
+
+        A call of its own, with the schema, the domains and the current filter
+        state in view, so the change can be checked against all three before
+        it reaches the client. An invalid set is sent back with its errors,
+        every earlier rejection included, as in visualization generation; one
+        that never validates becomes a FreeTextExplain naming the problems
+        rather than a filter that silently matches nothing.
+
+        Returns one ``FilterData`` tool call per operation, or that message.
+        """
+        current = list(current_filters)
+        request = (tool_args.get("request") or "").strip() or next(
+            (
+                m["content"]
+                for m in reversed(messages)
+                if m.get("role") == "user" and isinstance(m.get("content"), str)
+            ),
+            "",
+        )
+        rendered = render_template(
+            self.skills["filter"].instructions,
+            {
+                "request": request,
+                "current_filters": describe_filters(current),
+                "data_schema": simplify_data_schema(data_schema),
+                "data_domains": simplify_data_domains(data_domains),
             },
-        }
+        )
+        logger.info("filter prompt: current filters=%s", filter_summary(current))
+        msgs = normalize_tool_calls(copy.deepcopy(messages))
+        msgs.insert(0, {"role": "system", "content": rendered})
+        schema = _parse_request_schema(data_schema)
+        gpt_client = self.agent._get_gpt_client(openai_api_key)
+
+        rejected = []
+        errors = ["No filter change came back."]
+        for _attempt in range(MAX_FILTER_ATTEMPTS):
+            retry = (
+                _retry_turns(rejected, closing=FILTER_RETRY_CLOSING) if rejected else []
+            )
+            resp = _call_with_budget_guard(
+                self.agent.create_completion,
+                usage,
+                gpt_client,
+                model=model or self.agent.gpt_model_name,
+                messages=msgs + retry,
+                tools=[APPLY_FILTER_OPERATIONS_TOOL],
+                tool_choice="required",
+                max_completion_tokens=1024,
+            )
+            usage.add("filter", getattr(resp, "usage", None))
+            calls = resp.choices[0].message.tool_calls or []
+            args = _tool_args(calls[0]) if calls else None
+            if args is None:
+                errors = ["No filter change came back."]
+                continue
+            operations = args.get("operations")
+            errors = validate_operations(operations, schema, data_domains, current)
+            if not errors:
+                return operation_tool_calls(operations, current)
+            rejected.append((APPLY_FILTER_OPERATIONS, args, errors))
+
+        logger.warning(
+            "filter change rejected after %d attempts: %s", MAX_FILTER_ATTEMPTS, errors
+        )
+        return {"name": "FreeTextExplain", "arguments": filter_failure_args(errors)}
 
     def _handle_offer_issue_report(
         self,
@@ -733,8 +816,10 @@ class Orchestrator:
         openai_api_key=None,
         model=None,
         budget_check: Callable[["Usage"], str | None] | None = None,
+        filters: list[dict] | None = None,
         issue_reporting: bool = False,
     ):
+        filters = filters or []
         tools = [*self.tools, OFFER_ISSUE_REPORT_TOOL] if issue_reporting else self.tools
         # The handlers below each read the history afresh, so a chart revealed
         # with GetVisualizationSpec is marked on this copy — never on the
@@ -754,8 +839,11 @@ class Orchestrator:
             {
                 "data_schema": simplify_data_schema(data_schema),
                 "data_domains": simplify_data_domains(data_domains),
+                "current_filters": describe_filters(filters),
             },
         )
+        logger.info("orchestrate prompt: current filters=%s", filter_summary(filters))
+        logger.debug("orchestrate prompt current filters:\n%s", describe_filters(filters))
         msgs.insert(0, {"role": "system", "content": rendered})
 
         gpt_client = self.agent._get_gpt_client(openai_api_key)
@@ -846,9 +934,13 @@ class Orchestrator:
         tool_dispatch = {
             "Rebuff": self._handle_rebuff,
             "ClarifyVariable": self._handle_clarify_variable,
-            "FreeTextExplain": self._handle_free_text_explain,
+            "FreeTextExplain": functools.partial(
+                self._handle_free_text_explain, current_filters=filters
+            ),
             "CreateVisualization": self._handle_create_visualization,
-            "FilterData": self._handle_filter_data,
+            "FilterData": functools.partial(
+                self._handle_filter_data, current_filters=filters
+            ),
             "OfferIssueReport": self._handle_offer_issue_report,
         }
 
@@ -887,7 +979,8 @@ class Orchestrator:
                 openai_api_key=openai_api_key,
                 model=model,
             )
-            tool_calls.append(result)
+            # The filter step answers with one call per operation.
+            tool_calls.extend(result if isinstance(result, list) else [result])
 
             if tool_name == "CreateVisualization":
                 has_vis = True

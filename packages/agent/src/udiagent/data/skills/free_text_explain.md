@@ -34,6 +34,12 @@ all its values.
 
 {{data_domains}}
 
+## Current filters
+
+Every filter active right now, with the values the user has since edited it to. Answer questions about which filters are on from this list. The `FilterData` calls in the conversation history show what was asked for at the time; the user may have edited or removed those filters since, or added chart brushes, without telling you.
+
+{{current_filters}}
+
 ## Structured Function References
 
 When referring to data properties (counts, names, types), use dynamic function references instead of hardcoding values. This keeps responses accurate as datasets change.

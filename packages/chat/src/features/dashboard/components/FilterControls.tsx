@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { useDataFilters, useDataFiltersStore, useDataPackage } from '@/app/UDIChatContext';
 import { cn } from '@/lib/utils';
 import type { DataSelection } from '../stores/dataFiltersStore';
+import { FilterScopeControl } from './FilterScopeControl';
 import { IntervalFilterComponent } from './IntervalFilterComponent';
 import { PointFilterComponent } from './PointFilterComponent';
 
@@ -25,24 +26,34 @@ export function FilterControls({
 
   if (selection.type === 'interval') {
     return (
-      <div className="udi:space-y-3 udi:p-2">
-        {fields.map((_, idx) => (
-          <IntervalFilterComponent
-            key={idx}
-            dataSelection={selection}
-            fieldIndex={idx}
-            tweakable={tweakable}
-            filterKey={filterId}
-          />
-        ))}
-      </div>
+      <>
+        <FilterScopeControl filterId={filterId} selection={selection} />
+        <div className="udi:space-y-3 udi:p-2">
+          {fields.map((_, idx) => (
+            <IntervalFilterComponent
+              key={idx}
+              dataSelection={selection}
+              fieldIndex={idx}
+              tweakable={tweakable}
+              filterKey={filterId}
+            />
+          ))}
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="udi:p-2">
-      <PointFilterComponent dataSelection={selection} tweakable={tweakable} filterKey={filterId} />
-    </div>
+    <>
+      <FilterScopeControl filterId={filterId} selection={selection} />
+      <div className="udi:p-2">
+        <PointFilterComponent
+          dataSelection={selection}
+          tweakable={tweakable}
+          filterKey={filterId}
+        />
+      </div>
+    </>
   );
 }
 

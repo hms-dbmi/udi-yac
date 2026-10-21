@@ -1,6 +1,7 @@
 import type { StoreApi } from 'zustand';
 import type { ConversationState } from '@/features/chat/stores/conversationStore';
 import type { DashboardState } from '@/features/dashboard/stores/dashboardStore';
+import type { DataFiltersState } from '@/features/dashboard/stores/dataFiltersStore';
 import {
   currentSessionExport,
   type SessionExport,
@@ -9,6 +10,7 @@ import {
 interface SnapshotStores {
   conversation: StoreApi<ConversationState>;
   dashboard: StoreApi<DashboardState>;
+  dataFilters?: StoreApi<DataFiltersState>;
 }
 
 // Module-level singleton so the ErrorBoundary (which sits OUTSIDE
@@ -36,7 +38,11 @@ export function captureCurrentSession(): SessionExport | null {
   const stores = registered;
   if (!stores) return null;
   try {
-    return currentSessionExport(stores.conversation.getState(), stores.dashboard.getState());
+    return currentSessionExport(
+      stores.conversation.getState(),
+      stores.dashboard.getState(),
+      stores.dataFilters?.getState(),
+    );
   } catch {
     return null;
   }

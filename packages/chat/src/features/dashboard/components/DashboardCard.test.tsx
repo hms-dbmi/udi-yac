@@ -27,7 +27,7 @@ import {
   useGlobalStore,
 } from '@/app/UDIChatContext';
 import type { UDIGrammar } from 'udi-toolkit/react';
-import type { DataSelection } from '../stores/dataFiltersStore';
+import type { DataSelection, DataSelections } from '../stores/dataFiltersStore';
 import { DashboardCard } from './DashboardCard';
 
 const countBySex = {
@@ -191,7 +191,8 @@ describe('DashboardCard — read-only mode', () => {
   });
 });
 
-/** A card whose own brush a test can drive, the way a chip's Clear does. */
+/** A card whose own brush a test can drive through the column filter it shows,
+ *  the way a chip's Clear does. */
 let setOwnBrush: (sel: DataSelection['selection']) => void;
 function BrushHarness() {
   const store = useDashboardStore();
@@ -202,14 +203,23 @@ function BrushHarness() {
   }, [store]);
   const viz = useDashboard((s) => s.activeVisualizations.get('0-0'));
   if (!viz) return null;
-  const selections = {
-    [viz.uuid]: { dataSourceKey: 'donors', type: 'interval' as const, selection: brush },
-  };
+  const selections: DataSelections =
+    brush == null
+      ? {}
+      : {
+          'col:donors.donor_count': {
+            dataSourceKey: 'donors',
+            type: 'interval' as const,
+            selection: brush,
+          },
+        };
   return <DashboardCard vizKey="0-0" viz={viz} selections={selections} />;
 }
 
 describe('DashboardCard — dropping a cleared brush', () => {
-  it('remounts the chart when its own brush is emptied, and not again when it goes null', async () => {
+  // The toolkit clears the drawn brush in place; remounting the chart for it
+  // flashed the card blank, then unfiltered, on every clear.
+  it('keeps the chart mounted when its own brush is emptied or removed', async () => {
     render(
       <UDIChatProvider>
         <BrushHarness />
@@ -217,12 +227,10 @@ describe('DashboardCard — dropping a cleared brush', () => {
     );
     const drawn = await screen.findByTestId('udi-vis');
 
-    // Cleared to `{field: []}`: filters nothing, but the rect is still drawn.
     act(() => setOwnBrush({ donor_count: [] }));
-    const cleared = screen.getByTestId('udi-vis');
-    expect(cleared).not.toBe(drawn);
+    expect(screen.getByTestId('udi-vis')).toBe(drawn);
 
     act(() => setOwnBrush(null));
-    expect(screen.getByTestId('udi-vis')).toBe(cleared);
+    expect(screen.getByTestId('udi-vis')).toBe(drawn);
   });
 });

@@ -12,6 +12,10 @@ class YACCompletionRequest(BaseModel):
     #: Optional model override. Honored only alongside an ``X-OpenAI-Key``
     #: header — on the server's own key, model choice stays the operator's.
     model: str | None = None
+    #: The active filters as the client holds them — chat, host and chart
+    #: brush, with the user's edits (see ``udiagent.filters``). Optional so
+    #: older clients keep working; they get "no active filters".
+    filters: list[dict] = []
     #: The client can send issue reports, so the agent may offer one. Honored
     #: only when the server records them (LangFuse configured).
     issueReporting: bool = False

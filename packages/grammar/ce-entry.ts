@@ -125,11 +125,15 @@ export async function queryData(
     });
   }
 
-  await store.initDataSources(sources, options?.sourceResolver);
-
+  // Bind before awaiting the sources, not after: a host's selections are a
+  // snapshot of its own state, and written back after an await they could
+  // overwrite a newer value another chart bound meanwhile — a brush mid-drag
+  // flicked every chart back to an older filter.
   if (selections) {
-    store.bindExternalDataSelections(selections);
+    store.bindExternalDataSelections(selections, 'queryData');
   }
+
+  await store.initDataSources(sources, options?.sourceResolver);
 
   const result = store.getDataObject(
     sources.map((s) => s.name),

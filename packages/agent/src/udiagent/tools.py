@@ -51,8 +51,8 @@ ORCHESTRATOR_TOOLS = [
                 "'age' might match 'age_value' in donors or 'sample_age' in samples. "
                 "Returns a clarification request with candidate variables for the user "
                 "to choose from. Only for ambiguous FIELDS: never use it to ask which "
-                "values to filter on — for that, call FilterData without pointValues, "
-                "which shows the user the field's values to pick from."
+                "values to filter on — for that, call FilterData and say the values "
+                "are not named, which shows the user the field's values to pick from."
             ),
             "parameters": {
                 "type": "object",
@@ -183,54 +183,30 @@ ORCHESTRATOR_TOOLS = [
         "function": {
             "name": "FilterData",
             "description": (
-                "Filter the dataset to a subset of rows. Use for categorical filters "
-                "(e.g. filter to Female donors) or numeric range filters (e.g. filter "
-                "to age > 50). Call this tool multiple times for multiple filters. "
-                "When the user names a categorical field but not which values (e.g. "
-                "'filter by radiation type'), call it with filterType 'point' and no "
-                "pointValues: the user is shown the field's values to choose from."
+                "Change the active data filters: add a filter (e.g. to Female "
+                "donors, or age above 50), change or re-scope one that exists, "
+                "remove one, or clear them all. One call covers every filter "
+                "change in the request. Also covers questions about subjects "
+                "rather than rows, e.g. 'patients who ever had …' or 'donors "
+                "with no …'. When the user names a categorical field but not "
+                "which values (e.g. 'filter by radiation type'), say so: the "
+                "user is shown the field's values to choose from."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "title": {
+                    "request": {
                         "type": "string",
-                        "description": "A short, informative title for the filter (e.g. 'Donor Sex', 'Donor Age', 'Sample Assay Type').",
-                    },
-                    "entity": {
-                        "type": "string",
-                        "description": "The entity (table) to filter.",
-                    },
-                    "field": {
-                        "type": "string",
-                        "description": "The field to filter on.",
-                    },
-                    "filterType": {
-                        "type": "string",
-                        "enum": ["point", "interval"],
-                        "description": "Type of filter: 'point' for categorical values, 'interval' for numeric ranges.",
-                    },
-                    "intervalRange": {
-                        "type": "object",
-                        "properties": {
-                            "min": {"type": "number", "description": "Minimum value."},
-                            "max": {"type": "number", "description": "Maximum value."},
-                        },
-                        "required": ["min", "max"],
-                        "additionalProperties": False,
-                        "description": "Range for interval filters. Required when filterType is 'interval'.",
-                    },
-                    "pointValues": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 1,
                         "description": (
-                            "Values to filter for. Omit only when the user named the "
-                            "field but not the values, so they can pick them."
+                            "The filter change, in the user's terms plus anything "
+                            "you have confirmed: the table and column, the exact "
+                            "values, which current filter (by id) it changes, and "
+                            "whether it is about rows or about subjects such as "
+                            "patients."
                         ),
                     },
                 },
-                "required": ["entity", "field", "filterType"],
+                "required": ["request"],
                 "additionalProperties": False,
             },
         },

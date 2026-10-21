@@ -261,6 +261,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
   // Subscribed so the row table's named filters are rebuilt when the set of
   // filters changes (see the tableSpec memo).
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const palette = usePalette();
   const trackEvent = useTracker();
@@ -419,14 +420,15 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
       dataPackageStore,
     ) as DataTransformation[];
     return { ...baseTableSpec, transformation: namedFilters };
-    // dataSelections / activeVisualizations are change triggers rather than
-    // direct inputs: getFilterIds and getNamedFilters read them out of the
-    // stores via getState(), which the linter cannot see.
+    // dataSelections / filterScopes / activeVisualizations are change
+    // triggers rather than direct inputs: getFilterIds and getNamedFilters
+    // read them out of the stores via getState(), which the linter cannot see.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     baseTableSpec,
     entity,
     dataSelections,
+    filterScopes,
     activeVisualizations,
     dashboardStore,
     dataFiltersStore,

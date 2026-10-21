@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { debugLog } from './debugLog';
 import { density1d, nrd } from 'fast-kde';
 import { cloneDeep, isEqual } from 'lodash';
 import type {
@@ -64,6 +65,8 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
 
   function bindExternalDataSelections(
     externalSelections: DataSelections,
+    /** Who is binding, for the debug log only. */
+    from = 'UDIVis',
   ): void {
     let changed = false;
     for (const [selectionName, selection] of Object.entries(
@@ -76,6 +79,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         continue; // identical — skip to avoid reactive churn
       }
       dataSelections.value[selectionName] = selection;
+      debugLog('bind-external', { name: selectionName, selection, from });
       changed = true;
     }
     if (changed) {
@@ -132,6 +136,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     }
     const current = dataSelections.value[selectionName].selection;
     if (isEqual(current, selection)) return; // no change — skip reactive churn
+    debugLog('selection-write', { name: selectionName, selection });
     dataSelections.value[selectionName].selection = selection;
     const hashObj: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(dataSelections.value)) {
@@ -286,6 +291,16 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       if (set.size === 0) return 'false';
       return escape((d: Record<string, unknown>) => set.has(d[targetKey]));
     };
+
+    // 'none': rows whose key no matching origin row carries. A row with no key
+    // relates to nothing, so it is dropped — as SQL's NOT IN drops it.
+    if (selectionMatching === 'none') {
+      const set = new Set(filteredTable.array(originKey) as unknown[]);
+      return escape(
+        (d: Record<string, unknown>) =>
+          d[targetKey] != null && !set.has(d[targetKey]),
+      );
+    }
 
     // If the matching is 'any' or not specified, we just return the filter expression
     if (selectionMatching != 'all') {

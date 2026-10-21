@@ -71,6 +71,7 @@ export function UDIChatProvider({
     registerSnapshotSource({
       conversation: storesRef.current.conversation,
       dashboard: storesRef.current.dashboard,
+      dataFilters: storesRef.current.dataFilters,
     });
   }
   const globalStore = storesRef.current.global;

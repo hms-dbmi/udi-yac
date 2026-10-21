@@ -409,14 +409,27 @@ class PipelineCompiler:
                     f"selection field(s) {sorted(missing)} not found in "
                     f"source entity '{source_entity}'"
                 )
-        source_ref = st.env.get(filt.get("source")) or self._table_ref(filt["source"])
+        # The source as loaded, never a pipeline intermediate of the same name
+        # (Arquero reads `dataSources[source].dest`): a subject-scoped filter on
+        # the chart's own table, after another filter on it, must still see
+        # every row of each subject.
+        source_ref = self._table_ref(filt["source"])
         st.params.extend(pred_params)
-        if filt.get("match") == "all":
+        match = filt.get("match")
+        if match == "all":
             # Keep target entities whose ENTIRE related set passes the filter.
             return (
                 f"{target} IN (SELECT {origin} FROM {source_ref} "
                 f"GROUP BY {origin} "
                 f"HAVING COUNT(*) = COUNT(CASE WHEN {pred} THEN 1 END))"
+            )
+        if match == "none":
+            # Keep target entities with no related row passing the filter. The
+            # IS NOT NULL keeps NOT IN from going UNKNOWN on a null origin key;
+            # a null target key is dropped either way, as in Arquero.
+            return (
+                f"{target} NOT IN (SELECT {origin} FROM {source_ref} "
+                f"WHERE {pred} AND {origin} IS NOT NULL)"
             )
         return f"{target} IN (SELECT {origin} FROM {source_ref} WHERE {pred})"
 

@@ -127,6 +127,7 @@ export function FilterChips({
               />
             }
           >
+            {chip.scope && <span className="udi:text-muted-foreground">{chip.scope}</span>}
             <span className="udi:font-medium">{chip.label}</span>
             <span className="udi:font-mono udi:text-muted-foreground">{chip.value}</span>
             <ChevronDown aria-hidden />

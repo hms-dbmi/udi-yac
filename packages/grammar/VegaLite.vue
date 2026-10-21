@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { debugLog as debugLogRaw, nextDebugInstanceId } from './debugLog';
 import {
   computed,
   markRaw,
@@ -224,6 +225,41 @@ function parseSpec(): { success: boolean; specObject?: VegaSpecShim } {
 
 const ignore = ref(false);
 
+// Which component instance and which embedded view an event came from: a
+// chart can be remounted, or re-embed its view, mid-gesture.
+const instanceId = nextDebugInstanceId();
+let viewId = 0;
+function debugLog(event: string, data: Record<string, unknown> = {}): void {
+  debugLogRaw(event, { instance: instanceId, view: viewId, ...data });
+}
+
+// While the pointer is down on this chart, the brush being dragged is the
+// source of truth for this chart's own selections. A chart filtered by its own
+// brush rebuilds on every move, and the external selection it is handed back
+// (the host's copy of that brush) trails the drag by a render; redrawing the
+// brush from it mid-drag pulled it back a step on each move. So during a drag
+// rebuilds keep the brush's pixels, draw-back leaves it alone, a re-embed
+// (which would drop the gesture) waits, and the release redraws the brush once
+// from the external selection, which by then has caught up.
+let pointerDown = false;
+// A data update that arrived mid-drag, applied on release.
+let rebuildPending = false;
+function onChartPointerDown(): void {
+  pointerDown = true;
+  debugLog('pointer-down');
+}
+function onChartPointerUp(): void {
+  if (!pointerDown) return;
+  pointerDown = false;
+  debugLog('brush-release', { names: props.signalKeys ?? [], rebuildPending });
+  if (rebuildPending) {
+    rebuildPending = false;
+    void updateVegaChart();
+  } else {
+    void updateVegaChartSelections();
+  }
+}
+
 function formatVegaSignalKey(raw: string): string {
   // replace "-" with "_" in signalKey since Vega signals cannot contain "-"
   // TODO: I think if the key starts with a number they prepend an underscore
@@ -263,6 +299,8 @@ function initVegaChart() {
   heightIsContainer = specMaybeSized.height === 'container';
 
   embeddedSpecShape = specShape(specObject);
+  viewId += 1;
+  debugLog('embed');
   if (specObject.data && specObject.data.values) {
     delete specObject.data.values;
   }
@@ -321,6 +359,10 @@ function initVegaChart() {
             );
             // Skip degenerate ranges (single-point click before drag starts)
             if (Math.abs(dataRange[1] - dataRange[0]) < 1e-9) continue;
+            // A channel spanning its whole scale constrains nothing. It is
+            // also what draw-back writes to the axis a one-field selection
+            // leaves open, which must not come back as a filter on it.
+            if (spansWholeScale(pixelRange, tf.channel as 'x' | 'y')) continue;
             const dataField = fieldMap?.[tf.field] ?? tf.field;
             combined[dataField] = dataRange;
           }
@@ -335,9 +377,23 @@ function initVegaChart() {
           // Listen on each per-channel signal and combine all channels
           for (const channel of channels) {
             const channelSignal = `${signalKeyFormatted}_${channel}`;
-            view.addSignalListener(channelSignal, () => {
-              if (ignore.value) return;
-              routeSelectionUpdate(signalKey, buildCombinedSelection());
+            view.addSignalListener(channelSignal, (_name, value) => {
+              if (ignore.value) {
+                debugLog('brush-signal-ignored', {
+                  name: signalKey,
+                  channel,
+                  px: value,
+                });
+                return;
+              }
+              const combined = buildCombinedSelection();
+              debugLog('brush-signal', {
+                name: signalKey,
+                channel,
+                px: value,
+                combined,
+              });
+              routeSelectionUpdate(signalKey, combined);
             });
           }
         } else {
@@ -684,6 +740,11 @@ function routeSelectionUpdate(
 }
 
 onMounted(() => {
+  vegaContainer.value?.addEventListener('pointerdown', onChartPointerDown, {
+    capture: true,
+  });
+  window.addEventListener('pointerup', onChartPointerUp);
+  window.addEventListener('pointercancel', onChartPointerUp);
   window.addEventListener('pointerup', commitRemoteSelections);
   window.addEventListener('pointercancel', commitRemoteSelections);
   window.addEventListener('mouseup', commitRemoteSelections);
@@ -717,6 +778,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  vegaContainer.value?.removeEventListener('pointerdown', onChartPointerDown, {
+    capture: true,
+  });
+  window.removeEventListener('pointerup', onChartPointerUp);
+  window.removeEventListener('pointercancel', onChartPointerUp);
   window.removeEventListener('pointerup', commitRemoteSelections);
   window.removeEventListener('pointercancel', commitRemoteSelections);
   window.removeEventListener('mouseup', commitRemoteSelections);
@@ -734,6 +800,12 @@ onBeforeUnmount(() => {
     resizeObserver.disconnect();
     resizeObserver = null;
   }
+  // A view left running outlives its canvas: mid-drag, its window-level
+  // pointer listeners kept extending the brush against a detached canvas and
+  // writing the result into the shared selection.
+  debugLog('unmount');
+  vegaView.value?.finalize();
+  vegaView.value = null;
 });
 
 // Update data in the existing Vega view, preserving brush/selection state.
@@ -748,6 +820,14 @@ async function updateVegaChart() {
   // through the old spec. The changeset path below stays the fast one for the
   // case it was built for: a brush, where only the rows change.
   if (specShape(specObject) !== embeddedSpecShape) {
+    // A re-embed replaces the view, and with it the gesture of a brush being
+    // dragged (see onChartPointerDown): wait for the release. Swapping rows in
+    // place, below, is safe mid-drag, so the chart still follows its brush.
+    if (pointerDown) {
+      rebuildPending = true;
+      debugLog('chart-reembed-deferred');
+      return;
+    }
     vegaView.value.finalize();
     vegaView.value = null;
     // Re-applies props.selections itself, as the resize re-embed does.
@@ -764,8 +844,19 @@ async function updateVegaChart() {
   // and restoring their pixel signals across the data changeset — pixel
   // values are scale-relative, so this is a best-effort preservation for the
   // no-external-selection case only.
+  // Mid-drag the brush's own pixels win (see onChartPointerDown).
   const hasExternal = (signalKey: string) =>
-    props.selections?.[signalKey]?.selection != null;
+    !pointerDown && props.selections?.[signalKey]?.selection != null;
+  debugLog('chart-rebuild', {
+    names: props.signalKeys ?? [],
+    external: Object.fromEntries(
+      (props.signalKeys ?? []).map((k) => [
+        k,
+        props.selections?.[k]?.selection ?? null,
+      ]),
+    ),
+    pointerDown,
+  });
   const savedSignals: Record<string, unknown> = {};
   for (const signalKey of props.signalKeys ?? []) {
     if (hasExternal(signalKey)) continue;
@@ -870,6 +961,11 @@ async function updateVegaChartSelections() {
   const own = new Set(props.signalKeys ?? []);
   for (const [selectionName, selection] of Object.entries(props.selections)) {
     if (!own.has(selectionName)) continue;
+    // Not over a brush the user is dragging; the release redraws it.
+    if (pointerDown) {
+      debugLog('drawback-deferred', { name: selectionName });
+      continue;
+    }
     // Isolate each selection: a malformed entry must not abort applying the
     // others.
     try {
@@ -916,24 +1012,16 @@ function updateVegaChartSelection(
   }
 
   const rangeSelection = (selection.selection ?? {}) as RangeSelection;
-  const fieldEntries = Object.entries(rangeSelection);
+  const written = new Set<'x' | 'y'>();
+  const hasValue = Object.values(rangeSelection).some(
+    (r) => Array.isArray(r) && r.length === 2,
+  );
+  const hadValue = externalHadValue[selectionName] ?? false;
+  externalHadValue[selectionName] = hasValue;
 
-  for (let i = 0; i < fieldEntries.length; i++) {
-    const [field, range] = fieldEntries[i];
-    if (!Array.isArray(range) || range.length !== 2) continue;
-    const vegaField = reverseFieldMap[field] ?? field;
-
-    // Resolve the channel by field match; fall back to the tuple entry at the
-    // same position when the field name doesn't line up (keeps a 2D brush
-    // working even if the stored keys and encoding fields diverge).
-    let channel = tupleFields.find((t) => t.field === vegaField)?.channel;
-    if (channel !== 'x' && channel !== 'y') {
-      channel = tupleFields[i]?.channel;
-    }
-    if (channel !== 'x' && channel !== 'y') continue;
-
+  const writeChannel = (channel: 'x' | 'y', testNew: [number, number]) => {
+    if (!vegaView.value) return;
     const signalKeyFull = `${signalKeyStart}_${channel}`;
-    const testNew = toPixelRange(range, channel);
 
     // Skip only when the current signal is a usable 2-number tuple that
     // already matches — otherwise (empty/null/uninitialised) always write,
@@ -951,12 +1039,83 @@ function updateVegaChartSelection(
         closeEnough(Math.min(...currentVal), Math.min(...testNew)) &&
         closeEnough(Math.max(...currentVal), Math.max(...testNew))
       ) {
-        continue;
+        return;
       }
     }
 
     vegaView.value.signal(signalKeyFull, testNew);
+  };
+
+  for (const [field, range] of Object.entries(rangeSelection)) {
+    if (!Array.isArray(range) || range.length !== 2) continue;
+    const vegaField = reverseFieldMap[field] ?? field;
+    // By field only. A field this chart doesn't brush has no channel here —
+    // falling back to the tuple entry at the same position drew one chart's
+    // range against another axis's scale once selections were shared.
+    const channel = tupleFields.find((t) => t.field === vegaField)?.channel;
+    if (channel !== 'x' && channel !== 'y') continue;
+    writeChannel(channel, toPixelRange(range, channel));
+    written.add(channel);
   }
+  debugLog('drawback', {
+    name: selectionName,
+    selection: rangeSelection,
+    written: [...written],
+    fill: tupleFields
+      .map((t) => t.channel)
+      .filter(
+        (c) => (c === 'x' || c === 'y') && written.size > 0 && !written.has(c),
+      ),
+  });
+
+  // Cleared elsewhere (a chip removed, a filter emptied): drop the drawn brush
+  // in place, as Vega-Lite's own double-click clear does, rather than have the
+  // host remount the chart, which flashed it blank and then unfiltered. Only
+  // on the change from a value to none: a brush just drawn, whose external
+  // copy has not caught up yet, is not one to erase.
+  if (!hasValue) {
+    if (hadValue) {
+      for (const { channel } of tupleFields) {
+        if (channel === 'x' || channel === 'y') writeChannel(channel, [0, 0]);
+      }
+      debugLog('drawback-clear', { name: selectionName });
+    }
+    return;
+  }
+
+  // A 2-D brush only draws once both channels hold a range (Vega forms its
+  // tuple from both). A selection on one of its fields — a filter set in chat
+  // on age, shown on an age × weight chart — leaves the other axis open: span
+  // it fully, which reads back as no constraint (see spansWholeScale).
+  if (written.size === 0) return;
+  for (const { channel } of tupleFields) {
+    if ((channel === 'x' || channel === 'y') && !written.has(channel)) {
+      writeChannel(channel, fullPixelRange(channel));
+    }
+  }
+}
+
+/** Whether each own brush's external selection held a range when last
+ *  applied (see updateVegaChartSelection's clear). */
+const externalHadValue: Record<string, boolean> = {};
+
+function fullPixelRange(channel: 'x' | 'y'): [number, number] {
+  if (!vegaView.value) return [0, 0];
+  const [a, b] = vegaView.value.scale(channel).range() as [number, number];
+  return [Math.min(a, b), Math.max(a, b)];
+}
+
+function spansWholeScale(
+  pixelRange: [number, number],
+  channel: 'x' | 'y',
+): boolean {
+  if (!vegaView.value) return false;
+  const [lo, hi] = fullPixelRange(channel);
+  const eps = 0.5;
+  return (
+    Math.abs(Math.min(...pixelRange) - lo) < eps &&
+    Math.abs(Math.max(...pixelRange) - hi) < eps
+  );
 }
 
 function toPixelRange(

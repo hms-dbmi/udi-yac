@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { createConversationStore } from '@/features/chat';
 import { createDashboardStore } from '../stores/dashboardStore';
-import type { SessionExport } from './dashboardSerialization';
+import { createDataFiltersStore } from '../stores/dataFiltersStore';
+import {
+  buildSessionExport,
+  parseSessionExport,
+  type SessionExport,
+} from './dashboardSerialization';
 import { applySessionExport } from './applySessionExport';
 
 const countBySex = {
@@ -102,5 +107,144 @@ describe('applySessionExport', () => {
 
     expect(s.dashboard.getState().gridRowHeight).toBe(before);
     expect(s.dashboard.getState().activeVisualizations.size).toBe(1);
+  });
+});
+
+describe('applySessionExport — filters', () => {
+  const alwaysValid = {
+    isValidIntervalFilter: () => ({ isValid: 'yes' as const }),
+    isValidPointFilter: () => ({ isValid: 'yes' as const }),
+  };
+  const messages: SessionExport['conversation']['messages'] = [
+    { role: 'user', content: 'group 3 events' },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [
+        {
+          function: {
+            name: 'FilterData',
+            arguments: {
+              title: 'Diagnosis',
+              entity: 'Event',
+              field: 'diagnosis',
+              filter: {
+                filterType: 'point',
+                intervalRange: { min: 0, max: 0 },
+                pointValues: ['Group 3'],
+              },
+            } as never,
+          },
+        },
+      ],
+    },
+  ];
+  const id = 'col:Event.diagnosis';
+
+  /** Load a session the way the app does: apply it, then the sync effect runs. */
+  function load(exported: SessionExport) {
+    const s = { ...stores(), dataFilters: createDataFiltersStore() };
+    applySessionExport(exported, s, {});
+    s.dataFilters
+      .getState()
+      .syncFiltersFromMessages(s.conversation.getState().messages, alwaysValid);
+    return s.dataFilters.getState();
+  }
+
+  it('round-trips the user’s edits and scope through export and import', () => {
+    const original = createDataFiltersStore();
+    original.getState().syncFiltersFromMessages(messages, alwaysValid);
+    original.getState().setFilter(id, {
+      dataSourceKey: 'Event',
+      type: 'point',
+      selection: { diagnosis: ['SHH'] },
+    });
+    original.getState().setFilterScope(id, { entity: 'Patient', match: 'all' });
+
+    const exported = parseSessionExport(
+      JSON.parse(
+        JSON.stringify(
+          buildSessionExport({
+            messages,
+            dashboard: { visualizations: [], layout: { items: [] } },
+            filters: original.getState().exportFilterState(),
+          }),
+        ),
+      ),
+    );
+    if (!exported.ok) throw new Error(exported.error);
+
+    const restored = load(exported.value);
+    expect(restored.dataSelections[id].selection).toEqual({ diagnosis: ['SHH'] });
+    expect(restored.filterScopes[id]).toEqual({ entity: 'Patient', match: 'all' });
+  });
+
+  it('loads an older export without filter state as row-level filters from its messages', () => {
+    const restored = load(
+      session({ conversation: { messages }, visualizations: [], layout: { items: [] } }),
+    );
+    expect(restored.dataSelections[id].selection).toEqual({ diagnosis: ['Group 3'] });
+    expect(restored.filterScopes).toEqual({});
+  });
+
+  it('round-trips a filter a chart made, which no message records', () => {
+    const original = createDataFiltersStore();
+    original
+      .getState()
+      .applyChartSelection(
+        'Patient',
+        ['sex'],
+        { dataSourceKey: 'Patient', type: 'point', selection: { sex: ['F'] } },
+        1,
+      );
+    const exported = parseSessionExport(
+      JSON.parse(
+        JSON.stringify(
+          buildSessionExport({
+            messages,
+            dashboard: { visualizations: [], layout: { items: [] } },
+            filters: original.getState().exportFilterState(),
+          }),
+        ),
+      ),
+    );
+    if (!exported.ok) throw new Error(exported.error);
+
+    const restored = load(exported.value);
+    expect(restored.dataSelections['col:Patient.sex'].selection).toEqual({ sex: ['F'] });
+    expect(restored.filterOrigins['col:Patient.sex']).toBe('chart');
+    // Still placed in the chat where the chart made it, and still the chart's.
+    expect(restored.brushAnchors['col:Patient.sex']).toBe(1);
+  });
+
+  it('re-keys an export saved before column ids', () => {
+    const legacy = session({
+      conversation: { messages },
+      visualizations: [],
+      layout: { items: [] },
+      filters: {
+        selections: {
+          'message-filter-1-0': {
+            dataSourceKey: 'Event',
+            type: 'point',
+            selection: { diagnosis: ['SHH'] },
+          },
+        },
+        scopes: { 'message-filter-1-0': { entity: 'Patient', match: 'none' } },
+        removed: [],
+      },
+    });
+    const restored = load(legacy);
+    expect(Object.keys(restored.dataSelections)).toEqual([id]);
+    expect(restored.dataSelections[id].selection).toEqual({ diagnosis: ['SHH'] });
+    expect(restored.filterScopes[id]).toEqual({ entity: 'Patient', match: 'none' });
+  });
+
+  it('drops a malformed scope rather than the session', () => {
+    const parsed = parseSessionExport({
+      ...session(),
+      filters: { selections: {}, scopes: { [id]: { entity: 'Patient', match: 'most' } } },
+    });
+    expect(parsed.ok && parsed.value.filters).toEqual({ selections: {}, scopes: {}, removed: [] });
   });
 });

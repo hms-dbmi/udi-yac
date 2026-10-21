@@ -516,3 +516,67 @@ describe('dataPackageStore — display labels', () => {
     expect(store.getState().getFieldDataType('donors', 'nope')).toBeUndefined();
   });
 });
+
+describe('dataPackageStore — getSubjectRelationship', () => {
+  // Event and Surgery each key to Patient under their own column name;
+  // Visit keys to Site only, a sibling of nothing about patients.
+  const resource = (name: string, fks: Array<[string, string, string]> = []) => ({
+    name,
+    path: `${name}.csv`,
+    'udi:row_count': 10,
+    schema: {
+      fields: [],
+      foreignKeys: fks.map(([field, ref, refField]) => ({
+        fields: [field],
+        reference: { resource: ref, fields: [refField] },
+      })),
+    },
+  });
+  function store() {
+    const s = createDataPackageStore();
+    s.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          resource('Patient', [['site', 'Site', 'id']]),
+          resource('Event', [['patient_id', 'Patient', 'id']]),
+          resource('Surgery', [['pid', 'Patient', 'id']]),
+          resource('Site'),
+          resource('Visit', [['site', 'Site', 'id']]),
+        ],
+      } as never,
+    });
+    return s.getState();
+  }
+
+  it('keys the subject, the filtered table and a sibling by the subject id', () => {
+    const s = store();
+    expect(s.getSubjectRelationship('Event', 'Patient', 'Patient')).toEqual({
+      originKey: 'patient_id',
+      targetKey: 'id',
+    });
+    expect(s.getSubjectRelationship('Event', 'Event', 'Patient')).toEqual({
+      originKey: 'patient_id',
+      targetKey: 'patient_id',
+    });
+    expect(s.getSubjectRelationship('Event', 'Surgery', 'Patient')).toEqual({
+      originKey: 'patient_id',
+      targetKey: 'pid',
+    });
+  });
+
+  it('resolves a filter on the parent side of the link', () => {
+    // Patient rows scoped per Site: Patient holds the site id itself.
+    expect(store().getSubjectRelationship('Patient', 'Site', 'Site')).toEqual({
+      originKey: 'site',
+      targetKey: 'id',
+    });
+  });
+
+  it('is null for a table with no key to the subject', () => {
+    const s = store();
+    // Visit only reaches Patient through Site — a different key entirely.
+    expect(s.getSubjectRelationship('Event', 'Visit', 'Patient')).toBeNull();
+    expect(s.getSubjectRelationship('Visit', 'Visit', 'Patient')).toBeNull();
+  });
+});

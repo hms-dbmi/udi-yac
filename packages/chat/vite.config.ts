@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import dts from 'vite-plugin-dts';
+import { debugLogPlugin } from './vite-plugin-debug-log';
 
 // React (+ its subpaths) are peer deps and MUST stay external. Bundling a
 // second copy gives the lib its own React instance whose hook dispatcher is
@@ -105,6 +106,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
+    debugLogPlugin(),
     ...(mode === 'lib'
       ? [
           dts({

@@ -14,6 +14,7 @@ import {
   useApiConfig,
   useConversationStore,
   useDashboardStore,
+  useDataFiltersStore,
   useGlobal,
   useGlobalStore,
   useTracker,
@@ -163,6 +164,7 @@ export function IssueReportDialog() {
   const globalStore = useGlobalStore();
   const conversationStore = useConversationStore();
   const dashboardStore = useDashboardStore();
+  const dataFiltersStore = useDataFiltersStore();
   const apiConfig = useApiConfig();
   const trackEvent = useTracker();
 
@@ -186,7 +188,11 @@ export function IssueReportDialog() {
             draft={draft}
             source={source}
             getSession={() =>
-              currentSessionExport(conversationStore.getState(), dashboardStore.getState())
+              currentSessionExport(
+                conversationStore.getState(),
+                dashboardStore.getState(),
+                dataFiltersStore.getState(),
+              )
             }
             getConversationId={() => conversationStore.getState().conversationId}
             onDone={close}

@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from udiagent.agent import UDIAgent
+from udiagent.filters import filter_summary
 from udiagent.orchestrator import (
     BudgetExceededError,
     Orchestrator,
@@ -360,11 +361,12 @@ def yac_completions(
     logger.info(
         "Received /v1/yac/completions request "
         "(message_count=%d, schema_char_count=%d, domain_char_count=%d, "
-        "has_conversation_id=%s)",
+        "has_conversation_id=%s, filters=%s)",
         len(request.messages),
         len(request.dataSchema),
         len(request.dataDomains),
         x_conversation_id is not None,
+        filter_summary(request.filters),
     )
 
     refusal = _reject_byok_in_bedrock_mode(x_openai_key)
@@ -408,6 +410,7 @@ def yac_completions(
         model=requested_model,
         budget_check=budget_check,
         session_id=x_conversation_id,
+        filters=request.filters,
         issue_reporting=request.issueReporting and agent.langfuse_enabled,
     )
     logger.info("orchestrator_choice: %s", result.orchestrator_choice)

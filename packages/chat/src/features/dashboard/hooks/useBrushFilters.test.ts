@@ -1,132 +1,37 @@
 import { describe, it, expect } from 'vitest';
 import type { DataSelections } from '../stores/dataFiltersStore';
 import { selectBrushFilters, brushHasValue } from './useBrushFilters';
-import type { ActiveVisualization } from '../stores/dashboardStore';
 
-function viz(uuid: string, overrides: Partial<ActiveVisualization> = {}): ActiveVisualization {
-  return {
-    index: 0,
-    toolCallIndex: 0,
-    spec: {} as ActiveVisualization['spec'],
-    interactiveSpec: {} as ActiveVisualization['interactiveSpec'],
-    userPrompt: 'prompt',
-    uuid,
-    ...overrides,
-  };
-}
-
-const intervalSel = (dataSourceKey: string): DataSelections[string] => ({
-  dataSourceKey,
-  type: 'interval',
-  selection: { age: [10, 90] },
+const point = (field: string, values: string[]): DataSelections[string] => ({
+  dataSourceKey: 'donors',
+  type: 'point',
+  selection: { [field]: values },
 });
 
 describe('selectBrushFilters', () => {
-  it('returns a brush filter for an active viz with a non-empty selection', () => {
-    const active = new Map([['viz-key-1', viz('uuid-1', { title: 'Ages' })]]);
-    const internal: DataSelections = { 'uuid-1': intervalSel('donors') };
+  const data: DataSelections = {
+    'col:donors.sex': point('sex', ['F']),
+    'col:donors.race': point('race', []),
+    'col:donors.organ': point('organ', ['Kidney']),
+  };
 
-    const result = selectBrushFilters(internal, active);
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ uuid: 'uuid-1', vizKey: 'viz-key-1', title: 'Ages' });
-    expect(result[0].selection.dataSourceKey).toBe('donors');
-  });
-
-  it('ignores selections whose uuid is not an active visualization (stale/closed viz)', () => {
-    const active = new Map([['viz-key-1', viz('uuid-1')]]);
-    const internal: DataSelections = { 'uuid-closed': intervalSel('donors') };
-
-    expect(selectBrushFilters(internal, active)).toEqual([]);
-  });
-
-  it('keeps present-but-empty point selections so their widget persists', () => {
-    const active = new Map([['viz-key-1', viz('uuid-1')]]);
-    const internal: DataSelections = {
-      'uuid-1': { dataSourceKey: 'donors', type: 'point', selection: { sex: [] } },
-    };
-
-    const result = selectBrushFilters(internal, active);
-    expect(result).toHaveLength(1);
-    expect(brushHasValue(result[0].selection)).toBe(false);
-  });
-
-  it('ignores null selections', () => {
-    const active = new Map([['viz-key-1', viz('uuid-1')]]);
-    const internal: DataSelections = {
-      'uuid-1': { dataSourceKey: 'donors', type: 'interval', selection: null },
-    };
-
-    expect(selectBrushFilters(internal, active)).toEqual([]);
-  });
-
-  it('falls back to userPrompt when the viz has no title', () => {
-    const active = new Map([
-      ['viz-key-1', viz('uuid-1', { userPrompt: 'show ages', title: undefined })],
+  it('lists the filters charts made, in the order they were made', () => {
+    // organ was set in chat (no anchor); race was cleared but is still in place.
+    const result = selectBrushFilters(data, { 'col:donors.race': 4, 'col:donors.sex': 2 });
+    expect(result).toEqual([
+      { id: 'col:donors.sex', selection: data['col:donors.sex'] },
+      { id: 'col:donors.race', selection: data['col:donors.race'] },
     ]);
-    const internal: DataSelections = { 'uuid-1': intervalSel('donors') };
-
-    expect(selectBrushFilters(internal, active)[0].title).toBe('show ages');
   });
 
-  it('splits a multi-field point selection into one filter per field', () => {
-    const active = new Map([['viz-key-1', viz('uuid-1', { title: 'Events' })]]);
-    const internal: DataSelections = {
-      'uuid-1': {
-        dataSourceKey: 'Event',
-        type: 'point',
-        selection: { organization_name: ['CHOP'], event_type: ['Deceased'] },
-      },
-    };
-
-    const result = selectBrushFilters(internal, active);
-    expect(result).toHaveLength(2);
-    expect(result.map((b) => b.id).sort()).toEqual([
-      'uuid-1::event_type',
-      'uuid-1::organization_name',
-    ]);
-    const org = result.find((b) => b.field === 'organization_name')!;
-    // Narrowed to its own field — sibling fields never leak into a chip/widget.
-    expect(org.selection.selection).toEqual({ organization_name: ['CHOP'] });
-    expect(org.uuid).toBe('uuid-1');
-  });
-
-  it('keeps interval selections as a single unsplit filter', () => {
-    const active = new Map([['viz-key-1', viz('uuid-1')]]);
-    const internal: DataSelections = {
-      'uuid-1': {
-        dataSourceKey: 'donors',
-        type: 'interval',
-        selection: { age: [10, 90], weight: [50, 80] },
-      },
-    };
-
-    const result = selectBrushFilters(internal, active);
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe('uuid-1');
-    expect(result[0].field).toBeUndefined();
+  it('drops an anchor whose filter is gone', () => {
+    expect(selectBrushFilters(data, { 'col:donors.age': 1 })).toEqual([]);
   });
 });
 
 describe('brushHasValue', () => {
-  it('is true for an interval brush', () => {
-    expect(
-      brushHasValue({ dataSourceKey: 'd', type: 'interval', selection: { age: [10, 90] } }),
-    ).toBe(true);
-  });
-
-  it('is true for a point brush with selected values', () => {
-    expect(brushHasValue({ dataSourceKey: 'd', type: 'point', selection: { sex: ['M'] } })).toBe(
-      true,
-    );
-  });
-
-  it('is false for an empty point brush', () => {
-    expect(brushHasValue({ dataSourceKey: 'd', type: 'point', selection: { sex: [] } })).toBe(
-      false,
-    );
-  });
-
-  it('is false for a null selection', () => {
-    expect(brushHasValue({ dataSourceKey: 'd', type: 'interval', selection: null })).toBe(false);
+  it('is false for an emptied selection and true for a picked one', () => {
+    expect(brushHasValue(point('sex', []))).toBe(false);
+    expect(brushHasValue(point('sex', ['F']))).toBe(true);
   });
 });
