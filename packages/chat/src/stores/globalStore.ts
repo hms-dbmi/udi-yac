@@ -10,6 +10,9 @@ import { createStore } from 'zustand/vanilla';
  */
 export type ReadOnlyOption = boolean | 'locked';
 
+/** Where an issue report was started: the Session menu, an agent offer, or the crash screen. */
+export type IssueReportSource = 'menu' | 'chat' | 'crash';
+
 export const MIN_FONT_SCALE = 1;
 export const MAX_FONT_SCALE = 2;
 const FONT_SCALE_KEY = 'udi-yac:font-scale';
@@ -49,6 +52,11 @@ export interface GlobalState {
   fontScale: number;
   /** The host's `fontScale` prop. Overrides `fontScale` and hides its slider. */
   hostFontScale: number | undefined;
+  /**
+   * The Report an issue dialog. Opened from the Session menu or by the agent
+   * (an `OfferIssueReport` tool call), which live in unrelated trees.
+   */
+  issueReport: { open: boolean; draft: string; source: IssueReportSource };
   toggleDebugMode: () => void;
   /**
    * Open/close the Data Overview and optionally pick the entity to expand.
@@ -60,6 +68,8 @@ export interface GlobalState {
    *  so no caller can escape the lock. */
   setReadOnly: (value: boolean) => void;
   setFontScale: (value: number) => void;
+  openIssueReport: (draft: string, source: IssueReportSource) => void;
+  closeIssueReport: () => void;
 }
 
 /** The text size in effect: the host's, when it set one, else the viewer's. */
@@ -76,6 +86,7 @@ export function createGlobalStore(readOnly: ReadOnlyOption = false, hostFontScal
     readOnlyLocked: readOnly === 'locked',
     fontScale: readFontScale(),
     hostFontScale,
+    issueReport: { open: false, draft: '', source: 'menu' },
     toggleDebugMode: () => set((state) => ({ debugMode: !state.debugMode })),
     setOverview: (open, entity) =>
       set((state) => ({
@@ -92,5 +103,8 @@ export function createGlobalStore(readOnly: ReadOnlyOption = false, hostFontScal
       }
       set({ fontScale });
     },
+    openIssueReport: (draft, source) => set({ issueReport: { open: true, draft, source } }),
+    closeIssueReport: () =>
+      set((state) => ({ issueReport: { ...state.issueReport, open: false } })),
   }));
 }

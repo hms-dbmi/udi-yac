@@ -7,6 +7,8 @@ export interface QueryConfig {
   authToken?: string;
   openAiKey?: string;
   model?: string;
+  /** Tell the agent it may offer an issue report (see `UDIChatConfig.issueReporting`). */
+  issueReporting?: boolean;
 }
 
 function toYaml(obj: unknown, indent = 0): string {
@@ -37,6 +39,7 @@ function constructQueryBody(
   dataSchema: string,
   dataDomains: string,
   filters: AgentFilterEntry[],
+  issueReporting?: boolean,
 ) {
   const processed = structuredClone(messages).map((msg) => {
     if (msg.role === 'user' && msg.tool_calls?.length) {
@@ -54,7 +57,14 @@ function constructQueryBody(
     return msg;
   });
 
-  return { ...(model ? { model } : {}), messages: processed, dataSchema, dataDomains, filters };
+  return {
+    ...(model ? { model } : {}),
+    ...(issueReporting ? { issueReporting: true } : {}),
+    messages: processed,
+    dataSchema,
+    dataDomains,
+    filters,
+  };
 }
 
 export interface ToolCallResponse {
@@ -108,7 +118,14 @@ export async function queryLLM(
   // whoever pays for the tokens picks the model. Sending it without a key would
   // just be ignored, so don't. Otherwise the server's GPT_MODEL_NAME applies.
   const model = config.openAiKey ? config.model : undefined;
-  const body = constructQueryBody(messages, model, dataSchema, dataDomains, filters);
+  const body = constructQueryBody(
+    messages,
+    model,
+    dataSchema,
+    dataDomains,
+    filters,
+    config.issueReporting,
+  );
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   // Only when we were actually given a token. A deployment that proxies the

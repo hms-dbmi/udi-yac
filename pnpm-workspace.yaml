@@ -4,12 +4,14 @@ packages:
   - apps/grammar-app
   - apps/template-studio
   - apps/render-repro
+  - apps/site
 
 # merged from packages/chat/pnpm-workspace.yaml
 allowBuilds:
   "@parcel/watcher": true
   esbuild: true
   msw: true
+  sharp: true
   vue-demi: true
 minimumReleaseAgeExclude:
   - udi-toolkit

@@ -278,6 +278,50 @@ ORCHESTRATOR_TOOLS = [
 #: the client. They gather context; they are not an outcome of the turn.
 INTERNAL_ORCHESTRATOR_TOOLS = {"ListFieldValues", "GetVisualizationSpec"}
 
+#: Offered only when the client has issue reporting switched on and the server
+#: can record reports (LangFuse). Kept out of ``ORCHESTRATOR_TOOLS`` so the
+#: default tool list, and the capability lists the Rebuff and FreeTextExplain
+#: prompts are built from, stay as they were.
+OFFER_ISSUE_REPORT_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "OfferIssueReport",
+        "description": (
+            "Offer to send a problem report to the development team. The user "
+            "reviews and sends it themselves. Call it in two cases. (1) The user "
+            "asks to report a bug, an issue or feedback to the developers: set "
+            "user_requested to true. (2) The user says a result is wrong, broken "
+            "or not what they asked for: set user_requested to false, and still "
+            "fix or answer the request with the other tools in the same response "
+            "when you can. Never call it for questions about the data itself. "
+            "In case (2), do not call it if OfferIssueReport already appears "
+            "earlier in the conversation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "One short sentence shown to the user with the offer.",
+                },
+                "summary": {
+                    "type": "string",
+                    "description": (
+                        "A 1-3 sentence draft of the problem, in the user's terms, "
+                        "for them to edit before sending."
+                    ),
+                },
+                "user_requested": {
+                    "type": "boolean",
+                    "description": "True only when the user asked to report an issue.",
+                },
+            },
+            "required": ["message", "summary", "user_requested"],
+            "additionalProperties": False,
+        },
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Visualization rendering functions

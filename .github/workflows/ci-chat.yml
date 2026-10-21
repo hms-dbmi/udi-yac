@@ -6,14 +6,16 @@ on:
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
+      - "sample-data/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-chat.yml"
+  # No branch filter on PRs: in a stacked PR the base is the branch below it.
   pull_request:
-    branches: [main]
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
+      - "sample-data/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-chat.yml"

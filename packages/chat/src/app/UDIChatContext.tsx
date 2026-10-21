@@ -71,6 +71,7 @@ export function UDIChatProvider({
     registerSnapshotSource({
       conversation: storesRef.current.conversation,
       dashboard: storesRef.current.dashboard,
+      dataFilters: storesRef.current.dataFilters,
     });
   }
   const globalStore = storesRef.current.global;
@@ -196,6 +197,23 @@ export function useApiConfig(): ApiConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Issue reporting (opt-in)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the host switched on issue reporting (`issueReporting`). Off by
+ * default, and so off in a component rendered without the provider: reports go
+ * to the agent's LangFuse, which not every deployment has.
+ */
+const IssueReportingContext = createContext(false);
+
+export const IssueReportingProvider = IssueReportingContext.Provider;
+
+export function useIssueReporting(): boolean {
+  return useContext(IssueReportingContext);
+}
+
+// ---------------------------------------------------------------------------
 // Consumer-provided Download button label
 // ---------------------------------------------------------------------------
 
@@ -219,6 +237,31 @@ export function DownloadButtonLabelProvider({
 
 export function useDownloadButtonLabel(): string {
   return useContext(DownloadButtonLabelContext);
+}
+
+// ---------------------------------------------------------------------------
+// Consumer-provided key for sessions saved in the browser
+// ---------------------------------------------------------------------------
+
+const SavedSessionsKeyContext = createContext<string | undefined>(undefined);
+
+export function SavedSessionsKeyProvider({
+  storageKey,
+  children,
+}: {
+  storageKey: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <SavedSessionsKeyContext.Provider value={storageKey || undefined}>
+      {children}
+    </SavedSessionsKeyContext.Provider>
+  );
+}
+
+/** `undefined` when the consumer did not opt in to saved sessions. */
+export function useSavedSessionsKey(): string | undefined {
+  return useContext(SavedSessionsKeyContext);
 }
 
 // ---------------------------------------------------------------------------

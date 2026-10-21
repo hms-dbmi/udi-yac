@@ -63,7 +63,7 @@
     "lodash": "^4.18.1",
     "vega": "^6.4.0",
     "vega-embed": "^7.3.0",
-    "vega-lite": "^6.4.3"
+    "vega-lite": "^6.5.0"
   },
   "peerDependencies": {
     "ag-grid-community": "36.2.0",
@@ -84,27 +84,27 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@storybook/addon-docs": "^10.6.1",
-    "@storybook/vue3-vite": "^10.6.1",
-    "@types/lodash": "^4.17.25",
+    "@storybook/addon-docs": "^10.6.2",
+    "@storybook/vue3-vite": "^10.6.2",
+    "@types/lodash": "^4.17.26",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
-    "@vitejs/plugin-vue": "^6.0.9",
+    "@vitejs/plugin-vue": "^6.0.10",
     "@vue/devtools-api": "^8.2.1",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",
     "autoprefixer": "^10.6.1",
-    "eslint": "^10.12.0",
+    "eslint": "^10.13.0",
     "eslint-plugin-vue": "^10.11.1",
     "globals": "^17.13.0",
-    "pinia": "^4.0.3",
-    "prettier": "^3.9.9",
-    "storybook": "^10.6.1",
+    "pinia": "^4.1.0",
+    "prettier": "^3.9.10",
+    "storybook": "^10.6.2",
     "ts-json-schema-generator": "^2.9.0",
     "typescript": "^6.0.3",
-    "vite": "8.3.3",
+    "vite": "8.3.4",
     "vite-plugin-dts": "^5.1.2",
-    "vue-tsc": "^3.3.12"
+    "vue-tsc": "^3.3.13"
   },
   "repository": {
     "type": "git",

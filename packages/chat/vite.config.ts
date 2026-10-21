@@ -135,9 +135,9 @@ export default defineConfig(({ mode }) => ({
       '@': resolve(import.meta.dirname, './src'),
     },
   },
-  // `public/` holds the dev/demo data packages (~19 MB, including CSVs we don't
-  // redistribute) plus SPA-only icons. Vite copies it into dist in lib mode too,
-  // and `files: ["dist"]` would then ship it all. The library reads its data
+  // `public/` holds the dev/demo data packages (~20 MB of CSVs) plus SPA-only
+  // icons. Vite copies it into dist in lib mode too, and `files: ["dist"]`
+  // would then ship it all. The library reads its data
   // package from a URL the consumer supplies, so it needs none of it.
   publicDir: mode === 'lib' ? false : 'public',
   build:

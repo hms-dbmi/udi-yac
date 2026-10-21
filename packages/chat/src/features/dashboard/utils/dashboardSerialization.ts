@@ -5,8 +5,9 @@ import type {
   DashboardExport,
   DashboardExportVisualization,
   DashboardLayout,
+  DashboardState,
 } from '../stores/dashboardStore';
-import type { ExportedFilterState } from '../stores/dataFiltersStore';
+import type { DataFiltersState, ExportedFilterState } from '../stores/dataFiltersStore';
 import { DEFAULT_CARD_H, DEFAULT_CARD_W, MIN_CARD_H, MIN_CARD_W } from './gridDefaults';
 import { packAllRowMajor } from './gridPacking';
 
@@ -309,6 +310,26 @@ export function buildSessionExport(args: {
     ...(args.grid ? { grid: args.grid } : {}),
     ...(args.filters ? { filters: args.filters } : {}),
   };
+}
+
+/**
+ * The session as it stands, in the shape *Export session* writes. Takes store
+ * snapshots (`getState()`), so callers inside and outside the providers share it.
+ * With the filter store, the export carries the user's filter edits, scopes and
+ * chart-made filters, which the messages alone do not rebuild.
+ */
+export function currentSessionExport(
+  conversation: { messages: Message[]; sessionUsage?: SessionUsage },
+  dashboard: Pick<DashboardState, 'exportDashboard' | 'gridCols' | 'gridRowHeight'>,
+  dataFilters?: Pick<DataFiltersState, 'exportFilterState'>,
+): SessionExport {
+  return buildSessionExport({
+    messages: conversation.messages,
+    dashboard: dashboard.exportDashboard(),
+    grid: { cols: dashboard.gridCols, rowHeight: dashboard.gridRowHeight },
+    sessionUsage: conversation.sessionUsage,
+    filters: dataFilters?.exportFilterState(),
+  });
 }
 
 export interface PersistedLayoutSnapshot {

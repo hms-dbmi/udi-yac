@@ -16,6 +16,7 @@ export type {
   FilterOperationArgs,
   FilterMatch,
   FilterScope,
+  OfferIssueReportArgs,
   TextSegment,
   CreateVisualizationArgs,
 } from './types';

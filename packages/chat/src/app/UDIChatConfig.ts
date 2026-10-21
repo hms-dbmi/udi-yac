@@ -151,6 +151,14 @@ export interface UDIChatConfig {
    */
   initialSession?: unknown;
   /**
+   * Turns on "Saved in browser" in the dashboard's Session menu: the user can
+   * save the current session under a name, and load or delete the sessions
+   * saved under this key. They live in this origin's `localStorage`, and a
+   * session only makes sense against the data package it was built on, so
+   * use one key per package. Unset, the menu offers file export/import only.
+   */
+  savedSessionsKey?: string;
+  /**
    * Filters set by the embedding page. Each shows as a chip in the Filters
    * bar and filters every chart, like a chat filter; the user can adjust,
    * clear or remove it there. Entries are matched by `id` and applied again
@@ -167,6 +175,16 @@ export interface UDIChatConfig {
    * left out.
    */
   onFiltersChange?: (filters: UDIFilter[]) => void;
+  /**
+   * Let users report a problem to the development team: a *Report an issue*
+   * item in the Session menu, a button on the crash screen, and an offer from
+   * the agent when the user asks to report something or says a result is
+   * wrong. A report sends the user's note and their session export to
+   * `POST /v1/yac/issue_report`, which records it in the agent's LangFuse.
+   * Off by default; switch it on only against an agent with LangFuse
+   * configured (without it the agent refuses reports, and never offers one).
+   */
+  issueReporting?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }

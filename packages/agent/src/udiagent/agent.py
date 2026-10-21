@@ -5,6 +5,7 @@ import logging
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 from types import SimpleNamespace
+from urllib.parse import quote
 
 from udiagent._compat import get_openai_class, make_bedrock_provider
 
@@ -268,6 +269,66 @@ class UDIAgent:
                 else nullcontext()
             ):
                 yield
+
+    @property
+    def langfuse_enabled(self) -> bool:
+        """Whether traces, and so issue reports, are recorded anywhere."""
+        return getattr(self, "_langfuse_client", None) is not None
+
+    def record_issue_report(
+        self,
+        *,
+        description: str,
+        contact: str | None,
+        source: str,
+        session: dict,
+        session_id: str | None = None,
+    ) -> str | None:
+        """Record a user's issue report as an ``issue-report`` trace.
+
+        ``session_id`` (the conversation ID) files it in the same LangFuse
+        session as the turns being reported. The session export goes up as a
+        JSON attachment rather than inline, so a long conversation neither
+        bloats the trace nor hits the ingestion size limit.
+
+        Returns the trace ID, or ``None`` when LangFuse is disabled.
+        """
+        client = getattr(self, "_langfuse_client", None)
+        if client is None:
+            return None
+        from langfuse import LangfuseMedia
+
+        with self.trace(session_id=session_id, name="issue-report"):
+            client.update_current_span(
+                input={
+                    "description": description,
+                    "contact": contact,
+                    "source": source,
+                    "session": LangfuseMedia(
+                        content_bytes=json.dumps(session).encode(),
+                        content_type="application/json",
+                    ),
+                }
+            )
+            return client.get_current_trace_id()
+
+    def langfuse_urls(
+        self, trace_id: str, session_id: str | None = None
+    ) -> tuple[str | None, str | None]:
+        """``(trace_url, session_url)`` in the LangFuse UI.
+
+        Either is ``None`` when there is nothing to link to: no LangFuse, or no
+        session ID. The first call looks the project ID up over the network.
+        """
+        client = getattr(self, "_langfuse_client", None)
+        trace_url = client.get_trace_url(trace_id=trace_id) if client is not None else None
+        if not trace_url or not session_id:
+            return trace_url, None
+        # ponytail: the SDK only builds trace URLs. A session's page sits beside
+        # them (/project/<id>/sessions/<sessionId>), so swap the last segment
+        # rather than reach into the client's private project-ID cache.
+        project_url = trace_url.rsplit("/traces/", 1)[0]
+        return trace_url, f"{project_url}/sessions/{quote(session_id, safe='')}"
 
     def _init_server_model_connection(self, openai_api_key: str | None = None):
         """Instantiate the OpenAI client for GPT-based features.

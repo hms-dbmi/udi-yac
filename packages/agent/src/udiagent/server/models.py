@@ -1,6 +1,8 @@
 """Pydantic request/response models for the server."""
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class YACCompletionRequest(BaseModel):
@@ -14,6 +16,19 @@ class YACCompletionRequest(BaseModel):
     #: brush, with the user's edits (see ``udiagent.filters``). Optional so
     #: older clients keep working; they get "no active filters".
     filters: list[dict] = []
+    #: The client can send issue reports, so the agent may offer one. Honored
+    #: only when the server records them (LangFuse configured).
+    issueReporting: bool = False
+
+
+class YACIssueReportRequest(BaseModel):
+    description: str = Field(min_length=1, max_length=5000)
+    contact: str | None = Field(default=None, max_length=200)
+    #: Where the report was filed from: the Session menu, an agent offer in the
+    #: chat, or the crash screen.
+    source: Literal["menu", "chat", "crash"]
+    #: The client's session export (on the crash screen, plus an ``error`` block).
+    session: dict
 
 
 class YACBenchmarkCompletionRequest(BaseModel):

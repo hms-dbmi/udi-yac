@@ -1,0 +1,1667 @@
+{
+  "version": 1,
+  "exportedAt": "2026-09-29T14:39:57.990Z",
+  "conversation": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "What does the distribution of age at initial diagnosis look like?"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "function": {
+              "name": "RenderVisualization",
+              "arguments": {
+                "spec": "{\"source\": {\"name\": \"Treatment Summary\", \"source\": \"treatment_summary\"}, \"transformation\": [{\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"age_at_initial_dx_days\"}, \"right\": {\"literal\": null}}}, {\"binby\": {\"field\": \"age_at_initial_dx_days\", \"output\": {\"bin_start\": \"start\", \"bin_end\": \"end\"}}}, {\"rollup\": {\"count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"rect\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"start\", \"type\": \"quantitative\", \"title\": \"age_at_initial_dx_days\"}, {\"encoding\": \"x2\", \"field\": \"end\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"count\", \"type\": \"quantitative\", \"domainWhenFiltered\": \"filtered\"}]}}",
+                "titleTemplate": "Age at Initial Diagnosis (days)",
+                "summaryTemplate": "Displays how many {entity} fall into each range of {col:field}, as adjacent bars."
+              },
+              "meta": {
+                "tool_used": "vis_069_histogram_distribution",
+                "tool_args": {
+                  "entity": "Treatment Summary",
+                  "field": "age_at_initial_dx_days"
+                },
+                "fallback_reason": null,
+                "vis_req_id": null,
+                "tweakable_params": [],
+                "validation_retries": 0,
+                "valid": true,
+                "validation_errors": [],
+                "corrections": []
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "How was initial treatment sequenced between radiation and methotrexate?"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "function": {
+              "name": "RenderVisualization",
+              "arguments": {
+                "spec": "{\"source\": {\"name\": \"Treatment Summary\", \"source\": \"treatment_summary\"}, \"transformation\": [{\"groupby\": \"initial_treatment_order\"}, {\"rollup\": {\"Treatment Summary count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"Treatment Summary count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"initial_treatment_order\", \"type\": \"nominal\"}]}}",
+                "titleTemplate": "Initial Treatment Sequence",
+                "summaryTemplate": "Displays the number of {entity} in each {enc:y} category as horizontal bars."
+              },
+              "meta": {
+                "tool_used": "vis_001_barchart_count_horiz_grouped",
+                "tool_args": {
+                  "entity": "Treatment Summary",
+                  "field": "initial_treatment_order"
+                },
+                "fallback_reason": null,
+                "vis_req_id": null,
+                "tweakable_params": [
+                  {
+                    "kind": "field",
+                    "param": "field",
+                    "placeholder": "F",
+                    "entity": "Treatment Summary",
+                    "type": "nominal",
+                    "encodings": [
+                      "y"
+                    ],
+                    "label": "y",
+                    "value": "initial_treatment_order"
+                  }
+                ],
+                "validation_retries": 0,
+                "valid": true,
+                "validation_errors": [],
+                "corrections": []
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Compare survival from initial diagnosis between the two diagnosis cohorts."
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "function": {
+              "name": "RenderVisualization",
+              "arguments": {
+                "spec": "{\"source\": [{\"name\": \"Event\", \"source\": \"event\"}, {\"name\": \"Demographics\", \"source\": \"demographics\"}, {\"name\": \"Patient\", \"source\": \"patient\"}], \"transformation\": [{\"join\": {\"on\": [\"research_id\", \"research_id\"]}, \"in\": [\"Event\", \"Demographics\"], \"out\": \"Event__Demographics\"}, {\"derive\": {\"censor day\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"vital_status\"}, \"right\": {\"literal\": \"alive\"}}, \"then\": {\"field\": \"age_at_vital_status_days\"}, \"else\": {\"literal\": null}}}, \"in\": \"Patient\", \"out\": \"Patient__c\"}, {\"groupby\": \"research_id\", \"in\": \"Patient__c\"}, {\"rollup\": {\"censor day\": {\"op\": \"max\", \"field\": \"censor day\"}}, \"in\": \"Patient__c\", \"out\": \"Patient__by_subject\"}, {\"join\": {\"on\": [\"research_id\", \"research_id\"], \"kind\": \"left\"}, \"in\": [\"Event__Demographics\", \"Patient__by_subject\"], \"out\": \"Event__cens\"}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"age_at_event_days\"}, \"right\": {\"literal\": null}}}, {\"derive\": {\"start day\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"event_type\"}, \"right\": {\"literal\": \"Initial CNS Tumor\"}}, \"then\": {\"field\": \"age_at_event_days\"}, \"else\": {\"literal\": null}}, \"end day\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"event_type\"}, \"right\": {\"literal\": \"Deceased\"}}, \"then\": {\"field\": \"age_at_event_days\"}, \"else\": {\"literal\": null}}}}, {\"groupby\": \"research_id\"}, {\"derive\": {\"subject start\": {\"agg\": \"min\", \"field\": \"start day\"}, \"subject end\": {\"agg\": \"max\", \"field\": \"end day\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"diagnosis_type_cohort\"}, \"right\": {\"literal\": null}}}, {\"derive\": {\"stratum\": {\"field\": \"diagnosis_type_cohort\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"stratum\"}, \"right\": {\"literal\": null}}}, {\"groupby\": [\"research_id\", \"stratum\"]}, {\"rollup\": {\"start day\": {\"op\": \"min\", \"field\": \"subject start\"}, \"end day\": {\"op\": \"max\", \"field\": \"subject end\"}, \"censor day\": {\"op\": \"max\", \"field\": \"censor day\"}}}, {\"filter\": {\"op\": \"!=\", \"left\": {\"field\": \"start day\"}, \"right\": {\"literal\": null}}}, {\"derive\": {\"died\": {\"if\": {\"op\": \"!=\", \"left\": {\"field\": \"end day\"}, \"right\": {\"literal\": null}}, \"then\": {\"literal\": 1}, \"else\": {\"literal\": 0}}, \"survival days\": {\"if\": {\"op\": \"!=\", \"left\": {\"field\": \"end day\"}, \"right\": {\"literal\": null}}, \"then\": {\"op\": \"-\", \"left\": {\"field\": \"end day\"}, \"right\": {\"field\": \"start day\"}}, \"else\": {\"if\": {\"op\": \"!=\", \"left\": {\"field\": \"censor day\"}, \"right\": {\"literal\": null}}, \"then\": {\"op\": \"-\", \"left\": {\"field\": \"censor day\"}, \"right\": {\"field\": \"start day\"}}, \"else\": {\"literal\": 0}}}}}, {\"filter\": {\"op\": \">=\", \"left\": {\"field\": \"survival days\"}, \"right\": {\"literal\": 0}}}, {\"derive\": {\"survival years\": {\"op\": \"/\", \"left\": {\"field\": \"survival days\"}, \"right\": {\"literal\": 365.25}}}}, {\"derive\": {\"censor year\": {\"if\": {\"op\": \"!=\", \"left\": {\"field\": \"end day\"}, \"right\": {\"literal\": null}}, \"then\": {\"literal\": null}, \"else\": {\"if\": {\"op\": \"!=\", \"left\": {\"field\": \"censor day\"}, \"right\": {\"literal\": null}}, \"then\": {\"field\": \"survival years\"}, \"else\": {\"literal\": null}}}}}, {\"derive\": {\"cohort end\": {\"agg\": \"max\", \"field\": \"survival years\"}}}, {\"groupby\": \"stratum\"}, {\"derive\": {\"subjects\": {\"agg\": \"count\"}, \"deaths\": {\"agg\": \"sum\", \"field\": \"died\"}}}, {\"orderby\": {\"field\": [\"survival years\", \"research_id\"], \"order\": \"asc\"}}, {\"derive\": {\"survival percentage\": {\"rolling\": {\"expression\": {\"op\": \"*\", \"left\": {\"op\": \"-\", \"left\": {\"literal\": 1}, \"right\": {\"op\": \"/\", \"left\": {\"agg\": \"sum\", \"field\": \"died\"}, \"right\": {\"field\": \"subjects\"}}}, \"right\": {\"literal\": 100}}}}}}, {\"derive\": {\"final percentage\": {\"agg\": \"min\", \"field\": \"survival percentage\"}}}, {\"derive\": {\"label year\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"if\": {\"op\": \">\", \"left\": {\"field\": \"deaths\"}, \"right\": {\"literal\": 0}}, \"then\": {\"op\": \"*\", \"left\": {\"field\": \"cohort end\"}, \"right\": {\"literal\": 1.05}}, \"else\": {\"literal\": null}}, \"else\": {\"literal\": null}}}}, {\"derive\": {\"full survival\": {\"literal\": 100}}}, {\"derive\": {\"first year\": {\"agg\": \"min\", \"field\": \"survival years\"}}}, {\"derive\": {\"first percentage\": {\"agg\": \"max\", \"field\": \"survival percentage\"}}}, {\"derive\": {\"lead year\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"literal\": 0}, \"else\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 2}}, \"then\": {\"field\": \"first year\"}, \"else\": {\"literal\": null}}}, \"drop year\": {\"if\": {\"op\": \"<=\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 2}}, \"then\": {\"field\": \"first year\"}, \"else\": {\"literal\": null}}, \"drop percentage\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"field\": \"full survival\"}, \"else\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 2}}, \"then\": {\"field\": \"first percentage\"}, \"else\": {\"literal\": null}}}}}, {\"derive\": {\"rule year\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"deaths\"}, \"right\": {\"literal\": 0}}, \"then\": {\"literal\": null}, \"else\": {\"if\": {\"op\": \"==\", \"left\": {\"window\": \"rank\"}, \"right\": {\"literal\": 1}}, \"then\": {\"field\": \"label year\"}, \"else\": {\"if\": {\"op\": \"==\", \"left\": {\"field\": \"survival percentage\"}, \"right\": {\"field\": \"final percentage\"}}, \"then\": {\"field\": \"survival years\"}, \"else\": {\"literal\": null}}}}}}, {\"derive\": {\"_label_offset\": {\"op\": \"+\", \"left\": {\"field\": \"final percentage\"}, \"right\": {\"literal\": 0.5}}}}, {\"derive\": {\"final survival\": {\"op\": \"-\", \"left\": {\"field\": \"_label_offset\"}, \"right\": {\"op\": \"%\", \"left\": {\"field\": \"_label_offset\"}, \"right\": {\"literal\": 1}}}}}, {\"derive\": {\"survivors\": {\"op\": \"-\", \"left\": {\"field\": \"subjects\"}, \"right\": {\"field\": \"deaths\"}}}}, {\"derive\": {\"final label\": {\"concat\": [{\"field\": \"stratum\"}, {\"literal\": \" \"}, {\"literal\": \"(\"}, {\"field\": \"survivors\"}, {\"literal\": \"/\"}, {\"field\": \"subjects\"}, {\"literal\": \") \"}, {\"field\": \"final survival\"}, {\"literal\": \"%\"}]}}}], \"representation\": [{\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"lead year\", \"type\": \"quantitative\", \"title\": \"survival years\", \"domain\": {\"min\": 0}}, {\"encoding\": \"y\", \"field\": \"full survival\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 100}}, {\"encoding\": \"color\", \"field\": \"stratum\", \"type\": \"nominal\", \"omitLegend\": true}]}, {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"drop year\", \"type\": \"quantitative\", \"title\": \"survival years\", \"domain\": {\"min\": 0}}, {\"encoding\": \"y\", \"field\": \"drop percentage\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 100}}, {\"encoding\": \"color\", \"field\": \"stratum\", \"type\": \"nominal\", \"omitLegend\": true}]}, {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"survival years\", \"type\": \"quantitative\", \"title\": \"survival years\", \"domain\": {\"min\": 0}}, {\"encoding\": \"y\", \"field\": \"survival percentage\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 100}, \"title\": \"survival (%)\"}, {\"encoding\": \"color\", \"field\": \"stratum\", \"type\": \"nominal\", \"omitLegend\": true}], \"interpolate\": \"step-after\"}, {\"mark\": \"line\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"rule year\", \"type\": \"quantitative\", \"title\": \"survival years\", \"domain\": {\"min\": 0}}, {\"encoding\": \"y\", \"field\": \"final percentage\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 100}}, {\"encoding\": \"color\", \"field\": \"stratum\", \"type\": \"nominal\", \"omitLegend\": true}]}, {\"mark\": \"point\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"censor year\", \"type\": \"quantitative\", \"title\": \"survival years\", \"domain\": {\"min\": 0}}, {\"encoding\": \"y\", \"field\": \"survival percentage\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 100}}, {\"encoding\": \"shape\", \"value\": \"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z\"}, {\"encoding\": \"size\", \"value\": 500}, {\"encoding\": \"color\", \"field\": \"stratum\", \"type\": \"nominal\", \"omitLegend\": true}]}, {\"mark\": \"text\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"label year\", \"type\": \"quantitative\", \"title\": \"survival years\", \"domain\": {\"min\": 0}}, {\"encoding\": \"y\", \"field\": \"final percentage\", \"type\": \"quantitative\", \"domain\": {\"min\": 0, \"max\": 100}}, {\"encoding\": \"text\", \"field\": \"final label\", \"type\": \"nominal\"}, {\"encoding\": \"color\", \"field\": \"stratum\", \"type\": \"nominal\", \"omitLegend\": true}], \"align\": \"right\", \"dy\": -9, \"stroke\": \"white\", \"strokeWidth\": 3, \"strokeOpacity\": 0.7, \"avoidOverlap\": 8}], \"title\": {\"text\": \"diagnosis_type_cohort\", \"align\": \"right\"}}",
+                "titleTemplate": "Survival by Diagnosis Cohort",
+                "summaryTemplate": "Joins {entity1} to {ent:entity2} on the subject id and plots one curve per {col:entity2_field} value; a subject with several {ent:entity2} records joins a group for each."
+              },
+              "meta": {
+                "tool_used": "vis_057_line_survival_related",
+                "tool_args": {
+                  "entity1": "Event",
+                  "entity1_field1": "research_id",
+                  "entity1_field2": "event_type",
+                  "entity1_field3": "age_at_event_days",
+                  "entity2": "Demographics",
+                  "entity2_field": "diagnosis_type_cohort",
+                  "entity2_field1": "research_id",
+                  "entity3": "Patient",
+                  "entity3_field1": "research_id",
+                  "entity3_field2": "vital_status",
+                  "entity3_field3": "age_at_vital_status_days",
+                  "value1": "Initial CNS Tumor",
+                  "value2": "Deceased",
+                  "value3": "alive"
+                },
+                "fallback_reason": null,
+                "vis_req_id": null,
+                "tweakable_params": [
+                  {
+                    "kind": "field",
+                    "param": "entity2_field",
+                    "placeholder": "E2.F",
+                    "entity": "Demographics",
+                    "type": "nominal",
+                    "encodings": [
+                      "color"
+                    ],
+                    "label": "color",
+                    "value": "diagnosis_type_cohort"
+                  },
+                  {
+                    "kind": "grouping",
+                    "param": "grouping",
+                    "placeholder": "GROUP",
+                    "entity": "Demographics",
+                    "type": "nominal",
+                    "encodings": [
+                      "color"
+                    ],
+                    "label": "groups",
+                    "value": "",
+                    "field": "diagnosis_type_cohort",
+                    "fieldType": "nominal"
+                  }
+                ],
+                "validation_retries": 0,
+                "valid": true,
+                "validation_errors": [],
+                "corrections": []
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "What extent of tumor resection did surgeries achieve?"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "function": {
+              "name": "RenderVisualization",
+              "arguments": {
+                "spec": "{\"source\": {\"name\": \"Surgery\", \"source\": \"surgery\"}, \"transformation\": [{\"groupby\": \"extent_of_tumor_resection\"}, {\"rollup\": {\"Surgery count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"Surgery count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"extent_of_tumor_resection\", \"type\": \"nominal\"}]}}",
+                "titleTemplate": "Extent of Tumor Resection",
+                "summaryTemplate": "Displays the number of {entity} in each {enc:y} category as horizontal bars."
+              },
+              "meta": {
+                "tool_used": "vis_001_barchart_count_horiz_grouped",
+                "tool_args": {
+                  "entity": "Surgery",
+                  "field": "extent_of_tumor_resection"
+                },
+                "fallback_reason": null,
+                "vis_req_id": null,
+                "tweakable_params": [
+                  {
+                    "kind": "field",
+                    "param": "field",
+                    "placeholder": "F",
+                    "entity": "Surgery",
+                    "type": "nominal",
+                    "encodings": [
+                      "y"
+                    ],
+                    "label": "y",
+                    "value": "extent_of_tumor_resection"
+                  }
+                ],
+                "validation_retries": 0,
+                "valid": true,
+                "validation_errors": [],
+                "corrections": []
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Break down radiation type by treatment site."
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "function": {
+              "name": "RenderVisualization",
+              "arguments": {
+                "spec": "{\"source\": {\"name\": \"Radiation\", \"source\": \"radiation\"}, \"transformation\": [{\"groupby\": [\"radiation_site\", \"radiation_type\"]}, {\"rollup\": {\"count Radiation\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"count Radiation\", \"type\": \"quantitative\"}, {\"encoding\": \"color\", \"field\": \"radiation_site\", \"type\": \"nominal\"}, {\"encoding\": \"y\", \"field\": \"radiation_type\", \"type\": \"nominal\"}]}}",
+                "titleTemplate": "Radiation Type by Site",
+                "summaryTemplate": "Displays the number of {entity} in each {enc:y} category as horizontal bars, split by {enc:color}."
+              },
+              "meta": {
+                "tool_used": "vis_009_stacked_bar_count_horiz_stacked_grouped",
+                "tool_args": {
+                  "entity": "Radiation",
+                  "field1": "radiation_site",
+                  "field2": "radiation_type"
+                },
+                "fallback_reason": null,
+                "vis_req_id": null,
+                "tweakable_params": [
+                  {
+                    "kind": "field",
+                    "param": "field1",
+                    "placeholder": "F1",
+                    "entity": "Radiation",
+                    "type": "nominal",
+                    "encodings": [
+                      "color"
+                    ],
+                    "label": "color",
+                    "value": "radiation_site"
+                  },
+                  {
+                    "kind": "field",
+                    "param": "field2",
+                    "placeholder": "F2",
+                    "entity": "Radiation",
+                    "type": "nominal",
+                    "encodings": [
+                      "y"
+                    ],
+                    "label": "y",
+                    "value": "radiation_type"
+                  }
+                ],
+                "validation_retries": 0,
+                "valid": true,
+                "validation_errors": [],
+                "corrections": []
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "Which disease events are recorded?"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "function": {
+              "name": "RenderVisualization",
+              "arguments": {
+                "spec": "{\"source\": {\"name\": \"Event\", \"source\": \"event\"}, \"transformation\": [{\"groupby\": \"event_type\"}, {\"rollup\": {\"Event count\": {\"op\": \"count\"}}}], \"representation\": {\"mark\": \"bar\", \"mapping\": [{\"encoding\": \"x\", \"field\": \"Event count\", \"type\": \"quantitative\"}, {\"encoding\": \"y\", \"field\": \"event_type\", \"type\": \"nominal\"}]}}",
+                "titleTemplate": "Disease Events by Type",
+                "summaryTemplate": "Displays the number of {entity} in each {enc:y} category as horizontal bars."
+              },
+              "meta": {
+                "tool_used": "vis_001_barchart_count_horiz_grouped",
+                "tool_args": {
+                  "entity": "Event",
+                  "field": "event_type"
+                },
+                "fallback_reason": null,
+                "vis_req_id": null,
+                "tweakable_params": [
+                  {
+                    "kind": "field",
+                    "param": "field",
+                    "placeholder": "F",
+                    "entity": "Event",
+                    "type": "nominal",
+                    "encodings": [
+                      "y"
+                    ],
+                    "label": "y",
+                    "value": "event_type"
+                  }
+                ],
+                "validation_retries": 0,
+                "valid": true,
+                "validation_errors": [],
+                "corrections": []
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "sessionUsage": {
+      "promptTokens": 0,
+      "completionTokens": 0,
+      "totalTokens": 0,
+      "cachedPromptTokens": 0,
+      "reasoningTokens": 0,
+      "requests": 0
+    }
+  },
+  "visualizations": [
+    {
+      "key": "1-0",
+      "uuid": "udi_1790255408256_2",
+      "index": 1,
+      "toolCallIndex": 0,
+      "userPrompt": "What does the distribution of age at initial diagnosis look like?",
+      "titleTemplate": "Age at Initial Diagnosis (days)",
+      "summaryTemplate": "Displays how many {entity} fall into each range of {col:field}, as adjacent bars.",
+      "spec": {
+        "source": {
+          "name": "Treatment Summary",
+          "source": "treatment_summary"
+        },
+        "transformation": [
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "age_at_initial_dx_days"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "binby": {
+              "field": "age_at_initial_dx_days",
+              "output": {
+                "bin_start": "start",
+                "bin_end": "end"
+              }
+            }
+          },
+          {
+            "rollup": {
+              "count": {
+                "op": "count"
+              }
+            }
+          }
+        ],
+        "representation": {
+          "mark": "rect",
+          "mapping": [
+            {
+              "encoding": "x",
+              "field": "start",
+              "type": "quantitative",
+              "title": "age_at_initial_dx_days"
+            },
+            {
+              "encoding": "x2",
+              "field": "end",
+              "type": "quantitative"
+            },
+            {
+              "encoding": "y",
+              "field": "count",
+              "type": "quantitative",
+              "domainWhenFiltered": "filtered"
+            }
+          ]
+        }
+      },
+      "template": null
+    },
+    {
+      "key": "3-0",
+      "uuid": "udi_1790255408256_3",
+      "index": 3,
+      "toolCallIndex": 0,
+      "userPrompt": "How was initial treatment sequenced between radiation and methotrexate?",
+      "titleTemplate": "Initial Treatment Sequence",
+      "summaryTemplate": "Displays the number of {entity} in each {enc:y} category as horizontal bars.",
+      "spec": {
+        "source": {
+          "name": "Treatment Summary",
+          "source": "treatment_summary"
+        },
+        "transformation": [
+          {
+            "groupby": "initial_treatment_order"
+          },
+          {
+            "rollup": {
+              "Treatment Summary count": {
+                "op": "count"
+              }
+            }
+          }
+        ],
+        "representation": {
+          "mark": "bar",
+          "mapping": [
+            {
+              "encoding": "x",
+              "field": "Treatment Summary count",
+              "type": "quantitative"
+            },
+            {
+              "encoding": "y",
+              "field": "initial_treatment_order",
+              "type": "nominal"
+            }
+          ]
+        }
+      },
+      "template": {
+        "tool": "vis_001_barchart_count_horiz_grouped",
+        "toolArgs": {
+          "entity": "Treatment Summary",
+          "field": "initial_treatment_order"
+        },
+        "params": [
+          {
+            "kind": "field",
+            "param": "field",
+            "placeholder": "F",
+            "entity": "Treatment Summary",
+            "type": "nominal",
+            "encodings": [
+              "y"
+            ],
+            "label": "y",
+            "value": "initial_treatment_order"
+          }
+        ]
+      }
+    },
+    {
+      "key": "5-0",
+      "uuid": "udi_1790255408256_4",
+      "index": 5,
+      "toolCallIndex": 0,
+      "userPrompt": "Compare survival from initial diagnosis between the two diagnosis cohorts.",
+      "titleTemplate": "Survival by Diagnosis Cohort",
+      "summaryTemplate": "Joins {entity1} to {ent:entity2} on the subject id and plots one curve per {col:entity2_field} value; a subject with several {ent:entity2} records joins a group for each.",
+      "spec": {
+        "source": [
+          {
+            "name": "Event",
+            "source": "event"
+          },
+          {
+            "name": "Demographics",
+            "source": "demographics"
+          },
+          {
+            "name": "Patient",
+            "source": "patient"
+          }
+        ],
+        "transformation": [
+          {
+            "join": {
+              "on": [
+                "research_id",
+                "research_id"
+              ]
+            },
+            "in": [
+              "Event",
+              "Demographics"
+            ],
+            "out": "Event__Demographics"
+          },
+          {
+            "derive": {
+              "censor day": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "vital_status"
+                  },
+                  "right": {
+                    "literal": "alive"
+                  }
+                },
+                "then": {
+                  "field": "age_at_vital_status_days"
+                },
+                "else": {
+                  "literal": null
+                }
+              }
+            },
+            "in": "Patient",
+            "out": "Patient__c"
+          },
+          {
+            "groupby": "research_id",
+            "in": "Patient__c"
+          },
+          {
+            "rollup": {
+              "censor day": {
+                "op": "max",
+                "field": "censor day"
+              }
+            },
+            "in": "Patient__c",
+            "out": "Patient__by_subject"
+          },
+          {
+            "join": {
+              "on": [
+                "research_id",
+                "research_id"
+              ],
+              "kind": "left"
+            },
+            "in": [
+              "Event__Demographics",
+              "Patient__by_subject"
+            ],
+            "out": "Event__cens"
+          },
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "age_at_event_days"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "derive": {
+              "start day": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "event_type"
+                  },
+                  "right": {
+                    "literal": "Initial CNS Tumor"
+                  }
+                },
+                "then": {
+                  "field": "age_at_event_days"
+                },
+                "else": {
+                  "literal": null
+                }
+              },
+              "end day": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "event_type"
+                  },
+                  "right": {
+                    "literal": "Deceased"
+                  }
+                },
+                "then": {
+                  "field": "age_at_event_days"
+                },
+                "else": {
+                  "literal": null
+                }
+              }
+            }
+          },
+          {
+            "groupby": "research_id"
+          },
+          {
+            "derive": {
+              "subject start": {
+                "agg": "min",
+                "field": "start day"
+              },
+              "subject end": {
+                "agg": "max",
+                "field": "end day"
+              }
+            }
+          },
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "diagnosis_type_cohort"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "derive": {
+              "stratum": {
+                "field": "diagnosis_type_cohort"
+              }
+            }
+          },
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "stratum"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "groupby": [
+              "research_id",
+              "stratum"
+            ]
+          },
+          {
+            "rollup": {
+              "start day": {
+                "op": "min",
+                "field": "subject start"
+              },
+              "end day": {
+                "op": "max",
+                "field": "subject end"
+              },
+              "censor day": {
+                "op": "max",
+                "field": "censor day"
+              }
+            }
+          },
+          {
+            "filter": {
+              "op": "!=",
+              "left": {
+                "field": "start day"
+              },
+              "right": {
+                "literal": null
+              }
+            }
+          },
+          {
+            "derive": {
+              "died": {
+                "if": {
+                  "op": "!=",
+                  "left": {
+                    "field": "end day"
+                  },
+                  "right": {
+                    "literal": null
+                  }
+                },
+                "then": {
+                  "literal": 1
+                },
+                "else": {
+                  "literal": 0
+                }
+              },
+              "survival days": {
+                "if": {
+                  "op": "!=",
+                  "left": {
+                    "field": "end day"
+                  },
+                  "right": {
+                    "literal": null
+                  }
+                },
+                "then": {
+                  "op": "-",
+                  "left": {
+                    "field": "end day"
+                  },
+                  "right": {
+                    "field": "start day"
+                  }
+                },
+                "else": {
+                  "if": {
+                    "op": "!=",
+                    "left": {
+                      "field": "censor day"
+                    },
+                    "right": {
+                      "literal": null
+                    }
+                  },
+                  "then": {
+                    "op": "-",
+                    "left": {
+                      "field": "censor day"
+                    },
+                    "right": {
+                      "field": "start day"
+                    }
+                  },
+                  "else": {
+                    "literal": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "filter": {
+              "op": ">=",
+              "left": {
+                "field": "survival days"
+              },
+              "right": {
+                "literal": 0
+              }
+            }
+          },
+          {
+            "derive": {
+              "survival years": {
+                "op": "/",
+                "left": {
+                  "field": "survival days"
+                },
+                "right": {
+                  "literal": 365.25
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "censor year": {
+                "if": {
+                  "op": "!=",
+                  "left": {
+                    "field": "end day"
+                  },
+                  "right": {
+                    "literal": null
+                  }
+                },
+                "then": {
+                  "literal": null
+                },
+                "else": {
+                  "if": {
+                    "op": "!=",
+                    "left": {
+                      "field": "censor day"
+                    },
+                    "right": {
+                      "literal": null
+                    }
+                  },
+                  "then": {
+                    "field": "survival years"
+                  },
+                  "else": {
+                    "literal": null
+                  }
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "cohort end": {
+                "agg": "max",
+                "field": "survival years"
+              }
+            }
+          },
+          {
+            "groupby": "stratum"
+          },
+          {
+            "derive": {
+              "subjects": {
+                "agg": "count"
+              },
+              "deaths": {
+                "agg": "sum",
+                "field": "died"
+              }
+            }
+          },
+          {
+            "orderby": {
+              "field": [
+                "survival years",
+                "research_id"
+              ],
+              "order": "asc"
+            }
+          },
+          {
+            "derive": {
+              "survival percentage": {
+                "rolling": {
+                  "expression": {
+                    "op": "*",
+                    "left": {
+                      "op": "-",
+                      "left": {
+                        "literal": 1
+                      },
+                      "right": {
+                        "op": "/",
+                        "left": {
+                          "agg": "sum",
+                          "field": "died"
+                        },
+                        "right": {
+                          "field": "subjects"
+                        }
+                      }
+                    },
+                    "right": {
+                      "literal": 100
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "final percentage": {
+                "agg": "min",
+                "field": "survival percentage"
+              }
+            }
+          },
+          {
+            "derive": {
+              "label year": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "window": "rank"
+                  },
+                  "right": {
+                    "literal": 1
+                  }
+                },
+                "then": {
+                  "if": {
+                    "op": ">",
+                    "left": {
+                      "field": "deaths"
+                    },
+                    "right": {
+                      "literal": 0
+                    }
+                  },
+                  "then": {
+                    "op": "*",
+                    "left": {
+                      "field": "cohort end"
+                    },
+                    "right": {
+                      "literal": 1.05
+                    }
+                  },
+                  "else": {
+                    "literal": null
+                  }
+                },
+                "else": {
+                  "literal": null
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "full survival": {
+                "literal": 100
+              }
+            }
+          },
+          {
+            "derive": {
+              "first year": {
+                "agg": "min",
+                "field": "survival years"
+              }
+            }
+          },
+          {
+            "derive": {
+              "first percentage": {
+                "agg": "max",
+                "field": "survival percentage"
+              }
+            }
+          },
+          {
+            "derive": {
+              "lead year": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "window": "rank"
+                  },
+                  "right": {
+                    "literal": 1
+                  }
+                },
+                "then": {
+                  "literal": 0
+                },
+                "else": {
+                  "if": {
+                    "op": "==",
+                    "left": {
+                      "window": "rank"
+                    },
+                    "right": {
+                      "literal": 2
+                    }
+                  },
+                  "then": {
+                    "field": "first year"
+                  },
+                  "else": {
+                    "literal": null
+                  }
+                }
+              },
+              "drop year": {
+                "if": {
+                  "op": "<=",
+                  "left": {
+                    "window": "rank"
+                  },
+                  "right": {
+                    "literal": 2
+                  }
+                },
+                "then": {
+                  "field": "first year"
+                },
+                "else": {
+                  "literal": null
+                }
+              },
+              "drop percentage": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "window": "rank"
+                  },
+                  "right": {
+                    "literal": 1
+                  }
+                },
+                "then": {
+                  "field": "full survival"
+                },
+                "else": {
+                  "if": {
+                    "op": "==",
+                    "left": {
+                      "window": "rank"
+                    },
+                    "right": {
+                      "literal": 2
+                    }
+                  },
+                  "then": {
+                    "field": "first percentage"
+                  },
+                  "else": {
+                    "literal": null
+                  }
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "rule year": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "deaths"
+                  },
+                  "right": {
+                    "literal": 0
+                  }
+                },
+                "then": {
+                  "literal": null
+                },
+                "else": {
+                  "if": {
+                    "op": "==",
+                    "left": {
+                      "window": "rank"
+                    },
+                    "right": {
+                      "literal": 1
+                    }
+                  },
+                  "then": {
+                    "field": "label year"
+                  },
+                  "else": {
+                    "if": {
+                      "op": "==",
+                      "left": {
+                        "field": "survival percentage"
+                      },
+                      "right": {
+                        "field": "final percentage"
+                      }
+                    },
+                    "then": {
+                      "field": "survival years"
+                    },
+                    "else": {
+                      "literal": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "_label_offset": {
+                "op": "+",
+                "left": {
+                  "field": "final percentage"
+                },
+                "right": {
+                  "literal": 0.5
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "final survival": {
+                "op": "-",
+                "left": {
+                  "field": "_label_offset"
+                },
+                "right": {
+                  "op": "%",
+                  "left": {
+                    "field": "_label_offset"
+                  },
+                  "right": {
+                    "literal": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "survivors": {
+                "op": "-",
+                "left": {
+                  "field": "subjects"
+                },
+                "right": {
+                  "field": "deaths"
+                }
+              }
+            }
+          },
+          {
+            "derive": {
+              "final label": {
+                "concat": [
+                  {
+                    "field": "stratum"
+                  },
+                  {
+                    "literal": " "
+                  },
+                  {
+                    "literal": "("
+                  },
+                  {
+                    "field": "survivors"
+                  },
+                  {
+                    "literal": "/"
+                  },
+                  {
+                    "field": "subjects"
+                  },
+                  {
+                    "literal": ") "
+                  },
+                  {
+                    "field": "final survival"
+                  },
+                  {
+                    "literal": "%"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "representation": [
+          {
+            "mark": "line",
+            "mapping": [
+              {
+                "encoding": "x",
+                "field": "lead year",
+                "type": "quantitative",
+                "title": "survival years",
+                "domain": {
+                  "min": 0
+                }
+              },
+              {
+                "encoding": "y",
+                "field": "full survival",
+                "type": "quantitative",
+                "domain": {
+                  "min": 0,
+                  "max": 100
+                }
+              },
+              {
+                "encoding": "color",
+                "field": "stratum",
+                "type": "nominal",
+                "omitLegend": true
+              }
+            ]
+          },
+          {
+            "mark": "line",
+            "mapping": [
+              {
+                "encoding": "x",
+                "field": "drop year",
+                "type": "quantitative",
+                "title": "survival years",
+                "domain": {
+                  "min": 0
+                }
+              },
+              {
+                "encoding": "y",
+                "field": "drop percentage",
+                "type": "quantitative",
+                "domain": {
+                  "min": 0,
+                  "max": 100
+                }
+              },
+              {
+                "encoding": "color",
+                "field": "stratum",
+                "type": "nominal",
+                "omitLegend": true
+              }
+            ]
+          },
+          {
+            "mark": "line",
+            "mapping": [
+              {
+                "encoding": "x",
+                "field": "survival years",
+                "type": "quantitative",
+                "title": "survival years",
+                "domain": {
+                  "min": 0
+                }
+              },
+              {
+                "encoding": "y",
+                "field": "survival percentage",
+                "type": "quantitative",
+                "domain": {
+                  "min": 0,
+                  "max": 100
+                },
+                "title": "survival (%)"
+              },
+              {
+                "encoding": "color",
+                "field": "stratum",
+                "type": "nominal",
+                "omitLegend": true
+              }
+            ],
+            "interpolate": "step-after"
+          },
+          {
+            "mark": "line",
+            "mapping": [
+              {
+                "encoding": "x",
+                "field": "rule year",
+                "type": "quantitative",
+                "title": "survival years",
+                "domain": {
+                  "min": 0
+                }
+              },
+              {
+                "encoding": "y",
+                "field": "final percentage",
+                "type": "quantitative",
+                "domain": {
+                  "min": 0,
+                  "max": 100
+                }
+              },
+              {
+                "encoding": "color",
+                "field": "stratum",
+                "type": "nominal",
+                "omitLegend": true
+              }
+            ]
+          },
+          {
+            "mark": "point",
+            "mapping": [
+              {
+                "encoding": "x",
+                "field": "censor year",
+                "type": "quantitative",
+                "title": "survival years",
+                "domain": {
+                  "min": 0
+                }
+              },
+              {
+                "encoding": "y",
+                "field": "survival percentage",
+                "type": "quantitative",
+                "domain": {
+                  "min": 0,
+                  "max": 100
+                }
+              },
+              {
+                "encoding": "shape",
+                "value": "M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"
+              },
+              {
+                "encoding": "size",
+                "value": 500
+              },
+              {
+                "encoding": "color",
+                "field": "stratum",
+                "type": "nominal",
+                "omitLegend": true
+              }
+            ]
+          },
+          {
+            "mark": "text",
+            "mapping": [
+              {
+                "encoding": "x",
+                "field": "label year",
+                "type": "quantitative",
+                "title": "survival years",
+                "domain": {
+                  "min": 0
+                }
+              },
+              {
+                "encoding": "y",
+                "field": "final percentage",
+                "type": "quantitative",
+                "domain": {
+                  "min": 0,
+                  "max": 100
+                }
+              },
+              {
+                "encoding": "text",
+                "field": "final label",
+                "type": "nominal"
+              },
+              {
+                "encoding": "color",
+                "field": "stratum",
+                "type": "nominal",
+                "omitLegend": true
+              }
+            ],
+            "align": "right",
+            "dy": -9,
+            "stroke": "white",
+            "strokeWidth": 3,
+            "strokeOpacity": 0.7,
+            "avoidOverlap": 8
+          }
+        ],
+        "title": {
+          "text": "diagnosis_type_cohort",
+          "align": "right"
+        }
+      },
+      "template": {
+        "tool": "vis_057_line_survival_related",
+        "toolArgs": {
+          "entity1": "Event",
+          "entity1_field1": "research_id",
+          "entity1_field2": "event_type",
+          "entity1_field3": "age_at_event_days",
+          "entity2": "Demographics",
+          "entity2_field": "diagnosis_type_cohort",
+          "entity2_field1": "research_id",
+          "entity3": "Patient",
+          "entity3_field1": "research_id",
+          "entity3_field2": "vital_status",
+          "entity3_field3": "age_at_vital_status_days",
+          "value1": "Initial CNS Tumor",
+          "value2": "Deceased",
+          "value3": "alive"
+        },
+        "params": [
+          {
+            "kind": "field",
+            "param": "entity2_field",
+            "placeholder": "E2.F",
+            "entity": "Demographics",
+            "type": "nominal",
+            "encodings": [
+              "color"
+            ],
+            "label": "color",
+            "value": "diagnosis_type_cohort"
+          },
+          {
+            "kind": "grouping",
+            "param": "grouping",
+            "placeholder": "GROUP",
+            "entity": "Demographics",
+            "type": "nominal",
+            "encodings": [
+              "color"
+            ],
+            "label": "groups",
+            "value": "",
+            "field": "diagnosis_type_cohort",
+            "fieldType": "nominal"
+          }
+        ]
+      }
+    },
+    {
+      "key": "7-0",
+      "uuid": "udi_1790255408256_5",
+      "index": 7,
+      "toolCallIndex": 0,
+      "userPrompt": "What extent of tumor resection did surgeries achieve?",
+      "titleTemplate": "Extent of Tumor Resection",
+      "summaryTemplate": "Displays the number of {entity} in each {enc:y} category as horizontal bars.",
+      "spec": {
+        "source": {
+          "name": "Surgery",
+          "source": "surgery"
+        },
+        "transformation": [
+          {
+            "groupby": "extent_of_tumor_resection"
+          },
+          {
+            "rollup": {
+              "Surgery count": {
+                "op": "count"
+              }
+            }
+          }
+        ],
+        "representation": {
+          "mark": "bar",
+          "mapping": [
+            {
+              "encoding": "x",
+              "field": "Surgery count",
+              "type": "quantitative"
+            },
+            {
+              "encoding": "y",
+              "field": "extent_of_tumor_resection",
+              "type": "nominal"
+            }
+          ]
+        }
+      },
+      "template": {
+        "tool": "vis_001_barchart_count_horiz_grouped",
+        "toolArgs": {
+          "entity": "Surgery",
+          "field": "extent_of_tumor_resection"
+        },
+        "params": [
+          {
+            "kind": "field",
+            "param": "field",
+            "placeholder": "F",
+            "entity": "Surgery",
+            "type": "nominal",
+            "encodings": [
+              "y"
+            ],
+            "label": "y",
+            "value": "extent_of_tumor_resection"
+          }
+        ]
+      }
+    },
+    {
+      "key": "9-0",
+      "uuid": "udi_1790255408256_6",
+      "index": 9,
+      "toolCallIndex": 0,
+      "userPrompt": "Break down radiation type by treatment site.",
+      "titleTemplate": "Radiation Type by Site",
+      "summaryTemplate": "Displays the number of {entity} in each {enc:y} category as horizontal bars, split by {enc:color}.",
+      "spec": {
+        "source": {
+          "name": "Radiation",
+          "source": "radiation"
+        },
+        "transformation": [
+          {
+            "groupby": [
+              "radiation_site",
+              "radiation_type"
+            ]
+          },
+          {
+            "rollup": {
+              "count Radiation": {
+                "op": "count"
+              }
+            }
+          }
+        ],
+        "representation": {
+          "mark": "bar",
+          "mapping": [
+            {
+              "encoding": "x",
+              "field": "count Radiation",
+              "type": "quantitative"
+            },
+            {
+              "encoding": "color",
+              "field": "radiation_site",
+              "type": "nominal"
+            },
+            {
+              "encoding": "y",
+              "field": "radiation_type",
+              "type": "nominal"
+            }
+          ]
+        }
+      },
+      "template": {
+        "tool": "vis_009_stacked_bar_count_horiz_stacked_grouped",
+        "toolArgs": {
+          "entity": "Radiation",
+          "field1": "radiation_site",
+          "field2": "radiation_type"
+        },
+        "params": [
+          {
+            "kind": "field",
+            "param": "field1",
+            "placeholder": "F1",
+            "entity": "Radiation",
+            "type": "nominal",
+            "encodings": [
+              "color"
+            ],
+            "label": "color",
+            "value": "radiation_site"
+          },
+          {
+            "kind": "field",
+            "param": "field2",
+            "placeholder": "F2",
+            "entity": "Radiation",
+            "type": "nominal",
+            "encodings": [
+              "y"
+            ],
+            "label": "y",
+            "value": "radiation_type"
+          }
+        ]
+      }
+    },
+    {
+      "key": "11-0",
+      "uuid": "udi_1790255408256_7",
+      "index": 11,
+      "toolCallIndex": 0,
+      "userPrompt": "Which disease events are recorded?",
+      "titleTemplate": "Disease Events by Type",
+      "summaryTemplate": "Displays the number of {entity} in each {enc:y} category as horizontal bars.",
+      "spec": {
+        "source": {
+          "name": "Event",
+          "source": "event"
+        },
+        "transformation": [
+          {
+            "groupby": "event_type"
+          },
+          {
+            "rollup": {
+              "Event count": {
+                "op": "count"
+              }
+            }
+          }
+        ],
+        "representation": {
+          "mark": "bar",
+          "mapping": [
+            {
+              "encoding": "x",
+              "field": "Event count",
+              "type": "quantitative"
+            },
+            {
+              "encoding": "y",
+              "field": "event_type",
+              "type": "nominal"
+            }
+          ]
+        }
+      },
+      "template": {
+        "tool": "vis_001_barchart_count_horiz_grouped",
+        "toolArgs": {
+          "entity": "Event",
+          "field": "event_type"
+        },
+        "params": [
+          {
+            "kind": "field",
+            "param": "field",
+            "placeholder": "F",
+            "entity": "Event",
+            "type": "nominal",
+            "encodings": [
+              "y"
+            ],
+            "label": "y",
+            "value": "event_type"
+          }
+        ]
+      }
+    }
+  ],
+  "layout": {
+    "items": [
+      {
+        "i": "3-0",
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 4,
+        "minW": 1,
+        "minH": 3,
+        "moved": false
+      },
+      {
+        "i": "7-0",
+        "x": 1,
+        "y": 0,
+        "w": 1,
+        "h": 4,
+        "minW": 1,
+        "minH": 3,
+        "moved": false
+      },
+      {
+        "i": "11-0",
+        "x": 2,
+        "y": 0,
+        "w": 1,
+        "h": 4,
+        "minW": 1,
+        "minH": 3,
+        "moved": false
+      },
+      {
+        "i": "1-0",
+        "x": 3,
+        "y": 0,
+        "w": 1,
+        "h": 4,
+        "minW": 1,
+        "minH": 3,
+        "moved": false
+      },
+      {
+        "i": "9-0",
+        "x": 0,
+        "y": 4,
+        "w": 2,
+        "h": 4,
+        "minW": 1,
+        "minH": 3,
+        "moved": false
+      },
+      {
+        "i": "5-0",
+        "x": 2,
+        "y": 4,
+        "w": 2,
+        "h": 4,
+        "minW": 1,
+        "minH": 3,
+        "moved": false
+      }
+    ]
+  },
+  "grid": {
+    "cols": 4,
+    "rowHeight": 60
+  }
+}

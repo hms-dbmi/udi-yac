@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { Save, Upload, Download } from 'lucide-react';
+import { Bug, Save, Upload, Download, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -19,11 +20,15 @@ import {
   useDashboardStore,
   useDataFiltersStore,
   useDataPackage,
+  useGlobalStore,
+  useIssueReporting,
+  useSavedSessionsKey,
   useTracker,
 } from '@/app/UDIChatContext';
 import { applySessionExport } from '../utils/applySessionExport';
+import { SavedSessionsDialog } from './SavedSessionsDialog';
 import {
-  buildSessionExport,
+  currentSessionExport,
   parseSessionExport,
   type SessionExport,
 } from '../utils/dashboardSerialization';
@@ -51,29 +56,60 @@ export function SessionImportExportButton() {
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const globalStore = useGlobalStore();
+  const issueReporting = useIssueReporting();
   const trackEvent = useTracker();
+  const savedSessionsKey = useSavedSessionsKey();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [savedOpen, setSavedOpen] = useState(false);
+
+  const snapshotSession = useCallback(
+    (): SessionExport =>
+      currentSessionExport(
+        conversationStore.getState(),
+        dashboardStore.getState(),
+        dataFiltersStore.getState(),
+      ),
+    [conversationStore, dashboardStore, dataFiltersStore],
+  );
 
   const handleExport = useCallback(() => {
-    const state = dashboardStore.getState();
-    const conversation = conversationStore.getState();
-    const messages = conversation.messages;
-    const dashboard = state.exportDashboard();
-    const payload: SessionExport = buildSessionExport({
-      messages,
-      dashboard,
-      grid: { cols: state.gridCols, rowHeight: state.gridRowHeight },
-      sessionUsage: conversation.sessionUsage,
-      filters: dataFiltersStore.getState().exportFilterState(),
-    });
+    const payload = snapshotSession();
     saveBlob(JSON.stringify(payload, null, 2), `udi-session_${timestamp()}.json`);
     trackEvent('session_exported', {
-      messageCount: messages.length,
-      vizCount: dashboard.visualizations.length,
-      itemCount: dashboard.layout.items.length,
+      messageCount: payload.conversation.messages.length,
+      vizCount: payload.visualizations.length,
+      itemCount: payload.layout.items.length,
     });
-  }, [conversationStore, dashboardStore, dataFiltersStore, trackEvent]);
+  }, [snapshotSession, trackEvent]);
+
+  /** File import and browser-saved sessions both arrive unparsed. */
+  const importSession = useCallback(
+    (raw: unknown, source: 'file' | 'browser') => {
+      const parsed = parseSessionExport(raw);
+      if (!parsed.ok) {
+        setErrorMessage(parsed.error);
+        return;
+      }
+      applySessionExport(
+        parsed.value,
+        {
+          conversation: conversationStore,
+          dashboard: dashboardStore,
+          dataFilters: dataFiltersStore,
+        },
+        sourceFields,
+      );
+      trackEvent('session_imported', {
+        source,
+        messageCount: parsed.value.conversation.messages.length,
+        vizCount: parsed.value.visualizations.length,
+        itemCount: parsed.value.layout.items.length,
+      });
+    },
+    [conversationStore, dashboardStore, dataFiltersStore, sourceFields, trackEvent],
+  );
 
   const handlePickFile = useCallback(() => {
     fileInputRef.current?.click();
@@ -85,31 +121,12 @@ export function SessionImportExportButton() {
       event.target.value = '';
       if (!file) return;
       try {
-        const text = await file.text();
-        const parsed = parseSessionExport(JSON.parse(text));
-        if (!parsed.ok) {
-          setErrorMessage(parsed.error);
-          return;
-        }
-        applySessionExport(
-          parsed.value,
-          {
-            conversation: conversationStore,
-            dashboard: dashboardStore,
-            dataFilters: dataFiltersStore,
-          },
-          sourceFields,
-        );
-        trackEvent('session_imported', {
-          messageCount: parsed.value.conversation.messages.length,
-          vizCount: parsed.value.visualizations.length,
-          itemCount: parsed.value.layout.items.length,
-        });
+        importSession(JSON.parse(await file.text()), 'file');
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : 'Failed to read file');
       }
     },
-    [conversationStore, dashboardStore, dataFiltersStore, sourceFields, trackEvent],
+    [importSession],
   );
 
   return (
@@ -139,8 +156,31 @@ export function SessionImportExportButton() {
             <Upload className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
             Import session
           </DropdownMenuItem>
+          {savedSessionsKey && (
+            <DropdownMenuItem onClick={() => setSavedOpen(true)}>
+              <HardDrive className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
+              Saved in browser…
+            </DropdownMenuItem>
+          )}
+          {issueReporting && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => globalStore.getState().openIssueReport('', 'menu')}>
+                <Bug className="udi:h-3.5 udi:w-3.5 udi:mr-2" />
+                Report an issue
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {savedSessionsKey && savedOpen && (
+        <SavedSessionsDialog
+          storageKey={savedSessionsKey}
+          onClose={() => setSavedOpen(false)}
+          snapshot={snapshotSession}
+          onLoad={(raw) => importSession(raw, 'browser')}
+        />
+      )}
       <Dialog open={errorMessage !== null} onOpenChange={(o) => !o && setErrorMessage(null)}>
         <DialogContent>
           <DialogHeader>

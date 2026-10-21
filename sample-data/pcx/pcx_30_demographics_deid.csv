@@ -1,0 +1,970 @@
+organization_name,research_id,given_name,family_name,birth_year,race,ethnicity,gender,address_postal_code,diagnosis_type_cohort,data_type_cohort
+Akron Children's Hospital,C7227726,C7227726_given_name,C7227726_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Akron Children's Hospital,C7457859,C7457859_given_name,C7457859_family_name,2018,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Akron Children's Hospital,C7612224,C7612224_given_name,C7612224_family_name,2022,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Akron Children's Hospital,C7860561,C7860561_given_name,C7860561_family_name,2014,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C1038366,C1038366_given_name,C1038366_family_name,2014,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+CBTN Non-Consortium Member,C1083261,C1083261_given_name,C1083261_family_name,2009,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C2653602,C2653602_given_name,C2653602_family_name,2010,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3084963,C3084963_given_name,C3084963_family_name,2009,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3420753,C3420753_given_name,C3420753_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3612264,C3612264_given_name,C3612264_family_name,2004,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3612387,C3612387_given_name,C3612387_family_name,1999,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3612510,C3612510_given_name,C3612510_family_name,2007,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3612879,C3612879_given_name,C3612879_family_name,2008,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613002,C3613002_given_name,C3613002_family_name,2009,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613125,C3613125_given_name,C3613125_family_name,2009,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613248,C3613248_given_name,C3613248_family_name,1998,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613371,C3613371_given_name,C3613371_family_name,2012,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613494,C3613494_given_name,C3613494_family_name,2010,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613617,C3613617_given_name,C3613617_family_name,2010,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613740,C3613740_given_name,C3613740_family_name,2013,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613863,C3613863_given_name,C3613863_family_name,2015,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3613986,C3613986_given_name,C3613986_family_name,2013,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3614109,C3614109_given_name,C3614109_family_name,1999,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3614355,C3614355_given_name,C3614355_family_name,2008,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3614478,C3614478_given_name,C3614478_family_name,2009,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3614601,C3614601_given_name,C3614601_family_name,2000,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3614724,C3614724_given_name,C3614724_family_name,2011,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3614847,C3614847_given_name,C3614847_family_name,2006,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3614970,C3614970_given_name,C3614970_family_name,2008,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C3615093,C3615093_given_name,C3615093_family_name,2002,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C4062936,C4062936_given_name,C4062936_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C4076097,C4076097_given_name,C4076097_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C6528102,C6528102_given_name,C6528102_family_name,2009,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+CBTN Non-Consortium Member,C7782456,C7782456_given_name,C7782456_family_name,2024,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+CBTN Non-Consortium Member,C8876295,C8876295_given_name,C8876295_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's Hospital Los Angeles,C8832261,C8832261_given_name,C8832261_family_name,2020,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's Hospital of Atlanta (CHOA),C7848753,C7848753_given_name,C7848753_family_name,2019,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's Hospital of Atlanta (CHOA),C8128455,C8128455_given_name,C8128455_family_name,2017,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's Hospital of Atlanta (CHOA),C8578635,C8578635_given_name,C8578635_family_name,2025,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's Hospital of Atlanta (CHOA),C8578881,C8578881_given_name,C8578881_family_name,2021,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's Hospital of Atlanta (CHOA),C8579127,C8579127_given_name,C8579127_family_name,2024,Asian,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's Hospital of Atlanta (CHOA),C8579373,C8579373_given_name,C8579373_family_name,2022,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C1066164,C1066164_given_name,C1066164_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C1075635,C1075635_given_name,C1075635_family_name,2010,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C1169730,C1169730_given_name,C1169730_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C1235904,C1235904_given_name,C1235904_family_name,2013,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2317443,C2317443_given_name,C2317443_family_name,2018,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2400222,C2400222_given_name,C2400222_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2414490,C2414490_given_name,C2414490_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2492595,C2492595_given_name,C2492595_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2567010,C2567010_given_name,C2567010_family_name,2012,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2607354,C2607354_given_name,C2607354_family_name,2008,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2607600,C2607600_given_name,C2607600_family_name,2007,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2645361,C2645361_given_name,C2645361_family_name,1999,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2645484,C2645484_given_name,C2645484_family_name,2012,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2645607,C2645607_given_name,C2645607_family_name,1997,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2645853,C2645853_given_name,C2645853_family_name,2007,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2661843,C2661843_given_name,C2661843_family_name,2003,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2690133,C2690133_given_name,C2690133_family_name,2015,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2691978,C2691978_given_name,C2691978_family_name,2012,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2694069,C2694069_given_name,C2694069_family_name,2009,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2694192,C2694192_given_name,C2694192_family_name,2010,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2734905,C2734905_given_name,C2734905_family_name,2004,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2735151,C2735151_given_name,C2735151_family_name,2008,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2735274,C2735274_given_name,C2735274_family_name,2009,Asian,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2735766,C2735766_given_name,C2735766_family_name,2010,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2735889,C2735889_given_name,C2735889_family_name,2014,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2740809,C2740809_given_name,C2740809_family_name,2016,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2746098,C2746098_given_name,C2746098_family_name,2002,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2783613,C2783613_given_name,C2783613_family_name,2015,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2833920,C2833920_given_name,C2833920_family_name,2015,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C2834166,C2834166_given_name,C2834166_family_name,2011,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3161346,C3161346_given_name,C3161346_family_name,2006,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3164790,C3164790_given_name,C3164790_family_name,2016,Asian,Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3230472,C3230472_given_name,C3230472_family_name,2019,Black or African American,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3400827,C3400827_given_name,C3400827_family_name,2011,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3400950,C3400950_given_name,C3400950_family_name,2014,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3410298,C3410298_given_name,C3410298_family_name,2000,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3410544,C3410544_given_name,C3410544_family_name,2009,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3410913,C3410913_given_name,C3410913_family_name,2007,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3411282,C3411282_given_name,C3411282_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3445845,C3445845_given_name,C3445845_family_name,2012,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3521244,C3521244_given_name,C3521244_family_name,2020,Black or African American,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3588648,C3588648_given_name,C3588648_family_name,2014,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3641169,C3641169_given_name,C3641169_family_name,2019,Black or African American,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3678069,C3678069_given_name,C3678069_family_name,2014,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3680160,C3680160_given_name,C3680160_family_name,2007,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3732066,C3732066_given_name,C3732066_family_name,2015,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3768966,C3768966_given_name,C3768966_family_name,2010,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3769458,C3769458_given_name,C3769458_family_name,2015,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3769950,C3769950_given_name,C3769950_family_name,2013,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3808695,C3808695_given_name,C3808695_family_name,1999,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3808818,C3808818_given_name,C3808818_family_name,2008,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C3811647,C3811647_given_name,C3811647_family_name,1989,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4059861,C4059861_given_name,C4059861_family_name,2017,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4062321,C4062321_given_name,C4062321_family_name,2007,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4220376,C4220376_given_name,C4220376_family_name,2018,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4744725,C4744725_given_name,C4744725_family_name,2016,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4852965,C4852965_given_name,C4852965_family_name,2015,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4853088,C4853088_given_name,C4853088_family_name,2021,Asian,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4889496,C4889496_given_name,C4889496_family_name,2016,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4974243,C4974243_given_name,C4974243_family_name,2009,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C4985313,C4985313_given_name,C4985313_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C5226639,C5226639_given_name,C5226639_family_name,2015,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C5360832,C5360832_given_name,C5360832_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C5792193,C5792193_given_name,C5792193_family_name,2021,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C6919980,C6919980_given_name,C6919980_family_name,2022,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7111983,C7111983_given_name,C7111983_family_name,2012,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7219239,C7219239_given_name,C7219239_family_name,2014,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7271391,C7271391_given_name,C7271391_family_name,2022,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7369791,C7369791_given_name,C7369791_family_name,2017,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7559334,C7559334_given_name,C7559334_family_name,2023,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7588362,C7588362_given_name,C7588362_family_name,2018,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7592175,C7592175_given_name,C7592175_family_name,2015,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7687131,C7687131_given_name,C7687131_family_name,2016,Asian,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7705827,C7705827_given_name,C7705827_family_name,2008,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7706442,C7706442_given_name,C7706442_family_name,2019,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7706565,C7706565_given_name,C7706565_family_name,2015,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7747770,C7747770_given_name,C7747770_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7749984,C7749984_given_name,C7749984_family_name,2020,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7758717,C7758717_given_name,C7758717_family_name,2021,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7775814,C7775814_given_name,C7775814_family_name,2018,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C7963143,C7963143_given_name,C7963143_family_name,2017,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8027964,C8027964_given_name,C8027964_family_name,2005,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8150718,C8150718_given_name,C8150718_family_name,2017,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8167077,C8167077_given_name,C8167077_family_name,2018,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8274579,C8274579_given_name,C8274579_family_name,2017,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8527467,C8527467_given_name,C8527467_family_name,2016,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8579619,C8579619_given_name,C8579619_family_name,2021,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8622177,C8622177_given_name,C8622177_family_name,2019,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8626851,C8626851_given_name,C8626851_family_name,2017,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8684907,C8684907_given_name,C8684907_family_name,2012,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8732877,C8732877_given_name,C8732877_family_name,2010,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Children's National Medical Center (CNMC),C8738289,C8738289_given_name,C8738289_family_name,2022,Black or African American,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Children's National Medical Center (CNMC),C994701,C994701_given_name,C994701_family_name,2015,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Dayton Children's Hospital,C3207963,C3207963_given_name,C3207963_family_name,2019,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Dayton Children's Hospital,C3493200,C3493200_given_name,C3493200_family_name,2020,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Dayton Children's Hospital,C3634281,C3634281_given_name,C3634281_family_name,2018,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Dayton Children's Hospital,C4053834,C4053834_given_name,C4053834_family_name,2019,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Dayton Children's Hospital,C4053957,C4053957_given_name,C4053957_family_name,2012,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Dayton Children's Hospital,C5490351,C5490351_given_name,C5490351_family_name,2013,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Dayton Children's Hospital,C5490597,C5490597_given_name,C5490597_family_name,2010,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Dayton Children's Hospital,C6784065,C6784065_given_name,C6784065_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Dayton Children's Hospital,C6784188,C6784188_given_name,C6784188_family_name,2023,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hackensack,C1265301,C1265301_given_name,C1265301_family_name,2017,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Hackensack,C2596407,C2596407_given_name,C2596407_family_name,1998,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hackensack,C2723712,C2723712_given_name,C2723712_family_name,2019,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Hackensack,C3732927,C3732927_given_name,C3732927_family_name,2019,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Hackensack,C3735510,C3735510_given_name,C3735510_family_name,2004,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hackensack,C3736740,C3736740_given_name,C3736740_family_name,2012,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hackensack,C3875238,C3875238_given_name,C3875238_family_name,2019,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hackensack,C3924192,C3924192_given_name,C3924192_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hackensack,C4309674,C4309674_given_name,C4309674_family_name,2015,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hackensack,C5935242,C5935242_given_name,C5935242_family_name,2021,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hudson Institute,C2419410,C2419410_given_name,C2419410_family_name,2006,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hudson Institute,C2457294,C2457294_given_name,C2457294_family_name,2013,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Hudson Institute,C2457540,C2457540_given_name,C2457540_family_name,2006,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Hudson Institute,C2540442,C2540442_given_name,C2540442_family_name,2016,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C7226127,C7226127_given_name,C7226127_family_name,2016,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C7274835,C7274835_given_name,C7274835_family_name,2019,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C7333629,C7333629_given_name,C7333629_family_name,2018,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C7366716,C7366716_given_name,C7366716_family_name,2016,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C7901274,C7901274_given_name,C7901274_family_name,2017,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C7935837,C7935837_given_name,C7935837_family_name,2024,White,Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C8104962,C8104962_given_name,C8104962_family_name,2017,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C8105085,C8105085_given_name,C8105085_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C8435094,C8435094_given_name,C8435094_family_name,2023,Black or African American,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C8492412,C8492412_given_name,C8492412_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Intermountain Primary Children's Hospital,C8778633,C8778633_given_name,C8778633_family_name,2026,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Johns Hopkins All Children's Hospital,C7953795,C7953795_given_name,C7953795_family_name,2018,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Johns Hopkins Medicine,C3466755,C3466755_given_name,C3466755_family_name,2003,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Johns Hopkins Medicine,C3466878,C3466878_given_name,C3466878_family_name,2010,White,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Johns Hopkins Medicine,C3587418,C3587418_given_name,C3587418_family_name,2020,Black or African American,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Johns Hopkins Medicine,C4028742,C4028742_given_name,C4028742_family_name,2019,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C1002081,C1002081_given_name,C1002081_family_name,2011,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C1025205,C1025205_given_name,C1025205_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C105042,C105042_given_name,C105042_family_name,2009,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C1188918,C1188918_given_name,C1188918_family_name,2003,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C1189041,C1189041_given_name,C1189041_family_name,2016,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C138498,C138498_given_name,C138498_family_name,2007,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C144033,C144033_given_name,C144033_family_name,1993,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C144402,C144402_given_name,C144402_family_name,1992,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C144525,C144525_given_name,C144525_family_name,2007,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C144648,C144648_given_name,C144648_family_name,2008,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C144771,C144771_given_name,C144771_family_name,2009,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C144894,C144894_given_name,C144894_family_name,2008,Other/Unavailable/Not Reported;White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C145017,C145017_given_name,C145017_family_name,2009,White,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C145140,C145140_given_name,C145140_family_name,2008,Other/Unavailable/Not Reported;White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C145263,C145263_given_name,C145263_family_name,2011,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C145386,C145386_given_name,C145386_family_name,2009,Black or African American,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C145509,C145509_given_name,C145509_family_name,2009,White,Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C177981,C177981_given_name,C177981_family_name,1990,White,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C178104,C178104_given_name,C178104_family_name,2002,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C178227,C178227_given_name,C178227_family_name,2003,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C178350,C178350_given_name,C178350_family_name,2001,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C178473,C178473_given_name,C178473_family_name,2004,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C178596,C178596_given_name,C178596_family_name,2000,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C178719,C178719_given_name,C178719_family_name,2004,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C178965,C178965_given_name,C178965_family_name,1997,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C179088,C179088_given_name,C179088_family_name,1997,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C179457,C179457_given_name,C179457_family_name,1998,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C179580,C179580_given_name,C179580_family_name,2002,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C179703,C179703_given_name,C179703_family_name,2008,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C179826,C179826_given_name,C179826_family_name,2002,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C180072,C180072_given_name,C180072_family_name,2007,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C180195,C180195_given_name,C180195_family_name,2006,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C180318,C180318_given_name,C180318_family_name,2004,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C180441,C180441_given_name,C180441_family_name,2004,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C180564,C180564_given_name,C180564_family_name,2000,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C180687,C180687_given_name,C180687_family_name,2006,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C180933,C180933_given_name,C180933_family_name,2006,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C181056,C181056_given_name,C181056_family_name,1989,Other/Unavailable/Not Reported;White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C181179,C181179_given_name,C181179_family_name,2011,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C181302,C181302_given_name,C181302_family_name,2001,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C181425,C181425_given_name,C181425_family_name,2004,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C182286,C182286_given_name,C182286_family_name,2013,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C183270,C183270_given_name,C183270_family_name,2002,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C183393,C183393_given_name,C183393_family_name,2003,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C183516,C183516_given_name,C183516_family_name,1993,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C193110,C193110_given_name,C193110_family_name,1994,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2342412,C2342412_given_name,C2342412_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2407602,C2407602_given_name,C2407602_family_name,2008,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2408832,C2408832_given_name,C2408832_family_name,2004,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2438598,C2438598_given_name,C2438598_family_name,2009,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C2444133,C2444133_given_name,C2444133_family_name,2015,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2446101,C2446101_given_name,C2446101_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C2460369,C2460369_given_name,C2460369_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2461107,C2461107_given_name,C2461107_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2488167,C2488167_given_name,C2488167_family_name,2013,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2510307,C2510307_given_name,C2510307_family_name,2011,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2539827,C2539827_given_name,C2539827_family_name,2015,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C2548560,C2548560_given_name,C2548560_family_name,2004,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2568609,C2568609_given_name,C2568609_family_name,2010,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C2642040,C2642040_given_name,C2642040_family_name,2015,Asian,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C2769837,C2769837_given_name,C2769837_family_name,2015,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C300612,C300612_given_name,C300612_family_name,2014,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C300858,C300858_given_name,C300858_family_name,2003,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3374259,C3374259_given_name,C3374259_family_name,2002,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3376596,C3376596_given_name,C3376596_family_name,2007,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3376842,C3376842_given_name,C3376842_family_name,2013,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3379056,C3379056_given_name,C3379056_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3379794,C3379794_given_name,C3379794_family_name,2000,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3379917,C3379917_given_name,C3379917_family_name,2009,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3380286,C3380286_given_name,C3380286_family_name,2012,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3380901,C3380901_given_name,C3380901_family_name,2019,Asian,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C3381885,C3381885_given_name,C3381885_family_name,2014,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3382008,C3382008_given_name,C3382008_family_name,2014,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3405132,C3405132_given_name,C3405132_family_name,2011,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3405255,C3405255_given_name,C3405255_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3411651,C3411651_given_name,C3411651_family_name,1997,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3464049,C3464049_given_name,C3464049_family_name,2016,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3559989,C3559989_given_name,C3559989_family_name,2010,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3567000,C3567000_given_name,C3567000_family_name,2013,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3653469,C3653469_given_name,C3653469_family_name,2016,White,Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C3653715,C3653715_given_name,C3653715_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3740799,C3740799_given_name,C3740799_family_name,2009,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3749286,C3749286_given_name,C3749286_family_name,2007,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3753468,C3753468_given_name,C3753468_family_name,2010,White,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3821364,C3821364_given_name,C3821364_family_name,1997,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C3865521,C3865521_given_name,C3865521_family_name,2008,Asian,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C398643,C398643_given_name,C398643_family_name,2012,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C4024806,C4024806_given_name,C4024806_family_name,2014,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C4073883,C4073883_given_name,C4073883_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C4133784,C4133784_given_name,C4133784_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C4153095,C4153095_given_name,C4153095_family_name,2002,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C417585,C417585_given_name,C417585_family_name,2007,Other/Unavailable/Not Reported;White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C4234644,C4234644_given_name,C4234644_family_name,2019,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C4309428,C4309428_given_name,C4309428_family_name,2012,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C477240,C477240_given_name,C477240_family_name,2010,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C478962,C478962_given_name,C478962_family_name,2003,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C5022090,C5022090_given_name,C5022090_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C5027502,C5027502_given_name,C5027502_family_name,2022,Black or African American,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C5054685,C5054685_given_name,C5054685_family_name,2012,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C515124,C515124_given_name,C515124_family_name,1995,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C5214954,C5214954_given_name,C5214954_family_name,2005,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C522504,C522504_given_name,C522504_family_name,2001,Asian,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C5304498,C5304498_given_name,C5304498_family_name,2004,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C550056,C550056_given_name,C550056_family_name,2001,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C553131,C553131_given_name,C553131_family_name,2013,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C5555664,C5555664_given_name,C5555664_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C556575,C556575_given_name,C556575_family_name,2003,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C557682,C557682_given_name,C557682_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C5594286,C5594286_given_name,C5594286_family_name,1997,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C5623314,C5623314_given_name,C5623314_family_name,2007,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C565431,C565431_given_name,C565431_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C567522,C567522_given_name,C567522_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C5700066,C5700066_given_name,C5700066_family_name,2008,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C587325,C587325_given_name,C587325_family_name,2014,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C596058,C596058_given_name,C596058_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C607251,C607251_given_name,C607251_family_name,2002,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C614016,C614016_given_name,C614016_family_name,2007,White,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C617952,C617952_given_name,C617952_family_name,2000,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C618567,C618567_given_name,C618567_family_name,2001,Asian,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C618690,C618690_given_name,C618690_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C618813,C618813_given_name,C618813_family_name,2009,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6192804,C6192804_given_name,C6192804_family_name,2018,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6193173,C6193173_given_name,C6193173_family_name,2015,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6201168,C6201168_given_name,C6201168_family_name,2019,Asian;Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6201291,C6201291_given_name,C6201291_family_name,2011,Black or African American,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C626685,C626685_given_name,C626685_family_name,1995,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6431055,C6431055_given_name,C6431055_family_name,2012,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C648333,C648333_given_name,C648333_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C651039,C651039_given_name,C651039_family_name,2008,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C6512727,C6512727_given_name,C6512727_family_name,2021,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6513219,C6513219_given_name,C6513219_family_name,2015,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6519123,C6519123_given_name,C6519123_family_name,2012,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C652638,C652638_given_name,C652638_family_name,2007,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6695874,C6695874_given_name,C6695874_family_name,2020,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6715062,C6715062_given_name,C6715062_family_name,2022,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6715554,C6715554_given_name,C6715554_family_name,2008,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6830928,C6830928_given_name,C6830928_family_name,2016,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6929451,C6929451_given_name,C6929451_family_name,1997,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C699378,C699378_given_name,C699378_family_name,2002,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C6995994,C6995994_given_name,C6995994_family_name,2022,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C7008048,C7008048_given_name,C7008048_family_name,2017,Black or African American;White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C7125882,C7125882_given_name,C7125882_family_name,2022,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C7271637,C7271637_given_name,C7271637_family_name,2015,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C7332768,C7332768_given_name,C7332768_family_name,2017,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C7348512,C7348512_given_name,C7348512_family_name,2011,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C740214,C740214_given_name,C740214_family_name,1997,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C743535,C743535_given_name,C743535_family_name,2014,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C8013450,C8013450_given_name,C8013450_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C8167569,C8167569_given_name,C8167569_family_name,2016,Black or African American,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C817950,C817950_given_name,C817950_family_name,2012,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C833202,C833202_given_name,C833202_family_name,2011,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C8427960,C8427960_given_name,C8427960_family_name,2022,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C8585400,C8585400_given_name,C8585400_family_name,2024,Asian,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C870348,C870348_given_name,C870348_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C870471,C870471_given_name,C870471_family_name,2007,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C8796099,C8796099_given_name,C8796099_family_name,2026,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Lurie Children's Hospital,C908478,C908478_given_name,C908478_family_name,2015,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C960999,C960999_given_name,C960999_family_name,2000,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C982401,C982401_given_name,C982401_family_name,2014,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C992610,C992610_given_name,C992610_family_name,2008,Asian,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Lurie Children's Hospital,C997653,C997653_given_name,C997653_family_name,2014,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Maria Fareri Children's Hospital at Westchester Medical Center,C7104972,C7104972_given_name,C7104972_family_name,2022,Black or African American,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Maria Fareri Children's Hospital at Westchester Medical Center,C7105095,C7105095_given_name,C7105095_family_name,2014,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Maria Fareri Children's Hospital at Westchester Medical Center,C7817511,C7817511_given_name,C7817511_family_name,2022,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Maria Fareri Children's Hospital at Westchester Medical Center,C7817757,C7817757_given_name,C7817757_family_name,2008,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Maria Fareri Children's Hospital at Westchester Medical Center,C8197950,C8197950_given_name,C8197950_family_name,2022,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Meyer Children's Hospital,C1063458,C1063458_given_name,C1063458_family_name,2004,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C1205277,C1205277_given_name,C1205277_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C2403912,C2403912_given_name,C2403912_family_name,2014,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C2404158,C2404158_given_name,C2404158_family_name,2016,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C2404773,C2404773_given_name,C2404773_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C2405388,C2405388_given_name,C2405388_family_name,2017,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C2704155,C2704155_given_name,C2704155_family_name,2013,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C292371,C292371_given_name,C292371_family_name,2012,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C293601,C293601_given_name,C293601_family_name,2004,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C3253719,C3253719_given_name,C3253719_family_name,2015,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C3256302,C3256302_given_name,C3256302_family_name,2016,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C333453,C333453_given_name,C333453_family_name,2011,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Meyer Children's Hospital,C3471675,C3471675_given_name,C3471675_family_name,2006,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C3473274,C3473274_given_name,C3473274_family_name,2016,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Meyer Children's Hospital,C3473397,C3473397_given_name,C3473397_family_name,2016,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C3571674,C3571674_given_name,C3571674_family_name,2010,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C3572043,C3572043_given_name,C3572043_family_name,2012,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C4065150,C4065150_given_name,C4065150_family_name,2007,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C409221,C409221_given_name,C409221_family_name,2013,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C409836,C409836_given_name,C409836_family_name,2010,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C411066,C411066_given_name,C411066_family_name,2006,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C4417668,C4417668_given_name,C4417668_family_name,2017,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C4418529,C4418529_given_name,C4418529_family_name,2018,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C4420251,C4420251_given_name,C4420251_family_name,2018,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C457560,C457560_given_name,C457560_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C654114,C654114_given_name,C654114_family_name,2015,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Meyer Children's Hospital,C705282,C705282_given_name,C705282_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7366347,C7366347_given_name,C7366347_family_name,2015,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7366593,C7366593_given_name,C7366593_family_name,2014,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7374957,C7374957_given_name,C7374957_family_name,2011,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7376187,C7376187_given_name,C7376187_family_name,2010,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7391931,C7391931_given_name,C7391931_family_name,2022,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7400172,C7400172_given_name,C7400172_family_name,2019,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7401894,C7401894_given_name,C7401894_family_name,2017,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7402140,C7402140_given_name,C7402140_family_name,2022,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Meyer Children's Hospital,C7411980,C7411980_given_name,C7411980_family_name,2008,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7424157,C7424157_given_name,C7424157_family_name,2018,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7456383,C7456383_given_name,C7456383_family_name,2015,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7467576,C7467576_given_name,C7467576_family_name,2019,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C7467822,C7467822_given_name,C7467822_family_name,2022,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Meyer Children's Hospital,C7468191,C7468191_given_name,C7468191_family_name,2016,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C773424,C773424_given_name,C773424_family_name,2009,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C773547,C773547_given_name,C773547_family_name,2013,Asian;White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C773793,C773793_given_name,C773793_family_name,2012,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C823608,C823608_given_name,C823608_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C823731,C823731_given_name,C823731_family_name,2004,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C942672,C942672_given_name,C942672_family_name,2003,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C979203,C979203_given_name,C979203_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Meyer Children's Hospital,C979695,C979695_given_name,C979695_family_name,2008,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+NYU Langone Health,C8827095,C8827095_given_name,C8827095_family_name,2019,Black or African American,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Nicklaus Children's Hospital,C8398932,C8398932_given_name,C8398932_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C4108569,C4108569_given_name,C4108569_family_name,2015,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C4127634,C4127634_given_name,C4127634_family_name,2016,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C4853457,C4853457_given_name,C4853457_family_name,2009,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C4853703,C4853703_given_name,C4853703_family_name,2010,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C5332419,C5332419_given_name,C5332419_family_name,2009,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C5889978,C5889978_given_name,C5889978_family_name,2020,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C6067590,C6067590_given_name,C6067590_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C6316173,C6316173_given_name,C6316173_family_name,2021,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C6316296,C6316296_given_name,C6316296_family_name,2009,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+OHSU Doernbecher Children's Hospital,C7842726,C7842726_given_name,C7842726_family_name,2019,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C3991596,C3991596_given_name,C3991596_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C4274373,C4274373_given_name,C4274373_family_name,2003,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C4274742,C4274742_given_name,C4274742_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C4274865,C4274865_given_name,C4274865_family_name,2006,Asian,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C4274988,C4274988_given_name,C4274988_family_name,2016,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C4719387,C4719387_given_name,C4719387_family_name,2020,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C5259849,C5259849_given_name,C5259849_family_name,2008,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C5259972,C5259972_given_name,C5259972_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C6110148,C6110148_given_name,C6110148_family_name,2021,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C6809526,C6809526_given_name,C6809526_family_name,1984,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Orlando Health Arnold Palmer Hospital,C7638177,C7638177_given_name,C7638177_family_name,2008,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C103074,C103074_given_name,C103074_family_name,1991,White,Not Hispanic or Latino,female,981XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C104058,C104058_given_name,C104058_family_name,2001,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C104427,C104427_given_name,C104427_family_name,2012,White,Hispanic or Latino,female,981XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C1056939,C1056939_given_name,C1056939_family_name,2009,Pacific Islander,Not Hispanic or Latino,male,985XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C1057185,C1057185_given_name,C1057185_family_name,2000,Asian,Not Hispanic or Latino,male,995XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C1057431,C1057431_given_name,C1057431_family_name,2011,White,Not Hispanic or Latino,male,983XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C1070100,C1070100_given_name,C1070100_family_name,2004,White,Not Hispanic or Latino,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C1070223,C1070223_given_name,C1070223_family_name,1999,White,Not Hispanic or Latino,male,985XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C1070346,C1070346_given_name,C1070346_family_name,2016,White,Not Hispanic or Latino,female,988XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C1070838,C1070838_given_name,C1070838_family_name,2012,White,Not Hispanic or Latino,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C1154847,C1154847_given_name,C1154847_family_name,2016,Asian,Not Hispanic or Latino,female,982XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C1155462,C1155462_given_name,C1155462_family_name,2010,Unknown,Unknown,male,983XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C1155585,C1155585_given_name,C1155585_family_name,2006,White,Not Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C1183875,C1183875_given_name,C1183875_family_name,2000,White,Not Hispanic or Latino,male,988XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C123123,C123123_given_name,C123123_family_name,2010,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Seattle Children's Hospital,C1253493,C1253493_given_name,C1253493_family_name,2012,White,Not Hispanic or Latino,male,989XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C1253862,C1253862_given_name,C1253862_family_name,2004,Asian,Not Hispanic or Latino,male,983XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C141696,C141696_given_name,C141696_family_name,2002,White,Not Hispanic or Latino,female,981XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C141942,C141942_given_name,C141942_family_name,2012,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C142557,C142557_given_name,C142557_family_name,2009,White,Not Hispanic or Latino,female,993XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C142803,C142803_given_name,C142803_family_name,2010,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C143172,C143172_given_name,C143172_family_name,2001,White,Not Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C143418,C143418_given_name,C143418_family_name,2006,"Filipino, White",Not Hispanic or Latino,female,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C143541,C143541_given_name,C143541_family_name,2010,White,Not Hispanic or Latino,female,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C147354,C147354_given_name,C147354_family_name,1999,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C147477,C147477_given_name,C147477_family_name,1998,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C147846,C147846_given_name,C147846_family_name,1999,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Seattle Children's Hospital,C147969,C147969_given_name,C147969_family_name,2004,White,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C148215,C148215_given_name,C148215_family_name,2007,White,Not Hispanic or Latino,female,985XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C148584,C148584_given_name,C148584_family_name,2003,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C148707,C148707_given_name,C148707_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Seattle Children's Hospital,C148830,C148830_given_name,C148830_family_name,2009,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C148953,C148953_given_name,C148953_family_name,2008,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C149076,C149076_given_name,C149076_family_name,2008,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C149199,C149199_given_name,C149199_family_name,1998,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C149568,C149568_given_name,C149568_family_name,2010,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Seattle Children's Hospital,C153012,C153012_given_name,C153012_family_name,2001,White,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C153135,C153135_given_name,C153135_family_name,2005,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C153504,C153504_given_name,C153504_family_name,2002,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C154365,C154365_given_name,C154365_family_name,1995,White,Not Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C169248,C169248_given_name,C169248_family_name,1999,Other,Hispanic or Latino,male,993XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C169371,C169371_given_name,C169371_family_name,1996,Asian,Not Hispanic or Latino,female,981XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C169863,C169863_given_name,C169863_family_name,1996,Other/Unavailable/Not Reported;White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C170109,C170109_given_name,C170109_family_name,1987,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C170232,C170232_given_name,C170232_family_name,1995,White,Not Hispanic or Latino,male,981XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C170355,C170355_given_name,C170355_family_name,1993,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C171462,C171462_given_name,C171462_family_name,2000,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C173799,C173799_given_name,C173799_family_name,1991,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C175398,C175398_given_name,C175398_family_name,1998,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C175521,C175521_given_name,C175521_family_name,1988,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C225951,C225951_given_name,C225951_family_name,2008,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C226074,C226074_given_name,C226074_family_name,2012,White,Hispanic or Latino,male,993XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C226443,C226443_given_name,C226443_family_name,2005,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C2332203,C2332203_given_name,C2332203_family_name,2005,American Indian or Alaska Native,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C2333064,C2333064_given_name,C2333064_family_name,2016,White,Not Hispanic or Latino,male,985XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2333310,C2333310_given_name,C2333310_family_name,2016,Other,Not Hispanic or Latino,male,980XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C2355081,C2355081_given_name,C2355081_family_name,2004,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C2358156,C2358156_given_name,C2358156_family_name,2010,White,Not Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2463690,C2463690_given_name,C2463690_family_name,2015,Other,Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2544870,C2544870_given_name,C2544870_family_name,2005,White,Not Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2571192,C2571192_given_name,C2571192_family_name,2016,White,Not Hispanic or Latino,female,985XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C2571315,C2571315_given_name,C2571315_family_name,2013,Other,Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2605755,C2605755_given_name,C2605755_family_name,2017,"Other, White",Hispanic or Latino,female,591XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2696529,C2696529_given_name,C2696529_family_name,2011,American Indian,Not Hispanic or Latino,female,985XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2698251,C2698251_given_name,C2698251_family_name,2015,White,Not Hispanic or Latino,female,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2714610,C2714610_given_name,C2714610_family_name,2010,Unknown,Unknown,female,980XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C2784966,C2784966_given_name,C2784966_family_name,1988,White,Not Hispanic or Latino,female,981XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2852616,C2852616_given_name,C2852616_family_name,2004,White,Not Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C2892714,C2892714_given_name,C2892714_family_name,2017,White,Not Hispanic or Latino,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C298890,C298890_given_name,C298890_family_name,1997,White,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C303810,C303810_given_name,C303810_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C310206,C310206_given_name,C310206_family_name,1999,White,Not Hispanic or Latino,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C3388527,C3388527_given_name,C3388527_family_name,2017,White,Not Hispanic or Latino,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C3544368,C3544368_given_name,C3544368_family_name,2019,White,Not Hispanic or Latino,male,273XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C3544737,C3544737_given_name,C3544737_family_name,2008,Other,Not Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C3631329,C3631329_given_name,C3631329_family_name,2009,Unknown,Hispanic or Latino,male,967XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C3631698,C3631698_given_name,C3631698_family_name,1995,White,Not Hispanic or Latino,male,990XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C371583,C371583_given_name,C371583_family_name,2008,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C3717306,C3717306_given_name,C3717306_family_name,2010,White,Not Hispanic or Latino,male,989XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C3884586,C3884586_given_name,C3884586_family_name,2011,White,Not Hispanic or Latino,male,983XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C4031571,C4031571_given_name,C4031571_family_name,2018,Alaska Native,Not Hispanic or Latino,male,995XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C4031694,C4031694_given_name,C4031694_family_name,2012,Black or African American,Hispanic or Latino,male,981XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C4033539,C4033539_given_name,C4033539_family_name,2019,White,Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C4034523,C4034523_given_name,C4034523_family_name,2017,White,Not Hispanic or Latino,male,757XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C4034646,C4034646_given_name,C4034646_family_name,2016,White,Not Hispanic or Latino,female,997XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C4103649,C4103649_given_name,C4103649_family_name,2016,White,Not Hispanic or Latino,male,996XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C4104018,C4104018_given_name,C4104018_family_name,2020,White,Not Hispanic or Latino,male,960XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C4344483,C4344483_given_name,C4344483_family_name,2014,White,Not Hispanic or Latino,male,834XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C5254437,C5254437_given_name,C5254437_family_name,2019,White,Not Hispanic or Latino,female,980XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C5492565,C5492565_given_name,C5492565_family_name,2010,Asian,Unknown,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C558912,C558912_given_name,C558912_family_name,2012,Other,Not Hispanic or Latino,female,984XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C5623560,C5623560_given_name,C5623560_family_name,2018,Alaska Native,Not Hispanic or Latino,male,981XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C5624052,C5624052_given_name,C5624052_family_name,2023,White,Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C602700,C602700_given_name,C602700_family_name,2012,Mexican/Mexican American,Hispanic or Latino,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C603069,C603069_given_name,C603069_family_name,2015,White,Not Hispanic or Latino,male,985XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C6083703,C6083703_given_name,C6083703_family_name,2015,Moroccan,Not Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C622257,C622257_given_name,C622257_family_name,2011,White,Not Hispanic or Latino,female,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C647349,C647349_given_name,C647349_family_name,2013,White,Not Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C676746,C676746_given_name,C676746_family_name,1998,White,Not Hispanic or Latino,male,988XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C677115,C677115_given_name,C677115_family_name,2006,American Indian or Alaska Native,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C6958725,C6958725_given_name,C6958725_family_name,2021,White,Unknown,male,983XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C700977,C700977_given_name,C700977_family_name,1995,White,Not Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C701223,C701223_given_name,C701223_family_name,2007,White,Not Hispanic or Latino,female,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C701469,C701469_given_name,C701469_family_name,2014,White,Not Hispanic or Latino,female,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C7093902,C7093902_given_name,C7093902_family_name,2022,"Alaska Native, Mexican/Mexican American, White",Not Hispanic or Latino,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C724962,C724962_given_name,C724962_family_name,2004,Other,Hispanic or Latino,male,782XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C725331,C725331_given_name,C725331_family_name,2002,Other,Hispanic or Latino,male,981XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C7302756,C7302756_given_name,C7302756_family_name,2020,Unknown,Not Hispanic or Latino,female,985XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C7457490,C7457490_given_name,C7457490_family_name,2021,White,Not Hispanic or Latino,female,595XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C758541,C758541_given_name,C758541_family_name,2007,Asian,Not Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C7611978,C7611978_given_name,C7611978_family_name,2021,Unknown,Unknown,female,985XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C7617267,C7617267_given_name,C7617267_family_name,2019,White,Not Hispanic or Latino,male,972XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C782649,C782649_given_name,C782649_family_name,2005,White,Not Hispanic or Latino,female,981XX,Atypical teratoid/rhabdoid tumor,radiant
+Seattle Children's Hospital,C782895,C782895_given_name,C782895_family_name,2011,White,Not Hispanic or Latino,male,995XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C784371,C784371_given_name,C784371_family_name,1993,White,Not Hispanic or Latino,female,838XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C797655,C797655_given_name,C797655_family_name,2010,Other,Hispanic or Latino,female,989XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C8183559,C8183559_given_name,C8183559_family_name,2016,White,Not Hispanic or Latino,male,982XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C836769,C836769_given_name,C836769_family_name,2004,Other,Hispanic or Latino,female,989XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C837630,C837630_given_name,C837630_family_name,2016,White,Not Hispanic or Latino,female,985XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C8379990,C8379990_given_name,C8379990_family_name,2012,White,Not Hispanic or Latino,male,993XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C8405943,C8405943_given_name,C8405943_family_name,2016,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C8419104,C8419104_given_name,C8419104_family_name,2023,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Seattle Children's Hospital,C8432019,C8432019_given_name,C8432019_family_name,2019,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C8432142,C8432142_given_name,C8432142_family_name,2023,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C849561,C849561_given_name,C849561_family_name,2014,White,Not Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C8735460,C8735460_given_name,C8735460_family_name,2014,Asian Indian,Not Hispanic or Latino,female,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C912414,C912414_given_name,C912414_family_name,2009,"White, Other",Not Hispanic or Latino,male,985XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C912660,C912660_given_name,C912660_family_name,2009,Other,Hispanic or Latino,male,988XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C923607,C923607_given_name,C923607_family_name,2013,Other,Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C948330,C948330_given_name,C948330_family_name,2001,White,Not Hispanic or Latino,male,980XX,Medulloblastoma,radiant
+Seattle Children's Hospital,C991257,C991257_given_name,C991257_family_name,2007,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Seattle Children's Hospital,C99507,C99507_given_name,C99507_family_name,2008,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C1014381,C1014381_given_name,C1014381_family_name,2004,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C2337369,C2337369_given_name,C2337369_family_name,2014,Asian,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C2488782,C2488782_given_name,C2488782_family_name,2012,White,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C2602680,C2602680_given_name,C2602680_family_name,2014,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C2660736,C2660736_given_name,C2660736_family_name,2011,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C2684844,C2684844_given_name,C2684844_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C2898495,C2898495_given_name,C2898495_family_name,2012,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C3224691,C3224691_given_name,C3224691_family_name,2003,Native Hawaiian or Other Pacific Islander,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C3224814,C3224814_given_name,C3224814_family_name,2015,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C3518784,C3518784_given_name,C3518784_family_name,2014,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C3522105,C3522105_given_name,C3522105_family_name,2002,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C3638094,C3638094_given_name,C3638094_family_name,2020,Asian,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C3638340,C3638340_given_name,C3638340_family_name,2007,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C3638586,C3638586_given_name,C3638586_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C3841167,C3841167_given_name,C3841167_family_name,2013,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C4084953,C4084953_given_name,C4084953_family_name,2019,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C4085199,C4085199_given_name,C4085199_family_name,2017,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C4097622,C4097622_given_name,C4097622_family_name,2021,White,Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C4470927,C4470927_given_name,C4470927_family_name,2019,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C4472157,C4472157_given_name,C4472157_family_name,2017,Other/Unavailable/Not Reported,Unavailable,not available,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C6344955,C6344955_given_name,C6344955_family_name,2013,Asian;Other/Unavailable/Not Reported;White,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C6345324,C6345324_given_name,C6345324_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C6345447,C6345447_given_name,C6345447_family_name,2023,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C6889968,C6889968_given_name,C6889968_family_name,2018,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C7376433,C7376433_given_name,C7376433_family_name,2020,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C7862775,C7862775_given_name,C7862775_family_name,2014,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Stanford Lucile Packard Children's Hospital,C8205084,C8205084_given_name,C8205084_family_name,2019,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C1003065,C1003065_given_name,C1003065_family_name,2005,White,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C1003188,C1003188_given_name,C1003188_family_name,2002,White,Not Hispanic or Latino,female,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C101721,C101721_given_name,C101721_family_name,2009,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C1026804,C1026804_given_name,C1026804_family_name,2003,Other,Hispanic or Latino,male,086XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C1031847,C1031847_given_name,C1031847_family_name,2013,White,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C1032093,C1032093_given_name,C1032093_family_name,2015,White,Not Hispanic or Latino,male,087XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C1036644,C1036644_given_name,C1036644_family_name,2015,White,Not Hispanic or Latino,female,077XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C1054725,C1054725_given_name,C1054725_family_name,2008,White,Not Hispanic or Latino,female,077XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C1060629,C1060629_given_name,C1060629_family_name,2005,Black or African American,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C1100235,C1100235_given_name,C1100235_family_name,2016,White,Not Hispanic or Latino,male,159XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C115743,C115743_given_name,C115743_family_name,2013,White,Not Hispanic or Latino,female,193XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C121893,C121893_given_name,C121893_family_name,2012,Black or African American,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C1223973,C1223973_given_name,C1223973_family_name,2009,White,Not Hispanic or Latino,male,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C1232952,C1232952_given_name,C1232952_family_name,2009,"Other, White",Not Hispanic or Latino,male,111XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C1248204,C1248204_given_name,C1248204_family_name,2012,White,Not Hispanic or Latino,male,187XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C1277601,C1277601_given_name,C1277601_family_name,2016,White,Unknown,female,088XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C136653,C136653_given_name,C136653_family_name,2009,White,Not Hispanic or Latino,male,083XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C140712,C140712_given_name,C140712_family_name,2010,White,Not Hispanic or Latino,female,176XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C146247,C146247_given_name,C146247_family_name,2011,White,Not Hispanic or Latino,male,085XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C15252,C15252_given_name,C15252_family_name,2009,White,Not Hispanic or Latino,male,195XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C16113,C16113_given_name,C16113_family_name,1995,Other,Not Hispanic or Latino,female,183XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C17466,C17466_given_name,C17466_family_name,1995,White,Not Hispanic or Latino,female,473XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C18081,C18081_given_name,C18081_family_name,2009,White,Not Hispanic or Latino,female,175XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C18819,C18819_given_name,C18819_family_name,2008,Other,Unknown,male,181XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C196554,C196554_given_name,C196554_family_name,2013,Other,Not Hispanic or Latino,male,196XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C20049,C20049_given_name,C20049_family_name,2003,White,Not Hispanic or Latino,male,080XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C20910,C20910_given_name,C20910_family_name,2003,Black or African American,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C21402,C21402_given_name,C21402_family_name,2005,White,Not Hispanic or Latino,female,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C216603,C216603_given_name,C216603_family_name,1992,White,Not Hispanic or Latino,female,704XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C217095,C217095_given_name,C217095_family_name,2006,White,Not Hispanic or Latino,female,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C21894,C21894_given_name,C21894_family_name,2005,Black or African American,Not Hispanic or Latino,male,180XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C22263,C22263_given_name,C22263_family_name,1999,White,Not Hispanic or Latino,male,082XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C227058,C227058_given_name,C227058_family_name,2013,Other,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C22755,C22755_given_name,C22755_family_name,2000,White,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C22878,C22878_given_name,C22878_family_name,1995,Black or African American,Not Hispanic or Latino,female,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C230994,C230994_given_name,C230994_family_name,2006,White,Not Hispanic or Latino,male,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2313753,C2313753_given_name,C2313753_family_name,2016,Unknown,Not Hispanic or Latino,male,750XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2318673,C2318673_given_name,C2318673_family_name,2014,White,Not Hispanic or Latino,female,077XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2322117,C2322117_given_name,C2322117_family_name,2018,White,Not Hispanic or Latino,male,190XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C2338845,C2338845_given_name,C2338845_family_name,2006,White,Hispanic or Latino,female,180XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2346471,C2346471_given_name,C2346471_family_name,2007,Other,Not Hispanic or Latino,male,200XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2381034,C2381034_given_name,C2381034_family_name,2000,White,Not Hispanic or Latino,female,193XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C24108,C24108_given_name,C24108_family_name,2007,White,Not Hispanic or Latino,male,183XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2442411,C2442411_given_name,C2442411_family_name,2015,Black or African American,Not Hispanic or Latino,female,191XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C245754,C245754_given_name,C245754_family_name,1992,Asian,Not Hispanic or Latino,female,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2479926,C2479926_given_name,C2479926_family_name,2010,White,Not Hispanic or Latino,female,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2501205,C2501205_given_name,C2501205_family_name,2014,Unknown,Not Hispanic or Latino,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C25092,C25092_given_name,C25092_family_name,2006,White,Not Hispanic or Latino,female,196XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2536506,C2536506_given_name,C2536506_family_name,2017,Unknown,Unknown,female,182XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2536998,C2536998_given_name,C2536998_family_name,2014,Other,Not Hispanic or Latino,female,191XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C2554956,C2554956_given_name,C2554956_family_name,1997,White,Not Hispanic or Latino,male,080XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C2556555,C2556555_given_name,C2556555_family_name,2004,White,Not Hispanic or Latino,female,184XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C25830,C25830_given_name,C25830_family_name,1993,White,Not Hispanic or Latino,female,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2595915,C2595915_given_name,C2595915_family_name,2012,White,Not Hispanic or Latino,male,193XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2646837,C2646837_given_name,C2646837_family_name,2011,Other,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2658645,C2658645_given_name,C2658645_family_name,2003,White,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C2698005,C2698005_given_name,C2698005_family_name,2018,White,Not Hispanic or Latino,female,190XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C270354,C270354_given_name,C270354_family_name,2013,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C270723,C270723_given_name,C270723_family_name,2005,White,Not Hispanic or Latino,male,212XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C27552,C27552_given_name,C27552_family_name,1997,White,Not Hispanic or Latino,female,900XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2774019,C2774019_given_name,C2774019_family_name,2014,Other,Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2786688,C2786688_given_name,C2786688_family_name,2014,White,Not Hispanic or Latino,female,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2848188,C2848188_given_name,C2848188_family_name,2019,White,Not Hispanic or Latino,female,087XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C28905,C28905_given_name,C28905_family_name,2000,White,Not Hispanic or Latino,male,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2896773,C2896773_given_name,C2896773_family_name,2008,White,Not Hispanic or Latino,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2897019,C2897019_given_name,C2897019_family_name,2015,White,Not Hispanic or Latino,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2897142,C2897142_given_name,C2897142_family_name,2003,Other,Hispanic or Latino,male,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C29028,C29028_given_name,C29028_family_name,1998,White,Not Hispanic or Latino,male,193XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C2981889,C2981889_given_name,C2981889_family_name,2006,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C3003906,C3003906_given_name,C3003906_family_name,2014,Black or African American,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C30135,C30135_given_name,C30135_family_name,2008,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C308730,C308730_given_name,C308730_family_name,2002,Black or African American,Not Hispanic or Latino,male,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C312912,C312912_given_name,C312912_family_name,1995,White,Not Hispanic or Latino,male,083XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3169587,C3169587_given_name,C3169587_family_name,2012,White,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3198492,C3198492_given_name,C3198492_family_name,2010,White,Not Hispanic or Latino,female,078XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C33948,C33948_given_name,C33948_family_name,1984,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3406239,C3406239_given_name,C3406239_family_name,2018,White,Not Hispanic or Latino,female,185XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3408822,C3408822_given_name,C3408822_family_name,2016,White,Not Hispanic or Latino,male,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3409560,C3409560_given_name,C3409560_family_name,2012,Other,Not Hispanic or Latino,female,196XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3418416,C3418416_given_name,C3418416_family_name,2019,White,Not Hispanic or Latino,male,172XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3422106,C3422106_given_name,C3422106_family_name,2020,White,Not Hispanic or Latino,male,189XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C3474996,C3474996_given_name,C3474996_family_name,1995,Other,Not Hispanic or Latino,male,193XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3519645,C3519645_given_name,C3519645_family_name,2018,White,Not Hispanic or Latino,male,195XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3552978,C3552978_given_name,C3552978_family_name,2010,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C3559497,C3559497_given_name,C3559497_family_name,2017,White,Not Hispanic or Latino,male,180XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C3651501,C3651501_given_name,C3651501_family_name,2020,Other,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3665154,C3665154_given_name,C3665154_family_name,2003,Black or African American,Not Hispanic or Latino,female,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3665400,C3665400_given_name,C3665400_family_name,2017,White,Not Hispanic or Latino,male,180XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C374412,C374412_given_name,C374412_family_name,2014,White,Not Hispanic or Latino,female,194XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C3755559,C3755559_given_name,C3755559_family_name,2019,"Asian, White",Not Hispanic or Latino,female,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3755928,C3755928_given_name,C3755928_family_name,2006,Unknown,Not Hispanic or Latino,female,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3767367,C3767367_given_name,C3767367_family_name,2011,White,Not Hispanic or Latino,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C377979,C377979_given_name,C377979_family_name,1989,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3816813,C3816813_given_name,C3816813_family_name,2020,White,Not Hispanic or Latino,male,087XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C3859863,C3859863_given_name,C3859863_family_name,2010,Unknown,Unknown,male,083XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3860232,C3860232_given_name,C3860232_family_name,2018,White,Not Hispanic or Latino,male,175XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3943503,C3943503_given_name,C3943503_family_name,2019,Other,Not Hispanic or Latino,female,078XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C396306,C396306_given_name,C396306_family_name,2013,Other,Not Hispanic or Latino,male,156XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C396552,C396552_given_name,C396552_family_name,2013,White,Unknown,female,071XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3971178,C3971178_given_name,C3971178_family_name,2012,White,Not Hispanic or Latino,male,085XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C39729,C39729_given_name,C39729_family_name,2009,White,Not Hispanic or Latino,female,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3979173,C3979173_given_name,C3979173_family_name,2006,Other,Not Hispanic or Latino,female,111XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C3980157,C3980157_given_name,C3980157_family_name,2008,Other,Hispanic or Latino,male,178XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C40098,C40098_given_name,C40098_family_name,2012,Other,Unknown,female,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4021731,C4021731_given_name,C4021731_family_name,2020,White,Unknown,female,185XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4049406,C4049406_given_name,C4049406_family_name,2014,Unknown,Not Hispanic or Latino,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4063305,C4063305_given_name,C4063305_family_name,1999,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C406761,C406761_given_name,C406761_family_name,2012,Other,Not Hispanic or Latino,male,336XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C40713,C40713_given_name,C40713_family_name,2002,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C4082862,C4082862_given_name,C4082862_family_name,2000,White,Not Hispanic or Latino,male,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4093563,C4093563_given_name,C4093563_family_name,2019,Other,Unknown,male,077XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C41328,C41328_given_name,C41328_family_name,1976,White,Not Hispanic or Latino,male,196XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4174251,C4174251_given_name,C4174251_family_name,2010,Other,Hispanic or Latino,female,080XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C4190733,C4190733_given_name,C4190733_family_name,2018,"Other, White",Not Hispanic or Latino,female,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4190856,C4190856_given_name,C4190856_family_name,2004,White,Not Hispanic or Latino,female,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C419553,C419553_given_name,C419553_family_name,2001,White,Not Hispanic or Latino,male,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4261089,C4261089_given_name,C4261089_family_name,2010,Black or African American,Not Hispanic or Latino,female,283XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C4316685,C4316685_given_name,C4316685_family_name,2011,Unknown,Not Hispanic or Latino,male,081XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C432222,C432222_given_name,C432222_family_name,2009,White,Unknown,male,199XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4333905,C4333905_given_name,C4333905_family_name,2018,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4345713,C4345713_given_name,C4345713_family_name,2010,White,Not Hispanic or Latino,male,184XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C44403,C44403_given_name,C44403_family_name,2002,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C4463301,C4463301_given_name,C4463301_family_name,2017,White,Not Hispanic or Latino,female,078XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4463916,C4463916_given_name,C4463916_family_name,2021,White,Not Hispanic or Latino,male,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4483473,C4483473_given_name,C4483473_family_name,2020,White,Not Hispanic or Latino,male,170XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C45141,C45141_given_name,C45141_family_name,1992,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C45879,C45879_given_name,C45879_family_name,2007,White,Not Hispanic or Latino,female,077XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C466293,C466293_given_name,C466293_family_name,2014,White,Not Hispanic or Latino,male,080XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C48216,C48216_given_name,C48216_family_name,2003,White,Not Hispanic or Latino,female,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C49077,C49077_given_name,C49077_family_name,1991,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C4964157,C4964157_given_name,C4964157_family_name,2019,White,Not Hispanic or Latino,male,180XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C50184,C50184_given_name,C50184_family_name,2000,White,Not Hispanic or Latino,male,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C50799,C50799_given_name,C50799_family_name,1999,White,Not Hispanic or Latino,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C5136234,C5136234_given_name,C5136234_family_name,2008,White,Not Hispanic or Latino,male,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C5136849,C5136849_given_name,C5136849_family_name,2004,White,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C5137218,C5137218_given_name,C5137218_family_name,2019,White,Not Hispanic or Latino,female,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C528285,C528285_given_name,C528285_family_name,1994,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C52890,C52890_given_name,C52890_family_name,1996,White,Not Hispanic or Latino,male,085XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C528900,C528900_given_name,C528900_family_name,2005,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C529515,C529515_given_name,C529515_family_name,2003,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C531483,C531483_given_name,C531483_family_name,2004,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C533082,C533082_given_name,C533082_family_name,2005,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C533451,C533451_given_name,C533451_family_name,2003,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C53628,C53628_given_name,C53628_family_name,1998,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C537141,C537141_given_name,C537141_family_name,1992,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C540462,C540462_given_name,C540462_family_name,2009,White,Not Hispanic or Latino,female,170XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C540585,C540585_given_name,C540585_family_name,1997,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C542061,C542061_given_name,C542061_family_name,1970,Other/Unavailable/Not Reported,Unavailable,not reported,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C542307,C542307_given_name,C542307_family_name,1998,White,Not Hispanic or Latino,female,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C543045,C543045_given_name,C543045_family_name,1991,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C54366,C54366_given_name,C54366_family_name,1985,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C543906,C543906_given_name,C543906_family_name,1984,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C547965,C547965_given_name,C547965_family_name,1997,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C548457,C548457_given_name,C548457_family_name,1989,Other/Unavailable/Not Reported,Unavailable,not available,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C5489736,C5489736_given_name,C5489736_family_name,2023,White,Not Hispanic or Latino,female,180XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C5490105,C5490105_given_name,C5490105_family_name,2014,White,Not Hispanic or Latino,male,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C5490228,C5490228_given_name,C5490228_family_name,2014,"White, Other",Not Hispanic or Latino,female,083XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C549441,C549441_given_name,C549441_family_name,1992,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C551040,C551040_given_name,C551040_family_name,1985,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C552762,C552762_given_name,C552762_family_name,1994,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C55350,C55350_given_name,C55350_family_name,1999,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C553500,C553500_given_name,C553500_family_name,1997,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C554607,C554607_given_name,C554607_family_name,1996,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C557559,C557559_given_name,C557559_family_name,1979,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C558051,C558051_given_name,C558051_family_name,1983,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C558420,C558420_given_name,C558420_family_name,1987,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C55965,C55965_given_name,C55965_family_name,1994,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C56088,C56088_given_name,C56088_family_name,1995,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C56211,C56211_given_name,C56211_family_name,1996,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C5623068,C5623068_given_name,C5623068_family_name,2021,White,Not Hispanic or Latino,male,168XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C5633277,C5633277_given_name,C5633277_family_name,2014,White,Not Hispanic or Latino,female,175XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C563340,C563340_given_name,C563340_family_name,1999,Other/Unavailable/Not Reported,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C563586,C563586_given_name,C563586_family_name,1998,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C563709,C563709_given_name,C563709_family_name,1983,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C57564,C57564_given_name,C57564_family_name,2001,White,Not Hispanic or Latino,female,182XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C5801049,C5801049_given_name,C5801049_family_name,2021,White,Not Hispanic or Latino,male,078XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C5801172,C5801172_given_name,C5801172_family_name,2020,White,Not Hispanic or Latino,female,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C584619,C584619_given_name,C584619_family_name,2009,White,Not Hispanic or Latino,male,181XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C58548,C58548_given_name,C58548_family_name,2000,White,Not Hispanic or Latino,female,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C58917,C58917_given_name,C58917_family_name,2008,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C5964147,C5964147_given_name,C5964147_family_name,2017,Unknown,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C59655,C59655_given_name,C59655_family_name,2004,Unknown,Not Hispanic or Latino,female,190XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C6002523,C6002523_given_name,C6002523_family_name,2017,White,Not Hispanic or Latino,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6009411,C6009411_given_name,C6009411_family_name,2017,White,Not Hispanic or Latino,female,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C607743,C607743_given_name,C607743_family_name,2013,White,Not Hispanic or Latino,male,086XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C6109902,C6109902_given_name,C6109902_family_name,2021,Unknown,Not Hispanic or Latino,female,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6176814,C6176814_given_name,C6176814_family_name,2016,White,Not Hispanic or Latino,male,193XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6207441,C6207441_given_name,C6207441_family_name,2016,White,Unknown,female,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C623979,C623979_given_name,C623979_family_name,2001,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C625086,C625086_given_name,C625086_family_name,2006,White,Not Hispanic or Latino,female,180XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6254181,C6254181_given_name,C6254181_family_name,2013,White,Not Hispanic or Latino,female,342XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C626070,C626070_given_name,C626070_family_name,2015,Other,Hispanic or Latino,female,085XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C626193,C626193_given_name,C626193_family_name,2015,Black or African American,Not Hispanic or Latino,female,191XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C6476073,C6476073_given_name,C6476073_family_name,2011,Unknown,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6538311,C6538311_given_name,C6538311_family_name,2018,White,Not Hispanic or Latino,male,190XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C663708,C663708_given_name,C663708_family_name,2000,White,Not Hispanic or Latino,female,081XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C6735357,C6735357_given_name,C6735357_family_name,2010,Other,Not Hispanic or Latino,male,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C67527,C67527_given_name,C67527_family_name,2002,White,Not Hispanic or Latino,female,199XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6769797,C6769797_given_name,C6769797_family_name,2013,Unknown,Not Hispanic or Latino,male,070XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C68265,C68265_given_name,C68265_family_name,2006,Unknown,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6830682,C6830682_given_name,C6830682_family_name,2014,White,Not Hispanic or Latino,male,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6854052,C6854052_given_name,C6854052_family_name,2022,Other,Unknown,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C6908049,C6908049_given_name,C6908049_family_name,2021,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C692613,C692613_given_name,C692613_family_name,2005,White,Not Hispanic or Latino,female,083XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C698517,C698517_given_name,C698517_family_name,2012,White,Not Hispanic or Latino,female,180XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C698640,C698640_given_name,C698640_family_name,2015,Other,Hispanic or Latino,male,194XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C701838,C701838_given_name,C701838_family_name,2006,White,Not Hispanic or Latino,male,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C7041012,C7041012_given_name,C7041012_family_name,2014,White,Not Hispanic or Latino,female,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C7218378,C7218378_given_name,C7218378_family_name,2006,Other,Unknown,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C72570,C72570_given_name,C72570_family_name,2003,Other,Not Hispanic or Latino,female,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C7351464,C7351464_given_name,C7351464_family_name,2018,Unknown,Unknown,male,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C7351587,C7351587_given_name,C7351587_family_name,2023,White,Not Hispanic or Latino,male,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C740337,C740337_given_name,C740337_family_name,2004,Black or African American,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C741198,C741198_given_name,C741198_family_name,2003,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C7483812,C7483812_given_name,C7483812_family_name,2018,White,Not Hispanic or Latino,female,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C752883,C752883_given_name,C752883_family_name,1976,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C75399,C75399_given_name,C75399_family_name,1997,Other,Hispanic or Latino,male,077XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C7542975,C7542975_given_name,C7542975_family_name,2017,Unknown,Not Hispanic or Latino,female,082XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C760017,C760017_given_name,C760017_family_name,2016,White,Not Hispanic or Latino,female,088XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C76875,C76875_given_name,C76875_family_name,2003,Unknown,Not Hispanic or Latino,male,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C7726245,C7726245_given_name,C7726245_family_name,2015,White,Not Hispanic or Latino,male,193XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C7785162,C7785162_given_name,C7785162_family_name,2022,White,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C794457,C794457_given_name,C794457_family_name,2009,White,Not Hispanic or Latino,male,189XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C798270,C798270_given_name,C798270_family_name,2011,White,Not Hispanic or Latino,male,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C8013204,C8013204_given_name,C8013204_family_name,2013,Other,Unknown,male,088XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C8104470,C8104470_given_name,C8104470_family_name,2013,White,Not Hispanic or Latino,male,194XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C8146167,C8146167_given_name,C8146167_family_name,2021,Unknown,Not Hispanic or Latino,male,179XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C81918,C81918_given_name,C81918_family_name,2010,White,Not Hispanic or Latino,male,183XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C82164,C82164_given_name,C82164_family_name,2008,Unknown,Not Hispanic or Latino,female,194XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C8219967,C8219967_given_name,C8219967_family_name,2021,Unknown,Not Hispanic or Latino,male,085XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C83517,C83517_given_name,C83517_family_name,2001,Other,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C8361663,C8361663_given_name,C8361663_family_name,2001,White,Not Hispanic or Latino,male,193XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C8474331,C8474331_given_name,C8474331_family_name,2021,White,Not Hispanic or Latino,female,105XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C84747,C84747_given_name,C84747_family_name,1993,White,Not Hispanic or Latino,male,190XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C850914,C850914_given_name,C850914_family_name,1976,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C851283,C851283_given_name,C851283_family_name,1996,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C851406,C851406_given_name,C851406_family_name,1986,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C8516766,C8516766_given_name,C8516766_family_name,2014,Unknown,Unknown,male,181XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C854112,C854112_given_name,C854112_family_name,2006,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+The Children's Hospital of Philadelphia,C85854,C85854_given_name,C85854_family_name,2011,White,Not Hispanic or Latino,male,180XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C8607048,C8607048_given_name,C8607048_family_name,2018,Unknown,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C8659569,C8659569_given_name,C8659569_family_name,2021,White,Unknown,female,080XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C8660430,C8660430_given_name,C8660430_family_name,2019,White,Not Hispanic or Latino,male,080XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C876375,C876375_given_name,C876375_family_name,2016,White,Not Hispanic or Latino,female,196XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C8776050,C8776050_given_name,C8776050_family_name,2021,Unknown,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C880803,C880803_given_name,C880803_family_name,2016,Unknown,Not Hispanic or Latino,female,190XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C8882691,C8882691_given_name,C8882691_family_name,2022,Unknown,Not Hispanic or Latino,male,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C914505,C914505_given_name,C914505_family_name,2005,White,Not Hispanic or Latino,male,088XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C964566,C964566_given_name,C964566_family_name,2009,Unknown,Not Hispanic or Latino,male,081XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C972438,C972438_given_name,C972438_family_name,2011,Black or African American,Not Hispanic or Latino,female,191XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C973545,C973545_given_name,C973545_family_name,2011,White,Not Hispanic or Latino,male,087XX,Medulloblastoma,radiant
+The Children's Hospital of Philadelphia,C974652,C974652_given_name,C974652_family_name,2008,Black or African American,Not Hispanic or Latino,female,071XX,Atypical teratoid/rhabdoid tumor,radiant
+The Children's Hospital of Philadelphia,C99630,C99630_given_name,C99630_family_name,1999,White,Not Hispanic or Latino,male,087XX,Medulloblastoma,radiant
+UAB,C3199845,C3199845_given_name,C3199845_family_name,2013,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+UAB,C3203658,C3203658_given_name,C3203658_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+UAB,C3203904,C3203904_given_name,C3203904_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+UAB,C3430101,C3430101_given_name,C3430101_family_name,2005,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+UAB,C4161705,C4161705_given_name,C4161705_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+UAB,C4729473,C4729473_given_name,C4729473_family_name,2018,Black or African American;White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+UAB,C7026006,C7026006_given_name,C7026006_family_name,2018,Unknown,Not Hispanic or Latino,male,082XX,Atypical teratoid/rhabdoid tumor,radiant
+UCSF Benioff Children's Hospital,C1010445,C1010445_given_name,C1010445_family_name,2016,Other,Hispanic or Latino,female,945XX,Atypical teratoid/rhabdoid tumor,radiant
+UCSF Benioff Children's Hospital,C1203063,C1203063_given_name,C1203063_family_name,2001,Other,Hispanic or Latino,male,954XX,Medulloblastoma,radiant
+UCSF Benioff Children's Hospital,C2457171,C2457171_given_name,C2457171_family_name,1989,White,Not Hispanic or Latino,female,945XX,Atypical teratoid/rhabdoid tumor,radiant
+UCSF Benioff Children's Hospital,C2461968,C2461968_given_name,C2461968_family_name,2006,White,Not Hispanic or Latino,male,940XX,Atypical teratoid/rhabdoid tumor,radiant
+UCSF Benioff Children's Hospital,C2509200,C2509200_given_name,C2509200_family_name,1984,White,Not Hispanic or Latino,male,945XX,Medulloblastoma,radiant
+UCSF Benioff Children's Hospital,C2550528,C2550528_given_name,C2550528_family_name,2012,"Native American or Alaska Native, White",Hispanic or Latino,male,949XX,Medulloblastoma,radiant
+UCSF Benioff Children's Hospital,C2552619,C2552619_given_name,C2552619_family_name,2003,White,Not Hispanic or Latino,female,934XX,Medulloblastoma,radiant
+UCSF Benioff Children's Hospital,C4154940,C4154940_given_name,C4154940_family_name,2015,Asian,Hispanic or Latino,male,932XX,Medulloblastoma,radiant
+UCSF Benioff Children's Hospital,C4548909,C4548909_given_name,C4548909_family_name,2005,White,Hispanic or Latino,male,945XX,Medulloblastoma,radiant
+UCSF Benioff Children's Hospital,C7596111,C7596111_given_name,C7596111_family_name,2021,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+UCSF Benioff Children's Hospital,C7768188,C7768188_given_name,C7768188_family_name,2022,White,Not Hispanic or Latino,male,894XX,Atypical teratoid/rhabdoid tumor,radiant
+UCSF Benioff Children's Hospital,C7769295,C7769295_given_name,C7769295_family_name,2017,White,Not Hispanic or Latino,female,954XX,Medulloblastoma,radiant
+UCSF Benioff Children's Hospital,C8241861,C8241861_given_name,C8241861_family_name,2007,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+UCSF Benioff Children's Hospital,C8257113,C8257113_given_name,C8257113_family_name,2012,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+UCSF Benioff Children's Hospital,C886092,C886092_given_name,C886092_family_name,2016,White,Not Hispanic or Latino,female,949XX,Atypical teratoid/rhabdoid tumor,radiant
+UCSF Benioff Children's Hospital,C921639,C921639_given_name,C921639_family_name,2012,Black or African American,Not Hispanic or Latino,female,209XX,Atypical teratoid/rhabdoid tumor,radiant
+UNC Lineberger Comprehensive Cancer Center,C7863513,C7863513_given_name,C7863513_family_name,2023,American Indian or Alaska Native,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Iowa,C7223175,C7223175_given_name,C7223175_family_name,2011,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Iowa,C7223913,C7223913_given_name,C7223913_family_name,2021,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Iowa,C7224036,C7224036_given_name,C7224036_family_name,1998,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Iowa,C7415055,C7415055_given_name,C7415055_family_name,2004,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Iowa,C7532766,C7532766_given_name,C7532766_family_name,2010,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Iowa,C7705950,C7705950_given_name,C7705950_family_name,2013,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Iowa,C7754535,C7754535_given_name,C7754535_family_name,2020,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Iowa,C8028456,C8028456_given_name,C8028456_family_name,2025,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4105125,C4105125_given_name,C4105125_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4105248,C4105248_given_name,C4105248_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4105371,C4105371_given_name,C4105371_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4105494,C4105494_given_name,C4105494_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4105617,C4105617_given_name,C4105617_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4105863,C4105863_given_name,C4105863_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4106970,C4106970_given_name,C4106970_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4107216,C4107216_given_name,C4107216_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4107708,C4107708_given_name,C4107708_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4108077,C4108077_given_name,C4108077_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4110045,C4110045_given_name,C4110045_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4113366,C4113366_given_name,C4113366_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4114350,C4114350_given_name,C4114350_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4114965,C4114965_given_name,C4114965_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4115580,C4115580_given_name,C4115580_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4120869,C4120869_given_name,C4120869_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4122099,C4122099_given_name,C4122099_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4122345,C4122345_given_name,C4122345_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4122468,C4122468_given_name,C4122468_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4122591,C4122591_given_name,C4122591_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4123821,C4123821_given_name,C4123821_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4124805,C4124805_given_name,C4124805_family_name,1900,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Michigan C.S. Mott Children's Hospital,C4124928,C4124928_given_name,C4124928_family_name,1900,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C1010076,C1010076_given_name,C1010076_family_name,2015,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C1064319,C1064319_given_name,C1064319_family_name,2008,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C107994,C107994_given_name,C107994_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C1168131,C1168131_given_name,C1168131_family_name,2005,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C122262,C122262_given_name,C122262_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C1262718,C1262718_given_name,C1262718_family_name,2009,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C129273,C129273_given_name,C129273_family_name,1998,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C129519,C129519_given_name,C129519_family_name,2001,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C129642,C129642_given_name,C129642_family_name,2005,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C129765,C129765_given_name,C129765_family_name,1989,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C129888,C129888_given_name,C129888_family_name,1985,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C130011,C130011_given_name,C130011_family_name,1998,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C130134,C130134_given_name,C130134_family_name,2000,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C130257,C130257_given_name,C130257_family_name,1996,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C130380,C130380_given_name,C130380_family_name,1984,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C138006,C138006_given_name,C138006_family_name,2002,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C2358033,C2358033_given_name,C2358033_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Pittsburgh,C2541918,C2541918_given_name,C2541918_family_name,2002,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C2567502,C2567502_given_name,C2567502_family_name,2019,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C2666394,C2666394_given_name,C2666394_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C3273768,C3273768_given_name,C3273768_family_name,2008,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C3279303,C3279303_given_name,C3279303_family_name,2014,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C340341,C340341_given_name,C340341_family_name,2003,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C3651747,C3651747_given_name,C3651747_family_name,2012,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C3775608,C3775608_given_name,C3775608_family_name,2020,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C3776100,C3776100_given_name,C3776100_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C3777699,C3777699_given_name,C3777699_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C3904635,C3904635_given_name,C3904635_family_name,2004,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C3905865,C3905865_given_name,C3905865_family_name,2012,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C413034,C413034_given_name,C413034_family_name,2001,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C4157892,C4157892_given_name,C4157892_family_name,2014,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C4513239,C4513239_given_name,C4513239_family_name,2013,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C4874367,C4874367_given_name,C4874367_family_name,2019,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C4884084,C4884084_given_name,C4884084_family_name,2014,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C5361078,C5361078_given_name,C5361078_family_name,2011,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C607005,C607005_given_name,C607005_family_name,2005,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C6277182,C6277182_given_name,C6277182_family_name,2020,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Pittsburgh,C665061,C665061_given_name,C665061_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C6693414,C6693414_given_name,C6693414_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C710325,C710325_given_name,C710325_family_name,2006,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C7272621,C7272621_given_name,C7272621_family_name,2024,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C7272867,C7272867_given_name,C7272867_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C7272990,C7272990_given_name,C7272990_family_name,2023,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C7273113,C7273113_given_name,C7273113_family_name,2010,White,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C7273605,C7273605_given_name,C7273605_family_name,2015,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C7273851,C7273851_given_name,C7273851_family_name,2023,White,Unavailable,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+University of Pittsburgh,C7712346,C7712346_given_name,C7712346_family_name,2017,White,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C820287,C820287_given_name,C820287_family_name,2012,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C8516028,C8516028_given_name,C8516028_family_name,2020,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C8517012,C8517012_given_name,C8517012_family_name,2013,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C944886,C944886_given_name,C944886_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+University of Pittsburgh,C96801,C96801_given_name,C96801_family_name,2002,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Wake Forest Baptist Medical Center,C3335145,C3335145_given_name,C3335145_family_name,2008,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Wake Forest Baptist Medical Center,C3461835,C3461835_given_name,C3461835_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Wake Forest Baptist Medical Center,C3941166,C3941166_given_name,C3941166_family_name,2018,Black or African American;White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Wake Forest Baptist Medical Center,C5154930,C5154930_given_name,C5154930_family_name,2018,Other/Unavailable/Not Reported,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7226496,C7226496_given_name,C7226496_family_name,2009,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7226865,C7226865_given_name,C7226865_family_name,2018,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7226988,C7226988_given_name,C7226988_family_name,2013,Black or African American,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7227111,C7227111_given_name,C7227111_family_name,2020,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7227234,C7227234_given_name,C7227234_family_name,2007,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7227357,C7227357_given_name,C7227357_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7415547,C7415547_given_name,C7415547_family_name,2014,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7415670,C7415670_given_name,C7415670_family_name,2019,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7422312,C7422312_given_name,C7422312_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7422558,C7422558_given_name,C7422558_family_name,2015,Black or African American,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7424772,C7424772_given_name,C7424772_family_name,2016,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7543221,C7543221_given_name,C7543221_family_name,2022,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Washington University in St. Louis,C7543467,C7543467_given_name,C7543467_family_name,2017,White,Not Hispanic or Latino,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Washington University in St. Louis,C7553307,C7553307_given_name,C7553307_family_name,2015,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Washington University in St. Louis,C7559457,C7559457_given_name,C7559457_family_name,2009,White,Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7784301,C7784301_given_name,C7784301_family_name,2014,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7831656,C7831656_given_name,C7831656_family_name,2017,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Washington University in St. Louis,C7947891,C7947891_given_name,C7947891_family_name,2017,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C1044147,C1044147_given_name,C1044147_family_name,2016,White,Unavailable,female,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Weill Cornell Medical College,C1168500,C1168500_given_name,C1168500_family_name,2014,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C1168623,C1168623_given_name,C1168623_family_name,2008,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C1229139,C1229139_given_name,C1229139_family_name,2012,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C1254600,C1254600_given_name,C1254600_family_name,2013,Other/Unavailable/Not Reported,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C3436989,C3436989_given_name,C3436989_family_name,2019,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C3706359,C3706359_given_name,C3706359_family_name,2020,Other/Unavailable/Not Reported,Unavailable,female,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C4704750,C4704750_given_name,C4704750_family_name,2020,White,Not Hispanic or Latino,male,XXXXX,Atypical teratoid/rhabdoid tumor,cbtn-non-radiant
+Weill Cornell Medical College,C5228607,C5228607_given_name,C5228607_family_name,2011,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C5291214,C5291214_given_name,C5291214_family_name,2009,Other/Unavailable/Not Reported,Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C6432039,C6432039_given_name,C6432039_family_name,2023,White,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C6433392,C6433392_given_name,C6433392_family_name,2021,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C7037568,C7037568_given_name,C7037568_family_name,2016,Asian,Not Hispanic or Latino,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C8028333,C8028333_given_name,C8028333_family_name,2015,Black or African American,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C973914,C973914_given_name,C973914_family_name,2004,Other/Unavailable/Not Reported,Unavailable,male,XXXXX,Medulloblastoma,cbtn-non-radiant
+Weill Cornell Medical College,C974037,C974037_given_name,C974037_family_name,2016,White,Not Hispanic or Latino,female,XXXXX,Medulloblastoma,cbtn-non-radiant

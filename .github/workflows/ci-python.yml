@@ -8,14 +8,18 @@ on:
       - "packages/grammar-py/**"
       - "pyproject.toml"
       - "uv.lock"
+      - "sample-data/**"
+      - "scripts/gen_datapackage.py"
       - ".github/workflows/ci-python.yml"
+  # No branch filter on PRs: in a stacked PR the base is the branch below it.
   pull_request:
-    branches: [main]
     paths:
       - "packages/agent/**"
       - "packages/grammar-py/**"
       - "pyproject.toml"
       - "uv.lock"
+      - "sample-data/**"
+      - "scripts/gen_datapackage.py"
       - ".github/workflows/ci-python.yml"
 
 jobs:
@@ -54,6 +58,16 @@ jobs:
       - name: Check generated env docs are current
         if: matrix.package == 'agent'
         run: uv run python scripts/gen_env_docs.py --check
+
+      # sample-data/pcx/datapackage.json is generated from the CSVs, the data
+      # dictionary and example_prompts.json; regenerate it and fail on any diff
+      # (columns, types, cardinalities, foreign keys, descriptions, prompts).
+      - name: Check pcx datapackage.json is current
+        if: matrix.package == 'agent'
+        working-directory: .
+        run: |
+          python3 scripts/gen_datapackage.py sample-data/pcx --strip pcx_30_ --strip _level_deid --strip _deid --parent Patient
+          git diff --exit-code sample-data/pcx/datapackage.json
 
       - name: Verify package build
         run: uv build --out-dir dist

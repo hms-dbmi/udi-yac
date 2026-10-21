@@ -87,3 +87,18 @@ describe('queryLLM filter state', () => {
     expect(body(bare).filters).toEqual([]);
   });
 });
+
+/** The agent may offer an issue report only when the host switched reporting on. */
+describe('queryLLM issue reporting flag', () => {
+  it('sends the flag when issue reporting is on', async () => {
+    const fetchMock = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac', issueReporting: true }, [], '{}', '[]');
+    expect(body(fetchMock).issueReporting).toBe(true);
+  });
+
+  it('omits the flag otherwise', async () => {
+    const fetchMock = mockFetch();
+    await queryLLM({ apiBaseUrl: '/api/yac' }, [], '{}', '[]');
+    expect(body(fetchMock)).not.toHaveProperty('issueReporting');
+  });
+});

@@ -39,14 +39,14 @@ _ARGS = {
     "entity1": "Event",
     "entity1_field1": "research_id",
     "entity1_field2": "event_type",
-    "entity1_field3": "event_date",
+    "entity1_field3": "age_at_event_days",
     "entity1_field4": "organization_name",
     # The censoring source: who was still event-free when follow-up stopped.
     # Every survival template takes one, which is why the event log is entity1.
     "entity2": "Patient",
     "entity2_field1": "research_id",
     "entity2_field2": "vital_status",
-    "entity2_field3": "vital_status_date",
+    "entity2_field3": "age_at_vital_status_days",
     "value1": "Initial CNS Tumor",
     "value2": "Deceased",
     "value3": "alive",
@@ -266,7 +266,7 @@ def test_unknown_template_is_a_404_naming_the_likely_cause(client, data_schema):
     "field, expected",
     [
         # Declared quantitative, template requires nominal.
-        ("event_date", "requires nominal"),
+        ("age_at_event_days", "requires nominal"),
         ("no_such_column", "not found on entity 'Event'"),
         # The cardinality cap applies to a user's choice too, not just the model's.
         ("research_id", "unique values"),
