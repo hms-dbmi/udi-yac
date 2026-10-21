@@ -4,7 +4,6 @@ import type { Message, ToolCall } from '@/types/messages';
 import type { ValidStatus } from '@/types/dataPackage';
 import type { FilterDataArgs, FilterOperationArgs, FilterScope } from '@/features/tool-calls';
 import { normalizePointValues } from '@/features/data-package';
-import { debugLog } from '@/utils/debugLog';
 
 export type { DataSelection, DataSelections };
 
@@ -72,14 +71,9 @@ export function isColumnFilterKey(key: string): boolean {
   return key.startsWith(COLUMN_FILTER_PREFIX);
 }
 
-/** Keys of `dataSelections` that are filters: column filters and host
- *  filters (and `message-filter-*` from sessions saved before column keys). */
+/** Keys of `dataSelections` that are filters: column filters and host filters. */
 export function isChatFilterKey(key: string): boolean {
-  return (
-    isColumnFilterKey(key) ||
-    key.startsWith('message-filter-') ||
-    key.startsWith(HOST_FILTER_PREFIX)
-  );
+  return isColumnFilterKey(key) || key.startsWith(HOST_FILTER_PREFIX);
 }
 
 /**
@@ -120,10 +114,10 @@ export interface ExportedFilterState {
   selections: DataSelections;
   scopes: Record<string, FilterScope>;
   removed: string[];
-  /** Who last set each filter. Older exports omit it: chat. */
-  origins?: Record<string, 'chat' | 'chart'>;
+  /** Who last set each filter. One missing here (as in older exports) is chat's. */
+  origins: Record<string, 'chat' | 'chart'>;
   /** Where each chart-made filter sits in the chat (`brushAnchors`). */
-  anchors?: Record<string, number>;
+  anchors: Record<string, number>;
 }
 
 export interface DataFiltersState {
@@ -232,10 +226,6 @@ export function messageFilterKeyWithToolCall(
   return message?.linkedVisFilterId ?? `message-filter-${messageIndex}-${toolCallIndex}`;
 }
 
-export function messageFilterKey(messageIndex: number, message?: Message): string {
-  return messageFilterKeyWithToolCall(messageIndex, 0, message);
-}
-
 export function containsFilterCall(message: Message): boolean {
   return message.tool_calls?.some((call) => getToolCallName(call) === 'FilterData') ?? false;
 }
@@ -284,7 +274,6 @@ export function filterSpecForToolCall(
 ): FilterDataArgs | null {
   const all = extractAllFilterSpecsFromMessage(message);
   if (all.length === 0) return null;
-  // Matches messageFilterKey's own fallback to tool call 0.
   if (toolCallIndex == null) return all[0].args;
   return all.find((f) => f.toolCallIndex === toolCallIndex)?.args ?? null;
 }
@@ -382,19 +371,36 @@ function columnSelection(
   };
 }
 
-/** A FilterData id as written in the messages: a column id, or — in sessions
- *  saved before column keys — the `message-filter-{i}-{j}` of the add that
- *  made it, which `aliases` maps to its column. */
-function resolveFilterId(id: string | undefined, aliases: Record<string, string>): string | null {
-  if (!id) return null;
-  return aliases[id] ?? id;
-}
-
 /** Re-key a pre-column-key filter (`message-filter-*`, one field) by column. */
 function columnKeyFor(key: string, selection: DataSelection): string {
   if (isColumnFilterKey(key) || key.startsWith(HOST_FILTER_PREFIX)) return key;
   const [field] = Object.keys(selection.selection ?? {});
   return field ? columnFilterKey(selection.dataSourceKey, field) : key;
+}
+
+/** Copies of the maps a filter edit changes, a `drop` that deletes a filter
+ *  from every one, and `commit`, the state update that writes them back. */
+function draftFilters(s: DataFiltersState) {
+  const next = { ...s.dataSelections };
+  const origins = { ...s.filterOrigins };
+  const scopes = { ...s.filterScopes };
+  const removed = { ...s.removedFilters };
+  const anchors = { ...s.brushAnchors };
+  const drop = (id: string) => {
+    delete next[id];
+    delete origins[id];
+    delete scopes[id];
+    delete removed[id];
+    delete anchors[id];
+  };
+  const commit = () => ({
+    dataSelections: next,
+    filterOrigins: origins,
+    filterScopes: scopes,
+    removedFilters: removed,
+    brushAnchors: anchors,
+  });
+  return { next, origins, scopes, removed, anchors, drop, commit };
 }
 
 export function createDataFiltersStore() {
@@ -423,12 +429,8 @@ export function createDataFiltersStore() {
 
     syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => {
       const state = get();
-      const next = { ...state.dataSelections };
-      const origins = { ...state.filterOrigins };
-      const scopes = { ...state.filterScopes };
+      const { next, origins, scopes, removed, anchors, drop, commit } = draftFilters(state);
       const applied = { ...state.appliedFilterOps };
-      const removed = { ...state.removedFilters };
-      const anchors = { ...state.brushAnchors };
       // `message-filter-{i}-{j}` -> the column its add set, so a modify or
       // remove naming the old id (sessions before column keys) still lands.
       const aliases: Record<string, string> = {};
@@ -437,13 +439,6 @@ export function createDataFiltersStore() {
       const setScope = (id: string, scope: FilterScope | null | undefined) => {
         if (scope) scopes[id] = { entity: scope.entity, match: scope.match };
         else delete scopes[id];
-      };
-      const drop = (id: string) => {
-        delete next[id];
-        delete origins[id];
-        delete scopes[id];
-        delete removed[id];
-        delete anchors[id];
       };
       // A filter the agent defines is shown by the message that defined it,
       // so a chart that made it no longer anchors it in the chat.
@@ -466,19 +461,16 @@ export function createDataFiltersStore() {
           if (applied[opKey]) continue;
           applied[opKey] = true;
           changed = true;
-          debugLog('chat', 'filter-op', { opKey, op: args.op ?? 'add', args });
 
           if (args.op === 'clear') {
-            for (const id of Object.keys(next)) {
-              if (isColumnFilterKey(id) || id.startsWith('message-filter-')) drop(id);
-            }
+            for (const id of Object.keys(next)) if (isColumnFilterKey(id)) drop(id);
           } else if (args.op === 'remove') {
-            const id = resolveFilterId(args.id, aliases);
+            const id = aliases[args.id] ?? args.id;
             // Never a host filter: those belong to the embedding page.
             if (id && !id.startsWith(HOST_FILTER_PREFIX)) drop(id);
           } else if (args.op === 'modify') {
             // A filter that is still here, made in chat or on a chart.
-            const id = resolveFilterId(args.id, aliases);
+            const id = args.id && (aliases[args.id] ?? args.id);
             if (!id || id.startsWith(HOST_FILTER_PREFIX) || !(id in next)) continue;
             const selection = selectionFromArgs(args, validate);
             if (!selection) continue;
@@ -497,16 +489,7 @@ export function createDataFiltersStore() {
           }
         }
       }
-      if (changed) {
-        set({
-          dataSelections: next,
-          filterOrigins: origins,
-          filterScopes: scopes,
-          appliedFilterOps: applied,
-          removedFilters: removed,
-          brushAnchors: anchors,
-        });
-      }
+      if (changed) set({ ...commit(), appliedFilterOps: applied });
     },
 
     exportFilterState: () => {
@@ -539,7 +522,7 @@ export function createDataFiltersStore() {
         Object.fromEntries(Object.entries(entries).map(([k, v]) => [rekey[k] ?? k, v]));
       const origins: Record<string, 'chat' | 'chart'> = {};
       for (const key of Object.values(rekey)) origins[key] = 'chat';
-      Object.assign(origins, byColumn(exported.origins ?? {}));
+      Object.assign(origins, byColumn(exported.origins));
       set((s) => ({
         dataSelections: { ...s.dataSelections, ...selections },
         filterOrigins: { ...s.filterOrigins, ...origins },
@@ -549,7 +532,7 @@ export function createDataFiltersStore() {
           ...Object.fromEntries(exported.removed.map((id) => [rekey[id] ?? id, true as const])),
         },
         appliedFilterOps: { ...s.appliedFilterOps, ...applied },
-        brushAnchors: { ...s.brushAnchors, ...byColumn(exported.anchors ?? {}) },
+        brushAnchors: { ...s.brushAnchors, ...byColumn(exported.anchors) },
       }));
     },
 
@@ -563,14 +546,9 @@ export function createDataFiltersStore() {
 
     applyChartSelection: (entity, fields, selection, messageCount) => {
       const state = get();
-      const next = { ...state.dataSelections };
-      const origins = { ...state.filterOrigins };
-      const scopes = { ...state.filterScopes };
-      const removed = { ...state.removedFilters };
-      const anchors = { ...state.brushAnchors };
+      const { next, origins, removed, anchors, drop, commit } = draftFilters(state);
       let changed = false;
       const values = (selection?.selection ?? {}) as Record<string, unknown>;
-      const log: Record<string, string> = {};
 
       for (const field of fields) {
         const id = columnFilterKey(entity, field);
@@ -584,37 +562,18 @@ export function createDataFiltersStore() {
           origins[id] = 'chart';
           delete removed[id];
           if (!current && messageCount != null) anchors[id] = messageCount;
-          log[id] = current ? 'replaced' : 'created';
           changed = true;
         } else if (current && selectionHasValue(current)) {
           // A chart's selection no longer covering this column. A filter a
           // chart made (its widget is anchored in the chat) goes with it; one
           // a message shows — made in chat, even if a chart changed it since —
           // stays, emptied, so that message's widget keeps a filter to show.
-          if (id in state.brushAnchors) {
-            delete next[id];
-            delete origins[id];
-            delete scopes[id];
-            delete removed[id];
-            delete anchors[id];
-            log[id] = 'dropped';
-          } else {
-            next[id] = emptySelection(current);
-            log[id] = 'emptied';
-          }
+          if (id in state.brushAnchors) drop(id);
+          else next[id] = emptySelection(current);
           changed = true;
         }
       }
-      debugLog('chat', 'chart-write', { entity, fields, selection, changes: log });
-      if (changed) {
-        set({
-          dataSelections: next,
-          filterOrigins: origins,
-          filterScopes: scopes,
-          removedFilters: removed,
-          brushAnchors: anchors,
-        });
-      }
+      if (changed) set(commit());
     },
 
     // Clearing keeps the filter in place (its chip reads "All", its chat

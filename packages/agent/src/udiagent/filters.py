@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import json
 
-ORIGINS = ("chat", "host", "chart")
 SCOPE_MATCHES = ("any", "all", "none")
 
 _ORIGIN_LABELS = {
@@ -56,7 +55,7 @@ def normalize_filters(raw) -> list[dict]:
         if entry.get("filterType") not in ("point", "interval"):
             continue
         origin = entry.get("origin")
-        out.append({**entry, "origin": origin if origin in ORIGINS else "chat"})
+        out.append({**entry, "origin": origin if origin in _ORIGIN_LABELS else "chat"})
     return out
 
 
@@ -92,13 +91,8 @@ def filter_summary(filters) -> str:
     (it logs the schema and domains only as character counts). A value count
     is enough to tell an edited filter from the one first made.
     """
-    if not isinstance(filters, list):
-        return "none"
     parts = []
     for entry in filters:
-        if not isinstance(entry, dict):
-            parts.append("<invalid>")
-            continue
         if entry.get("filterType") == "interval":
             shape = (
                 "interval"
@@ -136,30 +130,6 @@ OPERATIONS = ("add", "modify", "remove", "clear")
 #: Attempts at a valid set of operations: the first call plus two retries, as
 #: in visualization generation.
 MAX_FILTER_ATTEMPTS = 3
-
-_SCOPE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "entity": {
-            "type": "string",
-            "description": (
-                "The subject table (e.g. 'Patient'). Must be related to the "
-                "filtered table by a foreign key."
-            ),
-        },
-        "match": {
-            "type": "string",
-            "enum": list(SCOPE_MATCHES),
-            "description": (
-                "'any': subjects with at least one matching row. 'all': "
-                "subjects whose every row matches. 'none': subjects with no "
-                "matching row."
-            ),
-        },
-    },
-    "required": ["entity", "match"],
-    "additionalProperties": False,
-}
 
 APPLY_FILTER_OPERATIONS = "ApplyFilterOperations"
 
@@ -239,12 +209,34 @@ APPLY_FILTER_OPERATIONS_TOOL = {
                                 "additionalProperties": False,
                             },
                             "scope": {
-                                **_SCOPE_SCHEMA,
+                                "type": "object",
                                 "description": (
                                     "Omit to keep only the matching rows. Set it to "
                                     "test the condition per subject instead, and "
                                     "keep every row of each subject that passes."
                                 ),
+                                "properties": {
+                                    "entity": {
+                                        "type": "string",
+                                        "description": (
+                                            "The subject table (e.g. 'Patient'). Must "
+                                            "be related to the filtered table by a "
+                                            "foreign key."
+                                        ),
+                                    },
+                                    "match": {
+                                        "type": "string",
+                                        "enum": list(SCOPE_MATCHES),
+                                        "description": (
+                                            "'any': subjects with at least one "
+                                            "matching row. 'all': subjects whose every "
+                                            "row matches. 'none': subjects with no "
+                                            "matching row."
+                                        ),
+                                    },
+                                },
+                                "required": ["entity", "match"],
+                                "additionalProperties": False,
                             },
                         },
                         "required": ["op"],

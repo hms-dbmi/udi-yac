@@ -130,7 +130,7 @@ export async function queryData(
   // overwrite a newer value another chart bound meanwhile — a brush mid-drag
   // flicked every chart back to an older filter.
   if (selections) {
-    store.bindExternalDataSelections(selections, 'queryData');
+    store.bindExternalDataSelections(selections);
   }
 
   await store.initDataSources(sources, options?.sourceResolver);

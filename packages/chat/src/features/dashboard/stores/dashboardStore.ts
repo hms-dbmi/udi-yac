@@ -197,7 +197,10 @@ export interface DashboardState {
     /** Every entity the spec reads; defaults to just `currentSourceName`. */
     specSourceNames?: string[],
   ) => object[];
-  getFilterIds: (dataFiltersStore: StoreApi<DataFiltersState>) => string[];
+  getFilterIds: (
+    dataFiltersStore: StoreApi<DataFiltersState>,
+    dataPackageStore: StoreApi<DataPackageState>,
+  ) => string[];
   updateActiveVisualizationSpec: (
     key: string,
     newSpec: UDIGrammar,
@@ -638,12 +641,14 @@ export function createDashboardStore() {
     requestJumpToMessage: (key) =>
       set((s) => ({ jumpToMessage: { key, nonce: (s.jumpToMessage?.nonce ?? 0) + 1 } })),
 
-    // The column and host filters. A chart's own selection is not a filter:
-    // its click or brush is written into the column filters on its fields.
-    getFilterIds: (dataFiltersStore) => {
+    // The column and host filters the package admits. A chart's own selection
+    // is not a filter: its click or brush is written into the column filters
+    // on its fields.
+    getFilterIds: (dataFiltersStore, dataPackageStore) => {
+      const dpState = dataPackageStore.getState();
       const validSelections = dataFiltersStore.getState().getValidDataSelections({
-        isValidIntervalFilter: () => ({ isValid: 'yes' }),
-        isValidPointFilter: () => ({ isValid: 'yes' }),
+        isValidIntervalFilter: dpState.isValidIntervalFilter,
+        isValidPointFilter: dpState.isValidPointFilter,
       });
       return Object.keys(validSelections).sort();
     },
@@ -736,13 +741,7 @@ export function createDashboardStore() {
 
     updateSpecFilters: (dataFiltersStore, dataPackageStore) => {
       const state = get();
-      const dpState = dataPackageStore.getState();
-      const filterIdList = Object.keys(
-        dataFiltersStore.getState().getValidDataSelections({
-          isValidIntervalFilter: dpState.isValidIntervalFilter,
-          isValidPointFilter: dpState.isValidPointFilter,
-        }),
-      ).sort();
+      const filterIdList = state.getFilterIds(dataFiltersStore, dataPackageStore);
 
       let changed = false;
       const next = new Map(state.activeVisualizations);

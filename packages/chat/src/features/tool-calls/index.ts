@@ -11,8 +11,6 @@ export type {
   RebuffArgs,
   ClarifyVariableArgs,
   FilterDataArgs,
-  FilterRemoveArgs,
-  FilterClearArgs,
   FilterOperationArgs,
   FilterMatch,
   FilterScope,

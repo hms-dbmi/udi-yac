@@ -18,7 +18,6 @@ from udiagent.filters import (
     MAX_FILTER_ATTEMPTS,
     describe_filters,
     filter_failure_args,
-    filter_summary,
     normalize_filters,
     operation_tool_calls,
     validate_operations,
@@ -606,15 +605,9 @@ class Orchestrator:
                     "data_domains": data_domains_simple,
                     # "Which filters are on?" is answered here too, and the
                     # history only has the FilterData calls as first made.
-                    "current_filters": describe_filters(list(current_filters)),
+                    "current_filters": describe_filters(current_filters),
                     "structured_functions": get_function_signatures(),
                 },
-            )
-            logger.info(
-                "explain prompt: current filters=%s", filter_summary(list(current_filters))
-            )
-            logger.debug(
-                "explain prompt current filters:\n%s", describe_filters(list(current_filters))
             )
             gpt_client = self.agent._get_gpt_client(openai_api_key)
             msgs = normalize_tool_calls(copy.deepcopy(messages))
@@ -745,14 +738,12 @@ class Orchestrator:
                 "data_domains": simplify_data_domains(data_domains),
             },
         )
-        logger.info("filter prompt: current filters=%s", filter_summary(current))
         msgs = normalize_tool_calls(copy.deepcopy(messages))
         msgs.insert(0, {"role": "system", "content": rendered})
         schema = _parse_request_schema(data_schema)
         gpt_client = self.agent._get_gpt_client(openai_api_key)
 
         rejected = []
-        errors = ["No filter change came back."]
         for _attempt in range(MAX_FILTER_ATTEMPTS):
             retry = (
                 _retry_turns(rejected, closing=FILTER_RETRY_CLOSING) if rejected else []
@@ -816,10 +807,10 @@ class Orchestrator:
         openai_api_key=None,
         model=None,
         budget_check: Callable[["Usage"], str | None] | None = None,
-        filters: list[dict] | None = None,
+        *,
+        filters: list[dict],
         issue_reporting: bool = False,
     ):
-        filters = filters or []
         tools = [*self.tools, OFFER_ISSUE_REPORT_TOOL] if issue_reporting else self.tools
         # The handlers below each read the history afresh, so a chart revealed
         # with GetVisualizationSpec is marked on this copy — never on the
@@ -842,8 +833,6 @@ class Orchestrator:
                 "current_filters": describe_filters(filters),
             },
         )
-        logger.info("orchestrate prompt: current filters=%s", filter_summary(filters))
-        logger.debug("orchestrate prompt current filters:\n%s", describe_filters(filters))
         msgs.insert(0, {"role": "system", "content": rendered})
 
         gpt_client = self.agent._get_gpt_client(openai_api_key)

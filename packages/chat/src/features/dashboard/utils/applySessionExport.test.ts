@@ -232,6 +232,8 @@ describe('applySessionExport — filters', () => {
         },
         scopes: { 'message-filter-1-0': { entity: 'Patient', match: 'none' } },
         removed: [],
+        origins: {},
+        anchors: {},
       },
     });
     const restored = load(legacy);
@@ -245,6 +247,12 @@ describe('applySessionExport — filters', () => {
       ...session(),
       filters: { selections: {}, scopes: { [id]: { entity: 'Patient', match: 'most' } } },
     });
-    expect(parsed.ok && parsed.value.filters).toEqual({ selections: {}, scopes: {}, removed: [] });
+    expect(parsed.ok && parsed.value.filters).toEqual({
+      selections: {},
+      scopes: {},
+      removed: [],
+      origins: {},
+      anchors: {},
+    });
   });
 });

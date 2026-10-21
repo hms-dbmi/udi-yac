@@ -60,7 +60,7 @@ const group3: DataSelection = {
   type: 'point',
   selection: { diagnosis: ['Group 3'] },
 };
-const ID = 'message-filter-0-0';
+const ID = 'col:Event.diagnosis';
 
 let filters: StoreApi<DataFiltersState>;
 
@@ -115,7 +115,7 @@ describe('FilterScopeControl', () => {
     renderIn(
       <>
         <FilterControls filterId="udi_1_1" selection={group3} tweakable={false} />
-        <FilterControls filterId="message-filter-1-0" selection={region} tweakable={false} />
+        <FilterControls filterId="col:Site.region" selection={region} tweakable={false} />
       </>,
     );
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();

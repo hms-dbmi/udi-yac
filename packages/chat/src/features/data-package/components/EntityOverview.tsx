@@ -412,7 +412,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
   const tableSpec = useMemo<UDIGrammar | null>(() => {
     if (!baseTableSpec) return null;
     const dash = dashboardStore.getState();
-    const filterIds = dash.getFilterIds(dataFiltersStore);
+    const filterIds = dash.getFilterIds(dataFiltersStore, dataPackageStore);
     const namedFilters = dash.getNamedFilters(
       filterIds,
       entity,

@@ -33,13 +33,7 @@ export function filterInterjections(
       .map(({ toolCallIndex }) => ({
         at: messageIndex + 0.5,
         key: `hidden-filter-${messageIndex}-${toolCallIndex}`,
-        node: (
-          <HiddenFilterWidget
-            message={message}
-            messageIndex={messageIndex}
-            toolCallIndex={toolCallIndex}
-          />
-        ),
+        node: <HiddenFilterWidget message={message} toolCallIndex={toolCallIndex} />,
       })),
   );
   const brushWidgets = brushes.map((brush) => ({

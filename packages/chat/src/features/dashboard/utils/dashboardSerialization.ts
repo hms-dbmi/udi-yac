@@ -225,21 +225,15 @@ function parseFilterState(raw: unknown): ExportedFilterState | undefined {
     }
   }
   const removed = isStringArray(raw.removed) ? raw.removed : [];
-  const origins: NonNullable<ExportedFilterState['origins']> = {};
+  const origins: ExportedFilterState['origins'] = {};
   for (const [id, origin] of Object.entries(isObject(raw.origins) ? raw.origins : {})) {
     if (origin === 'chat' || origin === 'chart') origins[id] = origin;
   }
-  const anchors: NonNullable<ExportedFilterState['anchors']> = {};
+  const anchors: ExportedFilterState['anchors'] = {};
   for (const [id, at] of Object.entries(isObject(raw.anchors) ? raw.anchors : {})) {
     if (typeof at === 'number' && Number.isFinite(at)) anchors[id] = at;
   }
-  return {
-    selections,
-    scopes,
-    removed,
-    ...(Object.keys(origins).length ? { origins } : {}),
-    ...(Object.keys(anchors).length ? { anchors } : {}),
-  };
+  return { selections, scopes, removed, origins, anchors };
 }
 
 export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
@@ -315,20 +309,20 @@ export function buildSessionExport(args: {
 /**
  * The session as it stands, in the shape *Export session* writes. Takes store
  * snapshots (`getState()`), so callers inside and outside the providers share it.
- * With the filter store, the export carries the user's filter edits, scopes and
- * chart-made filters, which the messages alone do not rebuild.
+ * The filter store adds the user's filter edits, scopes and chart-made filters,
+ * which the messages alone do not rebuild.
  */
 export function currentSessionExport(
   conversation: { messages: Message[]; sessionUsage?: SessionUsage },
   dashboard: Pick<DashboardState, 'exportDashboard' | 'gridCols' | 'gridRowHeight'>,
-  dataFilters?: Pick<DataFiltersState, 'exportFilterState'>,
+  dataFilters: Pick<DataFiltersState, 'exportFilterState'>,
 ): SessionExport {
   return buildSessionExport({
     messages: conversation.messages,
     dashboard: dashboard.exportDashboard(),
     grid: { cols: dashboard.gridCols, rowHeight: dashboard.gridRowHeight },
     sessionUsage: conversation.sessionUsage,
-    filters: dataFilters?.exportFilterState(),
+    filters: dataFilters.exportFilterState(),
   });
 }
 

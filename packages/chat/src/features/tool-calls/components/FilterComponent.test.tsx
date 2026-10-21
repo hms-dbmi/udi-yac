@@ -130,7 +130,7 @@ function renderFilter(message: Message, domains: DataFieldDomain[] = [assayType]
   return render(
     <UDIChatProvider>
       <Harness domains={domains} messages={[message]}>
-        <FilterComponent message={message} messageIndex={0} toolCallIndex={0} />
+        <FilterComponent message={message} toolCallIndex={0} />
       </Harness>
     </UDIChatProvider>,
   );
@@ -250,7 +250,7 @@ describe('FilterComponent — filter operations', () => {
     return render(
       <UDIChatProvider>
         <Harness domains={[assayType]} messages={messages}>
-          <FilterComponent message={messages[index]} messageIndex={index} toolCallIndex={0} />
+          <FilterComponent message={messages[index]} toolCallIndex={0} />
         </Harness>
       </UDIChatProvider>,
     );

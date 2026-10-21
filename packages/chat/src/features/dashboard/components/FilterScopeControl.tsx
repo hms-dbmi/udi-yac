@@ -42,7 +42,7 @@ export function FilterScopeControl({
         aria-labelledby={`${filterId}-scope`}
         className="udi:inline-flex udi:overflow-hidden udi:rounded-md udi:border"
       >
-        {SCOPE_OPTIONS.map(({ value, label }) => (
+        {SCOPE_OPTIONS.map((value) => (
           <button
             key={value}
             type="button"
@@ -56,7 +56,7 @@ export function FilterScopeControl({
                 : 'udi:hover:bg-muted',
             )}
           >
-            {label}
+            {value}
           </button>
         ))}
       </div>
