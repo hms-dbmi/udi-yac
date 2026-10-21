@@ -228,7 +228,17 @@ function parseFilterState(raw: unknown): ExportedFilterState | undefined {
   for (const [id, origin] of Object.entries(isObject(raw.origins) ? raw.origins : {})) {
     if (origin === 'chat' || origin === 'chart') origins[id] = origin;
   }
-  return { selections, scopes, removed, ...(Object.keys(origins).length ? { origins } : {}) };
+  const anchors: NonNullable<ExportedFilterState['anchors']> = {};
+  for (const [id, at] of Object.entries(isObject(raw.anchors) ? raw.anchors : {})) {
+    if (typeof at === 'number' && Number.isFinite(at)) anchors[id] = at;
+  }
+  return {
+    selections,
+    scopes,
+    removed,
+    ...(Object.keys(origins).length ? { origins } : {}),
+    ...(Object.keys(anchors).length ? { anchors } : {}),
+  };
 }
 
 export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {

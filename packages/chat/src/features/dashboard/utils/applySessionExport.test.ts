@@ -213,6 +213,8 @@ describe('applySessionExport — filters', () => {
     const restored = load(exported.value);
     expect(restored.dataSelections['col:Patient.sex'].selection).toEqual({ sex: ['F'] });
     expect(restored.filterOrigins['col:Patient.sex']).toBe('chart');
+    // Still placed in the chat where the chart made it, and still the chart's.
+    expect(restored.brushAnchors['col:Patient.sex']).toBe(1);
   });
 
   it('re-keys an export saved before column ids', () => {

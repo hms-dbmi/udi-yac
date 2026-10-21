@@ -37,7 +37,9 @@ export function chartSelectFields(spec: UDIGrammar): ChartSelectFields | null {
  * The chart's own selection as the column filters on its fields hold it,
  * whoever set them — so a filter set in chat, or on another chart, shows on
  * this one. A filter of the other kind (a range on a chart that clicks) has
- * no way to show here and is left out.
+ * no way to show here and is left out. With nothing to show the selection is
+ * `null`, not `{}`: the toolkit reads any non-null selection as one to redraw
+ * the brush from, and would then stop keeping the brush the user is drawing.
  */
 export function composeChartSelection(
   select: ChartSelectFields,
@@ -54,7 +56,7 @@ export function composeChartSelection(
   return {
     dataSourceKey: select.entity,
     type: select.type,
-    selection: selection as DataSelection['selection'],
+    selection: Object.keys(selection).length > 0 ? (selection as DataSelection['selection']) : null,
   };
 }
 

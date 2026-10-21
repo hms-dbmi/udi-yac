@@ -253,6 +253,40 @@ describe('dataFiltersStore', () => {
       expect(s.filterOrigins).toEqual({ [id]: 'chat' });
     });
 
+    // The empty-bubble report: a range made in chat, moved on a chart, then
+    // cleared on that chart. Dropping it left the chat message with nothing.
+    it('a chart clearing a filter a message shows empties it, even after changing it', () => {
+      const store = createDataFiltersStore();
+      store
+        .getState()
+        .syncFiltersFromMessages([filterMessage('donors', 'age', 0, 100)], alwaysValid);
+      const range = (min: number, max: number): DataSelection => ({
+        dataSourceKey: 'donors',
+        type: 'interval',
+        selection: { age: [min, max] },
+      });
+      store.getState().applyChartSelection('donors', ['age'], range(20, 40), 1);
+      expect(store.getState().filterOrigins['col:donors.age']).toBe('chart');
+
+      store.getState().applyChartSelection('donors', ['age'], null, 2);
+      expect(store.getState().dataSelections['col:donors.age']).toEqual({
+        dataSourceKey: 'donors',
+        type: 'interval',
+        selection: { age: [] },
+      });
+    });
+
+    it('a chat add claims a chart-made filter: its widget is now the message', () => {
+      const store = createDataFiltersStore();
+      store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['F'] }), 1);
+      expect(store.getState().brushAnchors).toEqual({ [id]: 1 });
+      store.getState().syncFiltersFromMessages([pointMessage('donors', 'sex', ['M'])], alwaysValid);
+      expect(store.getState().brushAnchors).toEqual({});
+      // So clearing it on the chart now empties rather than drops it.
+      store.getState().applyChartSelection('donors', ['sex'], null, 2);
+      expect(store.getState().dataSelections[id]).toEqual(pointSel({ sex: [] }));
+    });
+
     it('a fresh value re-activates a removed filter', () => {
       const store = createDataFiltersStore();
       store.getState().applyChartSelection('donors', ['sex'], pointSel({ sex: ['F'] }), 1);

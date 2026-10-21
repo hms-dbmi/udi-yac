@@ -136,9 +136,15 @@ export function FilterComponent({
     );
   }
 
+  // Removed since — by the agent, or with the chart that last set it. Say so
+  // rather than leave the message an empty bubble.
   if (!dataSelection) {
     debugLog('chat', 'filter-widget-empty', { filterKey, messageIndex, toolCallIndex });
-    return null;
+    return (
+      <p className="udi:p-2 udi:text-sm udi:text-muted-foreground">
+        This filter{filterArgs?.title ? ` (“${filterArgs.title}”)` : ''} has since been removed.
+      </p>
+    );
   }
 
   return (

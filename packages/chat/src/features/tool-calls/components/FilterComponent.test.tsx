@@ -281,6 +281,13 @@ describe('FilterComponent — filter operations', () => {
     expect(filters.getState().dataSelections).toEqual({});
   });
 
+  it('says so where the filter was added, once it has been removed', () => {
+    renderOps([add, opMessage({ op: 'remove', id: 'col:datasets.assay_type' })], 0);
+    expect(
+      screen.getByText(/This filter \(“Dataset Assay Type”\) has since been removed\./),
+    ).toBeTruthy();
+  });
+
   it('notes a clear', () => {
     renderOps([add, opMessage({ op: 'clear' })], 1);
     expect(screen.getByText('Cleared the filters I made.')).toBeTruthy();

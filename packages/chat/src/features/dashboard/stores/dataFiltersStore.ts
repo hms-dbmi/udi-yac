@@ -122,6 +122,8 @@ export interface ExportedFilterState {
   removed: string[];
   /** Who last set each filter. Older exports omit it: chat. */
   origins?: Record<string, 'chat' | 'chart'>;
+  /** Where each chart-made filter sits in the chat (`brushAnchors`). */
+  anchors?: Record<string, number>;
 }
 
 export interface DataFiltersState {
@@ -426,6 +428,7 @@ export function createDataFiltersStore() {
       const scopes = { ...state.filterScopes };
       const applied = { ...state.appliedFilterOps };
       const removed = { ...state.removedFilters };
+      const anchors = { ...state.brushAnchors };
       // `message-filter-{i}-{j}` -> the column its add set, so a modify or
       // remove naming the old id (sessions before column keys) still lands.
       const aliases: Record<string, string> = {};
@@ -440,12 +443,16 @@ export function createDataFiltersStore() {
         delete origins[id];
         delete scopes[id];
         delete removed[id];
+        delete anchors[id];
       };
+      // A filter the agent defines is shown by the message that defined it,
+      // so a chart that made it no longer anchors it in the chat.
       const define = (id: string, selection: DataSelection, scope?: FilterScope | null) => {
         next[id] = selection;
         origins[id] = 'chat';
         setScope(id, scope);
         delete removed[id];
+        delete anchors[id];
       };
 
       for (let i = 0; i < messages.length; i++) {
@@ -497,6 +504,7 @@ export function createDataFiltersStore() {
           filterScopes: scopes,
           appliedFilterOps: applied,
           removedFilters: removed,
+          brushAnchors: anchors,
         });
       }
     },
@@ -509,6 +517,7 @@ export function createDataFiltersStore() {
         scopes: Object.fromEntries(Object.entries(filterScopes).filter(isColumn)),
         removed: Object.keys(removedFilters).filter(isColumnFilterKey),
         origins: Object.fromEntries(Object.entries(filterOrigins).filter(isColumn)),
+        anchors: Object.fromEntries(Object.entries(get().brushAnchors).filter(isColumn)),
       };
     },
 
@@ -540,6 +549,7 @@ export function createDataFiltersStore() {
           ...Object.fromEntries(exported.removed.map((id) => [rekey[id] ?? id, true as const])),
         },
         appliedFilterOps: { ...s.appliedFilterOps, ...applied },
+        brushAnchors: { ...s.brushAnchors, ...byColumn(exported.anchors ?? {}) },
       }));
     },
 
@@ -577,14 +587,16 @@ export function createDataFiltersStore() {
           log[id] = current ? 'replaced' : 'created';
           changed = true;
         } else if (current && selectionHasValue(current)) {
-          // A chart's selection no longer covering this column. A filter the
-          // chart made goes with it; one made in chat stays, emptied, so its
-          // chat widget can still pick values.
-          if (state.filterOrigins[id] === 'chart') {
+          // A chart's selection no longer covering this column. A filter a
+          // chart made (its widget is anchored in the chat) goes with it; one
+          // a message shows — made in chat, even if a chart changed it since —
+          // stays, emptied, so that message's widget keeps a filter to show.
+          if (id in state.brushAnchors) {
             delete next[id];
             delete origins[id];
             delete scopes[id];
             delete removed[id];
+            delete anchors[id];
             log[id] = 'dropped';
           } else {
             next[id] = emptySelection(current);

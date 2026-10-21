@@ -52,8 +52,8 @@ describe('composeChartSelection', () => {
     });
   });
 
-  it('is empty, not null, when nothing filters its fields — so a cleared brush is dropped', () => {
-    expect(composeChartSelection(brush, {}).selection).toEqual({});
+  it('is null when nothing filters its fields, so the toolkit keeps a brush being drawn', () => {
+    expect(composeChartSelection(brush, {}).selection).toBeNull();
   });
 
   it('knows which filters a chart shows', () => {

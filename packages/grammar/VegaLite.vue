@@ -225,6 +225,24 @@ function parseSpec(): { success: boolean; specObject?: VegaSpecShim } {
 
 const ignore = ref(false);
 
+// While the pointer is down on this chart, the brush being dragged is the
+// source of truth for this chart's own selections. A chart filtered by its own
+// brush rebuilds on every move, and the external selection it is handed back
+// (the host's copy of that brush) trails the drag by a render; redrawing the
+// brush from it mid-drag pulled it back a step on each move. So during a drag
+// rebuilds keep the brush's pixels, draw-back leaves it alone, and the release
+// redraws it once from the external selection, which by then has caught up.
+let pointerDown = false;
+function onChartPointerDown(): void {
+  pointerDown = true;
+}
+function onChartPointerUp(): void {
+  if (!pointerDown) return;
+  pointerDown = false;
+  debugLog('brush-release', { names: props.signalKeys ?? [] });
+  void updateVegaChartSelections();
+}
+
 function formatVegaSignalKey(raw: string): string {
   // replace "-" with "_" in signalKey since Vega signals cannot contain "-"
   // TODO: I think if the key starts with a number they prepend an underscore
@@ -703,6 +721,11 @@ function routeSelectionUpdate(
 }
 
 onMounted(() => {
+  vegaContainer.value?.addEventListener('pointerdown', onChartPointerDown, {
+    capture: true,
+  });
+  window.addEventListener('pointerup', onChartPointerUp);
+  window.addEventListener('pointercancel', onChartPointerUp);
   window.addEventListener('pointerup', commitRemoteSelections);
   window.addEventListener('pointercancel', commitRemoteSelections);
   window.addEventListener('mouseup', commitRemoteSelections);
@@ -736,6 +759,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  vegaContainer.value?.removeEventListener('pointerdown', onChartPointerDown, {
+    capture: true,
+  });
+  window.removeEventListener('pointerup', onChartPointerUp);
+  window.removeEventListener('pointercancel', onChartPointerUp);
   window.removeEventListener('pointerup', commitRemoteSelections);
   window.removeEventListener('pointercancel', commitRemoteSelections);
   window.removeEventListener('mouseup', commitRemoteSelections);
@@ -783,8 +811,9 @@ async function updateVegaChart() {
   // and restoring their pixel signals across the data changeset — pixel
   // values are scale-relative, so this is a best-effort preservation for the
   // no-external-selection case only.
+  // Mid-drag the brush's own pixels win (see onChartPointerDown).
   const hasExternal = (signalKey: string) =>
-    props.selections?.[signalKey]?.selection != null;
+    !pointerDown && props.selections?.[signalKey]?.selection != null;
   debugLog('chart-rebuild', {
     names: props.signalKeys ?? [],
     external: Object.fromEntries(
@@ -793,6 +822,7 @@ async function updateVegaChart() {
         props.selections?.[k]?.selection ?? null,
       ]),
     ),
+    pointerDown,
   });
   const savedSignals: Record<string, unknown> = {};
   for (const signalKey of props.signalKeys ?? []) {
@@ -898,6 +928,11 @@ async function updateVegaChartSelections() {
   const own = new Set(props.signalKeys ?? []);
   for (const [selectionName, selection] of Object.entries(props.selections)) {
     if (!own.has(selectionName)) continue;
+    // Not over a brush the user is dragging; the release redraws it.
+    if (pointerDown) {
+      debugLog('drawback-deferred', { name: selectionName });
+      continue;
+    }
     // Isolate each selection: a malformed entry must not abort applying the
     // others.
     try {
