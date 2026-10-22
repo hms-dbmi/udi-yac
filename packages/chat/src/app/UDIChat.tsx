@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from 'react';
 import { Sparkles } from 'lucide-react';
-import { UDIToolkitProvider } from 'udi-toolkit/react';
+import { UDIToolkitProvider, type RecordUrlFn } from 'udi-toolkit/react';
 import { useThemePalette } from './useThemePalette';
 import {
   UDIChatProvider,
@@ -475,8 +475,20 @@ function ScaledRoot({
   palette: UDIPalette | undefined;
 }) {
   const fontScale = useGlobal(selectFontScale);
+  // A stable wrapper, so a host passing an inline function doesn't rebuild
+  // every table's columns on each of its renders; it still calls the latest.
+  const latestRecordUrl = useRef(props.recordUrl);
+  useLayoutEffect(() => {
+    latestRecordUrl.current = props.recordUrl;
+  });
+  const hasRecordUrl = props.recordUrl != null;
+  const recordUrl = useMemo<RecordUrlFn | undefined>(
+    () =>
+      hasRecordUrl ? (record, entity) => latestRecordUrl.current?.(record, entity) : undefined,
+    [hasRecordUrl],
+  );
   return (
-    <UDIToolkitProvider palette={palette} fontScale={fontScale}>
+    <UDIToolkitProvider palette={palette} fontScale={fontScale} recordUrl={recordUrl}>
       <MascotProvider mascot={props.mascot}>
         <SplashMessagesProvider messages={props.splashMessages}>
           {/*

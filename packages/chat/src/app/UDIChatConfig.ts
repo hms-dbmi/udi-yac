@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { UDIPalette } from 'udi-toolkit/react';
+import type { RecordUrlFn, UDIPalette } from 'udi-toolkit/react';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
 import type { DownloadAction, EntityIconMap, UDIFilter } from '@/features/dashboard';
 import type { ReadOnlyOption } from '@/stores/globalStore';
@@ -111,6 +111,19 @@ export interface UDIChatConfig {
    * scales. A spec-level per-encoding `range` still overrides it.
    */
   palette?: UDIPalette;
+  /**
+   * Links individual records out to their own pages. Called with a row of a
+   * chart or table and its entity (the spec's first source); return that
+   * record's URL, or nothing for a row with no page. Tables gain a leading ↗
+   * column, and a plain click on a point opens the record (a modifier click
+   * still picks). Aggregated rows carry no record id, so an aggregate gets
+   * no links. Only http(s) URLs are followed; relative ones resolve against
+   * the host page.
+   *
+   * Independently of this prop, a table cell whose value is an http(s) URL is
+   * always a link.
+   */
+  recordUrl?: RecordUrlFn;
   /**
    * Multiplier on every text size, charts and tables included: 1 is the stock
    * size, 2 doubles it. Clamped to 1–2. When set, it overrides the viewer's own

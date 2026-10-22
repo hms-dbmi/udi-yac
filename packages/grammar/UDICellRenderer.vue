@@ -17,6 +17,7 @@ import {
 import type { UDIPalette } from './Palette';
 import { toTableRampInterpolator, toTableCategoryColors } from './Palette';
 import { formatTime, timeFormatOf } from './temporal';
+import { cellLink } from './recordUrl';
 
 // Define props
 
@@ -401,7 +402,14 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
         :style="getStyle(layer, mark)"
         class="pos-absolute text"
       >
-        {{ getTextValue(layer) }}
+        <a
+          v-if="cellLink(getTextValue(layer))"
+          :href="cellLink(getTextValue(layer))!"
+          target="_blank"
+          rel="noopener noreferrer"
+          >{{ getTextValue(layer) }}</a
+        >
+        <template v-else>{{ getTextValue(layer) }}</template>
       </div>
       <div
         v-else-if="mark === 'bar'"
@@ -456,6 +464,11 @@ $container-margin-top: 2px;
   // background-color: bisque;
   // top: 50%;
   // dominant-baseline: middle;
+}
+
+.text a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 .bar {

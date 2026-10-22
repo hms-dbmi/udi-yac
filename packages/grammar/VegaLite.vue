@@ -53,6 +53,7 @@ import {
   patchLabelLegend,
   underlineGeometry,
 } from './axisLabelSelect';
+import { RECORD_URL_FIELD } from './recordUrl';
 
 // our type is more specific than the one from vega-embed
 interface VegaSpecShim {
@@ -235,12 +236,75 @@ const ignore = ref(false);
 let pointerDown = false;
 // A data update that arrived mid-drag, applied on release.
 let rebuildPending = false;
-function onChartPointerDown(): void {
-  pointerDown = true;
+
+// Clicking a point that stands for one record opens its page (UDIVis's
+// recordUrl). Vega-Lite resets an interval brush to empty on every press,
+// which would clear the brush's filter before the click is even seen. So an
+// emptied brush is held until release: a click on a linked point puts the
+// brush back, anything else clears it as the press used to.
+//
+// The latest press: where, whether on a linked point, and this chart's brush
+// signals as they were before Vega-Lite reset them. Kept past the release, as
+// the click arrives after it.
+let press: {
+  x: number;
+  y: number;
+  onLink: boolean;
+  brush: Record<string, unknown>;
+} | null = null;
+// Brushes a press emptied, routed on release.
+const heldClears = new Set<string>();
+// This view's per-channel brush signals ({name}_x / {name}_y).
+let brushSignals: string[] = [];
+
+/** A point's record link, unless a modifier makes the click a pick. */
+function linkOf(
+  event: { shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean },
+  item: unknown,
+): string | null {
+  const it = item as {
+    mark?: { marktype?: string };
+    datum?: Record<string, unknown>;
+  } | null;
+  if (it?.mark?.marktype !== 'symbol' || pickModeOf(event)) return null;
+  const url = it.datum?.[RECORD_URL_FIELD];
+  return typeof url === 'string' ? url : null;
 }
-function onChartPointerUp(): void {
+
+/** Whether `event` lands where the latest press did — a click, not a drag. */
+function isClick(event: { clientX: number; clientY: number }): boolean {
+  return (
+    press != null &&
+    Math.hypot(event.clientX - press.x, event.clientY - press.y) < 4
+  );
+}
+
+async function restoreBrush(brush: Record<string, unknown>): Promise<void> {
+  const view = vegaView.value;
+  if (!view) return;
+  ignore.value = true;
+  for (const [name, value] of Object.entries(brush)) view.signal(name, value);
+  await view.runAsync();
+  ignore.value = false;
+}
+
+function onChartPointerDown(event: PointerEvent): void {
+  pointerDown = true;
+  const brush: Record<string, unknown> = {};
+  for (const name of brushSignals) brush[name] = vegaView.value?.signal(name);
+  press = { x: event.clientX, y: event.clientY, onLink: false, brush };
+}
+function onChartPointerUp(event?: Event): void {
   if (!pointerDown) return;
   pointerDown = false;
+  if (heldClears.size > 0) {
+    if (press?.onLink && event instanceof MouseEvent && isClick(event)) {
+      void restoreBrush(press.brush);
+    } else {
+      for (const key of heldClears) routeSelectionUpdate(key, null);
+    }
+    heldClears.clear();
+  }
   if (rebuildPending) {
     rebuildPending = false;
     void updateVegaChart();
@@ -321,6 +385,16 @@ function initVegaChart() {
       errorMessage.value = null;
       const view = result.view;
       vegaView.value = markRaw(view);
+      brushSignals = [];
+      // A brush emptied mid-press waits for the release (see `press`).
+      const routeBrush = (key: string, selection: RangeSelection | null) => {
+        if (selection == null && pointerDown) {
+          heldClears.add(key);
+          return;
+        }
+        heldClears.delete(key);
+        routeSelectionUpdate(key, selection);
+      };
       for (const signalKey of props.signalKeys ?? []) {
         const signalKeyFormatted = formatVegaSignalKey(signalKey);
         // Vega-Lite stores per-channel ranges in separate signals
@@ -364,9 +438,10 @@ function initVegaChart() {
           // Listen on each per-channel signal and combine all channels
           for (const channel of channels) {
             const channelSignal = `${signalKeyFormatted}_${channel}`;
+            brushSignals.push(channelSignal);
             view.addSignalListener(channelSignal, () => {
               if (ignore.value) return;
-              routeSelectionUpdate(signalKey, buildCombinedSelection());
+              routeBrush(signalKey, buildCombinedSelection());
             });
           }
         } else {
@@ -378,13 +453,22 @@ function initVegaChart() {
               for (const [k, v] of Object.entries(value)) {
                 remapped[fieldMap[k] ?? k] = v as [number, number];
               }
-              routeSelectionUpdate(signalKey, remapped);
+              routeBrush(signalKey, remapped);
             } else {
-              routeSelectionUpdate(signalKey, value as RangeSelection | null);
+              routeBrush(signalKey, value as RangeSelection | null);
             }
           });
         }
       }
+      view.addEventListener('pointerdown', (event, item) => {
+        if (press && linkOf(event, item)) press.onLink = true;
+      });
+      view.addEventListener('click', (event, item) => {
+        const url = linkOf(event, item);
+        if (url && isClick(event as MouseEvent)) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      });
       if (props.pointSelect) {
         // Capture the prop into a local so its narrowing survives into the
         // click closure — TS otherwise widens `props.pointSelect` back to
@@ -394,6 +478,8 @@ function initVegaChart() {
         // if the signal is a point selection we I couldn't get signals
         // to work with dynamic data, so click events it is!
         view.addEventListener('click', function (event, item) {
+          // A plain click on a linked point opens it instead (above).
+          if (linkOf(event, item)) return;
           // A category label stands in for its marks: the selection gets the
           // guide's field alone, so an axis label picks a stacked bar whole
           // and a legend entry every segment of its color.
@@ -695,9 +781,9 @@ function onLabelPointerOut(event: PointerEvent): void {
 // environments; the flush is idempotent (the map clears), so double-firing
 // is harmless.
 const pendingRemoteCommits = new Map<string, RangeSelection | null>();
-function commitRemoteSelections(): void {
+function commitRemoteSelections(event?: Event): void {
   // A release also ends a drag (see onChartPointerDown).
-  onChartPointerUp();
+  onChartPointerUp(event);
   for (const [key, selection] of pendingRemoteCommits) {
     dataSourcesStore.updateDataSelection(key, selection);
   }

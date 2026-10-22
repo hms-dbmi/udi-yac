@@ -133,6 +133,7 @@ Embedding in another app? Two things worth knowing up front:
 | `splashMessages`      | `readonly string[]?`   | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages).                                                                                                                                  |
 | `onEvent`             | `TrackerFn?`           | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                                                                                                                                                       |
 | `palette`             | `UDIPalette?`          | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
+| `recordUrl`           | `RecordUrlFn?`         | Link individual records (table rows, scatter points) to their own pages. See [Record links](#record-links).                                                                                                                                      |
 | `fontScale`           | `number?`              | Text size multiplier (1–2) for every chart, table and label. Overrides and hides the viewer's own Text size setting; omit it to leave text size to the viewer.                                                                                   |
 | `readOnly`            | `boolean \| 'locked'?` | Start with the chat collapsed to a rail and every editing control hidden. `'locked'` removes the way back out. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                      |
 | `initialSession`      | `unknown?`             | A session export to seed the dashboard and conversation with. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                                                                       |
@@ -469,6 +470,28 @@ Supply any of these to take over a channel; each one you set wins, and the rest 
 | `grid`       | Gridlines, the plot frame, and table rules.                   |
 | `text`       | Tick labels, axis and legend titles, table text.              |
 | `mutedText`  | Empty cells and truncation notices.                           |
+
+### Record links
+
+Pass `recordUrl` to link individual records out to their own pages: a dataset, a donor, a patient. It is called with a row and its entity (the spec's first source) and returns that record's URL, or nothing for a row with no page.
+
+```tsx
+<UDIChat
+  apiBaseUrl="http://localhost:8007"
+  recordUrl={(record, entity) =>
+    typeof record.uuid === 'string'
+      ? `https://portal.hubmapconsortium.org/browse/${entity.replace(/s$/, '')}/${record.uuid}`
+      : undefined
+  }
+/>
+```
+
+- **Tables** gain a leading ↗ column that opens the row's page in a new tab. A table of aggregates (counts by sex, say) has no record ids, so the function returns nothing and the column is left out.
+- **Point marks** open their record on a plain click; the cursor turns to a pointer over them. A Shift, Ctrl or ⌘ click still picks, and clicking a point keeps an existing brush. Bars, lines and areas never link.
+- The function sees the whole row, not just the columns on screen, so it can key on a column the table doesn't show.
+- Only `http(s)` URLs are followed. A relative URL resolves against the host page.
+
+Independently of `recordUrl`, a table cell whose value is an `http(s)` URL — a protocol DOI, say — is always shown as a link.
 
 ### Custom mascot
 

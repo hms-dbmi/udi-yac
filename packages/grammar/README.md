@@ -217,6 +217,21 @@ function App() {
 }
 ```
 
+### Record links (`recordUrl`)
+
+`recordUrl` maps a row to the URL of that record's own page. It is called with the row and the spec's first source name. Tables gain a leading ↗ link column, and point marks open the link on a plain click; a Shift, Ctrl or ⌘ click still picks. A row the function returns nothing for gets no link, so an aggregated table has no column. Only `http(s)` URLs are followed.
+
+```tsx
+<UDIVis
+  spec={spec}
+  recordUrl={(row, source) =>
+    row.id ? `https://example.org/${source}/${row.id}` : undefined
+  }
+/>
+```
+
+It is a separate prop, not part of the spec, because the spec is JSON-cloned. On the custom element, set it as a JS property (`el.recordUrl = fn`). In React, `UDIToolkitProvider` also takes `recordUrl` as a default for every nested `<UDIVis>`. Independently of it, a table cell whose value is an `http(s)` URL renders as a link.
+
 ### Headless data query (`queryData`)
 
 `queryData` runs a UDI Grammar spec through the same Arquero pipeline that

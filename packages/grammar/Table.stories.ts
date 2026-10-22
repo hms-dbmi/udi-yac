@@ -993,4 +993,86 @@ export const FillContainer = {
   }),
 };
 
+/**
+ * Record links (`recordUrl`): a leading ↗ column on tables, and a plain click
+ * on a point opens its record. HuBMAP portal pages are keyed by entity + uuid.
+ */
+const hubmapRecordUrl = (row: Record<string, unknown>, source: string) =>
+  typeof row.uuid === 'string'
+    ? `https://portal.hubmapconsortium.org/browse/${source.replace(/s$/, '')}/${row.uuid}`
+    : undefined;
+
+const keyColumns = (fields: string[]) =>
+  fields.map((field) => ({
+    mark: 'text',
+    field,
+    encoding: 'text',
+    type: 'nominal',
+  }));
+
+export const RecordLinks = {
+  args: {
+    recordUrl: hubmapRecordUrl,
+    spec: {
+      source: { name: 'donors', source: './data/hubmap/donors.tsv' },
+      representation: {
+        mark: 'row',
+        mapping: keyColumns(['hubmap_id', 'sex', 'age_value']),
+      },
+    },
+  },
+};
+
+/** Cell values that are http(s) URLs render as links, with no recordUrl. */
+export const RecordLinksUrlCells = {
+  args: {
+    spec: {
+      source: { name: 'samples', source: './data/hubmap/samples.tsv' },
+      representation: {
+        mark: 'row',
+        mapping: keyColumns(['hubmap_id', 'preparation_protocol_doi']),
+      },
+    },
+  },
+};
+
+/** Aggregated rows carry no record id, so no link column. */
+export const RecordLinksAggregated = {
+  args: {
+    recordUrl: hubmapRecordUrl,
+    spec: {
+      source: { name: 'donors', source: './data/hubmap/donors.tsv' },
+      transformation: [
+        { groupby: 'sex' },
+        { rollup: { sex_count: { op: 'count' } } },
+      ],
+      representation: {
+        mark: 'row',
+        mapping: keyColumns(['sex', 'sex_count']),
+      },
+    },
+  },
+};
+
+/** Click a point to open it; a click on a point outside the brush keeps the brush. */
+export const RecordLinksScatter = {
+  args: {
+    recordUrl: hubmapRecordUrl,
+    spec: {
+      source: { name: 'donors', source: './data/hubmap/donors.tsv' },
+      representation: {
+        mark: 'point',
+        mapping: [
+          { encoding: 'x', field: 'weight_value', type: 'quantitative' },
+          { encoding: 'y', field: 'height_value', type: 'quantitative' },
+        ],
+        select: {
+          name: 'record-links-brush',
+          how: { type: 'interval', on: 'xy' },
+        },
+      },
+    },
+  },
+};
+
 // TODO:  geometry, select, and more x2,y2, point nominal shape, could maybe map size to more things, e.g. line/bar width

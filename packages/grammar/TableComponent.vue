@@ -26,6 +26,7 @@ import {
 import { AgGridVue } from 'ag-grid-vue3'; // Vue Data Grid Component
 import type { Domain, RowLayer, RowMapping } from './GrammarTypes';
 import type { UDIPalette } from './Palette';
+import { recordLink, type RecordUrlFn } from './recordUrl';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -46,6 +47,8 @@ interface TableComponentProps {
   fillContainer?: boolean | undefined;
   /** Multiplier on the grid's text size and row height (1 = stock). */
   fontScale?: number | undefined;
+  /** Row → its record's page; adds a leading link column. See UDIVis. */
+  recordUrl?: RecordUrlFn | undefined;
 }
 
 const props = defineProps<TableComponentProps>();
@@ -171,6 +174,7 @@ const colDefs = computed<ColDef[]>(() => {
   const keys = Object.keys(groupedMapping);
   const dateColumns = props.spec ? timeColumns(props.spec) : undefined;
   return [
+    ...recordLinkColumn(),
     ...keys.map((key) => ({
       headerName: key,
       field: key,
@@ -211,6 +215,43 @@ const colDefs = computed<ColDef[]>(() => {
     })),
   ];
 });
+
+// A leading ↗ column linking each row to its record's page, when the host's
+// recordUrl gives a link for any row (aggregated rows carry no record id, so an
+// aggregated table gets no column).
+function recordLinkColumn(): ColDef[] {
+  const fn = props.recordUrl;
+  const source = props.spec?.source[0]?.name ?? '';
+  if (!fn || !props.data?.some((row) => recordLink(fn, row, source))) return [];
+  return [
+    {
+      colId: '__udi_record_link',
+      headerName: '',
+      width: Math.round(36 * scale.value),
+      pinned: 'left',
+      sortable: false,
+      resizable: false,
+      suppressMovable: true,
+      // Quartz's cell padding alone is wider than the column.
+      cellStyle: { padding: 0, textAlign: 'center' },
+      cellRenderer: (params: { data?: Record<string, unknown> }) => {
+        const url = params.data && recordLink(fn, params.data, source);
+        if (!url) return '';
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        // VS15: the text glyph, not a color emoji where the font falls back.
+        a.textContent = '↗\uFE0E';
+        a.ariaLabel = 'Open record';
+        a.title = url;
+        a.style.color = 'inherit';
+        a.style.textDecoration = 'none';
+        return a;
+      },
+    },
+  ];
+}
 
 /*
  * ag-grid ships its own light theme and knows nothing about our palette, so a
