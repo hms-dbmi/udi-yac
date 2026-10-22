@@ -11,8 +11,8 @@
  * `loadDataPackage` reaches for CSVs, neither of which this package exercises
  * in jsdom.
  */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import type { DataPackage } from '@/types/dataPackage';
 import userEvent from '@testing-library/user-event';
 
@@ -290,6 +290,66 @@ describe('UDIChat — folded top bar', () => {
     await user.click(screen.getByRole('button', { name: /Report an issue/ }));
     expect(await screen.findByRole('dialog', { name: 'Report an issue' })).toBeTruthy();
     rect.mockRestore();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  /** A 100 px chip beside controls 300 px wide, or 30 px folded, in a row
+   *  `rowWidth` wide. Returns a way to report a resize, since jsdom has none. */
+  function layout(rowWidth: number) {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(rowWidth);
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const width = this.matches('[aria-label$="Open data overview."]')
+        ? 100
+        : this.querySelector('[aria-label="Dashboard options"]')
+          ? 30
+          : this.querySelector('[aria-label="Display settings"]')
+            ? 300
+            : 0;
+      return new DOMRect(0, 0, width, 20);
+    });
+    const watched: [ResizeObserverCallback, Element][] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        callback: ResizeObserverCallback;
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback;
+        }
+        observe(target: Element) {
+          watched.push([this.callback, target]);
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    return (target: Element) =>
+      act(() =>
+        watched.filter(([, t]) => t === target).forEach(([cb]) => cb([], {} as ResizeObserver)),
+      );
+  }
+
+  it.each([
+    [500, { folded: false, compact: false }],
+    [200, { folded: true, compact: false }],
+    [100, { folded: true, compact: true }],
+  ])('in a %i px row, shrinks only as far as it must', async (rowWidth, expected) => {
+    const resize = layout(rowWidth);
+    render(<UDIChat {...seedConfig} />);
+    const chip = await screen.findByRole('button', { name: /^donors:/ });
+    // The chip arrived after the header first measured itself.
+    resize(chip.parentElement!.parentElement!);
+
+    expect({
+      folded: screen.queryByRole('button', { name: 'Dashboard options' }) !== null,
+      // A compact chip holds its label itself; a full one gives it a line of its own.
+      compact: within(chip).getByText('donors') === chip,
+    }).toEqual(expected);
   });
 });
 

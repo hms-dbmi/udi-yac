@@ -15,45 +15,56 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
+/** How far the header has shrunk to fit its row: as designed, controls folded
+ *  into `DashboardMenu`, then count chips on one line too. */
+type HeaderFit = 'full' | 'folded' | 'compact';
+const NEXT_FIT = { full: 'folded', folded: 'compact', compact: null } as const;
+
 /** Counts, grid settings, session import/export and downloads. Not rendered in
  *  read-only: that view is usually a dashboard embedded in a host page, where
  *  the charts need the height more than the chrome does. When the counts would
- *  wrap beside the controls, the controls fold into one menu (`DashboardMenu`). */
+ *  wrap beside the controls, the controls fold into one menu, and if the counts
+ *  still don't fit beside that, the chips go compact. */
 function DashboardHeader() {
   const rowRef = useRef<HTMLDivElement>(null);
   const countsRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
-  // Folded, the controls are not in the DOM, so their width is kept from when
-  // they last were.
-  const controlsWidth = useRef(0);
-  const [folded, setFolded] = useState(false);
+  // A fresh object on every resize, so a resize re-runs the check from 'full'
+  // even when the header is already there.
+  const [fit, setFit] = useState<{ step: HeaderFit }>({ step: 'full' });
 
+  // Steps down one fit at a time while the counts don't fit on one line beside
+  // the controls. Layout-effect updates render before paint, so only the step
+  // that fits is ever seen.
   useLayoutEffect(() => {
+    const next = NEXT_FIT[fit.step];
+    if (!next) return;
     const row = rowRef.current!;
-    const counts = countsRef.current!;
     const width = (el: Element) => el.getBoundingClientRect().width;
     const gap = (el: Element) => parseFloat(getComputedStyle(el).columnGap) || 0;
-    const measure = () => {
-      if (controlsRef.current) controlsWidth.current = width(controlsRef.current);
-      // The chips keep their own width under flex-wrap, so this is the width of
-      // one line of them whether or not they are wrapping now.
-      const chipRow = counts.firstElementChild;
-      const chips = chipRow ? Array.from(chipRow.children) : [];
-      const countsWidth =
-        chips.reduce((sum, chip) => sum + width(chip), 0) +
-        (chips.length > 1 ? gap(chipRow!) * (chips.length - 1) : 0);
-      setFolded(countsWidth + gap(row) + controlsWidth.current > row.clientWidth);
-    };
-    measure();
-    // ponytail: a chip that narrows without resizing the counts block leaves the
-    // bar folded until the next resize; observe each chip (with a seen-set, since
-    // re-observing re-fires) if that shows up.
-    const observer = new ResizeObserver(measure);
-    observer.observe(row);
-    observer.observe(counts);
+    // The chips keep their own width under flex-wrap, so this is the width of
+    // one line of them whether or not they are wrapping now.
+    const chipRow = countsRef.current!.firstElementChild;
+    const chips = chipRow ? Array.from(chipRow.children) : [];
+    const countsWidth =
+      chips.reduce((sum, chip) => sum + width(chip), 0) +
+      (chips.length > 1 ? gap(chipRow!) * (chips.length - 1) : 0);
+    if (countsWidth + gap(row) + width(controlsRef.current!) > row.clientWidth) {
+      setFit({ step: next });
+    }
+  }, [fit]);
+
+  useLayoutEffect(() => {
+    // ponytail: a chip that changes width without resizing the counts block
+    // (squeezed, wrapping) isn't re-checked until the next resize; observe each
+    // chip (with a seen-set, since re-observing re-fires) if that shows up.
+    const observer = new ResizeObserver(() => setFit({ step: 'full' }));
+    observer.observe(rowRef.current!);
+    observer.observe(countsRef.current!);
     return () => observer.disconnect();
   }, []);
 
+  const folded = fit.step !== 'full';
   return (
     <div
       ref={rowRef}
@@ -63,17 +74,19 @@ function DashboardHeader() {
       )}
     >
       <div ref={countsRef}>
-        <DataCounts />
+        <DataCounts compact={fit.step === 'compact'} />
       </div>
-      {folded ? (
-        <DashboardMenu />
-      ) : (
-        <div ref={controlsRef} className="udi:flex udi:items-center udi:gap-1.5 udi:shrink-0">
-          <GridSettingsButton />
-          <SessionImportExportButton />
-          <DownloadButton />
-        </div>
-      )}
+      <div ref={controlsRef} className="udi:flex udi:items-center udi:gap-1.5 udi:shrink-0">
+        {folded ? (
+          <DashboardMenu />
+        ) : (
+          <>
+            <GridSettingsButton />
+            <SessionImportExportButton />
+            <DownloadButton />
+          </>
+        )}
+      </div>
     </div>
   );
 }
