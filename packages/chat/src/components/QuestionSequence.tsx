@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,8 +33,10 @@ interface QuestionSequenceProps {
 }
 
 /** A sequence of single-select questions shown one at a time. Answering one
- *  moves on to the next unanswered question; the arrows revisit earlier ones. */
+ *  moves on to the next unanswered question; the arrows revisit earlier ones.
+ *  Keys 1–9 pick the matching option while focus is inside. */
 export function QuestionSequence({ questions, onComplete }: QuestionSequenceProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
   // `undefined` = not answered yet; `null` = skipped.
   const [answers, setAnswers] = useState<(string | null | undefined)[]>(() =>
@@ -42,20 +44,44 @@ export function QuestionSequence({ questions, onComplete }: QuestionSequenceProp
   );
   const [freeText, setFreeText] = useState('');
 
+  // Take focus on arrival so the number keys work straight away. The chat input
+  // is disabled while the reply loads, so this doesn't pull focus from typing.
+  useEffect(() => containerRef.current?.focus({ preventScroll: true }), []);
+
+  // Refocus on every move: the focused option button may not exist on the next
+  // question, and focus left on <body> would end the number keys.
+  const goTo = (nextStep: number) => {
+    setStep(nextStep);
+    containerRef.current?.focus({ preventScroll: true });
+  };
+
   const answer = (value: string | null) => {
     const next = answers.with(step, value);
     setAnswers(next);
     setFreeText('');
     const unanswered = next.indexOf(undefined);
     if (unanswered === -1) onComplete(next as (string | null)[]);
-    else setStep(unanswered);
+    else goTo(unanswered);
   };
 
   const current = questions[step];
   if (!current) return null;
 
   return (
-    <div className="udi:rounded-lg udi:border udi:bg-background udi:p-1.5">
+    <div
+      ref={containerRef}
+      tabIndex={-1}
+      className="udi:rounded-lg udi:border udi:bg-background udi:p-1.5 udi:outline-none"
+      onKeyDown={(e) => {
+        // Digits typed into "Something else" are text, not shortcuts.
+        if (e.target instanceof HTMLInputElement || e.altKey || e.ctrlKey || e.metaKey) return;
+        const option = current.options[Number(e.key) - 1];
+        if (option) {
+          e.preventDefault();
+          answer(option.value);
+        }
+      }}
+    >
       <div className="udi:flex udi:items-center udi:gap-1 udi:px-1.5 udi:py-1">
         <p className="udi:flex-1 udi:text-sm udi:font-medium">{current.question}</p>
         {questions.length > 1 && (
@@ -65,7 +91,7 @@ export function QuestionSequence({ questions, onComplete }: QuestionSequenceProp
               size="icon-xs"
               aria-label="Previous question"
               disabled={step === 0}
-              onClick={() => setStep(step - 1)}
+              onClick={() => goTo(step - 1)}
             >
               <ChevronLeft />
             </Button>
@@ -75,7 +101,7 @@ export function QuestionSequence({ questions, onComplete }: QuestionSequenceProp
               size="icon-xs"
               aria-label="Next question"
               disabled={answers[step] === undefined || step === questions.length - 1}
-              onClick={() => setStep(step + 1)}
+              onClick={() => goTo(step + 1)}
             >
               <ChevronRight />
             </Button>
@@ -93,7 +119,13 @@ export function QuestionSequence({ questions, onComplete }: QuestionSequenceProp
               'udi:text-left udi:hover:bg-muted',
               answers[step] === option.value && 'udi:ring-1 udi:ring-primary/50',
             )}
-            render={<button type="button" onClick={() => answer(option.value)} />}
+            render={
+              <button
+                type="button"
+                aria-keyshortcuts={i < 9 ? String(i + 1) : undefined}
+                onClick={() => answer(option.value)}
+              />
+            }
           >
             <ItemMedia className="udi:size-5 udi:rounded udi:bg-muted udi:text-xs udi:text-muted-foreground">
               {i + 1}

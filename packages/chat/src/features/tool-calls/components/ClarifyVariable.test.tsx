@@ -1,19 +1,19 @@
 /**
  * @vitest-environment jsdom
  *
- * The agent's ClarifyVariable, as the chat shows it: one question at a time,
- * gone once the user has replied.
+ * The agent's ClarifyVariable, as the chat shows it: every clarification in a
+ * message asked one question at a time, gone once the user has replied.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UDIChatProvider, useConversationStore } from '@/app/UDIChatContext';
-import { ToolCallRenderer } from './ToolCallRenderer';
+import { ClarifyVariable } from './ClarifyVariable';
 
-const clarify = {
-  name: 'ClarifyVariable',
-  arguments: {
-    message: 'Which age and weight?',
+// Two ClarifyVariable calls in one message, one ambiguous term each.
+const clarifications = [
+  {
+    message: 'Which age?',
     ambiguous_variables: [
       {
         query_term: 'age',
@@ -22,10 +22,15 @@ const clarify = {
           { field_name: 'gestational_age_value', entity: 'donors' },
         ],
       },
+    ],
+  },
+  {
+    message: 'Which weight?',
+    ambiguous_variables: [
       { query_term: 'weight', candidates: [{ field_name: 'weight_value', entity: 'donors' }] },
     ],
   },
-};
+];
 
 function Probe({ onStore }: { onStore: (s: ReturnType<typeof useConversationStore>) => void }) {
   onStore(useConversationStore());
@@ -33,14 +38,14 @@ function Probe({ onStore }: { onStore: (s: ReturnType<typeof useConversationStor
 }
 
 describe('ClarifyVariable in the chat', () => {
-  it('asks one question at a time and collapses once answered', async () => {
+  it('asks every clarification in turn and collapses once answered', async () => {
     let conversation!: ReturnType<typeof useConversationStore>;
     const onSelectSuggestion = vi.fn();
     render(
       <UDIChatProvider>
         <Probe onStore={(s) => (conversation = s)} />
-        <ToolCallRenderer
-          toolCall={clarify}
+        <ClarifyVariable
+          clarifications={clarifications}
           messageIndex={0}
           onSelectSuggestion={onSelectSuggestion}
         />
@@ -49,7 +54,7 @@ describe('ClarifyVariable in the chat', () => {
 
     expect(screen.getByText('1 of 2')).toBeTruthy();
     expect(screen.queryByText('weight_value')).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: /^1 age_value/ }));
+    await userEvent.keyboard('1');
 
     expect(screen.getByText('2 of 2')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Skip' }));
@@ -63,6 +68,6 @@ describe('ClarifyVariable in the chat', () => {
       conversation.getState().addMessage({ role: 'user', content: 'age: age_value (donors)' });
     });
     expect(screen.queryByRole('button', { name: 'Skip' })).toBeNull();
-    expect(screen.getByText('Which age and weight?')).toBeTruthy();
+    expect(screen.getByText('Which weight?')).toBeTruthy();
   });
 });
