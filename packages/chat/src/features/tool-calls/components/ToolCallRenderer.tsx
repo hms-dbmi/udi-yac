@@ -67,7 +67,13 @@ export function ToolCallRenderer({
     }
     case 'ClarifyVariable': {
       const clarifyArgs = args as unknown as ClarifyVariableArgs;
-      return <ClarifyVariable {...clarifyArgs} onSelectSuggestion={onSelectSuggestion} />;
+      return (
+        <ClarifyVariable
+          {...clarifyArgs}
+          messageIndex={messageIndex}
+          onSelectSuggestion={onSelectSuggestion}
+        />
+      );
     }
     case 'OfferIssueReport': {
       const offerArgs = args as unknown as OfferIssueReportArgs;
