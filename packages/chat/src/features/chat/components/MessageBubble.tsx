@@ -1,6 +1,6 @@
 import { Crosshair } from 'lucide-react';
 import type { Message } from '@/types/messages';
-import { ToolCallRenderer } from '@/features/tool-calls';
+import { ClarifyVariable, ToolCallRenderer, type ClarifyVariableArgs } from '@/features/tool-calls';
 import {
   Accordion,
   AccordionContent,
@@ -25,7 +25,6 @@ const TOOL_CALL_LABELS: Record<string, string> = {
   FreeTextExplain: 'Explanation',
   Rebuff: 'Notice',
   FilterData: 'Filter',
-  ClarifyVariable: 'Clarify',
   OfferIssueReport: 'Report an issue',
 };
 
@@ -45,13 +44,22 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
   const hoveredViz = useDashboard((s) => s.hoveredVisualizationIndex);
   const isVizHovered = hoveredViz != null && hoveredViz.startsWith(`${messageIndex}-`);
   const isUser = message.role === 'user';
-  const toolCalls = message.tool_calls ?? [];
+  // Every ClarifyVariable call in a message is asked as one question sequence
+  // (rendered last), so one reply answers them all. The other calls keep their
+  // original index: vizKeys are built from it.
+  const allToolCalls = message.tool_calls ?? [];
+  const clarifications = allToolCalls
+    .filter((tc) => tc.function.name === 'ClarifyVariable')
+    .map((tc) => tc.function.arguments as unknown as ClarifyVariableArgs);
+  const toolCalls = allToolCalls
+    .map((tc, i) => ({ tc, i }))
+    .filter(({ tc }) => tc.function.name !== 'ClarifyVariable');
 
   // The chat→card hover is per-visualization: a single-tool-call message links
   // its whole bubble to its one card; a multi-tool-call message links each
   // accordion item to its own card (below), so hovering an item highlights
   // exactly that visualization.
-  const singleVizKey = toolCalls.length === 1 ? vizKey(messageIndex, 0) : null;
+  const singleVizKey = toolCalls.length === 1 ? vizKey(messageIndex, toolCalls[0].i) : null;
   const setChatHover = (key: string | null) =>
     dashboardStore.getState().setHoveredMessageVizKey(key);
   const jumpToViz = (key: string) => dashboardStore.getState().requestJumpToVisualization(key);
@@ -106,18 +114,17 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
         {/* Tool calls */}
         {toolCalls.length === 1 && (
           <ToolCallRenderer
-            toolCall={toolCalls[0].function}
-            isActive={isActive(vizKey(messageIndex, 0))}
-            onSelectSuggestion={onSelectSuggestion}
+            toolCall={toolCalls[0].tc.function}
+            isActive={isActive(vizKey(messageIndex, toolCalls[0].i))}
             message={message}
             messageIndex={messageIndex}
-            toolCallIndex={0}
+            toolCallIndex={toolCalls[0].i}
           />
         )}
 
         {toolCalls.length > 1 && (
-          <Accordion defaultValue={[0]} className="udi:mt-1 udi:min-w-64">
-            {toolCalls.map((tc, i) => {
+          <Accordion defaultValue={[toolCalls[0].i]} className="udi:mt-1 udi:min-w-64">
+            {toolCalls.map(({ tc, i }) => {
               const itemKey = vizKey(messageIndex, i);
               return (
                 <AccordionItem
@@ -142,7 +149,6 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
                     <ToolCallRenderer
                       toolCall={tc.function}
                       isActive={isActive(itemKey)}
-                      onSelectSuggestion={onSelectSuggestion}
                       message={message}
                       messageIndex={messageIndex}
                       toolCallIndex={i}
@@ -152,6 +158,14 @@ export function MessageBubble({ message, messageIndex, onSelectSuggestion }: Mes
               );
             })}
           </Accordion>
+        )}
+
+        {clarifications.length > 0 && (
+          <ClarifyVariable
+            clarifications={clarifications}
+            messageIndex={messageIndex}
+            onSelectSuggestion={onSelectSuggestion}
+          />
         )}
       </div>
     </div>

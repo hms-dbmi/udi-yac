@@ -4,6 +4,7 @@
  */
 
 export { ToolCallRenderer } from './components/ToolCallRenderer';
+export { ClarifyVariable } from './components/ClarifyVariable';
 export { FilterComponent } from './components/FilterComponent';
 
 export type {
