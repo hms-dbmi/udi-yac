@@ -271,6 +271,28 @@ describe('UDIChat — issue reporting', () => {
   });
 });
 
+describe('UDIChat — folded top bar', () => {
+  it('folds the controls into one menu that still reaches every action', async () => {
+    // jsdom's row is 0 px wide, so any measured width overflows it.
+    const rect = vi
+      .spyOn(Element.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 100, 20));
+    const user = userEvent.setup();
+    render(<UDIChat {...config} issueReporting />);
+    expect(screen.queryByRole('button', { name: /Session/ })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Dashboard options' }));
+    expect(screen.getByText('Columns')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Export session/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Download Raw Data/ })).toBeTruthy();
+
+    // The report dialog lives outside the popover, so closing it is no loss.
+    await user.click(screen.getByRole('button', { name: /Report an issue/ }));
+    expect(await screen.findByRole('dialog', { name: 'Report an issue' })).toBeTruthy();
+    rect.mockRestore();
+  });
+});
+
 describe('UDIChat — apiBaseUrl', () => {
   it('drops a trailing slash, so endpoints are not requested as //v1/...', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('[]')));
