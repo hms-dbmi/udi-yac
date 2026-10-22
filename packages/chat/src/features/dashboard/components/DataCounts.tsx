@@ -194,13 +194,10 @@ export function DataCounts() {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-muted udi:px-2.5 udi:py-1.5 udi:animate-pulse"
+            className="udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-muted udi:px-3 udi:py-2 udi:animate-pulse"
           >
             <div className="udi:h-5 udi:w-5 udi:rounded udi:bg-muted-foreground/20" />
-            <div className="udi:flex udi:flex-col udi:items-center udi:gap-1">
-              <div className="udi:h-4 udi:w-8 udi:rounded udi:bg-muted-foreground/20" />
-              <div className="udi:h-3 udi:w-12 udi:rounded udi:bg-muted-foreground/20" />
-            </div>
+            <div className="udi:h-4 udi:w-24 udi:rounded udi:bg-muted-foreground/20" />
           </div>
         ))}
       </div>
@@ -224,25 +221,22 @@ export function DataCounts() {
             onClick={() => globalStore.getState().setOverview(true, chip.id)}
             title={`${chip.label} — open data overview`}
             aria-label={`${chip.label}: ${chip.totalCount.toLocaleString()} rows. Open data overview.`}
-            className="udi:inline-flex udi:cursor-pointer udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-background udi:px-2.5 udi:py-1.5 udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none"
+            className="udi:inline-flex udi:cursor-pointer udi:items-center udi:gap-1 udi:whitespace-nowrap udi:rounded-md udi:border udi:bg-background udi:px-3 udi:py-2 udi:text-sm udi:font-medium udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none"
           >
-            <chip.Icon className="udi:h-5 udi:w-5 udi:text-muted-foreground udi:shrink-0" />
-            <div className="udi:flex udi:flex-col udi:items-center udi:text-center udi:leading-tight">
-              <div className="udi:text-base udi:font-bold">
-                {isFiltered ? (
-                  <>
-                    {filtered.toLocaleString()}
-                    <span className="udi:text-xs udi:font-normal udi:text-muted-foreground">
-                      {' '}
-                      / {chip.totalCount.toLocaleString()}
-                    </span>
-                  </>
-                ) : (
-                  chip.totalCount.toLocaleString()
-                )}
-              </div>
-              <span className="udi:text-xs udi:text-muted-foreground">{chip.label}</span>
-            </div>
+            <chip.Icon className="udi:mr-0.5 udi:h-5 udi:w-5 udi:text-muted-foreground udi:shrink-0" />
+            <span className="udi:tabular-nums">
+              {isFiltered ? (
+                <>
+                  {filtered.toLocaleString()}
+                  <span className="udi:text-muted-foreground">
+                    /{chip.totalCount.toLocaleString()}
+                  </span>
+                </>
+              ) : (
+                chip.totalCount.toLocaleString()
+              )}
+            </span>
+            {chip.label}
           </button>
         );
       })}
