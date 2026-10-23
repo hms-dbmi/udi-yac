@@ -59,6 +59,12 @@ jobs:
         if: matrix.package == 'agent'
         run: uv run python scripts/gen_env_docs.py --check
 
+      # openapi.json (the docs site's HTTP API reference) is generated from the
+      # FastAPI app; this fails a PR that changes the API without regenerating.
+      - name: Check openapi.json is current
+        if: matrix.package == 'agent'
+        run: uv run --extra server python scripts/gen_openapi.py --check
+
       # sample-data/pcx/datapackage.json is generated from the CSVs, the data
       # dictionary and example_prompts.json; regenerate it and fail on any diff
       # (columns, types, cardinalities, foreign keys, descriptions, prompts).

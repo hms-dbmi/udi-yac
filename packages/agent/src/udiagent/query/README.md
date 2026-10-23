@@ -329,6 +329,11 @@ dev container.
 
 ### 3.2 HTTP contract (for a non-toolkit consumer)
 
+The full request and response schemas are in the
+[HTTP API reference](https://hms-dbmi.github.io/udi-yac/docs/backend/http-api/)
+(generated from the server into [`openapi.json`](../../../openapi.json)); this
+section explains how the two endpoints are meant to be used.
+
 Two JWT-guarded endpoints (dev: `INSECURE_DEV_MODE=1`, `Authorization: Bearer
 dev`). With `jwtPassthrough` set on a backend, that same token is also what
 authenticates the query to the database; a token the database refuses yields

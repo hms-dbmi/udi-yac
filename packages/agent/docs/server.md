@@ -142,10 +142,15 @@ would change.
 
 ## Server Endpoints
 
-A running server describes its own endpoints: the OpenAPI spec is at
-`/openapi.json` and interactive docs are at `/docs`. The benchmark endpoints
-(`/v1/yac/benchmark`, `/v1/yac/benchmark_analysis`) are described in
-[Benchmarking](benchmarking.md).
+Every endpoint, with its request and response schemas, is in the
+[HTTP API reference](https://hms-dbmi.github.io/udi-yac/docs/backend/http-api/).
+It is rendered from [`openapi.json`](../openapi.json), which
+`scripts/gen_openapi.py` generates from the FastAPI app; CI fails when the two
+drift apart. A running server also serves its spec at `/openapi.json` and
+interactive docs at `/docs`.
+
+The benchmark endpoints (`/v1/yac/benchmark`, `/v1/yac/benchmark_analysis`)
+are left out of the reference; see [Benchmarking](benchmarking.md).
 
 ## Server-side query backends
 

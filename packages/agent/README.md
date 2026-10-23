@@ -66,7 +66,8 @@ INSECURE_DEV_MODE=1 uv run --extra server fastapi dev src/udiagent/server/app.py
 - [Benchmarking](docs/benchmarking.md): measuring a server configuration.
 - [Server-side data](src/udiagent/query/README.md): compiling the grammar to SQL.
 - Reference: the [Python API](https://hms-dbmi.github.io/udi-yac/docs/backend/python-api/)
-  and the server's OpenAPI spec (`/openapi.json` on a running server).
+  and the [HTTP API](https://hms-dbmi.github.io/udi-yac/docs/backend/http-api/)
+  (from [`openapi.json`](openapi.json)).
 
 ## License
 

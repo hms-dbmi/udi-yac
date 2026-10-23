@@ -9,6 +9,7 @@ Run with::
     uv run fastapi dev src/udiagent/server/app.py --port 8007
 """
 
+import importlib.metadata
 import json
 import logging
 import urllib.request
@@ -38,6 +39,11 @@ from udiagent.query import DatabaseAuthError, use_db_token
 from udiagent.server.config import ServerConfig
 from udiagent.server.auth import RAW_TOKEN_CLAIM, make_verify_jwt
 from udiagent.server.models import (
+    ErrorResponse,
+    IssueReportResponse,
+    MetadataResponse,
+    QueryResponse,
+    ToolCall,
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
     YACIssueReportRequest,
@@ -133,7 +139,35 @@ orchestrator = Orchestrator(
 )
 
 # --- FastAPI app ---
-app = FastAPI()
+# The title, description and tags feed the OpenAPI spec, which
+# scripts/gen_openapi.py writes to packages/agent/openapi.json for the docs site.
+app = FastAPI(
+    title="UDIAgent API",
+    # operationIds name the handler (`yac_completions`), not FastAPI's default
+    # handler + path + method, so the reference pages get short URLs.
+    generate_unique_id_function=lambda route: route.name,
+    version=importlib.metadata.version("udiagent"),
+    description=(
+        "The reference server for the YAC chat: it turns a conversation about a "
+        "data package into charts, filters and answers, and optionally serves the "
+        "package's data from a database. Every endpoint is stateless: the client "
+        "sends the conversation, the data package descriptor and the active "
+        "filters with each request. [How the agent works]"
+        "(https://hms-dbmi.github.io/udi-yac/docs/backend/architecture/) follows "
+        "a request through it."
+    ),
+    openapi_tags=[
+        {"name": "chat", "description": "Conversation turns and prompt suggestions."},
+        {"name": "charts", "description": "Re-binding a chart made from a template."},
+        {
+            "name": "data",
+            "description": "Server-side data: a package's schema and query results "
+            "from a database instead of CSVs in the browser.",
+        },
+        {"name": "issues", "description": "User issue reports, recorded in LangFuse."},
+        {"name": "status", "description": "Health check."},
+    ],
+)
 
 # Optional budget-check hook.  Downstream integrators should monkey-patch this
 # (``server_app.app.state.budget_check = my_fn``) to consult their quota store.
@@ -311,7 +345,34 @@ verify_jwt = make_verify_jwt(
 # ---------------------------------------------------------------------------
 
 
-@app.get("/")
+def _errors(descriptions: dict[int, str]) -> dict:
+    """OpenAPI entries for the error responses a route returns. Docs only."""
+    return {
+        status: {"model": ErrorResponse, "description": text}
+        for status, text in descriptions.items()
+    }
+
+
+_UNAUTHORIZED = "Missing, invalid or expired token (`detail`)."
+_IDP_UNREACHABLE = "The identity provider's keys could not be fetched (`JWT_JWKS_URL`)."
+_DB_FORBIDDEN = "The database rejected the caller's forwarded identity (JWT passthrough)."
+_NO_BACKEND = "No query backend is configured for the package."
+
+_USAGE_HEADERS = {
+    name: {"description": description, "schema": {"type": "string"}}
+    for name, description in {
+        "X-Usage-Prompt-Tokens": "Prompt tokens across every LLM call in the turn.",
+        "X-Usage-Completion-Tokens": "Completion tokens, reasoning included.",
+        "X-Usage-Total-Tokens": "Prompt plus completion tokens.",
+        "X-Usage-Cached-Prompt-Tokens": "Prompt tokens served from the provider's cache.",
+        "X-Usage-Cache-Write-Tokens": "Prompt tokens written to the provider's cache.",
+        "X-Usage-Reasoning-Tokens": "Reasoning tokens, a subset of completion tokens.",
+        "X-Usage-Model": "The model the turn ran on.",
+    }.items()
+}
+
+
+@app.get("/", tags=["status"], summary="Health check")
 def read_root():
     return {
         "service": "UDIAgent API",
@@ -351,13 +412,51 @@ def _reject_byok_in_bedrock_mode(x_openai_key: str | None) -> JSONResponse | Non
     )
 
 
-@app.post("/v1/yac/completions")
+@app.post(
+    "/v1/yac/completions",
+    summary="Run a conversation turn",
+    tags=["chat"],
+    responses={
+        200: {
+            "model": list[ToolCall],
+            "description": "The turn's outcomes, in the order to apply them. A "
+            "quota refusal is a `Rebuff` here too, not an error status.",
+            "headers": _USAGE_HEADERS,
+        },
+        **_errors(
+            {
+                401: f"{_UNAUTHORIZED} Or no OpenAI key: the server has none and "
+                "the request sent no `X-OpenAI-Key`, or OpenAI rejected it (`error`).",
+                403: "The server routes inference through Amazon Bedrock and "
+                "refuses per-request `X-OpenAI-Key` headers.",
+                502: "The LLM API call failed (a model the key cannot use, a rate "
+                "limit, a timeout).",
+                503: f"The server's LLM backend is misconfigured. Or: {_IDP_UNREACHABLE}",
+            }
+        ),
+    },
+)
 def yac_completions(
     request: YACCompletionRequest,
     token_payload: dict = Depends(verify_jwt),
-    x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
-    x_conversation_id: str | None = Header(None, alias="X-Conversation-Id"),
+    x_openai_key: str | None = Header(
+        None,
+        alias="X-OpenAI-Key",
+        description="The caller's own OpenAI key. Bypasses the server's quota, "
+        "and lets `model` take effect.",
+    ),
+    x_conversation_id: str | None = Header(
+        None,
+        alias="X-Conversation-Id",
+        description="Groups the turns of one conversation into a LangFuse session.",
+    ),
 ):
+    """Run one conversation turn.
+
+    The agent routes the latest message to tools (a chart, a filter change, an
+    answer, a clarifying question or a refusal) and returns one tool call per
+    outcome. Token use comes back in the `X-Usage-*` headers.
+    """
     logger.info(
         "Received /v1/yac/completions request "
         "(message_count=%d, schema_char_count=%d, domain_char_count=%d, "
@@ -538,7 +637,22 @@ _MAX_METADATA_CACHES = 32
 app.state.metadata_caches = {}
 
 
-@app.get("/v1/yac/metadata")
+@app.get(
+    "/v1/yac/metadata",
+    summary="Get a package's schema and column values",
+    tags=["data"],
+    responses={
+        200: {"model": MetadataResponse},
+        **_errors(
+            {
+                401: _UNAUTHORIZED,
+                403: _DB_FORBIDDEN,
+                404: _NO_BACKEND,
+                503: _IDP_UNREACHABLE,
+            }
+        ),
+    },
+)
 def yac_metadata(
     package: str | None = None,
     refresh: bool = False,
@@ -580,11 +694,32 @@ def yac_metadata(
     }
 
 
-@app.post("/v1/yac/query")
+@app.post(
+    "/v1/yac/query",
+    summary="Run chart queries",
+    tags=["data"],
+    responses={
+        200: {"model": QueryResponse},
+        **_errors(
+            {
+                401: _UNAUTHORIZED,
+                403: _DB_FORBIDDEN,
+                404: _NO_BACKEND,
+                503: _IDP_UNREACHABLE,
+            }
+        ),
+    },
+)
 def yac_query(
     request: YACQueryRequest,
     token_payload: dict = Depends(verify_jwt),
 ):
+    """Run every visible chart's transformation pipeline as SQL, in one batch.
+
+    The server-side counterpart of the toolkit's in-browser executor: each query
+    is compiled to SQL against the package's backend, with the current
+    selections applied.
+    """
     engines = app.state.query_engines
     engine = engines.get(request.package) or engines.get("default")
     if engine is None:
@@ -600,7 +735,24 @@ def yac_query(
     return {"results": results}
 
 
-@app.post("/v1/yac/vis_instantiate", response_model=YACVisInstantiateResponse)
+@app.post(
+    "/v1/yac/vis_instantiate",
+    response_model=YACVisInstantiateResponse,
+    summary="Re-bind a chart made from a template",
+    tags=["charts"],
+    responses=_errors(
+        {
+            400: "`bad_schema`: `dataSchema` has no entities.",
+            401: _UNAUTHORIZED,
+            404: "`unknown_template`: the template no longer exists.",
+            422: "`missing_bindings` or `invalid_bindings`: the bindings do not "
+            "fit the template or the schema; `errors` lists them.",
+            500: "`instantiate_failed`: a template bug.",
+            503: "`templates_unavailable`: this agent has no generated templates. "
+            f"Or: {_IDP_UNREACHABLE}",
+        }
+    ),
+)
 def yac_vis_instantiate(
     request: YACVisInstantiateRequest,
     token_payload: dict = Depends(verify_jwt),
@@ -787,7 +939,32 @@ def _notify_issue_report(
         )
 
 
-@app.post("/v1/yac/issue_report")
+@app.post(
+    "/v1/yac/issue_report",
+    summary="Record an issue report",
+    tags=["issues"],
+    # The handler reads the raw body itself (to cap its size before parsing),
+    # so the body has to be declared here for the spec to show it.
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {"schema": YACIssueReportRequest.model_json_schema()}
+            },
+        }
+    },
+    responses={
+        200: {"model": IssueReportResponse},
+        **_errors(
+            {
+                401: _UNAUTHORIZED,
+                413: f"The report is larger than {MAX_ISSUE_REPORT_BYTES // 2**20} MiB.",
+                422: "The report is invalid; `detail` has the per-field errors.",
+                503: f"LangFuse is not configured, so reports cannot be recorded. Or: {_IDP_UNREACHABLE}",
+            }
+        ),
+    },
+)
 async def yac_issue_report(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -857,7 +1034,8 @@ async def yac_issue_report(
     return {"traceId": trace_id}
 
 
-@app.post("/v1/yac/benchmark")
+# Benchmark tooling, left out of the published spec (see docs/benchmarking.md).
+@app.post("/v1/yac/benchmark", include_in_schema=False)
 def yac_benchmark(
     request: YACBenchmarkCompletionRequest,
     token_payload: dict = Depends(verify_jwt),
@@ -908,7 +1086,15 @@ def yac_benchmark(
     }
 
 
-@app.get("/v1/yac/examples")
+@app.get(
+    "/v1/yac/examples",
+    summary="List example prompts",
+    tags=["chat"],
+    responses={
+        200: {"model": list[str]},
+        **_errors({404: "No example prompts for the package, and no global list."}),
+    },
+)
 def yac_examples(package: str | None = None):
     """Example prompts for the chat. A package with its own `examplePrompts` in
     the backends config gets those — prompts are about a dataset, and the
@@ -927,13 +1113,17 @@ def yac_examples(package: str | None = None):
     return JSONResponse(content=prompts)
 
 
-@app.get("/v1/yac/structured_functions")
+@app.get(
+    "/v1/yac/structured_functions",
+    summary="List the structured text functions",
+    tags=["chat"],
+)
 def yac_structured_functions():
     """Return the structured function registry for frontend consumption."""
     return JSONResponse(content=export_registry_json())
 
 
-@app.get("/v1/yac/benchmark_analysis")
+@app.get("/v1/yac/benchmark_analysis", include_in_schema=False)
 def yac_benchmark_analysis(token_payload: dict = Depends(verify_jwt)):
     """The most recently written benchmark analysis under the package's out/.
 

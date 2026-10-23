@@ -24,7 +24,8 @@ ignore the extra key.
 
 import time
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 # How long a fetched key set is reused before being refreshed.
 _JWKS_TTL_SECONDS = 300
@@ -96,11 +97,20 @@ def make_verify_jwt(
             cache["fetched"] = now
         return cache["keys"]
 
+    # Declared only so the OpenAPI spec shows a bearer security scheme. The
+    # header itself is read below, where a missing one gets this module's 401;
+    # auto_error=False keeps HTTPBearer from answering first with its own.
+    bearer = HTTPBearer(auto_error=False, description="A JWT, as `Bearer <token>`.")
+
     # Defaulted rather than required: a missing header is an authentication
     # failure (401), not a malformed request (422) — and under a proxy that
     # attaches the header itself, the browser has no reason to send a
-    # placeholder just to satisfy a required field.
-    def verify_jwt(authorization: str = Header(default="")):
+    # placeholder just to satisfy a required field. Left out of the spec, which
+    # shows the security scheme instead.
+    def verify_jwt(
+        authorization: str = Header(default="", include_in_schema=False),
+        _scheme: HTTPAuthorizationCredentials | None = Security(bearer),
+    ):
         if insecure_dev_mode:
             return {"dev_mode": True}
         if not authorization.startswith("Bearer "):
