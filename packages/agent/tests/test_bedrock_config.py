@@ -393,7 +393,7 @@ class TestBedrockPackaging:
         assert "bedrock" in extras["all"][0]
 
     def test_deploy_image_installs_the_extra(self):
-        """deploy-agent.yml builds this Dockerfile; UDI_BEDROCK needs botocore."""
+        """The deployed image is built from this Dockerfile; UDI_BEDROCK needs botocore."""
         syncs = [
             line
             for line in (self._AGENT_ROOT / "Dockerfile").read_text().splitlines()
