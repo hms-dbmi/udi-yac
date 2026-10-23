@@ -478,7 +478,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       transformations.length > 0 &&
       'rollup' in (transformations[transformations.length - 1] as object);
     const displayDataOnly = options?.displayDataOnly ?? endsWithRollup;
-    const cacheKey = `${tablesVersion.value}|${selectionHash.value}|${displayDataOnly ? 'd' : 'a'}|${[...keys].sort().join('\0')}|${JSON.stringify(dataTransformations ?? null)}`;
+    const cacheKey = `${tablesVersion.value}|${selectionHash.value}|${displayDataOnly ? 'd' : 'a'}|${keys.join('\0')}|${JSON.stringify(dataTransformations ?? null)}`;
     const cached = getDataObjectCache.get(cacheKey);
     if (cached) {
       // LRU-ish touch: re-insert to mark as most-recently-used.
