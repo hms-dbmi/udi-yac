@@ -35,5 +35,13 @@ const { spec } = Astro.props;
   .udi-vis {
     min-width: 0;
     overflow-x: auto;
+    /* ponytail: the charts only have a light theme, so they sit on a light
+       panel in the site's dark mode too. Drop this once the toolkit themes
+       charts for dark mode. */
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background: #fff;
+    color: #171717;
+    color-scheme: light;
   }
 </style>
