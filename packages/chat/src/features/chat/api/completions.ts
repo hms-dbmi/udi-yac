@@ -113,6 +113,7 @@ export async function queryLLM(
   dataDomains: string,
   conversationId?: string,
   filters: AgentFilterEntry[] = [],
+  signal?: AbortSignal,
 ): Promise<QueryResult> {
   // The server honors a requested model only alongside a caller-supplied key —
   // whoever pays for the tokens picks the model. Sending it without a key would
@@ -146,6 +147,7 @@ export async function queryLLM(
     method: 'POST',
     headers,
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok) {
