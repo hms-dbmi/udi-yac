@@ -25,6 +25,9 @@ on:
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-site.yml"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

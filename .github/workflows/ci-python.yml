@@ -22,6 +22,9 @@ on:
       - "scripts/gen_datapackage.py"
       - ".github/workflows/ci-python.yml"
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
