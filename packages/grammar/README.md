@@ -230,7 +230,7 @@ function App() {
 />
 ```
 
-It is a separate prop, not part of the spec, because the spec is JSON-cloned. On the custom element, set it as a JS property (`el.recordUrl = fn`). In React, `UDIToolkitProvider` also takes `recordUrl` as a default for every nested `<UDIVis>`. Independently of it, a table cell whose value is an `http(s)` URL renders as a link. Both kinds of link take their color from the `--udi-table-link` CSS custom property, falling back to the browser's link color.
+It is a separate prop, not part of the spec, because the spec is JSON-cloned. On the custom element, set it as a JS property (`el.recordUrl = fn`). In React, `UDIToolkitProvider` also takes `recordUrl` as a default for every nested `<UDIVis>`. Independently of it, a table cell whose value is an `http(s)` URL renders as a link. Both kinds of link take their color from the `--udi-table-link` CSS custom property, falling back to the browser's link color. The link column stays put while the table scrolls sideways. On a transparent table (the default palette), set `--udi-table-surface` to the color the table sits on, so the scrolled cells don't show through the column.
 
 ### Headless data query (`queryData`)
 

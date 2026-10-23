@@ -267,7 +267,14 @@ function recordLinkColumn(): ColDef[] {
 const gridTheme = computed(() => {
   const palette = effectivePalette.value;
   const params: Record<string, string | number> = { fontFamily: 'inherit' };
-  if (palette?.background != null) params.backgroundColor = palette.background;
+  // A transparent table shows the cells scrolling under its pinned link
+  // column, so a host that sets --udi-table-surface (what the table sits on)
+  // gets that painted instead: the same look, but opaque.
+  if (palette?.background === 'transparent') {
+    params.backgroundColor = 'var(--udi-table-surface, transparent)';
+  } else if (palette?.background != null) {
+    params.backgroundColor = palette.background;
+  }
   if (palette?.text != null) params.foregroundColor = palette.text;
   if (palette?.grid != null) params.borderColor = palette.grid;
   // Quartz's stock size is 14px for both body and header.

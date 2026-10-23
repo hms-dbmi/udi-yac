@@ -442,6 +442,15 @@
   /* Table links (record links, URL cells): primary-700 reads on white,
      plain primary on dark. */
   --udi-table-link: var(--udi-color-udi-primary-700);
+  /* What the table sits on, painted under its pinned link column so scrolled
+     cells don't show through. Cards and dialogs have their own surface. */
+  --udi-table-surface: var(--background);
+}
+.udi-yac [data-slot='card'] udi-vis {
+  --udi-table-surface: var(--card);
+}
+.udi-yac [data-slot='dialog-content'] udi-vis {
+  --udi-table-surface: var(--popover);
 }
 .dark .udi-yac udi-vis,
 .udi-yac.dark udi-vis {
