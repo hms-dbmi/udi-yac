@@ -491,6 +491,26 @@ def test_insecure_dev_mode_does_not_require_an_authorization_header():
     assert verify()["dev_mode"] is True
 
 
+def test_missing_header_is_401_and_the_spec_shows_a_bearer_scheme():
+    """The HTTPBearer dependency is there for the OpenAPI spec only: it must not
+    answer a missing header itself, and the raw header stays out of the spec."""
+    from fastapi import Depends, FastAPI
+    from fastapi.testclient import TestClient
+
+    app = FastAPI()
+    verify = make_verify_jwt(secret_key="a-secret", algorithm="HS256", insecure_dev_mode=False)
+
+    @app.get("/private")
+    def private(payload: dict = Depends(verify)):
+        return payload
+
+    assert TestClient(app).get("/private").status_code == 401
+    spec = app.openapi()
+    assert spec["components"]["securitySchemes"]["HTTPBearer"]["scheme"] == "bearer"
+    assert spec["paths"]["/private"]["get"]["security"] == [{"HTTPBearer": []}]
+    assert "parameters" not in spec["paths"]["/private"]["get"]
+
+
 # ---------------------------------------------------------------------------
 # Raw token carry-through
 #

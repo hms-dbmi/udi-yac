@@ -17,6 +17,7 @@ on:
       # The docs copy these in (apps/site/scripts/sync-docs.mjs)
       - "packages/agent/README.md"
       - "packages/agent/docs/**"
+      - "packages/agent/openapi.json"
       - "packages/agent/pyproject.toml"
       - "packages/agent/src/udiagent/*.py"
       - "packages/agent/src/udiagent/query/*.py"
