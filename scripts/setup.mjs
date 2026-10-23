@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // One-shot dev-environment bootstrap for onboarding:
 //   1. create local env files from their templates (never overwrites)
-//   2. install JS deps (pnpm) + build the toolkit that chat/grammar-app need
+//   2. install JS deps (pnpm) + build the toolkit that chat and the site need
 //   3. install Python deps (uv, all extras — includes the FastAPI server)
 // Idempotent: safe to re-run. Invoke with `pnpm setup` or `node scripts/setup.mjs`.
 import { existsSync, copyFileSync, readFileSync } from 'node:fs';
@@ -44,7 +44,7 @@ if (!has('pnpm')) {
   process.exit(1);
 }
 run('pnpm install');
-run('pnpm run build:toolkit'); // chat + grammar-app resolve udi-toolkit from dist/
+run('pnpm run build:toolkit'); // chat + the site resolve udi-toolkit from dist/
 
 // 3. Python workspace.
 console.log('\n› Python dependencies (uv)');

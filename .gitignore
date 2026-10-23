@@ -1,7 +1,6 @@
 node_modules/
 dist/
 dist-ssr/
-.quasar/
 *.log
 logs/
 .env

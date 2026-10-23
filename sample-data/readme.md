@@ -77,8 +77,8 @@ the CSV filename and a blank `field` describes the table itself.
 
 This `sample-data/` directory (repo root) is the **one** canonical copy of the
 dev/test data. It is synced into each frontend's static dir on dev/build by
-`scripts/copy-sample-data.mjs` (chat → `packages/chat/public/data`, grammar-app
-→ `apps/grammar-app/public/data`); the toolkit's Storybook mounts it via
+`scripts/copy-sample-data.mjs` (chat → `packages/chat/public/data`, the site →
+`apps/site/public/app/data`); the toolkit's Storybook mounts it via
 `staticDirs`. Those `public/data` copies are gitignored — **edit files here, not
 there.**
 
@@ -87,7 +87,6 @@ there.**
 | Path                                    | Description                                                                                                                                                                                                                                                                                                |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `./hubmap/`                             | Full HuBMAP data package (`datapackage.json` + donors/samples/datasets `.tsv`), fetched fresh from `https://portal.hubmapconsortium.org/metadata/v0/udi/`. The **only** copy of HuBMAP in the repo: chat's default package, the toolkit stories' source, and the donors/samples behind the parity goldens. |
-| `./hubmap_examples/thumbnails/`         | Pre-rendered chart thumbnails for the grammar-app examples page. The TSVs that once sat beside them were an unmaintained snapshot and are gone — the page's specs read the live portal, or `./hubmap/` offline.                                                                                            |
 | `./penguins.csv`                        | Classic Palmer Penguins test dataset (loose CSV used by toolkit stories, parity goldens, and agent tests).                                                                                                                                                                                                 |
 | `./penguins/`                           | The same Penguins data as a self-contained package (`penguins.csv` + `datapackage.json`) — the committed default for the server-side query quickstart (`seed_duckdb.py` / `seed_starrocks.py`) and browser mode via `set-chat-data-source.mjs penguins`.                                                   |
 | `./pcx/`                                | De-identified clinical cancer cohort: 970 patients across 7 linked tables (demographics, disease events, medical therapy, radiation, surgery, survival, treatment summary). `datapackage.json` is generated from the CSVs + `data_dictionary.csv` + `example_prompts.json` by `scripts/gen_datapackage.py`; `sessions/` holds predefined session exports. The public Pages site's default package. |

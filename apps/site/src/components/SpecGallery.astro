@@ -1,0 +1,65 @@
+---
+// Example specs, grouped, each drawn live with a link to open it in the editor.
+import type { ExampleGroup } from '../grammar/types';
+import { editorHref } from '../grammar/urls';
+import Prose from './Prose.astro';
+import UdiVis from './UdiVis.astro';
+
+interface Props {
+  groups: ExampleGroup[];
+  /** One chart per row, for charts with many categories. */
+  wide?: boolean;
+}
+
+const { groups, wide = false } = Astro.props;
+const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+---
+
+{
+  groups.map((group) => (
+    <section>
+      <h2 id={slug(group.name)}>{group.name}</h2>
+      {group.description && <Prose text={group.description} />}
+      <div class:list={["grid", { wide }]}>
+        {group.examples.map((example) => (
+          <article class="card">
+            <h3 id={slug(`${group.name} ${example.name}`)}>{example.name}</h3>
+            {example.description && <Prose text={example.description} />}
+            <UdiVis spec={example.spec} />
+            <a href={editorHref(example.spec)}>Open in the editor →</a>
+          </article>
+        ))}
+      </div>
+    </section>
+  ))
+}
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 1rem;
+  }
+  .grid.wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+  }
+  .card > :global(*) {
+    margin: 0;
+  }
+  .card h3 {
+    font-size: var(--sl-text-h5);
+  }
+  .card a {
+    margin-top: auto;
+  }
+</style>

@@ -13,7 +13,7 @@ body:
         - packages/grammar (udi-toolkit)
         - packages/agent (udiagent)
         - packages/grammar-py (udi-grammar-py)
-        - apps/grammar-app (demo app)
+        - apps/site (docs site, grammar pages and editor)
         - Repo-wide (build, CI, tooling)
         - Not sure
     validations:
