@@ -164,7 +164,7 @@ function syncCharts() {
       );
       return `## ${TYPE_LABELS[type] ?? type}\n\n${entries.join('\n')}`;
     });
-  const intro = `YAC draws most charts from a library of ${templates.length} templates. When you ask a question, the agent picks a template and binds its *table* and *field* slots to your dataset; the dropdowns under a chart in the chat change those bindings. If no template fits, the agent writes a chart from scratch.\n\n:::note[Generated page]\nBuilt from [\`template_visualizations.json\`](${BLOB}packages/agent/src/udiagent/data/skills/template_visualizations.json) on every docs build.\n:::\n\n`;
+  const intro = `YAC draws its charts from a library of ${templates.length} templates. When you ask a question, the agent picks a template and binds its *table* and *field* slots to your dataset; the dropdowns under a chart in the chat change those bindings. If no template fits a question, the agent says why instead of drawing a chart.\n\n:::note[Generated page]\nBuilt from [\`template_visualizations.json\`](${BLOB}packages/agent/src/udiagent/data/skills/template_visualizations.json) on every docs build.\n:::\n\n`;
   writeFileSync(
     join(DOCS, 'charts.md'),
     frontmatter({
