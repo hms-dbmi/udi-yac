@@ -1,0 +1,39 @@
+---
+// A live chart, rendered by the toolkit's <udi-vis> custom element. The element
+// takes its spec as a JS property, not an attribute, so the spec rides in a data
+// attribute until the script below sets it.
+import type { UDIGrammar } from 'udi-toolkit';
+
+interface Props {
+  spec: UDIGrammar;
+}
+
+const { spec } = Astro.props;
+---
+
+<div class="udi-vis not-content">
+  <udi-vis data-spec={JSON.stringify(spec)}></udi-vis>
+</div>
+
+<script>
+  import 'udi-toolkit/ce';
+  import 'udi-toolkit/style.css';
+  import { resolveSpec } from '../grammar/urls';
+
+  // ponytail: every chart on the page renders at load. Render on scroll
+  // (IntersectionObserver) if a gallery gets slow.
+  for (const el of document.querySelectorAll<HTMLElement & { spec?: unknown }>(
+    'udi-vis[data-spec]',
+  )) {
+    el.spec = resolveSpec(JSON.parse(el.dataset.spec!));
+  }
+</script>
+
+<style>
+  /* min-width: 0 stops a container-sized Vega view from ratcheting its parent
+     wider on every resize; overflow keeps a wide table inside its card. */
+  .udi-vis {
+    min-width: 0;
+    overflow-x: auto;
+  }
+</style>

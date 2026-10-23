@@ -370,5 +370,6 @@ from the repo root) to browse the stories at `http://localhost:6006`.
 
 ![Interface showing a selection of many example visualizations, with one selected showing multiple stacked bar charts.](./docs/example_storybook.png)
 
-For an interactive spec editor built on the toolkit, see the demo app in
-[`apps/grammar-app`](../../apps/grammar-app).
+For an interactive spec editor built on the toolkit, see the
+[grammar editor](https://hms-dbmi.github.io/udi-yac/grammar/editor/) on the docs
+site, alongside a tutorial and live examples.

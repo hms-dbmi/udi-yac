@@ -15,7 +15,6 @@ git log "$(git log --merges --grep="Add 'packages/chat/'" -n1 --format=%H)^2"
 | Directory                                    | Published as                                                        | Stack                    | Role                                       |
 | -------------------------------------------- | ------------------------------------------------------------------- | ------------------------ | ------------------------------------------ |
 | [`packages/grammar`](packages/grammar)       | [`udi-toolkit`](https://www.npmjs.com/package/udi-toolkit) (npm)    | Vue 3, Vite              | Grammar types, UDIVis component, Storybook |
-| [`apps/grammar-app`](apps/grammar-app)       | — (private)                                                         | Vue 3, Quasar, Vite      | Demo app for the grammar/toolkit           |
 | [`packages/chat`](packages/chat)             | [`udi-yac`](https://www.npmjs.com/package/udi-yac) (npm)            | React 19, Tailwind, Vite | Chat UI — library + standalone SPA         |
 | [`packages/agent`](packages/agent)           | [`udiagent`](https://pypi.org/project/udiagent/) (PyPI)             | Python, OpenAI, FastAPI  | LLM orchestrator + reference server        |
 | [`packages/grammar-py`](packages/grammar-py) | [`udi-grammar-py`](https://pypi.org/project/udi-grammar-py/) (PyPI) | Python, hatchling        | Python builder for UDI grammar specs       |
@@ -30,9 +29,9 @@ Former homes: [udi-grammar](https://github.com/hms-dbmi/udi-grammar), [udi-chat-
 node scripts/setup.mjs      # or: pnpm setup
 ```
 
-This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:grammar`, `pnpm dev:storybook`, `pnpm dev:site`).
+This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:storybook`, `pnpm dev:site`).
 
-**The whole public site** (landing page, docs, the app page at `/udi-yac/app/`, grammar demo at `/udi-yac/grammar/`) runs with the **Dev: all** task at <http://localhost:4321/udi-yac/>. The site's app page embeds the `udi-yac` library build, so it needs **Dev: chat library (watch)** running to pick up chat changes. Its grammar link is proxied to the grammar demo's own dev server (`:9000`, **Dev: grammar app**) and works only while that runs. See [`apps/site/README.md`](apps/site/README.md#local-development). The standalone chat (**Dev: chat**) is separate and is configured only by its env vars, so point `VITE_UDI_DATA_PACKAGE` at any data package to try it.
+**The whole public site** (landing page, docs, grammar pages and editor at `/udi-yac/grammar/`, the app page at `/udi-yac/app/`) runs with the **Dev: all** task at <http://localhost:4321/udi-yac/>. The site's app page embeds the `udi-yac` library build, so it needs **Dev: chat library (watch)** running to pick up chat changes. See [`apps/site/README.md`](apps/site/README.md#local-development). The standalone chat (**Dev: chat**) is separate and is configured only by its env vars, so point `VITE_UDI_DATA_PACKAGE` at any data package to try it.
 
 Manual/CI steps — JavaScript/TypeScript (pnpm workspace, `udi-toolkit` consumed via `workspace:*`, so build it before the chat app):
 
@@ -41,7 +40,7 @@ pnpm install
 pnpm build:toolkit     # udi-toolkit → packages/grammar/dist
 pnpm build:chat        # standalone chat SPA
 pnpm build:chat:lib    # udi-yac library build
-pnpm build:grammar     # quasar demo app
+pnpm build:site        # the public site (toolkit + library + site)
 pnpm build:storybook
 pnpm test              # builds toolkit, then runs all JS tests
 ```

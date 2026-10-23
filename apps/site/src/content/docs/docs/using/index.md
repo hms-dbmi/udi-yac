@@ -24,7 +24,7 @@ YAC has three parts, each published on its own:
 
 - **The chat** ([`udi-yac`](https://www.npmjs.com/package/udi-yac) on npm): the app you see. It can be embedded in other sites.
 - **The agent** ([`udiagent`](https://pypi.org/project/udiagent/) on PyPI): the server that turns a question into a chart, using a large language model.
-- **The grammar** ([`udi-toolkit`](https://www.npmjs.com/package/udi-toolkit) on npm): the chart format both sides share, and the component that renders it. The [grammar demo](/udi-yac/grammar/) shows examples.
+- **The grammar** ([`udi-toolkit`](https://www.npmjs.com/package/udi-toolkit) on npm): the chart format both sides share, and the component that renders it. The [grammar pages](/udi-yac/grammar/) have a tutorial, examples and a live editor.
 
 To run or embed any of these, see [Integrate](/udi-yac/docs/integrate/chat/).
 
