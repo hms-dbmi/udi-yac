@@ -1,8 +1,9 @@
 node_modules
 dist
 .astro
-# Written by scripts/sync-docs.mjs from READMEs and template JSON elsewhere in the repo
+# Written by scripts/sync-docs.mjs from READMEs, docstrings and template JSON elsewhere in the repo
 src/content/docs/docs/integrate/
+src/content/docs/docs/backend/
 src/content/docs/docs/charts.md
 # Written by starlight-typedoc on every build
 src/content/docs/docs/api/

@@ -50,6 +50,11 @@ const devTrailingSlash = {
 export default defineConfig({
   site: 'https://hms-dbmi.github.io',
   base: '/udi-yac',
+  // Pages that moved from Integrate to the Backend section.
+  redirects: {
+    '/docs/integrate/agent/': '/udi-yac/docs/backend/agent/',
+    '/docs/integrate/server-side-data/': '/udi-yac/docs/backend/server-side-data/',
+  },
   vite: {
     plugins: [devTrailingSlash],
     // The app page reads the chat's own VITE_UDI_* settings (API URL, key
@@ -102,6 +107,10 @@ export default defineConfig({
         {
           label: 'Integrate',
           items: [{ autogenerate: { directory: 'docs/integrate' } }],
+        },
+        {
+          label: 'Backend',
+          items: [{ autogenerate: { directory: 'docs/backend' } }],
         },
         typeDocSidebarGroup,
         { label: 'Open the app', link: '/app/', attrs: { target: '_self' } },

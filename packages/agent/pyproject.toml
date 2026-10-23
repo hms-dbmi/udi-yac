@@ -63,3 +63,14 @@ packages = ["src/udiagent"]
 
 [tool.uv.sources]
 udi-grammar-py = { workspace = true }
+
+# The Python API reference on the docs site (apps/site/scripts/sync-docs.mjs
+# runs `uvx griffe2md` from this directory, once per public package).
+[tool.griffe2md]
+search_paths = ["src"]
+show_submodules = false
+show_signature_annotations = true
+show_if_no_docstring = false
+summary = { modules = false, attributes = false, classes = true, functions = true }
+# A tool-definition constant: its value is one very long line.
+filters = ["!^_", "!^ORCHESTRATOR_TOOLS$"]
