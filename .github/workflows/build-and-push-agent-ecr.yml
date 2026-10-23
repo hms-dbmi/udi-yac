@@ -85,7 +85,7 @@ jobs:
           set -euo pipefail
           IMAGE="${REGISTRY}/${REPOSITORY}"
           # Context is the repo root: the Dockerfile copies the workspace uv.lock
-          # (see root pyproject.toml [tool.uv.workspace]), same as deploy-agent.yml.
+          # (see root pyproject.toml [tool.uv.workspace]).
           # The SHA tag is the deployable one; 'latest' (excluded from immutability
           # in the ECR repo policy) is a convenience pointer only — the deploy
           # workflow refuses it.
