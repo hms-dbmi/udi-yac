@@ -65,6 +65,9 @@ assert.equal(
 const eventsFirst = store.getDataObject(['events', 'people'], []);
 const peopleFirst = store.getDataObject(['people', 'events'], []);
 assert.ok('kind' in eventsFirst.displayData[0]);
-assert.ok('age' in peopleFirst.displayData[0], 'a reordered source list is its own query');
+assert.ok(
+  'age' in peopleFirst.displayData[0],
+  'a reordered source list is its own query',
+);
 
 console.log('Duplicate-source test passed ✓');
