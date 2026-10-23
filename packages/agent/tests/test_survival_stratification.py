@@ -1282,6 +1282,10 @@ def test_cut_points_become_a_nested_conditional_over_the_bound_field():
         for t in spec["transformation"]
         if "derive" in t and "stratum" in t["derive"]
     )
+    # A missing age has no bucket.
+    assert stratum["if"] == {"op": "==", "left": {"field": "age"}, "right": {"literal": None}}
+    assert stratum["then"] == {"literal": None}
+    stratum = stratum["else"]
     # Ascending tests, so the first one that passes is the right bucket, and the
     # final else is everything at or above the last cut.
     assert stratum["if"] == {

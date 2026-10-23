@@ -145,6 +145,19 @@ def test_parity(engine, case):
         ), f"extent mismatch for {case['name']}"
 
 
+def test_stratum_golden_is_what_grouping_expr_writes():
+    """The null-stratum case is hand-written in the generator. Pin it to what
+    `grouping_expr` emits, or the golden checks a spec the agent never sends."""
+    from udiagent.stratify import grouping_expr
+
+    case = next(c for c in _GOLDENS["cases"] if c["name"] == "stratum-cut-with-nulls")
+    assert case["spec"]["transformation"][0]["derive"]["stratum"] == grouping_expr(
+        {"type": "quantitative", "cuts": [4000]}, "body_mass_g"
+    )
+    counts = {row.get("stratum"): row["n"] for row in case["expect"]["displayData"]}
+    assert counts[None] == 2, "the two penguins with no body mass have no stratum"
+
+
 def test_legacy_string_expressions_rejected(engine):
     with pytest.raises(UnsupportedQueryError):
         engine.run_query(
