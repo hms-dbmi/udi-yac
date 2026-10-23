@@ -427,6 +427,29 @@ def test_kde_structural():
         assert 0.9 < integral < 1.1
 
 
+def test_kde_cost_is_bounded(monkeypatch):
+    """The Python pass costs rows × samples: both come capped, and only the
+    columns it reads are fetched."""
+    import udiagent.query.engine as engine_module
+
+    views = {"penguins": str(_SAMPLE_DATA / "penguins.csv")}
+    connector = DuckDBConnector(views=views)
+    sent = []
+    execute = connector.execute
+    monkeypatch.setattr(
+        connector, "execute", lambda sql, *args: sent.append(sql) or execute(sql, *args)
+    )
+    monkeypatch.setattr(engine_module, "KDE_ROW_CAP", 100)
+    engine = QueryEngine(connector, table_map={"penguins": "penguins"})
+    result = engine.run_query(
+        source={"name": "penguins", "source": "penguins.csv"},
+        transformation=[{"groupby": "species"}, {"kde": {"field": "body_mass_g", "samples": 10**6}}],
+    )
+    assert len(result["displayData"]) <= 3 * 512
+    assert result["truncated"] == {"cap": 100, "sampled": False}
+    assert sent[-1].startswith('SELECT "body_mass_g", "species" FROM'), sent[-1]
+
+
 # ---------------------------------------------------------------------------
 # JWT passthrough against a live StarRocks (>= 3.5).
 #

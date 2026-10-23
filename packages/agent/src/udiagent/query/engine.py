@@ -23,6 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_ROW_CAP = 5000
+#: Most rows a kde reads. Its Python pass costs rows × samples.
+# ponytail: LIMIT takes whichever rows the backend returns first, not a random
+# sample; bin the values in SQL first if kde over bigger tables matters.
+KDE_ROW_CAP = 50_000
 
 
 class QueryEngine:
@@ -110,7 +114,7 @@ class QueryEngine:
             display_data_only = ends_in_rollup(transformation)
 
         display = compiler.compile(sources, transformation, skip_named_filters=False)
-        display_rows, truncated = self._execute(display, offset=offset)
+        display_rows, truncated_at = self._execute(display, offset=offset)
 
         result: dict = {
             "displayData": display_rows,
@@ -119,8 +123,8 @@ class QueryEngine:
             "isSubset": display.contains_named_filter,
             "aggregated": display.aggregated or display.kde_post is not None,
         }
-        if truncated:
-            result["truncated"] = {"cap": self.row_cap, "sampled": False}
+        if truncated_at is not None:
+            result["truncated"] = {"cap": truncated_at, "sampled": False}
 
         if display.contains_named_filter and not display_data_only:
             extent = compiler.compile(sources, transformation, skip_named_filters=True)
@@ -143,12 +147,17 @@ class QueryEngine:
             ]
         return self._columns_cache[entity]
 
-    def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], bool]:
-        # Aggregated/kde results are small by construction; only cap raw rows.
-        cap = None if (compiled.aggregated or compiled.kde_post) else self.row_cap + 1
+    def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], int | None]:
+        """Rows, and the cap they were cut at (None when they were not)."""
+        # Aggregated results are small by construction. A kde's output is too,
+        # but its input is raw rows, so it is capped like them.
+        if compiled.kde_post:
+            cap, offset = KDE_ROW_CAP, 0
+        else:
+            cap = None if compiled.aggregated else self.row_cap
         if cap is not None:
             # Re-emit with LIMIT; compile() built the SQL without one.
-            sql = f"{compiled.sql} LIMIT {cap}"
+            sql = f"{compiled.sql} LIMIT {cap + 1}"
             if offset > 0:
                 sql += f" OFFSET {int(offset)}"
         else:
@@ -161,12 +170,12 @@ class QueryEngine:
             # alone. Server-side log, never the response: it names tables.
             logger.error("query failed; SQL was: %s", sql)
             raise
-        truncated = cap is not None and len(rows) > self.row_cap
+        truncated = cap is not None and len(rows) > cap
         if truncated:
-            rows = rows[: self.row_cap]
+            rows = rows[:cap]
         if compiled.kde_post:
             rows = self._apply_kde(rows, compiled.kde_post)
-        return rows, truncated
+        return rows, cap if truncated else None
 
     @staticmethod
     def _apply_kde(rows: list[dict], post) -> list[dict]:
