@@ -13,6 +13,7 @@ import {
   useGlobalStore,
 } from '@/app/UDIChatContext';
 import { joinDataPath } from '@/features/data-package';
+import { cn } from '@/lib/utils';
 import { DEFAULT_ENTITY_ICONS, FALLBACK_ENTITY_ICON } from '@/utils/entityIcons';
 import type { EntityIconMap } from '../types';
 
@@ -23,7 +24,9 @@ interface EntityChip {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
-export function DataCounts() {
+/** @param compact One line per chip ("501 donors") instead of the count over
+ *  its label, for a header too narrow for the full chips. */
+export function DataCounts({ compact = false }: { compact?: boolean }) {
   const dataPackage = useDataPackage((s) => s.dataPackage);
   const entityNames = useDataPackage((s) => s.entityNames);
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
@@ -194,13 +197,20 @@ export function DataCounts() {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-muted udi:px-2.5 udi:py-1.5 udi:animate-pulse"
+            className={cn(
+              'udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-muted udi:animate-pulse',
+              compact ? 'udi:px-3 udi:py-2' : 'udi:px-2.5 udi:py-1.5',
+            )}
           >
             <div className="udi:h-5 udi:w-5 udi:rounded udi:bg-muted-foreground/20" />
-            <div className="udi:flex udi:flex-col udi:items-center udi:gap-1">
-              <div className="udi:h-4 udi:w-8 udi:rounded udi:bg-muted-foreground/20" />
-              <div className="udi:h-3 udi:w-12 udi:rounded udi:bg-muted-foreground/20" />
-            </div>
+            {compact ? (
+              <div className="udi:h-4 udi:w-24 udi:rounded udi:bg-muted-foreground/20" />
+            ) : (
+              <div className="udi:flex udi:flex-col udi:items-center udi:gap-1">
+                <div className="udi:h-4 udi:w-8 udi:rounded udi:bg-muted-foreground/20" />
+                <div className="udi:h-3 udi:w-12 udi:rounded udi:bg-muted-foreground/20" />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -224,25 +234,53 @@ export function DataCounts() {
             onClick={() => globalStore.getState().setOverview(true, chip.id)}
             title={`${chip.label} — open data overview`}
             aria-label={`${chip.label}: ${chip.totalCount.toLocaleString()} rows. Open data overview.`}
-            className="udi:inline-flex udi:cursor-pointer udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-background udi:px-2.5 udi:py-1.5 udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none"
+            className={cn(
+              'udi:inline-flex udi:cursor-pointer udi:items-center udi:rounded-md udi:border udi:bg-background udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
+              compact
+                ? 'udi:gap-1 udi:whitespace-nowrap udi:px-3 udi:py-2 udi:text-sm udi:font-medium'
+                : 'udi:gap-1.5 udi:px-2.5 udi:py-1.5',
+            )}
           >
-            <chip.Icon className="udi:h-5 udi:w-5 udi:text-muted-foreground udi:shrink-0" />
-            <div className="udi:flex udi:flex-col udi:items-center udi:text-center udi:leading-tight">
-              <div className="udi:text-base udi:font-bold">
-                {isFiltered ? (
-                  <>
-                    {filtered.toLocaleString()}
-                    <span className="udi:text-xs udi:font-normal udi:text-muted-foreground">
-                      {' '}
-                      / {chip.totalCount.toLocaleString()}
-                    </span>
-                  </>
-                ) : (
-                  chip.totalCount.toLocaleString()
-                )}
+            <chip.Icon
+              className={cn(
+                'udi:h-5 udi:w-5 udi:text-muted-foreground udi:shrink-0',
+                compact && 'udi:mr-0.5',
+              )}
+            />
+            {compact ? (
+              <>
+                <span className="udi:tabular-nums">
+                  {isFiltered ? (
+                    <>
+                      {filtered.toLocaleString()}
+                      <span className="udi:text-muted-foreground">
+                        /{chip.totalCount.toLocaleString()}
+                      </span>
+                    </>
+                  ) : (
+                    chip.totalCount.toLocaleString()
+                  )}
+                </span>
+                {chip.label}
+              </>
+            ) : (
+              <div className="udi:flex udi:flex-col udi:items-center udi:text-center udi:leading-tight">
+                <div className="udi:text-base udi:font-bold">
+                  {isFiltered ? (
+                    <>
+                      {filtered.toLocaleString()}
+                      <span className="udi:text-xs udi:font-normal udi:text-muted-foreground">
+                        {' '}
+                        / {chip.totalCount.toLocaleString()}
+                      </span>
+                    </>
+                  ) : (
+                    chip.totalCount.toLocaleString()
+                  )}
+                </div>
+                <span className="udi:text-xs udi:text-muted-foreground">{chip.label}</span>
               </div>
-              <span className="udi:text-xs udi:text-muted-foreground">{chip.label}</span>
-            </div>
+            )}
           </button>
         );
       })}
