@@ -16,6 +16,10 @@ on:
       - "sample-data/**"
       # The docs copy these in (apps/site/scripts/sync-docs.mjs)
       - "packages/agent/README.md"
+      - "packages/agent/docs/**"
+      - "packages/agent/pyproject.toml"
+      - "packages/agent/src/udiagent/*.py"
+      - "packages/agent/src/udiagent/query/*.py"
       - "packages/agent/src/udiagent/query/README.md"
       - "packages/agent/src/udiagent/data/skills/template_visualizations.json"
       - "packages/grammar-py/README.md"
@@ -50,6 +54,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # sync-docs builds the Python API reference with `uvx griffe2md`.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: Build udi-toolkit
         run: pnpm run build:toolkit
