@@ -44,7 +44,12 @@ interface MarkdownTextProps {
 export function MarkdownText({ children, className }: MarkdownTextProps) {
   return (
     <div className={cn('udi:max-w-none udi:text-sm', className)}>
-      <Markdown components={markdownComponents}>{children}</Markdown>
+      {/* No images: the browser would fetch one unasked, so a reply steered by
+          text in the data, or an imported session, could send data to any host
+          in its URL. */}
+      <Markdown components={markdownComponents} disallowedElements={['img']} unwrapDisallowed>
+        {children}
+      </Markdown>
     </div>
   );
 }
