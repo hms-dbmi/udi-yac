@@ -88,6 +88,9 @@ export type { TimeFormats } from './dist/temporal';
  */
 export declare const DEFAULT_PALETTE: UDIPalette;
 
+// Record links: set `recordUrl` on a <udi-vis> element as a JS property.
+export type { RecordUrlFn } from './dist/recordUrl';
+
 export type {
   UDIGrammar,
   DataSelections,

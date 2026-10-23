@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { UDIPalette } from '../Palette';
+import type { RecordUrlFn } from '../recordUrl';
 import { loadDataPackage } from './loadDataPackage';
 import type { SourceSpec, LoadDataPackageOptions } from '../loadDataPackage';
 
@@ -19,6 +20,7 @@ export interface DataPackageConfig extends LoadDataPackageOptions {
 export interface UDIToolkitContextValue {
   palette: UDIPalette | undefined;
   fontScale?: number | undefined;
+  recordUrl?: RecordUrlFn | undefined;
   status: DataPackageStatus;
 }
 
@@ -45,6 +47,11 @@ export interface UDIToolkitProviderProps {
    * per-instance `fontScale` prop still wins.
    */
   fontScale?: number;
+  /**
+   * Default record-link function inherited by every nested `<UDIVis>`; a
+   * per-instance `recordUrl` prop still wins.
+   */
+  recordUrl?: RecordUrlFn;
   /**
    * Optional data-package descriptor. When supplied, the provider calls
    * `loadDataPackage(sources, options)` on mount (and again any time the
@@ -74,6 +81,7 @@ function sourceFingerprint(sources: SourceSpec[] | undefined): string {
 export function UDIToolkitProvider({
   palette,
   fontScale,
+  recordUrl,
   dataPackage,
   children,
 }: UDIToolkitProviderProps): React.ReactElement {
@@ -128,8 +136,8 @@ export function UDIToolkitProvider({
   }, [fingerprint]);
 
   const value = React.useMemo<UDIToolkitContextValue>(
-    () => ({ palette, fontScale, status }),
-    [palette, fontScale, status],
+    () => ({ palette, fontScale, recordUrl, status }),
+    [palette, fontScale, recordUrl, status],
   );
 
   return (

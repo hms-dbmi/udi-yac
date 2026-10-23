@@ -6,7 +6,7 @@ export type { ReadOnlyOption, UDIFilter } from './app/UDIChatConfig';
 export type { SessionExport } from './features/dashboard/utils/dashboardSerialization';
 // Re-exported so embedders can type the `palette` prop without taking a
 // dependency on udi-toolkit — it is bundled into our output, not installed.
-export type { UDIPalette } from 'udi-toolkit/react';
+export type { UDIPalette, RecordUrlFn } from 'udi-toolkit/react';
 export type {
   DataPackage,
   DataPackageResource,
