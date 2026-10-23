@@ -1061,12 +1061,14 @@ def yac_benchmark(
                 "orchestrator_choice 'render-visualization'."
             },
         )
+    # Spends tokens like a completion, so it is held to the same budget.
     result = run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
         model=model,
+        budget_check=None if x_openai_key else app.state.budget_check,
     )
 
     return {
