@@ -15,6 +15,10 @@ const REPO = join(SITE, '../..');
 const DOCS = join(SITE, 'src/content/docs/docs');
 const BLOB = 'https://github.com/hms-dbmi/udi-yac/blob/main/';
 const RAW = 'https://raw.githubusercontent.com/hms-dbmi/udi-yac/main/';
+// Source files link to this site by its published URL, which works on GitHub
+// and PyPI. On the site itself those links become root-relative, so they stay
+// on whatever host serves it (dev, preview, Pages).
+const PUBLISHED = 'https://hms-dbmi.github.io/udi-yac/';
 
 // Markdown file (repo path) → page under /docs/, in sidebar order per section.
 const SECTIONS = ['integrate', 'backend'];
@@ -49,6 +53,7 @@ const frontmatter = (fields) =>
 /** Repo-relative links in a synced file point at files on GitHub, or at their
  *  synced page when that file is itself one of the PAGES. */
 function rewriteLink(target, readmePath) {
+  if (target.startsWith(PUBLISHED)) return `/udi-yac/${target.slice(PUBLISHED.length)}`;
   if (/^([a-z]+:|#|\/)/i.test(target)) return target;
   const [path, anchor] = target.split('#');
   const repoPath = posix.normalize(posix.join(posix.dirname(readmePath), path));
