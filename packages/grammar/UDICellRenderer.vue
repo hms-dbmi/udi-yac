@@ -466,8 +466,9 @@ $container-margin-top: 2px;
   // dominant-baseline: middle;
 }
 
+// A host sets --udi-table-link to its own link color; the browser's otherwise.
 .text a {
-  color: inherit;
+  color: var(--udi-table-link, LinkText);
   text-decoration: underline;
 }
 

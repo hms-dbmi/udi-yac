@@ -245,7 +245,8 @@ function recordLinkColumn(): ColDef[] {
         a.textContent = '↗\uFE0E';
         a.ariaLabel = 'Open record';
         a.title = url;
-        a.style.color = 'inherit';
+        // Same color as a URL cell's link (UDICellRenderer).
+        a.style.color = 'var(--udi-table-link, LinkText)';
         a.style.textDecoration = 'none';
         return a;
       },
