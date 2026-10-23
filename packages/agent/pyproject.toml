@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
 dependencies = [
-    "openai>=3.33.0",
+    "openai>=3.35.1",
     "jsonschema>=4.26.0",
     "requests>=2.32.5",
     "python-dotenv>=1.0.0",
