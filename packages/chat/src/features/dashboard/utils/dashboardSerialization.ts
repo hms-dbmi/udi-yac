@@ -326,47 +326,6 @@ export function currentSessionExport(
   });
 }
 
-export interface PersistedLayoutSnapshot {
-  version: 3;
-  layout: DashboardLayout;
-  vizKeys: string[];
-  gridCols: number;
-  gridRowHeight: number;
-}
-
-export function parsePersistedLayoutSnapshot(raw: unknown): ParseResult<PersistedLayoutSnapshot> {
-  if (!isObject(raw)) return { ok: false, error: 'snapshot must be an object' };
-  if (raw.version !== 3) return { ok: false, error: 'snapshot version mismatch' };
-  if (!isStringArray(raw.vizKeys)) return { ok: false, error: 'snapshot.vizKeys must be string[]' };
-  const layoutResult = parseLayout(raw.layout);
-  if (!layoutResult.ok) return layoutResult;
-  const gridCols =
-    typeof raw.gridCols === 'number' && Number.isFinite(raw.gridCols) ? raw.gridCols : 3;
-  const gridRowHeight =
-    typeof raw.gridRowHeight === 'number' && Number.isFinite(raw.gridRowHeight)
-      ? raw.gridRowHeight
-      : 60;
-  return {
-    ok: true,
-    value: {
-      version: 3,
-      layout: layoutResult.value,
-      vizKeys: raw.vizKeys,
-      gridCols,
-      gridRowHeight,
-    },
-  };
-}
-
-export function buildPersistedLayoutSnapshot(
-  layout: DashboardLayout,
-  vizKeys: string[],
-  gridCols: number,
-  gridRowHeight: number,
-): PersistedLayoutSnapshot {
-  return { version: 3, layout, vizKeys, gridCols, gridRowHeight };
-}
-
 export function layoutItems(layout: DashboardLayout): Layout {
   return layout.items;
 }

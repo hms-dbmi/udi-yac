@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useConversationStore, useDataPackageStore } from '@/app/UDIChatContext';
+import { saveBlob } from '@/lib/utils';
 import type { QueryConfig } from '../api/completions';
 
 /**
@@ -15,23 +16,10 @@ export function useDebugExports(config: QueryConfig): {
   const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
 
-  const downloadBlob = useCallback(
-    (content: string, filename: string, type = 'application/json') => {
-      const blob = new Blob([content], { type });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    },
-    [],
-  );
-
   const handleSaveConversation = useCallback(() => {
     const json = conversationStore.getState().exportConversation();
-    downloadBlob(json, `udi-conversation-${Date.now()}.json`);
-  }, [conversationStore, downloadBlob]);
+    saveBlob(json, `udi-conversation-${Date.now()}.json`);
+  }, [conversationStore]);
 
   const handleExportTestCase = useCallback(() => {
     const messages = conversationStore.getState().getMessagesFormattedForLLM();
@@ -52,16 +40,16 @@ export function useDebugExports(config: QueryConfig): {
       },
       expected: { tool_calls, orchestrator_choice },
     };
-    downloadBlob(JSON.stringify(testCase, null, 2), 'test_case.json');
-  }, [conversationStore, dataPackageStore, config.model, downloadBlob]);
+    saveBlob(JSON.stringify(testCase, null, 2), 'test_case.json');
+  }, [conversationStore, dataPackageStore, config.model]);
 
   const handleDownloadDataDomains = useCallback(() => {
-    downloadBlob(dataPackageStore.getState().dataDomainsString, 'data_domains.json');
-  }, [dataPackageStore, downloadBlob]);
+    saveBlob(dataPackageStore.getState().dataDomainsString, 'data_domains.json');
+  }, [dataPackageStore]);
 
   const handleDownloadDataSchema = useCallback(() => {
-    downloadBlob(dataPackageStore.getState().dataPackageString, 'data_schema.json');
-  }, [dataPackageStore, downloadBlob]);
+    saveBlob(dataPackageStore.getState().dataPackageString, 'data_schema.json');
+  }, [dataPackageStore]);
 
   return {
     handleSaveConversation,

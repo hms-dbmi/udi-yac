@@ -21,3 +21,16 @@ export function generateEventId(): string {
   }
   return `id_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
+
+/** Download `content` as a file named `name`; a string is saved as `type`. */
+export function saveBlob(content: Blob | string, name: string, type = 'application/json'): void {
+  const blob = typeof content === 'string' ? new Blob([content], { type }) : content;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

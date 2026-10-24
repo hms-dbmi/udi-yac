@@ -391,7 +391,6 @@ export function injectInteractivity(
     };
   }
 
-  console.log({ interactiveSpec });
   interactiveSpec.config = { hideActions: true };
   return interactiveSpec;
 }
