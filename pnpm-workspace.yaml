@@ -2,7 +2,6 @@ packages:
   - packages/chat
   - packages/grammar
   - apps/template-studio
-  - apps/render-repro
   - apps/site
 
 # merged from packages/chat/pnpm-workspace.yaml

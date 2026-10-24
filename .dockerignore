@@ -19,7 +19,6 @@ node_modules
 packages/agent/out/
 packages/agent/logs/
 packages/agent/tests/
-packages/agent/notes.md
 packages/agent/*.duckdb
 **/*.log
 

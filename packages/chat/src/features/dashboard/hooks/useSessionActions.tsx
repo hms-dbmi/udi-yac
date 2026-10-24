@@ -25,18 +25,7 @@ import {
   parseSessionExport,
   type SessionExport,
 } from '../utils/dashboardSerialization';
-
-function saveBlob(content: string, name: string) {
-  const blob = new Blob([content], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
+import { saveBlob } from '@/lib/utils';
 
 function timestamp(): string {
   const pad = (n: number) => String(n).padStart(2, '0');
