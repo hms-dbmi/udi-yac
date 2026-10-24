@@ -106,31 +106,6 @@ def validate_structured_text(text):
     return errors
 
 
-def resolve_structured_text(text, schema):
-    """Resolve all function references in text using the provided schema.
-
-    Replaces {function_name(args...)} with evaluated results.
-    Returns the resolved text string.
-    """
-
-    def replacer(match):
-        func_name = match.group(1)
-        args_str = match.group(2)
-
-        if func_name not in FUNCTION_REGISTRY:
-            return match.group(0)  # Leave unknown functions as-is
-
-        func, min_args, max_args, _ = FUNCTION_REGISTRY[func_name]
-        args = _ARG_PATTERN.findall(args_str) if args_str.strip() else []
-
-        try:
-            return func(schema, *args)
-        except Exception:
-            return match.group(0)
-
-    return _FUNC_REF_PATTERN.sub(replacer, text)
-
-
 def _human_readable(func_name, args):
     """Convert a function name and args into a human-readable label.
 

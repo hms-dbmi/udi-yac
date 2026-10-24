@@ -36,7 +36,8 @@ import json
 #: More strata than this stop being a comparison and start being a mess: the
 #: curves overlap, the colour scale runs out of distinguishable hues, and the
 #: legend is longer than the chart. Enforced rather than advised, because the
-#: model will happily ask for thirty.
+#: model will happily ask for thirty. Never above 10: a membership grouping
+#: carries its group index as one digit (see `_membership_groups`).
 MAX_GROUPS = 10
 
 #: Label for values no group claims, when the grouping does not name one.
@@ -438,16 +439,12 @@ def _membership_groups(grouping):
     rollup as a *string* digit and recovered with `min`, which orders by
     codepoint — so "10" would sort before "2" and the eleventh group would
     outrank the third. Ten named groups is the most that stays sound, and
-    `_check_group_count` already refuses more.
+    `_check_group_count` already refuses more, so `MAX_GROUPS` must not go
+    past 10.
     """
     groups = _nominal_groups(grouping)
     other = _other_label(grouping)
     _check_group_count(len(groups) + (1 if other is not None else 0))
-    if len(groups) > 10:
-        raise GroupingError(
-            "a membership grouping may name at most 10 groups, because the group "
-            "index travels as a single digit through the per-subject rollup."
-        )
     return groups, other
 
 
