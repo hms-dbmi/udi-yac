@@ -69,6 +69,11 @@ def _merge_columns(existing: list, added: list) -> list:
     return [c for c in existing if c not in added] + list(added)
 
 
+#: Most grid points a kde may ask for. The Python pass costs rows × samples, and
+#: `samples` arrives in the request.
+MAX_KDE_SAMPLES = 512
+
+
 @dataclass
 class KdePost:
     """Instructions for the engine's Python kde pass."""
@@ -150,7 +155,13 @@ class PipelineCompiler:
         row_limit: int | None = None,
     ) -> CompiledQuery:
         st = self._run(sources, transformations, skip_named_filters)
-        sql = self._assemble(st, f"SELECT * FROM {st.current}", row_limit)
+        columns = "*"
+        if st.kde_post:
+            # The kde pass reads only these, and fetching every column of every
+            # row is most of its cost on a wide table.
+            kde = st.kde_post
+            columns = ", ".join(self._q(c) for c in dict.fromkeys([kde.field, *kde.groupby]))
+        sql = self._assemble(st, f"SELECT {columns} FROM {st.current}", row_limit)
         return CompiledQuery(
             sql=sql,
             params=st.params,
@@ -213,7 +224,7 @@ class PipelineCompiler:
                 st.kde_post = KdePost(
                     field=spec["field"],
                     bandwidth=spec.get("bandwidth"),
-                    samples=spec.get("samples", 100),
+                    samples=self._kde_samples(spec.get("samples", 100)),
                     output_sample=output.get("sample", "sample"),
                     output_density=output.get("density", "density"),
                     groupby=list(st.pending_groupby or []),
@@ -242,6 +253,12 @@ class PipelineCompiler:
 
     def _q(self, ident: str) -> str:
         return self.dialect.quote(ident)
+
+    @staticmethod
+    def _kde_samples(samples) -> int:
+        if isinstance(samples, bool) or not isinstance(samples, (int, float)):
+            raise UnsupportedQueryError("kde samples must be a number")
+        return max(2, min(int(samples), MAX_KDE_SAMPLES))
 
     def _table_ref(self, entity: str) -> str:
         table = self.table_map.get(entity)

@@ -1011,6 +1011,41 @@ const CASES = [
       ],
     },
   ],
+  [
+    // A quantitative stratifier cut at 4000 g, as udiagent.stratify.grouping_expr
+    // writes it (test_query_parity checks the two stay identical). Two penguins
+    // have no body mass: both executors must give them a null stratum, not the
+    // bucket each one's `null < 4000` happens to pick.
+    'stratum-cut-with-nulls',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '==',
+                left: { field: 'body_mass_g' },
+                right: { literal: null },
+              },
+              then: { literal: null },
+              else: {
+                if: {
+                  op: '<',
+                  left: { field: 'body_mass_g' },
+                  right: { literal: 4000 },
+                },
+                then: { literal: '< 4000' },
+                else: { literal: '≥ 4000' },
+              },
+            },
+          },
+        },
+        { groupby: 'stratum' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
 ];
 
 const goldens = { sources: SOURCES, cases: [] };
