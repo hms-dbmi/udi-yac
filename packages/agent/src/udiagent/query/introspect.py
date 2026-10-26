@@ -19,8 +19,12 @@ so a value query per column made a 12-table package take ~12 s.
 
 from __future__ import annotations
 
+import contextvars
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+
+from .connectors import _POOL_SIZE
 
 # Categorical domains larger than this are omitted from an introspected
 # package. At least vis_generate.MAX_DRAWN_CATEGORIES: a chart can draw that
@@ -222,10 +226,24 @@ def introspect(
     resources = []
     all_domains: list[dict] = []
     entity_schemas = getattr(engine, "entity_schemas", None) or {}
-    for entity, table in engine.table_map.items():
-        resource, domains = introspect_table(
-            engine.connector, table, entity, distinct_cap
-        )
+    # Tables in parallel: each query's cost on a secured view is mostly fixed
+    # planning time, not work. A copy of this thread's context per table, so the
+    # request's database token (use_db_token) reaches the worker threads.
+    entities = list(engine.table_map.items())
+    with ThreadPoolExecutor(max_workers=max(1, min(_POOL_SIZE, len(entities)))) as pool:
+        futures = [
+            pool.submit(
+                contextvars.copy_context().run,
+                introspect_table,
+                engine.connector,
+                table,
+                entity,
+                distinct_cap,
+            )
+            for entity, table in entities
+        ]
+        tables = [future.result() for future in futures]
+    for (entity, _table), (resource, domains) in zip(entities, tables):
         # Relationship metadata (primaryKey/foreignKeys) isn't introspectable
         # from the database — merge it from the engine's configured schemas so
         # the chat's cross-entity filtering can resolve entity relationships.
