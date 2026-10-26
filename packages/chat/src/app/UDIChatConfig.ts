@@ -6,6 +6,13 @@ import type { ReadOnlyOption } from '@/stores/globalStore';
 
 export type { FilterMode, ReadOnlyOption, UDIFilter };
 
+/** The subjects every filter in place leaves: see {@link UDIChatConfig.cohort}. */
+export interface UDICohort {
+  entity: string;
+  /** One entry per subject, holding its key fields. */
+  keys: Record<string, unknown>[];
+}
+
 /**
  * Signature for the optional analytics callback — deliberately untyped in
  * the `properties` bag so consumers can forward directly to GA4, Segment,
@@ -225,6 +232,23 @@ export interface UDIChatConfig {
    *   Filters on several fields stay separate.
    */
   filterMode?: FilterMode;
+  /**
+   * The subject to report the filtered cohort of: a table of the data package
+   * (`entity`, e.g. `'patient'`) and the fields that identify its rows
+   * (`fields`, default: the table's `primaryKey`). With
+   * {@link UDIChatConfig.onCohortChange}, every change to the filters — chat,
+   * chart and host alike, on any table that reaches this one — reports the
+   * rows of `entity` that pass them all.
+   */
+  cohort?: { entity: string; fields?: string[] };
+  /**
+   * Called with the cohort {@link UDIChatConfig.cohort} asks for, once the
+   * filters settle: the key fields of every passing row, or `null` while no
+   * filter reaches the entity, so the host need not handle a list of every
+   * subject. Unlike row-level results, the list is not capped in server-side
+   * data mode.
+   */
+  onCohortChange?: (cohort: UDICohort | null) => void;
   /**
    * Let users report a problem to the development team: a *Report an issue*
    * item in the Session menu, a button on the crash screen, and an offer from
