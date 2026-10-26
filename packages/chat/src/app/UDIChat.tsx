@@ -307,11 +307,12 @@ function UDIChatInner({
   if (!readOnly && !chatMounted) setChatMounted(true);
 
   const exitReadOnly = () => {
-    globalStore.getState().setReadOnly(false);
-    // In the same handler, so a host that moves us into more room on this
-    // (an inline embed opening a modal) does it in the same render.
-    onReadOnlyChange?.(false);
     trackEvent('read_only_exited', {});
+    // A host listening owns the mode and switches `readOnly` itself — often
+    // while it moves us into more room, which it may want to animate from the
+    // read-only view still on screen.
+    if (onReadOnlyChange) onReadOnlyChange(false);
+    else globalStore.getState().setReadOnly(false);
   };
 
   const queryConfig: QueryConfig = {

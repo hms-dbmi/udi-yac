@@ -90,14 +90,20 @@ describe('UDIChat — host switching read-only', () => {
     expect(screen.getByRole('button', { name: 'Explore Data' })).toBeTruthy();
   });
 
-  it('tells the host when the user leaves through Explore Data', async () => {
+  it('leaves Explore Data to a host that handles it', async () => {
     const user = userEvent.setup();
     const onReadOnlyChange = vi.fn();
-    render(<UDIChat {...config} readOnly onReadOnlyChange={onReadOnlyChange} />);
+    const { rerender } = render(
+      <UDIChat {...config} readOnly onReadOnlyChange={onReadOnlyChange} />,
+    );
 
     await user.click(screen.getByRole('button', { name: 'Explore Data' }));
 
     expect(onReadOnlyChange).toHaveBeenCalledExactlyOnceWith(false);
+    // Controlled: still read-only until the host says otherwise.
+    expect(screen.queryByRole('heading', { name: 'Chat' })).toBeNull();
+    rerender(<UDIChat {...config} readOnly={false} onReadOnlyChange={onReadOnlyChange} />);
+    expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
   });
 
   it('lets the host out of a lock the user cannot leave', () => {

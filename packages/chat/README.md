@@ -194,10 +194,12 @@ const [expanded, setExpanded] = useState(false);
 </div>;
 ```
 
-`onReadOnlyChange` fires when the user presses Explore Data (the mode has already changed by
-then), not when the prop changes. Call your state setter from it and the container is restyled in
-the same render, so the chat appears in the new space with no in-between frame. The seeded
-transcript is hidden the first time the chat opens only; later, the conversation is the user's.
+`onReadOnlyChange` fires when the user presses Explore Data, not when the prop changes. Passing it
+makes the mode controlled: the button no longer leaves read-only by itself, your state setter
+does, by changing `readOnly` in the same update that restyles the container — so the chat appears
+in the new space with no in-between frame, and you can animate the move (a view transition, say)
+from the read-only view still on screen. The seeded transcript is hidden the first time the chat
+opens only; later, the conversation is the user's.
 
 By default the dashboard re-derives its column count for its new width on each switch. Pass
 `refitOnReadOnlyChange={false}` to keep the count — the one `initialSession` asked for, say — and

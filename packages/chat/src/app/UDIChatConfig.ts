@@ -157,10 +157,11 @@ export interface UDIChatConfig {
    */
   readOnly?: ReadOnlyOption;
   /**
-   * Called with `false` when the user leaves read-only through the Explore Data
-   * button — not when {@link UDIChatConfig.readOnly} changes. The mode has
-   * already changed; a host that controls `readOnly` should follow it here, and
-   * can move the chat into more room in the same render.
+   * Called with `false` when the user presses Explore Data — not when
+   * {@link UDIChatConfig.readOnly} changes. Passing it makes the mode
+   * controlled: the button no longer leaves read-only by itself, and the host
+   * does so by setting `readOnly` — free to move the chat into more room, and
+   * to animate that, in the same update.
    */
   onReadOnlyChange?: (readOnly: boolean) => void;
   /**
