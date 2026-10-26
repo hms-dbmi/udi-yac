@@ -1,39 +1,27 @@
 import { useEffect, useRef } from 'react';
 import { useDashboardStore } from '@/app/UDIChatContext';
-import {
-  buildPersistedLayoutSnapshot,
-  parsePersistedLayoutSnapshot,
-} from '../utils/dashboardSerialization';
-import type { DashboardLayout, DashboardState } from '../stores/dashboardStore';
 
-// v3 snapshots carry the grid config alongside the item layout. v2
-// snapshots (layout only, no gridCols/gridRowHeight) are silently
-// discarded by `parsePersistedLayoutSnapshot` — they referenced the old
-// rowHeight=30 default and clean rebuild is cheaper than a migration.
+// The grid's row height is the one layout setting kept across visits: chart
+// positions belong to charts a reload does not bring back, and the column count
+// follows the container width (see DashboardGrid). Same key as the v3 snapshot,
+// which also carried `gridRowHeight`, so a height saved by an older version
+// still applies.
 const STORAGE_KEY = 'udi-yac:dashboard:v3';
 const DEBOUNCE_MS = 300;
 
-function readSnapshot(): ReturnType<typeof parsePersistedLayoutSnapshot> | null {
+function readRowHeight(): number | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return parsePersistedLayoutSnapshot(JSON.parse(raw));
+    const height: unknown = raw ? JSON.parse(raw)?.gridRowHeight : null;
+    return typeof height === 'number' && Number.isFinite(height) ? height : null;
   } catch {
     return null;
   }
 }
 
-function writeSnapshot(
-  layout: DashboardLayout,
-  vizKeys: string[],
-  gridCols: number,
-  gridRowHeight: number,
-): void {
+function writeRowHeight(gridRowHeight: number): void {
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(buildPersistedLayoutSnapshot(layout, vizKeys, gridCols, gridRowHeight)),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ gridRowHeight }));
   } catch {
     // localStorage quota or unavailable — silently drop
   }
@@ -45,8 +33,8 @@ interface LayoutPersistenceOptions {
    *  user leaves read-only. */
   enabled?: boolean;
   /** Off when the dashboard was seeded from `initialSession`: that export
-   *  carries its own layout, and a snapshot left over from an unrelated
-   *  session must not override it. */
+   *  carries its own grid, and a height left over from another session must
+   *  not override it. */
   restore?: boolean;
 }
 
@@ -59,53 +47,19 @@ export function useLayoutPersistence({
 
   useEffect(() => {
     if (!enabled) return;
-    if (restoredRef.current) return;
-    restoredRef.current = true;
-
-    const snapshot = restore ? readSnapshot() : null;
-    if (snapshot && snapshot.ok) {
-      const state = store.getState();
-      const activeKeys = new Set(state.activeVisualizations.keys());
-      const storedKeys = snapshot.value.vizKeys;
-      const allMatch =
-        storedKeys.length === activeKeys.size && storedKeys.every((k) => activeKeys.has(k));
-      if (allMatch) {
-        state.setLayoutItems(snapshot.value.layout.items);
-      }
-      // Row height is a per-app preference — restore it regardless of whether
-      // the viz keys still match. The column count is intentionally NOT
-      // restored: it's derived from the container width on load (see
-      // DashboardGrid), so it always reflects the current screen size.
-      state.setGridRowHeight(snapshot.value.gridRowHeight);
+    if (!restoredRef.current) {
+      restoredRef.current = true;
+      const height = restore ? readRowHeight() : null;
+      if (height !== null) store.getState().setGridRowHeight(height);
     }
 
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let lastLayout: DashboardLayout | null = null;
-    let lastVizKeys: string | null = null;
-    let lastGridCols = -1;
-    let lastGridRowHeight = -1;
-
-    const flush = (state: DashboardState) => {
-      const keys = Array.from(state.activeVisualizations.keys());
-      writeSnapshot(state.layout, keys, state.gridCols, state.gridRowHeight);
-      lastLayout = state.layout;
-      lastVizKeys = keys.join('\n');
-      lastGridCols = state.gridCols;
-      lastGridRowHeight = state.gridRowHeight;
-    };
-
+    let last = store.getState().gridRowHeight;
     const unsub = store.subscribe((state) => {
-      const keys = Array.from(state.activeVisualizations.keys()).join('\n');
-      if (
-        state.layout === lastLayout &&
-        keys === lastVizKeys &&
-        state.gridCols === lastGridCols &&
-        state.gridRowHeight === lastGridRowHeight
-      ) {
-        return;
-      }
+      if (state.gridRowHeight === last) return;
+      last = state.gridRowHeight;
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => flush(store.getState()), DEBOUNCE_MS);
+      timer = setTimeout(() => writeRowHeight(last), DEBOUNCE_MS);
     });
 
     return () => {
