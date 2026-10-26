@@ -7,6 +7,7 @@ calling the LLM with each skill's instructions and passing a shared
 context between them.
 """
 
+import difflib
 import json
 import logging
 import re
@@ -251,6 +252,7 @@ def _call_llm_with_tools(
     openai_api_key=None,
     req_id="-",
     model=None,
+    data_domains=None,
 ):
     """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None.
 
@@ -262,35 +264,102 @@ def _call_llm_with_tools(
     problem, while "the request blew up" is a network or API one — and to the
     caller they are the same `None`, which is how a swallowed traceback used to
     surface as a mysterious freehand chart.
+
+    With `data_domains`, the model may also call `ListFieldValues` first. This is
+    the call that writes a grouping's values and a `<V*>` literal, and the
+    prompt shows only a sample of each column — so a protocol arm the sample
+    missed had to be guessed. Lookups are answered here and loop, bounded like
+    the orchestrator's; the last round offers only the chart tools.
     """
-    from udiagent.orchestrator import _call_with_budget_guard, BudgetExceededError
+    from udiagent.orchestrator import (
+        MAX_VALUE_LOOKUPS,
+        BudgetExceededError,
+        _call_with_budget_guard,
+    )
+    from udiagent.schema import lookup_field_values
+    from udiagent.tools import LIST_FIELD_VALUES_TOOL
+
+    lookup_name = LIST_FIELD_VALUES_TOOL["function"]["name"]
+    offered = [*tools, LIST_FIELD_VALUES_TOOL] if data_domains else tools
+    messages = list(messages)
 
     try:
         client = agent._get_gpt_client(openai_api_key)
-        resp = _call_with_budget_guard(
-            agent.create_completion,
-            usage,
-            client,
-            model=model or agent.gpt_model_name,
-            messages=messages,
-            tools=tools,
-            tool_choice=agent.vis_tool_choice,
-            max_completion_tokens=1024,
-        )
-        if usage is not None:
-            usage.add("create_visualization", getattr(resp, "usage", None))
-        choice = resp.choices[0]
-        if choice.message.tool_calls:
-            tc = choice.message.tool_calls[0]
-            return tc.function.name, json.loads(tc.function.arguments)
-        logger.warning(
-            "[vis %s] model returned no tool call from %d offered "
-            "(finish_reason=%s, content_chars=%d)",
-            req_id,
-            len(tools),
-            getattr(choice, "finish_reason", None),
-            len(choice.message.content or ""),
-        )
+        for lookup_round in range(MAX_VALUE_LOOKUPS + 1):
+            last = lookup_round == MAX_VALUE_LOOKUPS
+            resp = _call_with_budget_guard(
+                agent.create_completion,
+                usage,
+                client,
+                model=model or agent.gpt_model_name,
+                messages=messages,
+                tools=tools if last else offered,
+                tool_choice=agent.vis_tool_choice,
+                max_completion_tokens=1024,
+            )
+            if usage is not None:
+                usage.add("create_visualization", getattr(resp, "usage", None))
+            choice = resp.choices[0]
+            calls = choice.message.tool_calls or []
+            lookups = [tc for tc in calls if tc.function.name == lookup_name]
+            if lookups and not last:
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in calls
+                        ],
+                    }
+                )
+                for tc in calls:
+                    if tc in lookups:
+                        args = json.loads(tc.function.arguments or "{}")
+                        answer = lookup_field_values(
+                            data_domains,
+                            args.get("entity"),
+                            args.get("field"),
+                            args.get("contains"),
+                        )
+                        logger.info(
+                            "[vis %s] field values looked up: %s.%s contains=%r",
+                            req_id,
+                            args.get("entity"),
+                            args.get("field"),
+                            args.get("contains"),
+                        )
+                    else:
+                        # Same as the orchestrator: a chart asked for alongside a
+                        # lookup was chosen before its values were known.
+                        answer = (
+                            "Not run — you also asked to look something up. "
+                            "Call this again if you still want it."
+                        )
+                    messages.append(
+                        {"role": "tool", "tool_call_id": tc.id, "content": answer}
+                    )
+                continue
+
+            picked = next((tc for tc in calls if tc.function.name != lookup_name), None)
+            if picked is not None:
+                return picked.function.name, json.loads(picked.function.arguments)
+            logger.warning(
+                "[vis %s] model returned no tool call from %d offered "
+                "(finish_reason=%s, content_chars=%d)",
+                req_id,
+                len(tools),
+                getattr(choice, "finish_reason", None),
+                len(choice.message.content or ""),
+            )
+            break
     except BudgetExceededError:
         raise
     except Exception:
@@ -1100,6 +1169,98 @@ def _categorical_domains(data_domains):
     return out
 
 
+def _suggest_values(value, known, limit=8):
+    """Values in `known` the caller plausibly meant by `value`, best first.
+
+    Two kinds of near miss. Words: "Regimen B" for "ACNS0334: Regimen B", where
+    the value is a fragment of a longer label — every word of it appears, in any
+    order. Spelling: "Radiaton" for "Radiation", which difflib catches.
+    """
+    def words(text):
+        return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+    wanted = words(value)
+    by_words = [v for v in known if wanted and wanted <= words(v)]
+    close = difflib.get_close_matches(value, known, n=limit, cutoff=0.6)
+    suggestions = []
+    for v in by_words + close:
+        if v not in suggestions:
+            suggestions.append(v)
+    return suggestions[:limit]
+
+
+def _missing_value_error(value, field_name, entity_name, known, consequence):
+    """Prose for a literal that `known`, the column's values, does not hold."""
+    # A near miss is worth naming as one: the model was told to copy a value
+    # exactly, and "deceased" for "Deceased" is a different mistake from having
+    # picked the wrong column entirely.
+    lowered = {v.lower(): v for v in known}
+    if value.lower() in lowered:
+        return (
+            f"Value '{value}' does not appear in column '{field_name}' on "
+            f"'{entity_name}', but '{lowered[value.lower()]}' does — copy it "
+            f"exactly, including case."
+        )
+    suggestions = _suggest_values(value, known)
+    if suggestions:
+        hint = (
+            "Did you mean one of these? "
+            + ", ".join(repr(v) for v in suggestions)
+            + ". Copy the values exactly, and list every one that applies."
+        )
+    else:
+        sample = ", ".join(repr(v) for v in known[:8])
+        more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
+        hint = (
+            f"Either pick a value that is in that column ({sample}{more}), or "
+            f"bind a different column."
+        )
+    return (
+        f"Value '{value}' does not appear in column '{field_name}' on "
+        f"'{entity_name}', {consequence}. {hint}"
+    )
+
+
+def _grouping_value_errors(spec_template, bindings, entity_bindings, domains):
+    """Grouping values the column they group does not hold.
+
+    Only nominal groupings: a quantitative one cuts at numbers, which need not
+    occur in the column. A column without a value list is left unchecked, as
+    everywhere else — "not sent" is not "not there".
+    """
+    from udiagent.stratify import GroupingError, _nominal_groups, grouping_kind, parse_grouping
+
+    errors = []
+    for group_key, field_key in grouping_targets(spec_template).items():
+        try:
+            grouping = parse_grouping(bindings.get(group_key))
+            if grouping is None or grouping_kind(grouping) != "nominal":
+                continue
+            groups = _nominal_groups(grouping)
+        except GroupingError:
+            continue  # malformed: reported by the per-binding check
+        field_name = bindings.get(field_key)
+        entity_name = _entity_for_binding_key(field_key, entity_bindings)
+        known = domains.get((entity_name, field_name))
+        if not known:
+            continue
+        for label, values in groups:
+            for value in values:
+                if value in known:
+                    continue
+                errors.append(
+                    _missing_value_error(
+                        value,
+                        field_name,
+                        entity_name,
+                        known,
+                        f"so it puts no rows in group '{label}' — that group "
+                        f"would draw an empty curve",
+                    )
+                )
+    return errors
+
+
 def grouping_targets(spec_template):
     """``{grouping binding key: field binding key}`` for a template's `<GROUP:…>` tags.
 
@@ -1590,28 +1751,25 @@ def validate_bindings(
                 known = domains.get((entity_name, field_name))
                 if not known or value in known:
                     continue
-                # A near miss is worth naming as one: the model was told to copy
-                # a value exactly, and "deceased" for "Deceased" is a different
-                # mistake from having picked the wrong column entirely.
-                lowered = {v.lower(): v for v in known}
-                if value.lower() in lowered:
-                    errors.append(
-                        f"Value '{value}' does not appear in column "
-                        f"'{field_name}' on '{entity_name}', but "
-                        f"'{lowered[value.lower()]}' does — copy it exactly, "
-                        f"including case."
+                errors.append(
+                    _missing_value_error(
+                        value,
+                        field_name,
+                        entity_name,
+                        known,
+                        "which this template compares it against — so the "
+                        "comparison would match no rows and the chart would come "
+                        "out empty",
                     )
-                else:
-                    sample = ", ".join(repr(v) for v in known[:8])
-                    more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
-                    errors.append(
-                        f"Value '{value}' does not appear in column "
-                        f"'{field_name}' on '{entity_name}', which this template "
-                        f"compares it against — so the comparison would match no "
-                        f"rows and the chart would come out empty. Either pick a "
-                        f"value that is in that column ({sample}{more}), or bind a "
-                        f"different column."
-                    )
+                )
+
+        # A grouping's values are literals too, and nothing above reads them:
+        # a group of "arm b" on a column spelling it "ACNS0334: Regimen B"
+        # matches no rows, so that curve is empty (or, with an Other, its
+        # subjects quietly join Other) and the chart still renders.
+        errors.extend(
+            _grouping_value_errors(spec_template, bindings, entity_bindings, domains)
+        )
 
     return errors
 
@@ -2109,8 +2267,11 @@ def _execute_generate(skill, context):
             "and put those values in it. A tool without one can only split by "
             "whether a subject appears in a table at all: for a table with one row "
             "per drug given, that answers 'had any treatment', not 'had that drug'. "
-            "Name every spelling of the value you can see in the column, since one "
-            "drug or protocol is often recorded several ways.\n\n"
+            "Name every spelling of the value in the column, since one drug or "
+            "protocol is often recorded several ways. The Column Values below are "
+            "only a sample: unless the exact values are listed there, call "
+            "`ListFieldValues` with `contains` (e.g. the protocol or drug name) "
+            "to find them before writing the grouping, and copy them exactly.\n\n"
             f"## Available Datasets\n\n{data_schema_simple}"
         )
         # Some tools take a literal data value (a `value*` parameter) rather than
@@ -2123,8 +2284,9 @@ def _execute_generate(skill, context):
             if domains_simple:
                 system_msg += (
                     "\n\n## Column Values\n\n"
-                    "Use these when a tool asks for a literal `value` — copy one "
-                    "exactly rather than inventing it.\n\n"
+                    "Use these when a tool asks for a literal `value` or a "
+                    "`grouping` — copy one exactly rather than inventing it. Where "
+                    "a column is only sampled, `ListFieldValues` has the rest.\n\n"
                     f"{domains_simple}"
                 )
         tool_messages = [{"role": "system", "content": system_msg}] + list(
@@ -2137,6 +2299,7 @@ def _execute_generate(skill, context):
         result = _call_llm_with_tools(
             agent, tool_messages, selected_defs, config,
             usage=usage, openai_api_key=openai_api_key, req_id=rid, model=model,
+            data_domains=data_domains,
         )
         # Three attempts rather than two. A rejected binding is usually one
         # argument out of fifteen — a miscased literal value, a stratifier that
@@ -2203,6 +2366,7 @@ def _execute_generate(skill, context):
                         openai_api_key=openai_api_key,
                         req_id=rid,
                         model=model,
+                        data_domains=data_domains,
                     )
                     continue
                 fallback_reason = FALLBACK_VALIDATION_FAILED

@@ -318,6 +318,7 @@ def test_execute_generate_end_to_end_cube(monkeypatch):
         openai_api_key=None,
         req_id="-",
         model=None,
+        data_domains=None,
     ):
         calls["selected_tool_names"] = {t["function"]["name"] for t in tools}
         return tool_name, tool_args

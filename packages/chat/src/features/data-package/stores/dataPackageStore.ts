@@ -158,14 +158,20 @@ function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
 }
 
 /**
- * Values we are willing to put on the wire for one column.
+ * How much of one column's value list we are willing to put on the wire,
+ * measured as JSON characters rather than counted.
  *
- * Above this a column is an identifier or a date — research_id, surgery_date —
- * and enumerating it helps nobody, so we send the count alone. Below it we send
- * every value, because these are the columns a user names ("which chemo
- * agents?") and the agent has no other way to reach them.
+ * A count cannot tell a long vocabulary from an identifier. 284 protocol arms
+ * ("ACNS0334: Regimen B", …) are 7.5 KB and are exactly what a user names; 7,000
+ * research ids are 80 KB and enumerating them helps nobody. Sized, the first
+ * travels and the second is sent as a count — and a column of short ids that
+ * does fit travels too, which costs little and lets the agent check them.
  */
-const DOMAIN_VALUE_CAP = 250;
+const DOMAIN_COLUMN_BUDGET = 16_384;
+
+/** And for the whole payload, which goes out with every chat request. Columns
+ *  over it are omitted largest first, so the many small vocabularies survive. */
+const DOMAIN_TOTAL_BUDGET = 262_144;
 
 /**
  * Cap each column's value list. Never drop a column.
@@ -179,10 +185,23 @@ const DOMAIN_VALUE_CAP = 250;
  * `ListFieldValues` tool fetches the rest.
  */
 function capLongDomains(data: DataFieldDomain[]): SentFieldDomain[] {
-  return data.map((d) => {
+  const sizes = data.map((d) =>
+    d.type === 'interval' ? 0 : JSON.stringify((d.domain as CategoricalDomain).values).length,
+  );
+  // Smallest first: spending the total budget on the small columns keeps the
+  // most of them, and a column that does not fit on its own is out regardless.
+  const kept = new Set<number>();
+  let total = 0;
+  for (const i of sizes.map((_, i) => i).sort((a, b) => sizes[a] - sizes[b])) {
+    if (data[i].type === 'interval' || sizes[i] > DOMAIN_COLUMN_BUDGET) continue;
+    if (total + sizes[i] > DOMAIN_TOTAL_BUDGET) break;
+    total += sizes[i];
+    kept.add(i);
+  }
+  return data.map((d, i) => {
     if (d.type === 'interval') return d as SentFieldDomain;
     const values = (d.domain as CategoricalDomain).values;
-    if (values.length <= DOMAIN_VALUE_CAP) {
+    if (kept.has(i)) {
       return { ...d, domain: { values, distinct: values.length } };
     }
     return { ...d, domain: { values: [], distinct: values.length, omitted: true } };
