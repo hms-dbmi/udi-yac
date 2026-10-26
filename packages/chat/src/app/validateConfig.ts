@@ -109,6 +109,14 @@ export function validateConfig(config: UDIChatConfig): void {
     }
   }
 
+  if (
+    config.filterMode != null &&
+    config.filterMode !== 'separate' &&
+    config.filterMode !== 'shared'
+  ) {
+    errors.push('`filterMode` must be "separate" or "shared" when provided.');
+  }
+
   if (errors.length > 0) {
     throw new Error(
       `UDIChat config is invalid:\n  - ${errors.join('\n  - ')}\n\n` +

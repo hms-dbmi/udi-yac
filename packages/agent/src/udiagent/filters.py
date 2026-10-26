@@ -15,7 +15,10 @@ One entry per (filter, field)::
      "scope": {"entity": "Patient", "match": "any"}}
 
 ``intervalRange: {min, max}`` replaces ``pointValues`` on an interval filter.
-``scope`` is absent (or null) for a row-level filter.
+``scope`` is absent (or null) for a row-level filter. ``readOnly: true`` marks
+a filter the host page keeps for itself; a host filter without the flag (the
+host shares the column with chat and charts) is editable. Clients that predate
+the flag send none, so a ``host`` entry without it is read-only.
 """
 
 from __future__ import annotations
@@ -25,14 +28,22 @@ import json
 SCOPE_MATCHES = ("any", "all", "none")
 
 _ORIGIN_LABELS = {
-    "chat": "set in chat, editable",
-    "chart": "set on a chart, editable",
-    "host": "set by the host page, read-only",
+    "chat": "set in chat",
+    "chart": "set on a chart",
+    "host": "set by the host page",
 }
 
-#: Filters the agent may modify or remove. Chat and chart filters are one
-#: filter per column, whoever set them last; the host page owns its own.
-EDITABLE_ORIGINS = ("chat", "chart")
+
+def _read_only(entry: dict) -> bool:
+    """Whether the host page keeps this filter for itself (see the module doc)."""
+    flag = entry.get("readOnly")
+    return flag if isinstance(flag, bool) else entry.get("origin") == "host"
+
+
+def _origin_label(entry: dict) -> str:
+    """Who set the filter, and whether the agent may change it."""
+    access = "read-only" if _read_only(entry) else "editable"
+    return f"{_ORIGIN_LABELS[entry['origin']]}, {access}"
 
 
 def normalize_filters(raw) -> list[dict]:
@@ -113,7 +124,7 @@ def describe_filters(filters: list[dict]) -> str:
         return "No filters are active."
     lines = []
     for entry in filters:
-        lines.append(f"- id: {entry['id']} ({_ORIGIN_LABELS[entry['origin']]})")
+        lines.append(f"- id: {entry['id']} ({_origin_label(entry)})")
         if entry.get("title"):
             lines.append(f"  title: {entry['title']}")
         lines.append(f"  condition: {describe_condition(entry)}")
@@ -386,8 +397,8 @@ def validate_operations(
     """
     if not isinstance(operations, list) or not operations:
         return ["Give at least one operation."]
-    origins = {f["id"]: f["origin"] for f in current}
-    editable_ids = sorted(i for i, o in origins.items() if o in EDITABLE_ORIGINS)
+    by_id = {f["id"]: f for f in current}
+    editable_ids = sorted(i for i, f in by_id.items() if not _read_only(f))
     values = _value_lists(data_domains)
     touched: set[str] = set()
     errors: list[str] = []
@@ -399,14 +410,14 @@ def validate_operations(
         problems: list[str] = []
         if kind in ("modify", "remove"):
             target = op.get("id")
-            if target not in origins:
+            if target not in by_id:
                 known = ", ".join(editable_ids) or "none"
                 problems.append(
                     f"No filter has id '{target}'. Editable filters: {known}."
                 )
-            elif origins[target] not in EDITABLE_ORIGINS:
+            elif _read_only(by_id[target]):
                 problems.append(
-                    f"Filter '{target}' is read-only ({_ORIGIN_LABELS[origins[target]]}). "
+                    f"Filter '{target}' is read-only ({_origin_label(by_id[target])}). "
                     f"Add a new filter instead."
                 )
             elif target in touched:

@@ -4,6 +4,7 @@ import type { ActiveFilter } from '../hooks/useFilterChips';
 import {
   columnFilterKey,
   extractAllFilterSpecsFromMessage,
+  HOST_FILTER_PREFIX,
   type FilterOrigin,
 } from '../stores/dataFiltersStore';
 
@@ -16,6 +17,9 @@ import {
 export interface AgentFilterEntry {
   id: string;
   origin: FilterOrigin;
+  /** On host filters only: `true` for a separate one, which the agent may not
+   *  change; `false` for a shared one (a column filter), which it may. */
+  readOnly?: boolean;
   title?: string;
   entity: string;
   field: string;
@@ -52,6 +56,7 @@ export function agentFilterState(
         field,
         filterType: selection.type,
       };
+      if (origin === 'host') entry.readOnly = id.startsWith(HOST_FILTER_PREFIX);
       if (titles[id]) entry.title = titles[id];
       if (selection.type === 'point') {
         entry.pointValues = values.map((v) => String(v));

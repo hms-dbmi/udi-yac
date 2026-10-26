@@ -328,6 +328,21 @@ def test_invalid_operations_are_named(op, expected):
     assert errors[0].startswith("Operation 1")
 
 
+def test_host_filter_shared_on_a_column_is_editable():
+    # The chat flags every host filter; one without the flag (a client from
+    # before it) stays read-only.
+    shared = {**HOST, "id": "col:Patient.id", "readOnly": False}
+    current = [GROUP3, BRUSH, HOST, shared]
+    ops = [{"op": "remove", "id": shared["id"]}]
+    assert validate_operations(ops, SCHEMA, DOMAINS, current) == []
+    flagged = {**HOST, "readOnly": True}
+    errors = validate_operations(
+        [{"op": "remove", "id": HOST["id"]}], SCHEMA, DOMAINS, [GROUP3, BRUSH, flagged]
+    )
+    assert "is read-only (set by the host page, read-only)" in errors[0]
+    assert "(set by the host page, editable)" in describe_filters([shared])
+
+
 def test_chart_filters_can_be_modified_and_removed():
     """Chat and chart filters are one filter per column; either is editable."""
     assert _errors({"op": "remove", "id": BRUSH["id"]}) == []
