@@ -75,6 +75,73 @@ describe('UDIChat — read-only shell', () => {
   });
 });
 
+describe('UDIChat — host switching read-only', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('follows the readOnly prop both ways', () => {
+    const { rerender } = render(<UDIChat {...config} readOnly />);
+
+    rerender(<UDIChat {...config} readOnly={false} />);
+    expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Explore Data' })).toBeNull();
+
+    rerender(<UDIChat {...config} readOnly />);
+    expect(screen.queryByRole('heading', { name: 'Chat' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Explore Data' })).toBeTruthy();
+  });
+
+  it('tells the host when the user leaves through Explore Data', async () => {
+    const user = userEvent.setup();
+    const onReadOnlyChange = vi.fn();
+    render(<UDIChat {...config} readOnly onReadOnlyChange={onReadOnlyChange} />);
+
+    await user.click(screen.getByRole('button', { name: 'Explore Data' }));
+
+    expect(onReadOnlyChange).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
+  it('lets the host out of a lock the user cannot leave', () => {
+    const { rerender } = render(<UDIChat {...config} readOnly="locked" />);
+    rerender(<UDIChat {...config} readOnly={false} />);
+    expect(screen.getByRole('heading', { name: 'Chat' })).toBeTruthy();
+  });
+
+  it('keeps a draft through a round trip to read-only', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<UDIChat {...config} />);
+    await user.type(screen.getByPlaceholderText('Ask a question...'), 'half a question');
+
+    rerender(<UDIChat {...config} readOnly />);
+    rerender(<UDIChat {...config} readOnly={false} />);
+
+    expect(screen.getByPlaceholderText('Ask a question...')).toHaveProperty(
+      'value',
+      'half a question',
+    );
+  });
+
+  it('hides the seeded transcript on the first exit only', async () => {
+    // Never answers: the sent message stays in the transcript, pending.
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <UDIChat {...seedConfig} readOnly initialSession={seededSession} />,
+    );
+    expect(await screen.findByText('Seeded cohort')).toBeTruthy();
+
+    rerender(<UDIChat {...seedConfig} readOnly={false} initialSession={seededSession} />);
+    expect(screen.queryByText('donors by sex')).toBeNull();
+    await user.type(screen.getByPlaceholderText('Ask a question...'), 'my own question{Enter}');
+    expect(screen.getByText('my own question')).toBeTruthy();
+
+    rerender(<UDIChat {...seedConfig} readOnly initialSession={seededSession} />);
+    rerender(<UDIChat {...seedConfig} readOnly={false} initialSession={seededSession} />);
+
+    expect(screen.getByText('my own question')).toBeTruthy();
+    expect(screen.queryByText('donors by sex')).toBeNull();
+  });
+});
+
 /** A one-resource package. Paired with `dataFieldDomains`, `setDataPackage`
  *  reaches `loadingPhase: 'ready'` without fetching a single CSV — which is
  *  what the seeding effect waits for. */

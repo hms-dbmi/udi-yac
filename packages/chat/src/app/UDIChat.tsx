@@ -76,6 +76,7 @@ function UDIChatInner({
   initialSession,
   filters,
   onFiltersChange,
+  onReadOnlyChange,
   issueReporting,
 }: UDIChatConfig) {
   const conversationStore = useConversationStore();
@@ -288,11 +289,28 @@ function UDIChatInner({
     }
   }, [activeFilters, onFiltersChange]);
 
-  const exitReadOnly = () => {
-    // The seeded transcript would open the chat on a wall of prompts nobody
-    // here typed. Hidden, not dropped — see `hiddenCount`.
+  // Leaving read-only for the first time: the seeded transcript would open the
+  // chat on a wall of prompts nobody here typed. Hidden, not dropped — see
+  // `hiddenCount`. Only the first time: by the next exit the transcript is the
+  // user's own. A layout effect, so the transcript never paints.
+  const transcriptHidden = useRef(!readOnly);
+  useLayoutEffect(() => {
+    if (readOnly || transcriptHidden.current) return;
+    transcriptHidden.current = true;
     conversationStore.getState().hideMessages();
+  }, [readOnly, conversationStore]);
+
+  // The chat region mounts the first time it is shown and then stays mounted,
+  // only hidden while read-only, so a host toggling modes keeps the draft, the
+  // scroll position and a response still on its way.
+  const [chatMounted, setChatMounted] = useState(!readOnly);
+  if (!readOnly && !chatMounted) setChatMounted(true);
+
+  const exitReadOnly = () => {
     globalStore.getState().setReadOnly(false);
+    // In the same handler, so a host that moves us into more room on this
+    // (an inline embed opening a modal) does it in the same render.
+    onReadOnlyChange?.(false);
     trackEvent('read_only_exited', {});
   };
 
@@ -313,17 +331,17 @@ function UDIChatInner({
     // portals into it.
     <div className="udi:@container/shell udi:flex udi:h-full udi:w-full udi:bg-background">
       {/*
-       * Read-only drops the whole left region, so the dashboard gets the full
+       * Read-only hides the whole left region, so the dashboard gets the full
        * width; the floating Explore Data button is the way back. One branch,
        * rather than a per-control sweep, because the chat pane is where every
        * writing affordance lives — the input and its `//admin` backdoor, reset,
        * example prompts, the memory bank, the API key, closed-viz restore, and
-       * the data overview's "Open on dashboard" button. Nothing here is
-       * unmounted for good: leaving read-only re-renders the region with its
-       * state intact.
+       * the data overview's "Open on dashboard" button. `display: none` makes
+       * all of it unreachable; `contents` leaves the shell's flex row as if
+       * this wrapper were not there.
        */}
-      {!readOnly && (
-        <>
+      {chatMounted && (
+        <div style={{ display: readOnly ? 'none' : 'contents' }}>
           {/* Sidebar drawer — debug mode only */}
           {debugMode && drawerOpen && (
             <div className="udi:w-56 udi:shrink-0 udi:border-r udi:bg-background udi:overflow-hidden udi:flex udi:flex-col">
@@ -385,7 +403,7 @@ function UDIChatInner({
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
       <div className="udi:relative udi:flex-1 udi:min-w-0 udi:overflow-hidden">
         <DashboardPanel seeding={seeding} />
@@ -527,7 +545,11 @@ function UDIChatValidated(props: UDIChatConfig) {
   return (
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
-        <UDIChatProvider readOnly={props.readOnly} fontScale={props.fontScale}>
+        <UDIChatProvider
+          readOnly={props.readOnly}
+          fontScale={props.fontScale}
+          refitOnReadOnlyChange={props.refitOnReadOnlyChange}
+        >
           <ApiConfigProvider apiBaseUrl={props.apiBaseUrl} authToken={props.authToken}>
             <IssueReportingProvider value={props.issueReporting === true}>
               <TrackerProvider onEvent={props.onEvent}>
