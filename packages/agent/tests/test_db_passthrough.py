@@ -272,6 +272,13 @@ def test_queries_of_one_user_run_at_the_same_time(monkeypatch):
             barrier.wait()
 
     monkeypatch.setattr(StarRocksConnector, "_connect", lambda self, u, p: SlowConn(u, p))
+    # execute() imports pymysql for its error classes; CI's agent job runs
+    # without the [starrocks] extra, and the fake connection needs nothing else.
+    import sys
+    import types
+
+    err = types.SimpleNamespace(InterfaceError=OSError, OperationalError=OSError)
+    monkeypatch.setitem(sys.modules, "pymysql", types.SimpleNamespace(err=err))
     c = connector()
     token = make_token("alice")
     errors = []
