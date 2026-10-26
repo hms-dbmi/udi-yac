@@ -7,6 +7,7 @@ calling the LLM with each skill's instructions and passing a shared
 context between them.
 """
 
+import difflib
 import json
 import logging
 import re
@@ -1100,6 +1101,98 @@ def _categorical_domains(data_domains):
     return out
 
 
+def _suggest_values(value, known, limit=8):
+    """Values in `known` the caller plausibly meant by `value`, best first.
+
+    Two kinds of near miss. Words: "Regimen B" for "ACNS0334: Regimen B", where
+    the value is a fragment of a longer label — every word of it appears, in any
+    order. Spelling: "Radiaton" for "Radiation", which difflib catches.
+    """
+    def words(text):
+        return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+    wanted = words(value)
+    by_words = [v for v in known if wanted and wanted <= words(v)]
+    close = difflib.get_close_matches(value, known, n=limit, cutoff=0.6)
+    suggestions = []
+    for v in by_words + close:
+        if v not in suggestions:
+            suggestions.append(v)
+    return suggestions[:limit]
+
+
+def _missing_value_error(value, field_name, entity_name, known, consequence):
+    """Prose for a literal that `known`, the column's values, does not hold."""
+    # A near miss is worth naming as one: the model was told to copy a value
+    # exactly, and "deceased" for "Deceased" is a different mistake from having
+    # picked the wrong column entirely.
+    lowered = {v.lower(): v for v in known}
+    if value.lower() in lowered:
+        return (
+            f"Value '{value}' does not appear in column '{field_name}' on "
+            f"'{entity_name}', but '{lowered[value.lower()]}' does — copy it "
+            f"exactly, including case."
+        )
+    suggestions = _suggest_values(value, known)
+    if suggestions:
+        hint = (
+            "Did you mean one of these? "
+            + ", ".join(repr(v) for v in suggestions)
+            + ". Copy the values exactly, and list every one that applies."
+        )
+    else:
+        sample = ", ".join(repr(v) for v in known[:8])
+        more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
+        hint = (
+            f"Either pick a value that is in that column ({sample}{more}), or "
+            f"bind a different column."
+        )
+    return (
+        f"Value '{value}' does not appear in column '{field_name}' on "
+        f"'{entity_name}', {consequence}. {hint}"
+    )
+
+
+def _grouping_value_errors(spec_template, bindings, entity_bindings, domains):
+    """Grouping values the column they group does not hold.
+
+    Only nominal groupings: a quantitative one cuts at numbers, which need not
+    occur in the column. A column without a value list is left unchecked, as
+    everywhere else — "not sent" is not "not there".
+    """
+    from udiagent.stratify import GroupingError, _nominal_groups, grouping_kind, parse_grouping
+
+    errors = []
+    for group_key, field_key in grouping_targets(spec_template).items():
+        try:
+            grouping = parse_grouping(bindings.get(group_key))
+            if grouping is None or grouping_kind(grouping) != "nominal":
+                continue
+            groups = _nominal_groups(grouping)
+        except GroupingError:
+            continue  # malformed: reported by the per-binding check
+        field_name = bindings.get(field_key)
+        entity_name = _entity_for_binding_key(field_key, entity_bindings)
+        known = domains.get((entity_name, field_name))
+        if not known:
+            continue
+        for label, values in groups:
+            for value in values:
+                if value in known:
+                    continue
+                errors.append(
+                    _missing_value_error(
+                        value,
+                        field_name,
+                        entity_name,
+                        known,
+                        f"so it puts no rows in group '{label}' — that group "
+                        f"would draw an empty curve",
+                    )
+                )
+    return errors
+
+
 def grouping_targets(spec_template):
     """``{grouping binding key: field binding key}`` for a template's `<GROUP:…>` tags.
 
@@ -1590,28 +1683,25 @@ def validate_bindings(
                 known = domains.get((entity_name, field_name))
                 if not known or value in known:
                     continue
-                # A near miss is worth naming as one: the model was told to copy
-                # a value exactly, and "deceased" for "Deceased" is a different
-                # mistake from having picked the wrong column entirely.
-                lowered = {v.lower(): v for v in known}
-                if value.lower() in lowered:
-                    errors.append(
-                        f"Value '{value}' does not appear in column "
-                        f"'{field_name}' on '{entity_name}', but "
-                        f"'{lowered[value.lower()]}' does — copy it exactly, "
-                        f"including case."
+                errors.append(
+                    _missing_value_error(
+                        value,
+                        field_name,
+                        entity_name,
+                        known,
+                        "which this template compares it against — so the "
+                        "comparison would match no rows and the chart would come "
+                        "out empty",
                     )
-                else:
-                    sample = ", ".join(repr(v) for v in known[:8])
-                    more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
-                    errors.append(
-                        f"Value '{value}' does not appear in column "
-                        f"'{field_name}' on '{entity_name}', which this template "
-                        f"compares it against — so the comparison would match no "
-                        f"rows and the chart would come out empty. Either pick a "
-                        f"value that is in that column ({sample}{more}), or bind a "
-                        f"different column."
-                    )
+                )
+
+        # A grouping's values are literals too, and nothing above reads them:
+        # a group of "arm b" on a column spelling it "ACNS0334: Regimen B"
+        # matches no rows, so that curve is empty (or, with an Other, its
+        # subjects quietly join Other) and the chart still renders.
+        errors.extend(
+            _grouping_value_errors(spec_template, bindings, entity_bindings, domains)
+        )
 
     return errors
 
