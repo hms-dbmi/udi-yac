@@ -133,17 +133,22 @@ export interface UDIChatConfig {
    */
   fontScale?: number;
   /**
-   * Start the chat in read-only mode: the chat pane and the dashboard's top
-   * bar (counts, grid settings, session import/export, Download Data) are
-   * hidden, as is every editing control on the cards — drag, resize, rename,
-   * close, field tweak. What stays is the charts and what reads them: brushing
-   * and cross-filtering, the filter chips, the chart/table toggle and the info
-   * tooltips.
+   * Read-only mode: the chat pane and the dashboard's top bar (counts, grid
+   * settings, session import/export, Download Data) are hidden, as is every
+   * editing control on the cards — drag, resize, rename, close, field tweak.
+   * What stays is the charts and what reads them: brushing and cross-filtering,
+   * the filter chips, the chart/table toggle and the info tooltips.
    *
    * - `true` — a floating Explore Data button leaves read-only and opens the
-   *   chat, so this is the *initial* mode rather than a lock.
-   * - `'locked'` — the same, with no way out. For hosts embedding the
-   *   dashboard that do not want their users chatting at all.
+   *   chat (see {@link UDIChatConfig.onReadOnlyChange}).
+   * - `'locked'` — the same, with no way out for the user. For hosts embedding
+   *   the dashboard that do not want their users chatting at all.
+   *
+   * A change to this prop switches the mode, so the host can move between an
+   * inline read-only dashboard and a full chat — say, in a modal — and back,
+   * with charts, filters, brushes and the conversation intact. That needs the
+   * same mounted `UDIChat` throughout: restyle its container rather than
+   * rendering it somewhere else (a portal-based dialog remounts it).
    *
    * With the chat hidden there is nothing to build a dashboard from, so a
    * read-only embed almost always wants {@link UDIChatConfig.initialSession}
@@ -151,6 +156,21 @@ export interface UDIChatConfig {
    * set.
    */
   readOnly?: ReadOnlyOption;
+  /**
+   * Called with `false` when the user presses Explore Data — not when
+   * {@link UDIChatConfig.readOnly} changes. Passing it makes the mode
+   * controlled: the button no longer leaves read-only by itself, and the host
+   * does so by setting `readOnly` — free to move the chat into more room, and
+   * to animate that, in the same update.
+   */
+  onReadOnlyChange?: (readOnly: boolean) => void;
+  /**
+   * Whether the dashboard re-derives its column count for its new width when
+   * read-only mode changes either way: narrower when the chat pane appears,
+   * wider when it goes. Default `true`. Pass `false` to keep the count — an
+   * {@link UDIChatConfig.initialSession}'s, say — and let the cards stretch.
+   */
+  refitOnReadOnlyChange?: boolean;
   /**
    * A session export to seed the dashboard (and the conversation behind it)
    * with — the JSON written by the dashboard's `Session → Export session`

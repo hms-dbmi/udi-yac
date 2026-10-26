@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 import type { TrackerFn } from '@/app/UDIChatConfig';
@@ -38,22 +46,24 @@ interface UDIChatStores {
 const UDIChatContext = createContext<UDIChatStores | null>(null);
 
 /**
- * `readOnly` seeds the global store's starting mode. It is read once, when the
- * stores are created, so read-only renders from the very first paint with no
- * flash of the editable UI — and because it only seeds state, the user can
- * leave read-only afterwards (unless it was `'locked'`).
+ * `readOnly` seeds the global store's starting mode when the stores are
+ * created, so read-only renders from the very first paint with no flash of the
+ * editable UI. A later change to it is applied too, so the host can switch
+ * modes; the user can still leave read-only in between (unless `'locked'`).
  *
  * `fontScale` seeds the store the same way, so the first paint is already at
- * the host's size, but unlike `readOnly` it also follows later changes.
+ * the host's size, and also follows later changes.
  */
 export function UDIChatProvider({
   children,
-  readOnly,
+  readOnly = false,
   fontScale,
+  refitOnReadOnlyChange = true,
 }: {
   children: ReactNode;
   readOnly?: ReadOnlyOption;
   fontScale?: number;
+  refitOnReadOnlyChange?: boolean;
 }) {
   const storesRef = useRef<UDIChatStores | null>(null);
   if (storesRef.current == null) {
@@ -63,7 +73,7 @@ export function UDIChatProvider({
       dataPackage: createDataPackageStore(),
       dataFilters: createDataFiltersStore(),
       memoryBank: createMemoryBankStore(),
-      global: createGlobalStore(readOnly, fontScale),
+      global: createGlobalStore(readOnly, fontScale, refitOnReadOnlyChange),
     };
     // Register synchronously so the (outer) ErrorBoundary can capture the
     // current session even if the very first child render throws — a
@@ -78,6 +88,18 @@ export function UDIChatProvider({
   useEffect(() => {
     globalStore.setState({ hostFontScale: fontScale });
   }, [globalStore, fontScale]);
+  // A layout effect, so a host that restyles its container in the same render
+  // (an inline embed growing into a modal) never paints the new container in
+  // the old mode. Set directly rather than via `setReadOnly`: the lock keeps
+  // the user in read-only, not the host. One `setState`, so DashboardGrid sees
+  // the refit flag that came with the mode change.
+  useLayoutEffect(() => {
+    globalStore.setState({
+      readOnly: readOnly !== false,
+      readOnlyLocked: readOnly === 'locked',
+      refitOnReadOnlyChange,
+    });
+  }, [globalStore, readOnly, refitOnReadOnlyChange]);
   return <UDIChatContext.Provider value={storesRef.current}>{children}</UDIChatContext.Provider>;
 }
 
