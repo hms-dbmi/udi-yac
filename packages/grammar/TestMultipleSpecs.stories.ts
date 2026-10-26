@@ -1,4 +1,3 @@
-// import { fn } from '@storybook/test'
 import TestMultipleSpecs from './TestMultipleSpecs.vue';
 
 // export const ActionsData = {
@@ -23,7 +22,7 @@ export const Default = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -43,7 +42,7 @@ export const Default = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -78,7 +77,7 @@ export const Reversed = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -106,7 +105,7 @@ export const Reversed = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -133,7 +132,7 @@ export const ScatterDetailOverview = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -163,7 +162,7 @@ export const ScatterDetailOverview = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -190,7 +189,7 @@ export const ScatterOverviewDetail = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -210,7 +209,7 @@ export const ScatterOverviewDetail = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -247,7 +246,7 @@ export const ScatterFilter = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -277,7 +276,7 @@ export const ScatterFilter = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -314,7 +313,7 @@ export const ScatterFilterSelf = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -358,7 +357,7 @@ export const ScatterFilterSelfMultiple = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -395,7 +394,7 @@ export const ScatterFilterSelfMultiple = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -432,7 +431,7 @@ export const ScatterFilterSelfMultiple = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -469,7 +468,7 @@ export const ScatterFilterSelfMultiple = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -513,7 +512,7 @@ export const ScatterTable = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -533,7 +532,7 @@ export const ScatterTable = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -599,7 +598,7 @@ export const KDEScatterTable = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -630,7 +629,7 @@ export const KDEScatterTable = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -650,7 +649,7 @@ export const KDEScatterTable = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -716,7 +715,7 @@ export const CrossFilterKDE = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -773,7 +772,7 @@ export const CrossFilterKDE = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -829,7 +828,7 @@ export const CrossFilterKDE = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -885,7 +884,7 @@ export const CrossFilterKDE = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -956,7 +955,7 @@ export const CrossFilterStripPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -997,7 +996,7 @@ export const CrossFilterStripPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -1038,7 +1037,7 @@ export const CrossFilterStripPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -1079,7 +1078,7 @@ export const CrossFilterStripPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -1354,7 +1353,7 @@ export const CrossEntityStripPlot = {
       {
         source: {
           name: 'samples',
-          source: './data/samples.csv',
+          source: './data/hubmap/samples.tsv',
         },
         transformation: [
           {
@@ -1394,7 +1393,7 @@ export const CrossEntityStripPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -1434,7 +1433,7 @@ export const CrossEntityStripPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -1898,7 +1897,7 @@ export const CrossEntityStripAndBarPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -1938,7 +1937,7 @@ export const CrossEntityStripAndBarPlot = {
       {
         source: {
           name: 'samples',
-          source: './data/samples.csv',
+          source: './data/hubmap/samples.tsv',
         },
         transformation: [
           {
@@ -1999,7 +1998,7 @@ export const CrossEntityStripAndBarPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2056,7 +2055,7 @@ export const CrossEntityTableAndBarPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2101,7 +2100,7 @@ export const CrossEntityTableAndBarPlot = {
       {
         source: {
           name: 'samples',
-          source: './data/samples.csv',
+          source: './data/hubmap/samples.tsv',
         },
         transformation: [
           {
@@ -2169,7 +2168,7 @@ export const CrossEntityHeatmapAndBarPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2212,7 +2211,7 @@ export const CrossEntityHeatmapAndBarPlot = {
         },
       },
       {
-        source: { name: 'datasets', source: './data/datasets.csv' },
+        source: { name: 'datasets', source: './data/hubmap/datasets.tsv' },
         transformation: [
           {
             filter: {
@@ -2280,7 +2279,7 @@ export const CrossEntityHeatmapAndBarPlot = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2326,7 +2325,7 @@ export const CrossEntityHeatmapAndBarPlot = {
       {
         source: {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
         transformation: [
           {
@@ -2385,7 +2384,7 @@ export const CrossEntityErrorTest = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2425,7 +2424,7 @@ export const CrossEntityErrorTest = {
       {
         source: {
           name: 'samples',
-          source: './data/samples.csv',
+          source: './data/hubmap/samples.tsv',
         },
         transformation: [
           {
@@ -2486,7 +2485,7 @@ export const CrossEntityErrorTest = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2545,7 +2544,7 @@ export const FilterLayeredViz = {
       {
         source: {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
         transformation: [
           {
@@ -2601,7 +2600,7 @@ export const SimplePointSelection = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2636,7 +2635,7 @@ export const SimplePointSelection = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2664,7 +2663,7 @@ export const PointSelectionCrossFilter = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2704,7 +2703,7 @@ export const PointSelectionCrossFilter = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2745,7 +2744,7 @@ export const PointSelectionRow = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2781,7 +2780,7 @@ export const PointSelectionRow = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2809,7 +2808,7 @@ export const PointSelectionColumn = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2845,7 +2844,7 @@ export const PointSelectionColumn = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2873,7 +2872,7 @@ export const PointSelectionCell = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2909,7 +2908,7 @@ export const PointSelectionCell = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2936,7 +2935,7 @@ export const PointSelectionCellCrossFilter = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -2977,7 +2976,7 @@ export const PointSelectionCellCrossFilter = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -3016,7 +3015,7 @@ export const DebounceTest = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -3037,7 +3036,7 @@ export const DebounceTest = {
         config: { debounce: 500 },
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -3247,7 +3246,7 @@ export const ScaleOnFilterDensityDonors = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -3267,7 +3266,7 @@ export const ScaleOnFilterDensityDonors = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -3335,7 +3334,7 @@ export const ScaleOnFilterBarChartFullFull = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -3355,7 +3354,7 @@ export const ScaleOnFilterBarChartFullFull = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -3402,7 +3401,7 @@ export const ScaleOnFilterBarChartFullFiltered = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -3422,7 +3421,7 @@ export const ScaleOnFilterBarChartFullFiltered = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -3469,7 +3468,7 @@ export const ScaleOnFilterBarChartFilteredFiltered = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -3489,7 +3488,7 @@ export const ScaleOnFilterBarChartFilteredFiltered = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -3536,7 +3535,7 @@ export const HistogramFilterScatterplotExplicitHowField = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -3581,7 +3580,7 @@ export const HistogramFilterScatterplotExplicitHowField = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {
@@ -3609,7 +3608,7 @@ export const ScatterplotFilterExplicitHowField = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         representation: {
           mark: 'point',
@@ -3631,7 +3630,7 @@ export const ScatterplotFilterExplicitHowField = {
       {
         source: {
           name: 'donors',
-          source: './data/donors.csv',
+          source: './data/hubmap/donors.tsv',
         },
         transformation: [
           {

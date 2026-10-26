@@ -9,20 +9,23 @@ Run with::
     uv run fastapi dev src/udiagent/server/app.py --port 8007
 """
 
+import importlib.metadata
 import json
 import logging
-import os
+import urllib.request
 from dataclasses import asdict
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import AuthenticationError
-from fastapi import FastAPI, Header, Depends, Request
+from openai import APIError, AuthenticationError, OpenAIError
+from fastapi import BackgroundTasks, FastAPI, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from udiagent.agent import UDIAgent
+from udiagent.filters import filter_summary
 from udiagent.orchestrator import (
     BudgetExceededError,
     Orchestrator,
@@ -30,12 +33,23 @@ from udiagent.orchestrator import (
     build_rebuff_toolcall,
 )
 from udiagent.structured_functions import export_registry_json
+# Dependency-free (no duckdb/pymysql at module scope), unlike the connector
+# imports further down, which stay lazy because the drivers are extras.
+from udiagent.query import DatabaseAuthError, use_db_token
 from udiagent.server.config import ServerConfig
-from udiagent.server.auth import make_verify_jwt
+from udiagent.server.auth import RAW_TOKEN_CLAIM, make_verify_jwt
 from udiagent.server.models import (
+    ErrorResponse,
+    IssueReportResponse,
+    MetadataResponse,
+    QueryResponse,
+    ToolCall,
     YACCompletionRequest,
     YACBenchmarkCompletionRequest,
+    YACIssueReportRequest,
     YACQueryRequest,
+    YACVisInstantiateRequest,
+    YACVisInstantiateResponse,
 )
 
 # ---------------------------------------------------------------------------
@@ -58,13 +72,20 @@ load_dotenv(_PACKAGE_ROOT / ".env")
 # override=False keeps the path above (and real env vars) winning where both exist.
 load_dotenv(Path.cwd() / ".env")
 
+# --- Config ---
+# Built before logging so a misconfiguration is reported immediately, and so
+# every env var in the process flows through one validated model.
+config = ServerConfig.from_env()
+
 # When installed from a wheel, _PACKAGE_ROOT lands inside site-packages, which
 # has no data/ (only src/udiagent/data is packaged) and is often read-only —
 # hence the overrides. See the deployment guide in the package README.
-_DATA_DIR = Path(os.getenv("UDI_DATA_DIR") or _PACKAGE_ROOT / "data")
+_DATA_DIR = Path(config.udi_data_dir or _PACKAGE_ROOT / "data")
+# Where the benchmark runner writes when run from the package directory.
+_OUTPUT_DIR = _PACKAGE_ROOT / "out"
 
 # --- Logging setup ---
-_log_dir = Path(os.getenv("UDI_LOG_DIR") or _PACKAGE_ROOT / "logs")
+_log_dir = Path(config.udi_log_dir or _PACKAGE_ROOT / "logs")
 
 _handlers: list[logging.Handler] = [logging.StreamHandler()]
 try:
@@ -93,18 +114,24 @@ logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-# --- Config ---
-config = ServerConfig.from_env()
-
 # --- Agent & Orchestrator ---
 agent = UDIAgent(
     gpt_model_name=config.gpt_model_name,
     openai_api_key=config.openai_api_key,
     openai_base_url=config.openai_base_url,
+    bedrock=config.udi_bedrock,
+    # Gated: bedrock_region alone opts in, and ECS injects AWS_REGION into every
+    # task, so passing it unconditionally put every ECS deploy on Bedrock.
+    bedrock_region=config.aws_region if config.udi_bedrock else None,
     langfuse_public_key=config.langfuse_public_key,
     langfuse_secret_key=config.langfuse_secret_key,
     langfuse_host=config.langfuse_host,
     langfuse_environment=config.langfuse_environment,
+    openai_api=config.udi_openai_api,
+    reasoning_effort=config.udi_reasoning_effort,
+    temperature=None if config.udi_temperature == "omit" else config.udi_temperature,
+    max_completion_tokens=config.udi_max_completion_tokens,
+    vis_tool_choice=config.udi_vis_tool_choice,
 )
 
 orchestrator = Orchestrator(
@@ -112,7 +139,35 @@ orchestrator = Orchestrator(
 )
 
 # --- FastAPI app ---
-app = FastAPI()
+# The title, description and tags feed the OpenAPI spec, which
+# scripts/gen_openapi.py writes to packages/agent/openapi.json for the docs site.
+app = FastAPI(
+    title="UDIAgent API",
+    # operationIds name the handler (`yac_completions`), not FastAPI's default
+    # handler + path + method, so the reference pages get short URLs.
+    generate_unique_id_function=lambda route: route.name,
+    version=importlib.metadata.version("udiagent"),
+    description=(
+        "The reference server for the YAC chat: it turns a conversation about a "
+        "data package into charts, filters and answers, and optionally serves the "
+        "package's data from a database. Every endpoint is stateless: the client "
+        "sends the conversation, the data package descriptor and the active "
+        "filters with each request. [How the agent works]"
+        "(https://hms-dbmi.github.io/udi-yac/docs/backend/architecture/) follows "
+        "a request through it."
+    ),
+    openapi_tags=[
+        {"name": "chat", "description": "Conversation turns and prompt suggestions."},
+        {"name": "charts", "description": "Re-binding a chart made from a template."},
+        {
+            "name": "data",
+            "description": "Server-side data: a package's schema and query results "
+            "from a database instead of CSVs in the browser.",
+        },
+        {"name": "issues", "description": "User issue reports, recorded in LangFuse."},
+        {"name": "status", "description": "Health check."},
+    ],
+)
 
 # Optional budget-check hook.  Downstream integrators should monkey-patch this
 # (``server_app.app.state.budget_check = my_fn``) to consult their quota store.
@@ -121,8 +176,12 @@ app = FastAPI()
 app.state.budget_check = None
 
 
-def _usage_headers(usage: Usage | None) -> dict[str, str]:
-    """Render a ``Usage`` as the ``X-Usage-*`` header bundle for metering."""
+def _usage_headers(usage: Usage | None, model: str | None = None) -> dict[str, str]:
+    """Render a ``Usage`` as the ``X-Usage-*`` header bundle for metering.
+
+    *model* is the model the request actually ran on; it differs from the
+    server's default when a bring-your-own-key caller overrode it.
+    """
     if usage is None:
         usage = Usage()
     return {
@@ -130,8 +189,9 @@ def _usage_headers(usage: Usage | None) -> dict[str, str]:
         "X-Usage-Completion-Tokens": str(usage.completion_tokens),
         "X-Usage-Total-Tokens": str(usage.total_tokens),
         "X-Usage-Cached-Prompt-Tokens": str(usage.cached_prompt_tokens),
+        "X-Usage-Cache-Write-Tokens": str(usage.cache_write_tokens),
         "X-Usage-Reasoning-Tokens": str(usage.reasoning_tokens),
-        "X-Usage-Model": agent.gpt_model_name,
+        "X-Usage-Model": model or agent.gpt_model_name,
     }
 
 
@@ -150,6 +210,21 @@ async def _budget_exceeded_handler(request, exc: BudgetExceededError):
     )
 
 
+@app.exception_handler(DatabaseAuthError)
+async def _db_auth_error_handler(request, exc: DatabaseAuthError):
+    """Surface a database identity rejection as a 403.
+
+    Raised when a JWT-passthrough backend cannot authenticate the caller to the
+    database. The message is fixed: the underlying pymysql error names the
+    principal and the host, neither of which belongs in a client response.
+    """
+    logger.warning("database rejected forwarded identity: %s", exc)
+    return JSONResponse(
+        status_code=403,
+        content={"error": "The database rejected your credentials for this dataset."},
+    )
+
+
 @app.exception_handler(AuthenticationError)
 async def _openai_auth_error_handler(request, exc: AuthenticationError):
     """Surface a rejected OpenAI key as a clean 401 instead of a bare 500.
@@ -165,9 +240,80 @@ async def _openai_auth_error_handler(request, exc: AuthenticationError):
     )
 
 
+@app.exception_handler(OpenAIError)
+async def _openai_config_error_handler(request, exc: OpenAIError):
+    """Surface an unusable LLM backend as a 503 instead of a bare 500.
+
+    The OpenAI SDK raises a plain ``OpenAIError`` for client-construction and
+    credential problems, and an ``APIError`` subclass for anything the API
+    itself returned. Only the former is a server-configuration fault; API
+    failures go to ``_openai_api_error_handler``.
+
+    The common trigger is Bedrock SigV4 signing with no resolvable AWS
+    credentials — the SDK resolves them per request, so this fails at request
+    time rather than at startup. The response stays terse (an end user cannot
+    act on it); the actionable checklist goes to the log, where the operator
+    is looking.
+    """
+    if config.udi_bedrock:
+        logger.error(
+            "Bedrock request failed — could not resolve AWS credentials: %s "
+            "Check that the instance profile / task role is attached and grants "
+            "bedrock:InvokeModel, that AWS_REGION is set (region=%s), and — for "
+            "a container on Docker's bridge network — that the IMDSv2 hop limit "
+            "is at least 2 (`aws ec2 modify-instance-metadata-options "
+            "--http-put-response-hop-limit 2 --http-tokens required`).",
+            exc,
+            config.aws_region or "unset",
+        )
+        detail = (
+            "The server could not authenticate to its Amazon Bedrock backend. "
+            "This is a server configuration problem, not a problem with your "
+            "request — please contact the administrator."
+        )
+    else:
+        logger.error("LLM backend is misconfigured: %s", exc)
+        detail = (
+            "The server's LLM backend is misconfigured. This is a server "
+            "problem, not a problem with your request — please contact the "
+            "administrator."
+        )
+
+    return JSONResponse(status_code=503, content={"error": detail})
+
+
+@app.exception_handler(APIError)
+async def _openai_api_error_handler(request, exc: APIError):
+    """Surface a failed LLM API call as a 502 instead of a bare 500.
+
+    Starlette builds its default 500 outside CORSMiddleware, so that response
+    has no CORS headers and a cross-origin browser reports only "NetworkError"
+    — the status and the reason never reach the frontend. Typical triggers: a
+    caller-supplied ``model`` the key cannot use, a rate limit, a timeout.
+
+    The provider's message is echoed only to a caller who sent their own key,
+    since it describes that key. On the server's credential it can name the
+    operator's account (a Bedrock access denial carries the role ARN), so it
+    goes to the log instead.
+    """
+    logger.warning("LLM API call failed: %s", exc)
+    if request.headers.get("X-OpenAI-Key"):
+        detail = f"The LLM API call failed: {exc.message}"
+    else:
+        detail = (
+            "The LLM API call failed. Please try again or contact the "
+            "administrator."
+        )
+    return JSONResponse(status_code=502, content={"error": detail})
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # Defaults to ["*"] — any origin. Set UDI_CORS_ORIGINS to name the hosts
+    # that embed the chat once you know them; with the wildcard, Starlette
+    # echoes back whatever Origin asked, so any site can call this server with
+    # a user's credentials.
+    allow_origins=config.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -179,6 +325,7 @@ app.add_middleware(
         "X-Usage-Completion-Tokens",
         "X-Usage-Total-Tokens",
         "X-Usage-Cached-Prompt-Tokens",
+        "X-Usage-Cache-Write-Tokens",
         "X-Usage-Reasoning-Tokens",
         "X-Usage-Model",
     ],
@@ -188,6 +335,9 @@ verify_jwt = make_verify_jwt(
     config.jwt_secret_key,
     config.jwt_algorithm,
     config.insecure_dev_mode,
+    jwks_url=config.jwt_jwks_url,
+    issuer=config.jwt_issuer,
+    audience=config.jwt_audience,
 )
 
 # ---------------------------------------------------------------------------
@@ -195,7 +345,34 @@ verify_jwt = make_verify_jwt(
 # ---------------------------------------------------------------------------
 
 
-@app.get("/")
+def _errors(descriptions: dict[int, str]) -> dict:
+    """OpenAPI entries for the error responses a route returns. Docs only."""
+    return {
+        status: {"model": ErrorResponse, "description": text}
+        for status, text in descriptions.items()
+    }
+
+
+_UNAUTHORIZED = "Missing, invalid or expired token (`detail`)."
+_IDP_UNREACHABLE = "The identity provider's keys could not be fetched (`JWT_JWKS_URL`)."
+_DB_FORBIDDEN = "The database rejected the caller's forwarded identity (JWT passthrough)."
+_NO_BACKEND = "No query backend is configured for the package."
+
+_USAGE_HEADERS = {
+    name: {"description": description, "schema": {"type": "string"}}
+    for name, description in {
+        "X-Usage-Prompt-Tokens": "Prompt tokens across every LLM call in the turn.",
+        "X-Usage-Completion-Tokens": "Completion tokens, reasoning included.",
+        "X-Usage-Total-Tokens": "Prompt plus completion tokens.",
+        "X-Usage-Cached-Prompt-Tokens": "Prompt tokens served from the provider's cache.",
+        "X-Usage-Cache-Write-Tokens": "Prompt tokens written to the provider's cache.",
+        "X-Usage-Reasoning-Tokens": "Reasoning tokens, a subset of completion tokens.",
+        "X-Usage-Model": "The model the turn ran on.",
+    }.items()
+}
+
+
+@app.get("/", tags=["status"], summary="Health check")
 def read_root():
     return {
         "service": "UDIAgent API",
@@ -206,46 +383,134 @@ def read_root():
     }
 
 
-@app.post("/v1/yac/completions")
+def _reject_byok_in_bedrock_mode(x_openai_key: str | None) -> JSONResponse | None:
+    """Refuse a per-request OpenAI key when the server is backed by Bedrock.
+
+    Honoring one would build a client against api.openai.com and send the
+    prompt — including the data schema and domains — to a third party.
+    Deployments choose Bedrock to keep data inside their own AWS account, so
+    this fails closed rather than quietly falling back to the public API.
+
+    ``UDIAgent._get_gpt_client`` enforces the same rule as a backstop; this
+    exists so callers get an actionable 403 instead of a 500. Every endpoint
+    that accepts ``X-OpenAI-Key`` must call it.
+    """
+    if not (x_openai_key and config.udi_bedrock):
+        return None
+    logger.warning(
+        "Refused a per-request OpenAI key: this server routes inference "
+        "through Amazon Bedrock."
+    )
+    return JSONResponse(
+        status_code=403,
+        content={
+            "error": "This server routes all inference through Amazon Bedrock "
+            "and does not accept per-request OpenAI keys, because using one "
+            "would send your prompt and data schema to api.openai.com. Remove "
+            "the X-OpenAI-Key header to continue."
+        },
+    )
+
+
+@app.post(
+    "/v1/yac/completions",
+    summary="Run a conversation turn",
+    tags=["chat"],
+    responses={
+        200: {
+            "model": list[ToolCall],
+            "description": "The turn's outcomes, in the order to apply them. A "
+            "quota refusal is a `Rebuff` here too, not an error status.",
+            "headers": _USAGE_HEADERS,
+        },
+        **_errors(
+            {
+                401: f"{_UNAUTHORIZED} Or no OpenAI key: the server has none and "
+                "the request sent no `X-OpenAI-Key`, or OpenAI rejected it (`error`).",
+                403: "The server routes inference through Amazon Bedrock and "
+                "refuses per-request `X-OpenAI-Key` headers.",
+                502: "The LLM API call failed (a model the key cannot use, a rate "
+                "limit, a timeout).",
+                503: f"The server's LLM backend is misconfigured. Or: {_IDP_UNREACHABLE}",
+            }
+        ),
+    },
+)
 def yac_completions(
     request: YACCompletionRequest,
     token_payload: dict = Depends(verify_jwt),
-    x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
-    x_conversation_id: str | None = Header(None, alias="X-Conversation-Id"),
+    x_openai_key: str | None = Header(
+        None,
+        alias="X-OpenAI-Key",
+        description="The caller's own OpenAI key. Bypasses the server's quota, "
+        "and lets `model` take effect.",
+    ),
+    x_conversation_id: str | None = Header(
+        None,
+        alias="X-Conversation-Id",
+        description="Groups the turns of one conversation into a LangFuse session.",
+    ),
 ):
+    """Run one conversation turn.
+
+    The agent routes the latest message to tools (a chart, a filter change, an
+    answer, a clarifying question or a refusal) and returns one tool call per
+    outcome. Token use comes back in the `X-Usage-*` headers.
+    """
     logger.info(
         "Received /v1/yac/completions request "
         "(message_count=%d, schema_char_count=%d, domain_char_count=%d, "
-        "has_conversation_id=%s)",
+        "has_conversation_id=%s, filters=%s)",
         len(request.messages),
         len(request.dataSchema),
         len(request.dataDomains),
         x_conversation_id is not None,
+        filter_summary(request.filters),
     )
 
-    # No key from the caller and none configured server-side → actionable 401
+    refusal = _reject_byok_in_bedrock_mode(x_openai_key)
+    if refusal is not None:
+        return refusal
+
+    # No key from the caller and no server-side credential → actionable 401
     # instead of the RuntimeError the orchestrator would raise (a bare 500).
-    # A configured OPENAI_BASE_URL counts as credentialed: self-hosted backends
-    # take no key, and the agent builds a placeholder-key client for them.
-    if not x_openai_key and not config.openai_api_key and not config.openai_base_url:
+    # A configured OPENAI_BASE_URL counts as credentialed (self-hosted backends
+    # take no key, and the agent builds a placeholder-key client for them), as
+    # does UDI_BEDROCK (requests are signed with the instance's IAM role).
+    if not x_openai_key and not config.has_server_credentials:
         return JSONResponse(
             status_code=401,
             content={
-                "error": "No OpenAI API key. Set OPENAI_API_KEY in the agent's "
-                ".env or send one via the X-OpenAI-Key header."
+                "error": "No OpenAI API key. Set OPENAI_API_KEY (or UDI_BEDROCK) "
+                "in the agent's .env, or send a key via the X-OpenAI-Key header."
             },
         )
 
     # Only enforce budget for users who don't bring their own key.
     budget_check = None if x_openai_key else app.state.budget_check
 
+    # A caller-supplied model is honored only alongside a caller-supplied key:
+    # whoever pays for the tokens picks the model. On the server's own key,
+    # model choice (and its cost) stays the operator's.
+    # ponytail: key ownership is the permission check here. If deployments ever
+    # need to grant model choice independently of who pays, that becomes a
+    # role/claim lookup on token_payload — see the agent README.
+    requested_model = request.model if x_openai_key else None
+    if request.model and not x_openai_key:
+        logger.info(
+            "ignoring requested model %r: no caller-supplied key", request.model
+        )
+
     result = orchestrator.run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
+        model=requested_model,
         budget_check=budget_check,
         session_id=x_conversation_id,
+        filters=request.filters,
+        issue_reporting=request.issueReporting and agent.langfuse_enabled,
     )
     logger.info("orchestrator_choice: %s", result.orchestrator_choice)
     logger.info("usage: %s", result.usage)
@@ -256,7 +521,7 @@ def yac_completions(
     )
     return JSONResponse(
         content=result.tool_calls,
-        headers=_usage_headers(result.usage),
+        headers=_usage_headers(result.usage, requested_model),
     )
 
 
@@ -274,13 +539,30 @@ def _engine_from_config(spec: dict):
     from udiagent.query import DuckDBConnector, QueryEngine, StarRocksConnector
 
     backend_type = spec.get("type")
+    passthrough = bool(spec.get("jwtPassthrough"))
     if backend_type == "duckdb":
+        if passthrough:
+            raise ValueError("jwtPassthrough is not supported on duckdb (no user auth)")
         connector = DuckDBConnector(
             database=spec.get("database", ":memory:"),
             views=spec.get("views"),
         )
     elif backend_type == "starrocks":
-        connector = StarRocksConnector(**spec.get("connection", {}))
+        connection = spec.get("connection", {})
+        if passthrough and config.insecure_dev_mode and not connection.get("user"):
+            # Dev mode issues no real token, so passthrough has nothing to
+            # forward. Fail at startup rather than letting every query 403 —
+            # and never silently fall back to a shared credential, which is the
+            # exact behaviour passthrough exists to remove.
+            raise ValueError(
+                "jwtPassthrough backend needs a fallback connection.user under "
+                "INSECURE_DEV_MODE"
+            )
+        connector = StarRocksConnector(
+            **connection,
+            jwt_passthrough=passthrough,
+            principal_field=spec.get("principalField", "sub"),
+        )
     else:
         raise ValueError(f"unknown query backend type: {backend_type!r}")
     return QueryEngine(
@@ -292,7 +574,9 @@ def _engine_from_config(spec: dict):
 
 
 def _load_query_engines() -> dict:
-    path = os.getenv("UDI_QUERY_BACKENDS")
+    # A relative path has already been tried against the package root by
+    # ServerConfig, which is also what reports an unreadable one at startup.
+    path = config.udi_query_backends
     if not path:
         return {}
     engines = {}
@@ -325,12 +609,50 @@ def _no_backend_message(package, engines) -> str:
     )
 
 
+def _load_example_prompts() -> dict[str, list[str]]:
+    """Per-package "Try an example" prompts: each backend spec's optional
+    `examplePrompts`, which the seeders fill from `example_prompts.json`."""
+    path = config.udi_query_backends
+    if not path:
+        return {}
+    return {
+        package: spec["examplePrompts"]
+        for package, spec in json.loads(Path(path).read_text()).items()
+        if isinstance(spec.get("examplePrompts"), list)
+    }
+
+
 app.state.query_engines = _load_query_engines()
-# package name -> MetadataCache (created lazily per configured engine)
+app.state.example_prompts = _load_example_prompts()
+# (package name, principal) -> MetadataCache, created lazily. Keyed by
+# principal because dataDomains holds the actual distinct VALUES of each column
+# (introspect.py), so under per-user row policies a shared cache would serve one
+# user's data to the next. principal is None whenever the backend is not doing
+# passthrough, which collapses this back to one entry per package.
+# Bounded: unbounded per-user caches are a slow leak in a long-lived process.
+# A plain dict, not an OrderedDict: dicts are insertion-ordered, LRU needs only
+# re-insert and drop-first, and this stays a documented extension point that
+# callers can assign a bare {} to.
+_MAX_METADATA_CACHES = 32
 app.state.metadata_caches = {}
 
 
-@app.get("/v1/yac/metadata")
+@app.get(
+    "/v1/yac/metadata",
+    summary="Get a package's schema and column values",
+    tags=["data"],
+    responses={
+        200: {"model": MetadataResponse},
+        **_errors(
+            {
+                401: _UNAUTHORIZED,
+                403: _DB_FORBIDDEN,
+                404: _NO_BACKEND,
+                503: _IDP_UNREACHABLE,
+            }
+        ),
+    },
+)
 def yac_metadata(
     package: str | None = None,
     refresh: bool = False,
@@ -347,13 +669,24 @@ def yac_metadata(
             status_code=404,
             content={"error": _no_backend_message(package, engines)},
         )
+    token = token_payload.get(RAW_TOKEN_CLAIM)
+    principal = token_payload.get("sub") if engine.connector.jwt_passthrough else None
     caches = app.state.metadata_caches
-    if key not in caches:
+    cache_key = (key, principal)
+    if cache_key in caches:
+        caches[cache_key] = caches.pop(cache_key)  # re-insert = move to newest
+    else:
         from udiagent.query import MetadataCache
 
-        ttl = float(os.getenv("UDI_METADATA_TTL_SECONDS", "3600"))
-        caches[key] = MetadataCache(engine, package or key, ttl_seconds=ttl)
-    metadata = caches[key].refresh() if refresh else caches[key].get()
+        caches[cache_key] = MetadataCache(
+            engine, package or key, ttl_seconds=config.udi_metadata_ttl_seconds
+        )
+        while len(caches) > _MAX_METADATA_CACHES:
+            del caches[next(iter(caches))]  # oldest insertion = LRU
+
+    with use_db_token(token):
+        cache = caches[cache_key]
+        metadata = cache.refresh() if refresh else cache.get()
     return {
         "package": package or key,
         "interactive": False,
@@ -361,11 +694,32 @@ def yac_metadata(
     }
 
 
-@app.post("/v1/yac/query")
+@app.post(
+    "/v1/yac/query",
+    summary="Run chart queries",
+    tags=["data"],
+    responses={
+        200: {"model": QueryResponse},
+        **_errors(
+            {
+                401: _UNAUTHORIZED,
+                403: _DB_FORBIDDEN,
+                404: _NO_BACKEND,
+                503: _IDP_UNREACHABLE,
+            }
+        ),
+    },
+)
 def yac_query(
     request: YACQueryRequest,
     token_payload: dict = Depends(verify_jwt),
 ):
+    """Run every visible chart's transformation pipeline as SQL, in one batch.
+
+    The server-side counterpart of the toolkit's in-browser executor: each query
+    is compiled to SQL against the package's backend, with the current
+    selections applied.
+    """
     engines = app.state.query_engines
     engine = engines.get(request.package) or engines.get("default")
     if engine is None:
@@ -373,35 +727,383 @@ def yac_query(
             status_code=404,
             content={"error": _no_backend_message(request.package, engines)},
         )
-    results = engine.run_batch(
-        [q.model_dump() for q in request.queries],
-        request.selections,
-    )
+    with use_db_token(token_payload.get(RAW_TOKEN_CLAIM)):
+        results = engine.run_batch(
+            [q.model_dump() for q in request.queries],
+            request.selections,
+        )
     return {"results": results}
 
 
-@app.post("/v1/yac/benchmark")
+@app.post(
+    "/v1/yac/vis_instantiate",
+    response_model=YACVisInstantiateResponse,
+    summary="Re-bind a chart made from a template",
+    tags=["charts"],
+    responses=_errors(
+        {
+            400: "`bad_schema`: `dataSchema` has no entities.",
+            401: _UNAUTHORIZED,
+            404: "`unknown_template`: the template no longer exists.",
+            422: "`missing_bindings` or `invalid_bindings`: the bindings do not "
+            "fit the template or the schema; `errors` lists them.",
+            500: "`instantiate_failed`: a template bug.",
+            503: "`templates_unavailable`: this agent has no generated templates. "
+            f"Or: {_IDP_UNREACHABLE}",
+        }
+    ),
+)
+def yac_vis_instantiate(
+    request: YACVisInstantiateRequest,
+    token_payload: dict = Depends(verify_jwt),
+):
+    """Re-instantiate a template-generated visualization with new bindings.
+
+    This is what lets a client change *which field* a generated chart splits by
+    without rewriting the finished spec. Rewriting is the tempting approach and
+    it does not hold: a template's bindings can appear in transformations the
+    renamer has to know about one by one (a groupby entry, a derive expression,
+    a heading), so every new grammar feature silently falls outside it. Resolving
+    the template again is exact by construction, and placeholder resolution lives
+    in exactly one place (``udiagent.vis_generate``).
+
+    No LLM call, so — unlike /v1/yac/completions — no OpenAI key is required and
+    nothing is metered.
+    """
+    from udiagent.vis_generate import (
+        _load_generated_tools,
+        _parse_request_schema,
+        instantiate_template,
+        shared_entities_for,
+        template_tweakable_params,
+        unbound_placeholders,
+        validate_bindings,
+    )
+
+    generated = _load_generated_tools()
+    if generated is None:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "code": "templates_unavailable",
+                "error": "This agent has no generated visualization templates.",
+            },
+        )
+    _tool_defs, tool_dispatch, templates, _tool_tags = generated
+
+    entry = tool_dispatch.get(request.tool)
+    if entry is None:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "code": "unknown_template",
+                "error": (
+                    f"Unknown visualization template '{request.tool}'. The agent's "
+                    "templates may have changed since this chart was created."
+                ),
+            },
+        )
+    template_idx, param_map = entry
+    spec_template = templates[template_idx]
+
+    schema = _parse_request_schema(request.dataSchema)
+    if not schema.get("entities"):
+        # _parse_request_schema degrades to an empty schema by design, which
+        # would validate nothing and instantiate an unusable spec.
+        return JSONResponse(
+            status_code=400,
+            content={
+                "code": "bad_schema",
+                "error": "dataSchema has no entities; send the data package descriptor.",
+            },
+        )
+
+    bindings = {
+        param_map[k]: v for k, v in request.toolArgs.items() if k in param_map
+    }
+
+    missing = unbound_placeholders(spec_template, param_map, bindings)
+    if missing:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "code": "missing_bindings",
+                "error": (
+                    "Missing bindings for this template: " + ", ".join(missing)
+                ),
+                "errors": missing,
+            },
+        )
+
+    errors = validate_bindings(
+        spec_template, bindings, schema, shared_entities=shared_entities_for(request.tool)
+    )
+    if errors:
+        # errors[0] is already reader-grade prose naming the valid alternatives.
+        return JSONResponse(
+            status_code=422,
+            content={"code": "invalid_bindings", "error": errors[0], "errors": errors},
+        )
+
+    try:
+        spec = instantiate_template(spec_template, bindings, schema)
+    except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+        logger.warning("vis_instantiate failed for %s: %s", request.tool, exc)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "code": "instantiate_failed",
+                "error": f"Could not build a spec from template '{request.tool}'.",
+            },
+        )
+
+    return {
+        "spec": spec,
+        "toolArgs": {k: v for k, v in request.toolArgs.items() if k in param_map},
+        "params": template_tweakable_params(
+            spec_template, param_map, bindings, schema
+        ),
+    }
+
+
+# ponytail: checked after the body is buffered, so it caps what reaches
+# LangFuse, not what the process reads. A streaming cap (or a proxy limit) if
+# oversized uploads ever become a problem.
+MAX_ISSUE_REPORT_BYTES = 10 * 1024 * 1024
+
+
+def _slack_escape(text: str) -> str:
+    # The note is the user's text: escaped, it cannot @channel or forge links.
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _notify_issue_report(
+    url: str,
+    report: YACIssueReportRequest,
+    trace_id: str | None,
+    session_id: str | None,
+):
+    """POST a summary of a recorded report to UDI_ISSUE_REPORT_WEBHOOK_URL.
+
+    Runs after the response, and a failure is only logged: the report is
+    already in LangFuse. The session stays there, behind its access control;
+    only the note, contact and links go out — to the conversation the report
+    is about (its LangFuse session) and to the report itself.
+    """
+    trace_url = session_url = None
+    if trace_id:
+        try:
+            trace_url, session_url = agent.langfuse_urls(trace_id, session_id)
+        except Exception as exc:  # noqa: BLE001 - the links are optional
+            logger.warning("could not build the LangFuse URLs: %s", type(exc).__name__)
+
+    where = {"menu": "Session menu", "chat": "chat", "crash": "crash screen"}[report.source]
+    lines = [f"*Issue report* from the {where}"]
+    lines += [f">{_slack_escape(line)}" for line in report.description.splitlines()]
+    if report.contact:
+        lines.append(f"Contact: {_slack_escape(report.contact)}")
+    links = []
+    if session_url:
+        links.append(f"<{session_url}|Open the conversation in LangFuse>")
+    if trace_url:
+        links.append(f"<{trace_url}|Open the report>")
+    if links:
+        lines.append(" · ".join(links))
+    payload = {
+        "text": "\n".join(lines),
+        "report": {
+            "description": report.description,
+            "contact": report.contact,
+            "source": report.source,
+            "traceId": trace_id,
+            "traceUrl": trace_url,
+            "sessionId": session_id,
+            "sessionUrl": session_url,
+        },
+    }
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            logger.info("issue report webhook delivered (status=%d)", response.status)
+    except Exception as exc:  # noqa: BLE001 - logged, never raised
+        # Never log the URL: Slack's and Teams' embed their credentials.
+        logger.warning(
+            "issue report webhook failed: %s %s",
+            type(exc).__name__,
+            getattr(exc, "code", ""),
+        )
+
+
+@app.post(
+    "/v1/yac/issue_report",
+    summary="Record an issue report",
+    tags=["issues"],
+    # The handler reads the raw body itself (to cap its size before parsing),
+    # so the body has to be declared here for the spec to show it.
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {"schema": YACIssueReportRequest.model_json_schema()}
+            },
+        }
+    },
+    responses={
+        200: {"model": IssueReportResponse},
+        **_errors(
+            {
+                401: _UNAUTHORIZED,
+                413: f"The report is larger than {MAX_ISSUE_REPORT_BYTES // 2**20} MiB.",
+                422: "The report is invalid; `detail` has the per-field errors.",
+                503: f"LangFuse is not configured, so reports cannot be recorded. Or: {_IDP_UNREACHABLE}",
+            }
+        ),
+    },
+)
+async def yac_issue_report(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    token_payload: dict = Depends(verify_jwt),
+    x_conversation_id: str | None = Header(None, alias="X-Conversation-Id"),
+):
+    """Record a user's issue report, with their session export, in LangFuse.
+
+    Filed under the conversation's LangFuse session, next to the traces of the
+    turns being reported. Needs LangFuse: without it there is nowhere to put a
+    report, so the endpoint says so instead of accepting and dropping it.
+    """
+    if not agent.langfuse_enabled:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Issue reporting needs LangFuse, which this server has not configured."
+            },
+        )
+
+    raw = await request.body()
+    if len(raw) > MAX_ISSUE_REPORT_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "error": f"Issue report is too large ({len(raw)} bytes; "
+                f"limit {MAX_ISSUE_REPORT_BYTES})."
+            },
+        )
+    try:
+        report = YACIssueReportRequest.model_validate_json(raw)
+    except ValidationError as exc:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "Invalid issue report.",
+                "detail": exc.errors(
+                    include_input=False, include_url=False, include_context=False
+                ),
+            },
+        )
+
+    # Sizes only: the note, contact and session are the user's words and data.
+    logger.info(
+        "Received /v1/yac/issue_report (source=%s, byte_count=%d, "
+        "has_contact=%s, has_conversation_id=%s)",
+        report.source,
+        len(raw),
+        report.contact is not None,
+        x_conversation_id is not None,
+    )
+    trace_id = agent.record_issue_report(
+        description=report.description,
+        contact=report.contact,
+        source=report.source,
+        session=report.session,
+        session_id=x_conversation_id,
+    )
+    if config.udi_issue_report_webhook_url:
+        background_tasks.add_task(
+            _notify_issue_report,
+            config.udi_issue_report_webhook_url,
+            report,
+            trace_id,
+            x_conversation_id,
+        )
+    return {"traceId": trace_id}
+
+
+# Benchmark tooling, left out of the published spec (see docs/benchmarking.md).
+@app.post("/v1/yac/benchmark", include_in_schema=False)
 def yac_benchmark(
     request: YACBenchmarkCompletionRequest,
     token_payload: dict = Depends(verify_jwt),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
-    result = orchestrator.run(
+    refusal = _reject_byok_in_bedrock_mode(x_openai_key)
+    if refusal is not None:
+        return refusal
+
+    model = request.model if x_openai_key else None
+    # The runner's --no-orchestrator sends the expected choice. Only a chart
+    # can be produced without the routing call; anything else is refused
+    # rather than silently routed, which would mislabel the run.
+    if request.orchestrator_choice is None:
+        run = orchestrator.run
+    elif request.orchestrator_choice == "render-visualization":
+        run = orchestrator.run_visualization
+    else:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "Skipping the routing call is only supported for "
+                "orchestrator_choice 'render-visualization'."
+            },
+        )
+    # Spends tokens like a completion, so it is held to the same budget.
+    result = run(
         messages=request.messages,
         data_schema=request.dataSchema,
         data_domains=request.dataDomains,
         openai_api_key=x_openai_key,
+        model=model,
+        budget_check=None if x_openai_key else app.state.budget_check,
     )
 
     return {
         "tool_calls": result.tool_calls,
         "orchestrator_choice": result.orchestrator_choice,
         "usage": asdict(result.usage),
+        # What actually ran, so a benchmark run is labelled by the server that
+        # served it rather than by whatever the runner was told.
+        "model": model or agent.gpt_model_name,
+        "llm_settings": {
+            "openai_api": agent.openai_api,
+            "reasoning_effort": agent.reasoning_effort,
+            "temperature": agent.temperature,
+            "max_completion_tokens": agent.max_completion_tokens,
+            "vis_tool_choice": agent.vis_tool_choice,
+        },
     }
 
 
-@app.get("/v1/yac/examples")
-def yac_examples():
+@app.get(
+    "/v1/yac/examples",
+    summary="List example prompts",
+    tags=["chat"],
+    responses={
+        200: {"model": list[str]},
+        **_errors({404: "No example prompts for the package, and no global list."}),
+    },
+)
+def yac_examples(package: str | None = None):
+    """Example prompts for the chat. A package with its own `examplePrompts` in
+    the backends config gets those — prompts are about a dataset, and the
+    global list below is written for HuBMAP."""
+    own = app.state.example_prompts.get(package) if package else None
+    if own:
+        return JSONResponse(content=own)
     examples_path = _DATA_DIR / "example_prompts.json"
     if not examples_path.exists():
         return JSONResponse(
@@ -413,21 +1115,31 @@ def yac_examples():
     return JSONResponse(content=prompts)
 
 
-@app.get("/v1/yac/structured_functions")
+@app.get(
+    "/v1/yac/structured_functions",
+    summary="List the structured text functions",
+    tags=["chat"],
+)
 def yac_structured_functions():
     """Return the structured function registry for frontend consumption."""
     return JSONResponse(content=export_registry_json())
 
 
-@app.get("/v1/yac/benchmark_analysis")
-def yac_benchmark_analysis():
-    result_filename = "./out/benchmark_analysis.json"
-    if not os.path.exists(result_filename):
+@app.get("/v1/yac/benchmark_analysis", include_in_schema=False)
+def yac_benchmark_analysis(token_payload: dict = Depends(verify_jwt)):
+    """The most recently written benchmark analysis under the package's out/.
+
+    Behind auth like the benchmark itself: an analysis carries every prompt,
+    schema, domain and generated output of the run.
+    """
+    latest = max(
+        _OUTPUT_DIR.glob("**/benchmark_analysis.json"),
+        key=lambda path: path.stat().st_mtime,
+        default=None,
+    )
+    if latest is None:
         return JSONResponse(
-            content={"error": f"File {result_filename} not found."}, status_code=404
+            content={"error": "No benchmark analysis found."}, status_code=404
         )
-
-    with open(result_filename, "r") as f:
-        data = json.load(f)
-
-    return JSONResponse(content=data)
+    with latest.open() as f:
+        return JSONResponse(content=json.load(f))

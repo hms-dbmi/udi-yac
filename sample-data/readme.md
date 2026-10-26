@@ -12,10 +12,12 @@ YAC expects a few additional fields. They are all prepended with `udi:` for the 
 
 At the top level:
 
-| Field      | Description                                                                                                                                         |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `udi:name` | The name of the full data resource. Can be the same as `name`.                                                                                      |
-| `udi:path` | The path of the data resources. It is assumed that all data resources are relative to this path. This can be a relative path, or a full remote URL. |
+| Field        | Description                                                                                                                                                                                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `udi:name`   | The name of the full data resource. Can be the same as `name`.                                                                                                                                                                                                                                                            |
+| `udi:path`   | The path of the data resources. It is assumed that all data resources are relative to this path. This can be a relative path, or a full remote URL.                                                                                                                                                                       |
+| `udi:labels` | Optional. Friendly labels for categorical **values**, raw → label (`{"Children's Hospital of Philadelphia": "CHOP"}`). Applied across every resource, so an institution renamed once covers `donors.group_name` and `samples.group_name` alike. Display only — the raw value is what reaches a spec, a query, or the LLM. |
+| `udi:example_prompts` | Optional. List of example prompts the chat suggests for this package. When absent, the chat asks the agent (`/v1/yac/examples`). `scripts/gen_datapackage.py` fills it from an `example_prompts.json` kept beside the CSVs. |
 
 For each table resource:
 
@@ -26,12 +28,14 @@ For each table resource:
 
 For each data field:
 
-| Field                    | Description                                                                                                 |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `udi:cardinality`        | The number of unique values in the column.                                                                  |
-| `udi:unique`             | `true` if the value is unique for each row, `false` otherwise.                                              |
-| `udi:data_type`          | One of `quantitative`, `ordinal`, or `nominal`.                                                             |
-| `udi:overlapping_fields` | List of fields that are non-null on at least one row together. If all fields overlap, this should be `all`. |
+| Field                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`                  | Optional. Frictionless's standard field label, used wherever the column is shown to a person: generated chart titles, the tweak pickers, filter chips. Set it when the column name humanizes badly — `body_mass_index_value` becomes "Body Mass Index" on its own, but the label wanted is "BMI". Display only; specs and queries always key on `name`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `udi:cardinality`        | The number of unique values in the column.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `udi:unique`             | `true` if the value is unique for each row, `false` otherwise.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `udi:data_type`          | One of `quantitative`, `ordinal`, or `nominal`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `udi:time_format`        | Optional. How a time column stores its values, so charts, tables and filters show dates, years and ages instead of raw numbers: `epoch_ms` / `epoch_s` (milliseconds / seconds since 1970-01-01 UTC, e.g. HuBMAP's `created_timestamp`; shown as dates), `year` (a calendar year, shown as `1985` rather than `1,985`), or `days` (a duration such as an age, e.g. PCX's `age_at_event_days`; shown in years, `12.0 y`). Declare such a column `udi:data_type: quantitative`. Display only — specs, queries and the LLM still see the stored numbers. `gen_datapackage.py` sets it from an optional `time_format` column in `data_dictionary.csv`. Text dates in other layouts (`2019-12-02 13:14`) are deliberately not parsed: filtering or aggregating them needs numbers in both query engines, so convert such a column to epoch ms when preparing the data. |
+| `udi:overlapping_fields` | List of fields that are non-null on at least one row together. If all fields overlap, this should be `all`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ## Entity relationships (foreignKeys) — modeling guidance
 
@@ -60,29 +64,51 @@ key column to one of them.
 generating a `datapackage.json` for a CSV directory; for remote (StarRocks)
 packages the seed script carries these FKs into the server config — the
 database itself has no FK metadata, so a package without `foreignKeys` gets
-no cross-entity filtering at all.
+no cross-entity filtering at all. When a key is unique in several tables
+(pcx's Patient, Demographics and Treatment Summary are all one row per
+patient), pass `--parent <Table>` to choose the hub; otherwise name order
+picks it, and the agent only joins tables linked directly.
+
+It also fills in table and column `description`s from a `data_dictionary.csv`
+in the same directory — columns `table,field,description`, where `table` is
+the CSV filename and a blank `field` describes the table itself.
 
 ## Single source of truth
 
 This `sample-data/` directory (repo root) is the **one** canonical copy of the
 dev/test data. It is synced into each frontend's static dir on dev/build by
-`scripts/copy-sample-data.mjs` (chat → `packages/chat/public/data`, grammar-app
-→ `apps/grammar-app/public/data`); the toolkit's Storybook mounts it via
+`scripts/copy-sample-data.mjs` (chat → `packages/chat/public/data`, the site →
+`apps/site/public/app/data`); the toolkit's Storybook mounts it via
 `staticDirs`. Those `public/data` copies are gitignored — **edit files here, not
 there.**
 
 ## Contents
 
-| Path                                              | Description                                                                                                                                                                                                                                              |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./hubmap/datapackage.json`                       | Full HuBMAP data package (donors, samples, datasets), fetched fresh from `https://portal.hubmapconsortium.org/metadata/v0/udi/`. Chat's default data package.                                                                                            |
-| `./hubmap_examples/`                              | Curated HuBMAP subset (TSVs + chart thumbnails) used by the grammar-app examples page.                                                                                                                                                                   |
-| `./penguins.csv`                                  | Classic Palmer Penguins test dataset (loose CSV used by toolkit stories, parity goldens, and agent tests).                                                                                                                                               |
-| `./penguins/`                                     | The same Penguins data as a self-contained package (`penguins.csv` + `datapackage.json`) — the committed default for the server-side query quickstart (`seed_duckdb.py` / `seed_starrocks.py`) and browser mode via `set-chat-data-source.mjs penguins`. |
-| `./donors.csv`, `./samples.csv`, `./datasets.csv` | Loose single-table HuBMAP CSVs used by toolkit stories and grammar-app.                                                                                                                                                                                  |
-| `./example_*.csv`, `./match_test_*.csv`           | Small fixtures for tutorial/example specs.                                                                                                                                                                                                               |
+| Path                                    | Description                                                                                                                                                                                                                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./hubmap/`                             | Full HuBMAP data package (`datapackage.json` + donors/samples/datasets `.tsv`), fetched fresh from `https://portal.hubmapconsortium.org/metadata/v0/udi/`. The **only** copy of HuBMAP in the repo: chat's default package, the toolkit stories' source, and the donors/samples behind the parity goldens. |
+| `./penguins.csv`                        | Classic Palmer Penguins test dataset (loose CSV used by toolkit stories, parity goldens, and agent tests).                                                                                                                                                                                                 |
+| `./penguins/`                           | The same Penguins data as a self-contained package (`penguins.csv` + `datapackage.json`) — the committed default for the server-side query quickstart (`seed_duckdb.py` / `seed_starrocks.py`) and browser mode via `set-chat-data-source.mjs penguins`.                                                   |
+| `./pcx/`                                | De-identified clinical cancer cohort: 970 patients across 7 linked tables (demographics, disease events, medical therapy, radiation, surgery, survival, treatment summary). `datapackage.json` is generated from the CSVs + `data_dictionary.csv` + `example_prompts.json` by `scripts/gen_datapackage.py`; `sessions/` holds predefined session exports. The public Pages site's default package. |
+| `./example_*.csv`, `./match_test_*.csv` | Small fixtures for tutorial/example specs.                                                                                                                                                                                                                                                                 |
 
 To refresh HuBMAP: re-run the four `curl`s against the portal `/udi/` endpoint
 into `./hubmap/`, then set the manifest's `udi:path` back to `"./data/hubmap/"`
 (consumers resolve it page-relative, i.e. against the served `/data` mount, not
-against the manifest's own location).
+against the manifest's own location). The portal does not serve the display
+labels or date formats, so a refresh also drops the hand-authored field `title`s,
+the top-level `udi:labels` block, and the `*_timestamp` fields'
+`"type": "integer"`, `"udi:data_type": "quantitative"` and
+`"udi:time_format": "epoch_ms"` (the portal declares them `string` / `nominal`)
+— re-apply them from git history.
+
+Afterwards, regenerate the parity goldens — they read `hubmap/donors.tsv` and
+`hubmap/samples.tsv`, so a refresh changes their expected rows:
+
+    pnpm build:toolkit && node packages/grammar/scripts/gen-parity-goldens.mjs
+    cd packages/agent && uv run pytest tests/test_query_parity.py
+
+The portal's schema does drift: `assay_type` was dropped in favour of
+`dataset_type` / `soft_assaytype`, so check that anything naming a HuBMAP field
+(stories, specs, `packages/agent/data/data_domains/hubmap_data_schema.json`)
+still resolves.

@@ -8,12 +8,13 @@ Formerly four separate repositories, merged with full commit history preserved v
 git log "$(git log --merges --grep="Add 'packages/chat/'" -n1 --format=%H)^2"
 ```
 
+**Try it:** [hms-dbmi.github.io/udi-yac](https://hms-dbmi.github.io/udi-yac/), with sample datasets, predefined sessions and [docs](https://hms-dbmi.github.io/udi-yac/docs/using/).
+
 ## Packages
 
 | Directory                                    | Published as                                                        | Stack                    | Role                                       |
 | -------------------------------------------- | ------------------------------------------------------------------- | ------------------------ | ------------------------------------------ |
 | [`packages/grammar`](packages/grammar)       | [`udi-toolkit`](https://www.npmjs.com/package/udi-toolkit) (npm)    | Vue 3, Vite              | Grammar types, UDIVis component, Storybook |
-| [`apps/grammar-app`](apps/grammar-app)       | — (private)                                                         | Vue 3, Quasar, Vite      | Demo app for the grammar/toolkit           |
 | [`packages/chat`](packages/chat)             | [`udi-yac`](https://www.npmjs.com/package/udi-yac) (npm)            | React 19, Tailwind, Vite | Chat UI — library + standalone SPA         |
 | [`packages/agent`](packages/agent)           | [`udiagent`](https://pypi.org/project/udiagent/) (PyPI)             | Python, OpenAI, FastAPI  | LLM orchestrator + reference server        |
 | [`packages/grammar-py`](packages/grammar-py) | [`udi-grammar-py`](https://pypi.org/project/udi-grammar-py/) (PyPI) | Python, hatchling        | Python builder for UDI grammar specs       |
@@ -28,7 +29,9 @@ Former homes: [udi-grammar](https://github.com/hms-dbmi/udi-grammar), [udi-chat-
 node scripts/setup.mjs      # or: pnpm setup
 ```
 
-This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:grammar`, `pnpm dev:storybook`).
+This creates local env files from their templates, installs the JS (pnpm) and Python (uv) workspaces, and builds the toolkit. Set `OPENAI_API_KEY` in `packages/agent/.env`, then start the stack with the **Dev: chat + agent** VS Code task (Ctrl/Cmd+Shift+B) or `pnpm dev:chat` + `pnpm dev:agent` (other servers: `pnpm dev:storybook`, `pnpm dev:site`).
+
+**The whole public site** (landing page, docs, grammar pages and editor at `/udi-yac/grammar/`, the app page at `/udi-yac/app/`) runs with the **Dev: all** task at <http://localhost:4321/udi-yac/>. The site's app page embeds the `udi-yac` library build, so it needs **Dev: chat library (watch)** running to pick up chat changes. See [`apps/site/README.md`](apps/site/README.md#local-development). The standalone chat (**Dev: chat**) is separate and is configured only by its env vars, so point `VITE_UDI_DATA_PACKAGE` at any data package to try it.
 
 Manual/CI steps — JavaScript/TypeScript (pnpm workspace, `udi-toolkit` consumed via `workspace:*`, so build it before the chat app):
 
@@ -37,7 +40,7 @@ pnpm install
 pnpm build:toolkit     # udi-toolkit → packages/grammar/dist
 pnpm build:chat        # standalone chat SPA
 pnpm build:chat:lib    # udi-yac library build
-pnpm build:grammar     # quasar demo app
+pnpm build:site        # the public site (toolkit + library + site)
 pnpm build:storybook
 pnpm test              # builds toolkit, then runs all JS tests
 ```
@@ -65,32 +68,32 @@ Use HuBMAP (CSV, browser mode)** VS Code task).
 grammar to SQL and runs it there, so the browser never loads the CSVs. Both
 backends seed the committed `sample-data/penguins` package by default.
 
+Seeding writes `UDI_QUERY_BACKENDS` into `packages/agent/.env`, so the same
+**Dev: chat + agent** task (or `pnpm dev:agent` + `dev:chat`) serves both modes —
+there is no separate remote-mode task and no env prefix to remember.
+
 - **DuckDB — no container** (easiest). In VS Code, run the **Data: Use penguins
   (remote/DuckDB)** task (seeds penguins + points the chat at it), then **Dev:
-  chat + agent (remote/DuckDB)**. Manually:
+  chat + agent**. Manually:
 
   ```bash
   uv run --project packages/agent --extra duckdb \
     python packages/agent/scripts/seed_duckdb.py            # → packages/agent/penguins.duckdb
-  UDI_QUERY_BACKENDS=packages/agent/duckdb-backends.json INSECURE_DEV_MODE=1 \
-    uv run --project packages/agent --extra server --extra duckdb \
-    fastapi dev packages/agent/src/udiagent/server/app.py --port 8007
+  node scripts/set-chat-data-source.mjs penguins --remote
   ```
 
-  Then `node scripts/set-chat-data-source.mjs penguins --remote` and
-  `pnpm dev:chat`. (The plain `pnpm dev:agent` / **Dev: agent** task starts the
-  agent _without_ `UDI_QUERY_BACKENDS`, so remote packages 404 — use the remote
-  task/command above.) Full guide: [`dev/duckdb/README.md`](dev/duckdb/README.md).
+  Then `pnpm dev:agent` + `pnpm dev:chat`.
+  Full guide: [`dev/duckdb/README.md`](dev/duckdb/README.md).
 
 - **StarRocks — Docker** (closest to a production OLAP target):
 
   ```bash
   docker compose -f dev/starrocks/docker-compose.yml up -d
   cd packages/agent && uv sync --extra starrocks && uv run python scripts/seed_starrocks.py
+  node scripts/set-chat-data-source.mjs penguins --remote
   ```
 
-  Then set `VITE_UDI_REMOTE_PACKAGE=penguins`, start the agent
-  (`UDI_QUERY_BACKENDS=$(pwd)/starrocks-backends.json`), and `pnpm dev:chat`.
+  Then `pnpm dev:agent` + `pnpm dev:chat`.
   Full guide: [`dev/starrocks/README.md`](dev/starrocks/README.md).
 
 How the compiler and parity work: [`packages/agent/src/udiagent/query/README.md`](packages/agent/src/udiagent/query/README.md).
@@ -102,3 +105,7 @@ Dev/test data packages live once at [`sample-data/`](sample-data) (the single so
 ## Releases
 
 Tags are per-package: `udi-yac-vX.Y.Z`, `udi-toolkit-vX.Y.Z`, `udiagent-vX.Y.Z`, `udi-grammar-py-vX.Y.Z`. Because `udi-yac` depends on `udi-toolkit: workspace:*` (rewritten to the exact in-tree version at publish time), **publish udi-toolkit before udi-yac** whenever the toolkit version moved.
+
+## Citation
+
+Lange D, Gao S, Sui P, Misner P, van den Brandt A, Money A, Akhmetov N, Choy L, Zitnik M, Gehlenborg N. **YAC: Bridging Natural Language and Interactive Visual Exploration with Generative AI for Biomedical Data Discovery.** arXiv:2509.19182, 2025. [doi:10.48550/arXiv.2509.19182](https://doi.org/10.48550/arXiv.2509.19182). BibTeX is on the [landing page](https://hms-dbmi.github.io/udi-yac/#cite-yac); GitHub's **Cite this repository** reads [`CITATION.cff`](CITATION.cff).

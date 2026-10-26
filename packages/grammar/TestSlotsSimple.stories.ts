@@ -1,4 +1,3 @@
-// import { fn } from '@storybook/test'
 import TestSlotsSimple from './TestSlotsSimple.vue';
 
 // export const ActionsData = {
@@ -17,7 +16,7 @@ export const Default = {
     defaultSpec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       representation: {
         mark: 'point',
@@ -37,7 +36,7 @@ export const Default = {
     customSpec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -62,7 +61,7 @@ export const BarChart = {
     defaultSpec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         { filter: { name: 'scatter-select' } },
@@ -95,7 +94,7 @@ export const BarChart = {
     customSpec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -120,7 +119,7 @@ export const DiffTransform = {
     defaultSpec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       representation: {
         mark: 'point',
@@ -140,7 +139,7 @@ export const DiffTransform = {
     customSpec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {

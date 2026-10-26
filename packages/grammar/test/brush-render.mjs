@@ -27,7 +27,9 @@ const spec = vl.compile({
   layer: [
     {
       mark: { type: 'point' },
-      params: [{ name: 'br', select: { type: 'interval', encodings: ['x', 'y'] } }],
+      params: [
+        { name: 'br', select: { type: 'interval', encodings: ['x', 'y'] } },
+      ],
       encoding: {
         x: { field: 'a', type: 'quantitative', scale: { domain: [0, 5200] } },
         y: { field: 'b', type: 'quantitative', scale: { domain: [0, 5200] } },
@@ -62,11 +64,20 @@ view.signal('br_x', [sx()(1000), sx()(2000)]);
 view.signal('br_y', [sy()(1000), sy()(2000)]);
 await view.runAsync();
 const before = brushRect();
-assert.ok(before && before.w > 0 && before.h > 0, 'initial brush renders a rect');
+assert.ok(
+  before && before.w > 0 && before.h > 0,
+  'initial brush renders a rect',
+);
 
 // Simulate updateVegaChart: data changeset to the filtered subset + resize,
 // WITHOUT restoring pixel signals (external-selection case skips that).
-view.change('udi_data', vega.changeset().remove(() => true).insert([{ a: 1500, b: 1600 }]));
+view.change(
+  'udi_data',
+  vega
+    .changeset()
+    .remove(() => true)
+    .insert([{ a: 1500, b: 1600 }]),
+);
 await view.resize().runAsync();
 
 // Simulate the final re-assert (updateVegaChartSelections) writing the edited
@@ -76,18 +87,33 @@ view.signal('br_y', [sy()(3000), sy()(4000)]);
 await view.runAsync();
 const after = brushRect();
 
-assert.ok(after && after.w > 0 && after.h > 0, 'brush still renders after rebuild + re-assert');
+assert.ok(
+  after && after.w > 0 && after.h > 0,
+  'brush still renders after rebuild + re-assert',
+);
 // The edited range is higher on x and higher on y (screen-y grows downward,
 // so a higher data-y sits nearer the top → smaller y pixel). The key
 // assertion: the rect MOVED to the new range rather than staying put.
-assert.ok(after.x > before.x, `brush x moved right for the higher range (before ${before.x}, after ${after.x})`);
-assert.ok(after.y < before.y, `brush y moved up for the higher range (before ${before.y}, after ${after.y})`);
+assert.ok(
+  after.x > before.x,
+  `brush x moved right for the higher range (before ${before.x}, after ${after.x})`,
+);
+assert.ok(
+  after.y < before.y,
+  `brush y moved up for the higher range (before ${before.y}, after ${after.y})`,
+);
 
 // And it lands where the new data range maps (within a pixel).
 const expX = Math.min(sx()(3000), sx()(4000));
 const expY = Math.min(sy()(3000), sy()(4000));
-assert.ok(Math.abs(after.x - expX) < 1, `brush x at new range (${after.x} vs ${expX})`);
-assert.ok(Math.abs(after.y - expY) < 1, `brush y at new range (${after.y} vs ${expY})`);
+assert.ok(
+  Math.abs(after.x - expX) < 1,
+  `brush x at new range (${after.x} vs ${expX})`,
+);
+assert.ok(
+  Math.abs(after.y - expY) < 1,
+  `brush y at new range (${after.y} vs ${expY})`,
+);
 
 // --- Guards updateVegaChartSelection's resolution path (VegaLite.vue) ---
 // It reads the interval's field->channel map via `view.signal('_tuple_fields')`
@@ -95,7 +121,10 @@ assert.ok(Math.abs(after.y - expY) < 1, `brush y at new range (${after.y} vs ${e
 // channel, and writes that channel's pixel signal. Reproduce that exact logic
 // from a data-space range and assert the brush lands correctly.
 const tupleFields = view.signal('br_tuple_fields');
-assert.ok(Array.isArray(tupleFields), 'tuple fields read via view.signal() is an array');
+assert.ok(
+  Array.isArray(tupleFields),
+  'tuple fields read via view.signal() is an array',
+);
 const channelForField = (f) => tupleFields.find((t) => t.field === f)?.channel;
 assert.equal(channelForField('a'), 'x', 'field a resolves to channel x');
 assert.equal(channelForField('b'), 'y', 'field b resolves to channel y');
@@ -117,6 +146,108 @@ assert.ok(
 assert.ok(
   Math.abs(resolved.y - Math.min(sy()(2000), sy()(4000))) < 1,
   `resolved brush y matches field b range (${resolved.y})`,
+);
+
+// --- A selection on ONE field of an xy brush (VegaLite.vue draw-back) ---
+// A filter set in chat on `a` alone, shown on an a × b chart. Writing only the
+// x channel leaves Vega's tuple null and draws nothing, so draw-back spans the
+// open channel fully; read back, a full-span channel is no constraint.
+const full = (scale) => {
+  const [r0, r1] = scale.range();
+  return [Math.min(r0, r1), Math.max(r0, r1)];
+};
+const xOnly = new vega.View(vega.parse(spec), { renderer: 'none' });
+await xOnly.runAsync();
+xOnly.signal('br_x', [xOnly.scale('x')(1000), xOnly.scale('x')(2000)]);
+await xOnly.runAsync();
+assert.equal(
+  xOnly.signal('br_tuple'),
+  null,
+  'one channel alone forms no tuple',
+);
+
+// Both channels in the same pulse, as updateVegaChartSelection writes them
+// before its single runAsync: Vega rebuilds the tuple on `br_a || br_b`
+// changing, which a later write to the second channel alone doesn't do.
+const view1 = new vega.View(vega.parse(spec), { renderer: 'none' });
+await view1.runAsync();
+view1.signal('br_x', [view1.scale('x')(1000), view1.scale('x')(2000)]);
+view1.signal('br_y', full(view1.scale('y')));
+await view1.runAsync();
+assert.ok(
+  view1.signal('br_tuple'),
+  'spanning the open channel forms the tuple',
+);
+const spansAll = (px, scale) => {
+  const [lo, hi] = full(scale);
+  return (
+    Math.abs(Math.min(...px) - lo) < 0.5 && Math.abs(Math.max(...px) - hi) < 0.5
+  );
+};
+assert.ok(
+  spansAll(view1.signal('br_y'), view1.scale('y')),
+  'open channel reads as full span',
+);
+assert.ok(
+  !spansAll(view1.signal('br_x'), view1.scale('x')),
+  'the set channel does not',
+);
+
+// --- Clearing a drawn brush in place (VegaLite.vue draw-back clear) ---
+// Writing [0, 0] to every channel, as Vega-Lite's own double-click clear does,
+// empties the brush store, so the rectangle goes without re-embedding.
+view1.signal('br_x', [0, 0]);
+view1.signal('br_y', [0, 0]);
+await view1.runAsync();
+assert.equal(view1.signal('br_tuple'), null, 'a cleared brush forms no tuple');
+assert.equal(view1.data('br_store').length, 0, 'and its store is empty');
+
+// The crosshair UDIVis gives a brushable chart: on the view (its background)
+// and on the brushed layer's marks, beside the palette's frame stroke rather
+// than replacing it; the brush rect keeps its own `move` cursor.
+const cursorSpec = vl.compile({
+  data: { name: 'udi_data', values: [{ a: 1, b: 2 }] },
+  width: 100,
+  height: 100,
+  view: { cursor: 'crosshair' },
+  config: { view: { stroke: '#abc' } },
+  layer: [
+    {
+      mark: { type: 'point', cursor: 'crosshair' },
+      params: [
+        { name: 'br', select: { type: 'interval', encodings: ['x', 'y'] } },
+      ],
+      encoding: {
+        x: { field: 'a', type: 'quantitative' },
+        y: { field: 'b', type: 'quantitative' },
+      },
+    },
+  ],
+}).spec;
+const cursorView = new vega.View(vega.parse(cursorSpec), { renderer: 'none' });
+await cursorView.runAsync();
+const itemsNamed = (name) => {
+  const out = [];
+  const walk = (node) => {
+    if (node?.name === name) out.push(...(node.items ?? []));
+    for (const c of node?.items ?? []) if (typeof c === 'object') walk(c);
+  };
+  walk(cursorView.scenegraph().root);
+  return out;
+};
+const root = cursorView.scenegraph().root.items[0];
+assert.ok(
+  itemsNamed('layer_0_marks').length > 0 && itemsNamed('br_brush').length > 0,
+);
+assert.equal(root.cursor, 'crosshair', 'the view background shows a crosshair');
+assert.equal(root.stroke, '#abc', 'the frame keeps the palette stroke');
+assert.ok(
+  itemsNamed('layer_0_marks').every((item) => item.cursor === 'crosshair'),
+  'brushable marks show a crosshair',
+);
+assert.ok(
+  itemsNamed('br_brush').every((item) => item.cursor === 'move'),
+  'the brush rect keeps its move cursor',
 );
 
 console.log('brush-render: all assertions passed');

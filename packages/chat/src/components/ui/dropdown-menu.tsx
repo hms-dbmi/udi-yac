@@ -35,7 +35,7 @@ function DropdownMenuContent({
   return (
     <DropdownMenuPortal>
       <MenuPrimitive.Positioner
-        className="isolate z-1500 outline-none"
+        className="udi:isolate udi:z-1500 udi:outline-none"
         align={align}
         alignOffset={alignOffset}
         side={side}
@@ -54,7 +54,7 @@ function DropdownMenuContent({
             // `overflow-x-hidden` clipped any item label wider than the
             // trigger — visible on the "Download Data" menu where
             // "Download Raw Data" exceeded the button's width.
-            'z-1500 max-h-(--available-height) min-w-[max(8rem,var(--anchor-width))] max-w-[min(400px,100vw)] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95',
+            'udi:z-1500 udi:max-h-(--available-height) udi:min-w-[max(8rem,var(--anchor-width))] udi:max-w-[min(400px,100vw)] udi:origin-(--transform-origin) udi:overflow-x-hidden udi:overflow-y-auto udi:rounded-lg udi:bg-popover udi:p-1 udi:text-popover-foreground udi:shadow-md udi:ring-1 udi:ring-foreground/10 udi:duration-100 udi:outline-none udi:data-[side=bottom]:slide-in-from-top-2 udi:data-[side=inline-end]:slide-in-from-left-2 udi:data-[side=inline-start]:slide-in-from-right-2 udi:data-[side=left]:slide-in-from-right-2 udi:data-[side=right]:slide-in-from-left-2 udi:data-[side=top]:slide-in-from-bottom-2 udi:data-open:animate-in udi:data-open:fade-in-0 udi:data-open:zoom-in-95 udi:data-closed:animate-out udi:data-closed:overflow-hidden udi:data-closed:fade-out-0 udi:data-closed:zoom-out-95',
             className,
           )}
           {...props}
@@ -80,7 +80,7 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        'px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7',
+        'udi:px-1.5 udi:py-1 udi:text-xs udi:font-medium udi:text-muted-foreground udi:data-inset:pl-7',
         className,
       )}
       {...props}
@@ -106,7 +106,7 @@ function DropdownMenuItem({
         // `whitespace-nowrap` keeps each item on a single line so the popup's
         // `max-w-[min(400px,100vw)]` clip is the only horizontal constraint —
         // labels won't wrap into a stacked two-line item.
-        "group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm whitespace-nowrap outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
+        "udi:group/dropdown-menu-item udi:relative udi:flex udi:cursor-default udi:items-center udi:gap-1.5 udi:rounded-md udi:px-1.5 udi:py-1 udi:text-sm udi:whitespace-nowrap udi:outline-hidden udi:select-none udi:focus:bg-accent udi:focus:text-accent-foreground udi:not-data-[variant=destructive]:focus:**:text-accent-foreground udi:data-inset:pl-7 udi:data-[variant=destructive]:text-destructive udi:data-[variant=destructive]:focus:bg-destructive/10 udi:data-[variant=destructive]:focus:text-destructive udi:dark:data-[variant=destructive]:focus:bg-destructive/20 udi:data-disabled:pointer-events-none udi:data-disabled:opacity-50 udi:[&_svg]:pointer-events-none udi:[&_svg]:shrink-0 udi:[&_svg:not([class*='size-'])]:size-4 udi:data-[variant=destructive]:*:[svg]:text-destructive",
         className,
       )}
       {...props}
@@ -132,13 +132,13 @@ const DropdownMenuSubTrigger = React.forwardRef<
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "udi:flex udi:cursor-default udi:items-center udi:gap-1.5 udi:rounded-md udi:px-1.5 udi:py-1 udi:text-sm udi:outline-hidden udi:select-none udi:focus:bg-accent udi:focus:text-accent-foreground udi:not-data-[variant=destructive]:focus:**:text-accent-foreground udi:data-inset:pl-7 udi:data-popup-open:bg-accent udi:data-popup-open:text-accent-foreground udi:data-open:bg-accent udi:data-open:text-accent-foreground udi:[&_svg]:pointer-events-none udi:[&_svg]:shrink-0 udi:[&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto" />
+      <ChevronRightIcon className="udi:ml-auto" />
     </MenuPrimitive.SubmenuTrigger>
   );
 });
@@ -155,7 +155,7 @@ function DropdownMenuSubContent({
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        'w-auto min-w-24 rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+        'udi:w-auto udi:min-w-24 udi:rounded-lg udi:bg-popover udi:p-1 udi:text-popover-foreground udi:shadow-lg udi:ring-1 udi:ring-foreground/10 udi:duration-100 udi:data-[side=bottom]:slide-in-from-top-2 udi:data-[side=left]:slide-in-from-right-2 udi:data-[side=right]:slide-in-from-left-2 udi:data-[side=top]:slide-in-from-bottom-2 udi:data-open:animate-in udi:data-open:fade-in-0 udi:data-open:zoom-in-95 udi:data-closed:animate-out udi:data-closed:fade-out-0 udi:data-closed:zoom-out-95',
         className,
       )}
       align={align}
@@ -181,14 +181,14 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        "relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "udi:relative udi:flex udi:cursor-default udi:items-center udi:gap-1.5 udi:rounded-md udi:py-1 udi:pr-8 udi:pl-1.5 udi:text-sm udi:outline-hidden udi:select-none udi:focus:bg-accent udi:focus:text-accent-foreground udi:focus:**:text-accent-foreground udi:data-inset:pl-7 udi:data-disabled:pointer-events-none udi:data-disabled:opacity-50 udi:[&_svg]:pointer-events-none udi:[&_svg]:shrink-0 udi:[&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       checked={checked}
       {...props}
     >
       <span
-        className="pointer-events-none absolute right-2 flex items-center justify-center"
+        className="udi:pointer-events-none udi:absolute udi:right-2 udi:flex udi:items-center udi:justify-center"
         data-slot="dropdown-menu-checkbox-item-indicator"
       >
         <MenuPrimitive.CheckboxItemIndicator>
@@ -217,13 +217,13 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "udi:relative udi:flex udi:cursor-default udi:items-center udi:gap-1.5 udi:rounded-md udi:py-1 udi:pr-8 udi:pl-1.5 udi:text-sm udi:outline-hidden udi:select-none udi:focus:bg-accent udi:focus:text-accent-foreground udi:focus:**:text-accent-foreground udi:data-inset:pl-7 udi:data-disabled:pointer-events-none udi:data-disabled:opacity-50 udi:[&_svg]:pointer-events-none udi:[&_svg]:shrink-0 udi:[&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
       <span
-        className="pointer-events-none absolute right-2 flex items-center justify-center"
+        className="udi:pointer-events-none udi:absolute udi:right-2 udi:flex udi:items-center udi:justify-center"
         data-slot="dropdown-menu-radio-item-indicator"
       >
         <MenuPrimitive.RadioItemIndicator>
@@ -239,7 +239,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn('-mx-1 my-1 h-px bg-border', className)}
+      className={cn('udi:-mx-1 udi:my-1 udi:h-px udi:bg-border', className)}
       {...props}
     />
   );
@@ -250,7 +250,7 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<'spa
     <span
       data-slot="dropdown-menu-shortcut"
       className={cn(
-        'ml-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-accent-foreground',
+        'udi:ml-auto udi:text-xs udi:tracking-widest udi:text-muted-foreground udi:group-focus/dropdown-menu-item:text-accent-foreground',
         className,
       )}
       {...props}

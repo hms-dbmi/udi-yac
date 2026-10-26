@@ -18,7 +18,7 @@ function Slider({
 
   return (
     <SliderPrimitive.Root
-      className={cn('data-horizontal:w-full data-vertical:h-full', className)}
+      className={cn('udi:data-horizontal:w-full udi:data-vertical:h-full', className)}
       data-slot="slider"
       defaultValue={defaultValue}
       value={value}
@@ -27,21 +27,21 @@ function Slider({
       thumbAlignment="edge"
       {...props}
     >
-      <SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
+      <SliderPrimitive.Control className="udi:relative udi:flex udi:w-full udi:touch-none udi:items-center udi:select-none udi:data-disabled:opacity-50 udi:data-vertical:h-full udi:data-vertical:min-h-40 udi:data-vertical:w-auto udi:data-vertical:flex-col">
         <SliderPrimitive.Track
           data-slot="slider-track"
-          className="relative grow overflow-hidden rounded-full bg-border select-none data-horizontal:h-1.5 data-horizontal:w-full data-vertical:h-full data-vertical:w-1.5"
+          className="udi:relative udi:grow udi:overflow-hidden udi:rounded-full udi:bg-border udi:select-none udi:data-horizontal:h-1.5 udi:data-horizontal:w-full udi:data-vertical:h-full udi:data-vertical:w-1.5"
         >
           <SliderPrimitive.Indicator
             data-slot="slider-range"
-            className="bg-primary select-none data-horizontal:h-full data-vertical:w-full"
+            className="udi:bg-primary udi:select-none udi:data-horizontal:h-full udi:data-vertical:w-full"
           />
         </SliderPrimitive.Track>
         {Array.from({ length: _values.length }, (_, index) => (
           <SliderPrimitive.Thumb
             data-slot="slider-thumb"
             key={index}
-            className="relative block size-3 shrink-0 rounded-full border border-ring bg-white ring-ring/50 transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
+            className="udi:relative udi:block udi:size-3 udi:shrink-0 udi:rounded-full udi:border udi:border-ring udi:bg-white udi:ring-ring/50 udi:transition-[color,box-shadow] udi:select-none udi:after:absolute udi:after:-inset-2 udi:hover:ring-3 udi:focus-visible:ring-3 udi:focus-visible:outline-hidden udi:active:ring-3 udi:disabled:pointer-events-none udi:disabled:opacity-50"
           />
         ))}
       </SliderPrimitive.Control>

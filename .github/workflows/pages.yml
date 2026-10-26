@@ -1,8 +1,9 @@
 name: Deploy to GitHub Pages
 
-# Combined Pages site:
-#   /            ← chat SPA (packages/chat)
-#   /grammar/    ← quasar demo app (apps/grammar-app)
+# The Pages site, all built by apps/site (Astro Starlight):
+#   /            ← landing page + docs
+#   /app/        ← the chat, embedded from the udi-yac library
+#   /grammar/    ← grammar docs and examples; the editor at /grammar/editor/
 
 on:
   push:
@@ -10,15 +11,26 @@ on:
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
-      - "apps/grammar-app/**"
+      - "apps/site/**"
+      - "sample-data/**"
+      # The docs copy these in (apps/site/scripts/sync-docs.mjs)
+      - "packages/agent/README.md"
+      - "packages/agent/docs/**"
+      - "packages/agent/openapi.json"
+      - "packages/agent/pyproject.toml"
+      - "packages/agent/src/udiagent/*.py"
+      - "packages/agent/src/udiagent/query/*.py"
+      - "packages/agent/src/udiagent/query/README.md"
+      - "packages/agent/src/udiagent/data/skills/template_visualizations.json"
+      - "packages/grammar-py/README.md"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
+# Only the deploy job, which runs no repository code, may write to Pages.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -28,13 +40,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -42,36 +54,38 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # sync-docs builds the Python API reference with `uvx griffe2md`.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+
       - name: Build udi-toolkit
         run: pnpm run build:toolkit
 
-      - name: Build chat SPA
-        run: pnpm --filter udi-yac build
+      # The site's app page embeds the library build, not the standalone SPA.
+      - name: Build udi-yac library
+        run: pnpm --filter udi-yac build:lib
+
+      # Datasets and sessions come from sample-data/catalog.json; these set
+      # only the agent connection. Issue reports need LangFuse on that agent.
+      - name: Build landing page, docs and app page
+        run: pnpm --filter udi-yac-site build
         env:
-          VITE_BASE: ${{ vars.VITE_BASE || '/udi-yac/' }}
           VITE_UDI_API_BASE_URL: ${{ vars.VITE_UDI_API_BASE_URL }}
-          VITE_UDI_DATA_PACKAGE: ${{ vars.VITE_UDI_DATA_PACKAGE }}
           VITE_UDI_MODEL: ${{ vars.VITE_UDI_MODEL }}
           VITE_UDI_REQUIRE_API_KEY: ${{ vars.VITE_UDI_REQUIRE_API_KEY }}
-
-      - name: Build grammar demo app
-        run: pnpm --filter udi-grammar-app build
-
-      - name: Assemble site
-        run: |
-          mkdir site
-          cp -r packages/chat/dist/* site/
-          mkdir site/grammar
-          cp -r apps/grammar-app/dist/spa/* site/grammar/
+          VITE_UDI_ISSUE_REPORTING: "true"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ./site
+          path: ./apps/site/dist
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

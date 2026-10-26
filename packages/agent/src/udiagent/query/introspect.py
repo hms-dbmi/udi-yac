@@ -19,9 +19,15 @@ from __future__ import annotations
 import time
 from typing import Any
 
-# Categorical domains larger than this are omitted — mirrors the chat's
-# removeLongDomains (dataPackageStore.ts) cap of 80.
-DEFAULT_DISTINCT_CAP = 80
+# Categorical domains larger than this are omitted from an introspected
+# package. At least vis_generate.MAX_DRAWN_CATEGORIES: a chart can draw that
+# many categories, and the chat's filter for one lists the domain's values —
+# with no domain it can offer only the values already selected. Independent of
+# the chat's own cap: `capLongDomains` (dataPackageStore.ts) trims what a
+# package *sends* to the agent, while this decides what a server-side package
+# ever collects. Fields over the cap still appear in the schema with no domain,
+# which the chat reads as "unverifiable", not "invalid".
+DEFAULT_DISTINCT_CAP = 500
 
 # Below this row count, exact COUNT(DISTINCT) is cheap and the approximate
 # sketch's small-set error (10%+ observed on a few hundred rows) isn't worth
@@ -186,17 +192,28 @@ def introspect(
         # Relationship metadata (primaryKey/foreignKeys) isn't introspectable
         # from the database — merge it from the engine's configured schemas so
         # the chat's cross-entity filtering can resolve entity relationships.
-        extras = entity_schemas.get(entity)
-        if extras:
-            # Cube roles are resource-level keys in a datapackage descriptor,
-            # not schema-level ones — the chat reads them off the resource.
-            # Everything else (primaryKey/foreignKeys) belongs in the schema.
-            for key in _RESOURCE_LEVEL_EXTRAS:
-                if key in extras:
-                    resource[key] = extras[key]
-            resource["schema"].update(
-                {k: v for k, v in extras.items() if k not in _RESOURCE_LEVEL_EXTRAS}
-            )
+        # Nor are descriptions or date formats: `description` is the table's,
+        # and `fields` overlays per-column descriptions and `udi:time_format`
+        # by name rather than replacing the introspected fields.
+        extras = dict(entity_schemas.get(entity) or {})
+        if description := extras.pop("description", None):
+            resource["description"] = description
+        overlay = {f["name"]: f for f in extras.pop("fields", [])}
+        for field in resource["schema"]["fields"]:
+            extra = overlay.get(field["name"], {})
+            field["description"] = extra.get("description") or ""
+            if time_format := extra.get("udi:time_format"):
+                field["udi:time_format"] = time_format
+        for domain in domains:
+            extra = overlay.get(domain["field"], {})
+            domain["fieldDescription"] = extra.get("description") or ""
+        # Cube roles are resource-level keys in a datapackage descriptor,
+        # not schema-level ones — the chat reads them off the resource.
+        # Everything else (primaryKey/foreignKeys) belongs in the schema.
+        for key in _RESOURCE_LEVEL_EXTRAS:
+            if key in extras:
+                resource[key] = extras.pop(key)
+        resource["schema"].update(extras)
         resources.append(resource)
         all_domains.extend(domains)
     return {

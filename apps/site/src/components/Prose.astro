@@ -1,0 +1,10 @@
+---
+// A spec description: plain text where `backticks` mark code.
+interface Props {
+  text: string;
+}
+
+const { text } = Astro.props;
+---
+
+<p>{text.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</p>

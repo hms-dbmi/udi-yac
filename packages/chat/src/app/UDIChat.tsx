@@ -1,14 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
-import { UDIToolkitProvider } from 'udi-toolkit/react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from 'react';
+import { Sparkles } from 'lucide-react';
+import { queryData, UDIToolkitProvider, type RecordUrlFn } from 'udi-toolkit/react';
+import type { DataTransformation } from 'udi-toolkit';
+import { useThemePalette } from './useThemePalette';
 import {
   UDIChatProvider,
   DownloadActionsProvider,
   DownloadButtonLabelProvider,
+  SavedSessionsKeyProvider,
   EntityIconsProvider,
   MascotProvider,
+  ApiConfigProvider,
+  IssueReportingProvider,
   SplashMessagesProvider,
   TrackerProvider,
   useConversation,
+  useConversationStore,
   useDataPackageStore,
   useDashboardStore,
   useDashboard,
@@ -20,11 +35,20 @@ import {
   useGlobalStore,
   useTracker,
 } from '@/app/UDIChatContext';
-import { DataOverviewPanel } from '@/features/data-package';
+import { DataOverviewPanel, joinDataPath } from '@/features/data-package';
 import { Button } from '@/components/ui/button';
-import { extractAllUdiSpecsFromMessage } from '@/features/dashboard/stores/dashboardStore';
+import {
+  extractAllUdiSpecsFromMessage,
+  HOST_FILTER_PREFIX,
+  IssueReportDialog,
+  useActiveFilters,
+  type TemplateProvenance,
+  type UDIFilter,
+} from '@/features/dashboard';
 import { useLayoutPersistence } from '@/features/dashboard/hooks/useLayoutPersistence';
-import type { UDIGrammar } from 'udi-toolkit/react';
+import { parseSessionExport } from '@/features/dashboard/utils/dashboardSerialization';
+import { applySessionExport } from '@/features/dashboard/utils/applySessionExport';
+import type { UDIGrammar, UDIPalette } from 'udi-toolkit/react';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { ConversationList } from '@/features/chat/components/ConversationList';
@@ -35,7 +59,8 @@ import { cn } from '@/lib/utils';
 import { ChatRootProvider } from '@/lib/chatRoot';
 import type { QueryConfig } from '@/features/chat/api/completions';
 import { validateConfig } from '@/app/validateConfig';
-import type { UDIChatConfig } from './UDIChatConfig';
+import type { UDIChatConfig, UDICohort } from './UDIChatConfig';
+import { selectFontScale } from '@/stores/globalStore';
 
 export type { UDIChatConfig };
 
@@ -49,7 +74,16 @@ function UDIChatInner({
   authToken,
   model,
   requireApiKey,
+  initialSession,
+  filters,
+  onFiltersChange,
+  filterMode,
+  cohort,
+  onCohortChange,
+  onReadOnlyChange,
+  issueReporting,
 }: UDIChatConfig) {
+  const conversationStore = useConversationStore();
   const dataPackageStore = useDataPackageStore();
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
@@ -62,7 +96,18 @@ function UDIChatInner({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const apiKey = useApiKey({ requireApiKey: requireApiKey === true });
   const trackEvent = useTracker();
-  useLayoutPersistence();
+  const readOnly = useGlobal((s) => s.readOnly);
+  const readOnlyLocked = useGlobal((s) => s.readOnlyLocked);
+  const loadingPhase = useDataPackage((s) => s.loadingPhase);
+  useLayoutPersistence({ enabled: !readOnly, restore: initialSession == null });
+
+  // Keep the store's token current. A host that refreshes the JWT must not
+  // trigger a package reload: `authToken` is deliberately absent from the
+  // loader effect's deps below, and the remote query backend re-reads the token
+  // from the store on every request instead of capturing it.
+  useEffect(() => {
+    dataPackageStore.getState().setAuthToken(authToken);
+  }, [dataPackageStore, authToken]);
 
   // Load data package on mount
   useEffect(() => {
@@ -75,16 +120,54 @@ function UDIChatInner({
     } else if (dataPackagePath) {
       dataPackageStore.getState().fetchDataPackage(dataPackagePath, fetchOptions);
     }
+    // authToken is intentionally excluded from the deps below: reloading the
+    // whole package on every token refresh is exactly the bug this avoids. The
+    // effect above keeps the store's copy in sync, and the remote backend reads
+    // it from there per request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     dataPackageStore,
     remotePackage,
     apiBaseUrl,
-    authToken,
     dataPackagePath,
     dataPackageProp,
     dataFieldDomainsProp,
     fetchOptions,
   ]);
+
+  // Seed from `initialSession`, once, after the data package is ready: the
+  // cards need its field lists to become interactive. `validateConfig` already
+  // rejected a malformed payload, so a parse failure here cannot happen — bail
+  // rather than throw from inside an effect if it somehow does.
+  const parsedInitialSession = useMemo(
+    () => (initialSession == null ? null : parseSessionExport(initialSession)),
+    [initialSession],
+  );
+  // A layout effect, so the cards land before the frame where the package turns
+  // ready is painted — otherwise that frame shows the empty dashboard's splash.
+  const seededRef = useRef(false);
+  useLayoutEffect(() => {
+    if (seededRef.current) return;
+    if (!parsedInitialSession?.ok) return;
+    if (loadingPhase !== 'ready') return;
+    seededRef.current = true;
+    applySessionExport(
+      parsedInitialSession.value,
+      { conversation: conversationStore, dashboard: dashboardStore, dataFilters: dataFiltersStore },
+      dataPackageStore.getState().sourceFields,
+      dataPackageStore.getState().cubeMeasureFields,
+    );
+  }, [
+    parsedInitialSession,
+    loadingPhase,
+    conversationStore,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
+  // Until then the dashboard is not empty, only not filled yet.
+  const seeding =
+    parsedInitialSession?.ok === true && loadingPhase !== 'ready' && loadingPhase !== 'error';
 
   // Auto-activate visualizations from new assistant messages (batched to avoid O(n^2) cascade)
   useEffect(() => {
@@ -97,12 +180,22 @@ function UDIChatInner({
       userPrompt: string;
       sourceFields: Record<string, string[]> | null;
       title?: string;
+      template?: TemplateProvenance;
+      titleTemplate?: string;
+      summaryTemplate?: string;
     }> = [];
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       if (message.role !== 'assistant') continue;
       const specs = extractAllUdiSpecsFromMessage(message);
-      for (const { spec, toolCallIndex, title } of specs) {
+      for (const {
+        spec,
+        toolCallIndex,
+        title,
+        titleTemplate,
+        summaryTemplate,
+        template,
+      } of specs) {
         const key = state.vizKey(i, toolCallIndex);
         if (state.activeVisualizations.has(key)) continue;
         if (mbState.closedVisualizations.has(key)) continue;
@@ -118,6 +211,9 @@ function UDIChatInner({
           userPrompt,
           sourceFields,
           title,
+          titleTemplate,
+          summaryTemplate,
+          template,
         });
       }
     }
@@ -135,6 +231,12 @@ function UDIChatInner({
   }, [messages, dashboardStore, sourceFields, memoryBankStore, dataPackageStore, trackEvent]);
 
   // Sync data filters from messages (replaces Vue's watch(messages, ...) in dataFiltersStore)
+  //
+  // `loadingPhase` is a change-trigger, not a body input: the validators read
+  // dataPackage/dataFieldDomains through getState(), which the linter can't
+  // see, so without it this effect fires only on a new `messages` identity and
+  // never when the package finishes loading. Re-running is free —
+  // syncFiltersFromMessages skips keys it already holds and only sets on change.
   useEffect(() => {
     const dpState = dataPackageStore.getState();
     const validate = {
@@ -142,35 +244,180 @@ function UDIChatInner({
       isValidPointFilter: dpState.isValidPointFilter,
     };
     dataFiltersStore.getState().syncFiltersFromMessages(messages, validate);
-  }, [messages, dataFiltersStore, dataPackageStore]);
+  }, [messages, loadingPhase, dataFiltersStore, dataPackageStore]);
 
-  // Update spec filter structure when LLM FilterData selections change or when
-  // the set of active visualizations changes. For row-level sources a brush
-  // needs no re-run — each viz's own UUID is already in the filter list (from
-  // activeVisualizations), so the structure is stable once set up. Cube
-  // sources are different: which marginal a visualization must expand to
-  // depends on WHICH FIELDS are currently selected, so the brush mirror
-  // (internalDataSelections) has to be a dependency too. It updates on brush
-  // commit, not per tick, so this stays cheap.
+  // Update spec filter structure when any filter selection changes or when
+  // the set of active visualizations changes. Chart brushes write into
+  // `dataSelections` too, which cube sources depend on: which marginal a
+  // visualization must expand to depends on WHICH FIELDS are currently
+  // selected.
   const dataSelections = useDataFilters((s) => s.dataSelections);
-  const internalDataSelections = useDataFilters((s) => s.internalDataSelections);
+  const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   useEffect(() => {
     dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
   }, [
     dataSelections,
-    internalDataSelections,
+    filterScopes,
     activeVisualizations,
     dashboardStore,
     dataFiltersStore,
     dataPackageStore,
   ]);
 
+  // Host filters in. Held until the package is ready: before then the
+  // validators can't place a filter's fields, and its chip would never show.
+  // `?? []` so a host that stops passing `filters` deletes the ones it set.
+  useEffect(() => {
+    if (loadingPhase !== 'ready') return;
+    dataFiltersStore.getState().applyExternalFilters(filters ?? [], filterMode);
+  }, [filters, filterMode, loadingPhase, dataFiltersStore]);
+
+  // Every filter in place out, whenever the set or a value changes. Lives here
+  // rather than in the filter bar, which isn't always mounted.
+  const activeFilters = useActiveFilters();
+  const lastReportedFilters = useRef('[]');
+  useEffect(() => {
+    if (!onFiltersChange) return;
+    const report: UDIFilter[] = activeFilters.map(({ id, origin, selection }) => ({
+      ...selection,
+      id: id.startsWith(HOST_FILTER_PREFIX) ? id.slice(HOST_FILTER_PREFIX.length) : id,
+      origin,
+    }));
+    const json = JSON.stringify(report);
+    if (json === lastReportedFilters.current) return;
+    lastReportedFilters.current = json;
+    try {
+      // A copy, so a host mutating what it's handed can't reach the store.
+      onFiltersChange(JSON.parse(json) as UDIFilter[]);
+    } catch (err) {
+      console.error('UDIChat: onFiltersChange threw', err);
+    }
+  }, [activeFilters, onFiltersChange]);
+
+  // Leaving read-only for the first time: the seeded transcript would open the
+  // chat on a wall of prompts nobody here typed. Hidden, not dropped — see
+  // `hiddenCount`. Only the first time: by the next exit the transcript is the
+  // user's own. A layout effect, so the transcript never paints.
+  const transcriptHidden = useRef(!readOnly);
+  useLayoutEffect(() => {
+    if (readOnly || transcriptHidden.current) return;
+    transcriptHidden.current = true;
+    conversationStore.getState().hideMessages();
+  }, [readOnly, conversationStore]);
+
+  // The chat region mounts the first time it is shown and then stays mounted,
+  // only hidden while read-only, so a host toggling modes keeps the draft, the
+  // scroll position and a response still on its way.
+  const [chatMounted, setChatMounted] = useState(!readOnly);
+  if (!readOnly && !chatMounted) setChatMounted(true);
+
+  // The subjects every filter in place leaves, out to the host: the key
+  // columns of each `cohort.entity` row that passes, by the dashboard's own
+  // filter builder, so the cohort is what a chart of that table shows. `null`
+  // while no filter reaches the entity. Grouped, so a remote package returns
+  // every key rather than its row cap. The callback is read through a ref: an
+  // inline one would otherwise re-run the query on every host render.
+  const latestOnCohortChange = useRef(onCohortChange);
+  useLayoutEffect(() => {
+    latestOnCohortChange.current = onCohortChange;
+  });
+  const hasOnCohortChange = onCohortChange != null;
+  const cohortEntity = cohort?.entity;
+  const cohortFieldsKey = JSON.stringify(cohort?.fields ?? null);
+  const lastReportedCohort = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!hasOnCohortChange || !cohortEntity || loadingPhase !== 'ready') return;
+    const report = (value: UDICohort | null) => {
+      const json = JSON.stringify(value);
+      if (json === lastReportedCohort.current) return;
+      lastReportedCohort.current = json;
+      try {
+        // A copy, so a host mutating what it's handed can't reach us.
+        latestOnCohortChange.current?.(JSON.parse(json) as UDICohort | null);
+      } catch (err) {
+        console.error('UDIChat: onCohortChange threw', err);
+      }
+    };
+    const dataPackage = dataPackageStore.getState().dataPackage;
+    const resource = dataPackage?.resources.find((r) => r.name === cohortEntity);
+    const fields = (JSON.parse(cohortFieldsKey) as string[] | null) ?? resource?.schema.primaryKey;
+    if (!dataPackage || !resource || !fields?.length) {
+      console.error(
+        `UDIChat: cohort entity "${cohortEntity}" needs \`cohort.fields\` or a primaryKey in the data package.`,
+      );
+      return;
+    }
+    const dashboard = dashboardStore.getState();
+    const named = dashboard.getNamedFilters(
+      dashboard.getFilterIds(dataFiltersStore, dataPackageStore),
+      cohortEntity,
+      dataFiltersStore,
+      dataPackageStore,
+    ) as DataTransformation[];
+    if (named.length === 0) {
+      report(null);
+      return;
+    }
+    let stale = false;
+    // ponytail: a fixed 300ms debounce, so a brush drag runs one query, not
+    // one a frame; make it a prop if a host needs the cohort live.
+    const timer = setTimeout(() => {
+      queryData(
+        {
+          source: {
+            name: cohortEntity,
+            source: joinDataPath(dataPackage['udi:path'], resource.path),
+          },
+          transformation: [...named, { groupby: fields }, { rollup: { n: { op: 'count' } } }],
+        },
+        dataFiltersStore.getState().dataSelections,
+        // Explicit: left out, it runs the unfiltered pass as well.
+        { displayDataOnly: true },
+      )
+        .then((result) => {
+          if (stale || !result) return;
+          const keys = (result.displayData as Record<string, unknown>[]).map((row) =>
+            Object.fromEntries(fields.map((f) => [f, row[f]])),
+          );
+          report({ entity: cohortEntity, keys });
+        })
+        .catch((err) => console.error('UDIChat: cohort query failed', err));
+    }, 300);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+    // dataSelections / filterScopes / activeVisualizations are change
+    // triggers: the filter builder reads them out of the stores.
+  }, [
+    hasOnCohortChange,
+    cohortEntity,
+    cohortFieldsKey,
+    loadingPhase,
+    dataSelections,
+    filterScopes,
+    activeVisualizations,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
+
+  const exitReadOnly = () => {
+    trackEvent('read_only_exited', {});
+    // A host listening owns the mode and switches `readOnly` itself — often
+    // while it moves us into more room, which it may want to animate from the
+    // read-only view still on screen.
+    if (onReadOnlyChange) onReadOnlyChange(false);
+    else globalStore.getState().setReadOnly(false);
+  };
+
   const queryConfig: QueryConfig = {
     apiBaseUrl,
     authToken,
     model,
     openAiKey: apiKey.openAiKey ?? undefined,
+    issueReporting: issueReporting === true,
   };
 
   return (
@@ -180,66 +427,106 @@ function UDIChatInner({
     // purpose — `container-type: inline-size` implies `contain: layout`, which
     // would make the root a containing block for everything useChatRoot()
     // portals into it.
-    <div className="@container/shell flex h-full w-full bg-background">
-      {/* Sidebar drawer — debug mode only */}
-      {debugMode && drawerOpen && (
-        <div className="w-56 shrink-0 border-r bg-background overflow-hidden flex flex-col">
-          <ConversationList />
-        </div>
-      )}
+    <div className="udi:@container/shell udi:flex udi:h-full udi:w-full udi:bg-background">
       {/*
-       * Left region: chat and the data overview. Above 1200px both fit beside
-       * the dashboard (400 + 400 + 400), so the region doubles in width and
-       * shows them side by side. Below it, the overview takes the chat's slot
-       * and the chat is CSS-hidden rather than unmounted, so a streaming
-       * response and the message list's scroll position survive the swap.
-       * ponytail: 1200 is the one knob — inlined in the variants below because
-       * Tailwind scans source text and cannot read a constant.
+       * Read-only hides the whole left region, so the dashboard gets the full
+       * width; the floating Explore Data button is the way back. One branch,
+       * rather than a per-control sweep, because the chat pane is where every
+       * writing affordance lives — the input and its `//admin` backdoor, reset,
+       * example prompts, the memory bank, the API key, closed-viz restore, and
+       * the data overview's "Open on dashboard" button. `display: none` makes
+       * all of it unreachable; `contents` leaves the shell's flex row as if
+       * this wrapper were not there.
        */}
-      <div
-        className={cn(
-          'shrink-0 min-w-[300px] border-r flex flex-col overflow-hidden',
-          overviewOpen ? 'w-[400px] @min-[1200px]/shell:w-[800px]' : 'w-[400px]',
-        )}
-      >
-        <ViewSwitch
-          overviewOpen={overviewOpen}
-          onChange={(open) => globalStore.getState().setOverview(open)}
-        />
-        <div className="flex flex-1 min-h-0">
-          <div
-            className={cn(
-              'flex-1 min-w-0 flex flex-col overflow-hidden',
-              overviewOpen && 'hidden @min-[1200px]/shell:flex',
-            )}
-          >
-            <ChatPanel
-              config={queryConfig}
-              needsApiKey={apiKey.needsApiKey}
-              hasApiKey={apiKey.hasApiKey}
-              userKeyQuotaExceeded={apiKey.userKeyQuotaExceeded}
-              pendingQuotaRetry={apiKey.pendingQuotaRetry}
-              onSetApiKey={apiKey.setApiKey}
-              onClearApiKey={apiKey.clearApiKey}
-              onQuotaRebuff={apiKey.onQuotaRebuff}
-              onNormalResponse={apiKey.onNormalResponse}
-              onConsumePendingRetry={apiKey.consumePendingRetry}
-              showDrawerToggle={debugMode}
-              drawerOpen={drawerOpen}
-              onToggleDrawer={() => setDrawerOpen((v) => !v)}
-            />
-          </div>
-          {overviewOpen && (
-            <div className="flex-1 min-w-0 flex flex-col overflow-hidden @min-[1200px]/shell:border-l">
-              <DataOverviewPanel />
+      {chatMounted && (
+        <div style={{ display: readOnly ? 'none' : 'contents' }}>
+          {/* Sidebar drawer — debug mode only */}
+          {debugMode && drawerOpen && (
+            <div className="udi:w-56 udi:shrink-0 udi:border-r udi:bg-background udi:overflow-hidden udi:flex udi:flex-col">
+              <ConversationList />
             </div>
           )}
+          {/*
+           * Left region: chat and the data overview. Above 1200px both fit beside
+           * the dashboard (400 + 400 + 400), so the region doubles in width and
+           * shows them side by side. Below it, the overview takes the chat's slot
+           * and the chat is CSS-hidden rather than unmounted, so a streaming
+           * response and the message list's scroll position survive the swap.
+           * ponytail: 1200 is the one knob — inlined in the variants below because
+           * Tailwind scans source text and cannot read a constant.
+           */}
+          <div
+            className={cn(
+              'udi:shrink-0 udi:min-w-[300px] udi:border-r udi:flex udi:flex-col udi:overflow-hidden',
+              overviewOpen ? 'udi:w-[400px] udi:@min-[1200px]/shell:w-[800px]' : 'udi:w-[400px]',
+            )}
+          >
+            <ViewSwitch
+              overviewOpen={overviewOpen}
+              onChange={(open) => globalStore.getState().setOverview(open)}
+            />
+            <div className="udi:flex udi:flex-1 udi:min-h-0">
+              <div
+                // A popover opened from a chart *in the chat* aligns its left edge
+                // to this column rather than to its trigger, which sits indented
+                // inside a bubble — 320px starting there would spill over the
+                // dashboard. Found with `closest()` from the trigger, so no ref or
+                // context is needed.
+                data-udi-chat-column=""
+                className={cn(
+                  'udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden',
+                  overviewOpen && 'udi:hidden udi:@min-[1200px]/shell:flex',
+                )}
+              >
+                <ChatPanel
+                  config={queryConfig}
+                  needsApiKey={apiKey.needsApiKey}
+                  hasApiKey={apiKey.hasApiKey}
+                  userKeyQuotaExceeded={apiKey.userKeyQuotaExceeded}
+                  pendingQuotaRetry={apiKey.pendingQuotaRetry}
+                  onSetApiKey={apiKey.setApiKey}
+                  onClearApiKey={apiKey.clearApiKey}
+                  onQuotaRebuff={apiKey.onQuotaRebuff}
+                  onNormalResponse={apiKey.onNormalResponse}
+                  onConsumePendingRetry={apiKey.consumePendingRetry}
+                  showDrawerToggle={debugMode}
+                  drawerOpen={drawerOpen}
+                  onToggleDrawer={() => setDrawerOpen((v) => !v)}
+                />
+              </div>
+              {overviewOpen && (
+                <div className="udi:flex-1 udi:min-w-0 udi:flex udi:flex-col udi:overflow-hidden udi:@min-[1200px]/shell:border-l">
+                  <DataOverviewPanel />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+      )}
+      <div className="udi:relative udi:flex-1 udi:min-w-0 udi:overflow-hidden">
+        <DashboardPanel seeding={seeding} />
+        {readOnly && !readOnlyLocked && <ExploreDataButton onClick={exitReadOnly} />}
       </div>
-      <div className="flex-1 min-w-0 overflow-hidden">
-        <DashboardPanel />
-      </div>
+      {issueReporting && <IssueReportDialog />}
     </div>
+  );
+}
+
+/**
+ * The way out of read-only, floating over the dashboard's bottom-right corner
+ * just left of its scroll buttons: a reader looking at the charts is looking
+ * there. `absolute`, not `fixed` — embedded in a host's column, `fixed` would
+ * pin it to the host page's viewport.
+ */
+function ExploreDataButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="udi:absolute udi:right-14 udi:bottom-3 udi:z-20 udi:h-11 udi:gap-2 udi:rounded-lg udi:border udi:border-udi-gray-300 udi:bg-udi-primary-700 udi:px-5 udi:text-base udi:text-white udi:shadow-lg udi:hover:bg-udi-primary-700/90"
+    >
+      <Sparkles className="udi:size-5" />
+      Explore Data
+    </Button>
   );
 }
 
@@ -265,14 +552,14 @@ function ViewSwitch({
     <div
       role="group"
       aria-label="Sidebar view"
-      className="flex gap-1 border-b px-2 py-1.5 @min-[1200px]/shell:hidden"
+      className="udi:flex udi:gap-1 udi:border-b udi:px-2 udi:py-1.5 udi:@min-[1200px]/shell:hidden"
     >
       <Button
         variant={overviewOpen ? 'ghost' : 'secondary'}
         size="sm"
         aria-pressed={!overviewOpen}
         onClick={() => onChange(false)}
-        className="h-6 flex-1 text-xs"
+        className="udi:h-6 udi:flex-1 udi:text-xs"
       >
         Chat
       </Button>
@@ -281,11 +568,62 @@ function ViewSwitch({
         size="sm"
         aria-pressed={overviewOpen}
         onClick={() => onChange(true)}
-        className="h-6 flex-1 text-xs"
+        className="udi:h-6 udi:flex-1 udi:text-xs"
       >
         Data
       </Button>
     </div>
+  );
+}
+
+/**
+ * The toolkit provider and our root element, split out because both take the
+ * text-size preference, which lives in the global store and so is only
+ * reachable under UDIChatProvider.
+ */
+function ScaledRoot({
+  props,
+  rootRef,
+  palette,
+}: {
+  props: UDIChatConfig;
+  rootRef: RefObject<HTMLDivElement | null>;
+  palette: UDIPalette | undefined;
+}) {
+  const fontScale = useGlobal(selectFontScale);
+  // A stable wrapper, so a host passing an inline function doesn't rebuild
+  // every table's columns on each of its renders; it still calls the latest.
+  const latestRecordUrl = useRef(props.recordUrl);
+  useLayoutEffect(() => {
+    latestRecordUrl.current = props.recordUrl;
+  });
+  const hasRecordUrl = props.recordUrl != null;
+  const recordUrl = useMemo<RecordUrlFn | undefined>(
+    () =>
+      hasRecordUrl ? (record, entity) => latestRecordUrl.current?.(record, entity) : undefined,
+    [hasRecordUrl],
+  );
+  return (
+    <UDIToolkitProvider palette={palette} fontScale={fontScale} recordUrl={recordUrl}>
+      <MascotProvider mascot={props.mascot}>
+        <SplashMessagesProvider messages={props.splashMessages}>
+          {/*
+           * The `udi-yac` class is the scope for every design token and element
+           * reset in index.css. Without it nothing is styled — and with the
+           * tokens on :root instead, mounting us inside a shadcn host would
+           * retheme that host's pages. `--udi-font-scale` drives the text-size
+           * tokens there.
+           */}
+          <div
+            ref={rootRef}
+            className={cn('udi-yac udi:h-full udi:w-full', props.className)}
+            style={{ ...props.style, '--udi-font-scale': fontScale } as CSSProperties}
+          >
+            <UDIChatInner {...props} />
+          </div>
+        </SplashMessagesProvider>
+      </MascotProvider>
+    </UDIToolkitProvider>
   );
 }
 
@@ -298,46 +636,42 @@ function UDIChatValidated(props: UDIChatConfig) {
   // scoped design tokens live) instead of to document.body, and so the
   // dashboard's drag state can be scoped to us rather than the host page.
   const rootRef = useRef<HTMLDivElement>(null);
+  // Charts and tables render inside `.udi-yac` but are drawn by Vega and
+  // ag-grid, neither of which can see our CSS — so the theme has to be handed
+  // to them as colors. `props.palette` still wins per channel.
+  const themePalette = useThemePalette(rootRef, props.palette);
   return (
     <TooltipProvider>
       <ChatRootProvider value={rootRef}>
-        <UDIChatProvider>
-          <TrackerProvider onEvent={props.onEvent}>
-            <DownloadActionsProvider actions={props.downloadActions}>
-              <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
-                <EntityIconsProvider icons={props.entityIcons}>
-                  {/*
-                   * UDIToolkitProvider supersedes the previous local PaletteProvider:
-                   * it ships in udi-toolkit/react, sets palette on the React
-                   * Context that <UDIVis> already reads, and (optionally) auto-
-                   * loads a data package. We only use the palette half here —
-                   * the data package is still owned by dataPackageStore so the
-                   * existing rich state (loadingPhase, sourceFields, etc.) keeps
-                   * working unchanged.
-                   */}
-                  <UDIToolkitProvider palette={props.palette}>
-                    <MascotProvider mascot={props.mascot}>
-                      <SplashMessagesProvider messages={props.splashMessages}>
+        <UDIChatProvider
+          readOnly={props.readOnly}
+          fontScale={props.fontScale}
+          refitOnReadOnlyChange={props.refitOnReadOnlyChange}
+        >
+          <ApiConfigProvider apiBaseUrl={props.apiBaseUrl} authToken={props.authToken}>
+            <IssueReportingProvider value={props.issueReporting === true}>
+              <TrackerProvider onEvent={props.onEvent}>
+                <DownloadActionsProvider actions={props.downloadActions}>
+                  <DownloadButtonLabelProvider label={props.downloadButtonLabel}>
+                    <SavedSessionsKeyProvider storageKey={props.savedSessionsKey}>
+                      <EntityIconsProvider icons={props.entityIcons}>
                         {/*
-                         * The `udi-yac` class is the scope for every design token
-                         * and element reset in index.css. Without it nothing is
-                         * styled — and with the tokens on :root instead, mounting
-                         * us inside a shadcn host would retheme that host's pages.
+                         * UDIToolkitProvider supersedes the previous local PaletteProvider:
+                         * it ships in udi-toolkit/react, sets palette on the React
+                         * Context that <UDIVis> already reads, and (optionally) auto-
+                         * loads a data package. We only use the palette half here —
+                         * the data package is still owned by dataPackageStore so the
+                         * existing rich state (loadingPhase, sourceFields, etc.) keeps
+                         * working unchanged.
                          */}
-                        <div
-                          ref={rootRef}
-                          className={cn('udi-yac h-full w-full', props.className)}
-                          style={props.style}
-                        >
-                          <UDIChatInner {...props} />
-                        </div>
-                      </SplashMessagesProvider>
-                    </MascotProvider>
-                  </UDIToolkitProvider>
-                </EntityIconsProvider>
-              </DownloadButtonLabelProvider>
-            </DownloadActionsProvider>
-          </TrackerProvider>
+                        <ScaledRoot props={props} rootRef={rootRef} palette={themePalette} />
+                      </EntityIconsProvider>
+                    </SavedSessionsKeyProvider>
+                  </DownloadButtonLabelProvider>
+                </DownloadActionsProvider>
+              </TrackerProvider>
+            </IssueReportingProvider>
+          </ApiConfigProvider>
         </UDIChatProvider>
       </ChatRootProvider>
     </TooltipProvider>
@@ -345,9 +679,24 @@ function UDIChatValidated(props: UDIChatConfig) {
 }
 
 export function UDIChat(props: UDIChatConfig) {
+  // Every endpoint is `${apiBaseUrl}/v1/...`, so a trailing slash asks for
+  // `//v1/...`, which the agent 404s. `?.` leaves a missing value for
+  // validateConfig to report.
+  const apiBaseUrl = props.apiBaseUrl?.replace(/\/+$/, '');
   return (
-    <ErrorBoundary>
-      <UDIChatValidated {...props} />
+    <ErrorBoundary
+      issueReport={props.issueReporting ? { apiBaseUrl, authToken: props.authToken } : undefined}
+    >
+      <UDIChatValidated {...props} apiBaseUrl={apiBaseUrl} />
     </ErrorBoundary>
   );
+}
+
+/**
+ * `UDIChat` started in read-only mode — the dashboard embed. Pass
+ * `initialSession` to give it something to show, and `readOnly="locked"` via
+ * `UDIChat` itself if the user must not be able to open the chat at all.
+ */
+export function UDIDashboard(props: Omit<UDIChatConfig, 'readOnly'>) {
+  return <UDIChat {...props} readOnly />;
 }

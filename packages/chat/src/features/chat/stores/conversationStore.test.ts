@@ -94,4 +94,31 @@ describe('conversationStore', () => {
     // Original state should not have been mutated.
     expect(typeof store.getState().messages[1].tool_calls![0].function.arguments).toBe('object');
   });
+
+  it('hides the messages so far, keeping them for the model and new ones visible', () => {
+    const store = createConversationStore();
+    store.getState().addMessage(msg({ content: 'seeded' }));
+    store.getState().hideMessages();
+    store.getState().addMessage(msg({ content: 'fresh' }));
+
+    expect(store.getState().hiddenCount).toBe(1);
+    expect(store.getState().getMessagesFormattedForLLM()).toHaveLength(2);
+  });
+
+  it('shows everything again for a new or loaded conversation, and clamps on a trim', () => {
+    const store = createConversationStore();
+    store.getState().loadConversation([msg(), msg(), msg()]);
+    store.getState().hideMessages();
+
+    // A retry trims in place: the watermark cannot outrun the list.
+    store.getState().loadConversation([msg()], { keepId: true });
+    expect(store.getState().hiddenCount).toBe(1);
+
+    store.getState().loadConversation([msg(), msg()]);
+    expect(store.getState().hiddenCount).toBe(0);
+
+    store.getState().hideMessages();
+    store.getState().newConversation();
+    expect(store.getState().hiddenCount).toBe(0);
+  });
 });

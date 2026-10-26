@@ -21,20 +21,29 @@ const outPath = resolve(here, '../../agent/tests/goldens/parity.json');
 setActivePinia(createPinia());
 const store = useDataSourcesStore();
 
-// Entities available to specs. The pytest side registers the same CSVs as
-// DuckDB views, so both compilers read identical data.
+// Entities available to specs. The pytest side registers the same files as
+// DuckDB views, so both compilers read identical data. donors/samples come
+// from the committed HuBMAP package — the only copy of that data in the repo.
 const SOURCES = {
   penguins: 'penguins.csv',
-  donors: 'donors.csv',
-  samples: 'samples.csv',
+  donors: 'hubmap/donors.tsv',
+  samples: 'hubmap/samples.tsv',
 };
 for (const [name, file] of Object.entries(SOURCES)) {
-  const table = fromCSV(readFileSync(join(sampleData, file), 'utf8'));
+  // Delimiter by extension, as the toolkit's own loaders infer it.
+  const delimiter = file.endsWith('.tsv') ? '\t' : ',';
+  const table = fromCSV(readFileSync(join(sampleData, file), 'utf8'), {
+    delimiter,
+  });
   store.seedDataSource(name, file, table);
 }
 
 const src = (name) => ({ name, source: SOURCES[name] });
-const notNull = (f) => ({ op: '!=', left: { field: f }, right: { literal: null } });
+const notNull = (f) => ({
+  op: '!=',
+  left: { field: f },
+  right: { literal: null },
+});
 
 // [name, {source, transformation}, selections?, displayDataOnly?]
 const CASES = [
@@ -45,6 +54,59 @@ const CASES = [
       transformation: [
         { groupby: 'species' },
         { rollup: { count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // Carrying a *nominal* value through a rollup, which the stratified survival
+    // templates rest on: the aggregate has to return the string itself, and one
+    // group is deliberately all-null so the empty case is covered too. The rollup
+    // output is named after an existing column, as those templates do, which is
+    // safe because a rollup emits a fresh relation of group keys plus outputs.
+    //
+    // The derived input has a name of its own rather than overwriting `island`,
+    // which is how the templates are written. Shadowing is legal in both
+    // executors now — see `derive-shadowing-column` below and
+    // `test/derive-shadowing.mjs`.
+    'rollup-max-nominal-conditional',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            'adelie island': {
+              if: {
+                op: '==',
+                left: { field: 'species' },
+                right: { literal: 'Adelie' },
+              },
+              then: { field: 'island' },
+              else: { literal: null },
+            },
+          },
+        },
+        { groupby: 'species' },
+        { rollup: { island: { op: 'max', field: 'adelie island' } } },
+      ],
+    },
+  ],
+  [
+    // Broadcast an aggregate onto every row, then re-group by a finer key — the
+    // shape that lets one subject's span reach several groups.
+    'regroup-after-broadcast-derive',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        { groupby: 'species' },
+        { derive: { 'species max': { agg: 'max', field: 'body_mass_g' } } },
+        { groupby: ['species', 'island'] },
+        {
+          rollup: {
+            hi: { op: 'max', field: 'species max' },
+            n: { op: 'count' },
+          },
+        },
       ],
     },
   ],
@@ -86,8 +148,16 @@ const CASES = [
         {
           filter: {
             op: '&&',
-            left: { op: '>', left: { field: 'bill_length_mm' }, right: { literal: 45 } },
-            right: { op: '==', left: { field: 'sex' }, right: { literal: 'MALE' } },
+            left: {
+              op: '>',
+              left: { field: 'bill_length_mm' },
+              right: { literal: 45 },
+            },
+            right: {
+              op: '==',
+              left: { field: 'sex' },
+              right: { literal: 'MALE' },
+            },
           },
         },
         { groupby: 'species' },
@@ -111,9 +181,17 @@ const CASES = [
         },
         {
           derive: {
-            ratio: { op: '/', left: { field: 'mass' }, right: { field: 'flipper' } },
+            ratio: {
+              op: '/',
+              left: { field: 'mass' },
+              right: { field: 'flipper' },
+            },
             size: {
-              if: { op: '>', left: { field: 'mass' }, right: { literal: 1_000_000 } },
+              if: {
+                op: '>',
+                left: { field: 'mass' },
+                right: { literal: 1_000_000 },
+              },
               then: { literal: 'big' },
               else: { literal: 'small' },
             },
@@ -173,6 +251,227 @@ const CASES = [
     },
   ],
   [
+    // log/exp exist to write a running PRODUCT as exp(rolling sum(log)) — the
+    // Kaplan-Meier estimate. The at-risk count comes from rank() over a UNIQUE
+    // order (see rolling-percentile on ties), and every factor is positive, so
+    // no log(0) arises; the templates guard that case with a conditional.
+    'rolling-log-exp-product',
+    {
+      source: src('donors'),
+      transformation: [
+        { filter: notNull('age_value') },
+        { groupby: 'sex' },
+        { derive: { n: { agg: 'count' } } },
+        { orderby: { field: 'hubmap_id', order: 'asc' } },
+        {
+          derive: {
+            at_risk: {
+              op: '+',
+              left: {
+                op: '-',
+                left: { field: 'n' },
+                right: { window: 'rank' },
+              },
+              right: { literal: 1 },
+            },
+          },
+        },
+        {
+          derive: {
+            log_factor: {
+              fn: 'log',
+              args: [
+                {
+                  op: '/',
+                  left: { field: 'at_risk' },
+                  right: {
+                    op: '+',
+                    left: { field: 'at_risk' },
+                    right: { literal: 1 },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          derive: {
+            product: {
+              rolling: {
+                expression: {
+                  fn: 'exp',
+                  args: [{ agg: 'sum', field: 'log_factor' }],
+                },
+              },
+            },
+          },
+        },
+        {
+          rollup: {
+            lo: { op: 'min', field: 'product' },
+            hi: { op: 'max', field: 'product' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // The survival templates' confidence band and time horizon, in the shape
+    // they compile to: Greenwood's running sum and the log-log bounds as
+    // exp(log S * exp(+/-z * exp(log(V)/2) / -log S)), every log and divisor
+    // guarded inside its argument; the band gated by `&&`; then a FILTER on the
+    // still-grouped, still-ordered table, after which a group aggregate and
+    // rank() must see only the surviving rows; and a label whose middle part is
+    // a conditional concat. Age stands in for time, age over 40 for the event.
+    'km-band-horizon',
+    {
+      source: src('donors'),
+      transformation: (() => {
+        const f = (field) => ({ field });
+        const lit = (literal) => ({ literal });
+        const op = (o, left, right) => ({ op: o, left, right });
+        const cond = (i, t, e) => ({ if: i, then: t, else: e });
+        const roll = (o, field) => ({
+          rolling: { expression: { agg: o, field } },
+        });
+        const hasWidth = op('<', f('log_sum'), lit(0));
+        const se = op(
+          '/',
+          {
+            fn: 'exp',
+            args: [
+              op(
+                '*',
+                {
+                  fn: 'log',
+                  args: [
+                    cond(op('>', f('gw_sum'), lit(0)), f('gw_sum'), lit(1)),
+                  ],
+                },
+                lit(0.5),
+              ),
+            ],
+          },
+          cond(hasWidth, op('-', lit(0), f('log_sum')), lit(1)),
+        );
+        const bound = (sign) =>
+          cond(
+            op('&&', op('==', f('ci'), lit(1)), op('>', f('n'), lit(0))),
+            cond(
+              hasWidth,
+              op(
+                '*',
+                {
+                  fn: 'exp',
+                  args: [
+                    op('*', f('log_sum'), {
+                      fn: 'exp',
+                      args: [op('*', lit(sign * 1.959963984540054), se)],
+                    }),
+                  ],
+                },
+                lit(100),
+              ),
+              lit(100),
+            ),
+            lit(null),
+          );
+        return [
+          { filter: notNull('age_value') },
+          // Down to the three columns the case reads and a fifth of the rows
+          // (ages on a multiple of 5, which keeps ties), so the golden stays small.
+          { filter: op('==', op('%', f('age_value'), lit(5)), lit(0)) },
+          { groupby: ['sex', 'hubmap_id', 'age_value'] },
+          { rollup: { rows: { op: 'count' } } },
+          {
+            derive: {
+              died: cond(op('>', f('age_value'), lit(40)), lit(1), lit(0)),
+            },
+          },
+          { derive: { cohort_end: { agg: 'max', field: 'age_value' } } },
+          { groupby: 'sex' },
+          { derive: { n: { agg: 'count' } } },
+          {
+            orderby: [
+              { field: 'age_value', order: 'asc' },
+              { field: 'hubmap_id', order: 'asc' },
+            ],
+          },
+          {
+            derive: {
+              at_risk: op('+', op('-', f('n'), { window: 'rank' }), lit(1)),
+            },
+          },
+          {
+            derive: {
+              factor: op('-', lit(1), op('/', f('died'), f('at_risk'))),
+              gw_term: cond(
+                op('>', f('at_risk'), f('died')),
+                op(
+                  '/',
+                  f('died'),
+                  op('*', f('at_risk'), op('-', f('at_risk'), f('died'))),
+                ),
+                lit(0),
+              ),
+            },
+          },
+          {
+            derive: {
+              log_factor: {
+                fn: 'log',
+                args: [cond(op('>', f('factor'), lit(0)), f('factor'), lit(1))],
+              },
+            },
+          },
+          {
+            derive: {
+              log_sum: roll('sum', 'log_factor'),
+              gw_sum: roll('sum', 'gw_term'),
+            },
+          },
+          { derive: { ci: lit(1), horizon: lit(60) } },
+          { derive: { lower: bound(1), upper: bound(-1) } },
+          {
+            derive: {
+              cut: cond(op('>', f('cohort_end'), f('horizon')), lit(1), lit(0)),
+            },
+          },
+          { filter: op('<=', f('age_value'), f('horizon')) },
+          {
+            derive: {
+              events_in_window: { agg: 'sum', field: 'died' },
+              first_row: cond(
+                op('==', { window: 'rank' }, lit(1)),
+                lit(1),
+                lit(0),
+              ),
+            },
+          },
+          {
+            derive: {
+              label: {
+                concat: [
+                  f('sex'),
+                  cond(
+                    op('==', f('cut'), lit(1)),
+                    { concat: [lit(' at '), f('horizon'), lit('y')] },
+                    lit(''),
+                  ),
+                  lit(' ('),
+                  f('events_in_window'),
+                  lit(' events)'),
+                ],
+              },
+            },
+          },
+        ];
+      })(),
+    },
+    null,
+    true,
+  ],
+  [
     'groupby-derive-window-agg',
     {
       source: src('penguins'),
@@ -202,6 +501,35 @@ const CASES = [
     },
   ],
   [
+    // A stacked histogram: binby, then a groupby adding a category to the bins.
+    // The browser executor once grouped by the bin keys without making them
+    // columns, so naming `start`/`end` again failed there and not in SQL.
+    'binby-then-groupby',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        { binby: { field: 'body_mass_g', bins: 10, nice: true } },
+        { groupby: ['start', 'end', 'species'] },
+        { rollup: { count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // Bins as nice multiples of a unit (here 365.25, a year in days) rather
+    // than of a power of ten. A non-integer unit, so both executors must scale
+    // the edges back the same way.
+    'binby-unit',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        { binby: { field: 'body_mass_g', bins: 10, nice: true, unit: 365.25 } },
+        { rollup: { count: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
     'derive-percent-of-max',
     {
       source: src('penguins'),
@@ -217,6 +545,59 @@ const CASES = [
             },
           },
         },
+      ],
+    },
+  ],
+  [
+    // The shape the presence-stratified survival templates rest on: reduce the
+    // second table to one row per key, LEFT join so the unmatched keep a null
+    // marker, and turn that null into a label. An inner join cannot express this
+    // — it drops exactly the rows whose answer is "no" — so the executors have to
+    // agree on both the left join and on `in`/`out` naming a reduction of a table
+    // that is not the pipeline's current one.
+    'left-join-presence-marker',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        // Narrowed to a category only 18 of the 266 donors have, so the
+        // unmatched majority actually exercises the null-marker branch. Every
+        // donor has *some* sample, which would leave the "no" group empty and
+        // pin nothing.
+        {
+          filter: {
+            op: '==',
+            left: { field: 'sample_category' },
+            right: { literal: 'suspension' },
+          },
+          in: 'samples',
+          out: 'samples',
+        },
+        { groupby: 'donor.hubmap_id', in: 'samples' },
+        {
+          rollup: { marker: { op: 'count' } },
+          in: 'samples',
+          out: 'samples_by_donor',
+        },
+        {
+          join: { on: ['hubmap_id', 'donor.hubmap_id'], kind: 'left' },
+          in: ['donors', 'samples_by_donor'],
+          out: 'donors_p',
+        },
+        {
+          derive: {
+            group: {
+              if: {
+                op: '!=',
+                left: { field: 'marker' },
+                right: { literal: null },
+              },
+              then: { literal: 'has samples' },
+              else: { literal: 'no samples' },
+            },
+          },
+        },
+        { groupby: ['group', 'sex'] },
+        { rollup: { n: { op: 'count' } } },
       ],
     },
   ],
@@ -279,6 +660,114 @@ const CASES = [
         type: 'point',
       },
     },
+  ],
+  // Subject scope: a selection on samples, matched per donor. On samples
+  // itself (keyed on the donor column both sides) it keeps every sample of a
+  // matching donor; on donors it keeps the donors themselves. Samples created
+  // since mid-2023 split the donors three ways: some have only those, some
+  // only older ones, some both.
+  ...['any', 'all', 'none'].flatMap((match) => [
+    [
+      `named-filter-subject-same-table-${match}`,
+      {
+        source: src('samples'),
+        transformation: [
+          {
+            filter: {
+              name: 'sel_sample',
+              source: 'samples',
+              match,
+              entityRelationship: {
+                originKey: 'donor.hubmap_id',
+                targetKey: 'donor.hubmap_id',
+              },
+            },
+          },
+          { groupby: 'sample_category' },
+          { rollup: { n: { op: 'count' } } },
+        ],
+      },
+      {
+        sel_sample: {
+          dataSourceKey: 'samples',
+          selection: {
+            created_timestamp: [1_690_000_000_000, 1_800_000_000_000],
+          },
+          type: 'interval',
+        },
+      },
+    ],
+    [
+      `named-filter-subject-cross-table-${match}`,
+      {
+        source: src('donors'),
+        transformation: [
+          {
+            filter: {
+              name: 'sel_sample',
+              source: 'samples',
+              match,
+              entityRelationship: {
+                originKey: 'donor.hubmap_id',
+                targetKey: 'hubmap_id',
+              },
+            },
+          },
+          { groupby: 'sex' },
+          { rollup: { n: { op: 'count' } } },
+        ],
+      },
+      {
+        sel_sample: {
+          dataSourceKey: 'samples',
+          selection: {
+            created_timestamp: [1_690_000_000_000, 1_800_000_000_000],
+          },
+          type: 'interval',
+        },
+      },
+    ],
+  ]),
+  [
+    // The chat's cohort report (`onCohortChange`): every filter in place
+    // reaching the subject — here a per-donor sample filter and a filter on
+    // donors itself, chained — then the subject's keys, grouped so a remote
+    // package returns all of them rather than its row cap.
+    'cohort-keys',
+    {
+      source: src('donors'),
+      transformation: [
+        {
+          filter: {
+            name: 'sel_sample',
+            source: 'samples',
+            match: 'any',
+            entityRelationship: {
+              originKey: 'donor.hubmap_id',
+              targetKey: 'hubmap_id',
+            },
+          },
+        },
+        { filter: { name: 'sel_donor', source: 'donors' } },
+        { groupby: ['hubmap_id'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+    {
+      sel_sample: {
+        dataSourceKey: 'samples',
+        selection: {
+          created_timestamp: [1_690_000_000_000, 1_800_000_000_000],
+        },
+        type: 'interval',
+      },
+      sel_donor: {
+        dataSourceKey: 'donors',
+        selection: { sex: ['Female'] },
+        type: 'point',
+      },
+    },
+    true, // displayDataOnly, as the chat asks for it
   ],
   [
     // A brush whose fields don't exist in the target table (e.g. landed on
@@ -359,6 +848,244 @@ const CASES = [
       },
     },
     false, // displayDataOnly: force the extent pass
+  ],
+  [
+    // A dynamic stratification grouping, nominal: values combined into named
+    // strata by a chain of `==` under `||`, with everything unclaimed falling to
+    // an Other label. This is exactly what `udiagent.stratify.grouping_expr`
+    // emits, and it has to mean the same thing in both executors — a grouped
+    // survival curve computes its strata in a derive and then groups by them.
+    'derive-nominal-grouping',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '||',
+                left: {
+                  op: '==',
+                  left: { field: 'species' },
+                  right: { literal: 'Adelie' },
+                },
+                right: {
+                  op: '==',
+                  left: { field: 'species' },
+                  right: { literal: 'Gentoo' },
+                },
+              },
+              then: { literal: 'Adelie or Gentoo' },
+              else: { literal: 'Other' },
+            },
+          },
+        },
+        { groupby: 'stratum' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // The same, quantitative: ascending `<` tests, so the first that passes is
+    // the right bucket and the final else is everything at or above the last
+    // cut. Half-open on the right in both executors, or a subject at exactly the
+    // threshold lands in a different curve depending on where the query ran.
+    'derive-quantitative-grouping',
+    {
+      source: src('penguins'),
+      transformation: [
+        { filter: notNull('body_mass_g') },
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '<',
+                left: { field: 'body_mass_g' },
+                right: { literal: 3500 },
+              },
+              then: { literal: '< 3500' },
+              else: {
+                if: {
+                  op: '<',
+                  left: { field: 'body_mass_g' },
+                  right: { literal: 4500 },
+                },
+                then: { literal: '3500-4500' },
+                else: { literal: '>= 4500' },
+              },
+            },
+          },
+        },
+        { groupby: 'stratum' },
+        {
+          rollup: {
+            n: { op: 'count' },
+            heaviest: { op: 'max', field: 'body_mass_g' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // A join whose key has the SAME name on both sides, with that key then used
+    // downstream. Arquero keeps one copy; SQL has to be told to, because USING
+    // dedups on DuckDB but keeps both copies on StarRocks and every later
+    // reference to the key is then ambiguous.
+    'join-same-key-then-groupby',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        { groupby: 'group_name', in: 'samples' },
+        {
+          rollup: { samples_count: { op: 'count' } },
+          in: 'samples',
+          out: 'by_group',
+        },
+        {
+          join: { on: ['group_name', 'group_name'], kind: 'left' },
+          in: ['donors', 'by_group'],
+          out: 'joined',
+        },
+        { groupby: 'group_name' },
+        {
+          rollup: {
+            donors: { op: 'count' },
+            samples_count: { op: 'max', field: 'samples_count' },
+          },
+        },
+      ],
+    },
+  ],
+  [
+    // Columns present on BOTH sides of a join that are not the key: Arquero
+    // renames them '<name>_1' / '<name>_2', and SQL has to do the same or the
+    // relation holds two columns with one name. Both sides are narrowed to one
+    // group first so the cross product stays small.
+    'join-colliding-non-key-columns',
+    {
+      source: [src('donors'), src('samples')],
+      transformation: [
+        {
+          filter: {
+            op: '==',
+            left: { field: 'group_name' },
+            right: { literal: 'Vanderbilt TMC' },
+          },
+          in: 'donors',
+          out: 'donors',
+        },
+        {
+          filter: {
+            op: '==',
+            left: { field: 'sample_category' },
+            right: { literal: 'organ' },
+          },
+          in: 'samples',
+          out: 'samples',
+        },
+        {
+          join: { on: ['group_name', 'group_name'] },
+          in: ['donors', 'samples'],
+          out: 'joined',
+        },
+        { groupby: ['mapped_consortium_1', 'sample_category'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // unnest with the default `out`, i.e. overwriting the source column — the
+    // shape every multi-value template uses. medical_history is a comma-joined
+    // list, and blank cells must expand to no rows at all.
+    'unnest-multivalue',
+    {
+      source: src('donors'),
+      transformation: [
+        { unnest: { field: 'medical_history', separator: ',' } },
+        { groupby: 'medical_history' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // unnest into a fresh column: the source column survives alongside it, and
+    // the row multiplication has to carry every other column through.
+    'unnest-explicit-out',
+    {
+      source: src('donors'),
+      transformation: [
+        {
+          unnest: {
+            field: 'medical_history',
+            separator: ',',
+            out: 'condition',
+          },
+        },
+        { groupby: ['condition', 'sex'] },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // A derive that REUSES an existing column's name replaces it in both
+    // executors (test/derive-shadowing.mjs pins the Arquero half). Aggregating
+    // the shadowed name afterwards is what makes the difference visible.
+    'derive-shadowing-column',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            island: {
+              if: {
+                op: '==',
+                left: { field: 'species' },
+                right: { literal: 'Adelie' },
+              },
+              then: { field: 'island' },
+              else: { literal: 'other' },
+            },
+          },
+        },
+        { groupby: 'island' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
+  ],
+  [
+    // A quantitative stratifier cut at 4000 g, as udiagent.stratify.grouping_expr
+    // writes it (test_query_parity checks the two stay identical). Two penguins
+    // have no body mass: both executors must give them a null stratum, not the
+    // bucket each one's `null < 4000` happens to pick.
+    'stratum-cut-with-nulls',
+    {
+      source: src('penguins'),
+      transformation: [
+        {
+          derive: {
+            stratum: {
+              if: {
+                op: '==',
+                left: { field: 'body_mass_g' },
+                right: { literal: null },
+              },
+              then: { literal: null },
+              else: {
+                if: {
+                  op: '<',
+                  left: { field: 'body_mass_g' },
+                  right: { literal: 4000 },
+                },
+                then: { literal: '< 4000' },
+                else: { literal: '≥ 4000' },
+              },
+            },
+          },
+        },
+        { groupby: 'stratum' },
+        { rollup: { n: { op: 'count' } } },
+      ],
+    },
   ],
 ];
 

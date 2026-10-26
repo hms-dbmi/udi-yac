@@ -5,17 +5,24 @@ import type {
   DataPackageResource,
   CategoricalDomain,
   CubeInfo,
+  IntervalDomain,
   ValidStatus,
   EntityRelationship,
   ExportRowSet,
 } from '@/types/dataPackage';
 import { joinDataPath } from '@/features/data-package';
+// Relative, not via the feature barrel: the barrel already imports this store,
+// and normalizePointValues is needed at module-eval time by the validators.
+import { normalizePointValues } from '../utils/filterDiagnosis';
+import { humanizeFieldName } from '@/utils/humanize';
 import { httpError } from '@/utils/httpError';
 import {
   loadDataPackage,
   createRemoteBackend,
   setQueryBackend,
+  setTimeFormats,
   type SourceSpec,
+  type TimeFormats,
 } from 'udi-toolkit/react';
 
 export type LoadingPhase = 'idle' | 'fetching' | 'domains' | 'ready' | 'error';
@@ -70,6 +77,13 @@ export interface DataPackageState {
   interactiveMode: boolean;
   /** True while a remote batched query round-trip is in flight. */
   remoteQueryPending: boolean;
+  /** Current bearer token for server calls, held here rather than captured by
+   *  the remote backend so a host that refreshes the token does not force the
+   *  whole data package to be reloaded. */
+  authToken: string | undefined;
+  /** Update the token used by subsequent server calls. Cheap: the next batched
+   *  query picks it up; nothing is refetched. */
+  setAuthToken: (authToken: string | undefined) => void;
   fetchDataPackage: (path: string, fetchOptions?: RequestInit) => Promise<void>;
   /** Load a server-side package: fetches introspected metadata from
    *  GET /v1/yac/metadata and routes all queries through POST /v1/yac/query
@@ -85,6 +99,24 @@ export interface DataPackageState {
     fetchOptions?: RequestInit,
   ) => Promise<void>;
   getDomainForField: (entity: string, field: string) => DataFieldDomain | undefined;
+  /**
+   * Can this filter be applied?
+   *
+   * - `no`   — definitively invalid: the field is not in the schema, or it has
+   *            a domain and a requested value isn't in it.
+   * - `unknown` — unverifiable: the package hasn't loaded, or the field exists
+   *            but has no domain of the right type. A server-side package omits
+   *            categorical domains above 80 distinct values (introspect.py), so
+   *            this is common and must NOT be treated as invalid — callers
+   *            admit anything that isn't `no`.
+   * - `yes`  — verified against a real domain.
+   *
+   * `no` is anchored to `sourceFields`, which is set atomically when the
+   * package loads and never changes after, rather than to domain presence,
+   * which streams in per entity. That makes `no` monotone: a filter rejected
+   * once stays rejected, and one admitted while domains were still arriving is
+   * never silently lost.
+   */
   isValidIntervalFilter: (entity: string, field: string) => ValidStatus;
   isValidPointFilter: (entity: string, field: string, values: unknown[]) => ValidStatus;
   getEntityRelationship: (originSource: string, targetSource: string) => EntityRelationship | null;
@@ -96,12 +128,60 @@ export interface DataPackageState {
   /** The rollup op that correctly re-aggregates `measure` when a marginal is
    *  contracted, or null when the measure cannot be contracted at all. */
   getCubeMeasureOp: (entity: string, measure: string) => ContractOp | null;
+  /**
+   * The relationship a filter on `originSource`, scoped to `subject`, filters
+   * `targetSource` through: both keys name the subject's id, as `origin`
+   * and `target` each hold it. Only direct foreign keys to or from the subject
+   * count — a shared-parent bridge joins on the parent's key, which is not the
+   * subject. `null` when either table cannot be keyed to the subject.
+   */
+  getSubjectRelationship: (
+    originSource: string,
+    targetSource: string,
+    subject: string,
+  ) => EntityRelationship | null;
   /** Key columns of an entity — primary key, foreign keys, and udi:unique
    *  fields, in schema field order. Used by the table view's "relevant
    *  fields" mode so rows stay identifiable. */
   getKeyFields: (entity: string) => string[];
+  /**
+   * Friendly display label for a column: the schema's `title` when the package
+   * author supplied one, else a humanized `name`. Display only — every spec,
+   * filter and query still keys on the raw field name.
+   */
+  getFieldLabel: (entity: string, field: string) => string;
+  /** Friendly display label for an entity: the resource's `title`, else humanized. */
+  getEntityLabel: (entity: string) => string;
+  /** Friendly display label for a categorical value, via the package-level
+   *  `udi:labels` map. Unmapped values pass through untouched. */
+  getValueLabel: (value: string) => string;
+  /** A field's declared `udi:data_type` (quantitative / ordinal / nominal).
+   *  Available straight from the schema, unlike domains, which load from CSVs. */
+  getFieldDataType: (entity: string, field: string) => string | undefined;
+  /** A field's declared `udi:time_format` (e.g. `epoch_ms`), if it holds dates. */
+  getTimeFormat: (entity: string, field: string) => string | undefined;
+  /** Whether a resource declares this column at all. `getFieldLabel` humanizes
+   *  what it cannot find rather than reporting the miss, so a caller holding a
+   *  column but not its entity — a chart title naming a column from one of
+   *  several joined sources — asks this first. */
+  hasField: (entity: string, field: string) => boolean;
   setFilteredData: (entity: string, data: ExportRowSet) => void;
 }
+
+/**
+ * A domain as it is sent to the agent: the toolkit's shape plus the true
+ * `distinct` count, and `omitted` when the values were left out for size. The
+ * count is what stops a shortened list reading as a complete one.
+ */
+interface SentCategoricalDomain {
+  values: string[];
+  distinct: number;
+  omitted?: boolean;
+}
+
+type SentFieldDomain = Omit<DataFieldDomain, 'domain'> & {
+  domain: IntervalDomain | SentCategoricalDomain;
+};
 
 function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
   if (!data?.resources || !Array.isArray(data.resources)) return data;
@@ -116,10 +196,55 @@ function removeVestigialInfo(data: DataPackage | null): DataPackage | null {
   return clone;
 }
 
-function removeLongDomains(data: DataFieldDomain[], threshold = 80): DataFieldDomain[] {
-  return data.filter(
-    (d) => d.type === 'interval' || (d.domain as CategoricalDomain).values.length < threshold,
+/**
+ * How much of one column's value list we are willing to put on the wire,
+ * measured as JSON characters rather than counted.
+ *
+ * A count cannot tell a long vocabulary from an identifier. 284 protocol arms
+ * ("ACNS0334: Regimen B", …) are 7.5 KB and are exactly what a user names; 7,000
+ * research ids are 80 KB and enumerating them helps nobody. Sized, the first
+ * travels and the second is sent as a count — and a column of short ids that
+ * does fit travels too, which costs little and lets the agent check them.
+ */
+const DOMAIN_COLUMN_BUDGET = 16_384;
+
+/** And for the whole payload, which goes out with every chat request. Columns
+ *  over it are omitted largest first, so the many small vocabularies survive. */
+const DOMAIN_TOTAL_BUDGET = 262_144;
+
+/**
+ * Cap each column's value list. Never drop a column.
+ *
+ * This used to `filter` out any categorical domain with 80 or more values,
+ * which deleted 19 of 51 fields on the pcx package — and Patient Agents, whose
+ * every column is high-cardinality, disappeared from the payload entirely. The
+ * orchestrator reads this to decide what exists, so it told the user that table
+ * did not exist. Whatever is trimmed here must stay visible as a named column
+ * with an honest count; `simplify_data_domains` renders that, and the agent's
+ * `ListFieldValues` tool fetches the rest.
+ */
+function capLongDomains(data: DataFieldDomain[]): SentFieldDomain[] {
+  const sizes = data.map((d) =>
+    d.type === 'interval' ? 0 : JSON.stringify((d.domain as CategoricalDomain).values).length,
   );
+  // Smallest first: spending the total budget on the small columns keeps the
+  // most of them, and a column that does not fit on its own is out regardless.
+  const kept = new Set<number>();
+  let total = 0;
+  for (const i of sizes.map((_, i) => i).sort((a, b) => sizes[a] - sizes[b])) {
+    if (data[i].type === 'interval' || sizes[i] > DOMAIN_COLUMN_BUDGET) continue;
+    if (total + sizes[i] > DOMAIN_TOTAL_BUDGET) break;
+    total += sizes[i];
+    kept.add(i);
+  }
+  return data.map((d, i) => {
+    if (d.type === 'interval') return d as SentFieldDomain;
+    const values = (d.domain as CategoricalDomain).values;
+    if (kept.has(i)) {
+      return { ...d, domain: { values, distinct: values.length } };
+    }
+    return { ...d, domain: { values: [], distinct: values.length, omitted: true } };
+  });
 }
 
 function findResource(dp: DataPackage | null, entity: string): DataPackageResource | undefined {
@@ -161,6 +286,18 @@ function computeQuantitativeSourceFields(dp: DataPackage | null): Record<string,
       .map((f) => f.name);
   }
   return fieldsMap;
+}
+
+/** Entity → field → `udi:time_format`, for the toolkit's date rendering. */
+function computeTimeFormats(dp: DataPackage): TimeFormats {
+  const formats: TimeFormats = {};
+  for (const resource of dp.resources ?? []) {
+    for (const f of resource.schema?.fields ?? []) {
+      const format = f['udi:time_format'];
+      if (format) (formats[resource.name] ??= {})[f.name] = format;
+    }
+  }
+  return formats;
 }
 
 function computeCategoricalSourceFields(dp: DataPackage | null): Record<string, string[]> | null {
@@ -208,7 +345,7 @@ function computeDataPackageString(dp: DataPackage | null): string {
 
 function computeDataDomainsString(domains: DataFieldDomain[]): string {
   if (domains.length === 0) return '';
-  return JSON.stringify(removeLongDomains(domains));
+  return JSON.stringify(capLongDomains(domains));
 }
 
 export function createDataPackageStore() {
@@ -228,6 +365,9 @@ export function createDataPackageStore() {
     filteredData: new Map(),
     interactiveMode: true,
     remoteQueryPending: false,
+    authToken: undefined,
+
+    setAuthToken: (authToken: string | undefined) => set({ authToken }),
 
     getDomainForField: (entity: string, field: string) => {
       return get().dataFieldDomains.find((d) => d.entity === entity && d.field === field);
@@ -235,21 +375,27 @@ export function createDataPackageStore() {
 
     isValidIntervalFilter: (entity: string, field: string): ValidStatus => {
       const state = get();
-      if (!state.dataPackage?.resources) return { isValid: 'unknown' };
+      if (!state.dataPackage?.resources || !state.sourceFields) return { isValid: 'unknown' };
+      if (!state.sourceFields[entity]?.includes(field)) return { isValid: 'no' };
       const domain = state.getDomainForField(entity, field);
-      if (!domain) return { isValid: 'no' };
+      if (domain?.type !== 'interval') return { isValid: 'unknown' };
       return { isValid: 'yes' };
     },
 
     isValidPointFilter: (entity: string, field: string, values: unknown[]): ValidStatus => {
       const state = get();
-      if (!state.dataPackage?.resources) return { isValid: 'unknown' };
+      if (!state.dataPackage?.resources || !state.sourceFields) return { isValid: 'unknown' };
+      if (!state.sourceFields[entity]?.includes(field)) return { isValid: 'no' };
       const domain = state.getDomainForField(entity, field);
-      if (!domain) return { isValid: 'no' };
+      if (domain?.type !== 'point') return { isValid: 'unknown' };
       const validValues = (domain.domain as CategoricalDomain).values;
-      if (!validValues) return { isValid: 'no' };
-      const isValid = values.every((v) => validValues.includes(v as string));
-      return { isValid: isValid ? 'yes' : 'no' };
+      if (!validValues) return { isValid: 'unknown' };
+      // An empty request is not a miss: `clearFilter` and unticking the last
+      // box both commit `[]`, and the agent defaults an omitted `pointValues`
+      // to `[""]`. See normalizePointValues.
+      const requested = normalizePointValues(values);
+      if (requested.length === 0) return { isValid: 'yes' };
+      return { isValid: requested.every((v) => validValues.includes(v)) ? 'yes' : 'no' };
     },
 
     getEntityRelationship: (
@@ -321,6 +467,39 @@ export function createDataPackageStore() {
       return NON_ADDITIVE_NAME.test(measure) ? null : 'sum';
     },
 
+    getSubjectRelationship: (
+      originSource: string,
+      targetSource: string,
+      subject: string,
+    ): EntityRelationship | null => {
+      const resources = get().dataPackage?.resources ?? [];
+      // The column on `entity` holding the subject's id, and the subject's
+      // column it refers to — through a FK either way round.
+      const subjectKey = (entity: string): { own: string; subject: string } | null => {
+        const fkFrom = (source: string, target: string) =>
+          resources
+            .find((r) => r.name === source)
+            ?.schema?.foreignKeys?.find((fk) => fk.reference.resource === target);
+        const forward = fkFrom(entity, subject);
+        if (forward) {
+          return { own: forward.fields.at(-1)!, subject: forward.reference.fields.at(-1)! };
+        }
+        const reverse = fkFrom(subject, entity);
+        if (reverse) {
+          return { own: reverse.reference.fields.at(-1)!, subject: reverse.fields.at(-1)! };
+        }
+        return null;
+      };
+      const origin = subjectKey(originSource);
+      if (!origin) return null;
+      if (targetSource === subject) return { originKey: origin.own, targetKey: origin.subject };
+      if (targetSource === originSource) return { originKey: origin.own, targetKey: origin.own };
+      const target = subjectKey(targetSource);
+      // Both must hold the same subject column, or the keys share no domain.
+      if (!target || target.subject !== origin.subject) return null;
+      return { originKey: origin.own, targetKey: target.own };
+    },
+
     getKeyFields: (entity: string): string[] => {
       const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
       if (!resource?.schema) return [];
@@ -342,6 +521,36 @@ export function createDataPackageStore() {
       ];
     },
 
+    getFieldLabel: (entity: string, field: string): string => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      const title = resource?.schema?.fields?.find((f) => f.name === field)?.title;
+      return title?.trim() || humanizeFieldName(field);
+    },
+
+    getEntityLabel: (entity: string): string => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return resource?.title?.trim() || humanizeFieldName(entity);
+    },
+
+    getValueLabel: (value: string): string => {
+      return get().dataPackage?.['udi:labels']?.[value] ?? value;
+    },
+
+    getFieldDataType: (entity: string, field: string): string | undefined => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:data_type'];
+    },
+
+    getTimeFormat: (entity: string, field: string): string | undefined => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return resource?.schema?.fields?.find((f) => f.name === field)?.['udi:time_format'];
+    },
+
+    hasField: (entity: string, field: string): boolean => {
+      const resource = get().dataPackage?.resources?.find((r) => r.name === entity);
+      return !!resource?.schema?.fields?.some((f) => f.name === field);
+    },
+
     setFilteredData: (entity: string, data: ExportRowSet) => {
       set((state) => {
         const next = new Map(state.filteredData);
@@ -351,14 +560,25 @@ export function createDataPackageStore() {
     },
 
     fetchRemotePackage: async (apiBaseUrl: string, packageName: string, authToken?: string) => {
-      set({ loadingPhase: 'fetching', error: null });
+      // Seed the store before the first request so authHeaders() below is
+      // correct on mount, without depending on effect ordering in UDIChat.
+      set({ loadingPhase: 'fetching', error: null, authToken });
+      // Read at call time, not capture time: the host can refresh the token
+      // mid-session (setAuthToken) and every later request must carry the new
+      // one. Capturing an object here is what used to make the backend go
+      // stale until the whole package was rebuilt.
+      //
+      // No token means no header at all, rather than a `dev` placeholder: a
+      // deployment that proxies us through its own backend attaches the real
+      // one there, and a placeholder is just something for it to strip.
+      const authHeaders = (): Record<string, string> => {
+        const token = get().authToken;
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      };
       try {
-        const headers: Record<string, string> = {
-          Authorization: `Bearer ${authToken ?? 'dev'}`,
-        };
         const response = await fetch(
           `${apiBaseUrl}/v1/yac/metadata?package=${encodeURIComponent(packageName)}`,
-          { headers },
+          { headers: authHeaders() },
         );
         if (!response.ok) {
           throw await httpError(response);
@@ -373,7 +593,7 @@ export function createDataPackageStore() {
         const backend = await createRemoteBackend({
           url: `${apiBaseUrl}/v1/yac/query`,
           packageName,
-          headers,
+          headers: authHeaders,
         });
         backend.subscribePending((pending) => set({ remoteQueryPending: pending }));
         await setQueryBackend(backend);
@@ -404,6 +624,8 @@ export function createDataPackageStore() {
             (r) => r['udi:row_count'] && r['udi:row_count']! > 0,
           );
         }
+        // Before applyDataPackage, so the first charts already render dates.
+        await setTimeFormats(computeTimeFormats(json));
         applyDataPackage(set, json);
         set({ loadingPhase: 'domains' });
         await loadDomainsFromCSVs(set, json, fetchOptions);
@@ -426,6 +648,7 @@ export function createDataPackageStore() {
             (r) => r['udi:row_count'] && r['udi:row_count'] > 0,
           ),
         };
+        await setTimeFormats(computeTimeFormats(filtered));
         applyDataPackage(set, filtered);
 
         if (precomputedDomains) {

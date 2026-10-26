@@ -557,3 +557,87 @@ describe('swapPlainField', () => {
     expect(mapping[1].field).toBe('density'); // untouched
   });
 });
+
+describe('why a template-generated spec is re-bound rather than rewritten', () => {
+  /**
+   * A trimmed survival curve. The stratifier reaches the chart through a groupby,
+   * a derive that assembles the end-of-curve label, the spec's heading, and one
+   * mapping per layer.
+   */
+  const survivalByOrg = () =>
+    ({
+      source: { name: 'Event', source: 'event.csv' },
+      title: { text: 'organization_name', align: 'right' },
+      transformation: [
+        { groupby: ['research_id', 'organization_name'] },
+        { rollup: { 'end day': { op: 'max', field: 'event_date' } } },
+        { groupby: 'organization_name' },
+        {
+          derive: {
+            'final label': {
+              concat: [{ field: 'organization_name' }, { literal: ' ' }, { field: 'pct' }],
+            },
+          },
+        },
+      ],
+      representation: [
+        {
+          mark: 'line',
+          mapping: [
+            { encoding: 'x', field: 'survival days', type: 'quantitative' },
+            { encoding: 'y', field: 'pct', type: 'quantitative' },
+            { encoding: 'color', field: 'organization_name', type: 'nominal' },
+          ],
+        },
+        {
+          mark: 'text',
+          mapping: [
+            { encoding: 'x', field: 'label day', type: 'quantitative' },
+            { encoding: 'y', field: 'pct', type: 'quantitative' },
+            { encoding: 'text', field: 'final label', type: 'nominal' },
+            { encoding: 'color', field: 'organization_name', type: 'nominal' },
+          ],
+        },
+      ],
+    }) as unknown as UDIGrammar;
+
+  it('rewriting the spec moves the groupby but leaves the derive and title behind', () => {
+    const next = swapDimensionField(
+      survivalByOrg(),
+      'color',
+      'cns_diagnosis_category',
+    ) as unknown as {
+      title: { text: string };
+      transformation: Array<{
+        groupby?: string | string[];
+        derive?: Record<string, { concat: Array<{ field?: string }> }>;
+      }>;
+      representation: Array<{ mapping: Array<{ encoding: string; field: string }> }>;
+    };
+
+    // What it does get right: the groupbys and every colour mapping.
+    expect(next.transformation[0].groupby).toEqual(['research_id', 'cns_diagnosis_category']);
+    expect(next.transformation[2].groupby).toBe('cns_diagnosis_category');
+    const colours = next.representation.flatMap((layer) =>
+      layer.mapping.filter((m) => m.encoding === 'color').map((m) => m.field),
+    );
+    expect(colours).toEqual(['cns_diagnosis_category', 'cns_diagnosis_category']);
+
+    // What it cannot: `applyRenamePlan` never walks a `derive` block, and its Expr
+    // walker only visits left/right/if/then/else — so it cannot see a `concat`
+    // list either. Since the rollup above emits only its groupby keys, the old
+    // column no longer exists and this derive now references nothing, which stops
+    // the whole chart from transforming.
+    expect(next.transformation[3].derive!['final label'].concat[0]).toEqual({
+      field: 'organization_name',
+    });
+    // And the heading, which stands in for the dropped legend, goes stale.
+    expect(next.title.text).toBe('organization_name');
+
+    // This is why a spec with template provenance takes the re-bind path instead
+    // (see useTemplateRebind + POST /v1/yac/vis_instantiate, whose test asserts
+    // the same four places all move together). If this test ever starts failing
+    // because the renamer learned about derives, that is a decision to make
+    // deliberately — not two mechanisms claiming the same authority.
+  });
+});

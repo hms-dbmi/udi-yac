@@ -24,7 +24,6 @@ _BINARY_OPERATORS = {
     "-": "-",
     "*": "*",
     "/": "/",
-    "%": "%",
     "==": "=",
     "!=": "<>",
     ">": ">",
@@ -33,6 +32,14 @@ _BINARY_OPERATORS = {
     "<=": "<=",
     "&&": "AND",
     "||": "OR",
+}
+
+# UDI function -> SQL function. `log` is the natural logarithm (Arquero's
+# op.log), so LN — not LOG, which is base 10 in some dialects. Both exist in
+# DuckDB and StarRocks.
+_FUNCTIONS = {
+    "log": "LN",
+    "exp": "EXP",
 }
 
 _AGGREGATES = {
@@ -55,7 +62,9 @@ def is_expr(value: Any) -> bool:
         or ("op" in value and "left" in value and "right" in value)
         or "if" in value
         or "agg" in value
+        or "concat" in value
         or "window" in value
+        or "fn" in value
     )
 
 
@@ -106,6 +115,13 @@ def compile_expr(node: Any, ctx: ExprContext) -> str:
 
     if "op" in node:
         op = node.get("op")
+        if op == "%":
+            # MOD(), not the `%` operator: pymysql builds StarRocks statements
+            # with Python %-formatting, so a literal `%` in the SQL makes
+            # mogrify raise "unsupported format character". MOD is available on
+            # both dialects and means the same thing.
+            left, right = node.get("left"), node.get("right")
+            return f"MOD({compile_expr(left, ctx)}, {compile_expr(right, ctx)})"
         sql_op = _BINARY_OPERATORS.get(op)
         if sql_op is None:
             raise UnsupportedQueryError(f"unsupported operator '{op}'")
@@ -116,6 +132,25 @@ def compile_expr(node: Any, ctx: ExprContext) -> str:
                 inner = compile_expr(a, ctx)
                 return f"({inner} IS {'NOT ' if op == '!=' else ''}NULL)"
         return f"({compile_expr(left, ctx)} {sql_op} {compile_expr(right, ctx)})"
+
+    if "concat" in node:
+        parts = node["concat"]
+        if not isinstance(parts, list) or not parts:
+            raise UnsupportedQueryError("concat requires a non-empty list of parts")
+        # CAST each part so numeric columns concatenate as text; CONCAT + CAST AS
+        # VARCHAR are available in both StarRocks and DuckDB.
+        compiled = [f"CAST({compile_expr(part, ctx)} AS VARCHAR)" for part in parts]
+        return f"CONCAT({', '.join(compiled)})"
+
+    if "fn" in node:
+        name = node["fn"]
+        sql_fn = _FUNCTIONS.get(name)
+        if sql_fn is None:
+            raise UnsupportedQueryError(f"unsupported function '{name}'")
+        args = node.get("args")
+        if not isinstance(args, list) or len(args) != 1:
+            raise UnsupportedQueryError(f"function '{name}' takes exactly one argument")
+        return f"{sql_fn}({compile_expr(args[0], ctx)})"
 
     if "if" in node:
         cond = compile_expr(node["if"], ctx)
@@ -171,8 +206,14 @@ def expr_uses_aggregate(node: Any) -> bool:
         return False
     if "agg" in node or "window" in node:
         return True
-    return any(
+    if any(
         expr_uses_aggregate(v)
         for k, v in node.items()
         if k in ("left", "right", "if", "then", "else")
-    )
+    ):
+        return True
+    for key in ("concat", "args"):
+        parts = node.get(key)
+        if isinstance(parts, list) and any(expr_uses_aggregate(p) for p in parts):
+            return True
+    return False

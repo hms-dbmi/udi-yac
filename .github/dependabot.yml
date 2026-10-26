@@ -1,0 +1,69 @@
+# Minor/patch bumps arrive as one grouped PR per ecosystem each week; majors
+# get their own PRs. Security updates are grouped separately so they aren't
+# held back by an unrelated bump that fails CI.
+version: 2
+updates:
+  # Root covers the whole pnpm workspace (pnpm-workspace.yaml). Dependabot does
+  # not edit `overrides` there: when vite moves, bump the scoped
+  # `udi-toolkit>vite` pin to match, or the toolkit resolves a second vite.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    ignore:
+      # 2.3.0 memoizes GridItem, which freezes a card mid-resize. Later
+      # versions are still proposed; the resizing test in
+      # packages/chat/src/features/dashboard/components/DashboardGrid.test.tsx
+      # fails if they still have the bug.
+      - dependency-name: react-grid-layout
+        versions: ["2.3.0"]
+      # TypeScript 7.0 ships no JavaScript compiler API, which typescript-eslint,
+      # vue-tsc and vite-plugin-dts all need. Revisit once 7.1 is out and they
+      # support it.
+      - dependency-name: typescript
+        versions: [">=7"]
+      # Tracks the oldest Node major CI runs (node-version in the workflows),
+      # not the latest; bump it by hand when CI moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  # Root uv.lock covers both workspace members (packages/agent, packages/grammar-py).
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      python-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]

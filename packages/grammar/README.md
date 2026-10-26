@@ -12,13 +12,13 @@ The Grammar is defined with TypeScript typings in
 
 ## The grammar
 
-The Grammar maps variables to visual encodings. For instance, to create a scatterplot of height and weight we can map `height_value` to `x` and `weight_value` to `y` from the example `donors.csv` file.
+The Grammar maps variables to visual encodings. For instance, to create a scatterplot of height and weight we can map `height_value` to `x` and `weight_value` to `y` from the example `donors.tsv` file.
 
 ```json
 {
   "source": {
     "name": "donors",
-    "source": "./data/donors.csv"
+    "source": "./data/hubmap/donors.tsv"
   },
   "representation": {
     "mark": "point",
@@ -48,7 +48,7 @@ Scatterplots are easy since they map rows in data tables directly to marks. Howe
 {
   "source": {
     "name": "donors",
-    "source": "./data/donors.csv"
+    "source": "./data/hubmap/donors.tsv"
   },
   "transformation": [
     {
@@ -88,7 +88,7 @@ These data transformations can get more complex. For instance to create a relati
 {
   "source": {
     "name": "datasets",
-    "source": "./data/datasets.csv"
+    "source": "./data/hubmap/datasets.tsv"
   },
   "transformation": [
     {
@@ -237,7 +237,7 @@ npm install udi-toolkit vega vega-lite vega-embed arquero ag-grid-community
 
 <script>
   document.getElementById('chart').spec = {
-    source: { name: 'donors', source: './data/donors.csv' },
+    source: { name: 'donors', source: './data/hubmap/donors.tsv' },
     representation: {
       mark: 'point',
       mapping: [
@@ -269,6 +269,21 @@ function App() {
 }
 ```
 
+### Record links (`recordUrl`)
+
+`recordUrl` maps a row to the URL of that record's own page. It is called with the row and the spec's first source name. Tables gain a leading ↗ link column, and point marks open the link on a plain click; a Shift, Ctrl or ⌘ click still picks. A row the function returns nothing for gets no link, so an aggregated table has no column. Only `http(s)` URLs are followed.
+
+```tsx
+<UDIVis
+  spec={spec}
+  recordUrl={(row, source) =>
+    row.id ? `https://example.org/${source}/${row.id}` : undefined
+  }
+/>
+```
+
+It is a separate prop, not part of the spec, because the spec is JSON-cloned. On the custom element, set it as a JS property (`el.recordUrl = fn`). In React, `UDIToolkitProvider` also takes `recordUrl` as a default for every nested `<UDIVis>`. Independently of it, a table cell whose value is an `http(s)` URL renders as a link. Both kinds of link take their color from the `--udi-table-link` CSS custom property, falling back to the browser's link color. The link column stays put while the table scrolls sideways. On a transparent table (the default palette), set `--udi-table-surface` to the color the table sits on, so the scrolled cells don't show through the column.
+
 ### Headless data query (`queryData`)
 
 `queryData` runs a UDI Grammar spec through the same Arquero pipeline that
@@ -283,7 +298,7 @@ import { queryData } from 'udi-toolkit/react';
 
 const result = await queryData(
   {
-    source: { name: 'donors', source: '/data/donors.csv' },
+    source: { name: 'donors', source: '/data/hubmap/donors.tsv' },
     transformation: [{ rollup: { count: { op: 'count' } } }],
   },
   selections,
@@ -319,9 +334,9 @@ const allDomains: DataFieldDomain[] = [];
 
 await loadDataPackage(
   [
-    { name: 'donors', url: '/data/donors.csv' },
-    { name: 'samples', url: '/data/samples.csv' },
-    { name: 'datasets', url: '/data/datasets.csv' },
+    { name: 'donors', url: '/data/hubmap/donors.tsv' },
+    { name: 'samples', url: '/data/hubmap/samples.tsv' },
+    { name: 'datasets', url: '/data/hubmap/datasets.tsv' },
   ],
   {
     onEntityDomains: (entityName, domains) => {
@@ -422,5 +437,6 @@ from the repo root) to browse the stories at `http://localhost:6006`.
 
 ![Interface showing a selection of many example visualizations, with one selected showing multiple stacked bar charts.](./docs/example_storybook.png)
 
-For an interactive spec editor built on the toolkit, see the demo app in
-[`apps/grammar-app`](../../apps/grammar-app).
+For an interactive spec editor built on the toolkit, see the
+[grammar editor](https://hms-dbmi.github.io/udi-yac/grammar/editor/) on the docs
+site, alongside a tutorial and live examples.

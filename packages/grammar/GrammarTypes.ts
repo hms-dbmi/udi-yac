@@ -26,6 +26,30 @@ export interface UDIGrammar {
    * even when the spec author swaps marks.
    */
   config?: UDIGrammarConfig;
+
+  /**
+   * A heading for the whole visualization. A bare string is left-aligned; pass
+   * an object to place it elsewhere.
+   *
+   * Useful when a chart labels its series inline and so has no legend: the
+   * grouping *variable* still needs naming, which a legend would otherwise have
+   * carried in its title.
+   */
+  title?: string | VisualizationTitle;
+}
+
+/**
+ * A visualization heading with explicit placement.
+ */
+export interface VisualizationTitle {
+  text: string;
+
+  /**
+   * Where the heading sits horizontally. Defaults to `left`. Align it with
+   * whatever it is naming — a chart whose series labels run down the right edge
+   * reads better with a right-aligned heading.
+   */
+  align?: 'left' | 'center' | 'right';
 }
 
 /**
@@ -69,7 +93,16 @@ export interface DataSource {
  * These include operations like grouping, filtering, joining, and more.
  */
 export type DataTransformation =
-  GroupBy | BinBy | RollUp | Join | OrderBy | Derive | Filter | KDE | Only;
+  | GroupBy
+  | BinBy
+  | RollUp
+  | Join
+  | OrderBy
+  | Derive
+  | Filter
+  | KDE
+  | Unnest
+  | Only;
 
 /**
  * Base interface for all data transformations.
@@ -106,6 +139,47 @@ export interface GroupBy extends DataTransformationBase {
 }
 
 /**
+ * Expands a delimited multi-value field into one row per value.
+ *
+ * Some source columns hold a set rather than a scalar — `"Spine;Brain"` means the
+ * row belongs to both categories. Grouping on such a column treats every distinct
+ * combination as its own category, which is both wrong and unusable (a column with
+ * 22 real values can have 78 combinations). This is the only transformation that
+ * increases the row count: a row with n values becomes n rows, each carrying one
+ * value and a copy of every other column. Rows whose field is null or empty are
+ * dropped, since they belong to no category.
+ */
+export interface Unnest extends DataTransformationBase {
+  /**
+   * The name of the input table.
+   * If not specified, it assumes the output of the previous operation.
+   */
+  in?: string;
+
+  /**
+   * Configuration for expanding the field.
+   */
+  unnest: {
+    /**
+     * The multi-value field to expand.
+     */
+    field: string;
+
+    /**
+     * The delimiter between values. Defaults to `;`. Surrounding whitespace is
+     * always trimmed, so `"a; b"` and `"a;b"` behave the same.
+     */
+    separator?: string;
+
+    /**
+     * Column to write each individual value into. Defaults to overwriting
+     * `field`, which keeps downstream references to the original name working.
+     */
+    out?: string;
+  };
+}
+
+/**
  * Bins data into intervals for a specified field.
  */
 export interface BinBy extends DataTransformationBase {
@@ -133,6 +207,13 @@ export interface BinBy extends DataTransformationBase {
      * Whether to use "nice" bin boundaries. Optional.
      */
     nice?: boolean;
+
+    /**
+     * Make the bin width a nice multiple of this many field units, rather than
+     * of a power of ten — e.g. `365.25` bins an age in days by whole years.
+     * Optional. The renderer sets it for a column with a `udi:time_format`.
+     */
+    unit?: number;
 
     /**
      * Output field names for the bin start and end. Optional.
@@ -183,9 +264,11 @@ export interface OrderBy extends DataTransformationBase {
  */
 export interface DirectionalOrder {
   /**
-   * The name of the field to be sorted.
+   * The name of the field to be sorted, or several to sort by in turn — a
+   * tiebreak matters when a window function reads the order, because tied rows
+   * share a rank.
    */
-  field: string;
+  field: string | string[];
 
   /**
    * The sorting order for the field, either ascending ('asc') or descending ('desc').
@@ -211,6 +294,18 @@ export interface Join extends DataTransformationBase {
      * If two fields are specified, the first field is from the first table and the second field is from the second table.
      */
     on: string | [string, string] | [string[], string[]];
+
+    /**
+     * Which rows survive. Optional; defaults to `inner` — only rows matched on
+     * both sides.
+     *
+     * `left` keeps every row of the first table, filling the second table's
+     * columns with null where there was no match. That is the only way to ask
+     * about **absence**: whether a subject appears in another table at all is
+     * unanswerable from an inner join, which drops exactly the rows that would
+     * have answered "no".
+     */
+    kind?: 'inner' | 'left';
   };
 }
 
@@ -336,9 +431,12 @@ export interface Only extends DataTransformationBase {
 export type FilterExpression = string | Expr | FilterDataSelection;
 
 /**
- * A filter match type, which specifies how to match the filter data selection.
+ * A filter match type, which specifies how to match the filter data selection
+ * across the rows each target key relates to: keep targets with at least one
+ * matching row ('any'), with every row matching ('all'), or with no matching
+ * row ('none').
  */
-export type FilterMatch = 'all' | 'any';
+export type FilterMatch = 'all' | 'any' | 'none';
 
 /**
  * A data selection used for filtering.
@@ -360,8 +458,12 @@ export interface FilterDataSelection {
   entityRelationship?: FilterEntityRelationship;
 
   /**
-   * Specifies whether to use 'all' or 'any' of the selected data in a 1-to-many mapping.
-   * Default is 'any'.
+   * Specifies whether a target must relate to 'any', 'all' or 'none' of the
+   * selected data in a 1-to-many mapping. Default is 'any'.
+   *
+   * With `source` equal to the filtered table and both keys naming a subject
+   * column (e.g. a patient id), the filter keeps every row of each subject
+   * that matches, not just the matching rows.
    */
   match?: FilterMatch;
 }
@@ -414,11 +516,13 @@ export interface RollingDeriveExpression {
  * It is deliberately NOT a general expression language: it covers exactly the
  * surface the visualization templates emit today — field references, literals,
  * binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates
- * (count/sum/…), and window functions (rank). Add a node only when a template
+ * (count/sum/…), window functions (rank), and the log/exp math functions. Add
+ * a node only when a template
  * needs one.
  *
  * The union is untagged; nodes are distinguished by key
- * (`field` | `literal` | `op` | `if` | `agg` | `window`) without a `type` tag.
+ * (`field` | `literal` | `op` | `if` | `agg` | `window` | `concat` | `fn`)
+ * without a `type` tag.
  * CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field`
  * prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr
  * case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node
@@ -434,7 +538,9 @@ export type Expr =
   | BinaryExpr
   | ConditionalExpr
   | AggregateExpr
-  | WindowExpr;
+  | WindowExpr
+  | ConcatExpr
+  | FunctionExpr;
 
 /**
  * A reference to a column in the current table. Legacy form: `d['age']`.
@@ -505,6 +611,32 @@ export interface WindowExpr {
 }
 
 /**
+ * String concatenation of its parts, in order. Numbers are stringified.
+ *
+ * Exists because a text mark can only draw one field, so a label combining
+ * values — a category name next to its percentage — has to be assembled into a
+ * single column first. There is no formatting here: round or scale the numbers
+ * beforehand, since `["a", 1 / 3]` would render every digit.
+ */
+export interface ConcatExpr {
+  concat: Expr[];
+}
+
+/**
+ * A scalar math function of one argument. `log` is the NATURAL logarithm.
+ *
+ * Exists for running products: no executor has a portable product aggregate,
+ * but a product is `exp(sum(log(x)))`, and a running sum is already a rolling
+ * derive — which is how the survival templates compute the Kaplan-Meier
+ * estimate. `log` of zero or a negative number is -Infinity/NaN in Arquero and
+ * an error in SQL, so guard the argument with a conditional.
+ */
+export interface FunctionExpr {
+  fn: 'log' | 'exp';
+  args: [Expr];
+}
+
+/**
  * An aggregate function for summarizing data.
  */
 export interface AggregateFunction {
@@ -555,6 +687,73 @@ export interface GenericLayer<Mark, Mapping> {
    * The data selection configuration for the layer. Optional.
    */
   select?: DataSelection;
+
+  /**
+   * Dash pattern for the mark's stroke, as alternating on/off lengths in pixels
+   * (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer
+   * as an annotation — a reference line, a threshold — so it reads as guidance
+   * rather than as data.
+   */
+  strokeDash?: number[];
+
+  /**
+   * How a `line` or `area` mark connects consecutive points. Optional; the default
+   * `linear` draws a straight segment between them.
+   *
+   * `step-after` holds each value until the next point and then jumps, which is the
+   * correct reading whenever the quantity is constant between observations rather
+   * than changing gradually — a survival curve, a running total, any step function.
+   * Drawing those sloped implies measurements nobody took.
+   */
+  interpolate?:
+    | 'linear'
+    | 'step'
+    | 'step-before'
+    | 'step-after'
+    | 'basis'
+    | 'cardinal'
+    | 'monotone'
+    | 'natural';
+
+  /**
+   * Horizontal anchoring of a text mark relative to its x position. Text is
+   * centred by default, which puts half a label on the wrong side of whatever it
+   * annotates. Optional.
+   */
+  align?: 'left' | 'center' | 'right';
+
+  /**
+   * Pixel offsets applied after positioning, for nudging an annotation clear of
+   * the mark it labels. Optional.
+   */
+  dx?: number;
+  dy?: number;
+
+  /**
+   * A constant outline for the mark: colour, width in pixels, and opacity.
+   * Optional.
+   *
+   * On a `text` mark this is a legibility halo — a label drawn over other marks
+   * needs to be separated from them. The renderer draws such a layer twice (the
+   * outline pass beneath a clean fill pass), because SVG paints stroke *over*
+   * fill and a single pass would eat into the glyphs.
+   */
+  stroke?: string;
+  strokeWidth?: number;
+  strokeOpacity?: number;
+
+  /**
+   * Keep this layer's marks from drawing on top of each other, by nudging them
+   * apart along their position axis (`y` if the layer encodes one, else `x`).
+   * Optional; for `text` marks, where two labels landing on the same value makes
+   * both unreadable.
+   *
+   * `true` uses a default separation of 5% of the axis. A number sets the minimum
+   * separation explicitly, **in data units** — at spec-build time the plot's pixel
+   * size is not known, but an author who knows the axis runs 0..100 knows what a
+   * separation of 5 looks like on it.
+   */
+  avoidOverlap?: boolean | number;
 }
 
 /**
@@ -601,10 +800,29 @@ export interface GenericFieldMapping<Encoding> {
   domainWhenFiltered?: 'full' | 'filtered';
 
   /**
+   * Order of a categorical domain the renderer computes (no explicit `domain`,
+   * `domainWhenFiltered` not `"filtered"`). Always computed from the
+   * unfiltered data, so it holds still as filters change.
+   * - `"ascending"` (default): alphabetical, numbers in numeric order, nulls last.
+   * - `"-x"` / `"-y"`: by the per-category sum of that channel's field, largest
+   *   first (a bar chart's bar totals); ties alphabetical.
+   */
+  sort?: 'ascending' | '-x' | '-y';
+
+  /**
    * Custom title for the axis or legend label of this encoding.
    * Overrides the default field name displayed on the axis.
    */
   title?: string;
+
+  /**
+   * Display labels for this encoding's categorical values, raw value → label
+   * (e.g. `{ "Children's Hospital of Philadelphia": "CHOP" }`). Compiles to
+   * Vega's `labelExpr`, so it changes only the axis and legend text — the
+   * underlying data keeps its raw values, and selections, filters and tooltips
+   * are unaffected. Values with no entry render unchanged.
+   */
+  labels?: Record<string, string>;
 }
 
 /**

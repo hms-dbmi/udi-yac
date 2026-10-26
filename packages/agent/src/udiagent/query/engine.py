@@ -16,13 +16,17 @@ import logging
 from typing import Any
 
 from .compiler import PipelineCompiler, ends_in_rollup
-from .errors import UnsupportedQueryError
+from .errors import DatabaseAuthError, UnsupportedQueryError
 from .kde import gaussian_kde
 
 logger = logging.getLogger(__name__)
 
 
 DEFAULT_ROW_CAP = 5000
+#: Most rows a kde reads. Its Python pass costs rows × samples.
+# ponytail: LIMIT takes whichever rows the backend returns first, not a random
+# sample; bin the values in SQL first if kde over bigger tables matters.
+KDE_ROW_CAP = 50_000
 
 
 class QueryEngine:
@@ -38,7 +42,8 @@ class QueryEngine:
         table_map: entity name -> physical table/view name.
         row_cap: max rows returned for row-level (non-aggregated) results.
         entity_schemas: entity name -> extra schema metadata that can't be
-            introspected from the database — primaryKey/foreignKeys — merged
+            introspected from the database — primaryKey/foreignKeys, plus the
+            table `description` and per-column `fields` descriptions — merged
             into each resource by introspect(). The chat's cross-entity
             filtering (getEntityRelationship) depends on foreignKeys.
         """
@@ -46,7 +51,7 @@ class QueryEngine:
         self.table_map = table_map
         self.row_cap = row_cap
         self.entity_schemas = entity_schemas or {}
-        self._columns_cache: dict[str, set] = {}
+        self._columns_cache: dict[str, list] = {}
 
     # ── public API ───────────────────────────────────────────────────────────
 
@@ -71,6 +76,12 @@ class QueryEngine:
                 )
             except UnsupportedQueryError as error:
                 results[viz_id] = {"error": str(error)}
+            except DatabaseAuthError:
+                # A credential problem is not a chart-shaped error: it fails the
+                # whole request with a 403 rather than being reported per-viz
+                # inside a 200 (which would also echo the DB message to the
+                # client). Must stay ahead of the broad catch below.
+                raise
             except Exception as error:  # noqa: BLE001 - one bad spec (e.g. a
                 # SQL error from an unexpected column) must not sink the batch.
                 logger.exception("query failed for viz %s", viz_id)
@@ -104,7 +115,7 @@ class QueryEngine:
             display_data_only = ends_in_rollup(transformation)
 
         display = compiler.compile(sources, transformation, skip_named_filters=False)
-        display_rows, truncated = self._execute(display, offset=offset)
+        display_rows, truncated_at = self._execute(display, offset=offset)
 
         result: dict = {
             "displayData": display_rows,
@@ -113,8 +124,8 @@ class QueryEngine:
             "isSubset": display.contains_named_filter,
             "aggregated": display.aggregated or display.kde_post is not None,
         }
-        if truncated:
-            result["truncated"] = {"cap": self.row_cap, "sampled": False}
+        if truncated_at is not None:
+            result["truncated"] = {"cap": truncated_at, "sampled": False}
 
         if display.contains_named_filter and not display_data_only:
             extent = compiler.compile(sources, transformation, skip_named_filters=True)
@@ -124,15 +135,17 @@ class QueryEngine:
 
     # ── internals ────────────────────────────────────────────────────────────
 
-    def _columns_of(self, entity: str) -> set:
-        """Cached physical column names for an entity (DESCRIBE)."""
+    def _columns_of(self, entity: str) -> list:
+        """Cached physical column names for an entity, in table order
+        (DESCRIBE). Order matters: the compiler emits explicit select lists
+        from it, so a set would make the generated SQL nondeterministic."""
         if entity not in self._columns_cache:
             from .introspect import _describe
 
             table = self.table_map[entity]
-            self._columns_cache[entity] = {
+            self._columns_cache[entity] = [
                 name for name, _ in _describe(self.connector, table)
-            }
+            ]
         return self._columns_cache[entity]
 
     def _dimensions_of(self, entity: str) -> list | None:
@@ -145,23 +158,35 @@ class QueryEngine:
         dimensions = self.entity_schemas.get(entity, {}).get("udi:dimensions")
         return list(dimensions) if dimensions else None
 
-    def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], bool]:
-        # Aggregated/kde results are small by construction; only cap raw rows.
-        cap = None if (compiled.aggregated or compiled.kde_post) else self.row_cap + 1
+    def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], int | None]:
+        """Rows, and the cap they were cut at (None when they were not)."""
+        # Aggregated results are small by construction. A kde's output is too,
+        # but its input is raw rows, so it is capped like them.
+        if compiled.kde_post:
+            cap, offset = KDE_ROW_CAP, 0
+        else:
+            cap = None if compiled.aggregated else self.row_cap
         if cap is not None:
             # Re-emit with LIMIT; compile() built the SQL without one.
-            sql = f"{compiled.sql} LIMIT {cap}"
+            sql = f"{compiled.sql} LIMIT {cap + 1}"
             if offset > 0:
                 sql += f" OFFSET {int(offset)}"
         else:
             sql = compiled.sql
-        rows = self.connector.execute(sql, compiled.params)
-        truncated = cap is not None and len(rows) > self.row_cap
+        try:
+            rows = self.connector.execute(sql, compiled.params)
+        except Exception:
+            # The SQL is the only thing that identifies which compiled shape a
+            # backend rejected, and `run_batch` reports the driver's message
+            # alone. Server-side log, never the response: it names tables.
+            logger.error("query failed; SQL was: %s", sql)
+            raise
+        truncated = cap is not None and len(rows) > cap
         if truncated:
-            rows = rows[: self.row_cap]
+            rows = rows[:cap]
         if compiled.kde_post:
             rows = self._apply_kde(rows, compiled.kde_post)
-        return rows, truncated
+        return rows, cap if truncated else None
 
     @staticmethod
     def _apply_kde(rows: list[dict], post) -> list[dict]:

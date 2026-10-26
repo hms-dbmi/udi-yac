@@ -99,8 +99,13 @@ export interface RemoteBackendConfig {
   /** Data package name, forwarded so the server can resolve entity→table
    *  mappings and the package's configured backend. */
   packageName?: string;
-  /** Extra request headers (e.g. Authorization). */
-  headers?: Record<string, string>;
+  /** Extra request headers (e.g. Authorization).
+   *
+   *  Pass a FUNCTION for any header whose value can change during the session.
+   *  A plain object is captured once, so a bearer token that the host refreshes
+   *  would go stale here and keep being sent until it expired; a function is
+   *  re-read on every request. */
+  headers?: Record<string, string> | (() => Record<string, string>);
   /** Coalescing window for batching concurrent queries (ms). Queries issued
    *  within the same window go out as ONE request. Default 0 = same tick. */
   batchWindowMs?: number;
@@ -132,6 +137,10 @@ export function createRemoteBackend(
   config: RemoteBackendConfig,
 ): RemoteQueryBackend {
   const fetchFn = config.fetchFn ?? fetch;
+  const resolveHeaders = (): Record<string, string> =>
+    typeof config.headers === 'function'
+      ? config.headers()
+      : (config.headers ?? {});
   let pending: PendingQuery[] = [];
   let flushScheduled = false;
   let vizCounter = 0;
@@ -159,7 +168,7 @@ export function createRemoteBackend(
     try {
       const response = await fetchFn(config.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...config.headers },
+        headers: { 'Content-Type': 'application/json', ...resolveHeaders() },
         body: JSON.stringify({
           ...(config.packageName ? { package: config.packageName } : {}),
           selections,

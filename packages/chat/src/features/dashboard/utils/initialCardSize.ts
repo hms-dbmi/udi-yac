@@ -1,5 +1,5 @@
 import type { UDIGrammar } from 'udi-toolkit/react';
-import type { CategoricalDomain, DataFieldDomain } from '@/types/dataPackage';
+import type { CategoricalDomain, DataPackage, DataFieldDomain } from '@/types/dataPackage';
 import { DEFAULT_CARD_H } from './gridDefaults';
 
 interface SpecSourceRef {
@@ -33,20 +33,35 @@ interface SpecLayerRef {
  * charts at the visual default and only grows when categories actually
  * demand it.
  *
- * `getDomainForField` typically routes to `dataPackageStore.getDomainForField`,
- * which only returns a populated entry once the domain-computation worker
- * has settled. Pre-domain (loading-phase) adds get DEFAULT_CARD_H — that's
- * acceptable; in practice the worker has long since finished by the time
- * the user is chatting and creating charts.
+ * The category count comes from the field's domain, which in browser mode
+ * only arrives once the domain-computation worker has settled; pre-domain
+ * adds get DEFAULT_CARD_H, which is acceptable, since the worker has long
+ * finished by the time the user is chatting and creating charts. A domain can
+ * also exist without its values: a server-side package lists a column's
+ * values only below a DISTINCT cap (the agent's `introspect.py`), and a chart
+ * can draw far more categories than that. The schema's `udi:cardinality` still
+ * has the count, so it stands in.
  */
 export function computeInitialCardHeight(
   spec: UDIGrammar,
-  getDomainForField: (entity: string, field: string) => DataFieldDomain | undefined,
+  dataPackage: {
+    getDomainForField: (entity: string, field: string) => DataFieldDomain | undefined;
+    dataPackage: DataPackage | null;
+  },
   rowHeight: number,
 ): number {
   const src = spec.source as SpecSourceRef | SpecSourceRef[] | undefined;
   const entity = Array.isArray(src) ? src[0]?.name : src?.name;
   if (!entity) return DEFAULT_CARD_H;
+  const categoryCount = (field: string): number => {
+    const domain = dataPackage.getDomainForField(entity, field);
+    const listed =
+      domain?.type === 'point' ? ((domain.domain as CategoricalDomain).values?.length ?? 0) : 0;
+    if (listed > 0) return listed;
+    const fields = dataPackage.dataPackage?.resources?.find((r) => r.name === entity)?.schema
+      ?.fields;
+    return fields?.find((f) => f.name === field)?.['udi:cardinality'] ?? 0;
+  };
 
   const layers: SpecLayerRef[] = Array.isArray(spec.representation)
     ? (spec.representation as SpecLayerRef[])
@@ -66,10 +81,7 @@ export function computeInitialCardHeight(
       if (m?.encoding !== 'y' && m?.encoding !== 'x') continue;
       if (!m.field) continue;
       if (m.type !== 'nominal' && m.type !== 'ordinal') continue;
-      const domain = getDomainForField(entity, m.field);
-      if (!domain || domain.type !== 'point') continue;
-      const values = (domain.domain as CategoricalDomain).values;
-      const n = values?.length ?? 0;
+      const n = categoryCount(m.field);
       if (n === 0) continue;
       // Y categorical: bar per row, height grows with cardinality.
       // X categorical: vertical bars; height is mostly chart body + space for

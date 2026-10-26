@@ -35,11 +35,24 @@ export type { SourceSpec, LoadDataPackageOptions } from './loadDataPackage';
 export { DEFAULT_PALETTE } from './Palette';
 export type { UDIPalette, ContinuousColor, DiscreteColor } from './Palette';
 
+// Record links: row → the URL of that record's page (UDIVis `recordUrl`)
+export type { RecordUrlFn } from './recordUrl';
+
 // Expression AST compiler (Expr -> Arquero expression string)
 export { exprToArquero, isExpr } from './exprToArquero';
 
 // Plain-language summary of a spec's transformation pipeline (for info tooltips)
 export { describeTransformations } from './describeTransformations';
+
+// Label collision avoidance (what a text layer's `avoidOverlap` runs)
+export { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
+export type { LabelRow } from './labelLayout';
+
+// Time columns (`udi:time_format`): register a data package's dates, years and
+// ages so this build's UDIVis renders them. Each build entry (vue / ce / react)
+// holds its own copy of this state, so a Vue consumer must set it here.
+export { setTimeFormats, formatTime } from './temporal';
+export type { TimeFormats } from './temporal';
 
 // Query backend seam (local Arquero vs remote /v1/yac/query)
 export {

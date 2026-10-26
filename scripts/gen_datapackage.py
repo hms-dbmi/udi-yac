@@ -9,6 +9,19 @@ Stdlib only — run without installing anything:
 
     python3 scripts/gen_datapackage.py sample-data/pcx
 
+Descriptions are the one thing profiling cannot infer, and they reach the LLM
+(a bare number column called `age_at_diagnosis` is read as years unless
+something says days). Supply them with `--descriptions`, a data dictionary CSV
+with `table,field,description` columns — `table` is the CSV filename (or the
+humanized table name), and a row with a blank `field` describes the table
+itself. Kept beside the CSVs as `data_dictionary.csv`, it is picked up
+automatically, so a regenerated manifest does not lose them. An optional
+`time_format` column marks a time column (`epoch_ms`, `epoch_s`, `year`, or
+`days` for a duration such as an age), written out as `udi:time_format` so the
+chat shows dates, years and ages instead of raw numbers. Likewise an
+`example_prompts.json` (a list of strings) beside the CSVs becomes the
+package's `udi:example_prompts`, the prompts the chat suggests.
+
 Writes <dir>/datapackage.json. See sample-data/readme.md for the format.
 Run `python3 scripts/gen_datapackage.py --selftest` to check the inference.
 """
@@ -19,6 +32,14 @@ import json
 import re
 import sys
 from pathlib import Path
+
+# Picked up as the default `--descriptions`, and never profiled as a table.
+DICTIONARY_NAME = "data_dictionary.csv"
+# Embedded as `udi:example_prompts` when present beside the CSVs.
+PROMPTS_NAME = "example_prompts.json"
+
+# The `udi:time_format` values the chat renders (udi-toolkit's formatTime).
+TIME_FORMATS = ("epoch_ms", "epoch_s", "year", "days")
 
 
 def humanize(stem: str, strips: list[str]) -> str:
@@ -104,26 +125,51 @@ def _profile_table(name: str, header: list[str], rows: list[list[str]]) -> dict:
     }
 
 
-def _infer_foreign_keys(resources: list[dict]) -> None:
-    """Link tables on shared columns that are unique in exactly one table.
+def _infer_foreign_keys(resources: list[dict], preferred_parent: str | None = None) -> None:
+    """Link tables on shared columns that are unique in at least one table.
 
-    single-column keys only; the lone table where a shared column is
-    unique is treated as the parent (many->one). Ambiguous (0 or >1 unique)
-    columns are left unlinked — declare those FKs by hand in the JSON.
+    Single-column keys only; a table where the shared column is unique can serve
+    as the parent (many->one). A column unique in NO table is left unlinked —
+    declare those by hand.
+
+    When the column is unique in SEVERAL tables the widest key space wins (most
+    distinct values, then name order to stay deterministic). Two one-row-per-key
+    tables are genuinely ambiguous in direction, but the covering side is the
+    safer parent, and refusing to choose is worse than choosing: it used to drop
+    the column entirely, taking with it the unambiguous links from every *other*
+    table. Pruning pcx's demographics table to its cohort did exactly that —
+    `research_id` became unique in Demographics as well as Patient, and all five
+    of the package's foreign keys silently disappeared.
+
+    Width cannot separate tables that cover the same key space, and name order
+    then picks one arbitrarily — pcx's Patient, Demographics and Treatment
+    Summary all hold one row per patient. `preferred_parent` names the hub for
+    that case; the agent only joins tables linked directly, so the hub decides
+    which pairs of tables it can chart together.
     """
     cols_by_table = {r["name"]: {f["name"] for f in r["schema"]["fields"]} for r in resources}
     unique_cols = {
         r["name"]: {f["name"] for f in r["schema"]["fields"] if f["udi:unique"]}
         for r in resources
     }
+    # Distinct-value counts per (table, column), for the tiebreak below.
+    cardinality = {
+        (r["name"], f["name"]): f["udi:cardinality"]
+        for r in resources
+        for f in r["schema"]["fields"]
+    }
     shared = {c for a in cols_by_table.values() for c in a}
     shared = {c for c in shared if sum(c in cols for cols in cols_by_table.values()) >= 2}
 
     for col in sorted(shared):
         parents = [name for name, u in unique_cols.items() if col in u]
-        if len(parents) != 1:
+        if not parents:
             continue
-        parent = parents[0]
+        parent = (
+            preferred_parent
+            if preferred_parent in parents
+            else max(parents, key=lambda name: (cardinality[(name, col)], name))
+        )
         for r in resources:
             if r["name"] == parent or col not in cols_by_table[r["name"]]:
                 continue
@@ -136,28 +182,85 @@ def _infer_foreign_keys(resources: list[dict]) -> None:
             )
 
 
-def _mark_cube(resource: dict, measures: list[str]) -> None:
-    """Tag a resource as a pre-aggregated powerset cube.
+def _annotate_cube(res: dict, measure: str) -> None:
+    """Mark a resource as a pre-aggregated marginal cube.
 
-    A cube stores one row per dimension-subset combination: the dimensions in
-    that subset populated, every other dimension null, and the measure
-    pre-aggregated over the matching line-item rows. `udi:cube` marks the
-    resource; `udi:dimensions` / `udi:measures` name the two column roles, so
-    consumers can select a marginal (the `only` transformation) instead of
-    filtering row-wise. Every column that isn't named a measure is a
-    dimension.
+    A cube row is a count (or other measure) over whichever dimensions are
+    non-null; a null dimension means the row aggregates over it, so the same
+    table holds the grand total, every one-way marginal, and every combination.
+    Consumers need to know which column is the measure and which are dimensions
+    — it cannot be inferred, since a dimension is just a nullable column — so it
+    is declared here and read back through the schema by the `<M>` and
+    `<MARGINAL:...>` placeholders.
     """
-    columns = [f["name"] for f in resource["schema"]["fields"]]
-    unknown = [m for m in measures if m not in columns]
-    if unknown:
-        sys.exit(f"--cube measure(s) not in {resource['name']}: {unknown}")
-    resource["udi:cube"] = True
-    resource["udi:dimensions"] = [c for c in columns if c not in measures]
-    resource["udi:measures"] = list(measures)
+    names = [f["name"] for f in res["schema"]["fields"]]
+    if measure not in names:
+        sys.exit(f"{res['name']}: --measure {measure!r} is not a column (has: {', '.join(names)})")
+    res["udi:cube"] = True
+    res["udi:measures"] = [measure]
+    res["udi:dimensions"] = [n for n in names if n != measure]
+    for field in res["schema"]["fields"]:
+        if field["name"] == measure:
+            field["description"] = "Cube measure: the aggregated value for this row."
+        else:
+            field["description"] = (
+                f"Cube dimension: {field['name']}. Null when the row aggregates "
+                "over this dimension."
+            )
     # A cube's dimensions are null in every marginal that excludes them, so
     # the inferred primary key (a column unique across all rows) is
     # meaningless here — and a foreign key to it would be worse.
-    resource["schema"].pop("primaryKey", None)
+    res["schema"].pop("primaryKey", None)
+
+
+def _load_descriptions(path: Path) -> dict[tuple[str, str], dict[str, str]]:
+    """Read a data dictionary CSV into ``{(table, field): metadata}``.
+
+    The metadata is the `description` and, from the optional `time_format`
+    column, `udi:time_format`. A blank `field` is the table's own description.
+    Blank cells are skipped, so a dictionary with gaps leaves those columns as
+    profiled. An unknown time format stops the run: a typo would otherwise
+    quietly leave the column showing raw numbers.
+    """
+    entries = {}
+    with path.open(newline="", encoding="utf-8") as fh:
+        for line, row in enumerate(csv.DictReader(fh), start=2):
+            meta = {}
+            if text := row["description"].strip():
+                meta["description"] = text
+            if time_format := (row.get("time_format") or "").strip():
+                if time_format not in TIME_FORMATS:
+                    sys.exit(
+                        f"{path}:{line}: time_format {time_format!r} is not one of "
+                        f"{', '.join(TIME_FORMATS)}"
+                    )
+                meta["udi:time_format"] = time_format
+            if meta:
+                entries[(row["table"].strip(), row["field"].strip())] = meta
+    return entries
+
+
+def _apply_descriptions(
+    resources: list[dict], descriptions: dict[tuple[str, str], dict[str, str]]
+) -> set[tuple[str, str]]:
+    """Fill in table `description`s and column metadata. Returns the keys that matched.
+
+    A table is matched by its CSV filename or its humanized name: a dictionary
+    exported alongside the data knows the files, while one written by hand
+    against the package reads more naturally in the names specs use.
+    """
+    matched = set()
+    for resource in resources:
+        for table in (resource["path"], resource["name"]):
+            if meta := descriptions.get((table, "")):
+                if "description" in meta:
+                    resource["description"] = meta["description"]
+                matched.add((table, ""))
+            for field in resource["schema"]["fields"]:
+                if meta := descriptions.get((table, field["name"])):
+                    field.update(meta)
+                    matched.add((table, field["name"]))
+    return matched
 
 
 def build_package(
@@ -165,10 +268,14 @@ def build_package(
     name: str,
     udi_path: str,
     strips: list[str],
-    cube_measures: list[str] | None = None,
+    measure: str | None = None,
+    descriptions: dict[tuple[str, str], dict[str, str]] | None = None,
+    preferred_parent: str | None = None,
 ) -> dict:
     resources = []
     for path in sorted(csv_dir.glob("*.csv")):
+        if path.name == DICTIONARY_NAME:
+            continue
         with path.open(newline="", encoding="utf-8") as fh:
             reader = csv.reader(fh)
             header = next(reader)
@@ -176,8 +283,8 @@ def build_package(
         # name is the entity key (FK refs, source resolver, agent specs) — must be unique
         res = _profile_table(humanize(path.stem, strips), header, rows)
         res["path"] = path.name
-        if cube_measures:
-            _mark_cube(res, cube_measures)
+        if measure:
+            _annotate_cube(res, measure)
         resources.append(res)
 
     if not resources:
@@ -187,10 +294,19 @@ def build_package(
     if len(set(names)) != len(names):
         sys.exit(f"table names collide after humanizing: {names} — adjust --strip")
 
-    # Cubes have no line-level keys to join on — skip FK inference entirely
-    # rather than let a coincidentally-unique dimension become a key.
-    if not cube_measures:
-        _infer_foreign_keys(resources)
+    if preferred_parent and preferred_parent not in names:
+        sys.exit(f"--parent {preferred_parent!r} is not a table (has: {', '.join(names)})")
+    if not measure:
+        _infer_foreign_keys(resources, preferred_parent)
+
+    if descriptions:
+        matched = _apply_descriptions(resources, descriptions)
+        print(f"applied {len(matched)} description(s)")
+        # Loud, because a typo here is otherwise invisible: the manifest simply
+        # comes out without the description it was meant to carry.
+        for table, field in sorted(descriptions.keys() - matched):
+            print(f"  ⚠ no such {'column' if field else 'table'}: {table} {field}", file=sys.stderr)
+
     return {
         "name": name,
         "resources": resources,
@@ -232,6 +348,72 @@ def _selftest() -> None:
             "udi:cardinality": {"from": "many", "to": "one"},
         }
     ], child["schema"]["foreignKeys"]
+
+    # Two tables in which the key is unique, plus a third where it is not: the
+    # wider key space is the parent, and the narrow unique table becomes a child
+    # of it rather than the whole column being abandoned. This is the pcx shape —
+    # Patient (69 ids) / Demographics (65) / Event (many rows per id) — and it
+    # regressed to zero foreign keys when the ambiguity was treated as fatal.
+    wide = prof("id,x\n1,a\n2,b\n3,c\n", "wide")
+    narrow = prof("id,y\n1,q\n2,r\n", "narrow")
+    many = prof("id,z\n1,m\n1,n\n2,o\n", "many")
+    _infer_foreign_keys([narrow, wide, many])
+    assert wide["schema"]["foreignKeys"] == [], wide["schema"]["foreignKeys"]
+    for table in (narrow, many):
+        assert table["schema"]["foreignKeys"] == [
+            {
+                "fields": ["id"],
+                "reference": {"fields": ["id"], "resource": "wide"},
+                "udi:cardinality": {"from": "many", "to": "one"},
+            }
+        ], (table["name"], table["schema"]["foreignKeys"])
+
+    # Equal key spaces: the preferred parent wins over name order.
+    a, b = prof("id\n1\n2\n", "a"), prof("id\n1\n2\n", "b")
+    _infer_foreign_keys([a, b], preferred_parent="a")
+    assert a["schema"]["foreignKeys"] == [], a["schema"]["foreignKeys"]
+    assert b["schema"]["foreignKeys"][0]["reference"]["resource"] == "a", b["schema"]
+
+    # Descriptions match a table by filename or humanized name; a blank field
+    # describes the table, and a key naming no column is left unmatched.
+    described = prof("id,x\n1,a\n", "Wide")
+    described["path"] = "wide_deid.csv"
+    matched = _apply_descriptions(
+        [described],
+        {
+            ("wide_deid.csv", ""): {"description": "a table"},
+            ("Wide", "x"): {"description": "an x"},
+            ("Wide", "nope"): {"description": "?"},
+        },
+    )
+    assert matched == {("wide_deid.csv", ""), ("Wide", "x")}, matched
+    assert described["description"] == "a table", described
+    by_name = {f["name"]: f for f in described["schema"]["fields"]}
+    assert by_name["x"]["description"] == "an x", by_name["x"]
+    assert by_name["id"]["description"] == "", by_name["id"]
+
+    # A dictionary's time_format reaches the field; an unknown one stops the run.
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        dictionary = Path(tmp) / DICTIONARY_NAME
+        dictionary.write_text(
+            "table,field,description,time_format\n"
+            "Ages,age_days,Age in days.,days\n"
+            "Ages,birth_year,,year\n"
+        )
+        entries = _load_descriptions(dictionary)
+        assert entries == {
+            ("Ages", "age_days"): {"description": "Age in days.", "udi:time_format": "days"},
+            ("Ages", "birth_year"): {"udi:time_format": "year"},
+        }, entries
+        dictionary.write_text("table,field,description,time_format\nAges,x,,dayz\n")
+        try:
+            _load_descriptions(dictionary)
+            raise AssertionError("an unknown time_format was accepted")
+        except SystemExit as e:
+            assert "dayz" in str(e), e
+
     print("selftest OK")
 
 
@@ -252,13 +434,22 @@ def main() -> None:
         "(repeatable), e.g. --strip pcx_30_ --strip _level_deid",
     )
     ap.add_argument(
-        "--cube",
-        action="append",
-        default=[],
-        metavar="MEASURE",
-        help="treat every CSV in the directory as a pre-aggregated powerset "
-        "cube whose measure column is MEASURE (repeatable). Every other "
-        "column becomes a udi:dimension. e.g. --cube cnt",
+        "--measure",
+        help="treat the directory as a pre-aggregated marginal CUBE: this column is "
+        "the measure, every other column a dimension (null = aggregated over). "
+        "Skips foreign-key inference, which is meaningless for a cube.",
+    )
+    ap.add_argument(
+        "--descriptions",
+        type=Path,
+        help="data dictionary CSV (table,field,description) to write into the manifest "
+        "(default: <dir>/data_dictionary.csv when present)",
+    )
+    ap.add_argument(
+        "--parent",
+        metavar="TABLE",
+        help="humanized table name to link to when a key column is unique in several "
+        "tables (default: the widest key space, then name order)",
     )
     ap.add_argument("-o", "--out", help="output path (default: <dir>/datapackage.json)")
     ap.add_argument("--selftest", action="store_true", help="run inference self-check and exit")
@@ -275,7 +466,23 @@ def main() -> None:
     udi_path = args.udi_path or f"./data/{csv_dir.name}/"
     out = Path(args.out) if args.out else csv_dir / "datapackage.json"
 
-    pkg = build_package(csv_dir, name, udi_path, args.strip, args.cube)
+    descriptions_path = args.descriptions
+    if descriptions_path is None:
+        default = csv_dir / DICTIONARY_NAME
+        descriptions_path = default if default.is_file() else None
+    elif not descriptions_path.is_file():
+        ap.error(f"--descriptions file not found: {descriptions_path}")
+    descriptions = _load_descriptions(descriptions_path) if descriptions_path else None
+
+    pkg = build_package(
+        csv_dir, name, udi_path, args.strip, args.measure, descriptions, args.parent
+    )
+    prompts_path = csv_dir / PROMPTS_NAME
+    if prompts_path.is_file():
+        prompts = json.loads(prompts_path.read_text(encoding="utf-8"))
+        if not (isinstance(prompts, list) and all(isinstance(p, str) for p in prompts)):
+            sys.exit(f"{prompts_path} must be a JSON list of strings")
+        pkg["udi:example_prompts"] = prompts
     out.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
 
     fks = sum(len(r["schema"]["foreignKeys"]) for r in pkg["resources"])

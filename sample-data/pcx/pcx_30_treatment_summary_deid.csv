@@ -1,0 +1,971 @@
+research_id,organization_name,age_at_initial_dx_days,age_at_first_event_days,age_at_first_radiation_ever_days,age_at_initial_radiation_days,age_at_first_chemo_ever_days,age_at_initial_chemo_days,age_at_first_methotrexate_ever_days,had_initial_radiation,had_initial_chemo,had_initial_methotrexate,initial_treatment_order
+C1002081,Lurie Children's Hospital,2059,2640,2097,2097,2104,2104,,yes,yes,no,radiation_before_chemotherapy
+C1003065,The Children's Hospital of Philadelphia,4413,,4444,4444,4531,4531,,yes,yes,no,radiation_before_chemotherapy
+C1003188,The Children's Hospital of Philadelphia,5465,,5499,5499,5582,5582,,yes,yes,no,radiation_before_chemotherapy
+C1010076,University of Pittsburgh,754,1187,994,994,783,783,,yes,yes,no,chemo_before_radiation
+C1010445,UCSF Benioff Children's Hospital,557,675,,,585,585,585,no,yes,yes,chemo_only_no_initial_radiation
+C1014381,Stanford Lucile Packard Children's Hospital,4758,,4790,4790,4872,4872,,yes,yes,no,radiation_before_chemotherapy
+C101721,The Children's Hospital of Philadelphia,428,652,,,469,469,469,no,yes,yes,chemo_only_no_initial_radiation
+C1025205,Lurie Children's Hospital,252,947,431,431,289,289,289,yes,yes,yes,chemo_before_radiation
+C1026804,The Children's Hospital of Philadelphia,5299,6444,5334,5334,5415,5415,,yes,yes,no,radiation_before_chemotherapy
+C103074,Seattle Children's Hospital,8203,,8233,8233,8237,8237,,yes,yes,no,radiation_before_chemotherapy
+C1031847,The Children's Hospital of Philadelphia,1458,,1493,1493,1582,1582,,yes,yes,no,radiation_before_chemotherapy
+C1032093,The Children's Hospital of Philadelphia,819,1049,981,981,839,839,839,yes,yes,yes,chemo_before_radiation
+C1036644,The Children's Hospital of Philadelphia,711,846,,,733,733,733,no,yes,yes,chemo_only_no_initial_radiation
+C1038366,CBTN Non-Consortium Member,169,228,379,,196,196,196,no,yes,yes,chemo_only_no_initial_radiation
+C104058,Seattle Children's Hospital,4526,,4550,4550,4561,4561,,yes,yes,no,radiation_before_chemotherapy
+C1044147,Weill Cornell Medical College,395,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C104427,Seattle Children's Hospital,394,1519,476,476,414,414,414,yes,yes,yes,chemo_before_radiation
+C105042,Lurie Children's Hospital,1663,,1935,1935,1684,1684,1684,yes,yes,yes,chemo_before_radiation
+C1054725,The Children's Hospital of Philadelphia,3260,,3292,3292,3379,3379,,yes,yes,no,radiation_before_chemotherapy
+C1056939,Seattle Children's Hospital,641,768,893,,661,661,661,no,yes,yes,chemo_only_no_initial_radiation
+C1057185,Seattle Children's Hospital,6136,7410,6157,6157,6158,6158,,yes,yes,no,radiation_before_chemotherapy
+C1057431,Seattle Children's Hospital,2090,,2114,2114,2118,2118,,yes,yes,no,radiation_before_chemotherapy
+C1060629,The Children's Hospital of Philadelphia,4673,,4708,4708,4800,4800,,yes,yes,no,radiation_before_chemotherapy
+C1063458,Meyer Children's Hospital,3108,4791,3197,3197,3137,3137,,yes,yes,no,chemo_before_radiation
+C1064319,University of Pittsburgh,3275,,3309,3309,3390,3390,,yes,yes,no,radiation_before_chemotherapy
+C1066164,Children's National Medical Center (CNMC),3089,,3120,3120,3200,3200,,yes,yes,no,radiation_before_chemotherapy
+C1070100,Seattle Children's Hospital,5024,6989,5048,5048,5050,5050,,yes,yes,no,radiation_before_chemotherapy
+C1070223,Seattle Children's Hospital,6590,,6624,6624,6628,6628,,yes,yes,no,radiation_before_chemotherapy
+C1070346,Seattle Children's Hospital,663,1337,838,838,674,674,674,yes,yes,yes,chemo_before_radiation
+C1070838,Seattle Children's Hospital,2106,3017,2136,2136,2138,2138,3165,yes,yes,no,radiation_before_chemotherapy
+C1075635,Children's National Medical Center (CNMC),2836,,2868,2868,2858,2858,,yes,yes,no,chemo_before_radiation
+C107994,University of Pittsburgh,2907,4899,2939,2939,2983,2983,,yes,yes,no,radiation_before_chemotherapy
+C1083261,CBTN Non-Consortium Member,2654,2823,,,,,,no,no,no,no_initial_radiation_or_chemo
+C1100235,The Children's Hospital of Philadelphia,306,,588,588,327,327,,yes,yes,no,chemo_before_radiation
+C1154847,Seattle Children's Hospital,517,,720,720,538,538,538,yes,yes,yes,chemo_before_radiation
+C1155462,Seattle Children's Hospital,1516,1979,1546,1546,1546,1546,2065,yes,yes,no,radiation_and_chemo_same_day
+C1155585,Seattle Children's Hospital,4322,4821,4339,4339,4340,4340,4827,yes,yes,no,radiation_before_chemotherapy
+C115743,The Children's Hospital of Philadelphia,116,1267,,,131,131,,no,yes,no,chemo_only_no_initial_radiation
+C1168131,University of Pittsburgh,2087,4598,2114,2114,2199,2199,,yes,yes,no,radiation_before_chemotherapy
+C1168500,Weill Cornell Medical College,736,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C1168623,Weill Cornell Medical College,2902,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C1169730,Children's National Medical Center (CNMC),996,1315,1359,,1015,1015,,no,yes,no,chemo_only_no_initial_radiation
+C1183875,Seattle Children's Hospital,6394,,6423,6423,6502,6502,,yes,yes,no,radiation_before_chemotherapy
+C1188918,Lurie Children's Hospital,1021,5041,1065,1065,1044,1044,,yes,yes,no,chemo_before_radiation
+C1189041,Lurie Children's Hospital,,403,,,,,,no,no,no,no_initial_radiation_or_chemo
+C1203063,UCSF Benioff Children's Hospital,6034,,6061,6061,6061,6061,,yes,yes,no,radiation_and_chemo_same_day
+C1205277,Meyer Children's Hospital,3640,,3749,3749,3660,3660,,yes,yes,no,chemo_before_radiation
+C121893,The Children's Hospital of Philadelphia,382,411,,,,,,no,no,no,no_initial_radiation_or_chemo
+C122262,University of Pittsburgh,2859,3345,2889,2889,3002,3002,,yes,yes,no,radiation_before_chemotherapy
+C1223973,The Children's Hospital of Philadelphia,3336,,3367,3367,3448,3448,,yes,yes,no,radiation_before_chemotherapy
+C1229139,Weill Cornell Medical College,983,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C123123,Seattle Children's Hospital,836,926,,,852,852,852,no,yes,yes,chemo_only_no_initial_radiation
+C1232952,The Children's Hospital of Philadelphia,3126,,3184,3184,3184,3184,,yes,yes,no,radiation_and_chemo_same_day
+C1235904,Children's National Medical Center (CNMC),1729,,1764,1764,1851,1851,,yes,yes,no,radiation_before_chemotherapy
+C1248204,The Children's Hospital of Philadelphia,2076,,2313,2313,2169,2169,2169,yes,yes,yes,chemo_before_radiation
+C1253493,Seattle Children's Hospital,1997,,2024,2024,2026,2026,,yes,yes,no,radiation_before_chemotherapy
+C1253862,Seattle Children's Hospital,3137,3217,3431,,3231,,,no,no,no,no_initial_radiation_or_chemo
+C1254600,Weill Cornell Medical College,1735,3356,1713,2047,1713,2047,,yes,yes,no,radiation_and_chemo_same_day
+C1262718,University of Pittsburgh,3061,4069,3092,3092,3164,3164,,yes,yes,no,radiation_before_chemotherapy
+C1265301,Hackensack,266,351,,,286,286,286,no,yes,yes,chemo_only_no_initial_radiation
+C1277601,The Children's Hospital of Philadelphia,684,,1233,1233,707,707,707,yes,yes,yes,chemo_before_radiation
+C129273,University of Pittsburgh,-1,1788,,,,,,no,no,no,no_initial_radiation_or_chemo
+C129519,University of Pittsburgh,3683,3816,,,,,,no,no,no,no_initial_radiation_or_chemo
+C129642,University of Pittsburgh,2241,2638,,,,,,no,no,no,no_initial_radiation_or_chemo
+C129765,University of Pittsburgh,4491,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C129888,University of Pittsburgh,6063,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C130011,University of Pittsburgh,1067,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C130134,University of Pittsburgh,415,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C130257,University of Pittsburgh,1605,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C130380,University of Pittsburgh,5861,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C136653,The Children's Hospital of Philadelphia,1620,3509,1660,1660,1736,1736,,yes,yes,no,radiation_before_chemotherapy
+C138006,University of Pittsburgh,4452,6474,4487,4487,4487,4487,,yes,yes,no,radiation_and_chemo_same_day
+C138498,Lurie Children's Hospital,2590,,2621,2621,2622,2622,,yes,yes,no,radiation_before_chemotherapy
+C140712,The Children's Hospital of Philadelphia,1506,1525,1659,,1527,,1527,no,no,no,no_initial_radiation_or_chemo
+C141696,Seattle Children's Hospital,3977,5041,3997,3997,3997,3997,,yes,yes,no,radiation_and_chemo_same_day
+C141942,Seattle Children's Hospital,163,,,,178,178,,no,yes,no,chemo_only_no_initial_radiation
+C142557,Seattle Children's Hospital,1032,1502,1230,1230,1044,1044,1862,yes,yes,no,chemo_before_radiation
+C142803,Seattle Children's Hospital,641,,,,655,655,,no,yes,no,chemo_only_no_initial_radiation
+C143172,Seattle Children's Hospital,4044,,4067,4067,4067,4067,,yes,yes,no,radiation_and_chemo_same_day
+C143418,Seattle Children's Hospital,1882,,1905,1905,1907,1907,,yes,yes,no,radiation_before_chemotherapy
+C143541,Seattle Children's Hospital,292,,,,313,313,,no,yes,no,chemo_only_no_initial_radiation
+C144033,Lurie Children's Hospital,785,994,,,,,,no,no,no,no_initial_radiation_or_chemo
+C144402,Lurie Children's Hospital,1285,1696,,,,,,no,no,no,no_initial_radiation_or_chemo
+C144525,Lurie Children's Hospital,299,609,,,,,,no,no,no,no_initial_radiation_or_chemo
+C144648,Lurie Children's Hospital,113,199,,,,,,no,no,no,no_initial_radiation_or_chemo
+C144771,Lurie Children's Hospital,54,89,,,,,,no,no,no,no_initial_radiation_or_chemo
+C144894,Lurie Children's Hospital,685,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C145017,Lurie Children's Hospital,286,389,,,,,,no,no,no,no_initial_radiation_or_chemo
+C145140,Lurie Children's Hospital,1141,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C145263,Lurie Children's Hospital,233,309,,,,,,no,no,no,no_initial_radiation_or_chemo
+C145386,Lurie Children's Hospital,951,1076,,,,,,no,no,no,no_initial_radiation_or_chemo
+C145509,Lurie Children's Hospital,1102,1182,1200,,1132,1132,1132,no,yes,yes,chemo_only_no_initial_radiation
+C146247,The Children's Hospital of Philadelphia,1221,1432,1466,,1238,1238,,no,yes,no,chemo_only_no_initial_radiation
+C147354,Seattle Children's Hospital,3458,,3486,3486,3487,3487,,yes,yes,no,radiation_before_chemotherapy
+C147477,Seattle Children's Hospital,2428,,2452,2452,2458,2458,,yes,yes,no,radiation_before_chemotherapy
+C147846,Seattle Children's Hospital,2565,3045,2606,2606,2580,2580,,yes,yes,no,chemo_before_radiation
+C147969,Seattle Children's Hospital,1876,,1906,1906,1906,1906,,yes,yes,no,radiation_and_chemo_same_day
+C148215,Seattle Children's Hospital,202,5999,387,387,225,225,225,yes,yes,yes,chemo_before_radiation
+C148584,Seattle Children's Hospital,1897,,1925,1925,1926,1926,,yes,yes,no,radiation_before_chemotherapy
+C148707,Seattle Children's Hospital,575,,643,643,589,589,589,yes,yes,yes,chemo_before_radiation
+C148830,Seattle Children's Hospital,605,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C148953,Seattle Children's Hospital,1042,,1069,1069,1150,1150,,yes,yes,no,radiation_before_chemotherapy
+C149076,Seattle Children's Hospital,,560,,,,,,no,no,no,no_initial_radiation_or_chemo
+C149199,Seattle Children's Hospital,4238,,4262,4262,4261,4261,,yes,yes,no,chemo_before_radiation
+C149568,Seattle Children's Hospital,35,196,,,,,,no,no,no,no_initial_radiation_or_chemo
+C15252,The Children's Hospital of Philadelphia,604,,867,867,642,642,,yes,yes,no,chemo_before_radiation
+C153012,Seattle Children's Hospital,2790,3334,3173,3173,,,,yes,no,no,radiation_only_no_initial_chemo
+C153135,Seattle Children's Hospital,1931,,1962,1962,1964,1964,,yes,yes,no,radiation_before_chemotherapy
+C153504,Seattle Children's Hospital,3000,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C154365,Seattle Children's Hospital,5709,,5737,5737,5737,5737,,yes,yes,no,radiation_and_chemo_same_day
+C16113,The Children's Hospital of Philadelphia,5282,5718,5306,5306,5397,5397,,yes,yes,no,radiation_before_chemotherapy
+C169248,Seattle Children's Hospital,2153,3139,2176,2176,2177,2177,,yes,yes,no,radiation_before_chemotherapy
+C169371,Seattle Children's Hospital,3132,,3153,3153,3154,3154,,yes,yes,no,radiation_before_chemotherapy
+C169863,Seattle Children's Hospital,2902,3379,2930,2930,2931,2931,,yes,yes,no,radiation_before_chemotherapy
+C170109,Seattle Children's Hospital,6345,,6376,6376,6378,6378,,yes,yes,no,radiation_before_chemotherapy
+C170232,Seattle Children's Hospital,3142,,3169,3169,3169,3169,,yes,yes,no,radiation_and_chemo_same_day
+C170355,Seattle Children's Hospital,3695,,3724,3724,3724,3724,,yes,yes,no,radiation_and_chemo_same_day
+C171462,Seattle Children's Hospital,805,1320,1000,1000,840,840,,yes,yes,no,chemo_before_radiation
+C173799,Seattle Children's Hospital,4640,,4667,4667,4681,4681,,yes,yes,no,radiation_before_chemotherapy
+C17466,The Children's Hospital of Philadelphia,5666,,5697,5697,,,,yes,no,no,radiation_only_no_initial_chemo
+C175398,Seattle Children's Hospital,1056,1705,,,,,,no,no,no,no_initial_radiation_or_chemo
+C175521,Seattle Children's Hospital,4674,,4713,4713,4715,4715,,yes,yes,no,radiation_before_chemotherapy
+C177981,Lurie Children's Hospital,6086,9421,6108,6108,6108,6108,,yes,yes,no,radiation_and_chemo_same_day
+C178104,Lurie Children's Hospital,1599,,1630,1630,1630,1630,,yes,yes,no,radiation_and_chemo_same_day
+C178227,Lurie Children's Hospital,1096,1336,1124,1124,1124,1124,,yes,yes,no,radiation_and_chemo_same_day
+C178350,Lurie Children's Hospital,3879,,3940,3940,4008,4008,,yes,yes,no,radiation_before_chemotherapy
+C178473,Lurie Children's Hospital,1696,,1706,1706,1706,1706,,yes,yes,no,radiation_and_chemo_same_day
+C178596,Lurie Children's Hospital,3113,,3142,3142,3149,3149,,yes,yes,no,radiation_before_chemotherapy
+C178719,Lurie Children's Hospital,1137,1629,1189,1189,1189,1189,,yes,yes,no,radiation_and_chemo_same_day
+C178965,Lurie Children's Hospital,3559,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C179088,Lurie Children's Hospital,3870,,3909,3909,3909,3909,,yes,yes,no,radiation_and_chemo_same_day
+C179457,Lurie Children's Hospital,3955,,3977,3977,3977,3977,,yes,yes,no,radiation_and_chemo_same_day
+C179580,Lurie Children's Hospital,2031,,2057,2057,2061,2061,,yes,yes,no,radiation_before_chemotherapy
+C179703,Lurie Children's Hospital,1282,1711,,,,,,no,no,no,no_initial_radiation_or_chemo
+C179826,Lurie Children's Hospital,2678,3198,2700,2700,2706,2706,,yes,yes,no,radiation_before_chemotherapy
+C180072,Lurie Children's Hospital,949,,,,967,967,,no,yes,no,chemo_only_no_initial_radiation
+C180195,Lurie Children's Hospital,1335,,1344,1344,,,,yes,no,no,radiation_only_no_initial_chemo
+C180318,Lurie Children's Hospital,1446,,,,1482,1482,,no,yes,no,chemo_only_no_initial_radiation
+C180441,Lurie Children's Hospital,780,,,,817,817,,no,yes,no,chemo_only_no_initial_radiation
+C180564,Lurie Children's Hospital,4237,7328,4265,4265,4255,4255,,yes,yes,no,chemo_before_radiation
+C180687,Lurie Children's Hospital,475,496,,,511,,,no,no,no,no_initial_radiation_or_chemo
+C18081,The Children's Hospital of Philadelphia,715,917,,,733,733,,no,yes,no,chemo_only_no_initial_radiation
+C180933,Lurie Children's Hospital,2369,,2410,2410,2410,2410,,yes,yes,no,radiation_and_chemo_same_day
+C181056,Lurie Children's Hospital,3423,7042,3454,3454,3529,3529,,yes,yes,no,radiation_before_chemotherapy
+C181179,Lurie Children's Hospital,696,809,,,710,710,710,no,yes,yes,chemo_only_no_initial_radiation
+C181302,Lurie Children's Hospital,3187,,3224,3224,3313,3313,,yes,yes,no,radiation_before_chemotherapy
+C181425,Lurie Children's Hospital,2418,2806,2452,2452,2452,2452,,yes,yes,no,radiation_and_chemo_same_day
+C182286,Lurie Children's Hospital,230,,695,695,250,250,250,yes,yes,yes,chemo_before_radiation
+C183270,Lurie Children's Hospital,990,1060,,,,,,no,no,no,no_initial_radiation_or_chemo
+C183393,Lurie Children's Hospital,314,671,,,349,349,,no,yes,no,chemo_only_no_initial_radiation
+C183516,Lurie Children's Hospital,4076,4415,4101,4101,4101,4101,,yes,yes,no,radiation_and_chemo_same_day
+C18819,The Children's Hospital of Philadelphia,883,987,,,906,906,906,no,yes,yes,chemo_only_no_initial_radiation
+C193110,Lurie Children's Hospital,,7272,,,,,,no,no,no,no_initial_radiation_or_chemo
+C196554,The Children's Hospital of Philadelphia,345,572,575,,356,356,356,no,yes,yes,chemo_only_no_initial_radiation
+C20049,The Children's Hospital of Philadelphia,596,2850,,,,,,no,no,no,no_initial_radiation_or_chemo
+C20910,The Children's Hospital of Philadelphia,2644,3743,2673,2673,2689,2689,,yes,yes,no,radiation_before_chemotherapy
+C21402,The Children's Hospital of Philadelphia,1384,1573,1412,1412,4452,,,yes,no,no,radiation_only_no_initial_chemo
+C216603,The Children's Hospital of Philadelphia,1258,6779,1303,1303,7901,,,yes,no,no,radiation_only_no_initial_chemo
+C217095,The Children's Hospital of Philadelphia,2994,3007,3018,,3098,,,no,no,no,no_initial_radiation_or_chemo
+C21894,The Children's Hospital of Philadelphia,1736,,1925,1925,1755,1755,1755,yes,yes,yes,chemo_before_radiation
+C22263,The Children's Hospital of Philadelphia,4068,,4095,4095,4095,4095,,yes,yes,no,radiation_and_chemo_same_day
+C225951,Seattle Children's Hospital,1336,,1530,1530,1344,1344,1344,yes,yes,yes,chemo_before_radiation
+C226074,Seattle Children's Hospital,147,,229,229,166,166,166,yes,yes,yes,chemo_before_radiation
+C226443,Seattle Children's Hospital,2560,2582,2582,2582,,,,yes,no,no,radiation_only_no_initial_chemo
+C227058,The Children's Hospital of Philadelphia,506,1083,1002,1002,524,524,524,yes,yes,yes,chemo_before_radiation
+C22755,The Children's Hospital of Philadelphia,3437,5022,3468,3468,3438,3438,,yes,yes,no,chemo_before_radiation
+C22878,The Children's Hospital of Philadelphia,2238,5694,,,5720,,,no,no,no,no_initial_radiation_or_chemo
+C230994,The Children's Hospital of Philadelphia,3026,,3055,3055,3061,3061,,yes,yes,no,radiation_before_chemotherapy
+C2313753,The Children's Hospital of Philadelphia,381,583,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2317443,Children's National Medical Center (CNMC),129,,,,159,159,,no,yes,no,chemo_only_no_initial_radiation
+C2318673,The Children's Hospital of Philadelphia,1475,1521,,,1508,1508,,no,yes,no,chemo_only_no_initial_radiation
+C2322117,The Children's Hospital of Philadelphia,128,724,,,171,171,171,no,yes,yes,chemo_only_no_initial_radiation
+C2332203,Seattle Children's Hospital,4746,5782,4773,4773,4773,4773,,yes,yes,no,radiation_and_chemo_same_day
+C2333064,Seattle Children's Hospital,545,,,,561,561,,no,yes,no,chemo_only_no_initial_radiation
+C2333310,Seattle Children's Hospital,490,771,,,493,493,493,no,yes,yes,chemo_only_no_initial_radiation
+C2337369,Stanford Lucile Packard Children's Hospital,1345,,,,1458,1458,,no,yes,no,chemo_only_no_initial_radiation
+C2338845,The Children's Hospital of Philadelphia,4534,,4566,4566,4633,4633,,yes,yes,no,radiation_before_chemotherapy
+C2342412,Lurie Children's Hospital,3389,,3416,3416,3491,3491,,yes,yes,no,radiation_before_chemotherapy
+C2346471,The Children's Hospital of Philadelphia,3655,,3735,3735,3809,3809,,yes,yes,no,radiation_before_chemotherapy
+C2355081,Seattle Children's Hospital,4996,6552,5024,5024,5026,5026,,yes,yes,no,radiation_before_chemotherapy
+C2358033,University of Pittsburgh,769,1316,,,792,792,792,no,yes,yes,chemo_only_no_initial_radiation
+C2358156,Seattle Children's Hospital,395,,583,583,417,417,,yes,yes,no,chemo_before_radiation
+C2381034,The Children's Hospital of Philadelphia,6521,,6556,6556,6644,6644,,yes,yes,no,radiation_before_chemotherapy
+C2400222,Children's National Medical Center (CNMC),3348,4376,3349,3349,3465,3465,,yes,yes,no,radiation_before_chemotherapy
+C2403912,Meyer Children's Hospital,1423,,1536,1536,1438,1438,,yes,yes,no,chemo_before_radiation
+C2404158,Meyer Children's Hospital,720,1300,,,760,760,,no,yes,no,chemo_only_no_initial_radiation
+C2404773,Meyer Children's Hospital,4469,,4617,4617,4484,4484,4484,yes,yes,yes,chemo_before_radiation
+C2405388,Meyer Children's Hospital,251,318,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2407602,Lurie Children's Hospital,3386,,3420,3420,3420,3420,,yes,yes,no,radiation_and_chemo_same_day
+C2408832,Lurie Children's Hospital,4906,,4936,4936,4936,4936,,yes,yes,no,radiation_and_chemo_same_day
+C24108,The Children's Hospital of Philadelphia,1059,,1303,1303,1089,1089,,yes,yes,no,chemo_before_radiation
+C2414490,Children's National Medical Center (CNMC),3066,,3099,3099,3177,3177,,yes,yes,no,radiation_before_chemotherapy
+C2419410,Hudson Institute,3939,,3975,3975,4068,4068,,yes,yes,no,radiation_before_chemotherapy
+C2438598,Lurie Children's Hospital,3049,,3147,3147,3085,3085,3085,yes,yes,yes,chemo_before_radiation
+C2442411,The Children's Hospital of Philadelphia,1204,1616,1432,1432,1220,1220,1220,yes,yes,yes,chemo_before_radiation
+C2444133,Lurie Children's Hospital,692,1214,1823,,711,711,711,no,yes,yes,chemo_only_no_initial_radiation
+C2446101,Lurie Children's Hospital,404,963,1249,,431,431,431,no,yes,yes,chemo_only_no_initial_radiation
+C2457171,UCSF Benioff Children's Hospital,,-1,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2457294,Hudson Institute,645,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C245754,The Children's Hospital of Philadelphia,4595,8061,4886,4886,4886,4886,4886,yes,yes,yes,radiation_and_chemo_same_day
+C2457540,Hudson Institute,534,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2460369,Lurie Children's Hospital,920,1813,1237,1237,943,943,943,yes,yes,yes,chemo_before_radiation
+C2461107,Lurie Children's Hospital,1326,1730,1836,,1354,1354,1354,no,yes,yes,chemo_only_no_initial_radiation
+C2461968,UCSF Benioff Children's Hospital,,484,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2463690,Seattle Children's Hospital,1272,,1459,1459,1288,1288,1288,yes,yes,yes,chemo_before_radiation
+C2479926,The Children's Hospital of Philadelphia,3270,3827,3304,3304,3383,3383,,yes,yes,no,radiation_before_chemotherapy
+C2488167,Lurie Children's Hospital,1334,,,,1351,1351,1351,no,yes,yes,chemo_only_no_initial_radiation
+C2488782,Stanford Lucile Packard Children's Hospital,2491,2832,2518,2518,2600,2600,,yes,yes,no,radiation_before_chemotherapy
+C2492595,Children's National Medical Center (CNMC),3846,,3876,3876,3955,3955,,yes,yes,no,radiation_before_chemotherapy
+C2501205,The Children's Hospital of Philadelphia,1481,2031,1735,1735,1513,1513,,yes,yes,no,chemo_before_radiation
+C25092,The Children's Hospital of Philadelphia,2038,,2069,2069,2151,2151,,yes,yes,no,radiation_before_chemotherapy
+C2509200,UCSF Benioff Children's Hospital,3538,4305,4359,,,,,no,no,no,no_initial_radiation_or_chemo
+C2510307,Lurie Children's Hospital,2750,,2783,2783,2860,2860,,yes,yes,no,radiation_before_chemotherapy
+C2536506,The Children's Hospital of Philadelphia,672,,,,701,701,,no,yes,no,chemo_only_no_initial_radiation
+C2536998,The Children's Hospital of Philadelphia,1142,1737,1451,1451,1155,1155,,yes,yes,no,chemo_before_radiation
+C2539827,Lurie Children's Hospital,766,956,,,811,811,811,no,yes,yes,chemo_only_no_initial_radiation
+C2540442,Hudson Institute,541,,,,591,591,,no,yes,no,chemo_only_no_initial_radiation
+C2541918,University of Pittsburgh,5938,,5965,5965,6030,6030,,yes,yes,no,radiation_before_chemotherapy
+C2544870,Seattle Children's Hospital,5124,,5142,5142,5144,5144,,yes,yes,no,radiation_before_chemotherapy
+C2548560,Lurie Children's Hospital,5317,,5348,5348,5419,5419,,yes,yes,no,radiation_before_chemotherapy
+C2550528,UCSF Benioff Children's Hospital,969,1263,1267,,998,998,998,no,yes,yes,chemo_only_no_initial_radiation
+C2552619,UCSF Benioff Children's Hospital,3336,,3352,3352,3352,3352,,yes,yes,no,radiation_and_chemo_same_day
+C2554956,The Children's Hospital of Philadelphia,1441,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2556555,The Children's Hospital of Philadelphia,5448,6371,5481,5481,5567,5567,,yes,yes,no,radiation_before_chemotherapy
+C2567010,Children's National Medical Center (CNMC),2151,3867,2188,2188,2266,2266,,yes,yes,no,radiation_before_chemotherapy
+C2567502,University of Pittsburgh,54,76,,,58,58,,no,yes,no,chemo_only_no_initial_radiation
+C2568609,Lurie Children's Hospital,3061,,3093,3093,3177,3177,,yes,yes,no,radiation_before_chemotherapy
+C2571192,Seattle Children's Hospital,802,1168,979,979,815,815,,yes,yes,no,chemo_before_radiation
+C2571315,Seattle Children's Hospital,1277,,1434,1434,1289,1289,1289,yes,yes,yes,chemo_before_radiation
+C25830,The Children's Hospital of Philadelphia,,6555,5563,,5646,,,no,no,no,no_initial_radiation_or_chemo
+C2595915,The Children's Hospital of Philadelphia,2456,,2490,2490,2581,2581,,yes,yes,no,radiation_before_chemotherapy
+C2596407,Hackensack,7566,,7597,7597,7680,7680,,yes,yes,no,radiation_before_chemotherapy
+C2602680,Stanford Lucile Packard Children's Hospital,1638,1934,1675,1675,1670,1670,,yes,yes,no,chemo_before_radiation
+C2605755,Seattle Children's Hospital,557,,,,565,565,565,no,yes,yes,chemo_only_no_initial_radiation
+C2607354,Children's National Medical Center (CNMC),1912,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2607600,Children's National Medical Center (CNMC),2592,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2642040,Lurie Children's Hospital,1198,2002,1712,1712,1222,1222,1222,yes,yes,yes,chemo_before_radiation
+C2645361,Children's National Medical Center (CNMC),,5081,,,5081,,,no,no,no,no_initial_radiation_or_chemo
+C2645484,Children's National Medical Center (CNMC),825,1546,1052,1052,838,838,,yes,yes,no,chemo_before_radiation
+C2645607,Children's National Medical Center (CNMC),6433,,6456,6456,6611,6611,,yes,yes,no,radiation_before_chemotherapy
+C2645853,Children's National Medical Center (CNMC),2858,,2899,2899,2958,2958,,yes,yes,no,radiation_before_chemotherapy
+C2646837,The Children's Hospital of Philadelphia,2839,2939,2879,2879,2959,,,yes,no,no,radiation_only_no_initial_chemo
+C2653602,CBTN Non-Consortium Member,2400,2415,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2658645,The Children's Hospital of Philadelphia,-1,0,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2660736,Stanford Lucile Packard Children's Hospital,2774,,2804,2804,2882,2882,,yes,yes,no,radiation_before_chemotherapy
+C2661843,Children's National Medical Center (CNMC),4381,5730,4408,4408,6269,,,yes,no,no,radiation_only_no_initial_chemo
+C2666394,University of Pittsburgh,1447,1574,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2684844,Stanford Lucile Packard Children's Hospital,1441,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2690133,Children's National Medical Center (CNMC),1041,,,,1074,1074,1074,no,yes,yes,chemo_only_no_initial_radiation
+C2691978,Children's National Medical Center (CNMC),1892,2595,1936,1936,2018,2018,,yes,yes,no,radiation_before_chemotherapy
+C2694069,Children's National Medical Center (CNMC),610,826,826,826,612,612,,yes,yes,no,chemo_before_radiation
+C2694192,Children's National Medical Center (CNMC),784,898,,,800,800,,no,yes,no,chemo_only_no_initial_radiation
+C2696529,Seattle Children's Hospital,912,,1097,1097,933,933,,yes,yes,no,chemo_before_radiation
+C2698005,The Children's Hospital of Philadelphia,348,973,516,516,366,366,366,yes,yes,yes,chemo_before_radiation
+C2698251,Seattle Children's Hospital,1431,,,,1444,1444,1444,no,yes,yes,chemo_only_no_initial_radiation
+C270354,The Children's Hospital of Philadelphia,320,349,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2704155,Meyer Children's Hospital,2058,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C270723,The Children's Hospital of Philadelphia,3312,3877,3355,3355,3362,3362,,yes,yes,no,radiation_before_chemotherapy
+C2714610,Seattle Children's Hospital,836,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2723712,Hackensack,171,187,,,195,,195,no,no,no,no_initial_radiation_or_chemo
+C2734905,Children's National Medical Center (CNMC),3982,,4029,4029,,,,yes,no,no,radiation_only_no_initial_chemo
+C2735151,Children's National Medical Center (CNMC),1420,2567,2653,,1416,,,no,no,no,no_initial_radiation_or_chemo
+C2735274,Children's National Medical Center (CNMC),2228,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C2735766,Children's National Medical Center (CNMC),1913,,1941,1941,2025,2025,,yes,yes,no,radiation_before_chemotherapy
+C2735889,Children's National Medical Center (CNMC),480,777,,,502,502,502,no,yes,yes,chemo_only_no_initial_radiation
+C2740809,Children's National Medical Center (CNMC),1167,,,,1197,1197,,no,yes,no,chemo_only_no_initial_radiation
+C2746098,Children's National Medical Center (CNMC),4699,5381,4734,4734,4810,4810,,yes,yes,no,radiation_before_chemotherapy
+C27552,The Children's Hospital of Philadelphia,3856,6560,3884,3884,3968,3968,,yes,yes,no,radiation_before_chemotherapy
+C2769837,Lurie Children's Hospital,1624,,1654,1654,1697,1697,,yes,yes,no,radiation_before_chemotherapy
+C2774019,The Children's Hospital of Philadelphia,1853,2311,1883,1883,1966,1966,,yes,yes,no,radiation_before_chemotherapy
+C2783613,Children's National Medical Center (CNMC),487,535,,,540,,540,no,no,no,no_initial_radiation_or_chemo
+C2784966,Seattle Children's Hospital,8530,10542,8557,8557,8617,8617,,yes,yes,no,radiation_before_chemotherapy
+C2786688,The Children's Hospital of Philadelphia,1985,2103,2019,2019,2110,,,yes,no,no,radiation_only_no_initial_chemo
+C2833920,Children's National Medical Center (CNMC),1492,1627,,,1522,1522,,no,yes,no,chemo_only_no_initial_radiation
+C2834166,Children's National Medical Center (CNMC),2031,2508,2508,2508,2067,2067,,yes,yes,no,chemo_before_radiation
+C2848188,The Children's Hospital of Philadelphia,,219,,,33,,33,no,no,no,no_initial_radiation_or_chemo
+C2852616,Seattle Children's Hospital,5664,,5695,5695,5776,5776,,yes,yes,no,radiation_before_chemotherapy
+C28905,The Children's Hospital of Philadelphia,4234,5669,4263,4263,4267,4267,,yes,yes,no,radiation_before_chemotherapy
+C2892714,Seattle Children's Hospital,1033,,,,1045,1045,1045,no,yes,yes,chemo_only_no_initial_radiation
+C2896773,The Children's Hospital of Philadelphia,4254,,4289,4289,4368,4368,,yes,yes,no,radiation_before_chemotherapy
+C2897019,The Children's Hospital of Philadelphia,1794,,1831,1831,1908,1908,,yes,yes,no,radiation_before_chemotherapy
+C2897142,The Children's Hospital of Philadelphia,5980,,6011,6011,6103,6103,,yes,yes,no,radiation_before_chemotherapy
+C2898495,Stanford Lucile Packard Children's Hospital,2602,,2631,2631,2738,2738,,yes,yes,no,radiation_before_chemotherapy
+C29028,The Children's Hospital of Philadelphia,3655,,,,3772,3772,,no,yes,no,chemo_only_no_initial_radiation
+C292371,Meyer Children's Hospital,882,,1100,1100,899,899,,yes,yes,no,chemo_before_radiation
+C293601,Meyer Children's Hospital,3712,,,,3725,3725,,no,yes,no,chemo_only_no_initial_radiation
+C2981889,The Children's Hospital of Philadelphia,365,4202,,,426,426,,no,yes,no,chemo_only_no_initial_radiation
+C298890,Seattle Children's Hospital,6257,6302,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3003906,The Children's Hospital of Philadelphia,,181,,,,,,no,no,no,no_initial_radiation_or_chemo
+C300612,Lurie Children's Hospital,222,409,,,245,245,422,no,yes,no,chemo_only_no_initial_radiation
+C300858,Lurie Children's Hospital,4058,,4104,4104,4087,4087,,yes,yes,no,chemo_before_radiation
+C30135,The Children's Hospital of Philadelphia,1366,,1616,1616,1396,1396,,yes,yes,no,chemo_before_radiation
+C303810,Seattle Children's Hospital,1123,1210,1301,,1146,1146,,no,yes,no,chemo_only_no_initial_radiation
+C3084963,CBTN Non-Consortium Member,1005,1605,,,,,,no,no,no,no_initial_radiation_or_chemo
+C308730,The Children's Hospital of Philadelphia,4601,,4628,4628,4699,4699,,yes,yes,no,radiation_before_chemotherapy
+C310206,Seattle Children's Hospital,2648,5687,2661,2661,2646,,,yes,no,no,radiation_only_no_initial_chemo
+C312912,The Children's Hospital of Philadelphia,6576,7095,6606,6606,7127,,,yes,no,no,radiation_only_no_initial_chemo
+C3161346,Children's National Medical Center (CNMC),5165,,5199,5199,5189,5189,,yes,yes,no,chemo_before_radiation
+C3164790,Children's National Medical Center (CNMC),475,603,,,497,497,,no,yes,no,chemo_only_no_initial_radiation
+C3169587,The Children's Hospital of Philadelphia,2697,,2724,2724,2811,2811,,yes,yes,no,radiation_before_chemotherapy
+C3198492,The Children's Hospital of Philadelphia,3453,,3484,3484,3566,3566,,yes,yes,no,radiation_before_chemotherapy
+C3199845,UAB,2109,2483,2553,,2137,2137,,no,yes,no,chemo_only_no_initial_radiation
+C3203658,UAB,4601,,4643,4643,4648,4648,,yes,yes,no,radiation_before_chemotherapy
+C3203904,UAB,4573,,4627,4627,4627,4627,,yes,yes,no,radiation_and_chemo_same_day
+C3207963,Dayton Children's Hospital,370,,,,408,408,408,no,yes,yes,chemo_only_no_initial_radiation
+C3224691,Stanford Lucile Packard Children's Hospital,3579,5774,5806,,3321,,,no,no,no,no_initial_radiation_or_chemo
+C3224814,Stanford Lucile Packard Children's Hospital,1829,,1874,1874,1951,1951,,yes,yes,no,radiation_before_chemotherapy
+C3230472,Children's National Medical Center (CNMC),507,,690,690,530,530,,yes,yes,no,chemo_before_radiation
+C3253719,Meyer Children's Hospital,1789,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3256302,Meyer Children's Hospital,1229,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3273768,University of Pittsburgh,4159,,4192,4192,4273,4273,,yes,yes,no,radiation_before_chemotherapy
+C3279303,University of Pittsburgh,1963,,1992,1992,2069,2069,,yes,yes,no,radiation_before_chemotherapy
+C333453,Meyer Children's Hospital,1113,,1203,1203,1133,1133,,yes,yes,no,chemo_before_radiation
+C3335145,Wake Forest Baptist Medical Center,1404,4610,2487,2487,2540,2540,2540,yes,yes,yes,radiation_before_chemotherapy
+C3374259,Lurie Children's Hospital,6595,6639,6665,,6664,,,no,no,no,no_initial_radiation_or_chemo
+C3376596,Lurie Children's Hospital,3904,4653,3931,3931,3931,3931,,yes,yes,no,radiation_and_chemo_same_day
+C3376842,Lurie Children's Hospital,1407,,,,1429,1429,1429,no,yes,yes,chemo_only_no_initial_radiation
+C3379056,Lurie Children's Hospital,3957,5296,3983,3983,3984,3984,,yes,yes,no,radiation_before_chemotherapy
+C3379794,Lurie Children's Hospital,7221,,,,7264,7264,,no,yes,no,chemo_only_no_initial_radiation
+C3379917,Lurie Children's Hospital,3955,,3985,3985,3985,3985,,yes,yes,no,radiation_and_chemo_same_day
+C3380286,Lurie Children's Hospital,2831,,2861,2861,2937,2937,,yes,yes,no,radiation_before_chemotherapy
+C3380901,Lurie Children's Hospital,279,549,843,,292,292,,no,yes,no,chemo_only_no_initial_radiation
+C3381885,Lurie Children's Hospital,2156,,2190,2190,2190,2190,,yes,yes,no,radiation_and_chemo_same_day
+C3382008,Lurie Children's Hospital,1940,,1971,1971,1971,1971,,yes,yes,no,radiation_and_chemo_same_day
+C3388527,Seattle Children's Hospital,1192,,,,1215,1215,1215,no,yes,yes,chemo_only_no_initial_radiation
+C33948,The Children's Hospital of Philadelphia,2014,8517,2021,2021,1988,,,yes,no,no,radiation_only_no_initial_chemo
+C3400827,Children's National Medical Center (CNMC),3451,,,,3552,3552,,no,yes,no,chemo_only_no_initial_radiation
+C3400950,Children's National Medical Center (CNMC),2164,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C340341,University of Pittsburgh,4206,5287,4237,4237,4237,4237,,yes,yes,no,radiation_and_chemo_same_day
+C3405132,Lurie Children's Hospital,2845,,2874,2874,2874,2874,,yes,yes,no,radiation_and_chemo_same_day
+C3405255,Lurie Children's Hospital,3790,,3826,3826,3826,3826,,yes,yes,no,radiation_and_chemo_same_day
+C3406239,The Children's Hospital of Philadelphia,659,1049,869,869,679,679,,yes,yes,no,chemo_before_radiation
+C3408822,The Children's Hospital of Philadelphia,1636,1840,1665,1665,1738,1738,,yes,yes,no,radiation_before_chemotherapy
+C3409560,The Children's Hospital of Philadelphia,2782,,2830,2830,2924,2924,,yes,yes,no,radiation_before_chemotherapy
+C3410298,Children's National Medical Center (CNMC),5975,,6006,6006,6087,6087,,yes,yes,no,radiation_before_chemotherapy
+C3410544,Children's National Medical Center (CNMC),2059,2356,2089,2089,2173,2173,,yes,yes,no,radiation_before_chemotherapy
+C3410913,Children's National Medical Center (CNMC),1364,1757,,,1386,1386,,no,yes,no,chemo_only_no_initial_radiation
+C3411282,Children's National Medical Center (CNMC),0,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3411651,Lurie Children's Hospital,2147,7912,2168,2168,2170,2170,,yes,yes,no,radiation_before_chemotherapy
+C3418416,The Children's Hospital of Philadelphia,479,,,,503,503,,no,yes,no,chemo_only_no_initial_radiation
+C3420753,CBTN Non-Consortium Member,3355,3471,3390,3390,3528,,,yes,no,no,radiation_only_no_initial_chemo
+C3422106,The Children's Hospital of Philadelphia,25,183,414,,37,37,37,no,yes,yes,chemo_only_no_initial_radiation
+C3430101,UAB,5259,,5294,5294,5302,5302,,yes,yes,no,radiation_before_chemotherapy
+C3436989,Weill Cornell Medical College,616,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3445845,Children's National Medical Center (CNMC),983,,1183,1183,1018,1018,,yes,yes,no,chemo_before_radiation
+C3461835,Wake Forest Baptist Medical Center,3706,4079,3734,3734,3735,3735,,yes,yes,no,radiation_before_chemotherapy
+C3464049,Lurie Children's Hospital,1301,1804,1545,1545,1313,1313,1313,yes,yes,yes,chemo_before_radiation
+C3466755,Johns Hopkins Medicine,6135,,6171,6171,6176,6176,,yes,yes,no,radiation_before_chemotherapy
+C3466878,Johns Hopkins Medicine,3796,,3842,3842,3848,3848,,yes,yes,no,radiation_before_chemotherapy
+C3471675,Meyer Children's Hospital,5025,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3473274,Meyer Children's Hospital,1547,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3473397,Meyer Children's Hospital,1637,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3474996,The Children's Hospital of Philadelphia,6821,7866,6851,6851,7103,7103,,yes,yes,no,radiation_before_chemotherapy
+C3493200,Dayton Children's Hospital,146,151,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3518784,Stanford Lucile Packard Children's Hospital,2514,,2549,2549,2632,2632,,yes,yes,no,radiation_before_chemotherapy
+C3519645,The Children's Hospital of Philadelphia,953,1363,,,972,972,,no,yes,no,chemo_only_no_initial_radiation
+C3521244,Children's National Medical Center (CNMC),68,253,,,80,80,,no,yes,no,chemo_only_no_initial_radiation
+C3522105,Stanford Lucile Packard Children's Hospital,6741,,6767,6767,6843,6843,,yes,yes,no,radiation_before_chemotherapy
+C3544368,Seattle Children's Hospital,571,,,,587,587,587,no,yes,yes,chemo_only_no_initial_radiation
+C3544737,Seattle Children's Hospital,4624,4921,4648,4648,4648,4648,,yes,yes,no,radiation_and_chemo_same_day
+C3552978,The Children's Hospital of Philadelphia,3335,3803,3379,3379,3477,3477,,yes,yes,no,radiation_before_chemotherapy
+C3559497,The Children's Hospital of Philadelphia,1523,,1722,1722,1554,1554,1554,yes,yes,yes,chemo_before_radiation
+C3559989,Lurie Children's Hospital,2808,3338,2829,2829,2867,2867,,yes,yes,no,radiation_before_chemotherapy
+C3567000,Lurie Children's Hospital,2794,,2821,2821,2821,2821,,yes,yes,no,radiation_and_chemo_same_day
+C3571674,Meyer Children's Hospital,3918,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3572043,Meyer Children's Hospital,3163,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3587418,Johns Hopkins Medicine,233,,462,462,253,253,253,yes,yes,yes,chemo_before_radiation
+C3588648,Children's National Medical Center (CNMC),2375,,2410,2410,2496,2496,,yes,yes,no,radiation_before_chemotherapy
+C3612264,CBTN Non-Consortium Member,2799,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3612387,CBTN Non-Consortium Member,4615,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3612510,CBTN Non-Consortium Member,3623,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3612879,CBTN Non-Consortium Member,2021,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613002,CBTN Non-Consortium Member,3054,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613125,CBTN Non-Consortium Member,989,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613248,CBTN Non-Consortium Member,5495,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613371,CBTN Non-Consortium Member,1032,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613494,CBTN Non-Consortium Member,2072,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613617,CBTN Non-Consortium Member,2486,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613740,CBTN Non-Consortium Member,1420,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613863,CBTN Non-Consortium Member,952,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3613986,CBTN Non-Consortium Member,1715,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3614109,CBTN Non-Consortium Member,3162,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3614355,CBTN Non-Consortium Member,2272,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3614478,CBTN Non-Consortium Member,1792,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3614601,CBTN Non-Consortium Member,5516,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3614724,CBTN Non-Consortium Member,1923,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3614847,CBTN Non-Consortium Member,3970,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3614970,CBTN Non-Consortium Member,3211,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3615093,CBTN Non-Consortium Member,4197,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3631329,Seattle Children's Hospital,4278,,4329,4329,4344,4344,,yes,yes,no,radiation_before_chemotherapy
+C3631698,Seattle Children's Hospital,9216,11019,9269,9269,9277,9277,,yes,yes,no,radiation_before_chemotherapy
+C3634281,Dayton Children's Hospital,1093,1327,,,1103,1103,1103,no,yes,yes,chemo_only_no_initial_radiation
+C3638094,Stanford Lucile Packard Children's Hospital,373,677,695,,401,401,,no,yes,no,chemo_only_no_initial_radiation
+C3638340,Stanford Lucile Packard Children's Hospital,3319,4896,3350,3350,,,,yes,no,no,radiation_only_no_initial_chemo
+C3638586,Stanford Lucile Packard Children's Hospital,2334,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3641169,Children's National Medical Center (CNMC),504,774,,,526,526,526,no,yes,yes,chemo_only_no_initial_radiation
+C3651501,The Children's Hospital of Philadelphia,346,,,,371,371,371,no,yes,yes,chemo_only_no_initial_radiation
+C3651747,University of Pittsburgh,3024,,3046,3046,3177,3177,,yes,yes,no,radiation_before_chemotherapy
+C3653469,Lurie Children's Hospital,1008,1071,,,1064,1064,,no,yes,no,chemo_only_no_initial_radiation
+C3653715,Lurie Children's Hospital,4193,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3665154,The Children's Hospital of Philadelphia,6703,,6741,6741,6822,6822,,yes,yes,no,radiation_before_chemotherapy
+C3665400,The Children's Hospital of Philadelphia,1544,2182,2256,,1601,1601,1601,no,yes,yes,chemo_only_no_initial_radiation
+C3678069,Children's National Medical Center (CNMC),2650,,2679,2679,2763,2763,,yes,yes,no,radiation_before_chemotherapy
+C3680160,Children's National Medical Center (CNMC),5159,5666,5189,5189,5274,5274,,yes,yes,no,radiation_before_chemotherapy
+C3706359,Weill Cornell Medical College,133,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C371583,Seattle Children's Hospital,2538,,2563,2563,2563,2563,,yes,yes,no,radiation_and_chemo_same_day
+C3717306,Seattle Children's Hospital,3855,,3880,3880,3884,3884,,yes,yes,no,radiation_before_chemotherapy
+C3732066,Children's National Medical Center (CNMC),2113,3029,2148,2148,2148,2148,,yes,yes,no,radiation_and_chemo_same_day
+C3732927,Hackensack,586,928,763,763,617,617,617,yes,yes,yes,chemo_before_radiation
+C3735510,Hackensack,5094,5959,5136,5136,5204,5204,,yes,yes,no,radiation_before_chemotherapy
+C3736740,Hackensack,3214,,3249,3249,3254,3254,,yes,yes,no,radiation_before_chemotherapy
+C3740799,Lurie Children's Hospital,1003,,1236,1236,1032,1032,,yes,yes,no,chemo_before_radiation
+C374412,The Children's Hospital of Philadelphia,190,525,570,,192,192,192,no,yes,yes,chemo_only_no_initial_radiation
+C3749286,Lurie Children's Hospital,4080,,4111,4111,4190,4190,,yes,yes,no,radiation_before_chemotherapy
+C3753468,Lurie Children's Hospital,4169,,4203,4203,4196,4196,,yes,yes,no,chemo_before_radiation
+C3755559,The Children's Hospital of Philadelphia,454,739,857,,468,468,,no,yes,no,chemo_only_no_initial_radiation
+C3755928,The Children's Hospital of Philadelphia,5557,,5591,5591,5675,5675,,yes,yes,no,radiation_before_chemotherapy
+C3767367,The Children's Hospital of Philadelphia,3790,,3821,3821,3904,3904,,yes,yes,no,radiation_before_chemotherapy
+C3768966,Children's National Medical Center (CNMC),3270,3827,3304,3304,4164,,,yes,no,no,radiation_only_no_initial_chemo
+C3769458,Children's National Medical Center (CNMC),2164,2591,2191,2191,2275,2275,,yes,yes,no,radiation_before_chemotherapy
+C3769950,Children's National Medical Center (CNMC),2875,,2903,2903,2903,2903,,yes,yes,no,radiation_and_chemo_same_day
+C3775608,University of Pittsburgh,358,,,,398,398,,no,yes,no,chemo_only_no_initial_radiation
+C3776100,University of Pittsburgh,1865,,1896,1896,1976,1976,,yes,yes,no,radiation_before_chemotherapy
+C3777699,University of Pittsburgh,4732,,4770,4770,,,,yes,no,no,radiation_only_no_initial_chemo
+C377979,The Children's Hospital of Philadelphia,3424,6706,,,,,,no,no,no,no_initial_radiation_or_chemo
+C3808695,Children's National Medical Center (CNMC),3414,6100,3448,3448,3427,3427,,yes,yes,no,chemo_before_radiation
+C3808818,Children's National Medical Center (CNMC),4693,,4727,4727,4804,4804,,yes,yes,no,radiation_before_chemotherapy
+C3811647,Children's National Medical Center (CNMC),6005,8617,6028,6028,6116,6116,,yes,yes,no,radiation_before_chemotherapy
+C3816813,The Children's Hospital of Philadelphia,637,,824,824,656,656,656,yes,yes,yes,chemo_before_radiation
+C3821364,Lurie Children's Hospital,4003,,4037,4037,4037,4037,,yes,yes,no,radiation_and_chemo_same_day
+C3841167,Stanford Lucile Packard Children's Hospital,2783,,2811,2811,2889,2889,,yes,yes,no,radiation_before_chemotherapy
+C3859863,The Children's Hospital of Philadelphia,4099,,4133,4133,4206,4206,,yes,yes,no,radiation_before_chemotherapy
+C3860232,The Children's Hospital of Philadelphia,1366,2576,2604,,1397,1397,1397,no,yes,yes,chemo_only_no_initial_radiation
+C3865521,Lurie Children's Hospital,1848,,1872,1872,1872,1872,,yes,yes,no,radiation_and_chemo_same_day
+C3875238,Hackensack,743,821,,,773,773,773,no,yes,yes,chemo_only_no_initial_radiation
+C3884586,Seattle Children's Hospital,3630,,3657,3657,3657,3657,,yes,yes,no,radiation_and_chemo_same_day
+C3904635,University of Pittsburgh,6318,,,,6062,,,no,no,no,no_initial_radiation_or_chemo
+C3905865,University of Pittsburgh,3490,,3505,3505,3588,3588,,yes,yes,no,radiation_before_chemotherapy
+C3924192,Hackensack,4855,,4894,4894,4898,4898,,yes,yes,no,radiation_before_chemotherapy
+C3941166,Wake Forest Baptist Medical Center,591,947,,,989,,,no,no,no,no_initial_radiation_or_chemo
+C3943503,The Children's Hospital of Philadelphia,964,,,,977,977,977,no,yes,yes,chemo_only_no_initial_radiation
+C396306,The Children's Hospital of Philadelphia,562,1019,829,829,587,587,587,yes,yes,yes,chemo_before_radiation
+C396552,The Children's Hospital of Philadelphia,480,,,,508,508,,no,yes,no,chemo_only_no_initial_radiation
+C3971178,The Children's Hospital of Philadelphia,3357,,3388,3388,3472,3472,,yes,yes,no,radiation_before_chemotherapy
+C39729,The Children's Hospital of Philadelphia,1235,,1449,1449,1266,1266,,yes,yes,no,chemo_before_radiation
+C3979173,The Children's Hospital of Philadelphia,5706,5797,5813,,,,,no,no,no,no_initial_radiation_or_chemo
+C3980157,The Children's Hospital of Philadelphia,5087,,5114,5114,5121,5121,,yes,yes,no,radiation_before_chemotherapy
+C398643,Lurie Children's Hospital,1067,1228,,,1098,1098,,no,yes,no,chemo_only_no_initial_radiation
+C3991596,Orlando Health Arnold Palmer Hospital,4675,,4704,4704,4785,4785,,yes,yes,no,radiation_before_chemotherapy
+C40098,The Children's Hospital of Philadelphia,86,,385,385,110,110,,yes,yes,no,chemo_before_radiation
+C4021731,The Children's Hospital of Philadelphia,543,,,,571,571,571,no,yes,yes,chemo_only_no_initial_radiation
+C4024806,Lurie Children's Hospital,2593,,2628,2628,2670,2670,,yes,yes,no,radiation_before_chemotherapy
+C4028742,Johns Hopkins Medicine,1123,,1162,1162,,,,yes,no,no,radiation_only_no_initial_chemo
+C4031571,Seattle Children's Hospital,1187,2657,1376,1376,1204,1204,1204,yes,yes,yes,chemo_before_radiation
+C4031694,Seattle Children's Hospital,3365,,3391,3391,3467,3467,,yes,yes,no,radiation_before_chemotherapy
+C4033539,Seattle Children's Hospital,,1595,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4034523,Seattle Children's Hospital,1562,2214,1737,1737,1579,1579,1579,yes,yes,yes,chemo_before_radiation
+C4034646,Seattle Children's Hospital,1785,,1960,1960,1802,1802,,yes,yes,no,chemo_before_radiation
+C4049406,The Children's Hospital of Philadelphia,2705,3273,3311,,2759,2759,,no,yes,no,chemo_only_no_initial_radiation
+C4053834,Dayton Children's Hospital,753,,,,781,781,781,no,yes,yes,chemo_only_no_initial_radiation
+C4053957,Dayton Children's Hospital,3238,4402,3273,3273,3358,3358,,yes,yes,no,radiation_before_chemotherapy
+C4059861,Children's National Medical Center (CNMC),1516,,1551,1551,1551,1551,,yes,yes,no,radiation_and_chemo_same_day
+C4062321,Children's National Medical Center (CNMC),5336,,5378,5378,5462,5462,,yes,yes,no,radiation_before_chemotherapy
+C4062936,CBTN Non-Consortium Member,1228,1570,1597,,1341,1341,1341,no,yes,yes,chemo_only_no_initial_radiation
+C4063305,The Children's Hospital of Philadelphia,7024,7663,7057,7057,7148,7148,,yes,yes,no,radiation_before_chemotherapy
+C4065150,Meyer Children's Hospital,4945,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C406761,The Children's Hospital of Philadelphia,1038,1232,1183,1183,1052,1052,1052,yes,yes,yes,chemo_before_radiation
+C40713,The Children's Hospital of Philadelphia,2589,,2645,2645,2596,2596,,yes,yes,no,chemo_before_radiation
+C4073883,Lurie Children's Hospital,1634,,1665,1665,1910,1910,,yes,yes,no,radiation_before_chemotherapy
+C4076097,CBTN Non-Consortium Member,687,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4082862,The Children's Hospital of Philadelphia,7927,,7984,7984,8066,8066,,yes,yes,no,radiation_before_chemotherapy
+C4084953,Stanford Lucile Packard Children's Hospital,1124,,,,1150,1150,1150,no,yes,yes,chemo_only_no_initial_radiation
+C4085199,Stanford Lucile Packard Children's Hospital,1212,1789,,,1376,1376,1376,no,yes,yes,chemo_only_no_initial_radiation
+C409221,Meyer Children's Hospital,722,,944,944,736,736,,yes,yes,no,chemo_before_radiation
+C4093563,The Children's Hospital of Philadelphia,1048,1597,1892,,1087,1087,1087,no,yes,yes,chemo_only_no_initial_radiation
+C4097622,Stanford Lucile Packard Children's Hospital,368,563,,,390,390,390,no,yes,yes,chemo_only_no_initial_radiation
+C409836,Meyer Children's Hospital,1680,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4103649,Seattle Children's Hospital,2122,,,,2140,2140,2140,no,yes,yes,chemo_only_no_initial_radiation
+C4104018,Seattle Children's Hospital,167,613,193,193,195,195,,yes,yes,no,radiation_before_chemotherapy
+C4105125,University of Michigan C.S. Mott Children's Hospital,2228,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4105248,University of Michigan C.S. Mott Children's Hospital,2188,4081,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4105371,University of Michigan C.S. Mott Children's Hospital,408,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4105494,University of Michigan C.S. Mott Children's Hospital,1013,2232,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4105617,University of Michigan C.S. Mott Children's Hospital,3192,3621,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4105863,University of Michigan C.S. Mott Children's Hospital,3807,5519,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4106970,University of Michigan C.S. Mott Children's Hospital,3018,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4107216,University of Michigan C.S. Mott Children's Hospital,5398,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4107708,University of Michigan C.S. Mott Children's Hospital,47,856,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4108077,University of Michigan C.S. Mott Children's Hospital,4617,5924,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4108569,OHSU Doernbecher Children's Hospital,2633,,2681,2681,2722,2722,,yes,yes,no,radiation_before_chemotherapy
+C4110045,University of Michigan C.S. Mott Children's Hospital,116,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C411066,Meyer Children's Hospital,3336,,,,3338,3338,,no,yes,no,chemo_only_no_initial_radiation
+C4113366,University of Michigan C.S. Mott Children's Hospital,2011,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4114350,University of Michigan C.S. Mott Children's Hospital,3468,4035,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4114965,University of Michigan C.S. Mott Children's Hospital,1057,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4115580,University of Michigan C.S. Mott Children's Hospital,3969,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4120869,University of Michigan C.S. Mott Children's Hospital,3992,4248,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4122099,University of Michigan C.S. Mott Children's Hospital,7723,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4122345,University of Michigan C.S. Mott Children's Hospital,656,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4122468,University of Michigan C.S. Mott Children's Hospital,691,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4122591,University of Michigan C.S. Mott Children's Hospital,3548,3924,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4123821,University of Michigan C.S. Mott Children's Hospital,,5493,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4124805,University of Michigan C.S. Mott Children's Hospital,1431,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4124928,University of Michigan C.S. Mott Children's Hospital,803,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4127634,OHSU Doernbecher Children's Hospital,2192,,2224,2224,2296,2296,,yes,yes,no,radiation_before_chemotherapy
+C413034,University of Pittsburgh,5110,,5136,5136,5187,5187,,yes,yes,no,radiation_before_chemotherapy
+C41328,The Children's Hospital of Philadelphia,13275,,13359,13359,13368,13368,,yes,yes,no,radiation_before_chemotherapy
+C4133784,Lurie Children's Hospital,780,,,,795,795,795,no,yes,yes,chemo_only_no_initial_radiation
+C4153095,Lurie Children's Hospital,7195,,7214,7214,7214,7214,,yes,yes,no,radiation_and_chemo_same_day
+C4154940,UCSF Benioff Children's Hospital,1800,2367,2031,2031,1829,1829,1829,yes,yes,yes,chemo_before_radiation
+C4157892,University of Pittsburgh,2780,,2807,2807,2884,2884,,yes,yes,no,radiation_before_chemotherapy
+C4161705,UAB,1261,,,,1307,1307,,no,yes,no,chemo_only_no_initial_radiation
+C4174251,The Children's Hospital of Philadelphia,4346,4590,4473,4473,4362,4362,4362,yes,yes,yes,chemo_before_radiation
+C417585,Lurie Children's Hospital,2759,,2809,2809,2799,2799,,yes,yes,no,chemo_before_radiation
+C4190733,The Children's Hospital of Philadelphia,1446,,,,1466,1466,,no,yes,no,chemo_only_no_initial_radiation
+C4190856,The Children's Hospital of Philadelphia,6575,,6601,6601,6609,6609,,yes,yes,no,radiation_before_chemotherapy
+C419553,The Children's Hospital of Philadelphia,4854,6590,4886,4886,4894,4894,,yes,yes,no,radiation_before_chemotherapy
+C4220376,Children's National Medical Center (CNMC),519,,,,546,546,,no,yes,no,chemo_only_no_initial_radiation
+C4234644,Lurie Children's Hospital,936,,,,963,963,963,no,yes,yes,chemo_only_no_initial_radiation
+C4261089,The Children's Hospital of Philadelphia,4151,,4412,4412,4223,4223,4223,yes,yes,yes,chemo_before_radiation
+C4274373,Orlando Health Arnold Palmer Hospital,6364,7147,6395,6395,6472,6472,,yes,yes,no,radiation_before_chemotherapy
+C4274742,Orlando Health Arnold Palmer Hospital,585,3963,,,603,603,,no,yes,no,chemo_only_no_initial_radiation
+C4274865,Orlando Health Arnold Palmer Hospital,5172,,5207,5207,5279,5279,,yes,yes,no,radiation_before_chemotherapy
+C4274988,Orlando Health Arnold Palmer Hospital,2104,,2139,2139,2211,2211,,yes,yes,no,radiation_before_chemotherapy
+C4309428,Lurie Children's Hospital,3468,3971,3496,3496,3496,3496,,yes,yes,no,radiation_and_chemo_same_day
+C4309674,Hackensack,2534,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4316685,The Children's Hospital of Philadelphia,4000,,4031,4031,4104,4104,,yes,yes,no,radiation_before_chemotherapy
+C432222,The Children's Hospital of Philadelphia,495,,881,881,517,517,,yes,yes,no,chemo_before_radiation
+C4333905,The Children's Hospital of Philadelphia,1502,,,,1529,1529,1529,no,yes,yes,chemo_only_no_initial_radiation
+C4344483,Seattle Children's Hospital,3009,,3036,3036,3040,3040,,yes,yes,no,radiation_before_chemotherapy
+C4345713,The Children's Hospital of Philadelphia,4442,,4473,4473,4485,4485,,yes,yes,no,radiation_before_chemotherapy
+C4417668,Meyer Children's Hospital,1764,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4418529,Meyer Children's Hospital,1430,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4420251,Meyer Children's Hospital,1433,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C44403,The Children's Hospital of Philadelphia,1888,,,,2010,2010,,no,yes,no,chemo_only_no_initial_radiation
+C4463301,The Children's Hospital of Philadelphia,2043,,2072,2072,2135,2135,,yes,yes,no,radiation_before_chemotherapy
+C4463916,The Children's Hospital of Philadelphia,580,,,,608,608,,no,yes,no,chemo_only_no_initial_radiation
+C4470927,Stanford Lucile Packard Children's Hospital,891,933,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4472157,Stanford Lucile Packard Children's Hospital,1169,,,,1211,1211,1211,no,yes,yes,chemo_only_no_initial_radiation
+C4483473,The Children's Hospital of Philadelphia,1017,,1214,1214,1041,1041,1041,yes,yes,yes,chemo_before_radiation
+C4513239,University of Pittsburgh,3361,,3394,3394,3469,3469,,yes,yes,no,radiation_before_chemotherapy
+C45141,The Children's Hospital of Philadelphia,6676,9799,6712,6712,6718,6718,,yes,yes,no,radiation_before_chemotherapy
+C4548909,UCSF Benioff Children's Hospital,6185,,6229,6229,6213,6213,,yes,yes,no,chemo_before_radiation
+C457560,Meyer Children's Hospital,2513,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C45879,The Children's Hospital of Philadelphia,265,,,,290,290,,no,yes,no,chemo_only_no_initial_radiation
+C466293,The Children's Hospital of Philadelphia,383,2082,528,528,398,398,398,yes,yes,yes,chemo_before_radiation
+C4704750,Weill Cornell Medical College,707,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C4719387,Orlando Health Arnold Palmer Hospital,811,,1040,1040,838,838,838,yes,yes,yes,chemo_before_radiation
+C4729473,UAB,1192,,1399,1399,1220,1220,1220,yes,yes,yes,chemo_before_radiation
+C4744725,Children's National Medical Center (CNMC),2245,,2273,2273,2360,2360,,yes,yes,no,radiation_before_chemotherapy
+C477240,Lurie Children's Hospital,1694,,1951,1951,1712,1712,,yes,yes,no,chemo_before_radiation
+C478962,Lurie Children's Hospital,4284,,4316,4316,4401,4401,,yes,yes,no,radiation_before_chemotherapy
+C48216,The Children's Hospital of Philadelphia,2265,,,,2381,2381,,no,yes,no,chemo_only_no_initial_radiation
+C4852965,Children's National Medical Center (CNMC),2607,,2640,2640,2728,2728,,yes,yes,no,radiation_before_chemotherapy
+C4853088,Children's National Medical Center (CNMC),533,,,,555,555,,no,yes,no,chemo_only_no_initial_radiation
+C4853457,OHSU Doernbecher Children's Hospital,4795,,4828,4828,4905,4905,,yes,yes,no,radiation_before_chemotherapy
+C4853703,OHSU Doernbecher Children's Hospital,4463,,4446,,4512,4512,,no,yes,no,chemo_only_no_initial_radiation
+C4874367,University of Pittsburgh,1126,,,,1152,1152,1152,no,yes,yes,chemo_only_no_initial_radiation
+C4884084,University of Pittsburgh,3169,4115,3207,3207,3282,3282,,yes,yes,no,radiation_before_chemotherapy
+C4889496,Children's National Medical Center (CNMC),2417,2594,2446,2446,2447,2447,,yes,yes,no,radiation_before_chemotherapy
+C49077,The Children's Hospital of Philadelphia,4535,6032,6057,,6057,,,no,no,no,no_initial_radiation_or_chemo
+C4964157,The Children's Hospital of Philadelphia,,1240,,,1269,,1269,no,no,no,no_initial_radiation_or_chemo
+C4974243,Children's National Medical Center (CNMC),554,4781,,,577,577,,no,yes,no,chemo_only_no_initial_radiation
+C4985313,Children's National Medical Center (CNMC),2779,,2805,2805,2810,2810,,yes,yes,no,radiation_before_chemotherapy
+C50184,The Children's Hospital of Philadelphia,2404,,2439,2439,,,,yes,no,no,radiation_only_no_initial_chemo
+C5022090,Lurie Children's Hospital,3621,5615,3645,3645,3645,3645,,yes,yes,no,radiation_and_chemo_same_day
+C5027502,Lurie Children's Hospital,81,180,,,104,104,,no,yes,no,chemo_only_no_initial_radiation
+C5054685,Lurie Children's Hospital,2783,,2835,2835,2835,2835,,yes,yes,no,radiation_and_chemo_same_day
+C50799,The Children's Hospital of Philadelphia,3408,,3433,3433,3442,3442,,yes,yes,no,radiation_before_chemotherapy
+C5136234,The Children's Hospital of Philadelphia,5272,,5305,5305,5389,5389,,yes,yes,no,radiation_before_chemotherapy
+C5136849,The Children's Hospital of Philadelphia,6833,,6860,6860,6945,6945,,yes,yes,no,radiation_before_chemotherapy
+C5137218,The Children's Hospital of Philadelphia,1526,2105,2338,,1575,1575,1575,no,yes,yes,chemo_only_no_initial_radiation
+C515124,Lurie Children's Hospital,4963,,4994,4994,5002,5002,,yes,yes,no,radiation_before_chemotherapy
+C5154930,Wake Forest Baptist Medical Center,1930,,1991,1991,1980,1980,,yes,yes,no,chemo_before_radiation
+C5214954,Lurie Children's Hospital,1887,,1924,1924,1924,1924,,yes,yes,no,radiation_and_chemo_same_day
+C522504,Lurie Children's Hospital,4729,,4762,4762,4838,4838,,yes,yes,no,radiation_before_chemotherapy
+C5226639,Children's National Medical Center (CNMC),1347,1836,,,2096,,,no,no,no,no_initial_radiation_or_chemo
+C5228607,Weill Cornell Medical College,4050,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C5254437,Seattle Children's Hospital,1481,1989,1654,1654,1489,1489,,yes,yes,no,chemo_before_radiation
+C5259849,Orlando Health Arnold Palmer Hospital,5480,,5513,5513,5587,5587,,yes,yes,no,radiation_before_chemotherapy
+C5259972,Orlando Health Arnold Palmer Hospital,1878,1914,1918,,1918,,,no,no,no,no_initial_radiation_or_chemo
+C528285,The Children's Hospital of Philadelphia,4018,4352,4049,4049,4142,4142,,yes,yes,no,radiation_before_chemotherapy
+C52890,The Children's Hospital of Philadelphia,4389,,4389,4389,4395,4395,,yes,yes,no,radiation_before_chemotherapy
+C528900,The Children's Hospital of Philadelphia,640,1126,,,,,,no,no,no,no_initial_radiation_or_chemo
+C5291214,Weill Cornell Medical College,5250,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C529515,The Children's Hospital of Philadelphia,790,1127,,,,,,no,no,no,no_initial_radiation_or_chemo
+C5304498,Lurie Children's Hospital,6361,6771,6404,6404,6404,6404,,yes,yes,no,radiation_and_chemo_same_day
+C531483,The Children's Hospital of Philadelphia,759,1096,,,,,,no,no,no,no_initial_radiation_or_chemo
+C533082,The Children's Hospital of Philadelphia,761,5174,1350,1350,793,793,,yes,yes,no,chemo_before_radiation
+C5332419,OHSU Doernbecher Children's Hospital,4799,,4833,4833,4835,4835,,yes,yes,no,radiation_before_chemotherapy
+C533451,The Children's Hospital of Philadelphia,976,976,,,,,,no,no,no,no_initial_radiation_or_chemo
+C5360832,Children's National Medical Center (CNMC),1755,,1786,1786,1865,1865,,yes,yes,no,radiation_before_chemotherapy
+C5361078,University of Pittsburgh,4412,,4450,4450,4529,4529,,yes,yes,no,radiation_before_chemotherapy
+C53628,The Children's Hospital of Philadelphia,3542,,3570,3570,3577,3577,,yes,yes,no,radiation_before_chemotherapy
+C537141,The Children's Hospital of Philadelphia,4321,4808,,,,,,no,no,no,no_initial_radiation_or_chemo
+C540462,The Children's Hospital of Philadelphia,444,,,,486,486,,no,yes,no,chemo_only_no_initial_radiation
+C540585,The Children's Hospital of Philadelphia,1157,4048,,,,,,no,no,no,no_initial_radiation_or_chemo
+C542061,The Children's Hospital of Philadelphia,,10135,,,,,,no,no,no,no_initial_radiation_or_chemo
+C542307,The Children's Hospital of Philadelphia,1682,2536,5156,,1692,1692,,no,yes,no,chemo_only_no_initial_radiation
+C543045,The Children's Hospital of Philadelphia,3712,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C54366,The Children's Hospital of Philadelphia,2404,8544,2444,2444,2475,2475,,yes,yes,no,radiation_before_chemotherapy
+C543906,The Children's Hospital of Philadelphia,3561,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C547965,The Children's Hospital of Philadelphia,1035,1308,,,,,,no,no,no,no_initial_radiation_or_chemo
+C548457,The Children's Hospital of Philadelphia,730,4565,,,,,,no,no,no,no_initial_radiation_or_chemo
+C5489736,The Children's Hospital of Philadelphia,79,279,,,119,119,119,no,yes,yes,chemo_only_no_initial_radiation
+C5490105,The Children's Hospital of Philadelphia,3361,,3388,3388,3393,3393,,yes,yes,no,radiation_before_chemotherapy
+C5490228,The Children's Hospital of Philadelphia,3399,,3425,3425,3507,3507,,yes,yes,no,radiation_before_chemotherapy
+C5490351,Dayton Children's Hospital,3598,,,,3701,3701,,no,yes,no,chemo_only_no_initial_radiation
+C5490597,Dayton Children's Hospital,4100,4473,4129,4129,4205,4205,,yes,yes,no,radiation_before_chemotherapy
+C5492565,Seattle Children's Hospital,4669,,4697,4697,4705,4705,,yes,yes,no,radiation_before_chemotherapy
+C549441,The Children's Hospital of Philadelphia,2495,5478,,,,,,no,no,no,no_initial_radiation_or_chemo
+C550056,Lurie Children's Hospital,3803,,3837,3837,3841,3841,,yes,yes,no,radiation_before_chemotherapy
+C551040,The Children's Hospital of Philadelphia,,6270,,,,,,no,no,no,no_initial_radiation_or_chemo
+C552762,The Children's Hospital of Philadelphia,,2799,,,,,,no,no,no,no_initial_radiation_or_chemo
+C553131,Lurie Children's Hospital,294,,,,322,322,322,no,yes,yes,chemo_only_no_initial_radiation
+C55350,The Children's Hospital of Philadelphia,2574,3616,2588,2588,2679,2679,,yes,yes,no,radiation_before_chemotherapy
+C553500,The Children's Hospital of Philadelphia,1036,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C554607,The Children's Hospital of Philadelphia,1522,2132,,,,,,no,no,no,no_initial_radiation_or_chemo
+C5555664,Lurie Children's Hospital,1918,1929,2003,,1932,,1932,no,no,no,no_initial_radiation_or_chemo
+C556575,Lurie Children's Hospital,3049,3857,3081,3081,3082,3082,,yes,yes,no,radiation_before_chemotherapy
+C557559,The Children's Hospital of Philadelphia,4505,7001,,,,,,no,no,no,no_initial_radiation_or_chemo
+C557682,Lurie Children's Hospital,964,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C558051,The Children's Hospital of Philadelphia,3349,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C558420,The Children's Hospital of Philadelphia,2463,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C558912,Seattle Children's Hospital,1026,1183,1189,,1034,1034,1034,no,yes,yes,chemo_only_no_initial_radiation
+C5594286,Lurie Children's Hospital,7247,9423,7277,7277,7277,7277,,yes,yes,no,radiation_and_chemo_same_day
+C55965,The Children's Hospital of Philadelphia,3987,5022,4018,4018,4110,4110,5267,yes,yes,no,radiation_before_chemotherapy
+C56088,The Children's Hospital of Philadelphia,4869,5617,4898,4898,4986,4986,,yes,yes,no,radiation_before_chemotherapy
+C56211,The Children's Hospital of Philadelphia,5235,5278,5300,,5242,5242,,no,yes,no,chemo_only_no_initial_radiation
+C5623068,The Children's Hospital of Philadelphia,809,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C5623314,Lurie Children's Hospital,4753,5523,4779,4779,4779,4779,,yes,yes,no,radiation_and_chemo_same_day
+C5623560,Seattle Children's Hospital,1726,1879,,,1737,1737,1737,no,yes,yes,chemo_only_no_initial_radiation
+C5624052,Seattle Children's Hospital,78,,,,91,91,,no,yes,no,chemo_only_no_initial_radiation
+C5633277,The Children's Hospital of Philadelphia,3357,,3388,3388,3395,3395,,yes,yes,no,radiation_before_chemotherapy
+C563340,The Children's Hospital of Philadelphia,458,1402,,,,,,no,no,no,no_initial_radiation_or_chemo
+C563586,The Children's Hospital of Philadelphia,1155,1642,,,,,,no,no,no,no_initial_radiation_or_chemo
+C563709,The Children's Hospital of Philadelphia,3834,8919,,,,,,no,no,no,no_initial_radiation_or_chemo
+C565431,Lurie Children's Hospital,2320,,2345,2345,2346,2346,,yes,yes,no,radiation_before_chemotherapy
+C567522,Lurie Children's Hospital,3503,3607,3537,3537,3537,3537,,yes,yes,no,radiation_and_chemo_same_day
+C5700066,Lurie Children's Hospital,78,589,622,,87,87,,no,yes,no,chemo_only_no_initial_radiation
+C57564,The Children's Hospital of Philadelphia,4288,,4317,4317,4332,4332,,yes,yes,no,radiation_before_chemotherapy
+C5792193,Children's National Medical Center (CNMC),434,861,,,460,460,460,no,yes,yes,chemo_only_no_initial_radiation
+C5801049,The Children's Hospital of Philadelphia,126,,,,247,247,247,no,yes,yes,chemo_only_no_initial_radiation
+C5801172,The Children's Hospital of Philadelphia,1141,,,,1167,1167,1167,no,yes,yes,chemo_only_no_initial_radiation
+C584619,The Children's Hospital of Philadelphia,2327,,2362,2362,2362,2362,,yes,yes,no,radiation_and_chemo_same_day
+C58548,The Children's Hospital of Philadelphia,4240,,4269,4269,4359,4359,,yes,yes,no,radiation_before_chemotherapy
+C587325,Lurie Children's Hospital,624,720,,,636,636,636,no,yes,yes,chemo_only_no_initial_radiation
+C5889978,OHSU Doernbecher Children's Hospital,1225,,,,1255,1255,1255,no,yes,yes,chemo_only_no_initial_radiation
+C58917,The Children's Hospital of Philadelphia,1575,1664,,,1589,1589,,no,yes,no,chemo_only_no_initial_radiation
+C5935242,Hackensack,1040,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C596058,Lurie Children's Hospital,2554,3286,2580,2580,2580,2580,,yes,yes,no,radiation_and_chemo_same_day
+C5964147,The Children's Hospital of Philadelphia,2447,,2480,2480,2487,2487,,yes,yes,no,radiation_before_chemotherapy
+C59655,The Children's Hospital of Philadelphia,2982,3552,3135,3135,2988,2988,2988,yes,yes,yes,chemo_before_radiation
+C6002523,The Children's Hospital of Philadelphia,2313,,2349,2349,2433,2433,,yes,yes,no,radiation_before_chemotherapy
+C6009411,The Children's Hospital of Philadelphia,2390,,2420,2420,2420,2420,,yes,yes,no,radiation_and_chemo_same_day
+C602700,Seattle Children's Hospital,1385,3963,1555,1555,1399,1399,1399,yes,yes,yes,chemo_before_radiation
+C603069,Seattle Children's Hospital,218,438,367,367,229,229,229,yes,yes,yes,chemo_before_radiation
+C6067590,OHSU Doernbecher Children's Hospital,2862,4114,2890,2890,2890,2890,,yes,yes,no,radiation_and_chemo_same_day
+C607005,University of Pittsburgh,3580,,3625,3625,3695,3695,,yes,yes,no,radiation_before_chemotherapy
+C607251,Lurie Children's Hospital,1689,2009,1716,1716,1716,1716,,yes,yes,no,radiation_and_chemo_same_day
+C607743,The Children's Hospital of Philadelphia,738,755,1216,,760,,760,no,no,no,no_initial_radiation_or_chemo
+C6083703,Seattle Children's Hospital,2915,,2944,2944,2945,2945,,yes,yes,no,radiation_before_chemotherapy
+C6109902,The Children's Hospital of Philadelphia,1075,,,,1103,1103,1103,no,yes,yes,chemo_only_no_initial_radiation
+C6110148,Orlando Health Arnold Palmer Hospital,882,,,,910,910,,no,yes,no,chemo_only_no_initial_radiation
+C614016,Lurie Children's Hospital,1498,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C6176814,The Children's Hospital of Philadelphia,2813,,2845,2845,2929,2929,,yes,yes,no,radiation_before_chemotherapy
+C617952,Lurie Children's Hospital,4850,,4878,4878,4884,4884,,yes,yes,no,radiation_before_chemotherapy
+C618567,Lurie Children's Hospital,2520,,2551,2551,2551,2551,,yes,yes,no,radiation_and_chemo_same_day
+C618690,Lurie Children's Hospital,2325,,2357,2357,5644,5644,,yes,yes,no,radiation_before_chemotherapy
+C618813,Lurie Children's Hospital,532,,752,752,557,557,,yes,yes,no,chemo_before_radiation
+C6192804,Lurie Children's Hospital,2010,2121,2042,2042,2042,2042,,yes,yes,no,radiation_and_chemo_same_day
+C6193173,Lurie Children's Hospital,1569,,1601,1601,1673,1673,,yes,yes,no,radiation_before_chemotherapy
+C6201168,Lurie Children's Hospital,1526,,1546,1546,1546,1546,,yes,yes,no,radiation_and_chemo_same_day
+C6201291,Lurie Children's Hospital,3926,5133,3961,3961,3962,3962,,yes,yes,no,radiation_before_chemotherapy
+C6207441,The Children's Hospital of Philadelphia,2774,,2802,2802,2877,2877,,yes,yes,no,radiation_before_chemotherapy
+C622257,Seattle Children's Hospital,1750,1998,1769,1769,1777,1777,,yes,yes,no,radiation_before_chemotherapy
+C623979,The Children's Hospital of Philadelphia,5119,5436,5146,5146,,,,yes,no,no,radiation_only_no_initial_chemo
+C625086,The Children's Hospital of Philadelphia,2637,3479,2665,2665,2675,2675,,yes,yes,no,radiation_before_chemotherapy
+C6254181,The Children's Hospital of Philadelphia,4093,,4124,4124,,,,yes,no,no,radiation_only_no_initial_chemo
+C626070,The Children's Hospital of Philadelphia,291,535,,,304,304,304,no,yes,yes,chemo_only_no_initial_radiation
+C626193,The Children's Hospital of Philadelphia,170,278,,,193,193,193,no,yes,yes,chemo_only_no_initial_radiation
+C626685,Lurie Children's Hospital,3799,,3821,3821,3821,3821,,yes,yes,no,radiation_and_chemo_same_day
+C6277182,University of Pittsburgh,1438,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C6316173,OHSU Doernbecher Children's Hospital,1015,1137,,,1034,1034,1034,no,yes,yes,chemo_only_no_initial_radiation
+C6316296,OHSU Doernbecher Children's Hospital,5467,,5500,5500,5501,5501,,yes,yes,no,radiation_before_chemotherapy
+C6344955,Stanford Lucile Packard Children's Hospital,3472,,3504,3504,3595,3595,,yes,yes,no,radiation_before_chemotherapy
+C6345324,Stanford Lucile Packard Children's Hospital,3194,,3214,3214,3214,3214,,yes,yes,no,radiation_and_chemo_same_day
+C6345447,Stanford Lucile Packard Children's Hospital,320,,,,346,346,,no,yes,no,chemo_only_no_initial_radiation
+C6431055,Lurie Children's Hospital,2823,3826,2851,2851,2858,2858,,yes,yes,no,radiation_before_chemotherapy
+C6432039,Weill Cornell Medical College,119,,152,152,250,250,,yes,yes,no,radiation_before_chemotherapy
+C6433392,Weill Cornell Medical College,951,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C647349,Seattle Children's Hospital,761,1272,942,942,777,777,1280,yes,yes,no,chemo_before_radiation
+C6476073,The Children's Hospital of Philadelphia,4747,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C648333,Lurie Children's Hospital,2379,2989,2435,2435,2435,2435,,yes,yes,no,radiation_and_chemo_same_day
+C651039,Lurie Children's Hospital,1321,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C6512727,Lurie Children's Hospital,1034,1538,1601,,1060,1060,1060,no,yes,yes,chemo_only_no_initial_radiation
+C6513219,Lurie Children's Hospital,3175,,3202,3202,3207,3207,,yes,yes,no,radiation_before_chemotherapy
+C6519123,Lurie Children's Hospital,1399,1462,1489,,1428,1428,1428,no,yes,yes,chemo_only_no_initial_radiation
+C652638,Lurie Children's Hospital,2988,,3017,3017,3022,3022,,yes,yes,no,radiation_before_chemotherapy
+C6528102,CBTN Non-Consortium Member,,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C6538311,The Children's Hospital of Philadelphia,274,897,915,,295,295,295,no,yes,yes,chemo_only_no_initial_radiation
+C654114,Meyer Children's Hospital,129,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C663708,The Children's Hospital of Philadelphia,5688,6279,5868,5868,5701,5701,5701,yes,yes,yes,chemo_before_radiation
+C665061,University of Pittsburgh,3266,,3296,3296,3296,3296,,yes,yes,no,radiation_and_chemo_same_day
+C6693414,University of Pittsburgh,3297,,3331,3331,3331,3331,,yes,yes,no,radiation_and_chemo_same_day
+C6695874,Lurie Children's Hospital,1294,,,,1316,1316,1316,no,yes,yes,chemo_only_no_initial_radiation
+C6715062,Lurie Children's Hospital,520,,,,546,546,546,no,yes,yes,chemo_only_no_initial_radiation
+C6715554,Lurie Children's Hospital,1184,4973,1206,1206,1206,1206,,yes,yes,no,radiation_and_chemo_same_day
+C6735357,The Children's Hospital of Philadelphia,5153,5430,5180,5180,5258,5258,,yes,yes,no,radiation_before_chemotherapy
+C67527,The Children's Hospital of Philadelphia,3680,,3750,3750,3750,3750,,yes,yes,no,radiation_and_chemo_same_day
+C676746,Seattle Children's Hospital,6444,,6466,6466,6466,6466,,yes,yes,no,radiation_and_chemo_same_day
+C6769797,The Children's Hospital of Philadelphia,1710,2047,,,1970,1970,,no,yes,no,chemo_only_no_initial_radiation
+C677115,Seattle Children's Hospital,3630,,3658,3658,3659,3659,,yes,yes,no,radiation_before_chemotherapy
+C6784065,Dayton Children's Hospital,6353,,6394,6394,,,,yes,no,no,radiation_only_no_initial_chemo
+C6784188,Dayton Children's Hospital,231,,,,260,260,260,no,yes,yes,chemo_only_no_initial_radiation
+C6809526,Orlando Health Arnold Palmer Hospital,2734,14497,,,2755,2755,,no,yes,no,chemo_only_no_initial_radiation
+C68265,The Children's Hospital of Philadelphia,2212,,2236,2236,2243,2243,,yes,yes,no,radiation_before_chemotherapy
+C6830682,The Children's Hospital of Philadelphia,3671,,3698,3698,3706,3706,,yes,yes,no,radiation_before_chemotherapy
+C6830928,Lurie Children's Hospital,972,,1259,1259,1013,1013,1013,yes,yes,yes,chemo_before_radiation
+C6854052,The Children's Hospital of Philadelphia,756,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C6889968,Stanford Lucile Packard Children's Hospital,2164,,2203,2203,2203,2203,,yes,yes,no,radiation_and_chemo_same_day
+C6908049,The Children's Hospital of Philadelphia,1097,1490,1280,1280,1116,1116,1116,yes,yes,yes,chemo_before_radiation
+C6919980,Children's National Medical Center (CNMC),543,,,,565,565,,no,yes,no,chemo_only_no_initial_radiation
+C692613,The Children's Hospital of Philadelphia,3606,,3641,3641,3723,3723,,yes,yes,no,radiation_before_chemotherapy
+C6929451,Lurie Children's Hospital,3803,4736,3832,3832,3894,3894,,yes,yes,no,radiation_before_chemotherapy
+C6958725,Seattle Children's Hospital,897,,1090,1090,916,916,916,yes,yes,yes,chemo_before_radiation
+C698517,The Children's Hospital of Philadelphia,1484,1868,,,1496,1496,,no,yes,no,chemo_only_no_initial_radiation
+C698640,The Children's Hospital of Philadelphia,350,364,,,367,,367,no,no,no,no_initial_radiation_or_chemo
+C699378,Lurie Children's Hospital,3222,,3222,3222,3307,3307,,yes,yes,no,radiation_before_chemotherapy
+C6995994,Lurie Children's Hospital,481,,,,511,511,511,no,yes,yes,chemo_only_no_initial_radiation
+C7008048,Lurie Children's Hospital,2492,,2523,2523,2523,2523,,yes,yes,no,radiation_and_chemo_same_day
+C700977,Seattle Children's Hospital,7628,,7650,7650,7660,7660,,yes,yes,no,radiation_before_chemotherapy
+C701223,Seattle Children's Hospital,3248,3762,3276,3276,3276,3276,,yes,yes,no,radiation_and_chemo_same_day
+C701469,Seattle Children's Hospital,737,,907,907,746,746,,yes,yes,no,chemo_before_radiation
+C701838,The Children's Hospital of Philadelphia,3300,3731,3328,3328,3375,3375,,yes,yes,no,radiation_before_chemotherapy
+C7026006,UAB,2328,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7037568,Weill Cornell Medical College,2975,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7041012,The Children's Hospital of Philadelphia,3497,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C705282,Meyer Children's Hospital,2272,,2317,2317,2313,2313,,yes,yes,no,chemo_before_radiation
+C7093902,Seattle Children's Hospital,916,,,,932,932,932,no,yes,yes,chemo_only_no_initial_radiation
+C710325,University of Pittsburgh,3475,,,,3580,3580,,no,yes,no,chemo_only_no_initial_radiation
+C7104972,Maria Fareri Children's Hospital at Westchester Medical Center,951,1272,,,983,983,,no,yes,no,chemo_only_no_initial_radiation
+C7105095,Maria Fareri Children's Hospital at Westchester Medical Center,3702,,,,3831,3831,,no,yes,no,chemo_only_no_initial_radiation
+C7111983,Children's National Medical Center (CNMC),3157,3184,3194,,3194,,,no,no,no,no_initial_radiation_or_chemo
+C7125882,Lurie Children's Hospital,531,737,770,,565,565,,no,yes,no,chemo_only_no_initial_radiation
+C7218378,The Children's Hospital of Philadelphia,922,,1147,1147,943,943,,yes,yes,no,chemo_before_radiation
+C7219239,Children's National Medical Center (CNMC),3525,,3552,3552,3629,3629,,yes,yes,no,radiation_before_chemotherapy
+C7223175,University of Iowa,4297,,4345,4345,4429,4429,,yes,yes,no,radiation_before_chemotherapy
+C7223913,University of Iowa,739,,,,749,749,749,no,yes,yes,chemo_only_no_initial_radiation
+C7224036,University of Iowa,836,9179,9186,,857,857,,no,yes,no,chemo_only_no_initial_radiation
+C7226127,Intermountain Primary Children's Hospital,3118,,3171,3171,3246,3246,,yes,yes,no,radiation_before_chemotherapy
+C7226496,Washington University in St. Louis,5527,,5557,5557,5562,5562,,yes,yes,no,radiation_before_chemotherapy
+C7226865,Washington University in St. Louis,2397,,,,2432,2432,,no,yes,no,chemo_only_no_initial_radiation
+C7226988,Washington University in St. Louis,,4135,,,3996,,,no,no,no,no_initial_radiation_or_chemo
+C7227111,Washington University in St. Louis,1362,,,,1393,1393,,no,yes,no,chemo_only_no_initial_radiation
+C7227234,Washington University in St. Louis,5705,,5744,5744,5751,5751,,yes,yes,no,radiation_before_chemotherapy
+C7227357,Washington University in St. Louis,2844,3211,2875,2875,2883,2883,,yes,yes,no,radiation_before_chemotherapy
+C7227726,Akron Children's Hospital,5541,,5563,5563,5650,5650,,yes,yes,no,radiation_before_chemotherapy
+C724962,Seattle Children's Hospital,4428,,4451,4451,4448,4448,,yes,yes,no,chemo_before_radiation
+C725331,Seattle Children's Hospital,4973,5308,4987,4987,4987,4987,,yes,yes,no,radiation_and_chemo_same_day
+C72570,The Children's Hospital of Philadelphia,3557,3962,3585,3585,3585,3585,,yes,yes,no,radiation_and_chemo_same_day
+C7271391,Children's National Medical Center (CNMC),666,872,1291,,685,685,,no,yes,no,chemo_only_no_initial_radiation
+C7271637,Lurie Children's Hospital,3275,3718,3306,3306,3297,3297,,yes,yes,no,chemo_before_radiation
+C7272621,University of Pittsburgh,172,,,,212,212,,no,yes,no,chemo_only_no_initial_radiation
+C7272867,University of Pittsburgh,2750,,2788,2788,2788,2788,,yes,yes,no,radiation_and_chemo_same_day
+C7272990,University of Pittsburgh,431,,,,468,468,,no,yes,no,chemo_only_no_initial_radiation
+C7273113,University of Pittsburgh,4791,,5190,5190,5189,5189,,yes,yes,no,chemo_before_radiation
+C7273605,University of Pittsburgh,3371,,3399,3399,3480,3480,,yes,yes,no,radiation_before_chemotherapy
+C7273851,University of Pittsburgh,475,,,,503,503,503,no,yes,yes,chemo_only_no_initial_radiation
+C7274835,Intermountain Primary Children's Hospital,2032,,2050,2050,2141,2141,,yes,yes,no,radiation_before_chemotherapy
+C7302756,Seattle Children's Hospital,1698,,,,1715,1715,1715,no,yes,yes,chemo_only_no_initial_radiation
+C7332768,Lurie Children's Hospital,2443,,2474,2474,2474,2474,,yes,yes,no,radiation_and_chemo_same_day
+C7333629,Intermountain Primary Children's Hospital,2353,,2379,2379,2454,2454,,yes,yes,no,radiation_before_chemotherapy
+C7348512,Lurie Children's Hospital,5050,,5085,5085,5085,5085,,yes,yes,no,radiation_and_chemo_same_day
+C7351464,The Children's Hospital of Philadelphia,2539,,2568,2568,2562,2562,,yes,yes,no,chemo_before_radiation
+C7351587,The Children's Hospital of Philadelphia,530,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7366347,Meyer Children's Hospital,2557,,2672,2672,,,,yes,no,no,radiation_only_no_initial_chemo
+C7366593,Meyer Children's Hospital,2922,,3045,3045,,,,yes,no,no,radiation_only_no_initial_chemo
+C7366716,Intermountain Primary Children's Hospital,3327,,3346,3346,3429,3429,,yes,yes,no,radiation_before_chemotherapy
+C7369791,Children's National Medical Center (CNMC),2763,,2794,2794,2794,2794,,yes,yes,no,radiation_and_chemo_same_day
+C7374957,Meyer Children's Hospital,4018,4034,4226,,,,,no,no,no,no_initial_radiation_or_chemo
+C7376187,Meyer Children's Hospital,1659,2724,1804,1804,,,,yes,no,no,radiation_only_no_initial_chemo
+C7376433,Stanford Lucile Packard Children's Hospital,1714,,1738,1738,1738,1738,,yes,yes,no,radiation_and_chemo_same_day
+C7391931,Meyer Children's Hospital,31,182,,,60,60,,no,yes,no,chemo_only_no_initial_radiation
+C7400172,Meyer Children's Hospital,1461,,1498,1498,,,,yes,no,no,radiation_only_no_initial_chemo
+C7401894,Meyer Children's Hospital,1296,2191,1735,1735,1650,1650,,yes,yes,no,chemo_before_radiation
+C740214,Lurie Children's Hospital,2640,4237,2663,2663,2663,2663,,yes,yes,no,radiation_and_chemo_same_day
+C7402140,Meyer Children's Hospital,243,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C740337,The Children's Hospital of Philadelphia,1887,2983,,,,,,no,no,no,no_initial_radiation_or_chemo
+C741198,The Children's Hospital of Philadelphia,2100,,2123,2123,2123,2123,,yes,yes,no,radiation_and_chemo_same_day
+C7411980,Meyer Children's Hospital,5692,,,,5736,5736,,no,yes,no,chemo_only_no_initial_radiation
+C7415055,University of Iowa,777,7288,7305,,,,,no,no,no,no_initial_radiation_or_chemo
+C7415547,Washington University in St. Louis,3654,,3700,3700,3697,3697,,yes,yes,no,chemo_before_radiation
+C7415670,Washington University in St. Louis,1728,,1757,1757,1757,1757,,yes,yes,no,radiation_and_chemo_same_day
+C7422312,Washington University in St. Louis,2655,,2686,2686,2694,2694,,yes,yes,no,radiation_before_chemotherapy
+C7422558,Washington University in St. Louis,3120,,3153,3153,3161,3161,,yes,yes,no,radiation_before_chemotherapy
+C7424157,Meyer Children's Hospital,2122,2184,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7424772,Washington University in St. Louis,2216,,2250,2250,2330,2330,,yes,yes,no,radiation_before_chemotherapy
+C743535,Lurie Children's Hospital,860,1921,933,933,880,880,880,yes,yes,yes,chemo_before_radiation
+C7456383,Meyer Children's Hospital,3094,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7457490,Seattle Children's Hospital,1195,,,,1211,1211,1211,no,yes,yes,chemo_only_no_initial_radiation
+C7457859,Akron Children's Hospital,2285,,2330,2330,2405,2405,,yes,yes,no,radiation_before_chemotherapy
+C7467576,Meyer Children's Hospital,1796,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7467822,Meyer Children's Hospital,709,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7468191,Meyer Children's Hospital,,3106,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7483812,The Children's Hospital of Philadelphia,2534,,2560,2560,2570,2570,,yes,yes,no,radiation_before_chemotherapy
+C752883,The Children's Hospital of Philadelphia,4230,11609,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7532766,University of Iowa,241,5537,5614,,263,263,,no,yes,no,chemo_only_no_initial_radiation
+C75399,The Children's Hospital of Philadelphia,5620,6018,5648,5648,5654,5654,,yes,yes,no,radiation_before_chemotherapy
+C7542975,The Children's Hospital of Philadelphia,2935,,2963,2963,3033,3033,,yes,yes,no,radiation_before_chemotherapy
+C7543221,Washington University in St. Louis,716,,932,932,737,737,737,yes,yes,yes,chemo_before_radiation
+C7543467,Washington University in St. Louis,2744,3289,2947,2947,2761,2761,2761,yes,yes,yes,chemo_before_radiation
+C7553307,Washington University in St. Louis,3094,,3402,3402,3110,3110,3110,yes,yes,yes,chemo_before_radiation
+C7559334,Children's National Medical Center (CNMC),271,400,539,,271,271,271,no,yes,yes,chemo_only_no_initial_radiation
+C7559457,Washington University in St. Louis,5441,,5474,5474,5475,5475,,yes,yes,no,radiation_before_chemotherapy
+C758541,Seattle Children's Hospital,2820,3483,2839,2839,2839,2839,5373,yes,yes,no,radiation_and_chemo_same_day
+C7588362,Children's National Medical Center (CNMC),2256,,2283,2283,2374,2374,,yes,yes,no,radiation_before_chemotherapy
+C7592175,Children's National Medical Center (CNMC),3592,,3618,3618,3698,3698,,yes,yes,no,radiation_before_chemotherapy
+C7596111,UCSF Benioff Children's Hospital,854,,1154,1154,926,926,926,yes,yes,yes,chemo_before_radiation
+C760017,The Children's Hospital of Philadelphia,110,,,,122,122,,no,yes,no,chemo_only_no_initial_radiation
+C7611978,Seattle Children's Hospital,1447,,1616,1616,1461,1461,,yes,yes,no,chemo_before_radiation
+C7612224,Akron Children's Hospital,572,690,727,,600,600,600,no,yes,yes,chemo_only_no_initial_radiation
+C7617267,Seattle Children's Hospital,1182,1561,1582,,1201,1201,1201,no,yes,yes,chemo_only_no_initial_radiation
+C7638177,Orlando Health Arnold Palmer Hospital,6166,,6195,6195,6195,6195,,yes,yes,no,radiation_and_chemo_same_day
+C7687131,Children's National Medical Center (CNMC),3162,,3187,3187,3196,3196,,yes,yes,no,radiation_before_chemotherapy
+C76875,The Children's Hospital of Philadelphia,3651,,3683,3683,3691,3691,,yes,yes,no,radiation_before_chemotherapy
+C7705827,Children's National Medical Center (CNMC),1434,2567,2653,,1431,,,no,no,no,no_initial_radiation_or_chemo
+C7705950,University of Iowa,3676,,3690,3690,3690,3690,,yes,yes,no,radiation_and_chemo_same_day
+C7706442,Children's National Medical Center (CNMC),1413,1837,,,1431,1431,,no,yes,no,chemo_only_no_initial_radiation
+C7706565,Children's National Medical Center (CNMC),3766,,3791,3791,,,,yes,no,no,radiation_only_no_initial_chemo
+C7712346,University of Pittsburgh,2805,,2833,2833,2827,2827,,yes,yes,no,chemo_before_radiation
+C7726245,The Children's Hospital of Philadelphia,3789,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C773424,Meyer Children's Hospital,2511,,2619,2619,2524,2524,,yes,yes,no,chemo_before_radiation
+C773547,Meyer Children's Hospital,1076,,1257,1257,1104,1104,1104,yes,yes,yes,chemo_before_radiation
+C773793,Meyer Children's Hospital,1433,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7747770,Children's National Medical Center (CNMC),6284,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7749984,Children's National Medical Center (CNMC),886,951,960,,962,,,no,no,no,no_initial_radiation_or_chemo
+C7754535,University of Iowa,2093,,2121,2121,2121,2121,,yes,yes,no,radiation_and_chemo_same_day
+C7758717,Children's National Medical Center (CNMC),1588,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7768188,UCSF Benioff Children's Hospital,849,1052,,,874,874,874,no,yes,yes,chemo_only_no_initial_radiation
+C7769295,UCSF Benioff Children's Hospital,2968,,3008,3008,3015,3015,,yes,yes,no,radiation_before_chemotherapy
+C7775814,Children's National Medical Center (CNMC),2634,,2660,2660,2665,2665,,yes,yes,no,radiation_before_chemotherapy
+C7782456,CBTN Non-Consortium Member,17,67,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7784301,Washington University in St. Louis,3793,,3827,3827,3835,3835,,yes,yes,no,radiation_before_chemotherapy
+C7785162,The Children's Hospital of Philadelphia,1256,,,,1285,1285,1285,no,yes,yes,chemo_only_no_initial_radiation
+C7817511,Maria Fareri Children's Hospital at Westchester Medical Center,1172,1217,,,1215,1215,,no,yes,no,chemo_only_no_initial_radiation
+C7817757,Maria Fareri Children's Hospital at Westchester Medical Center,6164,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C782649,Seattle Children's Hospital,4007,,4027,4027,4095,4095,,yes,yes,no,radiation_before_chemotherapy
+C782895,Seattle Children's Hospital,2013,,2033,2033,2033,2033,,yes,yes,no,radiation_and_chemo_same_day
+C7831656,Washington University in St. Louis,1966,,2002,2002,2003,2003,,yes,yes,no,radiation_before_chemotherapy
+C7842726,OHSU Doernbecher Children's Hospital,2328,,2359,2359,2451,2451,,yes,yes,no,radiation_before_chemotherapy
+C784371,Seattle Children's Hospital,8286,,8320,8320,8321,8321,,yes,yes,no,radiation_before_chemotherapy
+C7848753,Children's Hospital of Atlanta (CHOA),1609,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C7860561,Akron Children's Hospital,3325,3664,3356,3356,3445,3445,,yes,yes,no,radiation_before_chemotherapy
+C7862775,Stanford Lucile Packard Children's Hospital,4126,,4174,4174,4253,4253,,yes,yes,no,radiation_before_chemotherapy
+C7863513,UNC Lineberger Comprehensive Cancer Center,787,,,,829,829,829,no,yes,yes,chemo_only_no_initial_radiation
+C7901274,Intermountain Primary Children's Hospital,3074,,3107,3107,3179,3179,,yes,yes,no,radiation_before_chemotherapy
+C7935837,Intermountain Primary Children's Hospital,466,,671,671,489,489,489,yes,yes,yes,chemo_before_radiation
+C794457,The Children's Hospital of Philadelphia,2696,3912,2727,2727,2805,2805,4781,yes,yes,no,radiation_before_chemotherapy
+C7947891,Washington University in St. Louis,2799,,2833,2833,2840,2840,,yes,yes,no,radiation_before_chemotherapy
+C7953795,Johns Hopkins All Children's Hospital,1840,2574,2635,,1859,1859,,no,yes,no,chemo_only_no_initial_radiation
+C7963143,Children's National Medical Center (CNMC),2286,2475,2475,2475,2291,2291,2291,yes,yes,yes,chemo_before_radiation
+C797655,Seattle Children's Hospital,2186,,2209,2209,2210,2210,,yes,yes,no,radiation_before_chemotherapy
+C798270,The Children's Hospital of Philadelphia,1846,,1874,1874,1960,1960,,yes,yes,no,radiation_before_chemotherapy
+C8013204,The Children's Hospital of Philadelphia,4501,,4555,4555,,,,yes,no,no,radiation_only_no_initial_chemo
+C8013450,Lurie Children's Hospital,1948,2253,2269,,6767,,,no,no,no,no_initial_radiation_or_chemo
+C8027964,Children's National Medical Center (CNMC),,4312,4088,,4312,,,no,no,no,no_initial_radiation_or_chemo
+C8028333,Weill Cornell Medical College,,3497,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8028456,University of Iowa,132,,,,203,203,203,no,yes,yes,chemo_only_no_initial_radiation
+C8104470,The Children's Hospital of Philadelphia,4598,,4625,4625,,,,yes,no,no,radiation_only_no_initial_chemo
+C8104962,Intermountain Primary Children's Hospital,3180,,3212,3212,3285,3285,,yes,yes,no,radiation_before_chemotherapy
+C8105085,Intermountain Primary Children's Hospital,3184,,3212,3212,3290,3290,,yes,yes,no,radiation_before_chemotherapy
+C8128455,Children's Hospital of Atlanta (CHOA),2769,,2773,2773,2777,2777,,yes,yes,no,radiation_before_chemotherapy
+C8146167,The Children's Hospital of Philadelphia,1808,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8150718,Children's National Medical Center (CNMC),1212,1453,1967,,1238,1238,1238,no,yes,yes,chemo_only_no_initial_radiation
+C8167077,Children's National Medical Center (CNMC),1589,2107,2107,2107,1588,,,yes,no,no,radiation_only_no_initial_chemo
+C8167569,Lurie Children's Hospital,3153,,3228,3228,3187,3187,,yes,yes,no,chemo_before_radiation
+C817950,Lurie Children's Hospital,1514,,,,1536,1536,,no,yes,no,chemo_only_no_initial_radiation
+C8183559,Seattle Children's Hospital,3490,,3516,3516,3519,3519,,yes,yes,no,radiation_before_chemotherapy
+C81918,The Children's Hospital of Philadelphia,1171,1364,,,1183,1183,,no,yes,no,chemo_only_no_initial_radiation
+C8197950,Maria Fareri Children's Hospital at Westchester Medical Center,1480,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C820287,University of Pittsburgh,1475,,1505,1505,1505,1505,,yes,yes,no,radiation_and_chemo_same_day
+C8205084,Stanford Lucile Packard Children's Hospital,,2239,,,,,,no,no,no,no_initial_radiation_or_chemo
+C82164,The Children's Hospital of Philadelphia,1923,1936,2097,,1945,,1945,no,no,no,no_initial_radiation_or_chemo
+C8219967,The Children's Hospital of Philadelphia,1548,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C823608,Meyer Children's Hospital,167,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C823731,Meyer Children's Hospital,4406,,,,4428,4428,,no,yes,no,chemo_only_no_initial_radiation
+C8241861,UCSF Benioff Children's Hospital,6174,,,,6297,6297,,no,yes,no,chemo_only_no_initial_radiation
+C8257113,UCSF Benioff Children's Hospital,3168,4696,,,4730,,,no,no,no,no_initial_radiation_or_chemo
+C8274579,Children's National Medical Center (CNMC),3155,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C833202,Lurie Children's Hospital,2066,,2094,2094,2080,2080,,yes,yes,no,chemo_before_radiation
+C83517,The Children's Hospital of Philadelphia,3671,4402,4535,,3799,3799,,no,yes,no,chemo_only_no_initial_radiation
+C8361663,The Children's Hospital of Philadelphia,7195,9063,7224,7224,7438,7438,,yes,yes,no,radiation_before_chemotherapy
+C836769,Seattle Children's Hospital,4295,4664,4322,4322,4323,4323,,yes,yes,no,radiation_before_chemotherapy
+C837630,Seattle Children's Hospital,77,1279,1306,,83,83,83,no,yes,yes,chemo_only_no_initial_radiation
+C8379990,Seattle Children's Hospital,4368,,4397,4397,4397,4397,,yes,yes,no,radiation_and_chemo_same_day
+C8398932,Nicklaus Children's Hospital,6388,6878,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8405943,Seattle Children's Hospital,3540,,3569,3569,3570,3570,,yes,yes,no,radiation_before_chemotherapy
+C8419104,Seattle Children's Hospital,796,,,,816,816,816,no,yes,yes,chemo_only_no_initial_radiation
+C8427960,Lurie Children's Hospital,843,1034,1105,,878,878,878,no,yes,yes,chemo_only_no_initial_radiation
+C8432019,Seattle Children's Hospital,1686,2197,2223,,1706,1706,1706,no,yes,yes,chemo_only_no_initial_radiation
+C8432142,Seattle Children's Hospital,994,,,,1009,1009,,no,yes,no,chemo_only_no_initial_radiation
+C8435094,Intermountain Primary Children's Hospital,1149,,,,1172,1172,1172,no,yes,yes,chemo_only_no_initial_radiation
+C8474331,The Children's Hospital of Philadelphia,1510,1693,1733,,1544,1544,1544,no,yes,yes,chemo_only_no_initial_radiation
+C84747,The Children's Hospital of Philadelphia,5075,6483,5103,5103,5104,5104,,yes,yes,no,radiation_before_chemotherapy
+C8492412,Intermountain Primary Children's Hospital,6369,,6383,6383,,,,yes,no,no,radiation_only_no_initial_chemo
+C849561,Seattle Children's Hospital,733,3022,924,924,753,753,753,yes,yes,yes,chemo_before_radiation
+C850914,The Children's Hospital of Philadelphia,,-1,,,,,,no,no,no,no_initial_radiation_or_chemo
+C851283,The Children's Hospital of Philadelphia,486,-1,,,,,,no,no,no,no_initial_radiation_or_chemo
+C851406,The Children's Hospital of Philadelphia,4716,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8516028,University of Pittsburgh,2003,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8516766,The Children's Hospital of Philadelphia,4270,,4297,4297,4386,4386,,yes,yes,no,radiation_before_chemotherapy
+C8517012,University of Pittsburgh,4604,,4643,4643,4643,4643,,yes,yes,no,radiation_and_chemo_same_day
+C8527467,Children's National Medical Center (CNMC),3760,,3788,3788,,,,yes,no,no,radiation_only_no_initial_chemo
+C854112,The Children's Hospital of Philadelphia,245,610,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8578635,Children's Hospital of Atlanta (CHOA),199,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8578881,Children's Hospital of Atlanta (CHOA),1627,,,,1647,1647,,no,yes,no,chemo_only_no_initial_radiation
+C8579127,Children's Hospital of Atlanta (CHOA),735,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8579373,Children's Hospital of Atlanta (CHOA),1297,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8579619,Children's National Medical Center (CNMC),1819,1837,,,,,,no,no,no,no_initial_radiation_or_chemo
+C85854,The Children's Hospital of Philadelphia,826,999,,,841,841,841,no,yes,yes,chemo_only_no_initial_radiation
+C8585400,Lurie Children's Hospital,650,,,,667,667,667,no,yes,yes,chemo_only_no_initial_radiation
+C8607048,The Children's Hospital of Philadelphia,2876,,2904,2904,,,,yes,no,no,radiation_only_no_initial_chemo
+C8622177,Children's National Medical Center (CNMC),2466,,2500,2500,2586,2586,,yes,yes,no,radiation_before_chemotherapy
+C8626851,Children's National Medical Center (CNMC),3143,3154,3182,,3189,,,no,no,no,no_initial_radiation_or_chemo
+C8659569,The Children's Hospital of Philadelphia,1821,,1853,1853,,,,yes,no,no,radiation_only_no_initial_chemo
+C8660430,The Children's Hospital of Philadelphia,2655,,2684,2684,2765,2765,,yes,yes,no,radiation_before_chemotherapy
+C8684907,Children's National Medical Center (CNMC),3107,4520,3148,3148,4537,,,yes,no,no,radiation_only_no_initial_chemo
+C870348,Lurie Children's Hospital,376,,,,400,400,400,no,yes,yes,chemo_only_no_initial_radiation
+C870471,Lurie Children's Hospital,3363,,3401,3401,3401,3401,,yes,yes,no,radiation_and_chemo_same_day
+C8732877,Children's National Medical Center (CNMC),5822,,5873,5873,,,,yes,no,no,radiation_only_no_initial_chemo
+C8735460,Seattle Children's Hospital,4160,,4197,4197,4197,4197,,yes,yes,no,radiation_and_chemo_same_day
+C8738289,Children's National Medical Center (CNMC),1596,,1633,1633,,,,yes,no,no,radiation_only_no_initial_chemo
+C876375,The Children's Hospital of Philadelphia,5,128,,,31,31,31,no,yes,yes,chemo_only_no_initial_radiation
+C8776050,The Children's Hospital of Philadelphia,1982,,,,1994,1994,1994,no,yes,yes,chemo_only_no_initial_radiation
+C8778633,Intermountain Primary Children's Hospital,108,,,,110,110,,no,yes,no,chemo_only_no_initial_radiation
+C8796099,Lurie Children's Hospital,8,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C880803,The Children's Hospital of Philadelphia,343,484,,,351,351,351,no,yes,yes,chemo_only_no_initial_radiation
+C8827095,NYU Langone Health,2534,,2576,2576,2584,2584,,yes,yes,no,radiation_before_chemotherapy
+C8832261,Children's Hospital Los Angeles,213,363,608,,246,246,246,no,yes,yes,chemo_only_no_initial_radiation
+C886092,UCSF Benioff Children's Hospital,362,662,705,,383,383,,no,yes,no,chemo_only_no_initial_radiation
+C8876295,CBTN Non-Consortium Member,3548,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8882691,The Children's Hospital of Philadelphia,1694,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C8888964,Lurie Children's Hospital,2443,,2483,2483,2483,2483,,yes,yes,no,radiation_and_chemo_same_day
+C908478,Lurie Children's Hospital,525,881,1112,,547,547,547,no,yes,yes,chemo_only_no_initial_radiation
+C912414,Seattle Children's Hospital,2888,,2926,2926,2933,2933,,yes,yes,no,radiation_before_chemotherapy
+C912660,Seattle Children's Hospital,1851,2841,1881,1881,1883,1883,,yes,yes,no,radiation_before_chemotherapy
+C914505,The Children's Hospital of Philadelphia,4170,4208,4191,4191,4267,,,yes,no,no,radiation_only_no_initial_chemo
+C921639,UCSF Benioff Children's Hospital,1351,1636,1457,1457,1378,1378,1378,yes,yes,yes,chemo_before_radiation
+C923607,Seattle Children's Hospital,1392,,1564,1564,1408,1408,1408,yes,yes,yes,chemo_before_radiation
+C942672,Meyer Children's Hospital,4917,,5042,5042,4941,4941,,yes,yes,no,chemo_before_radiation
+C944886,University of Pittsburgh,306,,567,567,327,327,,yes,yes,no,chemo_before_radiation
+C948330,Seattle Children's Hospital,5918,,5942,5942,5949,5949,,yes,yes,no,radiation_before_chemotherapy
+C960999,Lurie Children's Hospital,3804,4853,3835,3835,3835,3835,,yes,yes,no,radiation_and_chemo_same_day
+C964566,The Children's Hospital of Philadelphia,2841,,,,2867,2867,2867,no,yes,yes,chemo_only_no_initial_radiation
+C96801,University of Pittsburgh,4075,,4111,4111,4197,4197,,yes,yes,no,radiation_before_chemotherapy
+C972438,The Children's Hospital of Philadelphia,2050,2860,2076,2076,2160,2160,,yes,yes,no,radiation_before_chemotherapy
+C973545,The Children's Hospital of Philadelphia,2031,2485,2508,,2068,2068,,no,yes,no,chemo_only_no_initial_radiation
+C973914,Weill Cornell Medical College,4592,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C974037,Weill Cornell Medical College,484,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C974652,The Children's Hospital of Philadelphia,1564,2304,1743,1743,1606,1606,1606,yes,yes,yes,chemo_before_radiation
+C979203,Meyer Children's Hospital,880,1008,,,,,,no,no,no,no_initial_radiation_or_chemo
+C979695,Meyer Children's Hospital,3385,,,,,,,no,no,no,no_initial_radiation_or_chemo
+C982401,Lurie Children's Hospital,744,,,,767,767,,no,yes,no,chemo_only_no_initial_radiation
+C991257,Seattle Children's Hospital,3724,,3751,3751,3757,3757,,yes,yes,no,radiation_before_chemotherapy
+C992610,Lurie Children's Hospital,1615,,1646,1646,1652,1652,,yes,yes,no,radiation_before_chemotherapy
+C994701,Children's National Medical Center (CNMC),730,967,,,750,750,,no,yes,no,chemo_only_no_initial_radiation
+C99507,Seattle Children's Hospital,1999,,2027,2027,2032,2032,,yes,yes,no,radiation_before_chemotherapy
+C99630,The Children's Hospital of Philadelphia,5344,,5368,5368,5453,5453,,yes,yes,no,radiation_before_chemotherapy
+C997653,Lurie Children's Hospital,1030,1288,,,1050,1050,1050,no,yes,yes,chemo_only_no_initial_radiation

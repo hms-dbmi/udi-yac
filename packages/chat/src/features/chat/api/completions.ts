@@ -1,4 +1,5 @@
-import type { Message } from '@/types/messages';
+import type { Message, ToolCallMeta } from '@/types/messages';
+import type { AgentFilterEntry } from '@/features/dashboard';
 import { httpError } from '@/utils/httpError';
 
 export interface QueryConfig {
@@ -6,6 +7,8 @@ export interface QueryConfig {
   authToken?: string;
   openAiKey?: string;
   model?: string;
+  /** Tell the agent it may offer an issue report (see `UDIChatConfig.issueReporting`). */
+  issueReporting?: boolean;
 }
 
 function toYaml(obj: unknown, indent = 0): string {
@@ -32,9 +35,11 @@ function toYaml(obj: unknown, indent = 0): string {
 
 function constructQueryBody(
   messages: Message[],
-  model: string,
+  model: string | undefined,
   dataSchema: string,
   dataDomains: string,
+  filters: AgentFilterEntry[],
+  issueReporting?: boolean,
 ) {
   const processed = structuredClone(messages).map((msg) => {
     if (msg.role === 'user' && msg.tool_calls?.length) {
@@ -52,12 +57,21 @@ function constructQueryBody(
     return msg;
   });
 
-  return { model, messages: processed, dataSchema, dataDomains };
+  return {
+    ...(model ? { model } : {}),
+    ...(issueReporting ? { issueReporting: true } : {}),
+    messages: processed,
+    dataSchema,
+    dataDomains,
+    filters,
+  };
 }
 
 export interface ToolCallResponse {
   name: string;
   arguments: Record<string, unknown>;
+  /** Agent-side provenance (template + bindings); see ToolCallMeta. */
+  meta?: ToolCallMeta;
 }
 
 /** Per-request token usage, parsed from the server's `X-Usage-*` headers. */
@@ -67,6 +81,8 @@ export interface Usage {
   totalTokens: number;
   /** Cached share of `promptTokens` (0 when the provider doesn't report it). */
   cachedPromptTokens: number;
+  /** Share of `promptTokens` written to the prompt cache (0 when not reported). */
+  cacheWriteTokens: number;
   /** Reasoning share of `completionTokens` (0 when not reported). */
   reasoningTokens: number;
   model?: string;
@@ -84,6 +100,7 @@ function parseUsage(headers: Headers): Usage {
     completionTokens: num('X-Usage-Completion-Tokens'),
     totalTokens: num('X-Usage-Total-Tokens'),
     cachedPromptTokens: num('X-Usage-Cached-Prompt-Tokens'),
+    cacheWriteTokens: num('X-Usage-Cache-Write-Tokens'),
     reasoningTokens: num('X-Usage-Reasoning-Tokens'),
     model: headers.get('X-Usage-Model') ?? undefined,
   };
@@ -95,14 +112,29 @@ export async function queryLLM(
   dataSchema: string,
   dataDomains: string,
   conversationId?: string,
+  filters: AgentFilterEntry[] = [],
+  signal?: AbortSignal,
 ): Promise<QueryResult> {
-  const model = config.model ?? 'agenticx/UDI-VIS-Beta-v2-Llama-3.1-8B';
-  const body = constructQueryBody(messages, model, dataSchema, dataDomains);
+  // The server honors a requested model only alongside a caller-supplied key —
+  // whoever pays for the tokens picks the model. Sending it without a key would
+  // just be ignored, so don't. Otherwise the server's GPT_MODEL_NAME applies.
+  const model = config.openAiKey ? config.model : undefined;
+  const body = constructQueryBody(
+    messages,
+    model,
+    dataSchema,
+    dataDomains,
+    filters,
+    config.issueReporting,
+  );
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  // The backend requires an Authorization header (even in dev mode).
-  // Use the provided authToken, or fall back to a dev placeholder.
-  headers['Authorization'] = `Bearer ${config.authToken ?? 'dev'}`;
+  // Only when we were actually given a token. A deployment that proxies the
+  // agent through its own backend attaches the header there — sending a
+  // placeholder would just be something for that proxy to strip.
+  if (config.authToken) {
+    headers['Authorization'] = `Bearer ${config.authToken}`;
+  }
   if (config.openAiKey) {
     headers['X-OpenAI-Key'] = config.openAiKey;
   }
@@ -115,6 +147,7 @@ export async function queryLLM(
     method: 'POST',
     headers,
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok) {

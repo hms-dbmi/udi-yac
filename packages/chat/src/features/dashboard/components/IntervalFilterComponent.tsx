@@ -1,0 +1,356 @@
+import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { RotateCcw } from 'lucide-react';
+import { useDataPackage, useDataFilters, useTracker } from '@/app/UDIChatContext';
+import type { DataSelection } from '../stores/dataFiltersStore';
+import { FilterTarget } from './FilterTarget';
+import { StepNumberInput } from './StepNumberInput';
+import { DateBoundInput } from './DateBoundInput';
+import { cutPrecision } from '../utils/grouping';
+import type { DataFieldDomain } from '@/types/dataPackage';
+import type { RangeSelection } from 'udi-toolkit/react';
+
+interface IntervalFilterComponentProps {
+  dataSelection: DataSelection;
+  fieldIndex: number;
+  tweakable: boolean;
+  filterKey: string;
+  /**
+   * Optional override for where an edit is written. Defaults to
+   * `dataFiltersStore.setFilter(filterKey, …)`, which routes by filter id.
+   * Brush-originated filters pass a writer that targets the brush store
+   * instead, so the same widget can drive a visualization brush.
+   */
+  onCommit?: (selection: DataSelection) => void;
+}
+
+/**
+ * Full extent of an (entity, field) interval domain, and whether that extent is
+ * real. A slider needs a real track: with no interval domain the 0-100 below is
+ * invented, and dragging it would commit a range that genuinely filters — e.g.
+ * `file_size BETWEEN 0 AND 100` on a column that runs to 4.1e9. Callers gate the
+ * slider on `hasRange` rather than on the validator, which admits unverifiable
+ * fields. `Number.isFinite` also catches all-null columns, which the domain
+ * worker reports as {min: Infinity, max: -Infinity}.
+ */
+function intervalExtent(
+  getDomainForField: (entity: string, field: string) => DataFieldDomain | undefined,
+  entity: string,
+  field: string,
+): { min: number; max: number; hasRange: boolean } {
+  const domain = getDomainForField(entity, field);
+  const iv = domain?.type === 'interval' ? (domain.domain as { min: number; max: number }) : null;
+  if (!iv || !Number.isFinite(iv.min) || !Number.isFinite(iv.max)) {
+    return { min: 0, max: 100, hasRange: false };
+  }
+  return { min: iv.min, max: iv.max, hasRange: true };
+}
+
+export function IntervalFilterComponent({
+  dataSelection,
+  fieldIndex,
+  tweakable,
+  filterKey,
+  onCommit,
+}: IntervalFilterComponentProps) {
+  const quantitativeSourceFields = useDataPackage((s) => s.quantitativeSourceFields);
+  const getDomainForField = useDataPackage((s) => s.getDomainForField);
+  const isValidIntervalFilter = useDataPackage((s) => s.isValidIntervalFilter);
+  const getTimeFormat = useDataPackage((s) => s.getTimeFormat);
+  const setFilter = useDataFilters((s) => s.setFilter);
+  const trackEvent = useTracker();
+
+  const entity = dataSelection.dataSourceKey;
+  const field = Object.keys(dataSelection.selection ?? {})[fieldIndex] ?? '';
+
+  const rangeMinMax = useMemo(
+    () => intervalExtent(getDomainForField, entity, field),
+    [getDomainForField, entity, field],
+  );
+
+  const storeRange = useMemo(() => {
+    const arr = dataSelection.selection?.[field] as number[] | undefined;
+    if (!arr || arr.length < 2) return [rangeMinMax.min, rangeMinMax.max];
+    return [arr[0], arr[1]];
+  }, [dataSelection.selection, field, rangeMinMax]);
+
+  // Local state for responsive slider; committed to store once per animation
+  // frame so dependent views update live without flooding the store on every
+  // pointermove.
+  const [localRange, setLocalRange] = useState(storeRange);
+  const pendingRangeRef = useRef<number[] | null>(null);
+  const commitFrameRef = useRef<number | null>(null);
+
+  // Sync local state when store range changes externally (e.g. reset, session load).
+  // Render-time adjustment instead of an effect — see react.dev "You Might Not
+  // Need an Effect": storing information from previous renders.
+  const [prevStoreRange, setPrevStoreRange] = useState(storeRange);
+  if (prevStoreRange !== storeRange) {
+    setPrevStoreRange(storeRange);
+    setLocalRange(storeRange);
+  }
+
+  // Cancel any pending frame on unmount so we don't touch the store after teardown.
+  useEffect(() => {
+    return () => {
+      if (commitFrameRef.current != null) cancelAnimationFrame(commitFrameRef.current);
+    };
+  }, []);
+
+  const commit = useCallback(
+    (selection: DataSelection) => {
+      if (onCommit) onCommit(selection);
+      else setFilter(filterKey, selection);
+    },
+    [onCommit, setFilter, filterKey],
+  );
+
+  const commitToStore = useCallback(
+    (range: number[]) => {
+      const current = (dataSelection.selection ?? {}) as RangeSelection;
+      const nextSelection: RangeSelection = {
+        ...current,
+        [field]: [range[0], range[1]],
+      };
+      commit({ ...dataSelection, selection: nextSelection });
+    },
+    [commit, dataSelection, field],
+  );
+
+  const scheduleCommit = useCallback(
+    (range: number[]) => {
+      pendingRangeRef.current = range;
+      if (commitFrameRef.current != null) return;
+      commitFrameRef.current = requestAnimationFrame(() => {
+        commitFrameRef.current = null;
+        const pending = pendingRangeRef.current;
+        pendingRangeRef.current = null;
+        if (pending) commitToStore(pending);
+      });
+    },
+    [commitToStore],
+  );
+
+  // Bounds carry the decimals the field is read at, as a stratifier's cuts do
+  // (StratifierGroupingControl): whole numbers for age in days. A bound at the
+  // extent keeps the extent's exact value, so dragging to the end still takes
+  // in the largest value rather than stopping at its rounded neighbour.
+  const precision = rangeMinMax.hasRange
+    ? cutPrecision(rangeMinMax.min, rangeMinMax.max)
+    : cutPrecision(localRange[0], localRange[1]);
+  const snap = useCallback(
+    (v: number) => {
+      const { min, max } = rangeMinMax;
+      if (v <= min) return min;
+      if (v >= max) return max;
+      return Math.min(Math.max(Number(v.toFixed(precision)), min), max);
+    },
+    [rangeMinMax, precision],
+  );
+
+  const handleRangeChange = useCallback(
+    (value: number | readonly number[]) => {
+      const arr = (Array.isArray(value) ? [...value] : [value]).map(snap);
+      if (arr.length < 2) return;
+      setLocalRange(arr);
+      scheduleCommit(arr);
+    },
+    [scheduleCommit, snap],
+  );
+
+  // Fire analytics once at drag-resolve rather than on every rAF commit, so a
+  // single drag produces one event instead of dozens. The data store is still
+  // updated continuously via scheduleCommit above for live downstream views.
+  const handleRangeCommit = useCallback(
+    (value: number | readonly number[]) => {
+      const arr = Array.isArray(value) ? [...value] : [value];
+      if (arr.length < 2) return;
+      trackEvent('filter_range_changed', {
+        entity,
+        field,
+        isReset: false,
+        isFullRange: arr[0] <= rangeMinMax.min && arr[1] >= rangeMinMax.max,
+      });
+    },
+    [trackEvent, entity, field, rangeMinMax],
+  );
+
+  // Reset and typed bounds commit at once, dropping any drag frame in flight.
+  const commitNow = useCallback(
+    (range: number[], isReset: boolean) => {
+      setLocalRange(range);
+      if (commitFrameRef.current != null) {
+        cancelAnimationFrame(commitFrameRef.current);
+        commitFrameRef.current = null;
+      }
+      pendingRangeRef.current = null;
+      commitToStore(range);
+      trackEvent('filter_range_changed', {
+        entity,
+        field,
+        isReset,
+        isFullRange: range[0] <= rangeMinMax.min && range[1] >= rangeMinMax.max,
+      });
+    },
+    [commitToStore, rangeMinMax, trackEvent, entity, field],
+  );
+
+  const handleReset = () => commitNow([rangeMinMax.min, rangeMinMax.max], true);
+
+  // A typed or stepped bound stays inside the extent, and can't cross the
+  // other one.
+  const handleBoundCommit = (index: 0 | 1, typed: number) => {
+    const bound = snap(typed);
+    const next = [...localRange];
+    next[index] = index === 0 ? Math.min(bound, next[1]) : Math.max(bound, next[0]);
+    if (next[index] !== localRange[index]) commitNow(next, false);
+  };
+
+  // Base UI's Select fires `onValueChange` on every item press, including a
+  // press on the already-selected item — a common way to dismiss the menu.
+  // Both handlers below reset the range to the field's full domain, so an
+  // unguarded re-commit would wipe a narrowed range just from opening and
+  // closing the menu. Bail out when the value hasn't actually changed.
+  const handleEntityChange = useCallback(
+    (val: string | null) => {
+      if (!val || val === entity) return;
+      // The field and its extent both belong to the entity being committed, so
+      // resolve them against `val` rather than the outgoing entity: keep the
+      // current field when the new entity has it, otherwise fall back to that
+      // entity's first quantitative field. Only when it has none at all does
+      // the field carry over unchanged, leaving the widget to surface the
+      // invalid state instead of inventing a field.
+      const newFieldOptions = quantitativeSourceFields?.[val] ?? [];
+      const nextField = newFieldOptions.includes(field) ? field : (newFieldOptions[0] ?? field);
+      const extent = intervalExtent(getDomainForField, val, nextField);
+      commit({
+        ...dataSelection,
+        dataSourceKey: val,
+        selection: { [nextField]: [extent.min, extent.max] },
+      });
+      trackEvent('filter_entity_changed', {
+        filterType: 'interval',
+        entity: val,
+        field: nextField,
+      });
+    },
+    [commit, dataSelection, entity, field, quantitativeSourceFields, getDomainForField, trackEvent],
+  );
+
+  const handleFieldChange = useCallback(
+    (val: string | null) => {
+      if (!val || val === field) return;
+      const extent = intervalExtent(getDomainForField, entity, val);
+      commit({
+        ...dataSelection,
+        selection: { [val]: [extent.min, extent.max] },
+      });
+      trackEvent('filter_field_changed', {
+        filterType: 'interval',
+        entity,
+        field: val,
+      });
+    },
+    [commit, dataSelection, getDomainForField, entity, field, trackEvent],
+  );
+
+  const fieldOptions = quantitativeSourceFields?.[entity] ?? [];
+  const isValid = isValidIntervalFilter(entity, field).isValid !== 'no' && rangeMinMax.hasRange;
+
+  // A brush from a visualization can report a range slightly outside the data
+  // extent (charts often pad the axis with a visual buffer). Clamp only the
+  // slider thumb positions to the track so they never overshoot the line; the
+  // stored range value is left untouched.
+  const clampInRange = (v: number) => Math.min(Math.max(v, rangeMinMax.min), rangeMinMax.max);
+  const thumbRange = [clampInRange(localRange[0]), clampInRange(localRange[1])];
+  // The boxes show what the filter takes in, so they clamp too. Without a real
+  // extent there is nothing to clamp to: they show the requested bounds.
+  const shownRange = rangeMinMax.hasRange ? thumbRange : localRange;
+  const boundClass = 'udi:h-7 udi:w-24 udi:px-1.5 udi:text-sm udi:font-semibold';
+
+  // An epoch date field is filtered by day: a date picker per bound, the lower
+  // taking in its whole first day and the upper its whole last day. A year or
+  // an age keeps the number box, in its stored units.
+  const timeFormat = getTimeFormat(entity, field);
+  const msPerUnit = timeFormat === 'epoch_ms' ? 1 : timeFormat === 'epoch_s' ? 1000 : null;
+  const boundInput = (index: 0 | 1) => {
+    const label = `${index === 0 ? 'Minimum' : 'Maximum'} ${field}`;
+    if (msPerUnit === null) {
+      return (
+        <StepNumberInput
+          value={shownRange[index]}
+          precision={precision}
+          label={label}
+          disabled={!isValid}
+          className={boundClass}
+          onCommit={(value) => handleBoundCommit(index, value)}
+        />
+      );
+    }
+    return (
+      <DateBoundInput
+        value={shownRange[index] * msPerUnit}
+        min={rangeMinMax.hasRange ? rangeMinMax.min * msPerUnit : undefined}
+        max={rangeMinMax.hasRange ? rangeMinMax.max * msPerUnit : undefined}
+        endOfDay={index === 1}
+        label={label}
+        disabled={!isValid}
+        // Floored, so a day's last millisecond is its last second in epoch_s.
+        onCommit={(ms) => handleBoundCommit(index, Math.floor(ms / msPerUnit))}
+      />
+    );
+  };
+
+  return (
+    <div className="udi:space-y-2">
+      <FilterTarget
+        entity={entity}
+        field={field}
+        fieldOptions={fieldOptions}
+        tweakable={tweakable}
+        onEntityChange={handleEntityChange}
+        onFieldChange={handleFieldChange}
+      />
+      {/* Wraps when two date inputs don't fit beside each other (the chat's
+          side panel is too narrow for them); number boxes stay on one line. */}
+      <div className="udi:flex udi:flex-wrap udi:items-center udi:gap-1.5 udi:text-sm">
+        {boundInput(0)}
+        <span className="udi:text-muted-foreground">to</span>
+        {boundInput(1)}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="udi:h-6 udi:w-6"
+                onClick={handleReset}
+              />
+            }
+          >
+            <RotateCcw className="udi:h-3 udi:w-3" />
+          </TooltipTrigger>
+          <TooltipContent>Reset range</TooltipContent>
+        </Tooltip>
+      </div>
+      {isValid ? (
+        <Slider
+          value={thumbRange}
+          min={rangeMinMax.min}
+          max={rangeMinMax.max}
+          step={(rangeMinMax.max - rangeMinMax.min) / 100}
+          onValueChange={handleRangeChange}
+          onValueCommitted={handleRangeCommit}
+        />
+      ) : rangeMinMax.hasRange ? (
+        <span className="udi:text-sm udi:text-destructive">Error: Invalid filter.</span>
+      ) : (
+        <span className="udi:text-sm udi:text-muted-foreground">
+          Range unavailable for {field} — showing the requested bounds only.
+        </span>
+      )}
+    </div>
+  );
+}

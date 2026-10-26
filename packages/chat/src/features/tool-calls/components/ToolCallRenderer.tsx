@@ -1,17 +1,16 @@
 import type { FlatToolCall, Message } from '@/types/messages';
-import type { FreeTextExplainArgs, RebuffArgs, ClarifyVariableArgs } from '../types';
+import type { FreeTextExplainArgs, RebuffArgs, OfferIssueReportArgs } from '../types';
 import { FreeTextExplain } from './FreeTextExplain';
 import { RebuffNotice } from './RebuffNotice';
 import { VisualizationCard } from './VisualizationCard';
 import { FilterComponent } from './FilterComponent';
-import { ClarifyVariable } from './ClarifyVariable';
+import { IssueReportOffer } from './IssueReportOffer';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import { Badge } from '@/components/ui/badge';
 
 interface ToolCallRendererProps {
   toolCall: FlatToolCall;
   isActive?: boolean;
-  onSelectSuggestion?: (suggestion: string) => void;
   message?: Message;
   messageIndex?: number;
   toolCallIndex?: number;
@@ -20,7 +19,6 @@ interface ToolCallRendererProps {
 export function ToolCallRenderer({
   toolCall,
   isActive,
-  onSelectSuggestion,
   message,
   messageIndex,
   toolCallIndex,
@@ -42,7 +40,6 @@ export function ToolCallRenderer({
         <VisualizationCard
           spec={spec}
           isActive={isActive ?? false}
-          title={typeof args.title === 'string' ? args.title : undefined}
           messageIndex={messageIndex}
           toolCallIndex={toolCallIndex}
         />
@@ -57,24 +54,16 @@ export function ToolCallRenderer({
       return <RebuffNotice message={rebuffArgs.message} />;
     }
     case 'FilterData': {
-      if (message && messageIndex != null) {
-        return (
-          <FilterComponent
-            message={message}
-            messageIndex={messageIndex}
-            toolCallIndex={toolCallIndex}
-          />
-        );
-      }
+      if (message) return <FilterComponent message={message} toolCallIndex={toolCallIndex} />;
       return <Badge variant="secondary">Filter</Badge>;
     }
-    case 'ClarifyVariable': {
-      const clarifyArgs = args as unknown as ClarifyVariableArgs;
-      return <ClarifyVariable {...clarifyArgs} onSelectSuggestion={onSelectSuggestion} />;
+    case 'OfferIssueReport': {
+      const offerArgs = args as unknown as OfferIssueReportArgs;
+      return <IssueReportOffer {...offerArgs} />;
     }
     default:
       return (
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="outline" className="udi:text-xs">
           {toolCall.name}
         </Badge>
       );

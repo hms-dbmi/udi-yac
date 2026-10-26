@@ -1,0 +1,346 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * Regression tests for the entity/field pickers on an interval filter.
+ * Base UI's Select fires `onValueChange` on every item press — including a
+ * press on the already-selected item, which is a common way to dismiss the
+ * menu. Both pickers reset the range to the field's full domain, so an
+ * unguarded re-commit wiped a narrowed range (10–25 snapped back to min–max)
+ * just from opening and closing a menu.
+ */
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useEffect, type ReactNode } from 'react';
+import { UDIChatProvider, useDataPackage, useDataPackageStore } from '@/app/UDIChatContext';
+import { IntervalFilterComponent } from './IntervalFilterComponent';
+import type { DataSelection } from '../stores/dataFiltersStore';
+import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
+
+const pkg = {
+  'udi:path': 'data',
+  resources: [
+    {
+      name: 'Donor',
+      path: 'donor.csv',
+      'udi:row_count': 10,
+      schema: {
+        fields: [
+          { name: 'age', 'udi:data_type': 'quantitative' },
+          { name: 'bmi', 'udi:data_type': 'quantitative' },
+          { name: 'created', 'udi:data_type': 'quantitative', 'udi:time_format': 'epoch_ms' },
+          { name: 'created_s', 'udi:data_type': 'quantitative', 'udi:time_format': 'epoch_s' },
+        ],
+      },
+    },
+    {
+      name: 'Dataset',
+      path: 'dataset.csv',
+      'udi:row_count': 10,
+      schema: {
+        fields: [
+          { name: 'age', 'udi:data_type': 'quantitative' },
+          { name: 'file_count', 'udi:data_type': 'quantitative' },
+        ],
+      },
+    },
+    // No quantitative fields at all — nothing valid to fall back to.
+    {
+      name: 'Sample',
+      path: 'sample.csv',
+      'udi:row_count': 10,
+      schema: { fields: [{ name: 'sample_type', 'udi:data_type': 'nominal' }] },
+    },
+  ],
+} as unknown as DataPackage;
+
+const JAN_1_2020 = new Date(2020, 0, 1).getTime();
+const JAN_1_2021 = new Date(2021, 0, 1).getTime();
+
+const domains: DataFieldDomain[] = [
+  {
+    entity: 'Donor',
+    field: 'created_s',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: JAN_1_2020 / 1000, max: JAN_1_2021 / 1000 },
+  },
+  {
+    entity: 'Donor',
+    field: 'created',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: JAN_1_2020, max: JAN_1_2021 },
+  },
+  {
+    entity: 'Donor',
+    field: 'age',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: 0, max: 100 },
+  },
+  {
+    entity: 'Donor',
+    field: 'bmi',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: 10, max: 50 },
+  },
+  {
+    entity: 'Dataset',
+    field: 'age',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: 1, max: 9 },
+  },
+  {
+    entity: 'Dataset',
+    field: 'file_count',
+    type: 'interval',
+    fieldDescription: '',
+    domain: { min: 2, max: 400 },
+  },
+];
+
+function Harness({ children }: { children: ReactNode }) {
+  const dataPackageStore = useDataPackageStore();
+  // Gate children on a STORE value so they mount only after the seed — the
+  // component under test subscribes to stable function slices and would not
+  // re-render on a post-mount store update.
+  const loadingPhase = useDataPackage((s) => s.loadingPhase);
+  useEffect(() => {
+    dataPackageStore.setState({
+      dataPackage: pkg,
+      dataFieldDomains: domains,
+      loadingPhase: 'ready',
+      // Derived maps the pickers read; normally computed on package load.
+      entityNames: ['Donor', 'Dataset', 'Sample'],
+      quantitativeSourceFields: {
+        Donor: ['age', 'bmi'],
+        Dataset: ['age', 'file_count'],
+        Sample: [],
+      },
+      categoricalSourceFields: { Donor: [], Dataset: [], Sample: ['sample_type'] },
+    });
+  }, [dataPackageStore]);
+  return loadingPhase === 'ready' ? <>{children}</> : null;
+}
+
+/** Renders a narrowed Donor filter — `age` 10–25 out of a 0–100 domain by default. */
+function renderNarrowedFilter(
+  onCommit: (s: DataSelection) => void,
+  selection: DataSelection['selection'] = { age: [10, 25] },
+) {
+  const dataSelection: DataSelection = {
+    dataSourceKey: 'Donor',
+    type: 'interval',
+    selection,
+  };
+  render(
+    <UDIChatProvider>
+      <Harness>
+        <IntervalFilterComponent
+          dataSelection={dataSelection}
+          fieldIndex={0}
+          tweakable
+          filterKey="uuid-1"
+          onCommit={onCommit}
+        />
+      </Harness>
+    </UDIChatProvider>,
+  );
+}
+
+/** [entityTrigger, fieldTrigger] — rendered in that order when tweakable. */
+function pickers() {
+  return screen.getAllByRole('combobox');
+}
+
+async function openMenu(user: ReturnType<typeof userEvent.setup>, trigger: HTMLElement) {
+  await user.click(trigger);
+  const list = await waitFor(() => screen.getByRole('listbox'));
+  return list;
+}
+
+function optionsIn(list: HTMLElement) {
+  // Queried off the popup rather than via getAllByRole so the portal container
+  // (see useChatRoot) doesn't need to be part of the accessibility tree.
+  return Array.from(list.querySelectorAll<HTMLElement>('[role="option"]'));
+}
+
+function optionNamed(list: HTMLElement, name: string) {
+  const match = optionsIn(list).find((o) => o.textContent === name);
+  if (!match)
+    throw new Error(`no option "${name}" in [${optionsIn(list).map((o) => o.textContent)}]`);
+  return match;
+}
+
+describe('IntervalFilterComponent — entity/field pickers', () => {
+  it('keeps a narrowed range when the field menu is dismissed by re-picking the same field', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit);
+
+    const list = await openMenu(user, pickers()[1]);
+    await user.click(optionNamed(list, 'age'));
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('spinbutton', { name: 'Minimum age' })).toHaveValue(10);
+    expect(screen.getByRole('spinbutton', { name: 'Maximum age' })).toHaveValue(25);
+  });
+
+  it('keeps a narrowed range when the entity menu is dismissed by re-picking the same entity', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit);
+
+    const list = await openMenu(user, pickers()[0]);
+    await user.click(optionNamed(list, 'Donor'));
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('spinbutton', { name: 'Minimum age' })).toHaveValue(10);
+    expect(screen.getByRole('spinbutton', { name: 'Maximum age' })).toHaveValue(25);
+  });
+
+  it('keeps a narrowed range when a menu is dismissed with Escape', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit);
+
+    await openMenu(user, pickers()[1]);
+    await user.keyboard('{Escape}');
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('spinbutton', { name: 'Minimum age' })).toHaveValue(10);
+    expect(screen.getByRole('spinbutton', { name: 'Maximum age' })).toHaveValue(25);
+  });
+
+  it('still resets to the new domain when a different field is picked', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit);
+
+    const list = await openMenu(user, pickers()[1]);
+    await user.click(optionNamed(list, 'bmi'));
+
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ dataSourceKey: 'Donor', selection: { bmi: [10, 50] } }),
+    );
+  });
+
+  it("resets to the NEW entity's domain for the field, not the old entity's", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit);
+
+    const list = await openMenu(user, pickers()[0]);
+    await user.click(optionNamed(list, 'Dataset'));
+
+    // Donor.age spans 0-100, Dataset.age spans 1-9.
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ dataSourceKey: 'Dataset', selection: { age: [1, 9] } }),
+    );
+  });
+
+  it("falls back to the new entity's first quantitative field when the current one is absent", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    // Donor.bmi -> Dataset, which has no `bmi`; carrying it over would commit a
+    // filter that renders as "Error: Invalid filter."
+    renderNarrowedFilter(onCommit, { bmi: [20, 30] });
+
+    const list = await openMenu(user, pickers()[0]);
+    await user.click(optionNamed(list, 'Dataset'));
+
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ dataSourceKey: 'Dataset', selection: { age: [1, 9] } }),
+    );
+  });
+
+  it('keeps the field when the new entity has no quantitative field to fall back to', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit);
+
+    const list = await openMenu(user, pickers()[0]);
+    await user.click(optionNamed(list, 'Sample'));
+
+    // Nothing valid to offer, so the field is carried over as-is and the
+    // widget surfaces the invalid state rather than inventing a field.
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ dataSourceKey: 'Sample', selection: { age: [0, 100] } }),
+    );
+  });
+});
+
+describe('IntervalFilterComponent — epoch-ms date field', () => {
+  it('edits the bounds as dates, the upper one taking in its whole day', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+    const max = screen.getByLabelText('Maximum created') as HTMLInputElement;
+    expect(min.type).toBe('date');
+    expect([min.value, max.value]).toEqual(['2020-01-01', '2021-01-01']);
+
+    fireEvent.change(max, { target: { value: '2020-06-15' } });
+    fireEvent.blur(max);
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: { created: [JAN_1_2020, new Date(2020, 5, 15, 23, 59, 59, 999).getTime()] },
+      }),
+    );
+  });
+
+  it('waits for blur: a half-typed year is not committed, clamped to the range', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+
+    // What a date input reports while 2020 is typed into the year.
+    for (const value of ['0002-03-01', '0020-03-01', '0202-03-01', '2020-03-01']) {
+      fireEvent.change(min, { target: { value } });
+    }
+    expect(onCommit).not.toHaveBeenCalled();
+    fireEvent.blur(min);
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: { created: [new Date(2020, 2, 1).getTime(), JAN_1_2021] },
+      }),
+    );
+  });
+
+  it('keeps the bound when the date is cleared or the edit is cancelled', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created: [JAN_1_2020, JAN_1_2021] });
+    const min = screen.getByLabelText('Minimum created') as HTMLInputElement;
+
+    fireEvent.change(min, { target: { value: '' } });
+    fireEvent.blur(min);
+    expect(min.value).toBe('2020-01-01');
+
+    fireEvent.change(min, { target: { value: '2020-05-05' } });
+    fireEvent.keyDown(min, { key: 'Escape' });
+    fireEvent.blur(min);
+    expect(min.value).toBe('2020-01-01');
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('reads and writes epoch seconds, the upper bound on its last second', () => {
+    const onCommit = vi.fn();
+    renderNarrowedFilter(onCommit, { created_s: [JAN_1_2020 / 1000, JAN_1_2021 / 1000] });
+
+    const max = screen.getByLabelText('Maximum created_s') as HTMLInputElement;
+    expect(max.value).toBe('2021-01-01');
+
+    fireEvent.change(max, { target: { value: '2020-06-15' } });
+    fireEvent.blur(max);
+    expect(onCommit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        selection: {
+          created_s: [JAN_1_2020 / 1000, new Date(2020, 5, 15, 23, 59, 59).getTime() / 1000],
+        },
+      }),
+    );
+  });
+});

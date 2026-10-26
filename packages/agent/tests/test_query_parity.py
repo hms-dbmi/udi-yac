@@ -52,9 +52,17 @@ def engine(request):
         import seed_starrocks
 
         args = _starrocks_conn_args()
-        entries = seed_starrocks.seed(
-            _SAMPLE_DATA, "udi_parity", only=set(_GOLDENS["sources"]), **args
-        )
+        # Golden sources no longer all sit in one flat directory: donors and
+        # samples come from the HuBMAP package (sample-data/hubmap), penguins
+        # from sample-data itself. Seed per directory into the same database.
+        by_dir: dict[Path, set[str]] = {}
+        for name, filename in _GOLDENS["sources"].items():
+            by_dir.setdefault((_SAMPLE_DATA / filename).parent, set()).add(name)
+        entries = [
+            e
+            for data_dir, names in by_dir.items()
+            for e in seed_starrocks.seed(data_dir, "udi_parity", only=names, **args)
+        ]
         connector = StarRocksConnector(**args, database="udi_parity")
         return QueryEngine(
             connector, table_map={e["entity"]: e["table"] for e in entries}
@@ -79,10 +87,38 @@ def _canon_value(value):
     return value
 
 
+def _sort_key(row):
+    """Total order over canonicalized rows, tolerating mixed and null values.
+
+    Sorting the raw tuples raises as soon as a column is nullable — `None < "a"`
+    is a TypeError — so compare on the type name first and the repr second. Only
+    used to make the comparison order-independent; the equality check itself is
+    still on the values.
+    """
+    return tuple((type(v).__name__, repr(v)) for _, v in row)
+
+
 def _canon_rows(rows):
-    """Order-independent, tolerance-normalized canonical form."""
+    """Order-independent, tolerance-normalized canonical form.
+
+    Null-valued keys are dropped rather than compared. The two executors represent
+    "no value" differently at the edges — an all-null Arquero aggregate yields
+    `undefined`, which JSON omits, where SQL emits an explicit NULL — and
+    everything downstream (scales, filters, marks) treats absent and null alike.
+    Comparing them would fail on a distinction no chart can observe.
+    """
     return sorted(
-        tuple(sorted((k, _canon_value(v)) for k, v in row.items())) for row in rows
+        (
+            tuple(
+                sorted(
+                    (k, _canon_value(v))
+                    for k, v in row.items()
+                    if _canon_value(v) is not None
+                )
+            )
+            for row in rows
+        ),
+        key=_sort_key,
     )
 
 
@@ -107,6 +143,19 @@ def test_parity(engine, case):
         assert _canon_rows(result["extent"]) == _canon_rows(
             case["expect"]["allData"]
         ), f"extent mismatch for {case['name']}"
+
+
+def test_stratum_golden_is_what_grouping_expr_writes():
+    """The null-stratum case is hand-written in the generator. Pin it to what
+    `grouping_expr` emits, or the golden checks a spec the agent never sends."""
+    from udiagent.stratify import grouping_expr
+
+    case = next(c for c in _GOLDENS["cases"] if c["name"] == "stratum-cut-with-nulls")
+    assert case["spec"]["transformation"][0]["derive"]["stratum"] == grouping_expr(
+        {"type": "quantitative", "cuts": [4000]}, "body_mass_g"
+    )
+    counts = {row.get("stratum"): row["n"] for row in case["expect"]["displayData"]}
+    assert counts[None] == 2, "the two penguins with no body mass have no stratum"
 
 
 def test_legacy_string_expressions_rejected(engine):
@@ -147,7 +196,7 @@ def test_cross_entity_selection_with_missing_field_errors_clearly(engine):
         [
             {
                 "vizId": "bad",
-                "source": {"name": "samples", "source": "samples.csv"},
+                "source": {"name": "samples", "source": "hubmap/samples.tsv"},
                 "transformation": [
                     {
                         "filter": {
@@ -202,12 +251,12 @@ def test_offset_pages_row_level_results():
     """`offset` windows row-level results deterministically when the spec
     orders by a UNIQUE key (tie order is otherwise unspecified in SQL —
     same caveat as rolling windows)."""
-    views = {"donors": str(_SAMPLE_DATA / "donors.csv")}
+    views = {"donors": str(_SAMPLE_DATA / "hubmap" / "donors.tsv")}
     engine = QueryEngine(
         DuckDBConnector(views=views), table_map={"donors": "donors"}, row_cap=100
     )
     spec = {
-        "source": {"name": "donors", "source": "donors.csv"},
+        "source": {"name": "donors", "source": "hubmap/donors.tsv"},
         "transformation": [
             {"orderby": [{"field": "hubmap_id", "order": "asc"}]},
         ],
@@ -222,17 +271,22 @@ def test_offset_pages_row_level_results():
 
     # Windows must tile the full ordered result: page1+page2 == first 200.
     full = QueryEngine(
-        DuckDBConnector(views=views), table_map={"donors": "donors"}, row_cap=400
+        DuckDBConnector(views=views), table_map={"donors": "donors"}, row_cap=10_000
     ).run_query(**spec)
+    assert "truncated" not in full, "row_cap must exceed the donors table"
     assert first["displayData"] + second["displayData"] == full["displayData"][:200]
 
-    # Last window: donors has 266 rows -> offset 250 yields 16, untruncated.
-    tail = engine.run_query(**spec, offset=250)
+    # Last window: a partial page, derived from the live row count so a data
+    # refresh can't quietly turn this into an ordinary full page.
+    tail_offset = len(full["displayData"]) - 16
+    tail = engine.run_query(**spec, offset=tail_offset)
     assert len(tail["displayData"]) == 16
     assert "truncated" not in tail
 
     # run_batch forwards offset.
-    batch = engine.run_batch([{"vizId": "q", **spec, "offset": 250}], selections=None)
+    batch = engine.run_batch(
+        [{"vizId": "q", **spec, "offset": tail_offset}], selections=None
+    )
     assert len(batch["q"]["displayData"]) == 16
 
 
@@ -371,3 +425,116 @@ def test_kde_structural():
         step = pts[1][0] - pts[0][0]
         integral = sum(d for _, d in pts) * step
         assert 0.9 < integral < 1.1
+
+
+def test_kde_cost_is_bounded(monkeypatch):
+    """The Python pass costs rows × samples: both come capped, and only the
+    columns it reads are fetched."""
+    import udiagent.query.engine as engine_module
+
+    views = {"penguins": str(_SAMPLE_DATA / "penguins.csv")}
+    connector = DuckDBConnector(views=views)
+    sent = []
+    execute = connector.execute
+    monkeypatch.setattr(
+        connector, "execute", lambda sql, *args: sent.append(sql) or execute(sql, *args)
+    )
+    monkeypatch.setattr(engine_module, "KDE_ROW_CAP", 100)
+    engine = QueryEngine(connector, table_map={"penguins": "penguins"})
+    result = engine.run_query(
+        source={"name": "penguins", "source": "penguins.csv"},
+        transformation=[{"groupby": "species"}, {"kde": {"field": "body_mass_g", "samples": 10**6}}],
+    )
+    assert len(result["displayData"]) <= 3 * 512
+    assert result["truncated"] == {"cap": 100, "sampled": False}
+    assert sent[-1].startswith('SELECT "body_mass_g", "species" FROM'), sent[-1]
+
+
+# ---------------------------------------------------------------------------
+# JWT passthrough against a live StarRocks (>= 3.5).
+#
+# Separate opt-in from UDI_STARROCKS_TEST: it needs the JWT users provisioned,
+# which the parity leg does not.
+#
+#   python dev/starrocks/setup_jwt_auth.py
+#   UDI_STARROCKS_JWT_TEST=1 uv run pytest tests/test_query_parity.py -k jwt
+# ---------------------------------------------------------------------------
+
+_JWT_ENABLED = os.getenv("UDI_STARROCKS_JWT_TEST") == "1"
+_jwt_only = pytest.mark.skipif(
+    not _JWT_ENABLED, reason="set UDI_STARROCKS_JWT_TEST=1 (see dev/starrocks/README.md)"
+)
+
+
+@pytest.fixture(scope="module")
+def jwt_setup():
+    """The provisioning helper, imported from dev/ rather than duplicated."""
+    import importlib.util
+
+    path = _REPO_ROOT / "dev" / "starrocks" / "setup_jwt_auth.py"
+    spec = importlib.util.spec_from_file_location("setup_jwt_auth", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if not module.KEY_PATH.exists():
+        pytest.skip(f"run `python {path}` first")
+    return module
+
+
+@pytest.fixture(scope="module")
+def jwt_connector(jwt_setup):
+    from udiagent.query.connectors import StarRocksConnector
+
+    args = _starrocks_conn_args()
+    return StarRocksConnector(
+        host=args["host"],
+        port=args["port"],
+        database=jwt_setup.DATABASE,
+        jwt_passthrough=True,
+        principal_field=jwt_setup.PRINCIPAL_FIELD,
+    )
+
+
+@_jwt_only
+def test_jwt_passthrough_authenticates_as_the_token_subject(jwt_setup, jwt_connector):
+    """The database sees the end user, not a shared service account."""
+    from udiagent.query import use_db_token
+
+    with use_db_token(jwt_setup.mint("alice")):
+        rows = jwt_connector.execute("SELECT current_user() AS who")
+    assert rows[0]["who"].startswith("'alice'@")
+
+
+@_jwt_only
+def test_jwt_passthrough_enforces_per_user_grants(jwt_setup, jwt_connector):
+    """alice is granted the table, bob is authenticated but granted nothing.
+
+    This is the whole point of passthrough: the refusal comes from StarRocks,
+    not from anything this process decided.
+    """
+    from udiagent.query import DatabaseAuthError, use_db_token
+
+    with use_db_token(jwt_setup.mint("alice")):
+        assert jwt_connector.execute("SELECT COUNT(*) AS n FROM penguins")[0]["n"] > 0
+
+    with use_db_token(jwt_setup.mint("bob")):
+        with pytest.raises(DatabaseAuthError):
+            jwt_connector.execute("SELECT COUNT(*) AS n FROM penguins")
+
+
+@_jwt_only
+def test_jwt_passthrough_rejects_an_expired_token(jwt_setup, jwt_connector):
+    from udiagent.query import DatabaseAuthError, use_db_token
+
+    with use_db_token(jwt_setup.mint("alice", ttl=-60)):
+        with pytest.raises(DatabaseAuthError, match="expired"):
+            jwt_connector.execute("SELECT 1 AS n")
+
+
+@_jwt_only
+def test_jwt_passthrough_caches_one_connection_per_principal(jwt_setup, jwt_connector):
+    from udiagent.query import use_db_token
+
+    for _ in range(2):
+        with use_db_token(jwt_setup.mint("alice")):
+            jwt_connector.execute("SELECT 1 AS n")
+    assert list(jwt_connector._conns) == ["alice"]

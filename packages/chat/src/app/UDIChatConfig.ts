@@ -1,7 +1,17 @@
 import type { ReactNode } from 'react';
-import type { UDIPalette } from 'udi-toolkit/react';
+import type { RecordUrlFn, UDIPalette } from 'udi-toolkit/react';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
-import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
+import type { DownloadAction, EntityIconMap, FilterMode, UDIFilter } from '@/features/dashboard';
+import type { ReadOnlyOption } from '@/stores/globalStore';
+
+export type { FilterMode, ReadOnlyOption, UDIFilter };
+
+/** The subjects every filter in place leaves: see {@link UDIChatConfig.cohort}. */
+export interface UDICohort {
+  entity: string;
+  /** One entry per subject, holding its key fields. */
+  keys: Record<string, unknown>[];
+}
 
 /**
  * Signature for the optional analytics callback — deliberately untyped in
@@ -41,6 +51,13 @@ export interface UDIChatConfig {
   authToken?: string;
   /** If true, prompt the user to enter an OpenAI API key before chatting. */
   requireApiKey?: boolean;
+  /**
+   * LLM model id to run the request on. Applied **only when the user supplies
+   * their own OpenAI key** (`requireApiKey`, or a key entered in the UI): the
+   * server honors a requested model only alongside an `X-OpenAI-Key`, so that
+   * whoever pays for the tokens picks the model. Without a caller key the
+   * server's own `GPT_MODEL_NAME` applies and this value is not sent.
+   */
   model?: string;
   /**
    * Extra items to append to the Download Data dropdown. Each action's
@@ -101,6 +118,147 @@ export interface UDIChatConfig {
    * scales. A spec-level per-encoding `range` still overrides it.
    */
   palette?: UDIPalette;
+  /**
+   * Links individual records out to their own pages. Called with a row of a
+   * chart or table and its entity (the spec's first source); return that
+   * record's URL, or nothing for a row with no page. Tables gain a leading ↗
+   * column, and a plain click on a point opens the record (a modifier click
+   * still picks). Aggregated rows carry no record id, so an aggregate gets
+   * no links. Only http(s) URLs are followed; relative ones resolve against
+   * the host page.
+   *
+   * Independently of this prop, a table cell whose value is an http(s) URL is
+   * always a link.
+   */
+  recordUrl?: RecordUrlFn;
+  /**
+   * Multiplier on every text size, charts and tables included: 1 is the stock
+   * size, 2 doubles it. Clamped to 1–2. When set, it overrides the viewer's own
+   * Text size setting and hides that slider, so the host decides — e.g. a
+   * presentation mode, or a read-only embed, which has no slider to reach.
+   * Omit it to leave text size to the viewer.
+   */
+  fontScale?: number;
+  /**
+   * Read-only mode: the chat pane and the dashboard's top bar (counts, grid
+   * settings, session import/export, Download Data) are hidden, as is every
+   * editing control on the cards — drag, resize, rename, close, field tweak.
+   * What stays is the charts and what reads them: brushing and cross-filtering,
+   * the filter chips, the chart/table toggle and the info tooltips.
+   *
+   * - `true` — a floating Explore Data button leaves read-only and opens the
+   *   chat (see {@link UDIChatConfig.onReadOnlyChange}).
+   * - `'locked'` — the same, with no way out for the user. For hosts embedding
+   *   the dashboard that do not want their users chatting at all.
+   *
+   * A change to this prop switches the mode, so the host can move between an
+   * inline read-only dashboard and a full chat — say, in a modal — and back,
+   * with charts, filters, brushes and the conversation intact. That needs the
+   * same mounted `UDIChat` throughout: restyle its container rather than
+   * rendering it somewhere else (a portal-based dialog remounts it).
+   *
+   * With the chat hidden there is nothing to build a dashboard from, so a
+   * read-only embed almost always wants {@link UDIChatConfig.initialSession}
+   * too. See also the `UDIDashboard` component, which is `UDIChat` with this
+   * set.
+   */
+  readOnly?: ReadOnlyOption;
+  /**
+   * Called with `false` when the user presses Explore Data — not when
+   * {@link UDIChatConfig.readOnly} changes. Passing it makes the mode
+   * controlled: the button no longer leaves read-only by itself, and the host
+   * does so by setting `readOnly` — free to move the chat into more room, and
+   * to animate that, in the same update.
+   */
+  onReadOnlyChange?: (readOnly: boolean) => void;
+  /**
+   * Whether the dashboard re-derives its column count for its new width when
+   * read-only mode changes either way: narrower when the chat pane appears,
+   * wider when it goes. Default `true`. Pass `false` to keep the count — an
+   * {@link UDIChatConfig.initialSession}'s, say — and let the cards stretch.
+   */
+  refitOnReadOnlyChange?: boolean;
+  /**
+   * A session export to seed the dashboard (and the conversation behind it)
+   * with — the JSON written by the dashboard's `Session → Export session`
+   * action, in the {@link SessionExport} shape.
+   *
+   * Typed `unknown` so a consumer can pass `JSON.parse(file)` straight
+   * through: the value is run past `parseSessionExport`, and a malformed one
+   * throws from `validateConfig` into the surrounding ErrorBoundary rather
+   * than failing quietly. Applied once, after the data package has loaded
+   * (the cards need its field lists to become interactive).
+   */
+  initialSession?: unknown;
+  /**
+   * Turns on "Saved in browser" in the dashboard's Session menu: the user can
+   * save the current session under a name, and load or delete the sessions
+   * saved under this key. They live in this origin's `localStorage`, and a
+   * session only makes sense against the data package it was built on, so
+   * use one key per package. Unset, the menu offers file export/import only.
+   */
+  savedSessionsKey?: string;
+  /**
+   * Filters set by the embedding page. Each shows as a chip in the Filters
+   * bar and filters every chart, like a chat filter; the user can adjust,
+   * clear or remove it there. Entries are matched by `id` and applied again
+   * only when that entry changes, so re-rendering with the same array never
+   * undoes the user's edits; dropping an entry deletes its filter. Entries
+   * whose `origin` is `'chat'` or `'chart'` are ignored, so feeding
+   * {@link UDIChatConfig.onFiltersChange}'s output straight back is safe.
+   */
+  filters?: UDIFilter[];
+  /**
+   * Called with every filter in place whenever one changes — chat, chart and
+   * host filters alike, each tagged with its `origin`. A filter with no values
+   * (`[]`) is cleared: still shown, filtering nothing. Removed filters are
+   * left out.
+   */
+  onFiltersChange?: (filters: UDIFilter[]) => void;
+  /**
+   * How {@link UDIChatConfig.filters} meet the filters made in the chat and
+   * on charts.
+   *
+   * - `'separate'` (default) — each host filter is its own chip, read-only to
+   *   the agent, and applies on top of any chat or chart filter on the same
+   *   column.
+   * - `'shared'` — a host filter on a single field becomes that column's
+   *   filter, the one chat and charts write too: one chip, and whoever edits
+   *   it last (the host, the agent, a chart click) sets it.
+   *   {@link UDIChatConfig.onFiltersChange} reports it as `col:<entity>.<field>`
+   *   with the `origin` of that last edit, so a host can mirror chart clicks
+   *   and chat requests by matching `dataSourceKey` and field. Dropping a host
+   *   entry removes the filter only while the host was still its last editor.
+   *   Filters on several fields stay separate.
+   */
+  filterMode?: FilterMode;
+  /**
+   * The subject to report the filtered cohort of: a table of the data package
+   * (`entity`, e.g. `'patient'`) and the fields that identify its rows
+   * (`fields`, default: the table's `primaryKey`). With
+   * {@link UDIChatConfig.onCohortChange}, every change to the filters — chat,
+   * chart and host alike, on any table that reaches this one — reports the
+   * rows of `entity` that pass them all.
+   */
+  cohort?: { entity: string; fields?: string[] };
+  /**
+   * Called with the cohort {@link UDIChatConfig.cohort} asks for, once the
+   * filters settle: the key fields of every passing row, or `null` while no
+   * filter reaches the entity, so the host need not handle a list of every
+   * subject. Unlike row-level results, the list is not capped in server-side
+   * data mode.
+   */
+  onCohortChange?: (cohort: UDICohort | null) => void;
+  /**
+   * Let users report a problem to the development team: a *Report an issue*
+   * item in the Session menu, a button on the crash screen, and an offer from
+   * the agent when the user asks to report something or says a result is
+   * wrong. A report sends the user's note and their session export to
+   * `POST /v1/yac/issue_report`, which records it in the agent's LangFuse.
+   * Off by default; switch it on only against an agent with LangFuse
+   * configured (without it the agent refuses reports, and never offers one).
+   */
+  issueReporting?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }

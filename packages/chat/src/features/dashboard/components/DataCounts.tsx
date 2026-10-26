@@ -14,6 +14,7 @@ import {
 } from '@/app/UDIChatContext';
 import { buildCubeCountTransformation } from '../utils/cubeFilters';
 import { joinDataPath } from '@/features/data-package';
+import { cn } from '@/lib/utils';
 import { DEFAULT_ENTITY_ICONS, FALLBACK_ENTITY_ICON } from '@/utils/entityIcons';
 import type { EntityIconMap } from '../types';
 
@@ -24,16 +25,19 @@ interface EntityChip {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
-export function DataCounts() {
+/** @param compact One line per chip ("501 donors") instead of the count over
+ *  its label, for a header too narrow for the full chips. */
+export function DataCounts({ compact = false }: { compact?: boolean }) {
   const dataPackage = useDataPackage((s) => s.dataPackage);
   const entityNames = useDataPackage((s) => s.entityNames);
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const loadError = useDataPackage((s) => s.error);
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
+  const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
   const dataPackageStore = useDataPackageStore();
-  const dashboardStore = useDashboardStore();
   const globalStore = useGlobalStore();
 
   const [filteredCounts, setFilteredCounts] = useState<Record<string, number>>({});
@@ -70,54 +74,21 @@ export function DataCounts() {
       .filter((c): c is NonNullable<typeof c> => c !== null);
   }, [dataPackage, entityNames, mergedIcons, dataPackageStore, cubeTotals]);
 
-  // Build filter IDs (same logic as dashboardStore.getFilterIds)
-  const filterIds = useMemo(() => {
-    const vizIds = Array.from(activeVisualizations.values()).map((v) => v.uuid);
-    const dpState = dataPackageStore.getState();
-    const validSelections = dataFiltersStore.getState().getValidDataSelections({
-      isValidIntervalFilter: dpState.isValidIntervalFilter,
-      isValidPointFilter: dpState.isValidPointFilter,
-    });
-    const externalIds = Object.keys(validSelections);
-    return Array.from(new Set([...vizIds, ...externalIds])).sort();
-  }, [activeVisualizations, dataSelections, dataFiltersStore, dataPackageStore]);
+  // `dataSelections` is a change trigger: the filters are read out of the
+  // store via getState(), which the linter cannot see.
+  const filterIds = useMemo(
+    () => dashboardStore.getState().getFilterIds(dataFiltersStore, dataPackageStore),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dataSelections, dashboardStore, dataFiltersStore, dataPackageStore],
+  );
 
   // Build a count spec per entity (with named filters + rollup)
   const countSpecs = useMemo(() => {
     if (!dataPackage) return {};
     const dpState = dataPackageStore.getState();
-    const dashState = {
-      getNamedFilters: (ids: string[], source: string) => {
-        const uuidToSource = new Map<string, string>();
-        for (const v of activeVisualizations.values()) {
-          const src = v.interactiveSpec.source as { name?: string } | Array<{ name?: string }>;
-          const sn = Array.isArray(src) ? src[0]?.name : src?.name;
-          if (v.uuid && sn) uuidToSource.set(v.uuid, sn);
-        }
-        const dfState = dataFiltersStore.getState();
-        const valid = dfState.getValidDataSelections({
-          isValidIntervalFilter: dpState.isValidIntervalFilter,
-          isValidPointFilter: dpState.isValidPointFilter,
-        });
-        const getSource = (id: string) => uuidToSource.get(id) ?? valid[id]?.dataSourceKey ?? null;
-
-        return ids
-          .map((id): DataTransformation | null => {
-            const origin = getSource(id);
-            if (!origin) return null;
-            if (origin !== source) {
-              const er = dpState.getEntityRelationship(origin, source);
-              if (!er) return null;
-              return { filter: { name: id, source: origin, entityRelationship: er } };
-            }
-            return { filter: { name: id, source } };
-          })
-          .filter((f): f is DataTransformation => f !== null);
-      },
-    };
-
-    const activeFilters = dashboardStore.getState().getActiveFilters(filterIds, dataFiltersStore);
-
+    const activeFilters = dashboardStore
+      .getState()
+      .getActiveFilters(filterIds, dataFiltersStore, dataPackageStore);
     const specs: Record<string, QueryDataSpec> = {};
     for (const chip of chips) {
       const resource = dataPackage.resources.find((r) => r.name === chip.id);
@@ -140,21 +111,34 @@ export function DataCounts() {
         specs[chip.id] = { source, transformation };
         continue;
       }
-      const namedFilters = dashState.getNamedFilters(filterIds, chip.id);
+      // The dashboard's own builder, so a count filters exactly as a chart
+      // of the same table does — subject scopes included.
+      const namedFilters = dashboardStore
+        .getState()
+        .getNamedFilters(
+          filterIds,
+          chip.id,
+          dataFiltersStore,
+          dataPackageStore,
+        ) as DataTransformation[];
       specs[chip.id] = {
         source,
         transformation: [...namedFilters, { rollup: { count: { op: 'count' } } }],
       };
     }
     return specs;
+    // activeVisualizations / filterScopes are change triggers: getNamedFilters
+    // reads them out of the stores via getState(), which the linter cannot see.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     chips,
     filterIds,
     dataPackage,
     activeVisualizations,
+    filterScopes,
+    dashboardStore,
     dataFiltersStore,
     dataPackageStore,
-    dashboardStore,
   ]);
 
   // Unfiltered grand total per cube entity — the denominator in the chip's
@@ -262,10 +246,10 @@ export function DataCounts() {
   if (loadingPhase === 'error') {
     return (
       <div
-        className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive"
+        className="udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:border-destructive/40 udi:bg-destructive/5 udi:px-2.5 udi:py-1.5 udi:text-xs udi:text-destructive"
         title={loadError ?? undefined}
       >
-        <AlertCircle className="h-4 w-4 shrink-0" />
+        <AlertCircle className="udi:h-4 udi:w-4 udi:shrink-0" />
         <span>Couldn't load data package{loadError ? `: ${loadError}` : '.'}</span>
       </div>
     );
@@ -275,17 +259,24 @@ export function DataCounts() {
   if (loadingPhase === 'fetching' || loadingPhase === 'idle') {
     if (loadingPhase === 'idle') return null;
     return (
-      <div className="flex items-center gap-2">
+      <div className="udi:flex udi:items-center udi:gap-2">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="inline-flex items-center gap-1.5 rounded-md border bg-muted px-2.5 py-1.5 animate-pulse"
+            className={cn(
+              'udi:inline-flex udi:items-center udi:gap-1.5 udi:rounded-md udi:border udi:bg-muted udi:animate-pulse',
+              compact ? 'udi:px-3 udi:py-2' : 'udi:px-2.5 udi:py-1.5',
+            )}
           >
-            <div className="h-5 w-5 rounded bg-muted-foreground/20" />
-            <div className="flex flex-col items-center gap-1">
-              <div className="h-4 w-8 rounded bg-muted-foreground/20" />
-              <div className="h-3 w-12 rounded bg-muted-foreground/20" />
-            </div>
+            <div className="udi:h-5 udi:w-5 udi:rounded udi:bg-muted-foreground/20" />
+            {compact ? (
+              <div className="udi:h-4 udi:w-24 udi:rounded udi:bg-muted-foreground/20" />
+            ) : (
+              <div className="udi:flex udi:flex-col udi:items-center udi:gap-1">
+                <div className="udi:h-4 udi:w-8 udi:rounded udi:bg-muted-foreground/20" />
+                <div className="udi:h-3 udi:w-12 udi:rounded udi:bg-muted-foreground/20" />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -297,7 +288,7 @@ export function DataCounts() {
   const hasFilters = filterIds.length > 0;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="udi:flex udi:items-center udi:gap-2 udi:flex-wrap">
       {chips.map((chip) => {
         const filtered = filteredCounts[chip.id];
         const isFiltered =
@@ -309,25 +300,53 @@ export function DataCounts() {
             onClick={() => globalStore.getState().setOverview(true, chip.id)}
             title={`${chip.label} — open data overview`}
             aria-label={`${chip.label}: ${chip.totalCount.toLocaleString()} rows. Open data overview.`}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className={cn(
+              'udi:inline-flex udi:cursor-pointer udi:items-center udi:rounded-md udi:border udi:bg-background udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
+              compact
+                ? 'udi:gap-1 udi:whitespace-nowrap udi:px-3 udi:py-2 udi:text-sm udi:font-medium'
+                : 'udi:gap-1.5 udi:px-2.5 udi:py-1.5',
+            )}
           >
-            <chip.Icon className="h-5 w-5 text-muted-foreground shrink-0" />
-            <div className="flex flex-col items-center text-center leading-tight">
-              <div className="text-base font-bold">
-                {isFiltered ? (
-                  <>
-                    {filtered.toLocaleString()}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {' '}
-                      / {chip.totalCount.toLocaleString()}
-                    </span>
-                  </>
-                ) : (
-                  chip.totalCount.toLocaleString()
-                )}
+            <chip.Icon
+              className={cn(
+                'udi:h-5 udi:w-5 udi:text-muted-foreground udi:shrink-0',
+                compact && 'udi:mr-0.5',
+              )}
+            />
+            {compact ? (
+              <>
+                <span className="udi:tabular-nums">
+                  {isFiltered ? (
+                    <>
+                      {filtered.toLocaleString()}
+                      <span className="udi:text-muted-foreground">
+                        /{chip.totalCount.toLocaleString()}
+                      </span>
+                    </>
+                  ) : (
+                    chip.totalCount.toLocaleString()
+                  )}
+                </span>
+                {chip.label}
+              </>
+            ) : (
+              <div className="udi:flex udi:flex-col udi:items-center udi:text-center udi:leading-tight">
+                <div className="udi:text-base udi:font-bold">
+                  {isFiltered ? (
+                    <>
+                      {filtered.toLocaleString()}
+                      <span className="udi:text-xs udi:font-normal udi:text-muted-foreground">
+                        {' '}
+                        / {chip.totalCount.toLocaleString()}
+                      </span>
+                    </>
+                  ) : (
+                    chip.totalCount.toLocaleString()
+                  )}
+                </div>
+                <span className="udi:text-xs udi:text-muted-foreground">{chip.label}</span>
               </div>
-              <span className="text-[11px] text-muted-foreground">{chip.label}</span>
-            </div>
+            )}
           </button>
         );
       })}

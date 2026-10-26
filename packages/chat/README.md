@@ -18,20 +18,27 @@ pnpm test:watch   # vitest in watch mode
 
 ### Standalone app config (env vars)
 
-The standalone `App.tsx` reads these Vite env vars (see `.env.example`). Copy `.env.example` to `.env.local` to override locally:
+The standalone `App.tsx` reads these Vite env vars. Copy `.env.example` to `.env.local` to override locally — all are optional.
 
-| Var                        | Default                                                             | Purpose                                                                               |
-| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `VITE_UDI_API_BASE_URL`    | `http://localhost:8007`                                             | UDIAgent FastAPI server URL                                                           |
-| `VITE_UDI_DATA_PACKAGE`    | (unset → inline HuBMAP API package from `src/data/hubmapRemote.ts`) | Optional path/URL to a `datapackage_udi.json`. Overrides the inline default when set. |
-| `VITE_UDI_REQUIRE_API_KEY` | `true`                                                              | Set to `false` to skip the in-app OpenAI key prompt                                   |
-| `VITE_UDI_MODEL`           | (unset)                                                             | Optional LLM model override                                                           |
+Each is described once in [`src/app/envVars.ts`](src/app/envVars.ts); this table, `.env.example`, and `src/env.d.ts` are generated from it by `node scripts/gen-chat-env-docs.mjs`, and CI fails if they drift.
 
-By default the standalone app talks to the live HuBMAP Portal metadata API. To use the locally bundled snapshot instead, set:
+<!-- BEGIN generated: env vars (scripts/gen-chat-env-docs.mjs) -->
 
-```
-VITE_UDI_DATA_PACKAGE=/data/hubmap_2025-05-05/datapackage_udi.json
-```
+| Variable                   | Default                         | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_UDI_API_BASE_URL`    | `http://localhost:8007`         | UDIAgent FastAPI server URL. May also be a same-origin path (e.g. `/api/yac`) when the chat sits behind the host app’s reverse proxy.                                                                                                                                                                                                                                                                                                                       |
+| `VITE_UDI_DATA_PACKAGE`    | `/data/hubmap/datapackage.json` | Path or URL to a `datapackage.json`. Defaults to the bundled HuBMAP snapshot synced from `sample-data/`. Ignored when `VITE_UDI_REMOTE_PACKAGE` is set.                                                                                                                                                                                                                                                                                                     |
+| `VITE_UDI_REMOTE_PACKAGE`  | —                               | Name of a server-side data package (configured on the agent via `UDI_QUERY_BACKENDS`). When set, no CSVs load in the browser: metadata comes from `/v1/yac/metadata` and queries go to `/v1/yac/query`. Takes precedence over `VITE_UDI_DATA_PACKAGE`.                                                                                                                                                                                                      |
+| `VITE_UDI_REQUIRE_API_KEY` | `true`                          | Prompt the user for an OpenAI key in the UI. Defaults to `true`, but `.env.example` ships `false` because local dev runs against an agent that has its own `OPENAI_API_KEY`.                                                                                                                                                                                                                                                                                |
+| `VITE_UDI_MODEL`           | —                               | LLM model override. Sent **only when the user supplies their own OpenAI key** — the agent honors a requested model only alongside an `X-OpenAI-Key`, so whoever pays for the tokens picks the model. Otherwise the agent’s `GPT_MODEL_NAME` applies.                                                                                                                                                                                                        |
+| `VITE_UDI_READ_ONLY`       | `false`                         | Start in read-only mode: the chat pane and the dashboard’s top bar (counts, grid settings, session import/export, downloads) are hidden, as is every editing control on the cards, while brushing, filters and the table toggle stay. `true` leaves an Explore Data button over the dashboard that opens the chat; `locked` removes it. With the chat hidden there is nothing to build a dashboard from, so pair this with `VITE_UDI_INITIAL_SESSION`.      |
+| `VITE_UDI_INITIAL_SESSION` | —                               | Path or URL to a session export — the JSON written by the dashboard’s `Session → Export session` action. Fetched at startup and used to seed the dashboard and the conversation behind it. Anything under `public/` is served from the site root, so the pcx demo session (synced from `sample-data/`) is `/data/pcx/sessions/demo.json`. A malformed file fails loudly through the ErrorBoundary; a missing one only logs, and the dashboard starts empty. |
+| `VITE_UDI_ISSUE_REPORTING` | `false`                         | Let users report a problem to the development team (Session menu, crash screen, and an offer from the agent). Reports go to the agent’s `POST /v1/yac/issue_report`, which records them in LangFuse, so turn this on only against an agent with LangFuse configured.                                                                                                                                                                                        |
+| `VITE_BASE`                | `/`                             | Public base path for the built SPA (read in `vite.config.ts`, build-time only). The library build always uses `./`.                                                                                                                                                                                                                                                                                                                                         |
+
+<!-- END generated: env vars -->
+
+To switch between bundled data packages and server-side (remote) mode, use `node scripts/set-chat-data-source.mjs <package> [--remote]` rather than editing `.env.local` by hand — the repo-root README and `dev/duckdb/README.md` cover the full flow.
 
 > **Note on `build` vs `build:lib`**: `pnpm build` produces a deployable standalone SPA — this is the default so CI/deploy pipelines behave as expected. To build the publishable library bundle (the `UDIChat` React component), use `pnpm build:lib`, which invokes `vite build --mode lib` and emits both JS and `.d.ts` files under `dist/`.
 
@@ -44,14 +51,28 @@ VITE_UDI_DATA_PACKAGE=/data/hubmap_2025-05-05/datapackage_udi.json
 - **Arquero** for client-side data loading and domain computation
 - **Vite** for dev server and library builds
 
+### Agent version pairing
+
+`udi-yac` and `udiagent` share a private contract beyond the HTTP shape: the
+agent sends a chart's title and summary **tokenized** (`{enc:x}`, `{ent:entity3}`,
+`{col:entity2_field}`, …) and this package resolves them against the spec, the
+template's bindings and the data package's display labels. The vocabulary grows
+as templates need new wording, so **run an agent no newer than your `udi-yac`**.
+
+A newer client against an older agent is always fine. The other way round, a
+token this version does not know makes the wording fall back to a title derived
+from the spec — readable, just less specific. Builds from before that fallback
+landed print the unknown token instead, so an old enough `udi-yac` shows
+`{col:entity2_field}` in a card title where a current one degrades cleanly.
+
 ## Architecture
 
 ### Dual Build Modes
 
 The project builds as both a **library** and a **standalone app**:
 
-- **Library** (`pnpm build`): Exports the `UDIChat` component and `UDIChatConfig` type. Consumers provide React and render `<UDIChat>` with configuration props.
-- **Standalone** (`pnpm build:app`): Builds `App.tsx` as a full SPA with dev defaults.
+- **Library** (`pnpm build:lib`): Exports the `UDIChat` / `UDIDashboard` components and the `UDIChatConfig` type. Consumers provide React and render `<UDIChat>` with configuration props.
+- **Standalone** (`pnpm build`): Builds `App.tsx` as a full SPA with dev defaults.
 
 ### Library Usage
 
@@ -75,32 +96,212 @@ Embedding in another app? Two things worth knowing up front:
 
 - **`apiBaseUrl` accepts a same-origin path** (`/api/yac`), so agent traffic can go
   through your own reverse proxy and let your server attach auth — no CORS, no token in
-  the browser. `authToken` is then unnecessary.
-- **Every style is scoped** to the root element's `udi-yac` class, so the stylesheet
-  won't touch your app's own shadcn tokens or typography. Dark mode follows a `.dark`
-  class on any ancestor (the usual shadcn convention).
+  the browser. Leave `authToken` unset and the chat sends no `Authorization` header at
+  all, so there is nothing for the proxy to strip. This is the only workable shape when
+  your portal keeps its identity-provider token server-side; forward the body, the
+  `X-Conversation-Id` and `X-OpenAI-Key` request headers, and the `X-Usage-*` response
+  headers.
+- **Every style is scoped.** Design tokens and element resets are confined to the root
+  element's `udi-yac` class, and every Tailwind utility we emit carries a `udi:` prefix
+  (`udi:flex`), so nothing collides with your own Tailwind build whichever stylesheet
+  loads last. The sheet ships no preflight, so it cannot reset your typography or box
+  model. Dark mode follows a `.dark` class on any ancestor (the usual shadcn convention).
+- **The bundle is server-safe.** `import 'udi-yac'` evaluates without a DOM, so a route
+  file that imports it does not break SSR. Rendering `<UDIChat>` still requires a
+  browser — mount it client-side.
+- **`react` and `react-dom` are the only runtime dependencies.** Everything else,
+  `udi-toolkit` included, is bundled into the published file. Types are bundled too:
+  import `UDIPalette` from `udi-yac`, not from `udi-toolkit`.
 
 ### Config Props
 
-| Prop               | Type                 | Description                                                                                                                                                                                                                                      |
-| ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apiBaseUrl`       | `string`             | Base URL for the UDIAgent API. Absolute (`https://agent.example.org`) or a same-origin path (`/api/yac`).                                                                                                                                        |
-| `remotePackage`    | `string?`            | Server-side data package name. Schema/domains come from `GET /v1/yac/metadata` and queries from `POST /v1/yac/query`; no CSVs load in the browser and cross-filtering becomes commit-on-mouse-up. Takes precedence over both data-package props. |
-| `dataPackagePath`  | `string?`            | URL/path to `datapackage_udi.json`. Ignored when `dataPackage` is provided.                                                                                                                                                                      |
-| `dataPackage`      | `DataPackage?`       | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
-| `dataFieldDomains` | `DataFieldDomain[]?` | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
-| `fetchOptions`     | `RequestInit?`       | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
-| `authToken`        | `string?`            | JWT bearer token for API auth                                                                                                                                                                                                                    |
-| `requireApiKey`    | `boolean?`           | Show API key input before chatting                                                                                                                                                                                                               |
-| `model`            | `string?`            | LLM model name override                                                                                                                                                                                                                          |
-| `downloadActions`  | `DownloadAction[]?`  | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |
-| `entityIcons`      | `EntityIconMap?`     | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                                                                                                                                                          |
-| `mascot`           | `ReactNode \| null?` | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                                                                                                                                                         |
-| `splashMessages`   | `readonly string[]?` | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages).                                                                                                                                  |
-| `onEvent`          | `TrackerFn?`         | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                                                                                                                                                       |
-| `palette`          | `UDIPalette?`        | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
-| `className`        | `string?`            | CSS class for the root element                                                                                                                                                                                                                   |
-| `style`            | `CSSProperties?`     | Inline styles for the root element                                                                                                                                                                                                               |
+| Prop                    | Type                      | Description                                                                                                                                                                                                                                      |
+| ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apiBaseUrl`            | `string`                  | Base URL for the UDIAgent API. Absolute (`https://agent.example.org`) or a same-origin path (`/api/yac`).                                                                                                                                        |
+| `remotePackage`         | `string?`                 | Server-side data package name. Schema/domains come from `GET /v1/yac/metadata` and queries from `POST /v1/yac/query`; no CSVs load in the browser and cross-filtering becomes commit-on-mouse-up. Takes precedence over both data-package props. |
+| `dataPackagePath`       | `string?`                 | URL/path to `datapackage_udi.json`. Ignored when `dataPackage` is provided.                                                                                                                                                                      |
+| `dataPackage`           | `DataPackage?`            | Provide a data package object directly instead of fetching from a URL. Takes precedence over `dataPackagePath`.                                                                                                                                  |
+| `dataFieldDomains`      | `DataFieldDomain[]?`      | Pre-computed field domains. Skips CSV loading for domain computation when provided with `dataPackage`.                                                                                                                                           |
+| `fetchOptions`          | `RequestInit?`            | Custom fetch options (headers, credentials, etc.) forwarded to all data-loading fetch calls.                                                                                                                                                     |
+| `authToken`             | `string?`                 | JWT bearer token for API auth. Omit it when a backend proxy attaches the header instead; no `Authorization` header is then sent.                                                                                                                 |
+| `requireApiKey`         | `boolean?`                | Show API key input before chatting                                                                                                                                                                                                               |
+| `model`                 | `string?`                 | LLM model name override                                                                                                                                                                                                                          |
+| `downloadActions`       | `DownloadAction[]?`       | Extra items appended to the Download Data dropdown. See [Custom download actions](#custom-download-actions).                                                                                                                                     |
+| `downloadButtonLabel`   | `string?`                 | Override the Download dropdown's trigger label. Defaults to `Download Data`.                                                                                                                                                                     |
+| `entityIcons`           | `EntityIconMap?`          | Icon overrides for entity count chips. See [Custom entity icons](#custom-entity-icons).                                                                                                                                                          |
+| `mascot`                | `ReactNode \| null?`      | Replace or hide the welcome mascot. See [Custom mascot](#custom-mascot).                                                                                                                                                                         |
+| `splashMessages`        | `readonly string[]?`      | Override or hide the randomised prompt above the mascot. See [Custom splash messages](#custom-splash-messages).                                                                                                                                  |
+| `onEvent`               | `TrackerFn?`              | Analytics callback invoked on key user actions. See [Analytics events](#analytics-events).                                                                                                                                                       |
+| `palette`               | `UDIPalette?`             | Default color palette for every chart and table. See [Custom color palette](#custom-color-palette).                                                                                                                                              |
+| `recordUrl`             | `RecordUrlFn?`            | Link individual records (table rows, scatter points) to their own pages. See [Record links](#record-links).                                                                                                                                      |
+| `fontScale`             | `number?`                 | Text size multiplier (1–2) for every chart, table and label. Overrides and hides the viewer's own Text size setting; omit it to leave text size to the viewer.                                                                                   |
+| `readOnly`              | `boolean \| 'locked'?`    | Hide the chat pane and every editing control. `'locked'` removes the user's way back out. Followed on change. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                       |
+| `onReadOnlyChange`      | `(readOnly) => void`      | Called when the user leaves read-only via Explore Data. See [Switching modes from the host](#switching-modes-from-the-host).                                                                                                                     |
+| `refitOnReadOnlyChange` | `boolean?`                | Re-derive the dashboard's column count for its new width when read-only changes. Defaults to `true`. See [Switching modes from the host](#switching-modes-from-the-host).                                                                        |
+| `initialSession`        | `unknown?`                | A session export to seed the dashboard and conversation with. See [Read-only dashboard embed](#read-only-dashboard-embed).                                                                                                                       |
+| `savedSessionsKey`      | `string?`                 | Adds **Saved in browser…** to the dashboard's Session menu: save the current session by name, then load or delete it later. Stored in `localStorage` under this key, so use one key per data package.                                            |
+| `filters`               | `UDIFilter[]?`            | Filters set by the embedding page. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                                                |
+| `onFiltersChange`       | `(filters) => void`       | Called with every filter in place whenever one changes. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                           |
+| `filterMode`            | `'separate' \| 'shared'?` | `'shared'` makes a host filter on one field that column's filter, which chat and chart clicks edit too. See [Filters from the host page](#filters-from-the-host-page).                                                                           |
+| `cohort`                | `{ entity, fields? }?`    | The table whose filtered rows to report, and their key fields (default: its `primaryKey`). See [Reporting the filtered cohort](#reporting-the-filtered-cohort).                                                                                  |
+| `onCohortChange`        | `(cohort) => void`        | Called with the key fields of every `cohort.entity` row all filters leave, or `null` while none reaches it. See [Reporting the filtered cohort](#reporting-the-filtered-cohort).                                                                 |
+| `issueReporting`        | `boolean?`                | Let users report a problem to the development team: a Report an issue item in the Session menu, a button on the crash screen, and an offer from the agent. Needs LangFuse on the agent, which records reports via `POST /v1/yac/issue_report`.   |
+| `className`             | `string?`                 | CSS class for the root element                                                                                                                                                                                                                   |
+| `style`                 | `CSSProperties?`          | Inline styles for the root element                                                                                                                                                                                                               |
+
+### Read-only dashboard embed
+
+To drop UDI into a host app as a **dashboard** rather than a chat, use `UDIDashboard` (or
+`UDIChat` with `readOnly`). The chat pane, the dashboard's top bar and every editing control
+disappear, leaving the dashboard the full width and height.
+
+```tsx
+import { UDIDashboard } from 'udi-yac';
+import 'udi-yac/style.css';
+
+<div className="h-screen">
+  <UDIDashboard
+    apiBaseUrl="/api/yac"
+    dataPackagePath="./data/hubmap/datapackage.json"
+    initialSession={savedSession}
+  />
+</div>;
+```
+
+**Read-only is a mode, not a lock.** A floating "Explore Data" button at the dashboard's
+bottom right leaves read-only, at which point the full chat and every editing control appear. The
+chat opens fresh: the conversation `initialSession` carried is hidden, though the model still has
+it as context for the charts on the dashboard. If your users must not be able to chat at all,
+pass `readOnly="locked"` to `UDIChat` instead: the button is dropped, leaving no way out.
+
+#### Switching modes from the host
+
+`readOnly` is followed on change, so a host can show the dashboard inline and read-only, then give
+it a bigger stage — a modal, say — with the chat, and back again. Charts, filters, brushes, the
+conversation and a draft in the chat input all carry over, as long as it stays the **same mounted
+`UDIChat`**: restyle its container in place rather than rendering it somewhere else. A
+portal-based dialog remounts it and starts over; tabs beside it should hide it with CSS, not
+unmount it.
+
+```tsx
+const [expanded, setExpanded] = useState(false);
+
+<div className={expanded ? 'fixed inset-6 z-50' : 'h-[800px]'}>
+  <UDIChat
+    {...config}
+    initialSession={savedSession}
+    readOnly={!expanded}
+    onReadOnlyChange={(readOnly) => setExpanded(!readOnly)}
+    refitOnReadOnlyChange={false}
+  />
+</div>;
+```
+
+`onReadOnlyChange` fires when the user presses Explore Data, not when the prop changes. Passing it
+makes the mode controlled: the button no longer leaves read-only by itself, your state setter
+does, by changing `readOnly` in the same update that restyles the container — so the chat appears
+in the new space with no in-between frame, and you can animate the move (a view transition, say)
+from the read-only view still on screen. The seeded transcript is hidden the first time the chat
+opens only; later, the conversation is the user's.
+
+By default the dashboard re-derives its column count for its new width on each switch. Pass
+`refitOnReadOnlyChange={false}` to keep the count — the one `initialSession` asked for, say — and
+let the cards stretch or narrow instead.
+
+| Removed in read-only                                                       | Kept in read-only                       |
+| -------------------------------------------------------------------------- | --------------------------------------- |
+| The chat pane and the data overview                                        | Brushing and cross-filtering            |
+| Card drag, resize, rename, close, field tweak                              | The filter chips, including clearing    |
+| The top bar: counts, grid settings, session import / export, Download Data | The chart / table toggle and all-fields |
+| The Filters section, while nothing is filtered                             | The info tooltips                       |
+
+Layout changes are not written to `localStorage` while read-only, since there are none to make.
+
+#### Seeding the dashboard
+
+With the chat hidden there is nothing to build a dashboard from, so a read-only embed almost
+always wants `initialSession`. It takes the JSON that the dashboard's **Session → Export session**
+action writes — build a dashboard in the app, export it, and ship that file with your host:
+
+```tsx
+import savedSession from './my-dashboard.json';
+
+<UDIDashboard
+  apiBaseUrl="/api/yac"
+  dataPackagePath="/data/datapackage.json"
+  initialSession={savedSession}
+/>;
+```
+
+The prop is typed `unknown` so `JSON.parse(text)` can go straight in; it is validated against the
+`SessionExport` shape and a malformed payload throws a descriptive error rather than leaving a
+silently empty dashboard. It is applied once, after the data package finishes loading. `readOnly`
+and `initialSession` are independent — seeding a normal, chat-enabled session works too.
+
+To try the same thing in the standalone app without writing any code, point the two env vars at
+an exported session — `VITE_UDI_READ_ONLY=locked` and
+`VITE_UDI_INITIAL_SESSION=/data/pcx/sessions/demo.json` in `.env.local` (the pcx demo session,
+synced from `sample-data/` and served from the site root; pair it with the pcx package). The app
+fetches it at startup and hands it to `initialSession`.
+
+### Filters from the host page
+
+A host page can set filters and follow the ones in place, so controls outside the chat can drive it
+and read the results it is narrowing to:
+
+```tsx
+const [filters, setFilters] = useState<UDIFilter[]>([
+  { id: 'cohort', dataSourceKey: 'donors', type: 'point', selection: { sex: ['Female'] } },
+]);
+
+<UDIDashboard {...config} filters={filters} onFiltersChange={(all) => console.log(all)} />;
+```
+
+- **`filters`** entries are keyed by `id`. Each shows as a chip in the Filters bar and filters every
+  chart, like a filter asked for in the chat; the user can adjust, clear or remove it there. An
+  entry is applied again only when that entry changes, so re-rendering with the same array never
+  undoes the user's edits. Dropping an entry deletes its filter. Filters are applied once the data
+  package has loaded, and survive a conversation reset.
+- **`onFiltersChange`** receives every filter in place — chat, chart and host filters, each tagged
+  with its `origin` (`'chat' | 'chart' | 'host'`). A filter whose values are empty (`[]`) has been
+  cleared: its chip stays, reading "All", and it drops nothing. Removed filters are left out.
+  Entries whose `origin` is `'chat'` or `'chart'` are ignored when passed back in `filters`, so the
+  callback's output can be fed straight back.
+
+A `point` filter's `selection` maps each field to the values to keep; an `interval` filter's maps
+each field to `[min, max]`.
+
+**Sharing columns with the chat.** By default a host filter is its own chip, read-only to the agent,
+and applies on top of any chat or chart filter on the same column. Pass `filterMode="shared"` to
+keep one filter per column instead: a host filter on a single field becomes that column's filter,
+the same one the agent and chart clicks write. Whoever edits it last sets it, and
+`onFiltersChange` reports it as `col:<entity>.<field>` with that editor's `origin`. A host can
+then mirror chart clicks and chat requests into its own controls, matching on `dataSourceKey` and
+field. Dropping a host entry removes the filter only while the host was its last editor. Filters
+on several fields stay separate. Don't scope a filter to its own table: it is treated as
+unscoped, since a plain filter already reaches every related table through its foreign keys.
+
+### Reporting the filtered cohort
+
+A host can follow which subjects the filters leave, to narrow its own lists to the same people.
+Name the table and, if it has no `primaryKey`, the fields that identify its rows:
+
+```tsx
+<UDIChat
+  {...config}
+  cohort={{ entity: 'patient', fields: ['patient_id'] }}
+  onCohortChange={(cohort) => setPatientIds(cohort?.keys.map((k) => k.patient_id) ?? null)}
+/>
+```
+
+- Every filter counts: chat, chart and host, on any table that reaches `entity` (directly, or
+  through a subject scope), exactly as a chart of `entity` would be filtered.
+- `onCohortChange` gets `{ entity, keys }`, one object of key fields per row, once the filters have
+  settled (300 ms after the last change, so a brush drag runs one query). It gets `null` while no
+  filter reaches `entity`: everyone is in, and no list of every subject is sent.
+- In server-side data mode the keys come back grouped, so the list is complete: it is not cut at
+  the package's row cap.
+- A filter on another table reaches `entity` through a single key column, as charts do.
 
 ### Data Source Configuration
 
@@ -227,7 +428,18 @@ See [`src/data/hubmapRemote.ts`](src/data/hubmapRemote.ts) for the canonical inl
 
 - **Interval filters**: range sliders for numeric fields
 - **Point filters**: checkbox selection for categorical fields
-- **Filter toolbar**: active filter chips with clear buttons
+- **Filters bar**: a chip per filter; each opens a popover with that filter's controls, **Clear
+  all** (keep the filter, filter nothing — the chip reads "All") and **Remove filter** (drop the
+  chip and collapse the filter's chat item; expanding that item brings it back cleared). **Reset**
+  clears every filter.
+- **Multi-select on charts**: hold a key over a chart and click bars, their axis labels, or its legend entries:
+  - **Shift** picks a range: every category from the first click to the last, in axis or legend order.
+  - **Ctrl** (**⌘** on macOS) toggles each click on its own.
+
+  Nothing is applied (or queried) until the key is released or the pointer leaves the chart, when the picks become one filter.
+  Picks are limited to the bars drawn; to add one the chart's own filter hides, clear the
+  filter first.
+
 - **Cross-entity filtering**: filters propagate across related entities via foreign keys
 - **Null value filtering** toggle
 
@@ -298,8 +510,7 @@ Consumer entries are merged on top of the built-in icons (`donors`, `samples`, `
 Pass `palette` on `UDIChatConfig` to set the default colors used by every chart and table (dashboard cards, chat-message previews, and the memory bank). A spec-level per-encoding `range` still overrides the palette.
 
 ```tsx
-import { UDIChat } from 'udi-yac';
-import type { UDIPalette } from 'udi-toolkit/react';
+import { UDIChat, type UDIPalette } from 'udi-yac';
 import { interpolateViridis } from 'd3-scale-chromatic';
 
 const palette: UDIPalette = {
@@ -316,6 +527,42 @@ const palette: UDIPalette = {
 ```
 
 The `category`/`ordinal` fields accept a color array or a Vega scheme name. The `ramp` accepts a scheme name, a color array, or an interpolator function. Note: in the **table** renderer, function and array ramps are honored, while a bare scheme-name ramp falls back to the default (scheme names apply fully to Vega charts).
+
+#### Chart chrome follows your theme automatically
+
+Everything above colors the _data_. The surrounding chrome — plot background, axis lines, gridlines, tick labels, table text — is derived from the design tokens in effect on the chat root (`--foreground`, `--muted-foreground`, `--border`), and re-read whenever a `dark` class is toggled on any ancestor. So charts and tables follow light/dark mode, and follow your own token overrides, with no configuration.
+
+Supply any of these to take over a channel; each one you set wins, and the rest stay theme-derived:
+
+| Field        | Controls                                                      |
+| ------------ | ------------------------------------------------------------- |
+| `background` | Plot and table background. `'transparent'` inherits the card. |
+| `axis`       | Axis domain lines and ticks.                                  |
+| `grid`       | Gridlines, the plot frame, and table rules.                   |
+| `text`       | Tick labels, axis and legend titles, table text.              |
+| `mutedText`  | Empty cells and truncation notices.                           |
+
+### Record links
+
+Pass `recordUrl` to link individual records out to their own pages: a dataset, a donor, a patient. It is called with a row and its entity (the spec's first source) and returns that record's URL, or nothing for a row with no page.
+
+```tsx
+<UDIChat
+  apiBaseUrl="http://localhost:8007"
+  recordUrl={(record, entity) =>
+    typeof record.uuid === 'string'
+      ? `https://portal.hubmapconsortium.org/browse/${entity.replace(/s$/, '')}/${record.uuid}`
+      : undefined
+  }
+/>
+```
+
+- **Tables** gain a leading ↗ column that opens the row's page in a new tab. A table of aggregates (counts by sex, say) has no record ids, so the function returns nothing and the column is left out.
+- **Point marks** open their record on a plain click; the cursor turns to a pointer over them. A Shift, Ctrl or ⌘ click still picks, and clicking a point keeps an existing brush. Bars, lines and areas never link.
+- The function sees the whole row, not just the columns on screen, so it can key on a column the table doesn't show.
+- Only `http(s)` URLs are followed. A relative URL resolves against the host page.
+
+Independently of `recordUrl`, a table cell whose value is an `http(s)` URL — a protocol DOI, say — is always shown as a link.
 
 ### Custom mascot
 
@@ -392,25 +639,30 @@ Event names are stable, snake_case strings. **Properties carry metadata only —
 
 **Correlation ids.** Every event carries a `sessionId` (minted once per `UDIChat` mount) so all events from one chat instance can be stitched together and two tabs can be told apart. A subset of events — the ones bound to a single send↔response round trip — also carries a shared `turnId`, making it trivial to match a `message_sent` to the `response_received`, `rebuff_received`, or `request_failed` it produced. A retry after entering an API key reuses the original `turnId` so the retry's response still pairs back to the originating send.
 
-| Event                      | Fired when                                                                                      | Properties                                                                                                                                                                                                                                                   |
-| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `message_sent`             | User submits a message through the chat input                                                   | `turnId: string`<br>`charCount: number` — length of the text, not the text itself<br>`conversationLength: number` — messages already in the conversation when this one was added<br>`hasUserApiKey: boolean` — whether the request will carry the user's key |
-| `response_received`        | Server completes a `/v1/yac/completions` call (including rebuffs)                               | `turnId: string` — matches the originating `message_sent`<br>`durationMs: number`<br>`toolCallNames: string[]` — e.g. `["RenderVisualization", "FreeTextExplain"]`<br>`toolCallCount: number`<br>`hadUserKey: boolean`<br>`hasRebuff: boolean`               |
-| `rebuff_received`          | The response contains a `Rebuff` tool_call                                                      | `turnId: string`<br>`reason?: string` — machine-readable discriminator; `"budget_exceeded"` for quota rebuffs, absent for ordinary rebuffs<br>`hadUserKey: boolean`                                                                                          |
-| `request_failed`           | `/v1/yac/completions` throws (network error, HTTP !ok)                                          | `turnId: string`<br>`durationMs: number`<br>`hadUserKey: boolean`                                                                                                                                                                                            |
-| `api_key_set`              | User submits a key through the `ApiKeyInput`                                                    | `inResponseToQuota: boolean` — true if a budget-exceeded rebuff had triggered the prompt (distinguishes first-time entry from quota-recovery entry)                                                                                                          |
-| `api_key_cleared`          | User clears their stored key via the header icon                                                | _(none)_                                                                                                                                                                                                                                                     |
-| `conversation_reset`       | User clicks the Reset button (clears messages, pinned viz, filters, memory bank)                | `conversationLength: number` — message count at the moment of reset                                                                                                                                                                                          |
-| `visualization_pinned`     | A new visualization is auto-pinned from an assistant response                                   | `hasTitle: boolean`<br>`toolCallIndex: number` — position within the assistant message's tool_calls                                                                                                                                                          |
-| `visualization_closed`     | User clicks the × on a pinned visualization card                                                | `hasTitle: boolean`                                                                                                                                                                                                                                          |
-| `download_raw_data`        | User clicks "Download Raw Data" in the Download Data dropdown                                   | `sources: number` — count of sources contributing rows<br>`rowsTotal: number`                                                                                                                                                                                |
-| `download_manifest`        | User clicks "Download Manifest"                                                                 | `idsTotal: number` — count of `hubmap_id` values in the exported manifest                                                                                                                                                                                    |
-| `download_<slug>`          | User clicks a custom `downloadActions` entry                                                    | `label: string` — the original menu label                                                                                                                                                                                                                    |
-| `filter_range_changed`     | User commits a new range on a quantitative (interval) filter slider, including the reset button | `entity: string`<br>`field: string`<br>`isReset: boolean` — true when triggered by the reset button<br>`isFullRange: boolean` — true when the new range covers the full domain                                                                               |
-| `filter_selection_changed` | User toggles a checkbox or clicks "Clear all" on a categorical (point) filter                   | `entity: string`<br>`field: string`<br>`action: 'toggle' \| 'clear_all'`<br>`checked?: boolean` — present only when `action === 'toggle'`<br>`selectionCount: number` — count of selected values after the change (no values themselves)                     |
-| `filter_entity_changed`    | User changes the target entity on a tweakable filter card                                       | `filterType: 'interval' \| 'point'`<br>`entity: string` — the newly selected entity<br>`field: string` — the field carried over to the new entity (may be empty)                                                                                             |
-| `filter_field_changed`     | User changes the target field on a tweakable filter card                                        | `filterType: 'interval' \| 'point'`<br>`entity: string`<br>`field: string` — the newly selected field                                                                                                                                                        |
-| `visualization_tweaked`    | User swaps the field bound to an encoding via a `VizTweakComponent` dropdown                    | `encoding: string` — the encoding channel (e.g. `"x"`, `"color"`)                                                                                                                                                                                            |
+| Event                        | Fired when                                                                                      | Properties                                                                                                                                                                                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `message_sent`               | User submits a message through the chat input                                                   | `turnId: string`<br>`charCount: number` — length of the text, not the text itself<br>`conversationLength: number` — messages already in the conversation when this one was added<br>`hasUserApiKey: boolean` — whether the request will carry the user's key |
+| `response_received`          | Server completes a `/v1/yac/completions` call (including rebuffs)                               | `turnId: string` — matches the originating `message_sent`<br>`durationMs: number`<br>`toolCallNames: string[]` — e.g. `["RenderVisualization", "FreeTextExplain"]`<br>`toolCallCount: number`<br>`hadUserKey: boolean`<br>`hasRebuff: boolean`               |
+| `rebuff_received`            | The response contains a `Rebuff` tool_call                                                      | `turnId: string`<br>`reason?: string` — machine-readable discriminator; `"budget_exceeded"` for quota rebuffs, absent for ordinary rebuffs<br>`hadUserKey: boolean`                                                                                          |
+| `request_failed`             | `/v1/yac/completions` throws (network error, HTTP !ok)                                          | `turnId: string`<br>`durationMs: number`<br>`hadUserKey: boolean`                                                                                                                                                                                            |
+| `api_key_set`                | User submits a key through the `ApiKeyInput`                                                    | `inResponseToQuota: boolean` — true if a budget-exceeded rebuff had triggered the prompt (distinguishes first-time entry from quota-recovery entry)                                                                                                          |
+| `api_key_cleared`            | User clears their stored key via the header icon                                                | _(none)_                                                                                                                                                                                                                                                     |
+| `conversation_reset`         | User clicks the Reset button (clears messages, pinned viz, filters, memory bank)                | `conversationLength: number` — message count at the moment of reset                                                                                                                                                                                          |
+| `read_only_exited`           | User leaves read-only mode with the Explore Data button                                         | _(none)_                                                                                                                                                                                                                                                     |
+| `visualization_pinned`       | A new visualization is auto-pinned from an assistant response                                   | `hasTitle: boolean`<br>`toolCallIndex: number` — position within the assistant message's tool_calls                                                                                                                                                          |
+| `visualization_closed`       | User clicks the × on a pinned visualization card                                                | `hasTitle: boolean`                                                                                                                                                                                                                                          |
+| `download_raw_data`          | User clicks "Download Raw Data" in the Download Data dropdown                                   | `sources: number` — count of sources contributing rows<br>`rowsTotal: number`                                                                                                                                                                                |
+| `download_manifest`          | User clicks "Download Manifest"                                                                 | `idsTotal: number` — count of `hubmap_id` values in the exported manifest                                                                                                                                                                                    |
+| `download_<slug>`            | User clicks a custom `downloadActions` entry                                                    | `label: string` — the original menu label                                                                                                                                                                                                                    |
+| `filter_range_changed`       | User commits a new range on a quantitative (interval) filter slider, including the reset button | `entity: string`<br>`field: string`<br>`isReset: boolean` — true when triggered by the reset button<br>`isFullRange: boolean` — true when the new range covers the full domain                                                                               |
+| `filter_selection_changed`   | User toggles a checkbox or clicks "Clear all" on a categorical (point) filter                   | `entity: string`<br>`field: string`<br>`action: 'toggle' \| 'clear_all'`<br>`checked?: boolean` — present only when `action === 'toggle'`<br>`selectionCount: number` — count of selected values after the change (no values themselves)                     |
+| `filter_entity_changed`      | User changes the target entity on a tweakable filter card                                       | `filterType: 'interval' \| 'point'`<br>`entity: string` — the newly selected entity<br>`field: string` — the field carried over to the new entity (may be empty)                                                                                             |
+| `filter_field_changed`       | User changes the target field on a tweakable filter card                                        | `filterType: 'interval' \| 'point'`<br>`entity: string`<br>`field: string` — the newly selected field                                                                                                                                                        |
+| `visualization_tweaked`      | User changes the field a `VizTweakComponent` dropdown controls                                  | `encoding: string` — the channel, or the template parameter for a re-bind<br>`kind: 'field' \| 'dimension' \| 'measure' \| 'binding'` — `binding` means the agent re-instantiated the template; the rest are local spec rewrites                             |
+| `visualization_tweak_failed` | The agent refused a template re-bind (invalid binding, unknown template, transport failure)     | `encoding: string`<br>`kind: 'binding'`                                                                                                                                                                                                                      |
+| `issue_report_opened`        | The Report an issue dialog opens (from the Session menu or an agent offer)                      | `source: 'menu' \| 'chat'`                                                                                                                                                                                                                                   |
+| `issue_report_submitted`     | The agent accepts an issue report                                                               | `source: 'menu' \| 'chat'`<br>`hasContact: boolean`                                                                                                                                                                                                          |
+| `issue_report_failed`        | Sending an issue report fails (network error, HTTP !ok — e.g. no LangFuse on the agent)         | `source: 'menu' \| 'chat'`                                                                                                                                                                                                                                   |
 
 Every row in the table above also includes `sessionId: string`; it's omitted from the per-event cells to keep the table scannable.
 
@@ -418,7 +670,7 @@ Every row in the table above also includes `sessionId: string`; it's omitted fro
 
 **Properties you will _not_ see.** By design, the following never cross the tracker boundary: raw message text, tool_call `arguments`, OpenAI API keys, data rows, filter values. Only counts, booleans, tool-call names, ids, and short slug strings are emitted.
 
-### Debug Mode (type `!/admin` in chat)
+### Debug Mode (type `//admin` in chat)
 
 - System prompts toggle (show/hide system messages)
 - Conversation sidebar drawer (load saved session JSON files)
@@ -458,7 +710,7 @@ src/
         ChatInput.tsx               # Message input
         MessageList.tsx             # Message history with auto-scroll
         MessageBubble.tsx           # Single message + tool call tabs
-        ConversationList.tsx        # Sidebar with saved session files
+        ConversationList.tsx        # Debug sidebar (`//admin`): new conversation
         ApiKeyInput.tsx             # OpenAI API key input
       hooks/
         useChatApi.ts               # LLM API integration hook
@@ -474,7 +726,10 @@ src/
         DashboardPanel.tsx          # Dashboard layout (counts, filters, viz grid)
         DashboardCard.tsx           # Single pinned viz (chart, toolbar, tweak, spec)
         DataCounts.tsx              # Per-entity row counts (total + filtered)
-        FilterToolbar.tsx           # Active filter chips
+        FilterToolbar.tsx           # Filter chips, each a popover of its controls
+        FilterControls.tsx          # Filter widget by type + collapsible chat item
+        IntervalFilterComponent.tsx # Range slider
+        PointFilterComponent.tsx    # Checkbox list
         DownloadButton.tsx          # CSV/manifest download dropdown
         VizTweakComponent.tsx       # Field encoding swap dropdowns
         VizTweakComponent.types.ts  # TweakableParam, LayerLike, MappingLike
@@ -502,9 +757,7 @@ src/
       components/
         ToolCallRenderer.tsx        # Dispatches tool calls to renderers
         VisualizationCard.tsx       # UDIVis preview (chat) / pinned badge
-        FilterComponent.tsx         # Filter dispatcher (interval/point)
-        IntervalFilterComponent.tsx
-        PointFilterComponent.tsx
+        FilterComponent.tsx         # A FilterData tool call's chat item
         FreeTextExplain.tsx         # Markdown explanation with structured text
         RebuffNotice.tsx            # Rejection with suggestion buttons
         ClarifyVariable.tsx         # Field disambiguation UI

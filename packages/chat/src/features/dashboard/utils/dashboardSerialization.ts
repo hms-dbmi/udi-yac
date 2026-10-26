@@ -5,7 +5,9 @@ import type {
   DashboardExport,
   DashboardExportVisualization,
   DashboardLayout,
+  DashboardState,
 } from '../stores/dashboardStore';
+import type { DataFiltersState, ExportedFilterState } from '../stores/dataFiltersStore';
 import { DEFAULT_CARD_H, DEFAULT_CARD_W, MIN_CARD_H, MIN_CARD_W } from './gridDefaults';
 import { packAllRowMajor } from './gridPacking';
 
@@ -24,6 +26,10 @@ export interface SessionExport {
   /** Optional grid configuration (cols + row height). Old exports omit it
    *  and the importer falls back to current defaults. */
   grid?: { cols: number; rowHeight: number };
+  /** The chat filters as the user left them. Older exports omit it, and
+   *  their filters are rebuilt from the messages alone, row-level unless a
+   *  FilterData call said otherwise. */
+  filters?: ExportedFilterState;
 }
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -111,6 +117,20 @@ function parseLayout(raw: unknown): ParseResult<DashboardLayout> {
   return { ok: false, error: 'layout must contain an `items` array or v1 `columns` array' };
 }
 
+/**
+ * Template provenance is optional and additive: a chart without it is simply not
+ * re-bindable, so a malformed one degrades to `undefined` rather than failing the
+ * whole import. Kept lenient on purpose — the authority on what a binding means
+ * is the agent, which re-validates on every re-bind.
+ */
+function parseTemplateProvenanceField(raw: unknown): DashboardExportVisualization['template'] {
+  if (!isObject(raw)) return undefined;
+  if (typeof raw.tool !== 'string' || !raw.tool) return undefined;
+  if (!isObject(raw.toolArgs)) return undefined;
+  if (!Array.isArray(raw.params) || raw.params.length === 0) return undefined;
+  return raw as unknown as DashboardExportVisualization['template'];
+}
+
 function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExportVisualization> {
   if (!isObject(raw)) return { ok: false, error: `visualizations[${idx}] must be an object` };
   if (typeof raw.key !== 'string')
@@ -125,7 +145,10 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
     return { ok: false, error: `visualizations[${idx}].userPrompt must be a string` };
   if (!isObject(raw.spec))
     return { ok: false, error: `visualizations[${idx}].spec must be an object` };
-  const title = typeof raw.title === 'string' ? raw.title : undefined;
+  // All four are optional: `title` is an assistant-written title from an older
+  // session, `userTitle` an explicit rename, and the two templates the wording
+  // from the visualization template the agent used. Older exports carry fewer.
+  const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
   return {
     ok: true,
     value: {
@@ -134,8 +157,12 @@ function parseVisualization(raw: unknown, idx: number): ParseResult<DashboardExp
       index: raw.index,
       toolCallIndex: raw.toolCallIndex,
       userPrompt: raw.userPrompt,
-      title,
+      title: str(raw.title),
+      userTitle: str(raw.userTitle),
+      titleTemplate: str(raw.titleTemplate),
+      summaryTemplate: str(raw.summaryTemplate),
       spec: raw.spec as unknown as DashboardExportVisualization['spec'],
+      template: parseTemplateProvenanceField(raw.template),
     },
   };
 }
@@ -163,10 +190,50 @@ function parseSessionUsage(raw: unknown): SessionUsage {
     completionTokens: n(raw.completionTokens),
     totalTokens: n(raw.totalTokens),
     cachedPromptTokens: n(raw.cachedPromptTokens),
+    cacheWriteTokens: n(raw.cacheWriteTokens),
     reasoningTokens: n(raw.reasoningTokens),
     requests: n(raw.requests),
     lastModel: typeof raw.lastModel === 'string' ? raw.lastModel : undefined,
   };
+}
+
+const SCOPE_MATCHES = new Set(['any', 'all', 'none']);
+
+/** Lenient: an entry that isn't a well-formed selection or scope is dropped,
+ *  and that filter falls back to what its messages say. */
+function parseFilterState(raw: unknown): ExportedFilterState | undefined {
+  if (!isObject(raw)) return undefined;
+  const selections: ExportedFilterState['selections'] = {};
+  for (const [id, sel] of Object.entries(isObject(raw.selections) ? raw.selections : {})) {
+    if (
+      isObject(sel) &&
+      typeof sel.dataSourceKey === 'string' &&
+      (sel.type === 'point' || sel.type === 'interval') &&
+      (sel.selection === null || isObject(sel.selection))
+    ) {
+      selections[id] = sel as unknown as ExportedFilterState['selections'][string];
+    }
+  }
+  const scopes: ExportedFilterState['scopes'] = {};
+  for (const [id, scope] of Object.entries(isObject(raw.scopes) ? raw.scopes : {})) {
+    if (
+      isObject(scope) &&
+      typeof scope.entity === 'string' &&
+      SCOPE_MATCHES.has(scope.match as string)
+    ) {
+      scopes[id] = { entity: scope.entity, match: scope.match as 'any' | 'all' | 'none' };
+    }
+  }
+  const removed = isStringArray(raw.removed) ? raw.removed : [];
+  const origins: ExportedFilterState['origins'] = {};
+  for (const [id, origin] of Object.entries(isObject(raw.origins) ? raw.origins : {})) {
+    if (origin === 'chat' || origin === 'chart') origins[id] = origin;
+  }
+  const anchors: ExportedFilterState['anchors'] = {};
+  for (const [id, at] of Object.entries(isObject(raw.anchors) ? raw.anchors : {})) {
+    if (typeof at === 'number' && Number.isFinite(at)) anchors[id] = at;
+  }
+  return { selections, scopes, removed, origins, anchors };
 }
 
 export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
@@ -200,6 +267,7 @@ export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
   ) {
     grid = { cols: raw.grid.cols, rowHeight: raw.grid.rowHeight };
   }
+  const filters = parseFilterState(raw.filters);
   return {
     ok: true,
     value: {
@@ -212,6 +280,7 @@ export function parseSessionExport(raw: unknown): ParseResult<SessionExport> {
       visualizations,
       layout: layoutResult.value,
       ...(grid ? { grid } : {}),
+      ...(filters ? { filters } : {}),
     },
   };
 }
@@ -221,6 +290,7 @@ export function buildSessionExport(args: {
   dashboard: DashboardExport;
   grid?: { cols: number; rowHeight: number };
   sessionUsage?: SessionUsage;
+  filters?: ExportedFilterState;
 }): SessionExport {
   return {
     version: SESSION_EXPORT_VERSION,
@@ -232,48 +302,28 @@ export function buildSessionExport(args: {
     visualizations: args.dashboard.visualizations,
     layout: args.dashboard.layout,
     ...(args.grid ? { grid: args.grid } : {}),
+    ...(args.filters ? { filters: args.filters } : {}),
   };
 }
 
-export interface PersistedLayoutSnapshot {
-  version: 3;
-  layout: DashboardLayout;
-  vizKeys: string[];
-  gridCols: number;
-  gridRowHeight: number;
-}
-
-export function parsePersistedLayoutSnapshot(raw: unknown): ParseResult<PersistedLayoutSnapshot> {
-  if (!isObject(raw)) return { ok: false, error: 'snapshot must be an object' };
-  if (raw.version !== 3) return { ok: false, error: 'snapshot version mismatch' };
-  if (!isStringArray(raw.vizKeys)) return { ok: false, error: 'snapshot.vizKeys must be string[]' };
-  const layoutResult = parseLayout(raw.layout);
-  if (!layoutResult.ok) return layoutResult;
-  const gridCols =
-    typeof raw.gridCols === 'number' && Number.isFinite(raw.gridCols) ? raw.gridCols : 3;
-  const gridRowHeight =
-    typeof raw.gridRowHeight === 'number' && Number.isFinite(raw.gridRowHeight)
-      ? raw.gridRowHeight
-      : 60;
-  return {
-    ok: true,
-    value: {
-      version: 3,
-      layout: layoutResult.value,
-      vizKeys: raw.vizKeys,
-      gridCols,
-      gridRowHeight,
-    },
-  };
-}
-
-export function buildPersistedLayoutSnapshot(
-  layout: DashboardLayout,
-  vizKeys: string[],
-  gridCols: number,
-  gridRowHeight: number,
-): PersistedLayoutSnapshot {
-  return { version: 3, layout, vizKeys, gridCols, gridRowHeight };
+/**
+ * The session as it stands, in the shape *Export session* writes. Takes store
+ * snapshots (`getState()`), so callers inside and outside the providers share it.
+ * The filter store adds the user's filter edits, scopes and chart-made filters,
+ * which the messages alone do not rebuild.
+ */
+export function currentSessionExport(
+  conversation: { messages: Message[]; sessionUsage?: SessionUsage },
+  dashboard: Pick<DashboardState, 'exportDashboard' | 'gridCols' | 'gridRowHeight'>,
+  dataFilters: Pick<DataFiltersState, 'exportFilterState'>,
+): SessionExport {
+  return buildSessionExport({
+    messages: conversation.messages,
+    dashboard: dashboard.exportDashboard(),
+    grid: { cols: dashboard.gridCols, rowHeight: dashboard.gridRowHeight },
+    sessionUsage: conversation.sessionUsage,
+    filters: dataFilters.exportFilterState(),
+  });
 }
 
 export function layoutItems(layout: DashboardLayout): Layout {

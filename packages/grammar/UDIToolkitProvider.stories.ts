@@ -14,7 +14,7 @@ export default {
 };
 
 const barSpec = {
-  source: { name: 'datasets', source: './data/datasets.csv' },
+  source: { name: 'datasets', source: './data/hubmap/datasets.tsv' },
   transformation: [
     { groupby: 'assay_category' },
     { rollup: { count: { op: 'count' } } },
@@ -29,7 +29,7 @@ const barSpec = {
 };
 
 const heatmapSpec = {
-  source: { name: 'datasets', source: './data/datasets.csv' },
+  source: { name: 'datasets', source: './data/hubmap/datasets.tsv' },
   transformation: [
     { groupby: ['origin_samples_unique_mapped_organs', 'assay_category'] },
     { rollup: { count: { op: 'count' } } },
@@ -38,7 +38,11 @@ const heatmapSpec = {
     mark: 'rect',
     mapping: [
       { encoding: 'x', field: 'assay_category', type: 'nominal' },
-      { encoding: 'y', field: 'origin_samples_unique_mapped_organs', type: 'nominal' },
+      {
+        encoding: 'y',
+        field: 'origin_samples_unique_mapped_organs',
+        type: 'nominal',
+      },
       { encoding: 'color', field: 'count', type: 'quantitative' },
     ],
   },
@@ -83,7 +87,10 @@ export const SharedPalette = {
  */
 export const PerInstanceOverride = {
   args: { palette: customPalette, override: overridePalette },
-  render: (args: { palette: typeof customPalette; override: typeof overridePalette }) => ({
+  render: (args: {
+    palette: typeof customPalette;
+    override: typeof overridePalette;
+  }) => ({
     components: { UDIToolkitProvider, UDIVis },
     setup() {
       return { args, barSpec, heatmapSpec };

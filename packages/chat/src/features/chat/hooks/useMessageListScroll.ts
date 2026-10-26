@@ -49,6 +49,9 @@ export function useMessageListScroll(messages: Message[]): MessageListScrollResu
       const userSent = latest?.role === 'user';
       if (pinned || userSent) {
         setFirstUnreadIndex(null);
+        // Sending re-pins: the effect below scrolls the user's own message
+        // into view, so the reply lands in view instead of behind the pill.
+        if (userSent) setPinned(true);
       } else {
         // Preserve the earliest unread boundary across successive arrivals —
         // the divider should anchor where reading stopped, not creep forward.
@@ -87,13 +90,16 @@ export function useMessageListScroll(messages: Message[]): MessageListScrollResu
     return () => viewport.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // On new-message arrival while pinned, align the newest message at the top
-  // of the viewport. Pure DOM side effect — unread-state derivation lives in
-  // render above so this body stays setState-free.
+  const lastRole = messages[messages.length - 1]?.role;
+  // On new-message arrival while pinned, or on send, align the newest message
+  // at the top of the viewport. DOM side effect plus the ref mirror of the
+  // re-pin — unread-state derivation lives in render above so this body stays
+  // setState-free.
   useEffect(() => {
     const prev = prevLengthInEffectRef.current;
     prevLengthInEffectRef.current = messages.length;
     if (messages.length <= prev) return;
+    if (lastRole === 'user') pinnedRef.current = true;
     if (!pinnedRef.current) return;
 
     justAddedMessageRef.current = true;
@@ -117,7 +123,7 @@ export function useMessageListScroll(messages: Message[]): MessageListScrollResu
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [messages.length]);
+  }, [messages.length, lastRole]);
 
   // Streaming updates: when the last message grows in place and the user is
   // still pinned to the bottom, keep the tail glued to the viewport bottom

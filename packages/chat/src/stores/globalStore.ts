@@ -1,5 +1,39 @@
 import { createStore } from 'zustand/vanilla';
 
+/**
+ * The chat's mode, and whether the user may change it. The host may change it
+ * at any time.
+ * - `false` (default) — the normal chat + dashboard app.
+ * - `true` — read-only; the chat is hidden, and an Explore Data button
+ *   leaves read-only.
+ * - `'locked'` — read-only with no way out for the user, for hosts that embed
+ *   the dashboard and do not want their users chatting at all.
+ */
+export type ReadOnlyOption = boolean | 'locked';
+
+/** Where an issue report was started: the Session menu, an agent offer, or the crash screen. */
+export type IssueReportSource = 'menu' | 'chat' | 'crash';
+
+export const MIN_FONT_SCALE = 1;
+export const MAX_FONT_SCALE = 2;
+const FONT_SCALE_KEY = 'udi-yac:font-scale';
+
+function clampFontScale(value: number): number {
+  return Number.isFinite(value)
+    ? Math.min(MAX_FONT_SCALE, Math.max(MIN_FONT_SCALE, value))
+    : MIN_FONT_SCALE;
+}
+
+/** A per-viewer preference, so a projector setup survives a reload. */
+function readFontScale(): number {
+  try {
+    const raw = localStorage.getItem(FONT_SCALE_KEY);
+    return raw == null ? MIN_FONT_SCALE : clampFontScale(Number(raw));
+  } catch {
+    return MIN_FONT_SCALE;
+  }
+}
+
 export interface GlobalState {
   debugMode: boolean;
   isProduction: boolean;
@@ -7,6 +41,25 @@ export interface GlobalState {
   overviewOpen: boolean;
   /** Entity whose overview accordion item should be expanded, if any. */
   overviewEntity: string | null;
+  /**
+   * Read-only mode: the chat pane, the dashboard's top bar and every editing
+   * control on the cards (drag, resize, rename, close, field tweak) are hidden.
+   * Cross-filtering and the table toggle stay.
+   */
+  readOnly: boolean;
+  /** Whether the user is denied a way out of `readOnly`. See {@link ReadOnlyOption}. */
+  readOnlyLocked: boolean;
+  /** Re-derive the dashboard's column count for its new width when `readOnly` changes. */
+  refitOnReadOnlyChange: boolean;
+  /** Multiplier on every text size, charts included (1 = stock). For presenting. */
+  fontScale: number;
+  /** The host's `fontScale` prop. Overrides `fontScale` and hides its slider. */
+  hostFontScale: number | undefined;
+  /**
+   * The Report an issue dialog. Opened from the Session menu or by the agent
+   * (an `OfferIssueReport` tool call), which live in unrelated trees.
+   */
+  issueReport: { open: boolean; draft: string; source: IssueReportSource };
   toggleDebugMode: () => void;
   /**
    * Open/close the Data Overview and optionally pick the entity to expand.
@@ -14,19 +67,53 @@ export interface GlobalState {
    * reopens on whatever was last looked at); pass `null` to clear it.
    */
   setOverview: (open: boolean, entity?: string | null) => void;
+  /** The user's way in and out of read-only. No-op while `readOnlyLocked` —
+   *  guarded here rather than at each call site so no in-app caller can escape
+   *  the lock. The host's `readOnly` prop bypasses it (see UDIChatProvider). */
+  setReadOnly: (value: boolean) => void;
+  setFontScale: (value: number) => void;
+  openIssueReport: (draft: string, source: IssueReportSource) => void;
+  closeIssueReport: () => void;
 }
 
-export function createGlobalStore() {
+/** The text size in effect: the host's, when it set one, else the viewer's. */
+export const selectFontScale = (s: GlobalState): number =>
+  s.hostFontScale == null ? s.fontScale : clampFontScale(s.hostFontScale);
+
+export function createGlobalStore(
+  readOnly: ReadOnlyOption = false,
+  hostFontScale?: number,
+  refitOnReadOnlyChange = true,
+) {
   return createStore<GlobalState>()((set) => ({
     debugMode: false,
     isProduction: false,
     overviewOpen: false,
     overviewEntity: null,
+    readOnly: readOnly !== false,
+    readOnlyLocked: readOnly === 'locked',
+    refitOnReadOnlyChange,
+    fontScale: readFontScale(),
+    hostFontScale,
+    issueReport: { open: false, draft: '', source: 'menu' },
     toggleDebugMode: () => set((state) => ({ debugMode: !state.debugMode })),
     setOverview: (open, entity) =>
       set((state) => ({
         overviewOpen: open,
         overviewEntity: entity === undefined ? state.overviewEntity : entity,
       })),
+    setReadOnly: (value) => set((state) => (state.readOnlyLocked ? state : { readOnly: value })),
+    setFontScale: (value) => {
+      const fontScale = clampFontScale(value);
+      try {
+        localStorage.setItem(FONT_SCALE_KEY, String(fontScale));
+      } catch {
+        // localStorage unavailable — the setting just won't outlive the page
+      }
+      set({ fontScale });
+    },
+    openIssueReport: (draft, source) => set({ issueReport: { open: true, draft, source } }),
+    closeIssueReport: () =>
+      set((state) => ({ issueReport: { ...state.issueReport, open: false } })),
   }));
 }

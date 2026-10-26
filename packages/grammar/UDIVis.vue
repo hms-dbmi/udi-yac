@@ -4,6 +4,7 @@
 // conflicts with local declaration of 'defineEmits'" because Vue's
 // generated types ALSO declare it ambient. Drop the import; the macro is
 // in scope automatically.
+import type { CSSProperties } from 'vue';
 import {
   ref,
   shallowRef,
@@ -31,9 +32,22 @@ import type {
   VisualizationLayer,
 } from './GrammarTypes';
 import type { UDIPalette } from './Palette';
+import { RECORD_URL_FIELD, recordLink, type RecordUrlFn } from './recordUrl';
 import type { DataSelections, RangeSelection } from './DataSourcesStore';
 import { useDataSourcesStore } from './DataSourcesStore';
 import { getQueryBackend } from './queryBackend';
+import { orderCategories } from './domainCompute';
+import { scaleLinear } from 'd3-scale';
+import {
+  timeColumns,
+  isEpochMs,
+  timeFormatOf,
+  withBinUnits,
+  binEdgeFormat,
+  DAYS_PER_YEAR,
+} from './temporal';
+import { spreadLabels, DEFAULT_LABEL_GAP_FRACTION } from './labelLayout';
+import { PICK_SIGNAL, pickDimTest, selectFields } from './pointSelect';
 const dataSourcesStore = useDataSourcesStore();
 // Declared up here rather than beside the template: performDataTransformation
 // reads it to decide whether allData is needed, and a later declaration would
@@ -70,6 +84,19 @@ export interface ParserProps {
    * valued ramp survives (the spec is JSON-cloned internally).
    */
   palette?: UDIPalette | undefined;
+  /**
+   * Multiplier on every text size the chart or table draws — axis and legend
+   * labels, titles, table cells. 1 (the default) keeps Vega's and ag-grid's
+   * stock sizes; raise it for a projector.
+   */
+  fontScale?: number | undefined;
+  /**
+   * Maps a row to the URL of that record's own page. Tables gain a leading
+   * link column and point marks open the link on a plain click (a modifier
+   * click still picks). Rows it returns nothing for — aggregates — get no
+   * link. A separate prop, like `palette`, because the spec is JSON-cloned.
+   */
+  recordUrl?: RecordUrlFn | undefined;
 }
 
 // Expose data selections to parent component
@@ -98,6 +125,17 @@ const effectivePalette = computed(
   () => props.palette ?? injectedPalette?.value,
 );
 
+// The truncation notice's grey is fixed in the scoped stylesheet and disappears
+// on a dark surface. Hand the palette's muted color to CSS rather than restyling
+// per element; unset, the stylesheet keeps its original value.
+const chromeVars = computed<CSSProperties>(() => {
+  const muted = effectivePalette.value?.mutedText;
+  return {
+    ...(muted != null ? { '--udi-vis-muted': muted } : {}),
+    ...(props.fontScale != null ? { '--udi-font-scale': props.fontScale } : {}),
+  };
+});
+
 const parsedSpec = ref<ParsedUDIGrammar | null>(null);
 // Per-instance flag: true once this instance's own data sources have been
 // loaded via initDataSources.  The shared [loading, selectionHash] watcher
@@ -111,15 +149,28 @@ onMounted(() => {
   render();
 });
 
+/** The sources the mounted chart was built from (see render). */
+let loadedSourcesKey: string | null = null;
+
 async function render() {
   // console.log('udivis render');
   if (!props.spec) return; // CE may mount before spec prop is set
-  instanceReady.value = false;
   // Deep clone props.spec so internal mutations (e.g. setDefaultDomains
   // adding mapping.domain) don't leak back through the CE props to the
   // host (React) — which would otherwise trigger a re-mount and lose
   // the brush/selection state.
-  parsedSpec.value = parseSpecification(JSON.parse(JSON.stringify(props.spec)));
+  // withBinUnits: a time column's histogram bins fall on whole years.
+  const nextSpec = withBinUnits(
+    parseSpecification(JSON.parse(JSON.stringify(props.spec))),
+  );
+  // Only a spec reading other sources has anything to wait for. Dropping the
+  // ready flag unmounts the chart, and a host rewrites the spec whenever its
+  // filters change — on a brush's first move, too: the chart was torn down
+  // under the user's drag.
+  const sourcesKey = JSON.stringify(nextSpec.source);
+  if (sourcesKey !== loadedSourcesKey) instanceReady.value = false;
+  loadedSourcesKey = sourcesKey;
+  parsedSpec.value = nextSpec;
   // Load data sources BEFORE binding selections — binding can change
   // selectionHash which triggers the [loading, selectionHash] watcher.
   // If data isn't loaded yet that watcher would hit empty dataSources.
@@ -221,8 +272,10 @@ function buildVisualization(): void {
   // Re-parse from a fresh clone so any prior domain mutations (from
   // setDefaultDomains during a previous subset state) don't persist
   // when the filter is cleared.
-  parsedSpec.value = parseSpecification(JSON.parse(JSON.stringify(props.spec)));
-
+  // withBinUnits: a time column's histogram bins fall on whole years.
+  parsedSpec.value = withBinUnits(
+    parseSpecification(JSON.parse(JSON.stringify(props.spec))),
+  );
   const backend = getQueryBackend();
   if (backend.kind === 'remote') {
     const epoch = ++remoteQueryEpoch;
@@ -237,6 +290,7 @@ function buildVisualization(): void {
         // viz's own brush that lags the store by a render — the store is
         // the source of truth for brush state.
         selections: { ...props.selections, ...dataSourcesStore.dataSelections },
+        displayDataOnly: !needsAllData(parsedSpec.value),
       })
       .then((result) => {
         if (epoch !== remoteQueryEpoch) return; // stale response
@@ -370,7 +424,19 @@ function setDefaultDomains(
       // @ts-expect-error: checking domainWhenFiltered
       const domainWhenFiltered: string | undefined = mapping.domainWhenFiltered;
       if (type === 'quantitative') {
-        if (mark === 'bar' && domainWhenFiltered !== 'full') continue;
+        // A bar spanning x..x2 is a histogram's bin (convertToVegaSpec marks
+        // it pre-binned), so its x is anchored like a rect histogram's below,
+        // or brushing it shrinks the axis to the bins that are left. Its y
+        // stays with Vega-Lite, which sizes stacked bins by their totals.
+        const channel: string = mapping.encoding;
+        const binnedBarX =
+          mark === 'bar' &&
+          (channel === 'x' || channel === 'x2') &&
+          (mappingList as Array<{ encoding: string }>).some(
+            (m) => m.encoding === 'x2',
+          );
+        if (mark === 'bar' && !binnedBarX && domainWhenFiltered !== 'full')
+          continue;
         // Rect marks (histograms) pair x with x2 and y with y2 on the
         // same scale. Without an explicit domain, vega-lite auto-fits
         // the scale to the *filtered* values flowing into the chart,
@@ -378,7 +444,7 @@ function setDefaultDomains(
         // domain that unions both ends from allData so bin edges stay
         // anchored. Skip the partner encoding (x2/y2) — it shares the
         // x/y scale and doesn't need its own domain.
-        if (mark === 'rect') {
+        if (mark === 'rect' || binnedBarX) {
           // TS 6 can infer `encoding` here without the previous
           // `@ts-expect-error: encoding is statically known` escape; the
           // unused directive was tripping TS2578 under the upgrade.
@@ -454,20 +520,102 @@ function setDefaultDomains(
         }
       } else {
         // TODO, check if row categorical fields work here.
-        if (catDomainCache.has(field)) {
-          // @ts-expect-error: Again...
-          mapping.domain = catDomainCache.get(field);
-        } else {
-          // @ts-expect-error: Again...
-          const values = data.map((d) => d[field]);
-          const uniqueValues = Array.from(new Set(values));
-          // @ts-expect-error: Again...
-          mapping.domain = uniqueValues;
-          catDomainCache.set(field, uniqueValues);
+        // Ordered by value (or by total, for `sort: '-x' | '-y'`) rather than
+        // by which row mentions a value first: row order changes with every
+        // filter, and the domain order is both the axis order and the color
+        // assignment.
+        // @ts-expect-error: checking sort
+        const sort: string | undefined = mapping.sort;
+        const totalField =
+          sort === '-x' || sort === '-y'
+            ? (mappingList as Array<{ encoding: string; field?: string }>).find(
+                (m) => m.encoding === sort.slice(1),
+              )?.field
+            : undefined;
+        const cacheKey = `${field}|${totalField ?? ''}`;
+        let domain = catDomainCache.get(cacheKey);
+        if (!domain) {
+          domain = orderCategories(data, field, totalField);
+          catDomainCache.set(cacheKey, domain);
         }
+        // @ts-expect-error: mapping.domain assignment
+        mapping.domain = domain;
       }
     }
   }
+}
+
+// Read the numeric ends off a `Domain`, in either the `{min, max}` or the
+// `[min, max]` form. Categorical domains have no bounds to report.
+function numericDomainBounds(domain: unknown): {
+  min?: number | undefined;
+  max?: number | undefined;
+} {
+  if (Array.isArray(domain)) {
+    const [min, max] = domain;
+    return typeof min === 'number' && typeof max === 'number'
+      ? { min, max }
+      : {};
+  }
+  if (typeof domain === 'object' && domain !== null) {
+    const { min, max } = domain as { min?: unknown; max?: unknown };
+    return {
+      ...(typeof min === 'number' ? { min } : {}),
+      ...(typeof max === 'number' ? { max } : {}),
+    };
+  }
+  return {};
+}
+
+// [min, max] of a field's numeric values in `rows`, or null when it has none.
+function fieldRange(
+  rows: unknown,
+  field: string | undefined,
+): [number, number] | null {
+  if (!Array.isArray(rows) || !field) return null;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const row of rows) {
+    const value = (row as Record<string, unknown>)[field];
+    if (typeof value !== 'number' || !Number.isFinite(value)) continue;
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  return min <= max ? [min, max] : null;
+}
+
+/**
+ * Compile a raw→label map into a Vega `labelExpr`: a chain of equality tests
+ * ending in the raw label, so an unmapped value renders unchanged.
+ *
+ *   { "Children's Hospital of Philadelphia": "CHOP" }
+ *   → datum.label === 'Children\'s Hospital of Philadelphia' ? 'CHOP' : datum.label
+ *
+ * Returns '' for an empty map so the caller can skip the axis override entirely.
+ */
+function buildLabelExpr(labels: Record<string, string>): string {
+  const quote = (v: string) =>
+    `'${v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+  const entries = Object.entries(labels).filter(
+    ([raw, label]) => raw !== label,
+  );
+  if (entries.length === 0) return '';
+  return entries.reduce(
+    (fallback, [raw, label]) =>
+      `datum.label === ${quote(raw)} ? ${quote(label)} : ${fallback}`,
+    'datum.label',
+  );
+}
+
+// Axis ticks for an age in days, in days, falling on whole years (or nice
+// fractions of one): a days scale's own ticks (2000, 4000) read 5.5 y, 11.0 y.
+// ponytail: a span under a few months ticks finer than the label's one
+// decimal, so neighbouring labels can repeat.
+function wholeYearTicks([minDays, maxDays]: [number, number], count: number) {
+  return scaleLinear()
+    .domain([minDays / DAYS_PER_YEAR, maxDays / DAYS_PER_YEAR])
+    .ticks(count)
+    .map((years) => years * DAYS_PER_YEAR);
 }
 
 // Pin axis tick values to the union of the two paired bin-boundary fields
@@ -577,6 +725,19 @@ async function loadMoreRows(): Promise<void> {
   }
 }
 
+// Whether to run the second, unfiltered pipeline pass (allData / extent).
+// Charts need it even when the pipeline ends in a rollup, which the store would
+// otherwise skip: setDefaultDomains builds every scale domain from it, so a
+// filter can't drop categories off the axis or shift their colors.
+// TableComponent takes `data` only — it never reads allData, so for a row/table
+// spec that pass is another full materialization of the source (259ms for
+// HuBMAP's 9474 x 258 `datasets`) computed and thrown away. Skip it, unless a
+// default slot is present: that branch renders instead of TableComponent and
+// does expose allData to the consumer.
+function needsAllData(spec: ParsedUDIGrammar): boolean {
+  return isVegaLiteCompatible(spec) || !!slots.default;
+}
+
 function performDataTransformation(spec: ParsedUDIGrammar) {
   try {
     transformError.value = null;
@@ -584,15 +745,7 @@ function performDataTransformation(spec: ParsedUDIGrammar) {
     const dataObjects = dataSourcesStore.getDataObject(
       spec.source.map((x) => x.name),
       spec.transformation,
-      // TableComponent takes `data` only — it never reads allData, so for a
-      // row/table spec the second, unfiltered pipeline pass is another full
-      // materialization of the source (259ms for HuBMAP's 9474 x 258
-      // `datasets`) computed and thrown away. Skip it, unless a default slot
-      // is present: that branch renders instead of TableComponent and does
-      // expose allData to the consumer.
-      isVegaLiteCompatible(spec) || slots.default
-        ? undefined
-        : { displayDataOnly: true },
+      { displayDataOnly: !needsAllData(spec) },
     );
     // Keep previous data visible while loading/null — avoids "Loading..." flash
     if (dataObjects == null) return;
@@ -637,7 +790,34 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
   // add data. Don't reset transformError here — performDataTransformation
   // owns it, and resetting would swallow an error set earlier in this
   // same buildVisualization cycle.
-  vegaSpec.data!.values = transformedData.value;
+  // Shallow-copied, for two independent reasons.
+  //
+  // Vega tags every datum it ingests with an internal id. A changeset that
+  // removes all rows and re-inserts the SAME object identities — which the
+  // store's memoized `getDataObject` hands back on a repeat query — cancels out
+  // in its dataflow, so the encoding is never recomputed and marks keep their
+  // previous positions while `view.data()` reports the new values. That is the
+  // "chart is wrong until I toggle table view and back" failure: a re-embed
+  // ingests fresh tuples and the picture corrects itself.
+  //
+  // And the rows below are about to be written to (label layout adds a column),
+  // which must not reach into the store's cache: that data is shared with every
+  // other consumer of the same query.
+  vegaSpec.data!.values = (transformedData.value ?? []).map((row) => ({
+    ...row,
+  }));
+  // Each row carries its record's link, for VegaLite's click handler.
+  let hasRecordLinks = false;
+  if (props.recordUrl) {
+    const source = spec.source[0]?.name ?? '';
+    for (const row of vegaSpec.data.values) {
+      const url = recordLink(props.recordUrl, row, source);
+      if (url) {
+        row[RECORD_URL_FIELD] = url;
+        hasRecordLinks = true;
+      }
+    }
+  }
 
   debugVegaData.value = vegaSpec.data.values;
 
@@ -648,8 +828,13 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
   }
 
   const zeroBaselineFields = getZeroBaselineFields(spec);
+  // Epoch-ms date columns go to Vega-Lite as `temporal`, which formats the
+  // axis, tooltip and legend as dates. Only the Vega-Lite type changes: the
+  // spec's own type stays `quantitative`, so domains and brushes still work on
+  // the stored numbers.
+  const dateColumns = timeColumns(spec);
 
-  const outputLayers = inputLayers.map((layer) => {
+  const outputLayers = inputLayers.flatMap((layer, layerIndex) => {
     const mapping = Array.isArray(layer.mapping)
       ? layer.mapping
       : [layer.mapping];
@@ -658,6 +843,10 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     const vegaEncoding: any = {};
     for (const map of mapping) {
       const { encoding } = map;
+      const isTime =
+        !('value' in map) &&
+        map.type === 'quantitative' &&
+        isEpochMs(dateColumns, map.field);
       if ('value' in map) {
         vegaEncoding[encoding] = {
           value: map.value,
@@ -667,13 +856,65 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         const escapedField = map.field.replace(/\./g, '\\.');
         vegaEncoding[encoding] = {
           field: escapedField,
-          type: map.type,
+          type: isTime ? 'temporal' : map.type,
         };
+        // Vega-Lite's default of a tick per 40px puts a time axis on quarters,
+        // then drops every other label to stop overlaps — on a range starting
+        // after January that drops every January, the ticks that print the
+        // year. A tick per 100px lands multi-year ranges on whole years.
+        if (isTime && encoding === 'x') {
+          vegaEncoding[encoding].axis = {
+            tickCount: { expr: 'ceil(width / 100)' },
+          };
+        }
+        // The tooltip reads the field's format, as tables and filter chips
+        // do; the axis keeps its own calendar labels. Without it a binned
+        // bar's range (start – end) is formatted as a plain number, even on a
+        // time scale: 1.76e+12 – 1.78e+12.
+        if (isTime) {
+          Object.assign(vegaEncoding[encoding], {
+            format: 'epoch_ms',
+            formatType: 'udiTime',
+          });
+        }
+        // The other time formats (a year, an age in days, epoch seconds) keep
+        // their quantitative scale in stored units, so domains, brushes and
+        // filters are untouched; only the labels go through formatTime. A
+        // field-level formatType reaches the tooltip but not the guides, so
+        // the axis and legend each get it too.
+        const labelFormat =
+          !isTime && map.type === 'quantitative'
+            ? timeFormatOf(dateColumns, map.field)
+            : undefined;
+        if (labelFormat) {
+          const format = { format: labelFormat, formatType: 'udiTime' };
+          Object.assign(vegaEncoding[encoding], format);
+          if (encoding === 'x' || encoding === 'y') {
+            // From all rows, so the ticks hold still as filters change.
+            // A binned age (x paired with x2) ticks at its bar edges instead,
+            // which withBinUnits puts on whole years.
+            const binned = mapping.some((m) => m.encoding === `${encoding}2`);
+            const extent =
+              labelFormat === 'days' &&
+              !binned &&
+              fieldRange(transformedDataFull.value, map.field);
+            vegaEncoding[encoding].axis = extent
+              ? {
+                  ...format,
+                  values: wholeYearTicks(extent, encoding === 'x' ? 8 : 5),
+                }
+              : format;
+          } else if (encoding === 'color' || encoding === 'size') {
+            vegaEncoding[encoding].legend = format;
+          }
+        }
       }
       if (
         (encoding === 'x' || encoding === 'y' || encoding === 'size') &&
         !('value' in map) &&
         map.type === 'quantitative' &&
+        // A time scale has no zero; Vega-Lite drops it with a warning.
+        !isTime &&
         layer.mark !== 'bar' &&
         layer.mark !== 'rect' &&
         !zeroBaselineFields.has(map.field)
@@ -702,7 +943,30 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         if (vegaEncoding[encoding].scale == null) {
           vegaEncoding[encoding].scale = {};
         }
-        vegaEncoding[encoding].scale['domain'] = map.domain;
+        // `NumberDomain` is the documented `{min, max}` form, but vega-lite reads
+        // an object domain as a *data reference* ({data, field}) and dies with
+        // "Undefined data set name: undefined". Translate it to the array (or
+        // one-sided domainMin/domainMax) form vega-lite actually wants. The table
+        // renderer consumes {min,max} itself — row marks never reach here, they
+        // are handled by TableComponent.
+        const domain = map.domain as unknown;
+        const isNumberDomain =
+          typeof domain === 'object' &&
+          domain !== null &&
+          !Array.isArray(domain) &&
+          ('min' in domain || 'max' in domain);
+        if (isNumberDomain) {
+          const { min, max } = domain as { min?: number; max?: number };
+          if (min != null && max != null) {
+            vegaEncoding[encoding].scale['domain'] = [min, max];
+          } else if (min != null) {
+            vegaEncoding[encoding].scale['domainMin'] = min;
+          } else if (max != null) {
+            vegaEncoding[encoding].scale['domainMax'] = max;
+          }
+        } else {
+          vegaEncoding[encoding].scale['domain'] = domain;
+        }
       }
       if ('range' in map) {
         if (vegaEncoding[encoding].scale == null) {
@@ -715,6 +979,22 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       }
       if ('title' in map && map.title != null) {
         vegaEncoding[encoding].title = map.title;
+      }
+      if ('labels' in map && map.labels != null) {
+        const labelExpr = buildLabelExpr(map.labels);
+        if (labelExpr) {
+          // Relabel the axis/legend text only. Vega evaluates labelExpr against
+          // `datum.label` at render time, so the data keeps its raw values and
+          // selections, filters and tooltips are untouched.
+          const target =
+            encoding === 'color' || encoding === 'size' ? 'legend' : 'axis';
+          if (vegaEncoding[encoding][target] == null) {
+            vegaEncoding[encoding][target] = {};
+          }
+          if (vegaEncoding[encoding][target] !== null) {
+            vegaEncoding[encoding][target].labelExpr = labelExpr;
+          }
+        }
       }
     }
 
@@ -773,6 +1053,16 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
         }
       } else {
         pointSelect.value = layer.select;
+        // Dim the marks a Shift gesture hasn't picked. The signal is null
+        // outside a gesture, and the condition has no default branch, so
+        // the mark keeps its own opacity then.
+        const pickFields = selectFields(layer.select.fields);
+        if (pickFields.length > 0 && vegaEncoding.opacity == null) {
+          vegaEncoding.opacity = {
+            condition: { test: pickDimTest(pickFields), value: 0.25 },
+          };
+          vegaSpec.params = [{ name: PICK_SIGNAL, value: null }];
+        }
       }
     }
     // For rect histograms (x/x2 or y/y2 pair), inset both anchors by a pixel
@@ -787,24 +1077,151 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
     // keeping all boundary ticks visible.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const markConfig: any = { type: layer.mark, tooltip: true };
-    if (layer.mark === 'rect') {
+    // A brushable chart shows a crosshair over its plot and marks, so it reads
+    // as draggable; the brush rect keeps Vega-Lite's own `move` cursor.
+    if (selectParam?.select.type === 'interval') {
+      markConfig.cursor = 'crosshair';
+      vegaSpec.view = { ...vegaSpec.view, cursor: 'crosshair' };
+    }
+    // A point opens its record (VegaLite's click handler); say so on hover.
+    if (hasRecordLinks && layer.mark === 'point') markConfig.cursor = 'pointer';
+    // Dashed strokes distinguish annotation layers (reference lines) from data.
+    if (Array.isArray(layer.strokeDash) && layer.strokeDash.length > 0) {
+      markConfig.strokeDash = layer.strokeDash;
+    }
+    // Step interpolation for quantities that hold between observations.
+    if (layer.interpolate) markConfig.interpolate = layer.interpolate;
+    // Text placement. Without these a label is centred on its anchor, so half of
+    // it lands on top of whatever it is annotating.
+    if (layer.align) markConfig.align = layer.align;
+    if (typeof layer.dx === 'number') markConfig.dx = layer.dx;
+    if (typeof layer.dy === 'number') markConfig.dy = layer.dy;
+    if (layer.stroke) markConfig.stroke = layer.stroke;
+    if (typeof layer.strokeWidth === 'number')
+      markConfig.strokeWidth = layer.strokeWidth;
+    if (typeof layer.strokeOpacity === 'number')
+      markConfig.strokeOpacity = layer.strokeOpacity;
+    if (layer.mark === 'rect' || layer.mark === 'bar') {
       const hasXPair =
         mapping.some((m) => m.encoding === 'x') &&
         mapping.some((m) => m.encoding === 'x2');
       const hasYPair =
         mapping.some((m) => m.encoding === 'y') &&
         mapping.some((m) => m.encoding === 'y2');
+      // A bar spanning x..x2 with a quantitative height is a histogram's bin.
+      // Vega-Lite reads such a bar as a horizontal range (a thin line at each
+      // height) unless x is marked pre-binned; marked, the bins stand
+      // upright and a colour stacks them, as it stacks a plain bar chart.
+      if (
+        layer.mark === 'bar' &&
+        hasXPair &&
+        vegaEncoding.y?.type === 'quantitative'
+      ) {
+        vegaEncoding.x.bin = { binned: true };
+      }
+      // Whole-year date bins read their edges as years: an edge lands up to
+      // 18 hours from 1 January (withBinUnits), so as a date it reads 12/31
+      // west of UTC. An epoch_ms axis keeps Vega's calendar ticks, so only its
+      // tooltip changes; an epoch_s axis ticks at the edges and changes too.
+      if (hasXPair) {
+        const fieldOf = (encoding: string) =>
+          (mapping as Array<{ encoding: string; field?: string }>).find(
+            (m) => m.encoding === encoding,
+          )?.field;
+        const [start, end] = [fieldOf('x'), fieldOf('x2')];
+        const row = transformedDataFull.value?.[0] as
+          Record<string, unknown> | undefined;
+        const edgeFormat =
+          start && end && row
+            ? binEdgeFormat(dateColumns.get(start), row[start], row[end])
+            : undefined;
+        if (edgeFormat) {
+          // x2 too: a rect's tooltip lists the end as its own row, where a
+          // pre-binned bar's folds it into x's range.
+          for (const channel of ['x', 'x2'])
+            Object.assign(vegaEncoding[channel], {
+              format: edgeFormat,
+              formatType: 'udiTime',
+            });
+          if (vegaEncoding.x.axis?.formatType === 'udiTime')
+            vegaEncoding.x.axis.format = edgeFormat;
+        }
+      }
+      // Bin-boundary ticks are raw numbers, which a time axis labels as
+      // minutes; its own ticks land on calendar boundaries instead. An axis
+      // that already has explicit ticks keeps them.
       if (hasXPair) {
         markConfig.xOffset = 1;
         markConfig.x2Offset = -1;
-        alignAxisToBinBoundaries(vegaEncoding, mapping, 'x', 'x2');
+        if (
+          vegaEncoding.x?.type !== 'temporal' &&
+          vegaEncoding.x?.axis?.values == null
+        )
+          alignAxisToBinBoundaries(vegaEncoding, mapping, 'x', 'x2');
       }
       if (hasYPair) {
         markConfig.yOffset = 1;
         markConfig.y2Offset = -1;
-        alignAxisToBinBoundaries(vegaEncoding, mapping, 'y', 'y2');
+        if (
+          vegaEncoding.y?.type !== 'temporal' &&
+          vegaEncoding.y?.axis?.values == null
+        )
+          alignAxisToBinBoundaries(vegaEncoding, mapping, 'y', 'y2');
       }
     }
+    // Nudge apart marks that would land on the same spot — two labels sharing a
+    // value are both unreadable. The adjusted positions go into a column of their
+    // own on the shared dataset (rather than a per-layer copy of the data, which
+    // the runtime's changeset would not keep up to date) and this layer alone
+    // reads from it.
+    if (layer.avoidOverlap) {
+      const axis = vegaEncoding.y ? 'y' : 'x';
+      const otherAxis = axis === 'y' ? 'x' : 'y';
+      // Field names are read straight off the mapping, not off vegaEncoding,
+      // whose copies have their dots escaped for vega-lite.
+      const fieldOf = (encoding: string) => {
+        const map = mapping.find((m) => m.encoding === encoding);
+        return map && !('value' in map) ? map.field : undefined;
+      };
+      const positionField = fieldOf(axis);
+      // `domain` lives on field mappings only — a value mapping has none — so it
+      // has to be narrowed before it is read, exactly as `field` is above.
+      const domainOf = (encoding: string) => {
+        const map = mapping.find((m) => m.encoding === encoding);
+        return map && 'domain' in map ? map.domain : undefined;
+      };
+      const bounds = numericDomainBounds(domainOf(axis));
+      // How far the field spans: the fallback scale for a layer that wants its
+      // labels separated but declares no explicit domain.
+      const range = fieldRange(vegaSpec.data.values, positionField);
+      const span =
+        bounds.min !== undefined && bounds.max !== undefined
+          ? bounds.max - bounds.min
+          : range
+            ? range[1] - range[0]
+            : 0;
+      const minGap =
+        typeof layer.avoidOverlap === 'number'
+          ? layer.avoidOverlap
+          : span * DEFAULT_LABEL_GAP_FRACTION;
+      // A zero span means every mark is at the same position and there is no
+      // scale to express a separation on; leave them stacked rather than
+      // inventing a distance.
+      if (positionField && minGap > 0) {
+        const spreadField = `__spread_${layerIndex}_${axis}`;
+        spreadLabels(vegaSpec.data.values, {
+          positionField,
+          outField: spreadField,
+          minGap,
+          // Only the marks the layer actually draws take part: a template
+          // suppresses one by nulling its *other* axis, not its position.
+          requiredField: fieldOf(otherAxis),
+          limit: bounds,
+        });
+        vegaEncoding[axis] = { ...vegaEncoding[axis], field: spreadField };
+      }
+    }
+
     const outputLayer: {
       mark: { type: VisualizationLayer['mark']; tooltip: boolean };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -819,9 +1236,32 @@ function convertToVegaSpec(spec: ParsedUDIGrammar): string {
       outputLayer.params = [selectParam];
     }
 
+    // An outlined text mark has to be drawn twice. SVG paints stroke over fill,
+    // and vega emits no paint-order, so a single pass with a 3px white stroke
+    // hollows out 11px glyphs. Drawing the outline pass first and the same text
+    // again unstroked on top leaves the halo showing only outside the letters.
+    if (layer.mark === 'text' && layer.stroke) {
+      const fillOnly = { ...markConfig };
+      delete fillOnly.stroke;
+      delete fillOnly.strokeWidth;
+      delete fillOnly.strokeOpacity;
+      return [outputLayer, { ...outputLayer, mark: fillOnly }];
+    }
+
     return outputLayer;
   });
   vegaSpec['layer'] = outputLayers;
+
+  const titleSpec =
+    typeof spec.title === 'string' ? { text: spec.title } : spec.title;
+  if (titleSpec?.text) {
+    // Vega anchors a title across the plot width. Left is the default because a
+    // centred heading reads as a chart caption rather than as a key.
+    const anchor = { left: 'start', center: 'middle', right: 'end' }[
+      titleSpec.align ?? 'left'
+    ];
+    vegaSpec['title'] = { text: titleSpec.text, anchor };
+  }
 
   return JSON.stringify(vegaSpec);
 }
@@ -842,7 +1282,7 @@ const debugVegaData = ref();
     <div class="error-message" v-if="transformError">
       {{ transformError.message }}
     </div>
-    <div class="truncation-note" v-if="truncatedInfo">
+    <div class="truncation-note" v-if="truncatedInfo" :style="chromeVars">
       Showing first
       {{ (transformedData?.length ?? truncatedInfo.cap).toLocaleString() }}
       rows (result truncated server-side)
@@ -874,6 +1314,7 @@ const debugVegaData = ref();
         :point-select="pointSelect"
         :selections="props.selections"
         :palette="effectivePalette"
+        :font-scale="props.fontScale"
       />
     </template>
     <template v-else>
@@ -882,6 +1323,8 @@ const debugVegaData = ref();
         :spec="parsedSpec"
         :palette="effectivePalette"
         :fill-container="props.fillContainer"
+        :font-scale="props.fontScale"
+        :record-url="props.recordUrl"
       />
     </template>
   </template>
@@ -896,13 +1339,16 @@ const debugVegaData = ref();
   margin: 6px;
 }
 .truncation-note {
-  color: #757575; // muted; keep quasar vars out of the component
-  font-size: 0.75rem;
+  // The fallback is the value this carried before the palette gained chrome
+  // colors; on a dark surface the grey is unreadable, so a themed palette
+  // overrides it through `--udi-vis-muted` (see `chromeVars`).
+  color: var(--udi-vis-muted, #757575);
+  font-size: calc(0.75rem * var(--udi-font-scale, 1));
   margin: 2px 6px;
 }
 .load-more-button {
   margin-left: 6px;
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--udi-font-scale, 1));
   color: #1976d2;
   background: none;
   border: none;
@@ -910,7 +1356,7 @@ const debugVegaData = ref();
   cursor: pointer;
   text-decoration: underline;
   &:disabled {
-    color: #9e9e9e;
+    color: var(--udi-vis-muted, #9e9e9e);
     cursor: default;
     text-decoration: none;
   }

@@ -1,4 +1,12 @@
-import { createContext, useContext, useRef, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import type { DownloadAction, EntityIconMap } from '@/features/dashboard';
 import type { TrackerFn } from '@/app/UDIChatConfig';
@@ -23,7 +31,7 @@ import {
   createMemoryBankStore,
   type MemoryBankState,
 } from '@/features/dashboard/stores/memoryBankStore';
-import { createGlobalStore, type GlobalState } from '@/stores/globalStore';
+import { createGlobalStore, type GlobalState, type ReadOnlyOption } from '@/stores/globalStore';
 import { registerSnapshotSource } from './snapshotRegistry';
 
 interface UDIChatStores {
@@ -37,7 +45,26 @@ interface UDIChatStores {
 
 const UDIChatContext = createContext<UDIChatStores | null>(null);
 
-export function UDIChatProvider({ children }: { children: ReactNode }) {
+/**
+ * `readOnly` seeds the global store's starting mode when the stores are
+ * created, so read-only renders from the very first paint with no flash of the
+ * editable UI. A later change to it is applied too, so the host can switch
+ * modes; the user can still leave read-only in between (unless `'locked'`).
+ *
+ * `fontScale` seeds the store the same way, so the first paint is already at
+ * the host's size, and also follows later changes.
+ */
+export function UDIChatProvider({
+  children,
+  readOnly = false,
+  fontScale,
+  refitOnReadOnlyChange = true,
+}: {
+  children: ReactNode;
+  readOnly?: ReadOnlyOption;
+  fontScale?: number;
+  refitOnReadOnlyChange?: boolean;
+}) {
   const storesRef = useRef<UDIChatStores | null>(null);
   if (storesRef.current == null) {
     storesRef.current = {
@@ -46,7 +73,7 @@ export function UDIChatProvider({ children }: { children: ReactNode }) {
       dataPackage: createDataPackageStore(),
       dataFilters: createDataFiltersStore(),
       memoryBank: createMemoryBankStore(),
-      global: createGlobalStore(),
+      global: createGlobalStore(readOnly, fontScale, refitOnReadOnlyChange),
     };
     // Register synchronously so the (outer) ErrorBoundary can capture the
     // current session even if the very first child render throws — a
@@ -54,8 +81,25 @@ export function UDIChatProvider({ children }: { children: ReactNode }) {
     registerSnapshotSource({
       conversation: storesRef.current.conversation,
       dashboard: storesRef.current.dashboard,
+      dataFilters: storesRef.current.dataFilters,
     });
   }
+  const globalStore = storesRef.current.global;
+  useEffect(() => {
+    globalStore.setState({ hostFontScale: fontScale });
+  }, [globalStore, fontScale]);
+  // A layout effect, so a host that restyles its container in the same render
+  // (an inline embed growing into a modal) never paints the new container in
+  // the old mode. Set directly rather than via `setReadOnly`: the lock keeps
+  // the user in read-only, not the host. One `setState`, so DashboardGrid sees
+  // the refit flag that came with the mode change.
+  useLayoutEffect(() => {
+    globalStore.setState({
+      readOnly: readOnly !== false,
+      readOnlyLocked: readOnly === 'locked',
+      refitOnReadOnlyChange,
+    });
+  }, [globalStore, readOnly, refitOnReadOnlyChange]);
   return <UDIChatContext.Provider value={storesRef.current}>{children}</UDIChatContext.Provider>;
 }
 
@@ -137,6 +181,61 @@ export function useDownloadActions(): readonly DownloadAction[] {
 }
 
 // ---------------------------------------------------------------------------
+// Agent API configuration
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the agent lives, for the few components that call it outside the chat
+ * turn — re-binding a generated visualization, for one. A context rather than
+ * props because those components render in two unrelated trees (a dashboard card
+ * and a chat message), and neither owns the config.
+ *
+ * The default has no base URL, which reads as "the agent is not reachable from
+ * here": callers then hide the controls that would need it, so a component under
+ * test needs no provider.
+ */
+export interface ApiConfig {
+  apiBaseUrl: string;
+  authToken?: string;
+}
+
+const ApiConfigContext = createContext<ApiConfig>({ apiBaseUrl: '' });
+
+export function ApiConfigProvider({
+  apiBaseUrl,
+  authToken,
+  children,
+}: {
+  apiBaseUrl: string;
+  authToken?: string | undefined;
+  children: ReactNode;
+}) {
+  const value = useMemo(() => ({ apiBaseUrl, authToken }), [apiBaseUrl, authToken]);
+  return <ApiConfigContext.Provider value={value}>{children}</ApiConfigContext.Provider>;
+}
+
+export function useApiConfig(): ApiConfig {
+  return useContext(ApiConfigContext);
+}
+
+// ---------------------------------------------------------------------------
+// Issue reporting (opt-in)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the host switched on issue reporting (`issueReporting`). Off by
+ * default, and so off in a component rendered without the provider: reports go
+ * to the agent's LangFuse, which not every deployment has.
+ */
+const IssueReportingContext = createContext(false);
+
+export const IssueReportingProvider = IssueReportingContext.Provider;
+
+export function useIssueReporting(): boolean {
+  return useContext(IssueReportingContext);
+}
+
+// ---------------------------------------------------------------------------
 // Consumer-provided Download button label
 // ---------------------------------------------------------------------------
 
@@ -160,6 +259,31 @@ export function DownloadButtonLabelProvider({
 
 export function useDownloadButtonLabel(): string {
   return useContext(DownloadButtonLabelContext);
+}
+
+// ---------------------------------------------------------------------------
+// Consumer-provided key for sessions saved in the browser
+// ---------------------------------------------------------------------------
+
+const SavedSessionsKeyContext = createContext<string | undefined>(undefined);
+
+export function SavedSessionsKeyProvider({
+  storageKey,
+  children,
+}: {
+  storageKey: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <SavedSessionsKeyContext.Provider value={storageKey || undefined}>
+      {children}
+    </SavedSessionsKeyContext.Provider>
+  );
+}
+
+/** `undefined` when the consumer did not opt in to saved sessions. */
+export function useSavedSessionsKey(): string | undefined {
+  return useContext(SavedSessionsKeyContext);
 }
 
 // ---------------------------------------------------------------------------

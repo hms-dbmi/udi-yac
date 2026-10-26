@@ -10,7 +10,7 @@ interface ScrollAffordancesProps {
 }
 
 const buttonClass =
-  'cursor-pointer rounded-full bg-background/90 shadow-sm backdrop-blur-sm hover:bg-muted';
+  'udi:cursor-pointer udi:rounded-full udi:bg-background/90 udi:shadow-sm udi:backdrop-blur-sm udi:hover:bg-muted';
 
 /**
  * Up/down scroll buttons pinned to the bottom-right of a ScrollArea. Both are
@@ -56,7 +56,7 @@ export function ScrollAffordances({ containerRef }: ScrollAffordancesProps) {
   };
 
   return (
-    <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1">
+    <div className="udi:absolute udi:bottom-3 udi:right-3 udi:z-20 udi:flex udi:flex-col udi:gap-1">
       <Tooltip>
         <TooltipTrigger
           render={
@@ -70,7 +70,7 @@ export function ScrollAffordances({ containerRef }: ScrollAffordancesProps) {
             />
           }
         >
-          <ChevronUp className="size-4" />
+          <ChevronUp className="udi:size-4" />
         </TooltipTrigger>
         <TooltipContent>Scroll up</TooltipContent>
       </Tooltip>
@@ -87,7 +87,7 @@ export function ScrollAffordances({ containerRef }: ScrollAffordancesProps) {
             />
           }
         >
-          <ChevronDown className="size-4" />
+          <ChevronDown className="udi:size-4" />
         </TooltipTrigger>
         <TooltipContent>Scroll down</TooltipContent>
       </Tooltip>

@@ -147,10 +147,18 @@ describe('dataPackageStore — domain lookups and validators', () => {
     });
   });
 
-  it('isValidIntervalFilter returns "no" when the field has no domain', async () => {
+  it('isValidIntervalFilter returns "no" when the field is not in the schema', async () => {
     const store = createDataPackageStore();
     await store.getState().setDataPackage(makePackage(), domains);
     expect(store.getState().isValidIntervalFilter('donors', 'missing')).toEqual({ isValid: 'no' });
+  });
+
+  it('isValidIntervalFilter returns "unknown" for an interval filter on a categorical field', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidIntervalFilter('donors', 'organ')).toEqual({
+      isValid: 'unknown',
+    });
   });
 
   it('isValidPointFilter validates every value against the categorical domain', async () => {
@@ -168,6 +176,52 @@ describe('dataPackageStore — domain lookups and validators', () => {
     const store = createDataPackageStore();
     expect(store.getState().isValidPointFilter('donors', 'organ', ['heart'])).toEqual({
       isValid: 'unknown',
+    });
+  });
+
+  // A field can be perfectly real yet carry no domain: remote packages omit
+  // categorical domains above 80 distinct values (introspect.py). Calling that
+  // "invalid" made every such filter vanish from the chat without a trace.
+  it('isValidPointFilter returns "unknown" when the field is in the schema but has no domain', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), []);
+    expect(store.getState().isValidPointFilter('donors', 'organ', ['heart'])).toEqual({
+      isValid: 'unknown',
+    });
+  });
+
+  it('isValidPointFilter returns "no" for a field that is not in the schema', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidPointFilter('donors', 'ghost', ['x'])).toEqual({
+      isValid: 'no',
+    });
+  });
+
+  it('isValidPointFilter returns "no" for an unknown entity', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidPointFilter('ghosts', 'organ', ['heart'])).toEqual({
+      isValid: 'no',
+    });
+  });
+
+  it('isValidPointFilter returns "unknown" for a point filter on a quantitative field', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidPointFilter('donors', 'age_value', ['5'])).toEqual({
+      isValid: 'unknown',
+    });
+  });
+
+  // Clearing the widget commits [], and the agent defaults an omitted
+  // pointValues to [""]. Neither may flip a live widget into an error.
+  it('isValidPointFilter treats empty and blank-only requests as valid', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), domains);
+    expect(store.getState().isValidPointFilter('donors', 'organ', [])).toEqual({ isValid: 'yes' });
+    expect(store.getState().isValidPointFilter('donors', 'organ', [''])).toEqual({
+      isValid: 'yes',
     });
   });
 });
@@ -345,16 +399,18 @@ describe('dataPackageStore — serialization strings', () => {
     expect(store.getState().dataPackageString).not.toContain('udi:overlapping_fields');
   });
 
-  it('dataDomainsString drops large categorical domains (>= 80 values)', async () => {
+  it('dataDomainsString keeps every column, with its true distinct count', async () => {
+    // It used to DELETE any categorical column with 80+ values. The agent reads
+    // this payload to decide what exists, so a table whose columns were all
+    // high-cardinality disappeared and was reported to the user as not existing.
     const store = createDataPackageStore();
-    const largeValues = Array.from({ length: 100 }, (_, i) => `v${i}`);
-    const largeDomains: DataFieldDomain[] = [
+    const domains: DataFieldDomain[] = [
       {
         entity: 'donors',
-        field: 'donor_id',
+        field: 'chemotherapy_agent',
         type: 'point',
         fieldDescription: '',
-        domain: { values: largeValues },
+        domain: { values: Array.from({ length: 100 }, (_, i) => `drug${i}`) },
       },
       {
         entity: 'donors',
@@ -364,9 +420,207 @@ describe('dataPackageStore — serialization strings', () => {
         domain: { min: 0, max: 100 },
       },
     ];
-    await store.getState().setDataPackage(makePackage(), largeDomains);
-    const serialized = store.getState().dataDomainsString;
-    expect(serialized).toContain('age_value');
-    expect(serialized).not.toContain('donor_id');
+    await store.getState().setDataPackage(makePackage(), domains);
+    const sent = JSON.parse(store.getState().dataDomainsString);
+
+    expect(sent).toHaveLength(2);
+    const agent = sent.find((d: { field: string }) => d.field === 'chemotherapy_agent');
+    // Under the cap, so every value travels — these are the columns a user
+    // names, and the agent has no other way to reach them.
+    expect(agent.domain.values).toHaveLength(100);
+    expect(agent.domain.distinct).toBe(100);
+    expect(sent.find((d: { field: string }) => d.field === 'age_value')).toBeTruthy();
+  });
+
+  it('sends an identifier column as a count rather than 7000 ids', async () => {
+    const store = createDataPackageStore();
+    const domains: DataFieldDomain[] = [
+      {
+        entity: 'donors',
+        field: 'donor_id',
+        type: 'point',
+        fieldDescription: '',
+        domain: { values: Array.from({ length: 7000 }, (_, i) => `research-${i}`) },
+      },
+    ];
+    await store.getState().setDataPackage(makePackage(), domains);
+    const [sent] = JSON.parse(store.getState().dataDomainsString);
+
+    // Still named — the column exists and the agent must be able to see that.
+    expect(sent.field).toBe('donor_id');
+    expect(sent.domain.values).toEqual([]);
+    expect(sent.domain.distinct).toBe(7000);
+    expect(sent.domain.omitted).toBe(true);
+  });
+
+  it('sends a long vocabulary by size, not by how many values it has', async () => {
+    const store = createDataPackageStore();
+    // 284 protocol arms: more values than the old count cap allowed, but small.
+    const arms = Array.from({ length: 284 }, (_, i) => `ACNS${1000 + i}: Regimen B`);
+    const domains: DataFieldDomain[] = [
+      {
+        entity: 'donors',
+        field: 'protocol_name_and_arm',
+        type: 'point',
+        fieldDescription: '',
+        domain: { values: arms },
+      },
+    ];
+    await store.getState().setDataPackage(makePackage(), domains);
+    const [sent] = JSON.parse(store.getState().dataDomainsString);
+
+    expect(sent.domain.values).toHaveLength(284);
+    expect(sent.domain.omitted).toBeUndefined();
+  });
+
+  it('omits the largest columns first once the whole payload is over budget', async () => {
+    const store = createDataPackageStore();
+    // Each column fits on its own (~11-12 KB), but 30 of them do not fit together.
+    const column = (field: string, width: number): DataFieldDomain => ({
+      entity: 'donors',
+      field,
+      type: 'point',
+      fieldDescription: '',
+      domain: { values: Array.from({ length: 1000 }, (_, i) => `${i}`.padStart(width, 'x')) },
+    });
+    const domains = [
+      column('wide', 9),
+      ...Array.from({ length: 30 }, (_, i) => column(`c${i}`, 8)),
+    ];
+    await store.getState().setDataPackage(makePackage(), domains);
+    const sent: Array<{ field: string; domain: { omitted?: boolean } }> = JSON.parse(
+      store.getState().dataDomainsString,
+    );
+
+    expect(sent).toHaveLength(31);
+    expect(sent.find((d) => d.field === 'wide')?.domain.omitted).toBe(true);
+    expect(sent.find((d) => d.field === 'c0')?.domain.omitted).toBeUndefined();
+  });
+});
+
+describe('dataPackageStore — display labels', () => {
+  /** The same package, plus the two optional label keys a package author sets. */
+  function makeLabelledPackage(): DataPackage {
+    const pkg = makePackage();
+    pkg.resources[0].title = 'Donor';
+    pkg.resources[0].schema.fields[0].title = 'Age at death';
+    pkg['udi:labels'] = { "Children's Hospital of Philadelphia": 'CHOP' };
+    return pkg;
+  }
+
+  it('prefers a field title over humanizing the column name', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeLabelledPackage(), []);
+    expect(store.getState().getFieldLabel('donors', 'age_value')).toBe('Age at death');
+    // No title on this one, so the humanized fallback stands.
+    expect(store.getState().getFieldLabel('donors', 'organ')).toBe('Organ');
+  });
+
+  it('humanizes every field when the package carries no titles', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), []);
+    expect(store.getState().getFieldLabel('donors', 'age_value')).toBe('Age');
+    expect(store.getState().getFieldLabel('samples', 'sample_size')).toBe('Sample Size');
+  });
+
+  it('falls back to humanizing for an unknown entity or field', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeLabelledPackage(), []);
+    expect(store.getState().getFieldLabel('nope', 'age_value')).toBe('Age');
+    expect(store.getState().getFieldLabel('donors', 'not_a_field')).toBe('Not A Field');
+  });
+
+  it('labels entities from the resource title, humanizing otherwise', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeLabelledPackage(), []);
+    expect(store.getState().getEntityLabel('donors')).toBe('Donor');
+    expect(store.getState().getEntityLabel('samples')).toBe('Samples');
+  });
+
+  it('maps categorical values through udi:labels and passes the rest through', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makeLabelledPackage(), []);
+    expect(store.getState().getValueLabel("Children's Hospital of Philadelphia")).toBe('CHOP');
+    expect(store.getState().getValueLabel('Vanderbilt TMC')).toBe('Vanderbilt TMC');
+  });
+
+  it('passes every value through when the package has no label map', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), []);
+    expect(store.getState().getValueLabel("Children's Hospital of Philadelphia")).toBe(
+      "Children's Hospital of Philadelphia",
+    );
+  });
+
+  it('reads a field data type straight from the schema', async () => {
+    const store = createDataPackageStore();
+    await store.getState().setDataPackage(makePackage(), []);
+    expect(store.getState().getFieldDataType('donors', 'age_value')).toBe('quantitative');
+    expect(store.getState().getFieldDataType('donors', 'organ')).toBe('nominal');
+    expect(store.getState().getFieldDataType('donors', 'nope')).toBeUndefined();
+  });
+});
+
+describe('dataPackageStore — getSubjectRelationship', () => {
+  // Event and Surgery each key to Patient under their own column name;
+  // Visit keys to Site only, a sibling of nothing about patients.
+  const resource = (name: string, fks: Array<[string, string, string]> = []) => ({
+    name,
+    path: `${name}.csv`,
+    'udi:row_count': 10,
+    schema: {
+      fields: [],
+      foreignKeys: fks.map(([field, ref, refField]) => ({
+        fields: [field],
+        reference: { resource: ref, fields: [refField] },
+      })),
+    },
+  });
+  function store() {
+    const s = createDataPackageStore();
+    s.setState({
+      dataPackage: {
+        'udi:path': 'data',
+        resources: [
+          resource('Patient', [['site', 'Site', 'id']]),
+          resource('Event', [['patient_id', 'Patient', 'id']]),
+          resource('Surgery', [['pid', 'Patient', 'id']]),
+          resource('Site'),
+          resource('Visit', [['site', 'Site', 'id']]),
+        ],
+      } as never,
+    });
+    return s.getState();
+  }
+
+  it('keys the subject, the filtered table and a sibling by the subject id', () => {
+    const s = store();
+    expect(s.getSubjectRelationship('Event', 'Patient', 'Patient')).toEqual({
+      originKey: 'patient_id',
+      targetKey: 'id',
+    });
+    expect(s.getSubjectRelationship('Event', 'Event', 'Patient')).toEqual({
+      originKey: 'patient_id',
+      targetKey: 'patient_id',
+    });
+    expect(s.getSubjectRelationship('Event', 'Surgery', 'Patient')).toEqual({
+      originKey: 'patient_id',
+      targetKey: 'pid',
+    });
+  });
+
+  it('resolves a filter on the parent side of the link', () => {
+    // Patient rows scoped per Site: Patient holds the site id itself.
+    expect(store().getSubjectRelationship('Patient', 'Site', 'Site')).toEqual({
+      originKey: 'site',
+      targetKey: 'id',
+    });
+  });
+
+  it('is null for a table with no key to the subject', () => {
+    const s = store();
+    // Visit only reaches Patient through Site — a different key entirely.
+    expect(s.getSubjectRelationship('Event', 'Visit', 'Patient')).toBeNull();
+    expect(s.getSubjectRelationship('Visit', 'Visit', 'Patient')).toBeNull();
   });
 });

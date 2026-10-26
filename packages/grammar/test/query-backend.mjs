@@ -203,6 +203,70 @@ unsubscribe();
 await pendingBackend.query({ source: src });
 assert.equal(transitions.length, 2, 'unsubscribed callback no longer fires');
 
+// ── headers ──────────────────────────────────────────────────────────────────
+// A static object is captured once; a function is re-read per request. The
+// latter is what lets a host refresh a bearer token without rebuilding the
+// backend (and, before it existed, without reloading the whole data package).
+const sentHeaders = [];
+const headerFetch = async (url, init) => {
+  sentHeaders.push(init.headers);
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({
+      results: Object.fromEntries(
+        JSON.parse(init.body).queries.map((q) => [
+          q.vizId,
+          { displayData: [] },
+        ]),
+      ),
+    }),
+  };
+};
+
+const staticHeaders = createRemoteBackend({
+  url: 'https://example.test/v1/yac/query',
+  headers: { Authorization: 'Bearer static' },
+  fetchFn: headerFetch,
+});
+await staticHeaders.query({ source: src });
+assert.equal(
+  sentHeaders[0].Authorization,
+  'Bearer static',
+  'a static headers object is still supported',
+);
+assert.equal(
+  sentHeaders[0]['Content-Type'],
+  'application/json',
+  'caller headers merge with Content-Type rather than replacing it',
+);
+
+let token = 'first';
+const dynamicHeaders = createRemoteBackend({
+  url: 'https://example.test/v1/yac/query',
+  headers: () => ({ Authorization: `Bearer ${token}` }),
+  fetchFn: headerFetch,
+});
+await dynamicHeaders.query({ source: src });
+token = 'refreshed';
+await dynamicHeaders.query({ source: src });
+assert.deepEqual(
+  [sentHeaders[1].Authorization, sentHeaders[2].Authorization],
+  ['Bearer first', 'Bearer refreshed'],
+  'a headers function is re-read per request, so a refreshed token is sent',
+);
+
+const noHeaders = createRemoteBackend({
+  url: 'https://example.test/v1/yac/query',
+  fetchFn: headerFetch,
+});
+await noHeaders.query({ source: src });
+assert.equal(
+  sentHeaders[3]['Content-Type'],
+  'application/json',
+  'omitting headers entirely still sends Content-Type',
+);
+
 // ── reset ────────────────────────────────────────────────────────────────────
 setQueryBackend(null);
 assert.equal(

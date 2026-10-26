@@ -31,13 +31,13 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
   );
 
   return (
-    <div className="flex gap-2 p-3 border-t">
+    <div className="udi:flex udi:gap-2 udi:p-3 udi:border-t">
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder ?? 'Ask a question...'}
-        className="min-h-[40px] max-h-[120px] resize-none"
+        className="udi:min-h-[40px] udi:max-h-[120px] udi:resize-none"
         rows={1}
       />
       <Tooltip>
@@ -47,11 +47,11 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
               onClick={handleSend}
               disabled={disabled || !text.trim()}
               size="icon"
-              className="shrink-0 self-end"
+              className="udi:shrink-0 udi:self-end"
             />
           }
         >
-          <Send className="h-4 w-4" />
+          <Send className="udi:h-4 udi:w-4" />
         </TooltipTrigger>
         <TooltipContent>Send message</TooltipContent>
       </Tooltip>

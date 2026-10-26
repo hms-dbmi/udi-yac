@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Copy the canonical sample-data/ into a consumer's static dir.
 // Single source of truth lives at repo-root sample-data/; each frontend
-// (chat, grammar-app) syncs it into its own public/data on dev/build so the
+// (chat, template studio, site) syncs it into its own static dir on dev/build so the
 // data ships in the bundle. Storybook mounts sample-data/ directly via
 // staticDirs and does not use this script.
 //

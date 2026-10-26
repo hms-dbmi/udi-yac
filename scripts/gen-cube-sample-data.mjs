@@ -1,0 +1,212 @@
+#!/usr/bin/env node
+/**
+ * Generate a small pre-aggregated data-cube sample package from the committed
+ * HuBMAP donors table.
+ *
+ * The agent ships 11 `data_cube`-tagged visualization templates whose specs use
+ * `<MARGINAL:...>` filters — they select the pre-aggregated rows where the bound
+ * dimensions are non-null and every *other* dimension is null. `sample-data/`
+ * had no cube package, so those templates had nothing to render against in the
+ * template studio. This derives one from `sample-data/hubmap/donors.tsv`.
+ *
+ * Emits every marginal of size 0, 1 and 2 over the chosen dimensions, which is
+ * exactly the set the shipped templates ask for (`<MARGINAL>`, `<MARGINAL:D>`,
+ * `<MARGINAL:D1,D2>`). Higher-order marginals are omitted to keep the file small.
+ *
+ * Usage: node scripts/gen-cube-sample-data.mjs
+ */
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const srcTsv = join(repoRoot, 'sample-data', 'hubmap', 'donors.tsv');
+const outDir = join(repoRoot, 'sample-data', 'hubmap_cube');
+
+const MEASURE = 'donor_count';
+
+// Dimension values are joined into a Map key. The separator must be a
+// character that cannot occur in the data — values contain spaces (e.g.
+// "Cerebral edema"), so a space would split them apart again.
+const KEY_SEP = '\u0000';
+
+/**
+ * Dimensions of the cube. `derive` maps a source row to the dimension value;
+ * returning null/'' drops the row from marginals involving that dimension.
+ */
+const DIMENSIONS = [
+  { name: 'sex', dataType: 'nominal', derive: (r) => r.sex },
+  { name: 'race', dataType: 'nominal', derive: (r) => r.race },
+  {
+    name: 'cause_of_death',
+    dataType: 'nominal',
+    derive: (r) => r.cause_of_death,
+  },
+  {
+    name: 'age_group',
+    dataType: 'ordinal',
+    // Decade buckets, zero-padded so lexicographic order matches numeric order.
+    derive: (r) => {
+      const years = ageInYears(r);
+      if (years === null) return null;
+      const lo = Math.floor(years / 10) * 10;
+      return `${String(lo).padStart(2, '0')}-${lo + 9}`;
+    },
+  },
+  {
+    name: 'age_years',
+    dataType: 'quantitative',
+    // Rounded to 5 years so the quantitative dimension stays low-cardinality.
+    derive: (r) => {
+      const years = ageInYears(r);
+      return years === null ? null : String(Math.round(years / 5) * 5);
+    },
+  },
+];
+
+/** donors.tsv stores age as a value + unit pair; normalize to years. */
+function ageInYears(row) {
+  const value = Number.parseFloat(row.age_value);
+  if (!Number.isFinite(value)) return null;
+  const unit = (row.age_unit || '').toLowerCase();
+  if (unit.startsWith('month')) return value / 12;
+  if (unit.startsWith('week')) return value / 52;
+  if (unit.startsWith('day')) return value / 365;
+  return value; // years, or unspecified
+}
+
+function parseTsv(text) {
+  const lines = text.split('\n').filter((line) => line.length > 0);
+  const header = lines[0].split('\t');
+  return lines.slice(1).map((line) => {
+    const cells = line.split('\t');
+    return Object.fromEntries(header.map((key, i) => [key, cells[i] ?? '']));
+  });
+}
+
+/** All subsets of `arr` with size in [0, maxSize], in ascending size order. */
+function marginalSubsets(arr, maxSize) {
+  const out = [[]];
+  for (let size = 1; size <= maxSize; size++) {
+    const walk = (start, acc) => {
+      if (acc.length === size) {
+        out.push([...acc]);
+        return;
+      }
+      for (let i = start; i < arr.length; i++) walk(i + 1, [...acc, arr[i]]);
+    };
+    walk(0, []);
+  }
+  return out;
+}
+
+const rows = parseTsv(readFileSync(srcTsv, 'utf8'));
+
+// Precompute each dimension's value per source row once.
+const derived = rows.map((row) => {
+  const values = {};
+  for (const dim of DIMENSIONS) {
+    const value = dim.derive(row);
+    values[dim.name] = value === null || value === undefined || value === '' ? null : String(value);
+  }
+  return values;
+});
+
+const cubeRows = [];
+for (const active of marginalSubsets(
+  DIMENSIONS.map((d) => d.name),
+  2,
+)) {
+  const counts = new Map();
+  for (const values of derived) {
+    // A row only contributes to a marginal if it has a value for every active
+    // dimension — otherwise the null would be indistinguishable from the
+    // "this dimension is aggregated over" null that MARGINAL filters on.
+    if (active.some((name) => values[name] === null)) continue;
+    const key = active.map((name) => values[name]).join(KEY_SEP);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const sortedKeys = [...counts.keys()].sort();
+  for (const key of sortedKeys) {
+    const parts = key === '' ? [] : key.split(KEY_SEP);
+    const row = {};
+    for (const dim of DIMENSIONS) {
+      const idx = active.indexOf(dim.name);
+      row[dim.name] = idx === -1 ? '' : parts[idx];
+    }
+    row[MEASURE] = String(counts.get(key));
+    cubeRows.push(row);
+  }
+}
+
+const columns = [...DIMENSIONS.map((d) => d.name), MEASURE];
+const csv = [
+  columns.join(','),
+  ...cubeRows.map((row) => columns.map((c) => csvCell(row[c])).join(',')),
+].join('\n');
+
+function csvCell(value) {
+  const str = value ?? '';
+  return /[",\n]/.test(str) ? `"${str.replaceAll('"', '""')}"` : str;
+}
+
+/** Distinct non-empty values for a column, used for udi:cardinality. */
+function cardinality(column) {
+  return new Set(cubeRows.map((r) => r[column]).filter((v) => v !== '')).size;
+}
+
+const datapackage = {
+  name: 'hubmap_donor_cube',
+  title: 'HuBMAP donor counts (pre-aggregated cube)',
+  description:
+    'Marginal cube derived from sample-data/hubmap/donors.tsv by ' +
+    'scripts/gen-cube-sample-data.mjs. Each row is a pre-aggregated count; a null ' +
+    'dimension means the row aggregates over that dimension. Generated for the ' +
+    'template studio so data_cube-tagged templates have data to render against.',
+  'udi:name': 'hubmap_donor_cube',
+  'udi:path': './data/hubmap_cube/',
+  resources: [
+    {
+      name: 'donor_counts',
+      path: 'donor_counts.csv',
+      type: 'table',
+      format: 'csv',
+      mediatype: 'text/csv',
+      encoding: 'utf-8',
+      scheme: 'file',
+      'udi:row_count': cubeRows.length,
+      'udi:column_count': columns.length,
+      'udi:cube': true,
+      'udi:measures': [MEASURE],
+      'udi:dimensions': DIMENSIONS.map((d) => d.name),
+      schema: {
+        fields: [
+          ...DIMENSIONS.map((dim) => ({
+            name: dim.name,
+            type: dim.dataType === 'quantitative' ? 'number' : 'string',
+            description: `Cube dimension: donor ${dim.name.replaceAll('_', ' ')}. Null when the row aggregates over this dimension.`,
+            'udi:data_type': dim.dataType,
+            'udi:cardinality': cardinality(dim.name),
+            'udi:unique': false,
+          })),
+          {
+            name: MEASURE,
+            type: 'integer',
+            description: 'Pre-aggregated count of donors matching this row’s dimensions.',
+            'udi:data_type': 'quantitative',
+            'udi:cardinality': cardinality(MEASURE),
+            'udi:unique': false,
+          },
+        ],
+      },
+    },
+  ],
+};
+
+mkdirSync(outDir, { recursive: true });
+writeFileSync(join(outDir, 'donor_counts.csv'), `${csv}\n`);
+writeFileSync(join(outDir, 'datapackage.json'), `${JSON.stringify(datapackage, null, 2)}\n`);
+
+console.log(
+  `hubmap_cube: ${cubeRows.length} rows, ${columns.length} columns → sample-data/hubmap_cube/`,
+);

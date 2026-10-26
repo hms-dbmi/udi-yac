@@ -150,6 +150,10 @@
                 }
               },
               "type": "object"
+            },
+            "unit": {
+              "description": "Make the bin width a nice multiple of this many field units, rather than of a power of ten — e.g. `365.25` bins an age in days by whole years. Optional. The renderer sets it for a column with a `udi:time_format`.",
+              "type": "number"
             }
           },
           "required": ["field"],
@@ -215,6 +219,20 @@
         }
       },
       "required": ["categoryFields"],
+      "type": "object"
+    },
+    "ConcatExpr": {
+      "additionalProperties": false,
+      "description": "String concatenation of its parts, in order. Numbers are stringified.\n\nExists because a text mark can only draw one field, so a label combining values — a category name next to its percentage — has to be assembled into a single column first. There is no formatting here: round or scale the numbers beforehand, since `[\"a\", 1 / 3]` would render every digit.",
+      "properties": {
+        "concat": {
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "type": "array"
+        }
+      },
+      "required": ["concat"],
       "type": "object"
     },
     "ConditionalExpr": {
@@ -361,6 +379,9 @@
           "$ref": "#/definitions/KDE"
         },
         {
+          "$ref": "#/definitions/Unnest"
+        },
+        {
           "$ref": "#/definitions/Only"
         }
       ],
@@ -413,8 +434,18 @@
       "description": "Defines a sorting order and a field to sort by.",
       "properties": {
         "field": {
-          "description": "The name of the field to be sorted.",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "The name of the field to be sorted, or several to sort by in turn — a tiebreak matters when a window function reads the order, because tied rows share a rank."
         },
         "order": {
           "description": "The sorting order for the field, either ascending ('asc') or descending ('desc').",
@@ -458,9 +489,15 @@
         },
         {
           "$ref": "#/definitions/WindowExpr"
+        },
+        {
+          "$ref": "#/definitions/ConcatExpr"
+        },
+        {
+          "$ref": "#/definitions/FunctionExpr"
         }
       ],
-      "description": "A backend-neutral expression AST used by `derive` and `filter`, so the same spec can be compiled to Arquero (client/interactive) or SQL (server/remote).\n\nIt is deliberately NOT a general expression language: it covers exactly the surface the visualization templates emit today — field references, literals, binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates (count/sum/…), and window functions (rank). Add a node only when a template needs one.\n\nThe union is untagged; nodes are distinguished by key (`field` | `literal` | `op` | `if` | `agg` | `window`) without a `type` tag. CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field` prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node uses `agg`.\n\nponytail: the `string` form in DeriveExpression/FilterExpression is transitional. Once all templates/specs emit Expr, drop `string |` from those unions and the SQL backend no longer needs to reject raw expressions."
+      "description": "A backend-neutral expression AST used by `derive` and `filter`, so the same spec can be compiled to Arquero (client/interactive) or SQL (server/remote).\n\nIt is deliberately NOT a general expression language: it covers exactly the surface the visualization templates emit today — field references, literals, binary arithmetic/comparison/logic, ternary conditionals, per-group aggregates (count/sum/…), window functions (rank), and the log/exp math functions. Add a node only when a template needs one.\n\nThe union is untagged; nodes are distinguished by key (`field` | `literal` | `op` | `if` | `agg` | `window` | `concat` | `fn`) without a `type` tag. CAVEAT for compiler authors: `AggregateExpr` optionally carries a `field` prop ({ agg: 'max', field: 'g' }), so dispatch must test the bare FieldExpr case LAST (or test `agg` first). `BinaryExpr` owns `op`; the aggregate node uses `agg`.\n\nponytail: the `string` form in DeriveExpression/FilterExpression is transitional. Once all templates/specs emit Expr, drop `string |` from those unions and the SQL backend no longer needs to reject raw expressions."
     },
     "FieldExpr": {
       "additionalProperties": false,
@@ -514,7 +551,7 @@
         },
         "match": {
           "$ref": "#/definitions/FilterMatch",
-          "description": "Specifies whether to use 'all' or 'any' of the selected data in a 1-to-many mapping. Default is 'any'."
+          "description": "Specifies whether a target must relate to 'any', 'all' or 'none' of the selected data in a 1-to-many mapping. Default is 'any'.\n\nWith `source` equal to the filtered table and both keys naming a subject column (e.g. a patient id), the filter keeps every row of each subject that matches, not just the matching rows."
         },
         "name": {
           "description": "The name of the selection.",
@@ -559,9 +596,29 @@
       "description": "A filter expression: a structured expression (Expr) that evaluates to a boolean, or a data selection. The legacy raw Arquero string form is still accepted during migration (see Expr)."
     },
     "FilterMatch": {
-      "description": "A filter match type, which specifies how to match the filter data selection.",
-      "enum": ["all", "any"],
+      "description": "A filter match type, which specifies how to match the filter data selection across the rows each target key relates to: keep targets with at least one matching row ('any'), with every row matching ('all'), or with no matching row ('none').",
+      "enum": ["all", "any", "none"],
       "type": "string"
+    },
+    "FunctionExpr": {
+      "additionalProperties": false,
+      "description": "A scalar math function of one argument. `log` is the NATURAL logarithm.\n\nExists for running products: no executor has a portable product aggregate, but a product is `exp(sum(log(x)))`, and a running sum is already a rolling derive — which is how the survival templates compute the Kaplan-Meier estimate. `log` of zero or a negative number is -Infinity/NaN in Arquero and an error in SQL, so guard the argument with a conditional.",
+      "properties": {
+        "args": {
+          "items": {
+            "$ref": "#/definitions/Expr"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        },
+        "fn": {
+          "enum": ["log", "exp"],
+          "type": "string"
+        }
+      },
+      "required": ["fn", "args"],
+      "type": "object"
     },
     "GenericFieldMapping<ArcEncodingOptions>": {
       "additionalProperties": false,
@@ -584,6 +641,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -591,6 +655,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -625,6 +694,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -632,6 +708,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -666,6 +747,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -673,6 +761,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -707,6 +800,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -714,6 +814,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -748,6 +853,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -755,6 +867,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -789,6 +906,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -796,6 +920,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -830,6 +959,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -837,6 +973,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -871,6 +1012,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "omitLegend": {
           "description": "Set to true to omit the legend for this encoding.",
           "type": "boolean"
@@ -878,6 +1026,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -895,6 +1048,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -917,6 +1100,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -926,6 +1126,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -948,6 +1178,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -957,6 +1204,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -979,6 +1256,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -988,6 +1282,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1010,6 +1334,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1019,6 +1360,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1041,6 +1412,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1050,6 +1438,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1072,6 +1490,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1081,6 +1516,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1103,6 +1568,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1112,6 +1594,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1134,6 +1646,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1143,6 +1672,36 @@
       "additionalProperties": false,
       "description": "A generic layer for visualizing data.",
       "properties": {
+        "align": {
+          "description": "Horizontal anchoring of a text mark relative to its x position. Text is centred by default, which puts half a label on the wrong side of whatever it annotates. Optional.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "avoidOverlap": {
+          "description": "Keep this layer's marks from drawing on top of each other, by nudging them apart along their position axis (`y` if the layer encodes one, else `x`). Optional; for `text` marks, where two labels landing on the same value makes both unreadable.\n\n`true` uses a default separation of 5% of the axis. A number sets the minimum separation explicitly, **in data units** — at spec-build time the plot's pixel size is not known, but an author who knows the axis runs 0..100 knows what a separation of 5 looks like on it.",
+          "type": ["boolean", "number"]
+        },
+        "dx": {
+          "description": "Pixel offsets applied after positioning, for nudging an annotation clear of the mark it labels. Optional.",
+          "type": "number"
+        },
+        "dy": {
+          "type": "number"
+        },
+        "interpolate": {
+          "description": "How a `line` or `area` mark connects consecutive points. Optional; the default `linear` draws a straight segment between them.\n\n`step-after` holds each value until the next point and then jumps, which is the correct reading whenever the quantity is constant between observations rather than changing gradually — a survival curve, a running total, any step function. Drawing those sloped implies measurements nobody took.",
+          "enum": [
+            "linear",
+            "step",
+            "step-before",
+            "step-after",
+            "basis",
+            "cardinal",
+            "monotone",
+            "natural"
+          ],
+          "type": "string"
+        },
         "mapping": {
           "anyOf": [
             {
@@ -1165,6 +1724,23 @@
         "select": {
           "$ref": "#/definitions/DataSelection",
           "description": "The data selection configuration for the layer. Optional."
+        },
+        "stroke": {
+          "description": "A constant outline for the mark: colour, width in pixels, and opacity. Optional.\n\nOn a `text` mark this is a legibility halo — a label drawn over other marks needs to be separated from them. The renderer draws such a layer twice (the outline pass beneath a clean fill pass), because SVG paints stroke *over* fill and a single pass would eat into the glyphs.",
+          "type": "string"
+        },
+        "strokeDash": {
+          "description": "Dash pattern for the mark's stroke, as alternating on/off lengths in pixels (e.g. `[4, 4]`). Optional; omitted means a solid stroke. Used to mark a layer as an annotation — a reference line, a threshold — so it reads as guidance rather than as data.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "strokeOpacity": {
+          "type": "number"
+        },
+        "strokeWidth": {
+          "type": "number"
         }
       },
       "required": ["mark", "mapping"],
@@ -1373,6 +1949,11 @@
           "additionalProperties": false,
           "description": "Configuration for the join operation.",
           "properties": {
+            "kind": {
+              "description": "Which rows survive. Optional; defaults to `inner` — only rows matched on both sides.\n\n`left` keeps every row of the first table, filling the second table's columns with null where there was no match. That is the only way to ask about **absence**: whether a subject appears in another table at all is unanswerable from an inner join, which drops exactly the rows that would have answered \"no\".",
+              "enum": ["inner", "left"],
+              "type": "string"
+            },
             "on": {
               "anyOf": [
                 {
@@ -1809,6 +2390,13 @@
           "description": "The field to map to the encoding.",
           "type": "string"
         },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Display labels for this encoding's categorical values, raw value → label (e.g. `{ \"Children's Hospital of Philadelphia\": \"CHOP\" }`). Compiles to Vega's `labelExpr`, so it changes only the axis and legend text — the underlying data keeps its raw values, and selections, filters and tooltips are unaffected. Values with no entry render unchanged.",
+          "type": "object"
+        },
         "mark": {
           "$ref": "#/definitions/RowMarkOptions",
           "description": "The type of mark used in the row layer."
@@ -1824,6 +2412,11 @@
         "range": {
           "$ref": "#/definitions/Domain",
           "description": "The custom range will change the scaling of visual encodings."
+        },
+        "sort": {
+          "description": "Order of a categorical domain the renderer computes (no explicit `domain`, `domainWhenFiltered` not `\"filtered\"`). Always computed from the unfiltered data, so it holds still as filters change.\n- `\"ascending\"` (default): alphabetical, numbers in numeric order, nulls last.\n- `\"-x\"` / `\"-y\"`: by the per-category sum of that channel's field, largest   first (a bar chart's bar totals); ties alphabetical.",
+          "enum": ["ascending", "-x", "-y"],
+          "type": "string"
         },
         "title": {
           "description": "Custom title for the axis or legend label of this encoding. Overrides the default field name displayed on the axis.",
@@ -1910,6 +2503,17 @@
           ],
           "description": "The data source or data sources. This can be a single CSV file or a list of CSV files."
         },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/VisualizationTitle"
+            }
+          ],
+          "description": "A heading for the whole visualization. A bare string is left-aligned; pass an object to place it elsewhere.\n\nUseful when a chart labels its series inline and so has no legend: the grouping *variable* still needs naming, which a legend would otherwise have carried in its title."
+        },
         "transformation": {
           "description": "The data transformations applied to the source data before displaying the data.",
           "items": {
@@ -1934,6 +2538,42 @@
           "type": "boolean"
         }
       },
+      "type": "object"
+    },
+    "Unnest": {
+      "additionalProperties": false,
+      "description": "Expands a delimited multi-value field into one row per value.\n\nSome source columns hold a set rather than a scalar — `\"Spine;Brain\"` means the row belongs to both categories. Grouping on such a column treats every distinct combination as its own category, which is both wrong and unusable (a column with 22 real values can have 78 combinations). This is the only transformation that increases the row count: a row with n values becomes n rows, each carrying one value and a copy of every other column. Rows whose field is null or empty are dropped, since they belong to no category.",
+      "properties": {
+        "in": {
+          "description": "The name of the input table. If not specified, it assumes the output of the previous operation.",
+          "type": "string"
+        },
+        "out": {
+          "description": "The name of the output table. If not specified, it overwrites the name of the previous table.",
+          "type": "string"
+        },
+        "unnest": {
+          "additionalProperties": false,
+          "description": "Configuration for expanding the field.",
+          "properties": {
+            "field": {
+              "description": "The multi-value field to expand.",
+              "type": "string"
+            },
+            "out": {
+              "description": "Column to write each individual value into. Defaults to overwriting `field`, which keeps downstream references to the original name working.",
+              "type": "string"
+            },
+            "separator": {
+              "description": "The delimiter between values. Defaults to `;`. Surrounding whitespace is always trimmed, so `\"a; b\"` and `\"a;b\"` behave the same.",
+              "type": "string"
+            }
+          },
+          "required": ["field"],
+          "type": "object"
+        }
+      },
+      "required": ["unnest"],
       "type": "object"
     },
     "VisualizationLayer": {
@@ -1964,6 +2604,22 @@
         }
       ],
       "description": "A visualization layer for rendering data. This can include various types of marks such as lines, bars, points, etc."
+    },
+    "VisualizationTitle": {
+      "additionalProperties": false,
+      "description": "A visualization heading with explicit placement.",
+      "properties": {
+        "align": {
+          "description": "Where the heading sits horizontally. Defaults to `left`. Align it with whatever it is naming — a chart whose series labels run down the right edge reads better with a right-aligned heading.",
+          "enum": ["left", "center", "right"],
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": ["text"],
+      "type": "object"
     },
     "WindowExpr": {
       "additionalProperties": false,

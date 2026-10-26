@@ -88,3 +88,42 @@ describe('parseSessionExport', () => {
     expect(result.error).toMatch(/layout/);
   });
 });
+
+describe('parseSessionExport — title fields', () => {
+  const payloadWith = (viz: Record<string, unknown>) => ({
+    version: 1,
+    exportedAt: '2026-05-28T00:00:00.000Z',
+    conversation: minimalConversation,
+    visualizations: [viz],
+    layout: { items: [{ i: '0-0', x: 0, y: 0, w: 1, h: 9 }] },
+  });
+
+  it('round-trips a rename alongside the assistant title', () => {
+    const result = parseSessionExport(
+      payloadWith({ ...sampleViz('0-0'), userTitle: 'Cohort breakdown' }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.visualizations[0]).toMatchObject({
+      title: 'title 0-0',
+      userTitle: 'Cohort breakdown',
+    });
+  });
+
+  it('accepts an export predating the rename feature', () => {
+    const result = parseSessionExport(payloadWith(sampleViz('0-0')));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.visualizations[0].userTitle).toBeUndefined();
+  });
+
+  it('drops non-string title fields rather than failing the import', () => {
+    const result = parseSessionExport(
+      payloadWith({ ...sampleViz('0-0'), title: 42, userTitle: { nope: true } }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.visualizations[0].title).toBeUndefined();
+    expect(result.value.visualizations[0].userTitle).toBeUndefined();
+  });
+});

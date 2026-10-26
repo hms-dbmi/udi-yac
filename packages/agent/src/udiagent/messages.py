@@ -2,6 +2,69 @@
 
 import json
 
+#: The tool call a client echoes back for every chart already on the dashboard.
+RENDER_VISUALIZATION = "RenderVisualization"
+
+#: The internal tool that reads back a chart's full spec (see `udiagent.tools`).
+GET_VISUALIZATION_SPEC = "GetVisualizationSpec"
+
+
+def _function(tool_call: dict) -> dict:
+    """A tool call's function part, in either the flat or the OpenAI shape."""
+    return tool_call.get("function") or tool_call
+
+
+def visualization_calls(messages: list[dict]):
+    """Yield `(chart_id, tool_call)` for each chart rendered earlier in a history.
+
+    Charts are numbered in the order they appear — `chart_1`, `chart_2` — so the
+    same history always gives the same ids, which is what lets the model ask
+    for one by the id it was shown.
+    """
+    count = 0
+    for message in messages:
+        for tool_call in message.get("tool_calls") or []:
+            if isinstance(tool_call, dict) and _function(tool_call).get("name") == RENDER_VISUALIZATION:
+                count += 1
+                yield f"chart_{count}", tool_call
+
+
+def _compact_arguments(chart_id: str, meta: dict) -> dict:
+    """What the model is shown for a template-made chart instead of its spec.
+
+    The template call that produced it: the arguments a follow-up ("EFS too")
+    should start from, rather than a long spec it would have to reverse-engineer
+    — which also read its derived columns as settings to choose, and so switched
+    on options nobody asked for. Marked as trimmed, with the way to the rest.
+    """
+    return {
+        "chart_id": chart_id,
+        "template_tool": meta["tool_used"],
+        "template_args": meta.get("tool_args") or {},
+        "spec": (
+            "Omitted here to keep the history short; it is exactly what "
+            "template_tool produces from template_args. Call "
+            f'{GET_VISUALIZATION_SPEC} with chart_id "{chart_id}" to read it in full.'
+        ),
+    }
+
+
+def compact_visualization_history(messages: list[dict]) -> list[dict]:
+    """Replace each template-made chart's spec with the template call behind it.
+
+    Applies to a `RenderVisualization` call whose `meta` names the template it
+    came from and which has not been revealed (`meta.spec_revealed`, set when the
+    model asked for it with `GetVisualizationSpec`). A chart without that
+    provenance — drawn freehand — keeps its spec: there is no shorter, faithful
+    description of it. Mutates and returns `messages`; pass a copy.
+    """
+    for chart_id, tool_call in visualization_calls(messages):
+        function = _function(tool_call)
+        meta = function.get("meta") or {}
+        if meta.get("tool_used") and not meta.get("spec_revealed"):
+            function["arguments"] = _compact_arguments(chart_id, meta)
+    return messages
+
 
 def split_tool_calls(messages: list[dict]) -> list[dict]:
     """Split messages with multiple tool calls into separate messages.
@@ -24,7 +87,16 @@ def split_tool_calls(messages: list[dict]) -> list[dict]:
     return new_messages
 
 
-def normalize_tool_calls(messages: list[dict]) -> list[dict]:
+#: The reply a past FilterData call gets in the history. A bare "OK" read as
+#: "this filter is on", and the model answered "which filters are on?" from its
+#: own earlier call even with the edited state in front of it.
+FILTER_CALL_REPLY = (
+    "Applied when made. The user may have edited or removed this filter since; "
+    "the Current filters section is the present state."
+)
+
+
+def normalize_tool_calls(messages: list[dict], *, compact_charts: bool = True) -> list[dict]:
     """Reformat tool_calls into valid OpenAI function-calling format and
     inject synthetic tool-response messages where missing.
 
@@ -33,7 +105,13 @@ def normalize_tool_calls(messages: list[dict]) -> list[dict]:
     The OpenAI API requires each tool_call entry to have "id",
     "type": "function", and arguments as a JSON string.  It also
     requires a corresponding "tool" role message for every tool_call_id.
+
+    With `compact_charts` (the default), a chart made from a template is shown
+    as the template call behind it rather than its full spec — see
+    `compact_visualization_history`. Mutates `messages`; pass a copy.
     """
+    if compact_charts:
+        messages = compact_visualization_history(messages)
     result = []
     for idx, message in enumerate(messages):
         if "tool_calls" not in message:
@@ -93,7 +171,11 @@ def normalize_tool_calls(messages: list[dict]) -> list[dict]:
                     {
                         "role": "tool",
                         "tool_call_id": tc["id"],
-                        "content": "OK",
+                        "content": (
+                            FILTER_CALL_REPLY
+                            if tc["function"]["name"] == "FilterData"
+                            else "OK"
+                        ),
                     }
                 )
 

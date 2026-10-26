@@ -24,16 +24,16 @@ export function WelcomeSplash() {
   const mascot = useMascot();
   const mascotContent =
     mascot === undefined ? (
-      <img src={mascotSrc} alt="YAC mascot" className="w-60 h-60 object-contain" />
+      <img src={mascotSrc} alt="YAC mascot" className="udi:w-60 udi:h-60 udi:object-contain" />
     ) : (
       mascot // null \u2192 renders nothing; otherwise render the consumer's node
     );
 
   return (
-    <div className="flex items-center justify-center h-full p-6">
+    <div className="udi:flex udi:items-center udi:justify-center udi:h-full udi:p-6">
       {/* Arrow pointing left toward chat */}
       <svg
-        className="w-[40%] max-w-[300px] min-w-[100px] opacity-70 self-start mt-4"
+        className="udi:w-[40%] udi:max-w-[300px] udi:min-w-[100px] udi:opacity-70 udi:self-start udi:mt-4"
         viewBox="0 0 200 60"
         fill="none"
         preserveAspectRatio="xMinYMid meet"
@@ -56,12 +56,12 @@ export function WelcomeSplash() {
       </svg>
 
       {/* Mascot + speech bubble */}
-      <div className="flex flex-col items-center gap-1 mt-12">
+      <div className="udi:flex udi:flex-col udi:items-center udi:gap-1 udi:mt-12">
         {message !== null && (
-          <div className="relative bg-[#e8f4fc] border-[1.5px] border-[#57b4e9] rounded-2xl px-5 py-3">
-            <span className="text-sm text-foreground">{message}</span>
-            <div className="absolute -bottom-[10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#57b4e9]" />
-            <div className="absolute -bottom-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#e8f4fc]" />
+          <div className="udi:relative udi:bg-[#e8f4fc] udi:border-[1.5px] udi:border-[#57b4e9] udi:rounded-2xl udi:px-5 udi:py-3">
+            <span className="udi:text-sm udi:text-foreground">{message}</span>
+            <div className="udi:absolute udi:-bottom-[10px] udi:left-1/2 udi:-translate-x-1/2 udi:w-0 udi:h-0 udi:border-l-[10px] udi:border-r-[10px] udi:border-t-[10px] udi:border-l-transparent udi:border-r-transparent udi:border-t-[#57b4e9]" />
+            <div className="udi:absolute udi:-bottom-[8px] udi:left-1/2 udi:-translate-x-1/2 udi:w-0 udi:h-0 udi:border-l-[8px] udi:border-r-[8px] udi:border-t-[8px] udi:border-l-transparent udi:border-r-transparent udi:border-t-[#e8f4fc]" />
           </div>
         )}
         {mascotContent}

@@ -35,7 +35,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        'fixed inset-0 isolate z-1499 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',
+        'udi:fixed udi:inset-0 udi:isolate udi:z-1499 udi:bg-black/10 udi:duration-100 udi:supports-backdrop-filter:backdrop-blur-xs udi:data-open:animate-in udi:data-open:fade-in-0 udi:data-closed:animate-out udi:data-closed:fade-out-0',
         className,
       )}
       {...props}
@@ -57,7 +57,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          'fixed top-1/2 left-1/2 z-1500 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+          'udi:fixed udi:top-1/2 udi:left-1/2 udi:z-1500 udi:grid udi:w-full udi:max-w-[calc(100%-2rem)] udi:-translate-x-1/2 udi:-translate-y-1/2 udi:gap-4 udi:rounded-xl udi:bg-popover udi:p-4 udi:text-sm udi:text-popover-foreground udi:ring-1 udi:ring-foreground/10 udi:duration-100 udi:outline-none udi:sm:max-w-sm udi:data-open:animate-in udi:data-open:fade-in-0 udi:data-open:zoom-in-95 udi:data-closed:animate-out udi:data-closed:fade-out-0 udi:data-closed:zoom-out-95',
           className,
         )}
         {...props}
@@ -66,10 +66,16 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            render={<Button variant="ghost" className="absolute top-2 right-2" size="icon-sm" />}
+            render={
+              <Button
+                variant="ghost"
+                className="udi:absolute udi:top-2 udi:right-2"
+                size="icon-sm"
+              />
+            }
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="udi:sr-only">Close</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -79,7 +85,11 @@ function DialogContent({
 
 function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div data-slot="dialog-header" className={cn('flex flex-col gap-2', className)} {...props} />
+    <div
+      data-slot="dialog-header"
+      className={cn('udi:flex udi:flex-col udi:gap-2', className)}
+      {...props}
+    />
   );
 }
 
@@ -95,7 +105,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        '-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end',
+        'udi:-mx-4 udi:-mb-4 udi:flex udi:flex-col-reverse udi:gap-2 udi:rounded-b-xl udi:border-t udi:bg-muted/50 udi:p-4 udi:sm:flex-row udi:sm:justify-end',
         className,
       )}
       {...props}
@@ -112,7 +122,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn('font-heading text-base leading-none font-medium', className)}
+      className={cn('udi:font-heading udi:text-base udi:leading-none udi:font-medium', className)}
       {...props}
     />
   );
@@ -123,7 +133,7 @@ function DialogDescription({ className, ...props }: DialogPrimitive.Description.
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        'text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground',
+        'udi:text-sm udi:text-muted-foreground udi:*:[a]:underline udi:*:[a]:underline-offset-3 udi:*:[a]:hover:text-foreground',
         className,
       )}
       {...props}

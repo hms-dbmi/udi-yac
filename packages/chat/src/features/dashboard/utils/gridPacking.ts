@@ -1,4 +1,5 @@
 import type { Layout, LayoutItem } from 'react-grid-layout';
+import { DEFAULT_CARD_H } from './gridDefaults';
 
 /**
  * During a live resize, forces one row to a specific height instead of the
@@ -95,6 +96,67 @@ export function packAllRowMajor(
   return out;
 }
 
+/** How many times taller than its row's other cards a card may be before it
+ *  takes the row to itself (`widenTallItems`). */
+export const TALL_CARD_RATIO = 2;
+
+/** `ordered` split into the rows packAllRowMajor would put it in, by the same
+ *  wrap rule, with each card's own height intact. */
+function rowsOf(ordered: readonly LayoutItem[], cols: number): LayoutItem[][] {
+  const rows: LayoutItem[][] = [];
+  let cursorX = cols;
+  for (const item of ordered) {
+    const w = Math.max(1, Math.min(item.w, cols));
+    if (cursorX + w > cols) {
+      rows.push([]);
+      cursorX = 0;
+    }
+    rows[rows.length - 1].push(item);
+    cursorX += w;
+  }
+  return rows;
+}
+
+/**
+ * Give each card in `ids` that is far taller than the cards beside it a row of
+ * its own, by widening it to every column. A row is as tall as its tallest card
+ * (packAllRowMajor), so one 41-row chart of 198 categories next to 7-row cards
+ * stretched every one of them to 41.
+ *
+ * "Far taller" is more than TALL_CARD_RATIO times the shortest other card in its
+ * row, the one it would stretch the most. (Against the tallest, two tall charts
+ * side by side vouch for each other and still stretch a short card next to
+ * them.) A card alone in its row is measured against `reference`, the height a
+ * neighbour usually has, so a tall first chart is widened too and the next one
+ * added doesn't land beside it. Returns `ordered` with those widths changed;
+ * pack it afterwards.
+ */
+export function widenTallItems(
+  ordered: readonly LayoutItem[],
+  cols: number,
+  ids: ReadonlySet<string>,
+  reference = DEFAULT_CARD_H,
+): LayoutItem[] {
+  const safeCols = Math.max(1, Math.floor(cols));
+  let items = [...ordered];
+  // Each pass widens at most one card, which can't be picked again (it is
+  // already full width), so this ends within ids.size passes.
+  for (;;) {
+    const tall = rowsOf(items, safeCols)
+      .flatMap((row) =>
+        row.filter((it) => {
+          if (!ids.has(it.i) || it.w >= safeCols) return false;
+          const others = row.filter((o) => o !== it).map((o) => o.h);
+          return it.h > TALL_CARD_RATIO * (others.length ? Math.min(...others) : reference);
+        }),
+      )
+      .at(0);
+    if (!tall) return items;
+    // Widening re-wraps every later row, so re-measure from the start.
+    items = items.map((it) => (it === tall ? { ...it, w: safeCols } : it));
+  }
+}
+
 /**
  * Canonical layout normal form: sort items into row-major reading order, then
  * pack them tightly into `cols` columns with no gaps. Idempotent — packing an
@@ -114,7 +176,9 @@ export function packRowMajor(
 }
 
 /**
- * Insert a new item at the front of the row-major order and re-pack.
+ * Insert a new item at the front of the row-major order and re-pack. A new
+ * item far taller than the cards it would join gets a row of its own
+ * (`widenTallItems`).
  *
  * Example with `cols=2`:
  *   existing = [A@(0,0,1,9), B@(1,0,1,9)]
@@ -127,5 +191,5 @@ export function repackRowMajor(
   cols: number,
 ): Layout {
   const sorted = sortRowMajor(existing).filter((it) => it.i !== newItem.i);
-  return packAllRowMajor([newItem, ...sorted], cols);
+  return packAllRowMajor(widenTallItems([newItem, ...sorted], cols, new Set([newItem.i])), cols);
 }

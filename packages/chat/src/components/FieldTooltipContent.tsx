@@ -3,6 +3,10 @@ import { TooltipContent } from '@/components/ui/tooltip';
 
 interface FieldTooltipContentProps {
   field: string;
+  /** The package's friendly label, when it says something the column name
+   *  doesn't (`body_mass_index_value` → "BMI"). Shown above the raw name
+   *  rather than replacing it — you hover a field to learn what it is called. */
+  label?: string | undefined;
   dataType?: string | undefined;
   description?: string | undefined;
 }
@@ -12,18 +16,30 @@ interface FieldTooltipContentProps {
  * its description. Shared by the chat's field chips and the data overview's
  * field list so a field looks the same wherever it is hovered.
  */
-export function FieldTooltipContent({ field, dataType, description }: FieldTooltipContentProps) {
+export function FieldTooltipContent({
+  field,
+  label,
+  dataType,
+  description,
+}: FieldTooltipContentProps) {
+  const showLabel = !!label && label !== field;
   return (
-    <TooltipContent className="max-w-sm flex-col items-start gap-1 px-3 py-2 text-xs">
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono font-medium">{field}</span>
+    <TooltipContent className="udi:max-w-sm udi:flex-col udi:items-start udi:gap-1 udi:px-3 udi:py-2 udi:text-xs">
+      {showLabel && <span className="udi:font-medium">{label}</span>}
+      <div className="udi:flex udi:items-center udi:gap-1.5">
+        <span className="udi:font-mono udi:font-medium">{field}</span>
         {dataType && (
-          <Badge variant="outline" className="border-background/30 text-[9px] text-background">
+          <Badge
+            variant="outline"
+            className="udi:border-background/30 udi:text-2xs udi:text-background"
+          >
             {dataType}
           </Badge>
         )}
       </div>
-      {description && <p className="text-[11px] leading-snug text-background/80">{description}</p>}
+      {description && (
+        <p className="udi:text-xs udi:leading-snug udi:text-background/80">{description}</p>
+      )}
     </TooltipContent>
   );
 }

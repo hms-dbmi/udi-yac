@@ -1,6 +1,7 @@
 """Data schema parsing and simplification utilities."""
 
 import json
+import re
 
 
 def parse_schema_from_dict(raw: dict) -> dict:
@@ -236,6 +237,12 @@ def simplify_data_schema(data_schema):
     return "\n".join(lines)
 
 
+#: Values shown per column in a prompt. Deliberately small and unrelated to how
+#: many the client transports: the prompt needs enough to recognise the column's
+#: vocabulary, and `ListFieldValues` covers the rest on demand.
+PROMPT_VALUE_SAMPLE = 8
+
+
 def simplify_data_domains(data_domains):
     """Simplify data domains for better LLM consumption.
 
@@ -279,13 +286,128 @@ def simplify_data_domains(data_domains):
                 lines.append(f"        range: [{dmin}, {dmax}]")
             elif ftype == "point":
                 values = [v for v in domain.get("values", []) if v is not None]
-                if len(values) <= 8:
+                # The client sends the true count alongside the values, which may
+                # be fewer or none. Without it a shortened list reads as the whole
+                # column, and the model starts telling users a value does not
+                # exist because it was not in the sample.
+                distinct = domain.get("distinct")
+                if not isinstance(distinct, int) or distinct < len(values):
+                    distinct = len(values)
+
+                if domain.get("omitted") or (distinct and not values):
+                    lines.append(
+                        f"        values: {distinct} distinct — not listed "
+                        f"(too many to send); call "
+                        f'ListFieldValues("{entity}", "{name}") if you need them'
+                    )
+                elif len(values) <= PROMPT_VALUE_SAMPLE and distinct == len(values):
                     vals_str = ", ".join(str(v) for v in values)
                     lines.append(f"        values: [{vals_str}]")
                 else:
-                    sample = ", ".join(str(v) for v in values[:5])
+                    sample = ", ".join(str(v) for v in values[:PROMPT_VALUE_SAMPLE])
                     lines.append(
-                        f"        values: [{sample}, ...] ({len(values)} unique)"
+                        f"        values: [{sample}, ...] — showing "
+                        f"{min(PROMPT_VALUE_SAMPLE, len(values))} of {distinct}; "
+                        f'call ListFieldValues("{entity}", "{name}") for all '
+                        f"{distinct}"
                     )
 
     return "\n".join(lines)
+
+
+#: Most values one `contains` search returns. A search is for finding the few
+#: labels a user means, and a fragment like "a" should not dump a whole column.
+LOOKUP_MATCH_CAP = 60
+
+
+def _matches(value, query):
+    """Whether `value` is what a search for `query` means: the text, or every
+    word of it in any order ("regimen b" finds "ACNS0334: Regimen B")."""
+    text = value.lower()
+    if query.lower() in text:
+        return True
+    wanted = set(re.findall(r"[a-z0-9]+", query.lower()))
+    return bool(wanted) and wanted <= set(re.findall(r"[a-z0-9]+", text))
+
+
+def lookup_field_values(data_domains, entity, field, contains=None):
+    """Answer `ListFieldValues`: the values a prompt only sampled.
+
+    The values are already in the request — the client sends every column's
+    domain, capped for size — they are simply not all in the prompt. So this
+    reads them back rather than fetching anything, which is what makes a
+    sample honest: the rest is one call away and no round trip to the client
+    is needed. Shared by the orchestrator and vis generation, which both write
+    values a user named.
+
+    `contains` narrows a long column to the values matching a search, so a
+    column of hundreds of protocol arms can be searched rather than dumped.
+    """
+    entity = (entity or "").strip()
+    field = (field or "").strip()
+    contains = (contains or "").strip()
+    try:
+        domains = (
+            json.loads(data_domains)
+            if isinstance(data_domains, str)
+            else data_domains
+        ) or []
+    except (json.JSONDecodeError, TypeError):
+        domains = []
+
+    match = next(
+        (
+            d
+            for d in domains
+            if d.get("entity") == entity and d.get("field") == field
+        ),
+        None,
+    )
+    if match is None:
+        known = sorted(
+            {f"{d.get('entity')}.{d.get('field')}" for d in domains if d.get("field")}
+        )
+        return (
+            f"No column '{field}' on '{entity}'. Columns with values on "
+            f"record: {', '.join(known[:40]) or 'none'}."
+        )
+
+    domain = match.get("domain") or {}
+    if match.get("type") == "interval":
+        return (
+            f"{entity}.{field} is numeric, ranging from "
+            f"{domain.get('min')} to {domain.get('max')}."
+        )
+
+    values = [v for v in domain.get("values", []) if v is not None]
+    distinct = domain.get("distinct", len(values))
+    if not values:
+        # Omitted for size, which is not the same as being an identifier: a
+        # long vocabulary can be omitted too. Say what is known and no more.
+        return (
+            f"{entity}.{field} has {distinct} distinct values, too many to send "
+            f"with this request, so they cannot be listed or searched here. Use "
+            f"exact values the user gave, or filter on a range or group by the "
+            f"column rather than naming values."
+        )
+    if contains:
+        found = [v for v in values if _matches(str(v), contains)]
+        if not found:
+            return (
+                f"No value of {entity}.{field} matches '{contains}' (searched all "
+                f"{len(values)} on record). Try a shorter or different search."
+            )
+        shown = ", ".join(str(v) for v in found[:LOOKUP_MATCH_CAP])
+        rest = len(found) - LOOKUP_MATCH_CAP
+        more = f" … and {rest} more; search more narrowly to see them" if rest > 0 else ""
+        return (
+            f"{len(found)} value(s) of {entity}.{field} match '{contains}': "
+            f"{shown}{more}."
+        )
+    listed = ", ".join(str(v) for v in values)
+    if len(values) < distinct:
+        return (
+            f"{entity}.{field} has {distinct} distinct values. The "
+            f"{len(values)} on record here: {listed}."
+        )
+    return f"{entity}.{field} has {distinct} distinct values, all of them: {listed}."

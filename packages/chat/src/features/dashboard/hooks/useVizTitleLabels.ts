@@ -1,0 +1,30 @@
+import { useMemo } from 'react';
+import { useDataPackage } from '@/app/UDIChatContext';
+import type { VizTitleLabels } from '../utils/vizTitle';
+
+/**
+ * The data package's display labels, in the shape `buildVizTitle` wants.
+ *
+ * The lookups are stable store actions that read through to current
+ * state, so the object only needs rebuilding when the package itself changes —
+ * which is also what makes a title recompute once labels arrive.
+ */
+export function useVizTitleLabels(): VizTitleLabels {
+  const dataPackage = useDataPackage((s) => s.dataPackage);
+  const getFieldLabel = useDataPackage((s) => s.getFieldLabel);
+  const getEntityLabel = useDataPackage((s) => s.getEntityLabel);
+  const getFieldDataType = useDataPackage((s) => s.getFieldDataType);
+  const hasField = useDataPackage((s) => s.hasField);
+  return useMemo(
+    () => ({
+      getFieldLabel,
+      getEntityLabel,
+      getFieldDataType,
+      hasField,
+      // The whole map, not a lookup: it is attached to categorical encodings so
+      // the toolkit can compile it into one Vega labelExpr.
+      valueLabels: dataPackage?.['udi:labels'],
+    }),
+    [dataPackage, getFieldLabel, getEntityLabel, getFieldDataType, hasField],
+  );
+}

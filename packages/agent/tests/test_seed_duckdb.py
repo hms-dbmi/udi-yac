@@ -17,6 +17,7 @@ from udiagent.query import DuckDBConnector, QueryEngine, introspect  # noqa: E40
 
 def _make_package(tmp: Path) -> Path:
     (tmp / "patient.csv").write_text("research_id,age\nP1,10\nP2,20\n")
+    (tmp / "example_prompts.json").write_text('["Ages by visit kind?", "  "]')
     # `visit_day` mixes numbers with a sentinel -> must type numeric with NULL,
     # not text. `kind` keeps its sentinel-looking value as a real category.
     (tmp / "visit.csv").write_text(
@@ -34,11 +35,16 @@ def _make_package(tmp: Path) -> Path:
                     {
                         "name": "Patient",
                         "path": "patient.csv",
+                        "description": "One row per patient.",
                         "udi:row_count": 2,
                         "schema": {
                             "fields": [
                                 {"name": "research_id", "udi:data_type": "nominal"},
-                                {"name": "age", "udi:data_type": "quantitative"},
+                                {
+                                    "name": "age",
+                                    "udi:data_type": "quantitative",
+                                    "description": "Age in days.",
+                                },
                             ],
                             "primaryKey": ["research_id"],
                         },
@@ -50,7 +56,13 @@ def _make_package(tmp: Path) -> Path:
                         "schema": {
                             "fields": [
                                 {"name": "research_id", "udi:data_type": "nominal"},
-                                {"name": "visit_day", "udi:data_type": "quantitative"},
+                                # A date format with no description must still
+                                # reach the config: it's what the chat formats by.
+                                {
+                                    "name": "visit_day",
+                                    "udi:data_type": "quantitative",
+                                    "udi:time_format": "epoch_ms",
+                                },
                                 {"name": "kind", "udi:data_type": "nominal"},
                             ],
                             "foreignKeys": [
@@ -87,6 +99,8 @@ def test_seed_duckdb_round_trips(tmp_path):
     assert cfg["type"] == "duckdb"
     assert cfg["tables"] == {"Patient": "patient", "Visit": "visit"}
     assert cfg["schemas"]["Visit"]["foreignKeys"][0]["reference"]["resource"] == "Patient"
+    # The package's own example prompts ride along; blanks are dropped.
+    assert cfg["examplePrompts"] == ["Ages by visit kind?"]
 
     # Open the seeded file the way the server does and introspect.
     engine = QueryEngine(
@@ -101,6 +115,14 @@ def test_seed_duckdb_round_trips(tmp_path):
     assert types["visit_day"] == "quantitative"
     assert types["kind"] == "nominal"
     assert visit["schema"]["foreignKeys"][0]["reference"]["resource"] == "Patient"
+    # So do date formats, and only on the fields that declare one.
+    formats = {f["name"]: f.get("udi:time_format") for f in visit["schema"]["fields"]}
+    assert formats == {"research_id": None, "visit_day": "epoch_ms", "kind": None}
+    # Descriptions live only in the package, so they must survive the config.
+    patient = next(r for r in meta["dataSchema"]["resources"] if r["name"] == "Patient")
+    assert patient["description"] == "One row per patient."
+    ages = {f["name"]: f["description"] for f in patient["schema"]["fields"]}
+    assert ages == {"research_id": "", "age": "Age in days."}
 
     # "Unavailable" survives as a real category, not nulled away.
     rows = engine.run_query(source={"name": "Visit", "source": "visit"})["displayData"]

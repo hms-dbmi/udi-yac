@@ -1,45 +1,477 @@
-"""Server configuration from environment variables."""
+"""Server configuration — the single source of truth for every env var.
 
-import os
-from dataclasses import dataclass
+This model is what `.env.template` and the README's env-var table are generated
+from (`scripts/gen_env_docs.py`), so a `Field(description=...)` here is the one
+place a variable is described. CI fails if the generated docs drift from it.
+
+Cross-field rules live in `_check_consistency` below rather than at the point of
+use, so a misconfigured deployment reports *every* problem at once, at startup,
+instead of one at a time — or worse, silently (a lone `LANGFUSE_HOST` used to
+build a credential-less client whose traces simply never arrived).
+
+Validate an env file against this model without booting the server::
+
+    python -c "from udiagent.server.config import ServerConfig; ServerConfig()"
+"""
+
+from pathlib import Path
+from typing import Literal
+
+from pydantic import AliasChoices, Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-@dataclass
-class ServerConfig:
+_PACKAGE_ROOT = Path(__file__).resolve().parents[3]
+
+# Signature algorithms python-jose can actually verify, canonical spelling
+# keyed by uppercase form so a lowercased env value still resolves to the
+# spelling jose matches the token header against. It has no PS* or EdDSA
+# backend, so nothing else belongs here.
+_SIGNATURE_ALGORITHMS = {
+    alg.upper(): alg
+    for alg in (
+        "HS256", "HS384", "HS512",
+        "RS256", "RS384", "RS512",
+        "ES256", "ES384", "ES512",
+    )
+}
+# What JWKS mode accepts: the asymmetric subset. `none` is absent by
+# construction, so an unsigned token can't be configured into existence.
+_ASYMMETRIC_ALGORITHMS = frozenset(
+    alg for alg in _SIGNATURE_ALGORITHMS.values() if not alg.startswith("HS")
+)
+
+
+class ServerConfig(BaseSettings):
     """Configuration for the UDIAgent FastAPI server.
 
-    All values can be set via environment variables (see field names).
-    Call ``ServerConfig.from_env()`` to load from the current environment.
+    Every field is populated from the upper-cased env var of the same name.
     """
 
-    jwt_secret_key: str = ""
-    jwt_algorithm: str = "HS256"
-    insecure_dev_mode: bool = False
-    gpt_model_name: str = "gpt-5.4"
-    openai_api_key: str | None = None
-    openai_base_url: str | None = None
-    langfuse_public_key: str | None = None
-    langfuse_secret_key: str | None = None
-    langfuse_host: str | None = None
-    langfuse_environment: str | None = None
+    model_config = SettingsConfigDict(
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # --- Authentication ---
+    jwt_secret_key: str = Field(
+        default="",
+        json_schema_extra={"group": "Authentication"},
+        examples=['<paste output of: openssl rand -hex 32>'],
+        description=(
+            "JWT signing key for self-issued tokens. Required unless "
+            "`INSECURE_DEV_MODE=1` or `JWT_JWKS_URL` is set."
+        ),
+    )
+    jwt_algorithm: str = Field(
+        default="HS256",
+        description=(
+            "JWT algorithm. Set to the identity provider's (e.g. `RS256`) "
+            "when using `JWT_JWKS_URL`."
+        ),
+    )
+    jwt_jwks_url: str = Field(
+        default="",
+        examples=['https://idp.example/realms/udi/protocol/openid-connect/certs'],
+        description=(
+            "Verify externally issued tokens against an identity provider's "
+            "JWKS endpoint instead of `JWT_SECRET_KEY`. Mutually exclusive "
+            "with it."
+        ),
+    )
+    jwt_issuer: str = Field(
+        default="",
+        examples=['https://idp.example/realms/udi'],
+        description="Expected `iss` claim; validated only when set.",
+    )
+    jwt_audience: str = Field(
+        default="",
+        examples=['udi-yac'],
+        description="Expected `aud` claim. Required with `JWT_JWKS_URL`.",
+    )
+    insecure_dev_mode: bool = Field(
+        default=False,
+        json_schema_extra={"template": "1"},
+        description=(
+            "Skip JWT verification entirely. Development only — never set "
+            "this in production."
+        ),
+    )
+
+    # --- CORS ---
+    # Declared as a plain comma-separated string, not list[str]: pydantic
+    # -settings JSON-decodes complex types from the environment, so the `*`
+    # default would fail to parse. `cors_origins` below does the splitting.
+    udi_cors_origins: str = Field(
+        default="*",
+        json_schema_extra={"group": "CORS"},
+        examples=['https://portal.example.org,https://staging.example.org'],
+        description=(
+            "Comma-separated list of browser origins allowed to call this "
+            "server. Defaults to `*` (any origin). Note that credentialed "
+            "requests are always permitted, so with `*` any site can call "
+            "this server with a user's cookies — name your origins "
+            "explicitly in production."
+        ),
+    )
+
+    # --- Model backend ---
+    gpt_model_name: str = Field(
+        default="gpt-5.4",
+        json_schema_extra={"group": "Model backend"},
+        description=(
+            "Model for orchestration; with a custom base URL, that backend's "
+            "model id. Callers may override it per-request only by supplying "
+            "their own `X-OpenAI-Key`."
+        ),
+    )
+    openai_api_key: str | None = Field(
+        default=None,
+        json_schema_extra={"template": ""},
+        description=(
+            "OpenAI API key. If unset, callers must supply one per-request "
+            "via the `X-OpenAI-Key` header."
+        ),
+    )
+    openai_base_url: str | None = Field(
+        default=None,
+        examples=['https://openrouter.ai/api/v1'],
+        description=(
+            "Root of any OpenAI-compatible backend (Azure AI Foundry, "
+            "Bedrock, OpenRouter, Ollama, vLLM). Must support function "
+            "calling and JSON-schema structured outputs. For Bedrock this is "
+            "the static-API-key path; see `UDI_BEDROCK` for an IAM role."
+        ),
+    )
+    udi_bedrock: bool = Field(
+        default=False,
+        description=(
+            "Authenticate to Amazon Bedrock with SigV4 from the default AWS "
+            "credential chain (EC2 instance profile, ECS task role, "
+            "`AWS_PROFILE`, `~/.aws/credentials`), so no key is stored. "
+            "Mutually exclusive with `OPENAI_API_KEY` and `OPENAI_BASE_URL`. "
+            "Per-request `X-OpenAI-Key` headers are refused with a 403 in "
+            "this mode, so no prompt reaches api.openai.com. Requires the "
+            "`udiagent[bedrock]` extra."
+        ),
+    )
+    aws_region: str | None = Field(
+        default=None,
+        # Aliased (as is langfuse_host): AWS_DEFAULT_REGION is the AWS SDK's own
+        # fallback, and honoring it here keeps this object an accurate record
+        # of the region actually in force (the startup log and the credential
+        # error handler both report it). AWS_REGION must be listed explicitly —
+        # a validation_alias replaces the field-name lookup rather than adding
+        # to it. gen_env_docs.py documents the field name, so the table still
+        # reads AWS_REGION.
+        validation_alias=AliasChoices("AWS_REGION", "AWS_DEFAULT_REGION"),
+        examples=['us-east-1'],
+        description=(
+            "AWS region for Bedrock; also determines the endpoint. Required "
+            "with `UDI_BEDROCK`, though the AWS SDK will also accept "
+            "`AWS_DEFAULT_REGION` or `~/.aws/config` — there is no instance "
+            "metadata fallback. Set `AWS_BEDROCK_BASE_URL` instead to reach a "
+            "PrivateLink endpoint."
+        ),
+    )
+    udi_openai_api: Literal["chat_completions", "responses"] = Field(
+        default="chat_completions",
+        examples=['responses'],
+        description=(
+            "Which OpenAI-compatible endpoint to call: `chat_completions` or "
+            "`responses`. Some OpenAI models (e.g. `gpt-6.1-sol`) only call "
+            "tools through `responses`; self-hosted backends (vLLM, Ollama) "
+            "generally want the default."
+        ),
+    )
+    udi_reasoning_effort: str | None = Field(
+        default=None,
+        examples=['low'],
+        description=(
+            "Reasoning effort sent with every request (`none`, `low`, "
+            "`medium`, …), passed through as-is so new provider values work "
+            "without a release. Unset sends nothing, leaving the model's "
+            "default."
+        ),
+    )
+    # A number or the word `omit`: a blank value already means "use the
+    # default" (see `_blank_is_unset`), so it can't also mean "don't send".
+    udi_temperature: float | Literal["omit"] = Field(
+        default=0.0,
+        examples=['omit'],
+        description=(
+            "Sampling temperature sent with every request, or `omit` to send "
+            "none. OpenAI rejects a temperature whenever "
+            "`UDI_REASONING_EFFORT` is anything but `none`, so set `omit` "
+            "with reasoning models there."
+        ),
+    )
+    udi_max_completion_tokens: int | None = Field(
+        default=None,
+        gt=0,
+        examples=['16384'],
+        description=(
+            "Output-token cap for every request, replacing the built-in ones "
+            "(1024 for tool calls, 16384 for structured JSON). Reasoning "
+            "tokens count against it, so raise it when reasoning is on."
+        ),
+    )
+    udi_vis_tool_choice: Literal["auto", "required"] = Field(
+        default="auto",
+        examples=['required'],
+        description=(
+            "Whether the chart-template call may answer without picking a "
+            "template (`auto`, which then replies that no template fits) or "
+            "must pick one (`required`). Some models (e.g. `gpt-6.1-sol`) "
+            "reply in prose to many chart requests unless this is `required`."
+        ),
+    )
+
+    # --- Observability (all-or-nothing) ---
+    langfuse_public_key: str | None = Field(
+        default=None,
+        json_schema_extra={"group": "Observability (all three or none)"},
+        examples=['pk-your-key-goes-here'],
+        description="LangFuse public key. Tracing is off unless all three are set.",
+    )
+    langfuse_secret_key: str | None = Field(
+        default=None,
+        examples=['sk-your-key-goes-here'],
+        description="LangFuse secret key. Tracing is off unless all three are set.",
+    )
+    langfuse_host: str | None = Field(
+        default=None,
+        # LANGFUSE_BASE_URL is the name current LangFuse SDKs and the LangFuse
+        # UI's setup snippet use; LANGFUSE_HOST is the older one. Honor both.
+        validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
+        examples=['https://cloud.langfuse.com'],
+        description=(
+            "LangFuse instance URL, e.g. `https://cloud.langfuse.com`. "
+            "`LANGFUSE_BASE_URL` is accepted too."
+        ),
+    )
+    langfuse_environment: str | None = Field(
+        default=None,
+        examples=['production'],
+        description=(
+            "Tags traces with an environment label (e.g. `production`). "
+            "Does not by itself enable tracing."
+        ),
+    )
+    udi_issue_report_webhook_url: str | None = Field(
+        default=None,
+        examples=['https://hooks.slack.com/services/T000/B000/XXXX'],
+        description=(
+            "Notified of every issue report (`POST /v1/yac/issue_report`): a "
+            "JSON POST with a Slack-style `text` summary plus the report's "
+            "note, source, contact and LangFuse trace link — never the "
+            "session. Works as-is with Slack and Teams incoming webhooks; "
+            "route it through Zapier or Power Automate for email. Needs "
+            "LangFuse, since reports are refused without it."
+        ),
+    )
+
+    # --- Server-side query backends ---
+    udi_query_backends: str | None = Field(
+        default=None,
+        json_schema_extra={"group": "Server-side query backends"},
+        examples=['duckdb-backends.json'],
+        description=(
+            "Path to a JSON file mapping package names to StarRocks/DuckDB "
+            "connections, served via `/v1/yac/query` and `/v1/yac/metadata`. "
+            "Written by the seed scripts — see `dev/duckdb/README.md`. A "
+            "relative path is tried against the working directory first, then "
+            "against `packages/agent`, where the seed scripts write it."
+        ),
+    )
+    udi_metadata_ttl_seconds: float = Field(
+        default=3600.0,
+        description="TTL for the introspected-metadata cache.",
+    )
+
+    # --- Paths (override when installed from a wheel) ---
+    udi_log_dir: str | None = Field(
+        default=None,
+        json_schema_extra={"group": "Paths (override when installed from a wheel)"},
+        examples=['/var/log/udiagent'],
+        description=(
+            "Where the rotating log file goes. Defaults to `<package "
+            "root>/logs`; file logging is skipped if unwritable."
+        ),
+    )
+    udi_data_dir: str | None = Field(
+        default=None,
+        examples=['/srv/udiagent/data'],
+        description=(
+            "Repo-level dev data for `/v1/yac/examples`. Defaults to "
+            "`<package root>/data`; set this when installed from a wheel."
+        ),
+    )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """`UDI_CORS_ORIGINS` as the list Starlette's CORSMiddleware wants."""
+        return [
+            origin.strip()
+            for origin in self.udi_cors_origins.split(",")
+            if origin.strip()
+        ]
+
+    @property
+    def has_server_credentials(self) -> bool:
+        """Whether the server can serve a request with no ``X-OpenAI-Key``."""
+        return bool(self.openai_api_key or self.openai_base_url or self.udi_bedrock)
+
+    @field_validator("jwt_algorithm", mode="after")
+    @classmethod
+    def _normalize_algorithm(cls, value: str) -> str:
+        """Strip padding and accept a lowercased spelling.
+
+        An unrecognized value passes through as-is (stripped) so that
+        `_check_consistency` can report it by name rather than silently
+        substituting something that happens to parse.
+        """
+        value = value.strip()
+        return _SIGNATURE_ALGORITHMS.get(value.upper(), value)
+
+    @field_validator("udi_query_backends", mode="after")
+    @classmethod
+    def _resolve_backends_path(cls, value: str | None) -> str | None:
+        """Fall back to the package root for a relative path.
+
+        `pnpm dev:agent` and the VS Code tasks launch from the REPO ROOT, while
+        the seed scripts write their config next to themselves in
+        packages/agent — so the documented
+        `UDI_QUERY_BACKENDS=duckdb-backends.json` resolved to nothing and the
+        server died before `_check_consistency` could say why. The working
+        directory is still tried first, so a path that already worked keeps
+        working.
+        """
+        if not value:
+            return value
+        path = Path(value)
+        if not path.is_absolute() and not path.exists():
+            from_package = _PACKAGE_ROOT / path
+            if from_package.is_file():
+                return str(from_package)
+        return value
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, value, info):
+        """Treat a blank/whitespace env value as absent, for every field.
+
+        CI and deploy templates routinely interpolate "" for an unset variable
+        (`${{ vars.FOO }}`), which would otherwise defeat the defaults here —
+        and `INSECURE_DEV_MODE=` or `UDI_METADATA_TTL_SECONDS=` would raise a
+        parse error rather than falling back.
+        """
+        if isinstance(value, str) and not value.strip():
+            return cls.model_fields[info.field_name].default
+        return value
+
+    @model_validator(mode="after")
+    def _check_consistency(self):
+        """Report every cross-field problem at once, at startup."""
+        errors: list[str] = []
+
+        if not self.insecure_dev_mode:
+            if self.jwt_secret_key and self.jwt_jwks_url:
+                errors.append(
+                    "JWT_SECRET_KEY and JWT_JWKS_URL are mutually exclusive. "
+                    "Set the secret for self-issued tokens, or the JWKS URL "
+                    "for tokens issued by an external identity provider."
+                )
+            if not self.jwt_secret_key and not self.jwt_jwks_url:
+                errors.append(
+                    "JWT_SECRET_KEY or JWT_JWKS_URL must be set unless "
+                    "INSECURE_DEV_MODE=1. Refusing to start without a way to "
+                    "verify JWTs."
+                )
+            if not self.jwt_jwks_url and self.jwt_algorithm.lower() == "none":
+                # jose already refuses `none`, but a signature-less algorithm
+                # is worth turning away at startup rather than per-request.
+                # In JWKS mode the allowlist below already covers it.
+                errors.append(
+                    "JWT_ALGORITHM must not be 'none' — that would accept "
+                    "unsigned tokens. Set it to the algorithm your tokens are "
+                    "actually signed with."
+                )
+            if self.jwt_jwks_url:
+                if self.jwt_algorithm not in _ASYMMETRIC_ALGORITHMS:
+                    errors.append(
+                        f"JWT_JWKS_URL requires an asymmetric algorithm — one "
+                        f"of {', '.join(sorted(_ASYMMETRIC_ALGORITHMS))} — got "
+                        f"{self.jwt_algorithm!r}. Set JWT_ALGORITHM to the one "
+                        f"your identity provider signs with (e.g. RS256)."
+                    )
+                if not self.jwt_audience:
+                    # Without an audience, any token the IdP minted for any of
+                    # its clients would be accepted here.
+                    errors.append(
+                        "JWT_AUDIENCE must be set when using JWT_JWKS_URL, so "
+                        "that tokens issued for other clients of the same "
+                        "identity provider are rejected."
+                    )
+
+        # Partial LangFuse config used to construct a client with None
+        # credentials — traces then silently never arrive.
+        langfuse = {
+            "LANGFUSE_PUBLIC_KEY": self.langfuse_public_key,
+            "LANGFUSE_SECRET_KEY": self.langfuse_secret_key,
+            "LANGFUSE_HOST": self.langfuse_host,
+        }
+        missing = [name for name, value in langfuse.items() if not value]
+        if missing and len(missing) < len(langfuse):
+            errors.append(
+                "LangFuse is configured but incomplete: "
+                f"{', '.join(sorted(missing))} missing. Set all three to "
+                "enable tracing, or none to disable it."
+            )
+        if self.udi_issue_report_webhook_url:
+            if not self.udi_issue_report_webhook_url.startswith(("https://", "http://")):
+                errors.append("UDI_ISSUE_REPORT_WEBHOOK_URL must be an http(s) URL.")
+            if missing:
+                # Reports are refused without LangFuse, so it would never fire.
+                errors.append(
+                    "UDI_ISSUE_REPORT_WEBHOOK_URL is set, but issue reports "
+                    "need LangFuse, which is not configured."
+                )
+
+        # The OpenAI SDK refuses `provider=` alongside api_key/base_url, so
+        # these cannot be reconciled at construction — they are a genuine
+        # either/or, not a precedence question.
+        if self.udi_bedrock:
+            if self.openai_api_key:
+                errors.append(
+                    "UDI_BEDROCK and OPENAI_API_KEY are mutually exclusive. "
+                    "Bedrock SigV4 signs requests with the instance's IAM "
+                    "role; unset OPENAI_API_KEY, or unset UDI_BEDROCK and set "
+                    "OPENAI_BASE_URL to the Bedrock endpoint to use a static "
+                    "Bedrock API key."
+                )
+            if self.openai_base_url:
+                errors.append(
+                    "UDI_BEDROCK and OPENAI_BASE_URL are mutually exclusive. "
+                    "The Bedrock endpoint is derived from AWS_REGION; set "
+                    "AWS_BEDROCK_BASE_URL instead to reach a private endpoint."
+                )
+
+        # A bad path used to raise an uncaught FileNotFoundError at import,
+        # from inside a module-level call with no config context.
+        if self.udi_query_backends and not Path(self.udi_query_backends).is_file():
+            errors.append(
+                f"UDI_QUERY_BACKENDS points at {self.udi_query_backends!r}, "
+                "which is not a readable file. Seed one with "
+                "packages/agent/scripts/seed_duckdb.py, or unset it to run in "
+                "browser mode."
+            )
+
+        if errors:
+            raise ValueError("\n  - ".join(["invalid server configuration:"] + errors))
+        return self
 
     @classmethod
     def from_env(cls) -> "ServerConfig":
-        """Create a config by reading environment variables."""
-        return cls(
-            jwt_secret_key=os.getenv("JWT_SECRET_KEY", ""),
-            jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
-            insecure_dev_mode=int(os.getenv("INSECURE_DEV_MODE", "0")) == 1,
-            gpt_model_name=os.getenv("GPT_MODEL_NAME", "gpt-5.4"),
-            # Treat blank/whitespace as absent so an empty OPENAI_API_KEY in a
-            # dev .env doesn't build an OpenAI(api_key="") client that crashes
-            # at startup — the per-request X-OpenAI-Key path is used instead.
-            openai_api_key=(os.getenv("OPENAI_API_KEY") or "").strip() or None,
-            # Any OpenAI-compatible backend (Foundry, Bedrock, OpenRouter,
-            # Ollama, …). Blank/whitespace treated as absent, as above.
-            openai_base_url=(os.getenv("OPENAI_BASE_URL") or "").strip() or None,
-            langfuse_public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            langfuse_secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-            langfuse_host=os.getenv("LANGFUSE_HOST"),
-            langfuse_environment=os.getenv("LANGFUSE_ENVIRONMENT"),
-        )
+        """Backwards-compatible alias — `BaseSettings` reads the environment."""
+        return cls()

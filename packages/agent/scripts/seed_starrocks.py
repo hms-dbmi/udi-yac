@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed a local StarRocks instance from a directory of CSVs.
+"""Seed a local StarRocks instance from a directory of CSV/TSV files.
 
 Companion to dev/starrocks/docker-compose.yml. Reads the directory's
 datapackage.json for entity names and field typing (generate one for any CSV
@@ -32,7 +32,8 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_DATA_DIR = _REPO_ROOT / "sample-data" / "penguins"
-_DEFAULT_CONFIG_OUT = Path(__file__).resolve().parents[1] / "starrocks-backends.json"
+_AGENT_ROOT = Path(__file__).resolve().parents[1]
+_DEFAULT_CONFIG_OUT = _AGENT_ROOT / "starrocks-backends.json"
 
 BATCH_SIZE = 1000
 
@@ -107,12 +108,31 @@ def load_package(data_dir: Path) -> list[dict]:
             # Relationship metadata can't be introspected from the database
             # (StarRocks stores no FK constraints), yet the chat's
             # cross-entity filtering depends on it — carry it through to the
-            # backends config so /v1/yac/metadata can serve it.
+            # backends config so /v1/yac/metadata can serve it. Descriptions
+            # likewise exist only in the package, and are what tells the LLM
+            # what a column means; so do date formats (`udi:time_format`), which
+            # make the chat show an epoch column's BIGINTs as dates.
             schema_extras = {
                 key: schema[key]
                 for key in ("primaryKey", "foreignKeys")
                 if key in schema
             }
+            if resource.get("description"):
+                schema_extras["description"] = resource["description"]
+            described = [
+                {
+                    "name": f["name"],
+                    **{
+                        key: f[key]
+                        for key in ("description", "udi:time_format")
+                        if f.get(key)
+                    },
+                }
+                for f in fields
+                if f.get("description") or f.get("udi:time_format")
+            ]
+            if described:
+                schema_extras["fields"] = described
             # Cube roles are resource-level and equally un-introspectable: a
             # marginal row is just a row with nulls in it as far as the
             # database is concerned. Carry them through so `only` can resolve
@@ -144,7 +164,7 @@ def load_package(data_dir: Path) -> list[dict]:
                 }
             )
     else:
-        for csv_path in sorted(data_dir.glob("*.csv")):
+        for csv_path in sorted([*data_dir.glob("*.csv"), *data_dir.glob("*.tsv")]):
             entries.append(
                 {
                     "entity": csv_path.stem,
@@ -156,8 +176,21 @@ def load_package(data_dir: Path) -> list[dict]:
                 }
             )
     if not entries:
-        raise SystemExit(f"no CSVs or datapackage.json found in {data_dir}")
+        raise SystemExit(f"no CSV/TSV files or datapackage.json found in {data_dir}")
     return entries
+
+
+def load_example_prompts(data_dir: Path) -> list[str] | None:
+    """The package's own "Try an example" prompts, from `example_prompts.json`
+    (a JSON list of strings) beside the CSVs — served by /v1/yac/examples in
+    place of the agent's global list, which is written for HuBMAP."""
+    path = data_dir / "example_prompts.json"
+    if not path.exists():
+        return None
+    prompts = json.loads(path.read_text())
+    if not isinstance(prompts, list) or not all(isinstance(p, str) for p in prompts):
+        raise SystemExit(f"{path} must be a JSON list of strings")
+    return [p.strip() for p in prompts if p.strip()] or None
 
 
 def _is_number(value: str) -> bool:
@@ -184,8 +217,12 @@ def read_csv(
     decides columns with no numeric evidence at all (e.g. entirely
     sentinel/empty).
     """
-    with open(entry["csv_path"], newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
+    # Delimiter by extension, matching the toolkit's own inference
+    # (loadDataPackage.ts / DataSourcesStore.ts). The committed HuBMAP package
+    # ships .tsv, so without this its columns all collapse into one.
+    path = Path(entry["csv_path"])
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter="\t" if path.suffix == ".tsv" else ",")
         header = next(reader)
         raw_rows = [row for row in reader if row]
 
@@ -252,9 +289,41 @@ def create_and_load(
         return int(cur.fetchone()[0])
 
 
+def set_env_var(env_path: Path, key: str, value: str) -> None:
+    """Point `packages/agent/.env` at a freshly written backends config.
+
+    Seeding a backend and telling the agent about it are the same intention, so
+    the seed scripts do both — that's what lets one `Dev: agent` task serve
+    every mode instead of one task per backend with an inlined env var.
+
+    Mirrors the three-tier behaviour of `setEnv` in
+    `scripts/set-chat-data-source.mjs`: replace an active line, else revive a
+    commented one, else append.
+    """
+    line = f"{key}={value}"
+    if not env_path.exists():
+        env_path.write_text(line + "\n")
+        print(f"wrote {key} to {env_path}")
+        return
+
+    lines = env_path.read_text().splitlines()
+    for i, existing in enumerate(lines):
+        if existing.startswith(f"{key}="):
+            lines[i] = line
+            break
+        if existing.lstrip("# ").startswith(f"{key}="):
+            lines[i] = line
+            break
+    else:
+        lines.append(line)
+    env_path.write_text("\n".join(lines) + "\n")
+    print(f"set {key} in {env_path}")
+
+
 def write_backends_config(
     out_path: Path, database: str, entries: list[dict],
     host: str, port: int, user: str, password: str,
+    example_prompts: list[str] | None = None,
 ) -> None:
     config = {
         database: {
@@ -274,6 +343,8 @@ def write_backends_config(
     }
     if schemas:
         config[database]["schemas"] = schemas
+    if example_prompts:
+        config[database]["examplePrompts"] = example_prompts
     existing = {}
     if out_path.exists():
         try:
@@ -314,7 +385,10 @@ def seed(
     finally:
         conn.close()
     if config_out is not None:
-        write_backends_config(config_out, database, entries, host, port, user, password)
+        write_backends_config(
+            config_out, database, entries, host, port, user, password,
+            load_example_prompts(data_dir),
+        )
         print(f"\nwrote {config_out}")
     return entries
 
@@ -354,11 +428,19 @@ def main() -> None:
         config_out=Path(args.config_out),
         null_sentinels=null_sentinels,
     )
+    # Seeding a backend and telling the agent about it are one intention, so
+    # the CLI does both — that's what lets a single `Dev: agent` task serve
+    # every mode. Done here, not in seed(), so importing callers (tests) never
+    # touch a developer's .env.
+    set_env_var(_AGENT_ROOT / ".env", "UDI_QUERY_BACKENDS",
+                str(Path(args.config_out).resolve()))
     print(
         "\nNext steps:\n"
-        f"  agent:  UDI_QUERY_BACKENDS={args.config_out} INSECURE_DEV_MODE=1 "
-        "uv run fastapi dev src/udiagent/server/app.py --port 8007\n"
-        f"  chat:   add VITE_UDI_REMOTE_PACKAGE={database} to packages/chat/.env.local"
+        f"  chat:   node scripts/set-chat-data-source.mjs {database} --remote\n"
+        "  stack:  run the 'Dev: chat + agent' task (or pnpm dev:agent + "
+        "dev:chat)\n"
+        "UDI_QUERY_BACKENDS is already set in packages/agent/.env — no command "
+        "prefix needed. Restart the agent and the chat dev server to pick both up."
     )
 
 

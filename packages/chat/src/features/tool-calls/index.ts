@@ -4,14 +4,18 @@
  */
 
 export { ToolCallRenderer } from './components/ToolCallRenderer';
-export { IntervalFilterComponent } from './components/IntervalFilterComponent';
-export { PointFilterComponent } from './components/PointFilterComponent';
+export { ClarifyVariable } from './components/ClarifyVariable';
+export { FilterComponent } from './components/FilterComponent';
 
 export type {
   FreeTextExplainArgs,
   RebuffArgs,
   ClarifyVariableArgs,
   FilterDataArgs,
+  FilterOperationArgs,
+  FilterMatch,
+  FilterScope,
+  OfferIssueReportArgs,
   TextSegment,
   CreateVisualizationArgs,
 } from './types';

@@ -1,6 +1,5 @@
-// import { fn } from '@storybook/test'
-
 import UDIVis from './UDIVis.vue';
+import { setTimeFormats } from './temporal';
 
 // export const ActionsData = {
 //   onPinTask: fn(),
@@ -42,7 +41,7 @@ export const Default = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       representation: {
         mark: 'point',
@@ -61,7 +60,7 @@ export const HideVegaLiteActions = {
       config: { hideActions: true },
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       representation: {
         mark: 'point',
@@ -79,7 +78,7 @@ export const Heatmap = {
     spec: {
       source: {
         name: 'datasets',
-        source: './data/datasets.csv',
+        source: './data/hubmap/datasets.tsv',
       },
       transformation: [
         {
@@ -175,7 +174,7 @@ export const Layering = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -232,11 +231,204 @@ export const Checkboxes = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       representation: {
         mark: 'checkbox',
         mapping: [{ field: 'sex', encoding: 'text', type: 'nominal' }],
+      },
+    },
+  },
+};
+
+// HuBMAP's `*_timestamp` columns hold epoch ms. Registering them as dates (what
+// chat does from the data package's `udi:time_format`) makes axes, tooltips and
+// table cells show dates; the specs themselves stay `quantitative`.
+const hubmapDates = {
+  beforeEach: () => {
+    setTimeFormats({
+      datasets: {
+        created_timestamp: 'epoch_ms',
+        published_timestamp: 'epoch_ms',
+        last_modified_timestamp: 'epoch_ms',
+      },
+    });
+    return () => setTimeFormats({});
+  },
+};
+
+const datasets = { name: 'datasets', source: './data/hubmap/datasets.tsv' };
+
+export const DateHistogram = {
+  ...hubmapDates,
+  args: {
+    spec: {
+      source: datasets,
+      transformation: [
+        { binby: { field: 'created_timestamp' } },
+        { rollup: { count: { op: 'count' } } },
+      ],
+      representation: {
+        mark: 'rect',
+        mapping: [
+          { encoding: 'x', field: 'start', type: 'quantitative' },
+          { encoding: 'x2', field: 'end', type: 'quantitative' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+        ],
+      },
+    },
+  },
+};
+
+export const DateStackedHistogram = {
+  ...hubmapDates,
+  args: {
+    spec: {
+      source: datasets,
+      transformation: [
+        {
+          filter: {
+            op: '!=',
+            left: { field: 'published_timestamp' },
+            right: { literal: null },
+          },
+        },
+        {
+          binby: {
+            field: 'published_timestamp',
+            output: { bin_start: 'start', bin_end: 'end' },
+          },
+        },
+        { groupby: ['start', 'end', 'assay_category'] },
+        { rollup: { count: { op: 'count' } } },
+      ],
+      representation: {
+        mark: 'bar',
+        mapping: [
+          {
+            encoding: 'x',
+            field: 'start',
+            type: 'quantitative',
+            title: 'published_timestamp',
+          },
+          { encoding: 'x2', field: 'end', type: 'quantitative' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+          { encoding: 'color', field: 'assay_category', type: 'nominal' },
+        ],
+      },
+    },
+  },
+};
+
+export const DateAggregate = {
+  ...hubmapDates,
+  args: {
+    spec: {
+      source: datasets,
+      transformation: [
+        { groupby: 'dataset_type' },
+        {
+          rollup: {
+            first_published: { op: 'min', field: 'published_timestamp' },
+            last_published: { op: 'max', field: 'published_timestamp' },
+          },
+        },
+      ],
+      representation: [
+        {
+          mark: 'point',
+          mapping: [
+            { encoding: 'x', field: 'first_published', type: 'quantitative' },
+            { encoding: 'y', field: 'dataset_type', type: 'nominal' },
+          ],
+        },
+        {
+          mark: 'point',
+          mapping: [
+            { encoding: 'x', field: 'last_published', type: 'quantitative' },
+            { encoding: 'y', field: 'dataset_type', type: 'nominal' },
+          ],
+        },
+      ],
+    },
+  },
+};
+
+export const DateTable = {
+  ...hubmapDates,
+  args: {
+    spec: {
+      source: datasets,
+      transformation: [
+        { groupby: 'dataset_type' },
+        {
+          rollup: {
+            datasets: { op: 'count' },
+            newest: { op: 'max', field: 'created_timestamp' },
+            typical: { op: 'median', field: 'created_timestamp' },
+          },
+        },
+      ],
+      representation: {
+        mark: 'row',
+        mapping: [
+          { mark: 'text', encoding: 'text', field: '*', type: 'nominal' },
+        ],
+      },
+    },
+  },
+};
+
+// A year and an age in days, from a small synthetic fixture: they stay
+// quantitative and only their labels change (1985, not 1,985; 12.0 y, not 4383).
+const ageFormats = {
+  beforeEach: () => {
+    setTimeFormats({
+      ages: { birth_year: 'year', age_at_event_days: 'days' },
+    });
+    return () => setTimeFormats({});
+  },
+};
+
+const ages = { name: 'ages', source: './data/example_ages.csv' };
+
+export const AgeInDaysHistogram = {
+  ...ageFormats,
+  args: {
+    spec: {
+      source: ages,
+      transformation: [
+        { binby: { field: 'age_at_event_days' } },
+        { rollup: { count: { op: 'count' } } },
+      ],
+      representation: {
+        mark: 'rect',
+        mapping: [
+          { encoding: 'x', field: 'start', type: 'quantitative' },
+          { encoding: 'x2', field: 'end', type: 'quantitative' },
+          { encoding: 'y', field: 'count', type: 'quantitative' },
+        ],
+      },
+    },
+  },
+};
+
+export const BirthYearScatter = {
+  ...ageFormats,
+  args: {
+    spec: {
+      source: ages,
+      representation: {
+        mark: 'point',
+        mapping: [
+          { encoding: 'x', field: 'birth_year', type: 'quantitative' },
+          { encoding: 'y', field: 'age_at_event_days', type: 'quantitative' },
+          {
+            encoding: 'color',
+            field: 'age_at_event_days',
+            type: 'quantitative',
+          },
+        ],
       },
     },
   },

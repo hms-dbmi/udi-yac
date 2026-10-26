@@ -1,0 +1,787 @@
+organization_name,research_id,age_at_radiation_start_days,age_at_radiation_stop_days,radiation_site,radiation_site_other,radiation_type,radiation_type_other,total_radiation_dose,total_radiation_dose_unit,total_radiation_dose_focal,total_radiation_dose_focal_unit,is_initial_treatment
+Akron Children's Hospital,C7227726,5563,5619,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2176,cGy,4958,cGy,yes
+Akron Children's Hospital,C7457859,2330,2377,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Akron Children's Hospital,C7612224,727,769,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2460,cGy,3273,cGy,no
+Akron Children's Hospital,C7860561,3356,3404,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,Gy,5400,Gy,yes
+CBTN Non-Consortium Member,C1038366,379,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,3600  with boost to primary tumor bed at 5040  and iac to 5580 ,cGy,Not Applicable,Not Applicable,no
+CBTN Non-Consortium Member,C2653602,Not Available,2465,Unavailable,Not Applicable,Unavailable,Not Applicable,1260,Not Reported,Not Applicable,Not Applicable,no
+CBTN Non-Consortium Member,C2653602,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,360,Not Reported,Not Applicable,Not Applicable,no
+CBTN Non-Consortium Member,C3420753,3390,3431,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5400,cGy,yes
+CBTN Non-Consortium Member,C4062936,1597,1642,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,3960,cGy,no
+Children's Hospital Los Angeles,C8832261,1195,1206,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's Hospital Los Angeles,C8832261,1494,1503,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's Hospital Los Angeles,C8832261,1569,1584,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's Hospital Los Angeles,C8832261,1870,1881,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's Hospital Los Angeles,C8832261,2232,Not Reported,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Not Availale,Not Availale,Not Reported,Not Available,no
+Children's Hospital Los Angeles,C8832261,608,669,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's Hospital of Atlanta (CHOA),C8128455,2773,2846,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C1066164,3120,3159,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Children's National Medical Center (CNMC),C1075635,2868,2941,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Unavailable,Not Reported,yes
+Children's National Medical Center (CNMC),C1169730,1359,1408,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+Children's National Medical Center (CNMC),C1235904,1764,1808,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,Gy,5600 ,cGy,yes
+Children's National Medical Center (CNMC),C2400222,3349,3423,Unavailable,Not Applicable,Protons,Not Applicable,3600 ,cGy,Not Applicable,Not Applicable,yes
+Children's National Medical Center (CNMC),C2400222,4970,4983,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,unavailable,cGy,unavailable,cGy,no
+Children's National Medical Center (CNMC),C2414490,3099,3140,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C2492595,3876,3919,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C2567010,2188,2230,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,cGy,yes
+Children's National Medical Center (CNMC),C2567010,3896,3923,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,4000,cGy,no
+Children's National Medical Center (CNMC),C2567010,4569,4582,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3000,cGy,no
+Children's National Medical Center (CNMC),C2607354,Not Available,1996,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,no
+Children's National Medical Center (CNMC),C2607600,Not Available,2669,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Unavailable,Not Reported,no
+Children's National Medical Center (CNMC),C2645361,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Children's National Medical Center (CNMC),C2645484,1052,1086,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Children's National Medical Center (CNMC),C2645607,6456,6507,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,54,Gy,Unavailable,Not Reported,yes
+Children's National Medical Center (CNMC),C2645853,2899,2932,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Unavailable,Not Reported,yes
+Children's National Medical Center (CNMC),C2661843,4408,4450,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Children's National Medical Center (CNMC),C2661843,7117,7165,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,unavailable,cGy,unavailable,cGy,no
+Children's National Medical Center (CNMC),C2691978,1936,1980,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.40 ,Gy,55.80 ,Gy,yes
+Children's National Medical Center (CNMC),C2691978,2781,2785,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3000 ,cGy,no
+Children's National Medical Center (CNMC),C2694069,826,886,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,yes
+Children's National Medical Center (CNMC),C2694069,Not Available,Not Available,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Gy,no
+Children's National Medical Center (CNMC),C2734905,4029,4058,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1500,cGy,3600,cGy,yes
+Children's National Medical Center (CNMC),C2735151,2653,2695,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's National Medical Center (CNMC),C2735766,1941,1987,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,15,Gy,51,Gy,yes
+Children's National Medical Center (CNMC),C2746098,4734,4775,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,2340,cGy,yes
+Children's National Medical Center (CNMC),C2834166,2508,2550,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,4500,cGy,yes
+Children's National Medical Center (CNMC),C3161346,5199,5242,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Children's National Medical Center (CNMC),C3230472,690,751,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,cGy,yes
+Children's National Medical Center (CNMC),C3230472,710,751,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,4920,cGy,yes
+Children's National Medical Center (CNMC),C3400827,Not Available,3520,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600,cGy,5400,cGy,no
+Children's National Medical Center (CNMC),C3410298,6006,6045,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,3060,cGy,yes
+Children's National Medical Center (CNMC),C3410544,2089,2131,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Children's National Medical Center (CNMC),C3410913,Not Available,Not Available,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+Children's National Medical Center (CNMC),C3445845,1183,1228,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Children's National Medical Center (CNMC),C3588648,2410,2458,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2400 ,cGy,5400 ,cGy,yes
+Children's National Medical Center (CNMC),C3678069,2679,2722,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Children's National Medical Center (CNMC),C3680160,5189,5233,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36-39.6,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C3732066,2148,2189,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Children's National Medical Center (CNMC),C3768966,3304,3348,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C3769458,2191,2237,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,36,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C3769458,3182,3203,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,3750,cGy,no
+Children's National Medical Center (CNMC),C3769458,3549,3570,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's National Medical Center (CNMC),C3769458,3623,3625,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's National Medical Center (CNMC),C3769950,2903,2945,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Children's National Medical Center (CNMC),C3808695,3448,3479,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,3060 ,cGy,yes
+Children's National Medical Center (CNMC),C3808695,7978,8012,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,50 CcGE,CGE,no
+Children's National Medical Center (CNMC),C3808818,4727,4768,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Unavailable,cGy,Unavailable,cGy,yes
+Children's National Medical Center (CNMC),C3811647,10062,10123,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Children's National Medical Center (CNMC),C3811647,6028,6071,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Unavailable,Not Reported,yes
+Children's National Medical Center (CNMC),C3811647,8617,8630,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,1800 cGy,cGy,yes
+Children's National Medical Center (CNMC),C4059861,1551,1592,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Children's National Medical Center (CNMC),C4062321,5378,5426,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,cGy,Not Applicable,Not Applicable,yes
+Children's National Medical Center (CNMC),C4220376,Not Available,795,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,5400,cGy,no
+Children's National Medical Center (CNMC),C4744725,2273,2312,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340,cGy,3060,cGy,yes
+Children's National Medical Center (CNMC),C4852965,2640,2682,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,unavailable,cGy,2340,cGy,yes
+Children's National Medical Center (CNMC),C4889496,2446,2487,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,unavailable,Not Reported,yes
+Children's National Medical Center (CNMC),C4985313,2805,2847,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Children's National Medical Center (CNMC),C5226639,Not Available,2096,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,unavailable,cGy,unavailable,cGy,no
+Children's National Medical Center (CNMC),C5226639,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,unavailable,cGy,Not Applicable,Not Applicable,no
+Children's National Medical Center (CNMC),C5360832,1786,1827,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,3060,cGy,yes
+Children's National Medical Center (CNMC),C7111983,3194,3223,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,Gy,54,Gy,no
+Children's National Medical Center (CNMC),C7111983,4217,4233,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,30,Gy,no
+Children's National Medical Center (CNMC),C7111983,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Children's National Medical Center (CNMC),C7219239,3552,3595,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Children's National Medical Center (CNMC),C7271391,1291,1332,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5040,cGy,no
+Children's National Medical Center (CNMC),C7369791,2794,2841,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Children's National Medical Center (CNMC),C7559334,539,592,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,2860,cGy,no
+Children's National Medical Center (CNMC),C7588362,2283,2330,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Not Availale,Not Availale,Not Reported,Not Available,yes
+Children's National Medical Center (CNMC),C7592175,3618,3667,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,36,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C7687131,3187,3228,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,36,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C7705827,2653,2695,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Children's National Medical Center (CNMC),C7706442,Not Available,1991,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1800,cGy,3600,cGy,no
+Children's National Medical Center (CNMC),C7706565,3791,Not Reported,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+Children's National Medical Center (CNMC),C7749984,960,996,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,4000,cGy,no
+Children's National Medical Center (CNMC),C7775814,2660,Not Reported,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+Children's National Medical Center (CNMC),C7963143,2475,2512,Whole Ventricular with focal boost,Not Applicable,Protons,Not Applicable,36,Gy,50.4,Gy,yes
+Children's National Medical Center (CNMC),C8027964,4088,4132,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,no
+Children's National Medical Center (CNMC),C8027964,7204,7244,Other,Not Reported,Combination of Protons and Photons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Children's National Medical Center (CNMC),C8027964,7455,Not Available,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,600,cGy,no
+Children's National Medical Center (CNMC),C8150718,1967,2021,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,36,Gy,no
+Children's National Medical Center (CNMC),C8150718,2448,2448,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,18-19,Gy,no
+Children's National Medical Center (CNMC),C8150718,Not Available,1858,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,36,Gy,54,Gy,no
+Children's National Medical Center (CNMC),C8167077,2107,2093,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3600,cGy,yes
+Children's National Medical Center (CNMC),C8167077,2462,2584,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,30,Gy,no
+Children's National Medical Center (CNMC),C8527467,3788,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,36,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C8622177,2500,2542,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Children's National Medical Center (CNMC),C8626851,3182,3224,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,no
+Children's National Medical Center (CNMC),C8684907,3148,3183,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,Gy,54,Gy,yes
+Children's National Medical Center (CNMC),C8684907,4989,4993,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Children's National Medical Center (CNMC),C8732877,5873,5887,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Children's National Medical Center (CNMC),C8738289,1633,Not Available,Craniospinal with focal boost,Not Applicable,Not Reported,Not Applicable,2340,cGy,Not Reported,Not Available,yes
+Dayton Children's Hospital,C4053957,3273,3322,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,54,Gy,34,Gy,yes
+Dayton Children's Hospital,C4053957,3273,3322,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5400 ,cGy,3600 ,cGy,yes
+Dayton Children's Hospital,C4053957,4449,4451,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,24,Gy,no
+Dayton Children's Hospital,C5490597,4129,4176,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,54,Gy,Unavailable,Gy,yes
+Dayton Children's Hospital,C5490597,4703,4752,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,Gy,no
+Dayton Children's Hospital,C6784065,6394,6436,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,30.6,Gy,yes
+Hackensack,C2596407,7597,7641,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Hackensack,C3732927,1232,1236,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,2250,cGy,no
+Hackensack,C3732927,763,808,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Hackensack,C3735510,5136,5172,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Hackensack,C3735510,5990,6024,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,45,Gy,no
+Hackensack,C3736740,3249,3292,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Hackensack,C3924192,4894,4933,Other,"Three phases: CSI including vertebral bodies, CSI boost, brain boost",Protons,Not Applicable,54,CGE,Not Applicable,Not Applicable,yes
+Hudson Institute,C2419410,3975,4021,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,Unavailable,Not Reported,yes
+Hudson Institute,C2457540,Not Available,795,Unavailable,Not Applicable,Unavailable,Not Applicable,5520,Not Reported,Not Applicable,Not Applicable,no
+Intermountain Primary Children's Hospital,C7226127,3171,3212,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Intermountain Primary Children's Hospital,C7274835,2050,2101,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36 ,Gy,59.5,Gy,yes
+Intermountain Primary Children's Hospital,C7333629,2379,2425,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,2340,cGy,5400,cGy,yes
+Intermountain Primary Children's Hospital,C7366716,3346,3389,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Intermountain Primary Children's Hospital,C7901274,3107,3150,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,2342,cGy,5402 cGy,cGy,yes
+Intermountain Primary Children's Hospital,C7935837,671,712,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5040,cGy,yes
+Intermountain Primary Children's Hospital,C8104962,3212,3251,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600,cGy,5400 ,cGy,yes
+Intermountain Primary Children's Hospital,C8105085,3212,3253,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3602.5,cGy,5402.5,cGy,yes
+Intermountain Primary Children's Hospital,C8492412,6383,Not Reported,Not Reported,Not Applicable,Not Reported,Not Applicable,Not Applicable,Not Applicable,Not Applicable,Not Applicable,yes
+Johns Hopkins All Children's Hospital,C7953795,2635,2701,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,39.6,CGE,54 ,Gy,no
+Johns Hopkins Medicine,C3466755,6171,6212,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,9184 ,cGy,2788 ,cGy,yes
+Johns Hopkins Medicine,C3466878,3842,3892,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+Johns Hopkins Medicine,C3587418,462,503,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3272.72 ,cGy,yes
+Johns Hopkins Medicine,C4028742,1162,1207,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Unavailable,cGy,Unavailable,cGy,yes
+Lurie Children's Hospital,C1002081,2097,2139,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Lurie Children's Hospital,C1025205,431,475,Focal/Tumor bed,Not Applicable,Not Reported,Not Applicable,Not Applicable,Not Applicable,5412 ,cGy,yes
+Lurie Children's Hospital,C105042,1935,1976,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54.12,CGE,yes
+Lurie Children's Hospital,C1188918,1065,1114,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3240,cGy,5400,cGy,yes
+Lurie Children's Hospital,C1188918,5050,5065,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,2160,cGy,no
+Lurie Children's Hospital,C138498,2621,2657,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5500,cGy,yes
+Lurie Children's Hospital,C144525,Not Reported,Not Reported,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Lurie Children's Hospital,C144894,Not Reported,Not Reported,Other,Left Frontal Brain,Protons,Not Applicable,54.18,Not Reported,Not Applicable,Not Applicable,no
+Lurie Children's Hospital,C145140,Not Reported,Not Reported,Not Reported,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Applicable,Not Applicable,no
+Lurie Children's Hospital,C145263,Not Reported,Not Reported,Not Reported,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Applicable,Not Applicable,no
+Lurie Children's Hospital,C145509,1200,1245,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5940,cGy,no
+Lurie Children's Hospital,C177981,6108,6169,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,Unavailable,Not Reported,5580,Not Reported,yes
+Lurie Children's Hospital,C178104,1630,1672,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5500,cGy,Not Reported,Not Reported,yes
+Lurie Children's Hospital,C178227,1124,1167,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2400 ,cGy,5400 ,cGy,yes
+Lurie Children's Hospital,C178350,3940,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,5598,cGy,yes
+Lurie Children's Hospital,C178473,1706,1765,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5400 ,cGy,Not Reported,Not Reported,yes
+Lurie Children's Hospital,C178596,3142,3184,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5400 ,cGy,Not Reported,Not Reported,yes
+Lurie Children's Hospital,C178719,1189,1224,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+Lurie Children's Hospital,C179088,3909,3944,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5400,cGy,Unavailable,Not Reported,yes
+Lurie Children's Hospital,C179457,3977,4021,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5508,cGy,yes
+Lurie Children's Hospital,C179580,2057,2098,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5660,cGy,yes
+Lurie Children's Hospital,C179826,2700,2728,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5580,cGy,yes
+Lurie Children's Hospital,C180195,1344,1346,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+Lurie Children's Hospital,C180564,4265,4311,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5589,cGy,yes
+Lurie Children's Hospital,C180933,2410,2451,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5590,cGy,yes
+Lurie Children's Hospital,C181056,3454,3497,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,3240 ,cGy,yes
+Lurie Children's Hospital,C181302,3224,3288,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5580,cGy,yes
+Lurie Children's Hospital,C181425,2452,2492,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Lurie Children's Hospital,C182286,695,738,Whole Ventricular with focal boost,Not Applicable,Protons,Not Applicable,5411,CGE,5052,CGE,yes
+Lurie Children's Hospital,C183516,4101,4135,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,5400,cGy,5400,cGy,yes
+Lurie Children's Hospital,C2342412,3416,3459,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5412 ,cGy,yes
+Lurie Children's Hospital,C2407602,3420,3462,Other,CSI and Post Fossa TB Boost,Protons,Not Applicable,5412 ,cGy,Not Applicable,Not Applicable,yes
+Lurie Children's Hospital,C2408832,4936,4978,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2345 ,cGy,5412 ,cGy,yes
+Lurie Children's Hospital,C2438598,3147,3199,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2345 ,cGy,5953 ,cGy,yes
+Lurie Children's Hospital,C2444133,1823,1866,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5860,Not Reported,Unavailable,Not Reported,no
+Lurie Children's Hospital,C2446101,1249,1249,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+Lurie Children's Hospital,C2460369,1237,1279,Craniospinal with focal boost,Not Applicable,Not Reported,Not Applicable,2340,cGy,5400,cGy,yes
+Lurie Children's Hospital,C2460369,1917,1917,Other,gamma knife,Gamma Knife,Not Applicable,1700,cGy,Not Applicable,Not Applicable,no
+Lurie Children's Hospital,C2461107,1836,1888,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,no
+Lurie Children's Hospital,C2510307,2783,2826,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2345 ,cGy,5412 ,cGy,yes
+Lurie Children's Hospital,C2548560,5348,5392,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3630 ,cGy,5434 ,cGy,yes
+Lurie Children's Hospital,C2568609,3093,3128,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Lurie Children's Hospital,C2642040,1712,1761,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Lurie Children's Hospital,C2769837,1654,1698,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Lurie Children's Hospital,C300858,4104,4132,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3621 ,cGy,5611 ,cGy,yes
+Lurie Children's Hospital,C3374259,6665,6706,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3630,cGy,5621 ,cGy,no
+Lurie Children's Hospital,C3376596,3931,3973,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5595,cGy,Unavailable,cGy,yes
+Lurie Children's Hospital,C3376596,4976,5058,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,2400,cGy,no
+Lurie Children's Hospital,C3379056,3983,4026,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5592,cGy,yes
+Lurie Children's Hospital,C3379917,3985,4027,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5400,cGy,Not Reported,Not Reported,yes
+Lurie Children's Hospital,C3380286,2861,2904,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5439 ,cGy,yes
+Lurie Children's Hospital,C3380901,843,884,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+Lurie Children's Hospital,C3381885,2190,2233,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,5412,cGy,yes
+Lurie Children's Hospital,C3382008,1971,2014,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Lurie Children's Hospital,C3405132,2874,2917,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Lurie Children's Hospital,C3405255,3826,3869,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5592,cGy,Unavailable,Not Reported,yes
+Lurie Children's Hospital,C3411651,2168,2202,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5581,cGy,yes
+Lurie Children's Hospital,C3464049,1545,1589,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5800 ,cGy,yes
+Lurie Children's Hospital,C3464049,2233,2255,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,1050,cGy,no
+Lurie Children's Hospital,C3559989,2829,2875,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,9180 ,cGy,yes
+Lurie Children's Hospital,C3567000,2821,2866,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Lurie Children's Hospital,C3653469,Not Reported,Not Reported,Other,TBI for SCT,Not Reported,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Lurie Children's Hospital,C3740799,1236,1278,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5412,cGy,yes
+Lurie Children's Hospital,C3749286,4111,4154,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Lurie Children's Hospital,C3753468,4203,4244,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5431,cGy,2349,cGy,yes
+Lurie Children's Hospital,C3821364,4037,4076,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5000,CGE,yes
+Lurie Children's Hospital,C3865521,1872,1917,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5580,cGy,yes
+Lurie Children's Hospital,C4024806,2628,2670,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5414,cGy,yes
+Lurie Children's Hospital,C4073883,1665,1706,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,2400,cGy,yes
+Lurie Children's Hospital,C4153095,7214,7248,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Lurie Children's Hospital,C417585,2809,2843,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2360 ,cGy,5400 ,cGy,yes
+Lurie Children's Hospital,C4309428,3496,3538,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2345,cGy,5400,cGy,yes
+Lurie Children's Hospital,C477240,1951,1992,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54.12rbe,Not Reported,yes
+Lurie Children's Hospital,C478962,4316,4359,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,3060 ,cGy,yes
+Lurie Children's Hospital,C5022090,3645,3691,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5580,cGy,2340,cGy,yes
+Lurie Children's Hospital,C5054685,2835,2877,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600cGy,cGy,1440cGy,cGy,yes
+Lurie Children's Hospital,C515124,4994,5033,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Lurie Children's Hospital,C5214954,1924,1970,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5580,cGy,Unavailable,Not Reported,yes
+Lurie Children's Hospital,C522504,4762,4805,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2360,Not Reported,5049,Not Reported,yes
+Lurie Children's Hospital,C5304498,6404,6440,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Lurie Children's Hospital,C550056,3837,3885,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5456 ,cGy,5400,cGy,yes
+Lurie Children's Hospital,C5555664,2003,2045,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,no
+Lurie Children's Hospital,C556575,3081,3122,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5430,cGy,5430 ,cGy,yes
+Lurie Children's Hospital,C557682,Not Reported,Not Reported,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5979 ,cGy,Not Reported,Not Reported,no
+Lurie Children's Hospital,C5594286,7277,7323,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Lurie Children's Hospital,C5623314,4779,4821,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340,cGy,5400,cGy,yes
+Lurie Children's Hospital,C565431,2345,2387,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2345 ,cGy,5430 ,cGy,yes
+Lurie Children's Hospital,C567522,3537,3580,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3630 ,cGy,5614 ,cGy,yes
+Lurie Children's Hospital,C5700066,3056,3100,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5436,cGy,no
+Lurie Children's Hospital,C5700066,622,666,Unavailable,Not Applicable,Unavailable,Not Applicable,unavailable,Not Reported,Not Applicable,Not Applicable,no
+Lurie Children's Hospital,C596058,2580,2623,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2345 ,cGy,3067 ,cGy,yes
+Lurie Children's Hospital,C596058,4223,4241,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3496,cGy,no
+Lurie Children's Hospital,C596058,4489,4501,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+Lurie Children's Hospital,C607251,1716,1752,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5000,cGy,Not Reported,Not Reported,yes
+Lurie Children's Hospital,C617952,4878,4920,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.60,CGE,54.27,CGE,yes
+Lurie Children's Hospital,C618567,2551,2596,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5580,cGy,yes
+Lurie Children's Hospital,C618690,2357,2400,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5412,CGE,yes
+Lurie Children's Hospital,C618813,752,797,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+Lurie Children's Hospital,C6192804,2042,2085,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Lurie Children's Hospital,C6193173,1601,1643,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2350,cGy,5400,cGy,yes
+Lurie Children's Hospital,C6201168,1546,1597,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,Gy,5400,cGy,yes
+Lurie Children's Hospital,C6201291,3961,3987,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Lurie Children's Hospital,C626685,3821,3864,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Lurie Children's Hospital,C6431055,2851,2900,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340,cGy,5400,cGy,yes
+Lurie Children's Hospital,C6431055,3921,3948,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,3060,cGy,no
+Lurie Children's Hospital,C648333,2435,2478,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5500,cGy,yes
+Lurie Children's Hospital,C651039,Not Reported,Not Reported,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Reported,no
+Lurie Children's Hospital,C6512727,1601,1645,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,no
+Lurie Children's Hospital,C6513219,3202,3250,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5400,cGy,2345,cGy,yes
+Lurie Children's Hospital,C6519123,1489,1529,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Not Availale,Not Availale,5400,cGy,no
+Lurie Children's Hospital,C6519123,3787,3821,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,4320,cGy,no
+Lurie Children's Hospital,C6519123,4192,4206,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3500,cGy,no
+Lurie Children's Hospital,C652638,3017,3059,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2345 ,cGy,5412 ,cGy,yes
+Lurie Children's Hospital,C6715554,1206,1254,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,5580,cGy,3000,cGy,yes
+Lurie Children's Hospital,C6830928,1259,1300,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5400,cGy,3600,cGy,yes
+Lurie Children's Hospital,C6929451,3832,3874,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5400,cGy,3600,cGy,yes
+Lurie Children's Hospital,C6929451,4769,4769,Focal/Tumor bed,Not Applicable,Other,stereotactic radiosurgery,Not Applicable,Not Applicable,1800,cGy,no
+Lurie Children's Hospital,C6929451,5112,Not Available,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3600,cGy,no
+Lurie Children's Hospital,C699378,3222,3274,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,Not Reported,5400,cGy,yes
+Lurie Children's Hospital,C7008048,2523,2567,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Lurie Children's Hospital,C7125882,770,812,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,no
+Lurie Children's Hospital,C7271637,3306,3348,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5400,cGy,2400,cGy,yes
+Lurie Children's Hospital,C7332768,2474,2516,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5400,cGy,2340,cGy,yes
+Lurie Children's Hospital,C7348512,5085,5127,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Lurie Children's Hospital,C740214,2663,2721,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5400,cGy,2350,cGy,yes
+Lurie Children's Hospital,C743535,1955,2004,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,4500 ,cGy,no
+Lurie Children's Hospital,C743535,933,976,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5412 ,cGy,yes
+Lurie Children's Hospital,C8013450,2269,2359,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,23.4,CGE,no
+Lurie Children's Hospital,C8167569,3228,3268,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+Lurie Children's Hospital,C833202,2094,2138,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5412,cGy,yes
+Lurie Children's Hospital,C8427960,1105,1148,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,4500,cGy,no
+Lurie Children's Hospital,C870471,3401,3451,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2341 ,cGy,5408 ,cGy,yes
+Lurie Children's Hospital,C8888964,2483,2524,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,4756,cGy,yes
+Lurie Children's Hospital,C908478,1112,1154,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,no
+Lurie Children's Hospital,C960999,3835,3879,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Lurie Children's Hospital,C960999,6012,6037,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,4018 ,cGy,no
+Lurie Children's Hospital,C992610,1646,1687,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5453,cGy,3079,cGy,yes
+Maria Fareri Children's Hospital at Westchester Medical Center,C7105095,Not Available,Not Available,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Reported,Not Available,no
+Meyer Children's Hospital,C1063458,3197,3253,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3900 ,cGy,5700 ,cGy,yes
+Meyer Children's Hospital,C1205277,3749,3790,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Meyer Children's Hospital,C2403912,1536,1578,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Meyer Children's Hospital,C2404158,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C2404773,4617,4649,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Meyer Children's Hospital,C2704155,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C292371,1100,1137,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3120 ,cGy,5970 ,cGy,yes
+Meyer Children's Hospital,C3256302,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C333453,1203,1253,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2400 ,cGy,3060 ,cGy,yes
+Meyer Children's Hospital,C3471675,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C3473274,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C3473397,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C3571674,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Unavailable,Not Reported,no
+Meyer Children's Hospital,C3572043,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Unavailable,Not Reported,no
+Meyer Children's Hospital,C4065150,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C409221,944,963,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,Not Reported,Not Reported,yes
+Meyer Children's Hospital,C411066,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Not Reported,Not Applicable,Not Reported,Not Reported,Not Reported,Not Reported,no
+Meyer Children's Hospital,C4417668,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Unavailable,cGy,Unavailable,cGy,no
+Meyer Children's Hospital,C4418529,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Unavailable,cGy,Unavailable,cGy,no
+Meyer Children's Hospital,C4420251,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,cGy,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C457560,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C705282,2317,2366,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Meyer Children's Hospital,C7366347,2672,2714,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+Meyer Children's Hospital,C7366593,3045,3087,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+Meyer Children's Hospital,C7374957,4226,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C7376187,1804,1820,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+Meyer Children's Hospital,C7376187,2896,2919,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C7376187,4433,4457,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C7400172,1498,Not Reported,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+Meyer Children's Hospital,C7401894,1735,1778,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+Meyer Children's Hospital,C7411980,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Not Availale,Not Availale,Not Reported,Not Available,no
+Meyer Children's Hospital,C7467576,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C7468191,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C773424,2619,2661,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,4500 ,cGy,yes
+Meyer Children's Hospital,C773547,1257,1326,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Meyer Children's Hospital,C773793,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Unavailable,Not Reported,no
+Meyer Children's Hospital,C823731,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,Unavailable,Not Reported,Unavailable,Not Reported,no
+Meyer Children's Hospital,C942672,5042,5052,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,Unavailable,Not Reported,unvailable,Not Reported,yes
+Meyer Children's Hospital,C979203,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Meyer Children's Hospital,C979695,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+NYU Langone Health,C8827095,2576,Not Reported,Not Reported,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Not Applicable,Not Applicable,yes
+OHSU Doernbecher Children's Hospital,C4108569,2681,2728,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,30.6,CGE,yes
+OHSU Doernbecher Children's Hospital,C4127634,2224,2268,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,30.6,CGE,yes
+OHSU Doernbecher Children's Hospital,C4853457,4828,4877,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,23.4,Gy,54,Gy,yes
+OHSU Doernbecher Children's Hospital,C4853703,4446,4537,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,no
+OHSU Doernbecher Children's Hospital,C5332419,4833,4876,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,3060,cGy,yes
+OHSU Doernbecher Children's Hospital,C6067590,2890,2934,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5580,cGy,3960,cGy,yes
+OHSU Doernbecher Children's Hospital,C6067590,4950,4950,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,20,Gy,no
+OHSU Doernbecher Children's Hospital,C6316296,5500,5556,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+OHSU Doernbecher Children's Hospital,C7842726,2359,2404,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,18,CGE,yes
+Orlando Health Arnold Palmer Hospital,C3991596,4704,4746,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,54,Gy,30.6,Gy,yes
+Orlando Health Arnold Palmer Hospital,C4274373,6395,6434,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Orlando Health Arnold Palmer Hospital,C4274865,5207,5248,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Orlando Health Arnold Palmer Hospital,C4274988,2139,2181,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+Orlando Health Arnold Palmer Hospital,C4719387,1040,1077,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,50.4,CGE,yes
+Orlando Health Arnold Palmer Hospital,C5259849,5513,5555,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,18,Gy,54,Gy,yes
+Orlando Health Arnold Palmer Hospital,C5259972,1918,1964,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,54,Gy,54,Gy,no
+Orlando Health Arnold Palmer Hospital,C6809526,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+Orlando Health Arnold Palmer Hospital,C7638177,6195,6245,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C103074,8233,8280,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,21.40 ,CGE,54,CGE,yes
+Seattle Children's Hospital,C104058,4550,4595,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340,cGy,5400,cGy,yes
+Seattle Children's Hospital,C104427,476,514,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5040 ,CGE,yes
+Seattle Children's Hospital,C1056939,893,934,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5040 ,cGy,no
+Seattle Children's Hospital,C1057185,6157,6205,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C1057431,2114,2155,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,22.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C1070100,5048,5091,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54,CGE,yes
+Seattle Children's Hospital,C1070100,7002,7043,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,50.4,CGE,no
+Seattle Children's Hospital,C1070100,7853,7867,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,20,Gy,no
+Seattle Children's Hospital,C1070223,6624,6670,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,21.3,CGE,54,CGE,yes
+Seattle Children's Hospital,C1070346,838,880,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C1070838,2136,2179,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,23.4 ,CGE,54,Gy,yes
+Seattle Children's Hospital,C1154847,720,766,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Seattle Children's Hospital,C1155462,1546,1594,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C1155585,4339,4382,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C1155585,4987,4991,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+Seattle Children's Hospital,C1183875,6423,6464,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,18,CGE,54,CGE,yes
+Seattle Children's Hospital,C1253493,2024,2067,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C1253862,3431,3480,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,23.4 ,Gy,55.8,Gy,no
+Seattle Children's Hospital,C1253862,4708,4738,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,12.6,CGE,37.4,CGE,no
+Seattle Children's Hospital,C141696,3997,4044,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Seattle Children's Hospital,C141696,5181,5211,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,36,CGE,no
+Seattle Children's Hospital,C141696,5332,5354,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,3000 ,cGy,no
+Seattle Children's Hospital,C142557,1230,1267,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C143172,4067,4108,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Seattle Children's Hospital,C143418,1905,1948,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C147354,3486,3531,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C147477,2452,2495,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C147846,2606,2650,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C147846,3105,3105,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,1500,cGy,no
+Seattle Children's Hospital,C147969,1906,1949,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C148215,387,448,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+Seattle Children's Hospital,C148584,1925,1966,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C148707,643,681,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,4500 ,CGE,5040 ,CGE,yes
+Seattle Children's Hospital,C148953,1069,1108,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Seattle Children's Hospital,C149199,4262,4305,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C153012,3173,3223,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5480 ,cGy,yes
+Seattle Children's Hospital,C153135,1962,2004,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C153504,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Seattle Children's Hospital,C154365,5737,5779,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Seattle Children's Hospital,C169248,2176,2224,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C169248,3580,3618,Craniospinal with focal boost,Not Applicable,Gamma Knife,Not Applicable,2340 ,cGy,4500 ,cGy,no
+Seattle Children's Hospital,C169248,5471,5471,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,1900 ,cGy,no
+Seattle Children's Hospital,C169371,3153,3203,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C169863,2930,2972,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C170109,6376,6419,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C170232,3169,3212,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5580,cGy,3600,cGy,yes
+Seattle Children's Hospital,C170355,3724,3772,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C171462,1000,1041,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5040 ,cGy,yes
+Seattle Children's Hospital,C171462,1553,1592,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,1800 ,cGy,5040 ,cGy,no
+Seattle Children's Hospital,C173799,4667,4716,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3240 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C175521,4713,4757,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340,cGy,5400,cGy,yes
+Seattle Children's Hospital,C225951,1530,1575,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5580,cGy,yes
+Seattle Children's Hospital,C226074,229,277,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,yes
+Seattle Children's Hospital,C226443,2582,2585,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,720 ,cGy,Unavailable,cGy,yes
+Seattle Children's Hospital,C2332203,4773,4816,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C2332203,5835,7699,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5040,cGy,no
+Seattle Children's Hospital,C2355081,5024,5066,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C2358156,583,625,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C2463690,1459,1501,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C2544870,5142,5187,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3960 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C2571192,979,1025,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,CGE,yes
+Seattle Children's Hospital,C2571315,1434,1476,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,CGE,yes
+Seattle Children's Hospital,C2696529,1097,1142,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Seattle Children's Hospital,C2784966,10580,10587,Unavailable,Not Applicable,Gamma Knife,Not Applicable,3000 ,cGy,Not Applicable,Not Applicable,no
+Seattle Children's Hospital,C2784966,8557,8600,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C2852616,5695,5738,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,CGE,5400 ,CGE,yes
+Seattle Children's Hospital,C303810,1301,1344,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,CGE,5400 ,CGE,no
+Seattle Children's Hospital,C303810,3158,3158,Other,na,Other,I131 treatment,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+Seattle Children's Hospital,C310206,2661,2705,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C3544737,4648,4689,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54 ,CGE,yes
+Seattle Children's Hospital,C3631329,4329,4380,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,55.7 ,CGE,yes
+Seattle Children's Hospital,C3631698,9269,9310,Whole Ventricular with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,55,CGE,yes
+Seattle Children's Hospital,C371583,2563,2604,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54.2,CGE,yes
+Seattle Children's Hospital,C3717306,3880,3923,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,36,Gy,55.8,Gy,yes
+Seattle Children's Hospital,C3884586,3657,3700,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54,CGE,yes
+Seattle Children's Hospital,C4031571,1376,1427,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C4031694,3391,3440,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C4034523,1737,1780,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C4034646,1960,2002,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Seattle Children's Hospital,C4104018,193,229,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5490,cGy,yes
+Seattle Children's Hospital,C4344483,3036,3077,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C5254437,1654,1692,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,46.8,CGE,yes
+Seattle Children's Hospital,C5254437,2013,2060,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,no
+Seattle Children's Hospital,C5492565,4697,4743,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C558912,1189,1236,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,1260 ,CGE,5220 ,CGE,no
+Seattle Children's Hospital,C558912,1200,1236,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2132 ,CGE,5220 ,CGE,no
+Seattle Children's Hospital,C602700,1555,1598,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,55.8,CGE,yes
+Seattle Children's Hospital,C603069,367,408,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,CGE,yes
+Seattle Children's Hospital,C603069,497,534,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,4500 ,cGy,no
+Seattle Children's Hospital,C6083703,2944,2987,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C622257,1769,1814,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,39.6,Gy,55.8,Gy,yes
+Seattle Children's Hospital,C647349,942,969,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C676746,6466,6508,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C677115,3658,3699,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C6958725,1090,1131,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,52.2,CGE,yes
+Seattle Children's Hospital,C700977,7650,7693,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C701223,3276,3318,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,55.8,CGE,yes
+Seattle Children's Hospital,C701469,907,948,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C724962,4451,4494,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54.04,CGE,yes
+Seattle Children's Hospital,C725331,4987,5031,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C758541,2839,2888,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,36,Gy,55.8,Gy,yes
+Seattle Children's Hospital,C758541,3594,3594,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,18,Gy,no
+Seattle Children's Hospital,C758541,4226,4245,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,35,Gy,no
+Seattle Children's Hospital,C758541,5997,6004,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,25,Gy,no
+Seattle Children's Hospital,C7611978,1616,1657,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,CGE,5400,CGE,yes
+Seattle Children's Hospital,C7617267,1582,1626,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,36,CGE,54,CGE,no
+Seattle Children's Hospital,C7617267,1582,1626,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,CGE,5400,CGE,no
+Seattle Children's Hospital,C782649,4027,4068,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,CGE,5580 ,CGE,yes
+Seattle Children's Hospital,C782895,2033,2075,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C784371,8320,8362,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,CGE,5400 ,CGE,yes
+Seattle Children's Hospital,C797655,2209,2249,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C8183559,3516,3567,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C836769,4322,4365,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C837630,1306,1352,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,no
+Seattle Children's Hospital,C8379990,4397,4440,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,56,CGE,yes
+Seattle Children's Hospital,C8405943,3569,3612,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C8432019,2223,2266,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,no
+Seattle Children's Hospital,C849561,924,966,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C8735460,4197,4240,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54,CGE,yes
+Seattle Children's Hospital,C912414,2926,2969,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,55.8,CGE,yes
+Seattle Children's Hospital,C912660,1881,1925,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C923607,1564,1605,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C948330,5942,5986,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54 ,CGE,yes
+Seattle Children's Hospital,C991257,3751,3792,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,55.8,CGE,yes
+Seattle Children's Hospital,C99507,2027,2072,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,23.4 ,CGE,50.4,CGE,yes
+Stanford Lucile Packard Children's Hospital,C1014381,4790,4831,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,5400,Not Reported,yes
+Stanford Lucile Packard Children's Hospital,C2337369,Not Available,Not Available,Other,brain and spine,Protons,Not Applicable,unavailable,Gy,Not Applicable,Not Applicable,no
+Stanford Lucile Packard Children's Hospital,C2488782,2518,2560,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,6300 ,cGy,yes
+Stanford Lucile Packard Children's Hospital,C2602680,1675,1718,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5580,cGy,yes
+Stanford Lucile Packard Children's Hospital,C2602680,1964,1982,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+Stanford Lucile Packard Children's Hospital,C2660736,2804,2847,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Stanford Lucile Packard Children's Hospital,C2898495,2631,2675,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Stanford Lucile Packard Children's Hospital,C3224691,5806,5851,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,5940,cGy,no
+Stanford Lucile Packard Children's Hospital,C3224691,6528,6541,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,2500,cGy,no
+Stanford Lucile Packard Children's Hospital,C3224691,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,Not Reported,Unavailable,Not Reported,no
+Stanford Lucile Packard Children's Hospital,C3224814,1874,1874,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Stanford Lucile Packard Children's Hospital,C3518784,2549,2591,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,3060 ,cGy,yes
+Stanford Lucile Packard Children's Hospital,C3522105,6767,6808,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,3600,cGy,yes
+Stanford Lucile Packard Children's Hospital,C3638094,695,Not Reported,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3000,Not Reported,Not Reported,Not Reported,no
+Stanford Lucile Packard Children's Hospital,C3638340,3350,3392,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,5400,Not Reported,Unavailable,Not Reported,yes
+Stanford Lucile Packard Children's Hospital,C3841167,2811,2853,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,3060 ,cGy,yes
+Stanford Lucile Packard Children's Hospital,C6344955,3504,3556,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,23.4,Gy,30.6,Gy,yes
+Stanford Lucile Packard Children's Hospital,C6345324,3214,3257,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,36,Gy,54,Gy,yes
+Stanford Lucile Packard Children's Hospital,C6889968,2203,2246,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,23.4 Gy in 13 fx with additional boost to 50.4 Gy in 17 additional fx,Gy,yes
+Stanford Lucile Packard Children's Hospital,C7376433,1738,1788,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600,cGy,3600,cGy,yes
+Stanford Lucile Packard Children's Hospital,C7862775,4174,4216,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,30.6,Gy,54,Gy,yes
+The Children's Hospital of Philadelphia,C1003065,4444,4487,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1003188,5499,5543,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1026804,5334,5379,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1026804,6853,6861,Other,Whole Brain,Photons,Not Applicable,2000 ,cGy,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C1026804,6986,6997,Other,Whole Spine,Protons,Not Applicable,2500 ,cGy,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C1026804,6986,7003,Other,whole spine,Unavailable,Not Applicable,2500,cGy,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C1031847,1493,1535,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1032093,1153,1176,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,Not Reported,Not Available,no
+The Children's Hospital of Philadelphia,C1032093,981,1023,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+The Children's Hospital of Philadelphia,C1054725,3292,3331,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1060629,4708,4756,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1100235,588,629,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1223973,3367,3409,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1232952,3184,3226,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C1248204,2313,2357,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C1277601,1233,1279,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C136653,1660,1704,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1980 ,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C140712,1659,1703,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1800,cGy,5400,cGy,no
+The Children's Hospital of Philadelphia,C146247,1466,1502,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3000 ,cGy,6250 ,cGy,no
+The Children's Hospital of Philadelphia,C15252,867,908,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C16113,5306,5344,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5540,cGy,yes
+The Children's Hospital of Philadelphia,C17466,5697,5740,Other,Whole brain and spine,Protons,Not Applicable,5580 ,cGy,Not Applicable,Not Applicable,yes
+The Children's Hospital of Philadelphia,C18819,Not Available,Not Available,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+The Children's Hospital of Philadelphia,C196554,575,619,Focal/Tumor bed,Not Applicable,Combination of Protons and Photons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C20049,Not Available,1001,Focal/Tumor bed,Not Applicable,Other,IMRT,Not Applicable,Not Applicable,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C20910,2673,2715,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C20910,4486,4508,Whole Ventricular with focal boost,Not Applicable,Unavailable,Not Applicable,900 ,cGy,2160 ,cGy,no
+The Children's Hospital of Philadelphia,C21402,1412,1428,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C216603,1303,1319,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,5220 ,cGy,2280 ,cGy,yes
+The Children's Hospital of Philadelphia,C216603,7911,7955,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,4600,cGy,1400,cGy,no
+The Children's Hospital of Philadelphia,C217095,3018,3070,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1980 ,cGy,5580 ,cGy,no
+The Children's Hospital of Philadelphia,C21894,1925,1988,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C22263,4095,4135,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,1800 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C227058,1002,1048,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C22755,3468,3499,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5580 ,cGy,1980 ,cGy,yes
+The Children's Hospital of Philadelphia,C22878,Not Available,2814,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,18,Gy,54,Gy,no
+The Children's Hospital of Philadelphia,C22878,Not Available,5761,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+The Children's Hospital of Philadelphia,C230994,3055,3098,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C2338845,4566,4609,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 `,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C2346471,3735,3774,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C2381034,6556,6600,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C24108,1303,1344,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C2442411,1432,1477,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5580,cGy,yes
+The Children's Hospital of Philadelphia,C2442411,1698,1700,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+The Children's Hospital of Philadelphia,C245754,4886,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,1980,cGy,5580,cGy,yes
+The Children's Hospital of Philadelphia,C2479926,3304,3348,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C2501205,1735,1778,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+The Children's Hospital of Philadelphia,C2501205,2148,2190,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,"3960 , 5040 ",cGy,no
+The Children's Hospital of Philadelphia,C25092,2069,2116,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3060 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C2536998,1451,1493,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C2554956,Not Available,Not Available,Whole Ventricular with focal boost,Not Applicable,Unavailable,Not Applicable,4500 ,cGy,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C2556555,5481,5522,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C25830,5563,5606,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,5580 ,cGy,no
+The Children's Hospital of Philadelphia,C2595915,2490,2535,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,2340 ,cGy, 5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C2646837,2879,2918,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C2658645,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C2698005,1176,1219,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C2698005,516,558,Focal/Tumor bed,Not Applicable,Combination of Protons and Photons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C270723,3355,3398,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3060 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C270723,3355,3398,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C270723,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C27552,3884,3926,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,1980 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C2774019,1883,1925,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C2786688,2019,2065,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C28905,4263,4304,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C2896773,4289,4328,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C2897019,1831,1871,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5100 ,cGy,yes
+The Children's Hospital of Philadelphia,C2897142,6011,6057,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C29028,Not Available,3731,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,4500 ,cGy,4500 ,cGy,no
+The Children's Hospital of Philadelphia,C30135,1616,1660,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C308730,4628,4671,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C312912,6606,6648,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C3169587,2724,2766,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3198492,3484,3526,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C33948,2021,2084,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3240 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C3406239,1072,1100,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600,cGy,Not Reported,Not Available,no
+The Children's Hospital of Philadelphia,C3406239,869,911,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3408822,1665,1707,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3409560,2830,2879,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C3422106,414,449,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,no
+The Children's Hospital of Philadelphia,C3474996,6851,6905,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3552978,3379,3432,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy, 5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3559497,1722,1763,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3665154,6741,6788,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3665400,2256,2304,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,no
+The Children's Hospital of Philadelphia,C374412,570,587,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C3755559,857,902,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5580 ,cGy,no
+The Children's Hospital of Philadelphia,C3755928,5591,5633,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1500 ,cGy,5100 ,cGy,yes
+The Children's Hospital of Philadelphia,C3767367,3821,3861,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C377979,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,5400,cGy,no
+The Children's Hospital of Philadelphia,C377979,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C3816813,824,865,Focal/Tumor bed,Not Applicable,Combination of Protons and Photons,Not Applicable,Not Applicable,Not Applicable,5900,cGy,yes
+The Children's Hospital of Philadelphia,C3859863,4133,4176,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3860232,2604,2646,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C396306,829,870,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3971178,3388,3430,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1500 ,cGy,5100 ,cGy,yes
+The Children's Hospital of Philadelphia,C39729,1449,1491,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C3979173,5813,5855,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,no
+The Children's Hospital of Philadelphia,C3980157,5114,5163,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C40098,385,417,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5040,cGy,yes
+The Children's Hospital of Philadelphia,C4049406,3311,3353,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,36,Gy,18,Gy,no
+The Children's Hospital of Philadelphia,C4063305,7057,7104,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3600 ,cGy,yes
+The Children's Hospital of Philadelphia,C406761,1183,1225,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C406761,1308,1349,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1800 ,cGy,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C40713,2645,2688,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable, 3600,cGy,5580,cGy,yes
+The Children's Hospital of Philadelphia,C4082862,7984,8027,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C4093563,1892,1937,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600,cGy,5400,cGy,no
+The Children's Hospital of Philadelphia,C41328,13359,13407,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C4174251,4473,4486,Unavailable,Not Applicable,Protons,Not Applicable,3000,cGy,Not Applicable,Not Applicable,yes
+The Children's Hospital of Philadelphia,C4190856,6601,6645,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C419553,4886,4928,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3060 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C4261089,4412,4448,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C4316685,4031,4077,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C432222,881,928,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C4345713,4473,4519,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C44403,Not Available,1949,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Not Availale,Not Availale,Not Reported,Not Available,no
+The Children's Hospital of Philadelphia,C4463301,2072,2115,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C4483473,1214,1257,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+The Children's Hospital of Philadelphia,C45141,6712,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,5400 ,cGy,2400 ,cGy,yes
+The Children's Hospital of Philadelphia,C466293,2175,2217,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C466293,528,572,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C48216,Not Available,2338,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5580 ,cGy,no
+The Children's Hospital of Philadelphia,C49077,6057,6118,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,2340,cGy,no
+The Children's Hospital of Philadelphia,C49077,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C50184,2439,2848,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1800,cGy,5580,cGy,yes
+The Children's Hospital of Philadelphia,C50799,3433,3477,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600,cGy,1980,cGy,yes
+The Children's Hospital of Philadelphia,C5136234,5305,5347,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C5136849,6860,6901,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C5137218,2338,2380,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,no
+The Children's Hospital of Philadelphia,C528285,4049,4099,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+The Children's Hospital of Philadelphia,C52890,4389,4451,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,1980,cGy,5940,cGy,yes
+The Children's Hospital of Philadelphia,C533082,1350,1395,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,5580,cGy,yes
+The Children's Hospital of Philadelphia,C53628,3570,3613,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C542307,5156,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5580 ,cGy,no
+The Children's Hospital of Philadelphia,C54366,2444,2466,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600,cGy,6000,cGy,yes
+The Children's Hospital of Philadelphia,C54366,8613,8617,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,1800,cGy,no
+The Children's Hospital of Philadelphia,C5490105,3388,3429,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C5490228,3425,3467,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C549441,Not Available,Not Available,Unavailable,Not Applicable,Gamma Knife,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C549441,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C55350,2588,2649,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,Unavailable,Not Reported,yes
+The Children's Hospital of Philadelphia,C558420,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Reported,Not Reported,no
+The Children's Hospital of Philadelphia,C55965,4018,4079,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,unavailable ,cGy,3600 ,cGy,yes
+The Children's Hospital of Philadelphia,C56088,4898,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,unavailable,cGy,5540,cGy,yes
+The Children's Hospital of Philadelphia,C56211,5300,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,5400 ,cGy,Unavailable,Not Reported,no
+The Children's Hospital of Philadelphia,C5633277,3388,3441,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C563709,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,5580 ,cGy,no
+The Children's Hospital of Philadelphia,C57564,4317,4360,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C584619,2362,2404,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C58548,4269,4316,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C5964147,2480,2521,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C59655,3135,3180,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C6002523,2349,2391,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C6009411,2420,2460,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C607743,1216,1258,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3602 ,cGy,5403 ,cGy,no
+The Children's Hospital of Philadelphia,C6176814,2845,2875,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C6207441,2802,2850,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C623979,5146,5201,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C625086,2665,2707,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5340,cGy,yes
+The Children's Hospital of Philadelphia,C625086,3858,3886,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+The Children's Hospital of Philadelphia,C6254181,4124,Not Reported,Unavailable,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+The Children's Hospital of Philadelphia,C6538311,1008,1051,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,no
+The Children's Hospital of Philadelphia,C6538311,2829,2830,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,300,cGy,no
+The Children's Hospital of Philadelphia,C6538311,915,919,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,2500,cGy,no
+The Children's Hospital of Philadelphia,C663708,5868,5912,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C6735357,5180,5221,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3960,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C67527,3750,3793,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C6769797,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C68265,2236,2278,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C6830682,3698,3745,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C6908049,1280,1294,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3000,cGy,yes
+The Children's Hospital of Philadelphia,C692613,3641,3688,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C701838,3328,3367,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C701838,4003,4018,Whole Ventricular with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,2160,cGy,2160,cGy,no
+The Children's Hospital of Philadelphia,C7218378,1147,1204,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340,cGy,16380,cGy,yes
+The Children's Hospital of Philadelphia,C72570,3585,3626,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C7351464,2568,2611,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C740337,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,5400 ,cGy,3600 ,cGy,no
+The Children's Hospital of Philadelphia,C740337,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C741198,2123,2165,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5580 ,cGy,2160,cGy,yes
+The Children's Hospital of Philadelphia,C7483812,2560,2969,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C752883,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5500 ,cGy,no
+The Children's Hospital of Philadelphia,C75399,5648,5692,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C7542975,2963,3009,Other,External Beam Radiation Therapy,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+The Children's Hospital of Philadelphia,C76875,3683,3726,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C7726245,Not Reported,Not Reported,Not Reported,Not Applicable,Not Reported,Not Applicable,Not Applicable,Not Applicable,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C794457,2727,2770,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C798270,1874,1916,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1500,cGy,5100,cGy,yes
+The Children's Hospital of Philadelphia,C8013204,4555,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5580,cGy,yes
+The Children's Hospital of Philadelphia,C8104470,4625,Not Reported,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C82164,2097,2141,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,1980 ,cGy,5580 ,cGy,no
+The Children's Hospital of Philadelphia,C83517,4535,4571,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C83517,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600,cGy,6000,cGy,no
+The Children's Hospital of Philadelphia,C8361663,7224,7267,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C8474331,1733,1746,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400,cGy,no
+The Children's Hospital of Philadelphia,C84747,5103,5148,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,1800,cGy,5500,cGy,yes
+The Children's Hospital of Philadelphia,C84747,7576,7598,Other,craniospinal without focal boost,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C851406,Not Available,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,Not Reported,Not Reported,no
+The Children's Hospital of Philadelphia,C8516766,4297,4338,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C8607048,2904,2948,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C8659569,1853,Not Reported,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5580 ,cGy,yes
+The Children's Hospital of Philadelphia,C8660430,2684,2733,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5580,cGy,yes
+The Children's Hospital of Philadelphia,C914505,4191,4233,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,5400 ,cGy,yes
+The Children's Hospital of Philadelphia,C914505,4918,4933,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,2400 ,cGy,no
+The Children's Hospital of Philadelphia,C914505,4918,4933,Other,C2 Brain,Photons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+The Children's Hospital of Philadelphia,C972438,2076,2118,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2338 ,cGy,5400,cGy,yes
+The Children's Hospital of Philadelphia,C973545,2508,2550,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,no
+The Children's Hospital of Philadelphia,C974652,1743,Not Available,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+The Children's Hospital of Philadelphia,C974652,2344,2348,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3000 ,cGy,no
+The Children's Hospital of Philadelphia,C974652,2780,2782,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3500 ,cGy,no
+The Children's Hospital of Philadelphia,C99630,5368,5417,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+UAB,C3199845,2553,2595,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+UAB,C3203658,4643,4688,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+UAB,C3203904,4627,4675,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+UAB,C3430101,5294,5335,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5580,cGy,yes
+UAB,C4729473,1399,1442,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,unavailable,cGy,yes
+UCSF Benioff Children's Hospital,C1203063,6061,6103,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+UCSF Benioff Children's Hospital,C2509200,4359,4359,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,1.6,Gy,no
+UCSF Benioff Children's Hospital,C2509200,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+UCSF Benioff Children's Hospital,C2550528,1267,1311,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5400 ,cGy,no
+UCSF Benioff Children's Hospital,C2552619,3352,3398,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,1800 ,cGy,2340 ,cGy,yes
+UCSF Benioff Children's Hospital,C4154940,2031,2061,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,cGy,Not Reported,Not Available,yes
+UCSF Benioff Children's Hospital,C4548909,6229,6261,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5580,cGy,yes
+UCSF Benioff Children's Hospital,C7596111,1154,1196,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3960,cGy,5580,cGy,yes
+UCSF Benioff Children's Hospital,C7769295,3008,3050,Unavailable,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+UCSF Benioff Children's Hospital,C8241861,Not Available,6261,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,23.4,Gy,no
+UCSF Benioff Children's Hospital,C8257113,Not Available,Not Available,Unavailable,Not Applicable,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+UCSF Benioff Children's Hospital,C886092,1619,1651,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3600,cGy,no
+UCSF Benioff Children's Hospital,C886092,705,746,Other,Whole brain,Protons,Not Applicable,5040 ,cGy,Not Applicable,Not Applicable,no
+UCSF Benioff Children's Hospital,C921639,1457,1499,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+University of Iowa,C7223175,4345,4384,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,18,Gy,36,Gy,yes
+University of Iowa,C7224036,9186,9215,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,36,Gy,no
+University of Iowa,C7224036,Not Reported,1140,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,39.6,Gy,54,Gy,no
+University of Iowa,C7415055,7305,7356,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,61.2,Gy,no
+University of Iowa,C7532766,5614,5651,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,53.2,Gy,no
+University of Iowa,C7705950,3690,3732,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,39.6,Gy,54,Gy,yes
+University of Iowa,C7754535,2121,2165,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,54,Gy,36,Gy,yes
+University of Pittsburgh,C1010076,994,1026,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3060,cGy,5400,cGy,yes
+University of Pittsburgh,C1064319,3309,3357,Craniospinal with focal boost,Not Applicable,Other,"3D conformal radiotherapy and 6 MV photons, IMRT boost",3600,cGy,5400,cGy,yes
+University of Pittsburgh,C107994,2939,2983,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3000 ,cGy,yes
+University of Pittsburgh,C107994,4928,4965,Other,PTV,Other,IMRT,5040 ,cGy,Not Applicable,Not Applicable,no
+University of Pittsburgh,C107994,Not Reported,Not Reported,Not Reported,Not Applicable,Not Reported,Not Applicable,Not Applicable,Not Applicable,Not Applicable,Not Applicable,no
+University of Pittsburgh,C1168131,2114,2157,Craniospinal with focal boost,Not Applicable,Other,IMRT radiotherapy,2340 ,cGy,5580 ,cGy,yes
+University of Pittsburgh,C122262,2889,2930,Craniospinal with focal boost,Not Applicable,Other,IMRT,Unavailable,Not Reported,Unavailable,Not Reported,yes
+University of Pittsburgh,C1262718,3092,3134,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+University of Pittsburgh,C129273,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+University of Pittsburgh,C138006,4487,4538,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+University of Pittsburgh,C138006,6474,6480,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,1800,Not Reported,yes
+University of Pittsburgh,C138006,Not Reported,Not Reported,Not Reported,Not Applicable,Not Reported,Not Applicable,Not Applicable,Not Applicable,Not Applicable,Not Applicable,no
+University of Pittsburgh,C2358033,Not Available,1294,Focal/Tumor bed,Not Applicable,Unavailable,Not Applicable,Not Applicable,Not Applicable,5400,Not Reported,no
+University of Pittsburgh,C2541918,5965,6004,Craniospinal with focal boost,Not Applicable,Other,IMRT,3600 ,cGy,5400 ,cGy,yes
+University of Pittsburgh,C3273768,4192,4235,Focal/Tumor bed,Not Applicable,Other,VMAT,Not Applicable,Not Applicable,3060 ,cGy,yes
+University of Pittsburgh,C3279303,1992,2035,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,9000,Not Reported,yes
+University of Pittsburgh,C340341,4237,4279,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,1980 ,cGy,3600 ,cGy,yes
+University of Pittsburgh,C3651747,3046,3143,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+University of Pittsburgh,C3776100,1896,1939,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,unavailable,cGy,5400,cGy,yes
+University of Pittsburgh,C3777699,4770,4812,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,Not Reported,5400,Not Reported,yes
+University of Pittsburgh,C3904635,Not Available,6396,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,no
+University of Pittsburgh,C3905865,3505,3561,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+University of Pittsburgh,C413034,5136,5180,Craniospinal with focal boost,Not Applicable,Other,IMRT,2340,cGy,3600,cGy,yes
+University of Pittsburgh,C4157892,2807,2849,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+University of Pittsburgh,C4513239,3394,3437,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,54,Gy,Not Reported,Not Reported,yes
+University of Pittsburgh,C4884084,3207,3249,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,54,Gy,yes
+University of Pittsburgh,C4884084,Not Available,Not Available,Unavailable,Not Applicable,Gamma Knife,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,no
+University of Pittsburgh,C5361078,4450,4489,Other,23.4 Gy Proton radiation,Protons,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+University of Pittsburgh,C607005,3625,3653,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340,cGy,3240,cGy,yes
+University of Pittsburgh,C665061,3296,3339,Focal/Tumor bed,Not Applicable,Other,IMRT,Not Applicable,Not Applicable,6020,cGy,yes
+University of Pittsburgh,C6693414,3331,3373,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,36,Gy,yes
+University of Pittsburgh,C710325,Not Available,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,no
+University of Pittsburgh,C7272867,2788,2817,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+University of Pittsburgh,C7273113,5190,5232,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,54,Gy,Not Reported,Not Available,yes
+University of Pittsburgh,C7273605,3399,3441,Unavailable,Not Applicable,Unavailable,Not Applicable,Not Reported,Not Reported,Not Applicable,Not Applicable,yes
+University of Pittsburgh,C7712346,2833,2875,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+University of Pittsburgh,C820287,1505,1549,Focal/Tumor bed,Not Applicable,Other,IMRT,Not Applicable,Not Applicable,5580,cGy,yes
+University of Pittsburgh,C8517012,4643,Not Reported,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400,cGy,yes
+University of Pittsburgh,C944886,567,641,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+University of Pittsburgh,C96801,4111,4155,Craniospinal with focal boost,Not Applicable,Other,IMRT,2340 ,cGy,5580 ,cGy,yes
+Wake Forest Baptist Medical Center,C3335145,2487,2529,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,Not Reported,5400,Not Reported,yes
+Wake Forest Baptist Medical Center,C3461835,3734,3777,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,4320 ,cGy,yes
+Wake Forest Baptist Medical Center,C3461835,4112,4126,Focal/Tumor bed,Not Applicable,Other,EBRT,Not Applicable,Not Applicable,2500,cGy,no
+Wake Forest Baptist Medical Center,C3461835,4294,4294,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,17,Gy,no
+Wake Forest Baptist Medical Center,C3941166,Not Available,1161,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,cGy,5400 ,cGy,no
+Wake Forest Baptist Medical Center,C5154930,1991,1991,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,8,Gy,yes
+Washington University in St. Louis,C7226496,5557,5606,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,"posterior fossa boost to 54 CGE, pineal boost to 54 CGE, left ventricular boost to 54, and spinal boost to 39.6 above cord terminus and 50.4 to the cauda equina",CGE,yes
+Washington University in St. Louis,C7227234,5744,5787,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Washington University in St. Louis,C7227357,2875,Not Available,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Washington University in St. Louis,C7415547,3700,3739,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,Not Reported,Not Available,yes
+Washington University in St. Louis,C7415670,1757,1800,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Washington University in St. Louis,C7422312,2686,2730,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,30.6,Gy,yes
+Washington University in St. Louis,C7422558,3153,3192,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Washington University in St. Louis,C7424772,2250,2280,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Washington University in St. Louis,C7543221,932,969,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,50.4,CGE,yes
+Washington University in St. Louis,C7543467,2947,2988,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Washington University in St. Louis,C7543467,2947,2988,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Washington University in St. Louis,C7543467,3310,3321,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,3000,cGy,no
+Washington University in St. Louis,C7553307,3402,3451,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,Gy,54,Gy,yes
+Washington University in St. Louis,C7559457,5474,5517,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,Gy,54,Gy,yes
+Washington University in St. Louis,C7784301,3827,3869,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Washington University in St. Louis,C7831656,2002,2049,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,Gy,54,Gy,yes
+Washington University in St. Louis,C7947891,2833,2876,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Weill Cornell Medical College,C1254600,1713,1988,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,cGy,Not Applicable,Not Applicable,no
+Weill Cornell Medical College,C1254600,2047,Not Available,Unavailable,Not Applicable,Unavailable,Not Applicable,Unavailable,cGy,Not Applicable,Not Applicable,yes
+Weill Cornell Medical College,C4704750,Not Available,Not Available,Whole Ventricular with focal boost,Not Applicable,Unavailable,Not Applicable,30,Gy,Unavailable,Gy,no
+Weill Cornell Medical College,C6432039,152,Not Available,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,8680,Gy,yes

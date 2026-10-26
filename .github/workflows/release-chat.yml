@@ -1,45 +1,59 @@
 name: Release udi-yac (chat)
 
-on:
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: 'Version bump type'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+# Tag-triggered publish. This workflow never writes to main: the "Main Branch
+# Protection" ruleset requires every change to main to go through a pull
+# request, so the version bump lands via PR and pushing the matching tag is
+# what publishes.
+#
+# To release:
+#   1. Bump "version" in packages/chat/package.json in a PR; merge it.
+#   2. git fetch origin main
+#      git tag udi-yac-v<version> origin/main && git push origin udi-yac-v<version>
+#
+# No release ordering against udi-toolkit: it is a devDependency that the
+# library build bundles into dist/, so the published tarball never asks npm for
+# it and the in-tree toolkit version need not be published first.
+#
+# The filename is load-bearing — npm trusted publishing (OIDC) is bound to this
+# repository *and* this workflow filename. Renaming it breaks publishing.
 
+on:
+  push:
+    tags:
+      - "udi-yac-v*"
+
+# The build job installs and runs the dependency tree, so it holds a read-only
+# token. Only the publish job, which runs none of it, can publish or release.
 permissions:
-  id-token: write # Required for OIDC
-  contents: write # Required to push commits and tags
+  contents: read
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          persist-credentials: true
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      - name: Configure git
+      - name: Verify tag matches package version
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          tag_version="${GITHUB_REF_NAME#udi-yac-v}"
+          pkg_version=$(node -p "require('./packages/chat/package.json').version")
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match packages/chat/package.json version ${pkg_version}"
+            exit 1
+          fi
+          echo "Releasing udi-yac v${pkg_version}"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -62,26 +76,54 @@ jobs:
       - name: Build library
         run: pnpm --filter udi-yac build:lib
 
-      - name: Bump version
-        id: bump
-        working-directory: packages/chat
-        run: |
-          pnpm version ${{ inputs.bump }} --no-git-tag-version
-          new_version=$(node -p "require('./package.json').version")
-          echo "version=$new_version" >> "$GITHUB_OUTPUT"
-          git add package.json
-          git commit -m "chore(release): udi-yac-v${new_version}"
-          git tag "udi-yac-v${new_version}"
+      # Both guard properties of the published artifact that nothing else
+      # catches: the stylesheet must not leak into a host app, and the bundle
+      # must import without a DOM. See ci-chat.yml for the reasoning.
+      - name: Check library CSS scoping
+        run: pnpm --filter udi-yac test:css
 
-      - name: Push commit and tag
-        run: |
-          git push origin HEAD
-          git push --tags
+      - name: Check library imports on the server
+        run: pnpm --filter udi-yac test:ssr
 
+      - name: Pack
+        run: pnpm --filter udi-yac pack --pack-destination "$RUNNER_TEMP/package"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: ${{ runner.temp }}/package/*.tgz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create the GitHub Release
+      id-token: write # Required for npm trusted publishing (OIDC)
+    steps:
+      # For the pnpm version pin and the tag gh verifies; nothing here runs it.
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+          path: package
+
+      # --no-git-checks: the tag is checked out in detached HEAD, which pnpm's
+      # default branch/cleanliness checks reject.
       - name: Publish to npm
-        run: pnpm --filter udi-yac publish
+        run: pnpm publish package/*.tgz --no-git-checks
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "udi-yac-v${{ steps.bump.outputs.version }}" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag

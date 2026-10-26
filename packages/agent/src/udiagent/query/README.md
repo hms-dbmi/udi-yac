@@ -78,8 +78,14 @@ amount of state to mirror Arquero exactly:
   resolve against the request's `selections`. Same-entity → a predicate;
   cross-entity → a semi-join on `entityRelationship` (`targetKey IN (SELECT
 originKey FROM source WHERE pred)`); `match: 'all'` → `GROUP BY originKey
-HAVING count(matching) = count(total)`. An empty point value-list means **no
-  constraint** on that field (matches Arquero), not "match nothing".
+HAVING count(matching) = count(total)`; `match: 'none'` → `targetKey NOT IN
+(SELECT originKey FROM source WHERE pred AND originKey IS NOT NULL)`, which
+  drops rows with a null key. The subquery always reads the source as loaded,
+  never a pipeline intermediate. A semi-join whose `source` is the filtered
+  table itself, keyed on a subject column both sides, is a **per-subject
+  scope**: it keeps every row of each subject that matches. An empty point
+  value-list means **no constraint** on that field (matches Arquero), not
+  "match nothing".
 - `only` selects one **marginal** of a pre-aggregated cube: the rows where
   exactly the named dimensions are populated and every other dimension is
   null. The complement comes from the entity's configured `udi:dimensions`
@@ -88,7 +94,9 @@ NOT NULL AND race IS NULL AND age IS NULL` without the caller knowing the
   cube's shape. `{"only": []}` is the grand-total row. Pass `dimensions`
   inline to use it against an entity with no configured cube roles; with
   neither, the query fails loudly rather than returning a wrong marginal.
-- `kde` must be the last op; the engine post-processes its rows in Python.
+- `kde` must be the last op; the engine post-processes its rows in Python. It
+  fetches only the kde field and the group columns, and `samples` is clamped
+  to 512.
 
 **Filtering a cube.** A prepended predicate cannot work: a per-sex chart reads
 the marginal where `race IS NULL`, so `race IN (…)` on top of it is
@@ -117,10 +125,11 @@ visualization rather than render a plausible wrong number.
 - `table_map`: entity name → physical table/view name (entity names may
   contain spaces; table names are SQL-safe).
 - `entity_schemas`: per-entity metadata that **can't be introspected from the
-  database** — merged in by `introspect()` (see §4). `primaryKey`/`foreignKeys`
-  land in the schema and drive the chat's cross-entity filtering; the cube
-  roles (`udi:cube`, `udi:dimensions`, `udi:measures`,
-  `udi:measure_aggregations`) land on the resource and drive `only`.
+  database** — merged into the resource by `introspect()` (see §4).
+  `primaryKey`/`foreignKeys` land in the schema and drive the chat's
+  cross-entity filtering; descriptions are what the LLM reads; the cube roles
+  (`udi:cube`, `udi:dimensions`, `udi:measures`, `udi:measure_aggregations`)
+  land on the resource and drive `only`.
 
 `run_query(source, transformation?, selections?, display_data_only?, offset?)`
 returns the client-facing result:
@@ -141,8 +150,9 @@ returns the client-facing result:
   `true` when the pipeline ends in a rollup (the aggregate's unfiltered twin
   is rarely consumed).
 - **Row cap**: aggregated results are small by construction and never capped;
-  row-level results are limited to `row_cap` and flagged `truncated`.
-  `offset` pages past the cap ("load more") — deterministic only when the
+  row-level results are limited to `row_cap` and flagged `truncated`. A kde
+  reads at most 50,000 input rows (whichever the backend returns first) and is
+  flagged `truncated` with that cap when it hits it. `offset` pages past the cap ("load more") — deterministic only when the
   spec orders by a unique key.
 
 `run_batch(queries, selections)` runs many specs in one call and returns
@@ -171,13 +181,17 @@ Each connector exposes `execute(sql, params) -> list[dict]` plus a `dialect`
 **exactly the shape the browser used to compute from CSVs** — so the
 orchestrator and chat need no changes. Per table: `DESCRIBE` + one stats pass
 (`COUNT(*)`, per-column cardinality, numeric min/max) + one `DISTINCT` query
-per low-cardinality categorical (≤ 80 distinct, matching the chat's
-`removeLongDomains`). Cardinality is exact below 100k rows, approximate
-(`APPROX_COUNT_DISTINCT`) above. `MetadataCache` wraps it with a TTL.
+per categorical with at most 500 distinct values (`DEFAULT_DISTINCT_CAP`, as
+many as a chart can draw, so a filter on one can list them all). Cardinality
+is exact below 100k rows, approximate (`APPROX_COUNT_DISTINCT`) above.
+`MetadataCache` wraps it with a TTL.
 
 Foreign keys and primary keys are **merged in from `entity_schemas`**, because
 the database stores no FK constraints — this is what makes cross-entity
-filtering work in remote mode.
+filtering work in remote mode. So are descriptions: a schema's `description`
+becomes the resource's, and its `fields` (`[{name, description}]`) fill in the
+matching introspected columns' `description` and their domains'
+`fieldDescription`.
 
 ---
 
@@ -237,8 +251,18 @@ The key `default` (or a package with no explicit match) serves requests whose
           },
         ],
       },
-      "donors": { "primaryKey": ["id"] },
+      "donors": {
+        "primaryKey": ["id"],
+        // optional: what the LLM is told the table and its columns mean
+        "description": "One row per tissue donor.",
+        "fields": [
+          { "name": "age", "description": "Age at donation, in years." },
+        ],
+      },
     },
+    // optional: the chat's "Try an example" prompts for this package, served by
+    // GET /v1/yac/examples?package=my_cohort in place of the global list
+    "examplePrompts": ["How many donors are in each age group?"],
   },
 }
 ```
@@ -267,7 +291,7 @@ Related env var: `UDI_METADATA_TTL_SECONDS` (default `3600`) — introspection
 cache TTL.
 
 **Generating the config for a CSV dataset.** Two seeders write this config for
-you, carrying `foreignKeys`/`primaryKey` from the directory's
+you, carrying `foreignKeys`/`primaryKey` and descriptions from the directory's
 `datapackage.json` into `schemas` and applying identical CSV cleaning:
 
 - `packages/agent/scripts/seed_duckdb.py` → a local `.duckdb` file +
@@ -276,10 +300,85 @@ you, carrying `foreignKeys`/`primaryKey` from the directory's
 - `packages/agent/scripts/seed_starrocks.py` → a running StarRocks database +
   `starrocks-backends.json`. See `dev/starrocks/README.md`.
 
+### 3.1a Per-user database authentication (JWT passthrough)
+
+By default every caller's queries run as the one service credential in the
+backend spec: the agent authenticates the _caller_, but the database sees a
+single shared account, so authorization stops at the API boundary.
+
+Set `jwtPassthrough` and the agent instead forwards each caller's own bearer
+token to StarRocks as the connection password. StarRocks verifies it against
+the same JWKS the agent used and applies that user's own grants and row/column
+policies, so the database becomes the authority on who sees what and the audit
+trail names real users.
+
+```jsonc
+{
+  "my_cohort": {
+    "type": "starrocks",
+    "jwtPassthrough": true,
+    // Claim whose value is the StarRocks username. MUST match `principal_field`
+    // in the security integration. Keycloak's `sub` is a UUID, so a realistic
+    // deployment wants `preferred_username` or `email`. Default: "sub".
+    "principalField": "preferred_username",
+    "connection": {
+      "host": "starrocks.internal",
+      "port": 9030,
+      "database": "my_cohort",
+      // No password: the caller's token is the credential. A `user` here is
+      // used only as a fallback under INSECURE_DEV_MODE, which issues no token.
+    },
+    "tables": { "donors": "donors" },
+  },
+}
+```
+
+Requirements and caveats:
+
+- **StarRocks >= 3.5.0** — JWT authentication does not exist before it. Verified
+  against 3.5.21.
+- **Every caller needs a StarRocks user**, named by the `principalField` claim,
+  plus grants. There is no automatic provisioning; this is usually the
+  long pole in a rollout, not the agent-side configuration.
+- The `required_audience` of the StarRocks security integration must match the
+  agent's `JWT_AUDIENCE`, or one token cannot satisfy both.
+- **Revocation ceiling.** MySQL binds identity at CONNECT time and StarRocks
+  does not re-check `exp` mid-session, so the connector recycles a cached
+  connection once the token that opened it expires. A grant revoked inside a
+  live session is not seen until then — at most one token lifetime.
+- `jwtPassthrough` is rejected on `duckdb`, which has no concept of a user, and
+  rejected at startup under `INSECURE_DEV_MODE` unless `connection.user` gives
+  it a fallback. It never silently degrades to a shared credential.
+- Metadata is cached per principal, because `dataDomains` holds the actual
+  distinct values of each column and would otherwise leak across users.
+
+StarRocks side, once per realm:
+
+```sql
+CREATE SECURITY INTEGRATION keycloak PROPERTIES (
+  "type" = "authentication_jwt",
+  "jwks_url" = "https://idp.example/realms/udi/protocol/openid-connect/certs",
+  "principal_field" = "preferred_username",
+  "required_issuer" = "https://idp.example/realms/udi",
+  "required_audience" = "udi-yac"
+);
+```
+
+To exercise it locally, `dev/starrocks/setup_jwt_auth.py` provisions the
+equivalent (a throwaway JWKS plus two users with different grants) against the
+dev container.
+
 ### 3.2 HTTP contract (for a non-toolkit consumer)
 
+The full request and response schemas are in the
+[HTTP API reference](https://hms-dbmi.github.io/udi-yac/docs/backend/http-api/)
+(generated from the server into [`openapi.json`](../../../openapi.json)); this
+section explains how the two endpoints are meant to be used.
+
 Two JWT-guarded endpoints (dev: `INSECURE_DEV_MODE=1`, `Authorization: Bearer
-dev`).
+dev`). With `jwtPassthrough` set on a backend, that same token is also what
+authenticates the query to the database; a token the database refuses yields
+**403** for the whole request (never a per-visualization error inside a 200).
 
 **`GET /v1/yac/metadata?package=<name>&refresh=<0|1>`** — introspected schema
 for a package:
@@ -327,14 +426,15 @@ Set **`VITE_UDI_REMOTE_PACKAGE=<name>`** (standalone: env; embedded:
 including brush cross-filtering (committed on mouse-up, with a loading
 indicator) — runs on the server via `POST /v1/yac/query`. No CSVs enter the
 browser. Takes precedence over `dataPackage`/`dataPackagePath`. `apiBaseUrl`
-points at this server.
+points at this server. (Canonical description of every chat variable:
+`packages/chat/.env.example`, generated from `packages/chat/src/app/envVars.ts`.)
 
 ### 3.4 Using the engine directly (library)
 
 ```python
 from udiagent.query import DuckDBConnector, QueryEngine
 engine = QueryEngine(
-    DuckDBConnector(views={"donors": "donors.csv"}),
+    DuckDBConnector(views={"donors": "hubmap/donors.tsv"}),
     table_map={"donors": "donors"},
 )
 engine.run_query(
@@ -366,8 +466,15 @@ engine.run_query(
 - **median** on StarRocks is `PERCENTILE_APPROX` (approximate).
 - **rolling windows / `offset` paging** are only deterministic when ordered by
   a unique key (SQL tie order is unspecified).
-- **joins** with same-named keys use `USING`; differently-named non-key column
-  collisions error in SQL rather than auto-suffixing like Arquero (`_1`/`_2`).
+- **joins** spell their projection out instead of `SELECT *`, because both
+  halves of the naming have to be done by hand: a same-named join key is kept
+  once (from the left), and a non-key name present on both sides is renamed
+  `<name>_1` / `<name>_2` as Arquero does. `USING` is not enough — DuckDB
+  merges the key columns, StarRocks keeps both, and every later reference to
+  the key is then ambiguous.
+- **`%`** compiles to `MOD(a, b)`, never the operator: pymysql builds StarRocks
+  statements with Python `%`-formatting, so a bare `%` in the SQL raises
+  "unsupported format character".
 - **No multi-hop entity paths** — cross-entity filtering resolves direct FKs
   and shared-parent siblings only (see `sample-data/readme.md`).
 - **Row-level projection** — remote row tables still `SELECT *`; the

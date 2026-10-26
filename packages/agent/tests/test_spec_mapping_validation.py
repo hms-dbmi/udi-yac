@@ -235,6 +235,13 @@ def test_all_templates_pass_mapping_validation():
         "entities": {
             "donors": {"url": "donors.tsv"},
             "samples": {"url": "samples.tsv"},
+            # A third table, for the templates that cross membership of two of
+            # them. Without a binding for it `<E3>` resolves to an empty source
+            # name, which is the failure this used to report.
+            "datasets": {"url": "datasets.tsv"},
+            # A fourth table, for the template that crosses membership of two
+            # tables AND takes a censoring source — four entities in one spec.
+            "cohort": {"url": "cohort.tsv"},
         },
         "relationships": [
             {
@@ -248,9 +255,11 @@ def test_all_templates_pass_mapping_validation():
     fields = {
         "donors": {"hubmap_id", "age_value", "sex"},
         "samples": {"donor.hubmap_id", "age_value", "sex"},
+        "datasets": {"donor.hubmap_id", "age_value", "sex"},
+        "cohort": {"donor.hubmap_id", "age_value", "sex"},
     }
     bindings = {
-        "E": "donors", "E1": "samples", "E2": "donors",
+        "E": "donors", "E1": "samples", "E2": "donors", "E3": "datasets", "E4": "cohort",
         "F": "age_value", "F1": "age_value", "F2": "sex",
     }
     failures = []
@@ -268,6 +277,65 @@ def test_all_templates_pass_mapping_validation():
         if errors:
             failures.append((index, errors))
     assert not failures, f"invalid templates: {failures}"
+
+
+def test_every_grouped_template_pins_its_stratum_colour_domain():
+    """A new stratified template must not quietly go back to inferred colours.
+
+    Without a domain the renderer builds one from the order the rows happen to
+    mention each stratum, and assigns colours by position — so re-cutting the
+    chart repaints every curve. This sweeps the whole catalogue so the next
+    template that colours by `stratum` is covered by construction rather than by
+    someone remembering.
+    """
+    from udiagent.generated_vis_tools import TEMPLATES
+    from udiagent.stratify import STRATUM_COLUMN, grouping_labels
+    from udiagent.vis_generate import grouping_targets, instantiate_template
+
+    fake_schema = {
+        "entities": {
+            "donors": {"url": "donors.tsv"},
+            "samples": {"url": "samples.tsv"},
+            "datasets": {"url": "datasets.tsv"},
+            "cohort": {"url": "cohort.tsv"},
+        },
+        "relationships": [],
+    }
+    grouping = {"type": "quantitative", "cuts": [50, 65]}
+    expected = grouping_labels(grouping)
+
+    checked = 0
+    failures = []
+    for index, template in enumerate(TEMPLATES):
+        targets = grouping_targets(template)
+        if not targets:
+            continue
+        bindings = {
+            "E": "donors", "E1": "samples", "E2": "donors",
+            "E3": "datasets", "E4": "cohort",
+            "F": "age_value", "F1": "age_value", "F2": "sex",
+        }
+        for group_key in targets:
+            bindings[group_key] = grouping
+        try:
+            spec = instantiate_template(template, bindings, fake_schema)
+        except Exception:
+            continue  # instantiation quirks are covered elsewhere
+        for layer in spec.get("representation") or []:
+            mapping = layer.get("mapping")
+            for entry in mapping if isinstance(mapping, list) else [mapping]:
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get("encoding") != "color":
+                    continue
+                if entry.get("field") != STRATUM_COLUMN:
+                    continue
+                checked += 1
+                if entry.get("domain") != expected:
+                    failures.append((index, entry.get("domain")))
+
+    assert checked, "no template coloured by stratum — has the column been renamed?"
+    assert not failures, f"stratum colour mappings without a pinned domain: {failures}"
 
 
 def test_parse_and_validate_without_entity_fields_unchanged():

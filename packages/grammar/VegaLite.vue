@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import {
+  computed,
+  markRaw,
+  ref,
+  shallowRef,
+  onMounted,
+  onBeforeUnmount,
+} from 'vue';
 import vegaEmbed from 'vega-embed';
 // `defineProps` is a compile-time macro in <script setup> — importing it
 // shadows the macro and trips TS 6's "Import declaration conflicts with
@@ -20,6 +27,33 @@ import { isEmpty, debounce } from 'lodash';
 import type { UDIPalette } from './Palette';
 import { DEFAULT_PALETTE, toVegaRange, toVegaRamp } from './Palette';
 import { registerRampScheme } from './paletteScheme';
+import { formatTime } from './temporal';
+import {
+  PICK_SIGNAL,
+  type PickMode,
+  fieldChannel,
+  holdsPickMode,
+  keyPickMode,
+  pickModeOf,
+  rangePicks,
+  selectFields,
+  togglePointValues,
+} from './pointSelect';
+import {
+  CLICKABLE_LABELS,
+  CLICKABLE_LEGEND,
+  CLICKABLE_LEGEND_SYMBOLS,
+  LABEL_TOTALS_SIGNAL,
+  LEGEND_TOTALS_SIGNAL,
+  type LabelAxis,
+  categoryTotals,
+  findLabelAxis,
+  findLabelLegend,
+  patchLabelAxis,
+  patchLabelLegend,
+  underlineGeometry,
+} from './axisLabelSelect';
+import { RECORD_URL_FIELD } from './recordUrl';
 
 // our type is more specific than the one from vega-embed
 interface VegaSpecShim {
@@ -51,6 +85,8 @@ interface VegaLiteProps {
   selections?: DataSelections | null | undefined;
   /** Consumer-supplied color palette; falls back to DEFAULT_PALETTE per channel. */
   palette?: UDIPalette | undefined;
+  /** Multiplier on every chart text size (1 = Vega's defaults). */
+  fontScale?: number | undefined;
 }
 
 const props = defineProps<VegaLiteProps>();
@@ -70,16 +106,101 @@ function buildVegaConfig(): Record<string, unknown> {
   if (ordinal != null) range.ordinal = toVegaRange(ordinal);
   if (ramp != null) range.ramp = toVegaRamp(ramp, registerRampScheme);
 
+  // Chrome. Vega's defaults are a white plot with black axes, which reads as a
+  // bright rectangle punched into a dark host app; none of it is reachable from
+  // a spec, so the palette is the only place it can come from.
+  const background = palette.background ?? DEFAULT_PALETTE.background;
+  const axis = palette.axis ?? DEFAULT_PALETTE.axis;
+  const grid = palette.grid ?? DEFAULT_PALETTE.grid;
+  const text = palette.text ?? DEFAULT_PALETTE.text;
+
+  // Text sizes are Vega's own defaults times the scale. Vega lays labels out by
+  // these numbers, so they have to come through config rather than CSS.
+  const s = props.fontScale ?? 1;
+  const labels = { labelFontSize: 10 * s, titleFontSize: 11 * s };
+
   const config: Record<string, unknown> = {
     point: { shape: 'circle', filled: true },
     range,
+    background,
+    axis: {
+      domainColor: axis,
+      tickColor: axis,
+      gridColor: grid,
+      labelColor: text,
+      titleColor: text,
+      ...labels,
+    },
+    // The plot frame Vega strokes behind the marks — a rule, not an axis.
+    view: { stroke: grid },
+    legend: { labelColor: text, titleColor: text, ...labels },
+    header: labels,
+    title: {
+      color: text,
+      subtitleColor: text,
+      fontSize: 13 * s,
+      subtitleFontSize: 10 * s,
+    },
+    text: { fontSize: 11 * s },
   };
   if (markColor != null) config.mark = { color: markColor };
+  // Lets an encoding name `formatType: 'udiTime'` (UDIVis does, for a year or
+  // an age column), registered as an expression function in vegaEmbed below.
+  config.customFormatTypes = true;
   return config;
 }
 
+// What the chart can do, surfaced on hover: a pill naming the gesture, and for
+// point selections a pointer and a highlight on the hovered mark (CSS below).
+// A brush's crosshair is set in the spec (UDIVis), since Vega owns the cursor
+// there and the brush rect needs its own.
+const pointSelectable = computed(
+  () => selectFields(props.pointSelect?.fields).length > 0,
+);
+const toggleKey =
+  typeof navigator !== 'undefined' &&
+  /Mac|iPhone|iPad/.test(navigator.userAgent)
+    ? '⌘'
+    : 'Ctrl';
+const hint = computed(() =>
+  props.signalKeys?.length
+    ? 'Drag to filter'
+    : pointSelectable.value
+      ? `Click to filter · Shift range · ${toggleKey} toggle`
+      : null,
+);
+// The pill takes the palette's colors. A transparent background (the default,
+// which inherits the card) would leave its text over the marks, so the CSS
+// falls back to the page's own `Canvas` then.
+const hintColors = computed(() => {
+  const palette = props.palette ?? {};
+  const background = palette.background ?? DEFAULT_PALETTE.background;
+  return {
+    '--udi-hint-scale': props.fontScale ?? 1,
+    '--udi-hint-fg': palette.text ?? DEFAULT_PALETTE.text,
+    '--udi-hint-border': palette.grid ?? DEFAULT_PALETTE.grid,
+    ...(background && background !== 'transparent'
+      ? { '--udi-hint-bg': background }
+      : {}),
+  };
+});
+
 const vegaContainer = ref();
-const vegaView = ref<View | null>(null);
+// `shallowRef`, not `ref`, and the view is marked raw on the way in.
+//
+// A plain `ref` makes its value DEEPLY reactive: Vue wraps the Vega View in a
+// Proxy, and every object reached through it — datasets, tuples, scenegraph
+// items — gets wrapped too. Vega's dataflow is built on object identity: tuples
+// carry ids, marks join items to the tuples that produced them, and removals are
+// matched by identity. Hand it proxies and those comparisons stop matching, so a
+// removal fails to find the item it should delete and the mark keeps drawing it.
+//
+// That is hms-dbmi/udi-yac#34: the dataset ends up correct while the scenegraph
+// holds one stale item per facet group, from the first shrink onwards, and only
+// a re-embed clears it — because a re-embed builds a new view and new marks.
+// Nothing in the component needs the view to be reactive; it is only ever used
+// imperatively.
+const vegaView = shallowRef<View | null>(null);
 
 const errorMessage = ref();
 
@@ -104,10 +225,118 @@ function parseSpec(): { success: boolean; specObject?: VegaSpecShim } {
 
 const ignore = ref(false);
 
+// While the pointer is down on this chart, the brush being dragged is the
+// source of truth for this chart's own selections. A chart filtered by its own
+// brush rebuilds on every move, and the external selection it is handed back
+// (the host's copy of that brush) trails the drag by a render; redrawing the
+// brush from it mid-drag pulled it back a step on each move. So during a drag
+// rebuilds keep the brush's pixels, draw-back leaves it alone, a re-embed
+// (which would drop the gesture) waits, and the release redraws the brush once
+// from the external selection, which by then has caught up.
+let pointerDown = false;
+// A data update that arrived mid-drag, applied on release.
+let rebuildPending = false;
+
+// Clicking a point that stands for one record opens its page (UDIVis's
+// recordUrl). Vega-Lite resets an interval brush to empty on every press,
+// which would clear the brush's filter before the click is even seen. So an
+// emptied brush is held until release: a click on a linked point puts the
+// brush back, anything else clears it as the press used to.
+//
+// The latest press: where, whether on a linked point, and this chart's brush
+// signals as they were before Vega-Lite reset them. Kept past the release, as
+// the click arrives after it.
+let press: {
+  x: number;
+  y: number;
+  onLink: boolean;
+  brush: Record<string, unknown>;
+} | null = null;
+// Brushes a press emptied, routed on release.
+const heldClears = new Set<string>();
+// This view's per-channel brush signals ({name}_x / {name}_y).
+let brushSignals: string[] = [];
+
+/** A point's record link, unless a modifier makes the click a pick. */
+function linkOf(
+  event: { shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean },
+  item: unknown,
+): string | null {
+  const it = item as {
+    mark?: { marktype?: string };
+    datum?: Record<string, unknown>;
+  } | null;
+  if (it?.mark?.marktype !== 'symbol' || pickModeOf(event)) return null;
+  const url = it.datum?.[RECORD_URL_FIELD];
+  return typeof url === 'string' ? url : null;
+}
+
+/** Whether `event` lands where the latest press did — a click, not a drag. */
+function isClick(event: { clientX: number; clientY: number }): boolean {
+  return (
+    press != null &&
+    Math.hypot(event.clientX - press.x, event.clientY - press.y) < 4
+  );
+}
+
+async function restoreBrush(brush: Record<string, unknown>): Promise<void> {
+  const view = vegaView.value;
+  if (!view) return;
+  ignore.value = true;
+  for (const [name, value] of Object.entries(brush)) view.signal(name, value);
+  await view.runAsync();
+  ignore.value = false;
+}
+
+function onChartPointerDown(event: PointerEvent): void {
+  pointerDown = true;
+  const brush: Record<string, unknown> = {};
+  for (const name of brushSignals) brush[name] = vegaView.value?.signal(name);
+  press = { x: event.clientX, y: event.clientY, onLink: false, brush };
+}
+function onChartPointerUp(event?: Event): void {
+  if (!pointerDown) return;
+  pointerDown = false;
+  if (heldClears.size > 0) {
+    if (press?.onLink && event instanceof MouseEvent && isClick(event)) {
+      void restoreBrush(press.brush);
+    } else {
+      for (const key of heldClears) routeSelectionUpdate(key, null);
+    }
+    heldClears.clear();
+  }
+  if (rebuildPending) {
+    rebuildPending = false;
+    void updateVegaChart();
+  } else {
+    void updateVegaChartSelections();
+  }
+}
+
 function formatVegaSignalKey(raw: string): string {
   // replace "-" with "_" in signalKey since Vega signals cannot contain "-"
   // TODO: I think if the key starts with a number they prepend an underscore
   return raw.replace(/-/g, '_');
+}
+
+//: The spec the running view was compiled from, with `data.values` stripped.
+//
+// Everything except the rows — scale domains, encodings, mark config, layer
+// list — is baked in when the view is compiled, and a data changeset cannot
+// change any of it. So a build whose spec differs structurally needs a fresh
+// embed; applying only its data would leave the chart drawing new rows through
+// the old spec, which is the "stale until I toggle table view and back" class of
+// bug (toggling unmounts the view, forcing the re-embed by accident).
+let embeddedSpecShape: string | null = null;
+
+/** The part of a spec a changeset cannot update. */
+function specShape(specObject: VegaSpecShim): string {
+  const { data, ...rest } = specObject as Record<string, unknown> & {
+    data?: { values?: unknown };
+  };
+  const dataWithoutRows = { ...(data ?? {}) };
+  delete dataWithoutRows.values;
+  return JSON.stringify({ ...rest, data: dataWithoutRows });
 }
 
 function initVegaChart() {
@@ -122,18 +351,50 @@ function initVegaChart() {
   widthIsContainer = specMaybeSized.width === 'container';
   heightIsContainer = specMaybeSized.height === 'container';
 
+  embeddedSpecShape = specShape(specObject);
   if (specObject.data && specObject.data.values) {
     delete specObject.data.values;
   }
+  // A bar chart's category labels, and any chart's color legend, gray out when
+  // a filter empties a category, and are clickable when the point selection
+  // covers their field: the way to pick a bar too thin to hit, or every
+  // segment of one color.
+  const pointFields = selectFields(props.pointSelect?.fields);
+  const axis = findLabelAxis(specObject, pointFields);
+  const legend = findLabelLegend(specObject, pointFields);
+  labelAxis = axis;
+  labelLegend = legend;
   // console.log('initializing vega chart with spec:', specObject);
   vegaEmbed(vegaContainer.value, specObject as VisualizationSpec, {
     actions: props.hideActions ? false : true,
     config: buildVegaConfig(),
+    expressionFunctions: { udiTime: formatTime },
+    ...(axis || legend
+      ? {
+          patch: (vgSpec) => {
+            // A point selection's gestures light the empty labels they pick.
+            const picks = props.pointSelect ? PICK_SIGNAL : undefined;
+            if (axis) patchLabelAxis(vgSpec, axis, picks);
+            if (legend) patchLabelLegend(vgSpec, legend, picks);
+            return vgSpec;
+          },
+        }
+      : {}),
   })
     .then((result) => {
       errorMessage.value = null;
       const view = result.view;
-      vegaView.value = view;
+      vegaView.value = markRaw(view);
+      brushSignals = [];
+      // A brush emptied mid-press waits for the release (see `press`).
+      const routeBrush = (key: string, selection: RangeSelection | null) => {
+        if (selection == null && pointerDown) {
+          heldClears.add(key);
+          return;
+        }
+        heldClears.delete(key);
+        routeSelectionUpdate(key, selection);
+      };
       for (const signalKey of props.signalKeys ?? []) {
         const signalKeyFormatted = formatVegaSignalKey(signalKey);
         // Vega-Lite stores per-channel ranges in separate signals
@@ -159,6 +420,10 @@ function initVegaChart() {
             );
             // Skip degenerate ranges (single-point click before drag starts)
             if (Math.abs(dataRange[1] - dataRange[0]) < 1e-9) continue;
+            // A channel spanning its whole scale constrains nothing. It is
+            // also what draw-back writes to the axis a one-field selection
+            // leaves open, which must not come back as a filter on it.
+            if (spansWholeScale(pixelRange, tf.channel as 'x' | 'y')) continue;
             const dataField = fieldMap?.[tf.field] ?? tf.field;
             combined[dataField] = dataRange;
           }
@@ -173,9 +438,10 @@ function initVegaChart() {
           // Listen on each per-channel signal and combine all channels
           for (const channel of channels) {
             const channelSignal = `${signalKeyFormatted}_${channel}`;
+            brushSignals.push(channelSignal);
             view.addSignalListener(channelSignal, () => {
               if (ignore.value) return;
-              routeSelectionUpdate(signalKey, buildCombinedSelection());
+              routeBrush(signalKey, buildCombinedSelection());
             });
           }
         } else {
@@ -187,13 +453,22 @@ function initVegaChart() {
               for (const [k, v] of Object.entries(value)) {
                 remapped[fieldMap[k] ?? k] = v as [number, number];
               }
-              routeSelectionUpdate(signalKey, remapped);
+              routeBrush(signalKey, remapped);
             } else {
-              routeSelectionUpdate(signalKey, value as RangeSelection | null);
+              routeBrush(signalKey, value as RangeSelection | null);
             }
           });
         }
       }
+      view.addEventListener('pointerdown', (event, item) => {
+        if (press && linkOf(event, item)) press.onLink = true;
+      });
+      view.addEventListener('click', (event, item) => {
+        const url = linkOf(event, item);
+        if (url && isClick(event as MouseEvent)) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      });
       if (props.pointSelect) {
         // Capture the prop into a local so its narrowing survives into the
         // click closure — TS otherwise widens `props.pointSelect` back to
@@ -203,14 +478,69 @@ function initVegaChart() {
         // if the signal is a point selection we I couldn't get signals
         // to work with dynamic data, so click events it is!
         view.addEventListener('click', function (event, item) {
-          // Normalize the optional `fields` (string | string[] | undefined)
-          // to an iterable list of strings. No fields → no selection to
-          // build; bail.
-          const raw = point.fields;
-          const fields: string[] =
-            raw == null ? [] : typeof raw === 'string' ? [raw] : raw;
+          // A plain click on a linked point opens it instead (above).
+          if (linkOf(event, item)) return;
+          // A category label stands in for its marks: the selection gets the
+          // guide's field alone, so an axis label picks a stacked bar whole
+          // and a legend entry every segment of its color.
+          const markName = (item?.mark as { name?: string } | undefined)?.name;
+          const guide =
+            markName === CLICKABLE_LABELS
+              ? axis
+              : markName === CLICKABLE_LEGEND ||
+                  markName === CLICKABLE_LEGEND_SYMBOLS
+                ? legend
+                : null;
+          const guideValue = guide
+            ? (item as { datum?: { value?: unknown } }).datum?.value
+            : undefined;
+          // No fields → no selection to build; bail.
+          const fields = guide ? [guide.field] : selectFields(point.fields);
           if (fields.length === 0) return;
-          const datum = (item as { datum?: Record<string, unknown> })?.datum;
+          const datum = guide
+            ? { [guide.field]: guideValue }
+            : (item as { datum?: Record<string, unknown> })?.datum;
+          // A modifier held: add the click to the gesture's picks, commit
+          // nothing until it is released. Starting here too covers a key
+          // press the keydown listener didn't see (focus elsewhere).
+          const mode = pickModeOf(event);
+          if (mode) startPickGesture(mode);
+          if (pickMode === 'toggle') {
+            if (datum) {
+              pendingPicks = togglePointValues(pendingPicks, datum, fields);
+              applyPickSignal();
+            }
+            return;
+          }
+          if (pickMode === 'range') {
+            // A range runs along one field, in its scale's order: the clicked
+            // guide's (a legend entry picks colors), else a bar chart's
+            // category axis (whole bars, as a label click picks), or else the
+            // selection's first field.
+            const rangeGuide = guide ?? (axis?.clickable ? axis : null);
+            const rangeField = rangeGuide ? rangeGuide.field : fields[0];
+            const channel = rangeGuide
+              ? rangeGuide.channel
+              : rangeField && fieldChannel(specObject, rangeField);
+            if (datum && rangeField && channel) {
+              const value = String(datum[rangeField]);
+              // Moving to another guide mid-gesture starts a new range there.
+              if (rangeAnchorField !== rangeField) rangeAnchor = null;
+              rangeAnchorField = rangeField;
+              rangeAnchor ??= value;
+              let domain: unknown[] = [];
+              try {
+                domain = view.scale(channel).domain();
+              } catch {
+                // No scale on that channel: the range is just its two ends.
+              }
+              pendingPicks = {
+                [rangeField]: rangePicks(domain, rangeAnchor, value),
+              };
+              applyPickSignal();
+            }
+            return;
+          }
           if (!datum) {
             dataSourcesStore.clearDataSelection(point.name);
           } else {
@@ -233,6 +563,8 @@ function initVegaChart() {
       // a fresh view starts with no selection rect even though Pinia still
       // holds the selection. No-op on initial mount when there's none.
       updateVegaChartSelections();
+      // Same for a gesture's picks highlight.
+      applyPickSignal();
     })
     .catch((error) => {
       console.error('Error rendering chart', error);
@@ -270,6 +602,175 @@ const reembedForResize = debounce(() => {
   initVegaChart();
 }, 150);
 
+// Multi-select for point selections. Holding a modifier over the chart freezes
+// it: nothing is committed, so neither this chart nor any other re-queries.
+// With Ctrl (⌘ on macOS), clicks toggle the drawn marks into `pendingPicks`;
+// with Shift, they pick every category from the first click to the latest.
+// Either way the rest dim via PICK_SIGNAL, and releasing the key commits the
+// picks as one selection — one query, whatever was picked. So does anything
+// that could swallow that release: the pointer leaving the chart, the window
+// losing focus or the page being hidden. Marks the chart's own filter already
+// hides can't be picked: their rows were never fetched (a rollup skips the
+// unfiltered pass), so adding one means clearing the selection first.
+let pickMode: PickMode | null = null;
+let pendingPicks: Record<string, string[]> | null = null;
+// A Shift gesture's first click, which its range runs from; null until then,
+// and a Shift gesture that never clicks leaves the selection as it was.
+let rangeAnchor: string | null = null;
+// The field that anchor belongs to.
+let rangeAnchorField: string | null = null;
+let pointerOverChart = false;
+// Cleared by typing into a field, set by moving the pointer over the chart: a
+// capital letter typed in the chat while the pointer happens to rest on a
+// chart must not start a gesture.
+let pickArmed = false;
+
+function isEditable(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  return (
+    !!el &&
+    (el.isContentEditable ||
+      ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
+  );
+}
+
+function applyPickSignal(): void {
+  if (!vegaView.value || !props.pointSelect) return;
+  try {
+    vegaView.value.signal(PICK_SIGNAL, pickMode ? (pendingPicks ?? {}) : null);
+    void vegaView.value.runAsync();
+  } catch {
+    // The layer maps opacity itself, so UDIVis emitted no pick signal.
+  }
+}
+
+// Both modes start from the current selection, so holding a key dims nothing
+// new until a click; a range's first click then replaces it.
+function startPickGesture(mode: PickMode): void {
+  if (pickMode || !props.pointSelect) return;
+  pickMode = mode;
+  rangeAnchor = null;
+  rangeAnchorField = null;
+  const current =
+    dataSourcesStore.dataSelections[props.pointSelect.name]?.selection;
+  pendingPicks = current
+    ? (JSON.parse(JSON.stringify(current)) as Record<string, string[]>)
+    : null;
+  applyPickSignal();
+}
+
+function endPickGesture(): void {
+  if (!pickMode || !props.pointSelect) return;
+  const unchanged = pickMode === 'range' && rangeAnchor === null;
+  pickMode = null;
+  rangeAnchor = null;
+  rangeAnchorField = null;
+  const name = props.pointSelect.name;
+  if (unchanged) {
+    // Shift was held and released without a click.
+  } else if (pendingPicks) {
+    dataSourcesStore.updateDataSelection(name, pendingPicks);
+  } else {
+    dataSourcesStore.clearDataSelection(name);
+  }
+  pendingPicks = null;
+  applyPickSignal();
+}
+
+function onPickKeyDown(event: KeyboardEvent): void {
+  if (isEditable(event.target)) {
+    pickArmed = false;
+    return;
+  }
+  const mode = keyPickMode(event.key);
+  if (mode && pointerOverChart && pickArmed) startPickGesture(mode);
+}
+function onPickKeyUp(event: KeyboardEvent): void {
+  if (pickMode && keyPickMode(event.key) === pickMode) endPickGesture();
+}
+function onPickPointerMove(event: PointerEvent): void {
+  pointerOverChart = true;
+  pickArmed = true;
+  // The key's release can go unseen (a context menu had it), but every pointer
+  // event carries the modifiers actually held.
+  if (pickMode && !holdsPickMode(event, pickMode)) endPickGesture();
+  const mode = pickModeOf(event);
+  if (mode) startPickGesture(mode);
+}
+function onPickPointerLeave(): void {
+  pointerOverChart = false;
+  endPickGesture();
+}
+function onPickVisibilityChange(): void {
+  if (document.hidden) endPickGesture();
+}
+// A modifier click would otherwise also extend the page's text selection,
+// highlighting every axis label between two Shift-clicks.
+function onPickMouseDown(event: MouseEvent): void {
+  if (props.pointSelect && pickModeOf(event)) event.preventDefault();
+}
+
+// The running view's bar category axis and color legend (grayed-out /
+// clickable labels), if any.
+let labelAxis: LabelAxis | null = null;
+let labelLegend: LabelAxis | null = null;
+
+// Hovering a clickable label underlines it. Chrome won't draw an animatable
+// underline on SVG text — it ignores text-underline-offset there and paints the
+// decoration in the text's fill — so the underline is an HTML element laid over
+// the label. It is created on demand rather than rendered by Vue because
+// vega-embed empties the container on every embed.
+let labelUnderline: HTMLDivElement | null = null;
+
+function labelText(event: PointerEvent): SVGTextElement | null {
+  const target = event.target as Element | null;
+  return (
+    target?.closest?.<SVGTextElement>(
+      `.${CLICKABLE_LABELS} text, .${CLICKABLE_LEGEND} text`,
+    ) ?? null
+  );
+}
+
+function onLabelPointerOver(event: PointerEvent): void {
+  const text = labelText(event);
+  const container = vegaContainer.value as HTMLElement | undefined;
+  const ctm = text?.getScreenCTM();
+  if (!text || !container || !ctm) return;
+  if (!labelUnderline?.isConnected) {
+    labelUnderline = document.createElement('div');
+    labelUnderline.className = 'udi-label-underline';
+    labelUnderline.appendChild(document.createElement('span'));
+    container.appendChild(labelUnderline);
+  }
+  const rect = container.getBoundingClientRect();
+  const { left, top, width, angle } = underlineGeometry(
+    text.getBBox(),
+    (x, y) => {
+      const point = new DOMPoint(x, y).matrixTransform(ctm);
+      return {
+        x: point.x - rect.left - container.clientLeft + container.scrollLeft,
+        y: point.y - rect.top - container.clientTop + container.scrollTop,
+      };
+    },
+  );
+  Object.assign(labelUnderline.style, {
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width}px`,
+    transform: `rotate(${angle}rad)`,
+    color: getComputedStyle(text).fill,
+  });
+  // Restart the transition, so moving from one label to the next slides the
+  // underline in again instead of jumping it across.
+  labelUnderline.classList.remove('shown');
+  void labelUnderline.offsetWidth;
+  labelUnderline.classList.add('shown');
+}
+
+function onLabelPointerOut(event: PointerEvent): void {
+  if (labelText(event)) labelUnderline?.classList.remove('shown');
+}
+
 // Remote (non-interactive) mode: each live brush tick would trigger a server
 // round-trip, so buffer ticks here and commit once on pointer release. The
 // listeners are window-level so releasing outside the chart still commits.
@@ -280,7 +781,9 @@ const reembedForResize = debounce(() => {
 // environments; the flush is idempotent (the map clears), so double-firing
 // is harmless.
 const pendingRemoteCommits = new Map<string, RangeSelection | null>();
-function commitRemoteSelections(): void {
+function commitRemoteSelections(event?: Event): void {
+  // A release also ends a drag (see onChartPointerDown).
+  onChartPointerUp(event);
   for (const [key, selection] of pendingRemoteCommits) {
     dataSourcesStore.updateDataSelection(key, selection);
   }
@@ -298,9 +801,21 @@ function routeSelectionUpdate(
 }
 
 onMounted(() => {
+  vegaContainer.value?.addEventListener('pointerdown', onChartPointerDown, {
+    capture: true,
+  });
   window.addEventListener('pointerup', commitRemoteSelections);
   window.addEventListener('pointercancel', commitRemoteSelections);
   window.addEventListener('mouseup', commitRemoteSelections);
+  window.addEventListener('keydown', onPickKeyDown);
+  window.addEventListener('keyup', onPickKeyUp);
+  window.addEventListener('blur', endPickGesture);
+  document.addEventListener('visibilitychange', onPickVisibilityChange);
+  vegaContainer.value?.addEventListener('pointermove', onPickPointerMove);
+  vegaContainer.value?.addEventListener('pointerleave', onPickPointerLeave);
+  vegaContainer.value?.addEventListener('mousedown', onPickMouseDown);
+  vegaContainer.value?.addEventListener('pointerover', onLabelPointerOver);
+  vegaContainer.value?.addEventListener('pointerout', onLabelPointerOut);
   initVegaChart();
   if (vegaContainer.value && typeof ResizeObserver !== 'undefined') {
     lastW = vegaContainer.value.offsetWidth;
@@ -322,14 +837,31 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  vegaContainer.value?.removeEventListener('pointerdown', onChartPointerDown, {
+    capture: true,
+  });
   window.removeEventListener('pointerup', commitRemoteSelections);
   window.removeEventListener('pointercancel', commitRemoteSelections);
   window.removeEventListener('mouseup', commitRemoteSelections);
+  window.removeEventListener('keydown', onPickKeyDown);
+  window.removeEventListener('keyup', onPickKeyUp);
+  window.removeEventListener('blur', endPickGesture);
+  document.removeEventListener('visibilitychange', onPickVisibilityChange);
+  vegaContainer.value?.removeEventListener('pointermove', onPickPointerMove);
+  vegaContainer.value?.removeEventListener('pointerleave', onPickPointerLeave);
+  vegaContainer.value?.removeEventListener('mousedown', onPickMouseDown);
+  vegaContainer.value?.removeEventListener('pointerover', onLabelPointerOver);
+  vegaContainer.value?.removeEventListener('pointerout', onLabelPointerOut);
   reembedForResize.cancel();
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
   }
+  // A view left running outlives its canvas: mid-drag, its window-level
+  // pointer listeners kept extending the brush against a detached canvas and
+  // writing the result into the shared selection.
+  vegaView.value?.finalize();
+  vegaView.value = null;
 });
 
 // Update data in the existing Vega view, preserving brush/selection state.
@@ -337,6 +869,26 @@ async function updateVegaChart() {
   if (!vegaView.value) return;
   const { success, specObject } = parseSpec();
   if (!success || isEmpty(specObject)) return;
+
+  // Only the rows can be swapped in place. Anything else — a scale domain that
+  // moved because a filter changed the data extent, a field an encoding now
+  // points at — has to be recompiled, or the view keeps drawing the new data
+  // through the old spec. The changeset path below stays the fast one for the
+  // case it was built for: a brush, where only the rows change.
+  if (specShape(specObject) !== embeddedSpecShape) {
+    // A re-embed replaces the view, and with it the gesture of a brush being
+    // dragged (see onChartPointerDown): wait for the release. Swapping rows in
+    // place, below, is safe mid-drag, so the chart still follows its brush.
+    if (pointerDown) {
+      rebuildPending = true;
+      return;
+    }
+    vegaView.value.finalize();
+    vegaView.value = null;
+    // Re-applies props.selections itself, as the resize re-embed does.
+    initVegaChart();
+    return;
+  }
 
   // For a brush that has an EXTERNAL selection (props.selections — e.g. the
   // chat adjustment widget / filter chips mirror brushes there), that
@@ -347,8 +899,9 @@ async function updateVegaChart() {
   // and restoring their pixel signals across the data changeset — pixel
   // values are scale-relative, so this is a best-effort preservation for the
   // no-external-selection case only.
+  // Mid-drag the brush's own pixels win (see onChartPointerDown).
   const hasExternal = (signalKey: string) =>
-    props.selections?.[signalKey]?.selection != null;
+    !pointerDown && props.selections?.[signalKey]?.selection != null;
   const savedSignals: Record<string, unknown> = {};
   for (const signalKey of props.signalKeys ?? []) {
     if (hasExternal(signalKey)) continue;
@@ -382,6 +935,20 @@ async function updateVegaChart() {
       .remove(() => true)
       .insert(specObject.data.values ?? []),
   );
+  // The label tooltips and gray-out read each category's total from here, so
+  // they track the filtered rows the marks draw.
+  if (labelAxis) {
+    vegaView.value.signal(
+      LABEL_TOTALS_SIGNAL,
+      categoryTotals(specObject.data.values ?? [], labelAxis),
+    );
+  }
+  if (labelLegend) {
+    vegaView.value.signal(
+      LEGEND_TOTALS_SIGNAL,
+      categoryTotals(specObject.data.values ?? [], labelLegend),
+    );
+  }
 
   // Restore only the verified-active brush signals (no-external-selection case)
   for (const [key, value] of Object.entries(savedSignals)) {
@@ -406,12 +973,12 @@ async function updateVegaChart() {
 
 watch(() => props.spec, updateVegaChart);
 
-// The palette only feeds the embed-time `config`, so a change requires a full
-// re-embed (not just a data update). Finalize the existing view first so its
-// dataflow / listeners don't leak. Palette is a consumer-level config that
-// rarely changes, so re-embedding (and dropping any active brush) is fine.
+// The palette and font scale only feed the embed-time `config`, so a change
+// requires a full re-embed (not just a data update). Finalize the existing view
+// first so its dataflow / listeners don't leak. Both are consumer-level config
+// that rarely changes, so re-embedding (and dropping any active brush) is fine.
 watch(
-  () => props.palette,
+  () => [props.palette, props.fontScale],
   () => {
     if (vegaView.value) {
       vegaView.value.finalize();
@@ -431,9 +998,18 @@ async function updateVegaChartSelections() {
   ignore.value = true;
   // console.log('Current signals:', currentSignals);
 
+  // Only this chart's own brushes. The map holds every chart's selections
+  // (a source chart renders its brush from it), and asking Vega for a signal
+  // this view doesn't define throws — one error per foreign brush per chart on
+  // every selection change. signalKeys lists exactly the interval signals this
+  // chart owns, which is all updateVegaChartSelection applies.
+  const own = new Set(props.signalKeys ?? []);
   for (const [selectionName, selection] of Object.entries(props.selections)) {
-    // Isolate each selection: a malformed entry (or one for a signal this
-    // chart doesn't have) must not abort applying the others.
+    if (!own.has(selectionName)) continue;
+    // Not over a brush the user is dragging; the release redraws it.
+    if (pointerDown) continue;
+    // Isolate each selection: a malformed entry must not abort applying the
+    // others.
     try {
       updateVegaChartSelection(selectionName, selection);
     } catch (error) {
@@ -458,8 +1034,9 @@ function updateVegaChartSelection(
   // (initVegaChart's brush listeners): via `view.signal(...)`, NOT
   // `getState().signals`. getState() applies Vega's default signal filter,
   // which can omit `_tuple_fields` in the embedded canvas view and made this
-  // whole function silently no-op. A missing tuple (this chart has no such
-  // interval selection) → nothing to do.
+  // whole function silently no-op. `view.signal` THROWS for a name this view
+  // doesn't define, so the caller passes only this chart's own brushes; an
+  // empty tuple (a brush not drawn yet) → nothing to do.
   const tupleFields = vegaView.value.signal(
     `${signalKeyStart}_tuple_fields`,
   ) as Array<{ channel: string; field: string }> | undefined;
@@ -477,24 +1054,16 @@ function updateVegaChartSelection(
   }
 
   const rangeSelection = (selection.selection ?? {}) as RangeSelection;
-  const fieldEntries = Object.entries(rangeSelection);
+  const written = new Set<'x' | 'y'>();
+  const hasValue = Object.values(rangeSelection).some(
+    (r) => Array.isArray(r) && r.length === 2,
+  );
+  const hadValue = externalHadValue[selectionName] ?? false;
+  externalHadValue[selectionName] = hasValue;
 
-  for (let i = 0; i < fieldEntries.length; i++) {
-    const [field, range] = fieldEntries[i];
-    if (!Array.isArray(range) || range.length !== 2) continue;
-    const vegaField = reverseFieldMap[field] ?? field;
-
-    // Resolve the channel by field match; fall back to the tuple entry at the
-    // same position when the field name doesn't line up (keeps a 2D brush
-    // working even if the stored keys and encoding fields diverge).
-    let channel = tupleFields.find((t) => t.field === vegaField)?.channel;
-    if (channel !== 'x' && channel !== 'y') {
-      channel = tupleFields[i]?.channel;
-    }
-    if (channel !== 'x' && channel !== 'y') continue;
-
+  const writeChannel = (channel: 'x' | 'y', testNew: [number, number]) => {
+    if (!vegaView.value) return;
     const signalKeyFull = `${signalKeyStart}_${channel}`;
-    const testNew = toPixelRange(range, channel);
 
     // Skip only when the current signal is a usable 2-number tuple that
     // already matches — otherwise (empty/null/uninitialised) always write,
@@ -512,12 +1081,72 @@ function updateVegaChartSelection(
         closeEnough(Math.min(...currentVal), Math.min(...testNew)) &&
         closeEnough(Math.max(...currentVal), Math.max(...testNew))
       ) {
-        continue;
+        return;
       }
     }
 
     vegaView.value.signal(signalKeyFull, testNew);
+  };
+
+  for (const [field, range] of Object.entries(rangeSelection)) {
+    if (!Array.isArray(range) || range.length !== 2) continue;
+    const vegaField = reverseFieldMap[field] ?? field;
+    // By field only. A field this chart doesn't brush has no channel here —
+    // falling back to the tuple entry at the same position drew one chart's
+    // range against another axis's scale once selections were shared.
+    const channel = tupleFields.find((t) => t.field === vegaField)?.channel;
+    if (channel !== 'x' && channel !== 'y') continue;
+    writeChannel(channel, toPixelRange(range, channel));
+    written.add(channel);
   }
+
+  // Cleared elsewhere (a chip removed, a filter emptied): drop the drawn brush
+  // in place, as Vega-Lite's own double-click clear does, rather than have the
+  // host remount the chart, which flashed it blank and then unfiltered. Only
+  // on the change from a value to none: a brush just drawn, whose external
+  // copy has not caught up yet, is not one to erase.
+  if (!hasValue) {
+    if (hadValue) {
+      for (const { channel } of tupleFields) {
+        if (channel === 'x' || channel === 'y') writeChannel(channel, [0, 0]);
+      }
+    }
+    return;
+  }
+
+  // A 2-D brush only draws once both channels hold a range (Vega forms its
+  // tuple from both). A selection on one of its fields — a filter set in chat
+  // on age, shown on an age × weight chart — leaves the other axis open: span
+  // it fully, which reads back as no constraint (see spansWholeScale).
+  if (written.size === 0) return;
+  for (const { channel } of tupleFields) {
+    if ((channel === 'x' || channel === 'y') && !written.has(channel)) {
+      writeChannel(channel, fullPixelRange(channel));
+    }
+  }
+}
+
+/** Whether each own brush's external selection held a range when last
+ *  applied (see updateVegaChartSelection's clear). */
+const externalHadValue: Record<string, boolean> = {};
+
+function fullPixelRange(channel: 'x' | 'y'): [number, number] {
+  if (!vegaView.value) return [0, 0];
+  const [a, b] = vegaView.value.scale(channel).range() as [number, number];
+  return [Math.min(a, b), Math.max(a, b)];
+}
+
+function spansWholeScale(
+  pixelRange: [number, number],
+  channel: 'x' | 'y',
+): boolean {
+  if (!vegaView.value) return false;
+  const [lo, hi] = fullPixelRange(channel);
+  const eps = 0.5;
+  return (
+    Math.abs(Math.min(...pixelRange) - lo) < eps &&
+    Math.abs(Math.max(...pixelRange) - hi) < eps
+  );
 }
 
 function toPixelRange(
@@ -545,13 +1174,28 @@ watch(() => props.selections, updateVegaChartSelections, { deep: true });
 </script>
 
 <template>
-  <div ref="vegaContainer" class="vega-chart-container"></div>
+  <div
+    class="udi-vega-wrap"
+    :class="{ 'udi-point-selectable': pointSelectable }"
+    :style="hintColors"
+  >
+    <div ref="vegaContainer" class="vega-chart-container"></div>
+    <div v-if="hint" class="udi-interaction-hint" aria-hidden="true">
+      {{ hint }}
+    </div>
+  </div>
   <div v-if="errorMessage" class="vega-error-message">
     {{ errorMessage }}
   </div>
 </template>
 
 <style scoped>
+.udi-vega-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .vega-chart-container {
   width: 100%;
   height: 100%;
@@ -570,5 +1214,76 @@ watch(() => props.selections, updateVegaChartSelections, { deep: true });
    to higher-z-index ancestors of the chart's mounting container. */
 #vg-tooltip-element {
   z-index: 2147483647;
+}
+
+/* Clickable category labels (axisLabelSelect.ts). Global, not scoped: Vega draws
+   the labels and VegaLite.vue creates the underline imperatively, so neither
+   carries this component's scope attribute. */
+.udi-clickable-labels text,
+.udi-clickable-legend text,
+.udi-clickable-legend-symbols path {
+  cursor: pointer;
+}
+/* A point-selectable chart's marks: a pointer, and a light touch on the one
+   under it. .role-mark leaves axes and legends to the rules above. */
+.udi-point-selectable .role-mark path {
+  cursor: pointer;
+  transition: filter 120ms ease-out;
+}
+.udi-point-selectable .role-mark path:hover {
+  filter: brightness(0.9) saturate(1.15);
+}
+/* The gesture a chart takes, named on hover. Sized to the x-axis title's row
+   and kept in its left corner, below the y labels and the x ticks and clear of
+   a right-hand legend. The delay keeps it from flashing while the pointer
+   crosses the dashboard; pressing hides it, so it never sits on a brush being
+   drawn. */
+.udi-interaction-hint {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 0 6px;
+  border: 1px solid var(--udi-hint-border);
+  border-radius: 9999px;
+  background: var(--udi-hint-bg, Canvas);
+  color: var(--udi-hint-fg);
+  font-size: calc(10px * var(--udi-hint-scale, 1));
+  line-height: calc(12px * var(--udi-hint-scale, 1));
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.udi-vega-wrap:hover .udi-interaction-hint {
+  opacity: 0.9;
+  transition-delay: 400ms;
+}
+.udi-vega-wrap:active .udi-interaction-hint {
+  opacity: 0;
+  transition-delay: 0s;
+}
+.udi-label-underline {
+  position: absolute;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.udi-label-underline > span {
+  display: block;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transform: translateY(5px);
+  transition:
+    transform 180ms ease-out,
+    opacity 180ms ease-out;
+}
+.udi-label-underline.shown > span {
+  opacity: 1;
+  transform: translateY(1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .udi-label-underline > span {
+    transition: none;
+  }
 }
 </style>

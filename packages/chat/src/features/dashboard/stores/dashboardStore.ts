@@ -1,7 +1,12 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { UDIGrammar } from 'udi-toolkit/react';
 import type { Layout, LayoutItem } from 'react-grid-layout';
-import type { Message } from '@/types/messages';
+import type {
+  Message,
+  TemplateArgValue,
+  TemplateParamDescriptor,
+  ToolCallMeta,
+} from '@/types/messages';
 import type { DataFiltersState } from './dataFiltersStore';
 import type { DataPackageState } from '@/features/data-package';
 import type { MemoryBankState } from './memoryBankStore';
@@ -23,11 +28,11 @@ import {
   packAllRowMajor,
   packRowMajor,
   repackRowMajor,
+  widenTallItems,
 } from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
 import {
   buildCubeTransformation,
-  getRepresentedFields,
   type ActiveFilter,
   type SkippedFilter,
 } from '../utils/cubeFilters';
@@ -38,18 +43,47 @@ export interface ActiveVisualization {
   spec: UDIGrammar;
   interactiveSpec: UDIGrammar;
   userPrompt: string;
+  /** Assistant-written title, only present on cards from a session that
+   *  predates programmatic titles. Never mutated — it is a provenance record. */
   title?: string;
+  /** An explicit user rename. Wins over the built title. */
+  userTitle?: string;
+  /** Tokenized wording from the visualization template the agent used —
+   *  resolved against the live spec on every render (see utils/vizTitle.ts). */
+  titleTemplate?: string;
+  summaryTemplate?: string;
   uuid: string;
   /** Filters that could not be applied to this visualization — only ever
    *  non-empty for cube sources, which cannot serve every filter shape. See
    *  `buildCubeTransformation`. */
   skippedFilters?: SkippedFilter[];
+  /** Present when the agent built this spec from a template (see below). */
+  template?: TemplateProvenance;
+}
+
+/**
+ * How a generated spec came to be: the template and the bindings it was resolved
+ * with, plus the parameters the agent will accept a re-binding for.
+ *
+ * Carrying this is what lets a tweak re-resolve the template instead of rewriting
+ * the finished spec — the only approach that stays correct when a binding is
+ * referenced from transformations as well as encodings. `toolArgs` is kept
+ * current as the user tweaks, so successive changes compose from the last
+ * accepted set rather than from the original render.
+ */
+export interface TemplateProvenance {
+  tool: string;
+  toolArgs: Record<string, TemplateArgValue>;
+  params: TemplateParamDescriptor[];
 }
 
 export interface ExtractedSpec {
   spec: object;
   toolCallIndex: number;
   title?: string;
+  template?: TemplateProvenance;
+  titleTemplate?: string;
+  summaryTemplate?: string;
 }
 
 export interface DashboardLayout {
@@ -72,7 +106,12 @@ export interface DashboardExportVisualization {
   toolCallIndex: number;
   userPrompt: string;
   title?: string;
+  userTitle?: string;
+  titleTemplate?: string;
+  summaryTemplate?: string;
   spec: UDIGrammar;
+  /** Kept so a restored dashboard is as tweakable as a live one. */
+  template?: TemplateProvenance;
 }
 
 export interface DashboardExport {
@@ -80,22 +119,40 @@ export interface DashboardExport {
   layout: DashboardLayout;
 }
 
+/** A cross-panel jump request: which vizKey to reveal, plus a bumped nonce so
+ *  repeat requests for the same target still fire. */
+export interface JumpRequest {
+  key: string;
+  nonce: number;
+}
+
 export interface DashboardState {
   activeVisualizations: Map<string, ActiveVisualization>;
   layout: DashboardLayout;
   gridCols: number;
+  /** Whether the column count still follows the container width. Cleared once
+   *  something chooses it — the grid settings, or an imported session's `grid`
+   *  — so the grid's fit-on-mount cannot override that choice. */
+  gridColsAuto: boolean;
   gridRowHeight: number;
   containerWidth: number;
   filterAllNullValues: boolean;
   tableViewKeys: Set<string>;
   // Linked-hover state, one field per direction so each stays unambiguous:
   // `hoveredVisualizationIndex` = the hovered card's vizKey (drives the chat
-  // message + matching accordion-item highlight/scroll); `hoveredMessageVizKey`
-  // = the vizKey the chat is pointing at — a single-viz message's card, or a
-  // specific accordion item in a multi-viz message — drives that card's
-  // highlight/scroll.
+  // message + matching accordion-item highlight); `hoveredMessageVizKey` = the
+  // vizKey the chat is pointing at — a single-viz message's card, or a specific
+  // accordion item in a multi-viz message — drives that card's highlight.
+  // Hover only highlights; scrolling is an explicit jump (below).
   hoveredVisualizationIndex: string | null;
   hoveredMessageVizKey: string | null;
+  // Explicit cross-panel "jump to" requests, raised by the jump buttons on a
+  // dashboard card's toolbar and a chat message. `jumpToVisualization` asks the
+  // card with that vizKey to scroll itself into view; `jumpToMessage` asks the
+  // message that produced that vizKey to do the same. The nonce bumps on every
+  // request so pressing the same button twice re-fires on the receiving side.
+  jumpToVisualization: JumpRequest | null;
+  jumpToMessage: JumpRequest | null;
   vizKey: (messageIndex: number, toolCallIndex: number) => string;
   addActiveVisualization: (
     index: number,
@@ -104,6 +161,8 @@ export interface DashboardState {
     userPrompt: string,
     sourceFields: Record<string, string[]> | null,
     title?: string,
+    text?: { titleTemplate?: string; summaryTemplate?: string },
+    template?: TemplateProvenance,
     cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
   addActiveVisualizationBatch: (
@@ -114,6 +173,9 @@ export interface DashboardState {
       userPrompt: string;
       sourceFields: Record<string, string[]> | null;
       title?: string;
+      template?: TemplateProvenance;
+      titleTemplate?: string;
+      summaryTemplate?: string;
     }>,
     dataPackageStore?: StoreApi<DataPackageState>,
   ) => void;
@@ -131,6 +193,8 @@ export interface DashboardState {
   setHoveredVisualizationIndex: (key: string | null) => void;
   isHovered: (key: string) => boolean;
   setHoveredMessageVizKey: (key: string | null) => void;
+  requestJumpToVisualization: (key: string) => void;
+  requestJumpToMessage: (key: string) => void;
   updateSpecFilters: (
     dataFiltersStore: StoreApi<DataFiltersState>,
     dataPackageStore: StoreApi<DataPackageState>,
@@ -140,14 +204,20 @@ export interface DashboardState {
     currentSourceName: string,
     dataFiltersStore: StoreApi<DataFiltersState>,
     dataPackageStore: StoreApi<DataPackageState>,
+    /** Every entity the spec reads; defaults to just `currentSourceName`. */
+    specSourceNames?: string[],
   ) => object[];
-  getFilterIds: (dataFiltersStore: StoreApi<DataFiltersState>) => string[];
+  getFilterIds: (
+    dataFiltersStore: StoreApi<DataFiltersState>,
+    dataPackageStore: StoreApi<DataPackageState>,
+  ) => string[];
   /** Each active selection reduced to `{ id, sourceName, fields }`. Cube
    *  filtering needs to know WHICH fields a selection constrains — that
    *  decides the marginal a visualization must expand to. */
   getActiveFilters: (
     filterIdList: string[],
     dataFiltersStore: StoreApi<DataFiltersState>,
+    dataPackageStore: StoreApi<DataPackageState>,
   ) => ActiveFilter[];
   updateActiveVisualizationSpec: (
     key: string,
@@ -155,8 +225,22 @@ export interface DashboardState {
     sourceFields: Record<string, string[]> | null,
     cubeMeasureFields?: Record<string, string[]> | null,
   ) => void;
+  applyTemplateRebind: (
+    key: string,
+    newSpec: UDIGrammar,
+    toolArgs: Record<string, TemplateArgValue>,
+    params: TemplateParamDescriptor[] | undefined,
+    sourceFields: Record<string, string[]> | null,
+    cubeMeasureFields?: Record<string, string[]> | null,
+  ) => void;
+  clearTemplateProvenance: (key: string) => void;
+  /** Rename a card. An empty/whitespace title clears the rename, handing the
+   *  displayed title back to the built title. */
+  setVisualizationTitle: (key: string, title: string) => void;
   setLayoutItems: (items: Layout) => void;
   setGridCols: (cols: number) => void;
+  /** Derive the column count from the grid's width, unless it was chosen. */
+  fitGridColsToWidth: (px: number) => void;
   setGridRowHeight: (px: number) => void;
   setContainerWidth: (px: number) => void;
   repackLayout: (dataPackageStore?: StoreApi<DataPackageState>) => void;
@@ -221,6 +305,14 @@ function getSpecSourceName(spec: UDIGrammar): string | undefined {
   const src = spec.source as SpecSourceLike | SpecSourceLike[] | undefined;
   if (!src) return undefined;
   return Array.isArray(src) ? src[0]?.name : src.name;
+}
+
+/** Every entity a spec reads, not just the one it is nominally "about". */
+function getSpecSourceNames(spec: UDIGrammar): string[] {
+  const src = spec.source as SpecSourceLike | SpecSourceLike[] | undefined;
+  if (!src) return [];
+  const list = Array.isArray(src) ? src : [src];
+  return list.map((s) => s?.name).filter((n): n is string => typeof n === 'string');
 }
 
 // Minimal shapes the spec-walking code relies on. The canonical UDIGrammar
@@ -335,9 +427,66 @@ export function injectInteractivity(
     };
   }
 
-  console.log({ interactiveSpec });
   interactiveSpec.config = { hideActions: true };
   return interactiveSpec;
+}
+
+/**
+ * Fields that **every** layer encodes.
+ *
+ * Used to drop rows with missing values. The filters apply to the one dataset all
+ * layers share, so a field only qualifies if no layer could draw the row anyway.
+ * A layered spec routinely nulls a field out on purpose — that is how an
+ * annotation layer picks the rows it marks — and filtering on a field encoded by
+ * only some layers would delete those rows from the layers that do want them,
+ * taking the data with it. Vega-Lite already drops invalid values per layer, so
+ * what this pass skips is still handled downstream.
+ *
+ * For a single-layer spec (the common case) this is every encoded field.
+ */
+function getFieldsInEveryLayer(spec: UDIGrammar): string[] {
+  if (!spec.representation) return [];
+  const representations = Array.isArray(spec.representation)
+    ? (spec.representation as SpecRepresentationLike[])
+    : [spec.representation as SpecRepresentationLike];
+
+  const perLayer: Set<string>[] = representations.map((representation) => {
+    const rawMapping = representation.mapping;
+    const mappings: SpecMappingLike[] = Array.isArray(rawMapping)
+      ? rawMapping
+      : rawMapping
+        ? [rawMapping]
+        : [];
+    const fields = new Set<string>();
+    for (const mapping of mappings) {
+      if (mapping && 'field' in mapping && mapping.field) {
+        fields.add(mapping.field);
+      }
+    }
+    return fields;
+  });
+
+  const [first, ...rest] = perLayer;
+  if (!first) return [];
+  return [...first].filter((field) => rest.every((layer) => layer.has(field)));
+}
+
+/**
+ * The state change for switching to `cols` columns, or null if it is already
+ * the count. Items are re-packed in row-major reading order so cards with
+ * x+w > cols don't overflow the grid; the layout reference is kept when the
+ * repack moves nothing, so RGL sees no new prop.
+ */
+function withGridCols(
+  state: DashboardState,
+  cols: number,
+): (Pick<DashboardState, 'gridCols'> & Partial<Pick<DashboardState, 'layout'>>) | null {
+  const safe = clampGridCols(cols);
+  if (state.gridCols === safe) return null;
+  const sorted = [...state.layout.items].sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+  const repacked = packAllRowMajor(sorted, safe);
+  if (layoutItemsEqual(state.layout.items, repacked)) return { gridCols: safe };
+  return { gridCols: safe, layout: { items: repacked } };
 }
 
 export function createDashboardStore() {
@@ -345,12 +494,15 @@ export function createDashboardStore() {
     activeVisualizations: new Map(),
     layout: emptyLayout(),
     gridCols: DEFAULT_GRID_COLS,
+    gridColsAuto: true,
     gridRowHeight: DEFAULT_GRID_ROW_HEIGHT_PX,
     containerWidth: 0,
     filterAllNullValues: true,
     tableViewKeys: new Set(),
     hoveredVisualizationIndex: null,
     hoveredMessageVizKey: null,
+    jumpToVisualization: null,
+    jumpToMessage: null,
 
     vizKey: (messageIndex, toolCallIndex) => `${messageIndex}-${toolCallIndex}`,
 
@@ -361,6 +513,8 @@ export function createDashboardStore() {
       userPrompt,
       sourceFields,
       title,
+      text,
+      template,
       cubeMeasureFields,
     ) => {
       const uuid = generateId();
@@ -368,7 +522,17 @@ export function createDashboardStore() {
       const key = get().vizKey(index, toolCallIndex);
       set((state) => {
         const next = new Map(state.activeVisualizations);
-        next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
+        next.set(key, {
+          index,
+          toolCallIndex,
+          spec,
+          interactiveSpec,
+          userPrompt,
+          title,
+          ...text,
+          uuid,
+          template,
+        });
         return {
           activeVisualizations: next,
           layout: insertItemRowMajor(state.layout, newDefaultItem(key), state.gridCols),
@@ -387,17 +551,36 @@ export function createDashboardStore() {
         // returns a row count sized to fit categorical Y mappings, so a
         // "donors by race" chart lands tall enough to show every category
         // instead of cramped at the default height.
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
-        const cubeMeasureFields = dataPackageStore?.getState().cubeMeasureFields;
-        for (const { index, toolCallIndex, spec, userPrompt, sourceFields, title } of items) {
+        const dp = dataPackageStore?.getState();
+        const cubeMeasureFields = dp?.cubeMeasureFields;
+        for (const {
+          index,
+          toolCallIndex,
+          spec,
+          userPrompt,
+          sourceFields,
+          title,
+          template,
+          titleTemplate,
+          summaryTemplate,
+        } of items) {
           const uuid = generateId();
           const interactiveSpec = injectInteractivity(spec, uuid, sourceFields, cubeMeasureFields);
           const key = `${index}-${toolCallIndex}`;
           if (state.activeVisualizations.has(key)) continue;
-          next.set(key, { index, toolCallIndex, spec, interactiveSpec, userPrompt, title, uuid });
-          const h = getDomainForField
-            ? computeInitialCardHeight(spec, getDomainForField, state.gridRowHeight)
-            : DEFAULT_CARD_H;
+          next.set(key, {
+            index,
+            toolCallIndex,
+            spec,
+            interactiveSpec,
+            userPrompt,
+            title,
+            titleTemplate,
+            summaryTemplate,
+            uuid,
+            template,
+          });
+          const h = dp ? computeInitialCardHeight(spec, dp, state.gridRowHeight) : DEFAULT_CARD_H;
           newItems.push({ ...newDefaultItem(key), h });
         }
         if (newItems.length === 0) return { activeVisualizations: next };
@@ -409,7 +592,9 @@ export function createDashboardStore() {
         const existingOrdered = [...state.layout.items]
           .filter((it) => !newKeys.has(it.i))
           .sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
-        const combined = [...newItems, ...existingOrdered];
+        // A new chart far taller than the cards it would join (a 198-category
+        // bar) gets a row of its own rather than stretching theirs.
+        const combined = widenTallItems([...newItems, ...existingOrdered], state.gridCols, newKeys);
         return {
           activeVisualizations: next,
           layout: { items: packAllRowMajor(combined, state.gridCols) },
@@ -446,10 +631,8 @@ export function createDashboardStore() {
         // DEFAULT_CARD_H on restore. Re-running the category-aware
         // estimator means a "donor by organ" chart comes back tall
         // enough for all 15 organs just like its initial add did.
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
-        const h = getDomainForField
-          ? computeInitialCardHeight(viz.spec, getDomainForField, state.gridRowHeight)
-          : DEFAULT_CARD_H;
+        const dp = dataPackageStore?.getState();
+        const h = dp ? computeInitialCardHeight(viz.spec, dp, state.gridRowHeight) : DEFAULT_CARD_H;
         const item = { ...newDefaultItem(key), h };
         return {
           activeVisualizations: next,
@@ -487,31 +670,37 @@ export function createDashboardStore() {
 
     setHoveredMessageVizKey: (key) => set({ hoveredMessageVizKey: key }),
 
-    getFilterIds: (dataFiltersStore) => {
-      const vizFilterIDs = Array.from(get().activeVisualizations.values()).map((v) => v.uuid);
+    requestJumpToVisualization: (key) =>
+      set((s) => ({
+        jumpToVisualization: { key, nonce: (s.jumpToVisualization?.nonce ?? 0) + 1 },
+      })),
+
+    requestJumpToMessage: (key) =>
+      set((s) => ({ jumpToMessage: { key, nonce: (s.jumpToMessage?.nonce ?? 0) + 1 } })),
+
+    // The column and host filters the package admits. A chart's own selection
+    // is not a filter: its click or brush is written into the column filters
+    // on its fields.
+    getFilterIds: (dataFiltersStore, dataPackageStore) => {
+      const dpState = dataPackageStore.getState();
       const validSelections = dataFiltersStore.getState().getValidDataSelections({
-        isValidIntervalFilter: () => ({ isValid: 'yes' }),
-        isValidPointFilter: () => ({ isValid: 'yes' }),
+        isValidIntervalFilter: dpState.isValidIntervalFilter,
+        isValidPointFilter: dpState.isValidPointFilter,
       });
-      const externalIds = Object.keys(validSelections);
-      const ids = Array.from(new Set([...vizFilterIDs, ...externalIds]));
-      ids.sort();
-      return ids;
+      return Object.keys(validSelections).sort();
     },
 
-    getActiveFilters: (filterIdList, dataFiltersStore) => {
-      const uuidToSource = new Map<string, string>();
-      for (const v of get().activeVisualizations.values()) {
-        const sourceName = getSpecSourceName(v.interactiveSpec);
-        if (v.uuid && sourceName) uuidToSource.set(v.uuid, sourceName);
-      }
-      // LLM-issued filters live in `dataSelections`; brush/click selections
-      // are mirrored out of Pinia into `internalDataSelections` keyed by the
-      // originating viz's uuid.
-      const dfState = dataFiltersStore.getState();
+    getActiveFilters: (filterIdList, dataFiltersStore, dataPackageStore) => {
+      // Every filter — chat, host, or a chart's click or brush — lives in
+      // `dataSelections` and names the entity it constrains.
+      const dpState = dataPackageStore.getState();
+      const validSelections = dataFiltersStore.getState().getValidDataSelections({
+        isValidIntervalFilter: dpState.isValidIntervalFilter,
+        isValidPointFilter: dpState.isValidPointFilter,
+      });
       const result: ActiveFilter[] = [];
       for (const id of filterIdList) {
-        const selection = dfState.dataSelections[id] ?? dfState.internalDataSelections[id];
+        const selection = validSelections[id];
         if (!selection?.selection) continue;
         // A point selection with every value unchecked constrains nothing —
         // it must not widen the marginal a visualization reads.
@@ -519,21 +708,20 @@ export function createDashboardStore() {
           .filter(([, value]) => !(Array.isArray(value) && value.length === 0))
           .map(([field]) => field);
         if (fields.length === 0) continue;
-        const sourceName = uuidToSource.get(id) ?? selection.dataSourceKey;
+        const sourceName = selection.dataSourceKey;
         if (!sourceName) continue;
         result.push({ id, sourceName, fields });
       }
       return result;
     },
 
-    getNamedFilters: (filterIdList, currentSourceName, dataFiltersStore, dataPackageStore) => {
-      const state = get();
-      const uuidToSource = new Map<string, string>();
-      for (const v of state.activeVisualizations.values()) {
-        const sourceName = getSpecSourceName(v.interactiveSpec);
-        if (v.uuid && sourceName) uuidToSource.set(v.uuid, sourceName);
-      }
-
+    getNamedFilters: (
+      filterIdList,
+      currentSourceName,
+      dataFiltersStore,
+      dataPackageStore,
+      specSourceNames = [currentSourceName],
+    ) => {
       const dpState = dataPackageStore.getState();
       const dfState = dataFiltersStore.getState();
       const validSelections = dfState.getValidDataSelections({
@@ -541,47 +729,87 @@ export function createDashboardStore() {
         isValidPointFilter: dpState.isValidPointFilter,
       });
 
-      const getSourceName = (id: string) => {
-        return uuidToSource.get(id) ?? validSelections[id]?.dataSourceKey ?? null;
-      };
+      const getSourceName = (id: string) => validSelections[id]?.dataSourceKey ?? null;
 
-      return filterIdList
-        .map((id: string): object | null => {
-          const originSourceName = getSourceName(id);
-          if (!originSourceName) return null;
-          if (originSourceName !== currentSourceName) {
-            const er: EntityRelationship | null = dpState.getEntityRelationship(
-              originSourceName,
-              currentSourceName,
-            );
-            if (!er) return null;
-            return {
+      // Every entity the spec reads gets restricted. Aiming a selection at one
+      // table cannot be right, because two different things have to happen and
+      // each only works on a particular table:
+      //
+      //   - the selection's own predicate (`protocol === 'X'`) can only be
+      //     applied to the table the selection lives on. An *inner* join needs
+      //     it, or the join re-admits every other row the surviving subjects
+      //     have — filtering to one therapy protocol left seven curves.
+      //   - the entity restriction can only reach the other tables through
+      //     their FK path. A *left* join needs it, because the right-hand table
+      //     cannot remove a left-hand row: filtering the censoring table of a
+      //     survival curve dropped the censor ticks and left the curve itself
+      //     untouched.
+      //
+      // Doing both to every source covers both, with no join-kind analysis.
+      // `in`/`out` are explicit on every filter and always name a raw source,
+      // so no filter can land on an intermediate table and their order among
+      // themselves cannot matter.
+      const targets = specSourceNames.length > 0 ? specSourceNames : [currentSourceName];
+      const uniqueTargets = Array.from(new Set(targets));
+
+      return filterIdList.flatMap((id: string): object[] => {
+        const originSourceName = getSourceName(id);
+        if (!originSourceName) return [];
+        // A subject-scoped filter reaches every table through the subject's
+        // key, its own table included, so that table keeps every row of a
+        // matching subject. A table with no key to the subject is left alone.
+        const scope = dfState.filterScopes[id];
+        if (scope) {
+          return uniqueTargets.flatMap((target): object[] => {
+            const er = dpState.getSubjectRelationship(originSourceName, target, scope.entity);
+            if (!er) return [];
+            return [
+              {
+                filter: {
+                  name: id,
+                  source: originSourceName,
+                  entityRelationship: er,
+                  match: scope.match,
+                },
+                in: target,
+                out: target,
+              },
+            ];
+          });
+        }
+        return uniqueTargets.flatMap((target): object[] => {
+          if (target === originSourceName) {
+            return [{ filter: { name: id }, in: target, out: target }];
+          }
+          const er: EntityRelationship | null = dpState.getEntityRelationship(
+            originSourceName,
+            target,
+          );
+          if (!er) return [];
+          return [
+            {
               filter: {
                 name: id,
                 source: originSourceName,
                 entityRelationship: er,
               },
-            };
-          }
-          return { filter: { name: id } };
-        })
-        .filter((f): f is object => f !== null);
+              in: target,
+              out: target,
+            },
+          ];
+        });
+      });
     },
 
     updateSpecFilters: (dataFiltersStore, dataPackageStore) => {
       const state = get();
+      const filterIdList = state.getFilterIds(dataFiltersStore, dataPackageStore);
       const dpState = dataPackageStore.getState();
-      const filterIdList = (() => {
-        const vizFilterIDs = Array.from(state.activeVisualizations.values()).map((v) => v.uuid);
-        const validSelections = dataFiltersStore.getState().getValidDataSelections({
-          isValidIntervalFilter: dpState.isValidIntervalFilter,
-          isValidPointFilter: dpState.isValidPointFilter,
-        });
-        const externalIds = Object.keys(validSelections);
-        return Array.from(new Set([...vizFilterIDs, ...externalIds])).sort();
-      })();
-
-      const activeFilters = state.getActiveFilters(filterIdList, dataFiltersStore);
+      const activeFilters = state.getActiveFilters(
+        filterIdList,
+        dataFiltersStore,
+        dataPackageStore,
+      );
 
       let changed = false;
       const next = new Map(state.activeVisualizations);
@@ -592,7 +820,7 @@ export function createDashboardStore() {
         // Structured expression AST, not the legacy raw string form — the
         // remote query backend rejects raw Arquero strings by design.
         const nullFilters = state.filterAllNullValues
-          ? (getRepresentedFields(viz.spec).map((field) => ({
+          ? (getFieldsInEveryLayer(viz.spec).map((field) => ({
               filter: { op: '!=', left: { field }, right: { literal: null } },
             })) as DataTransformation[])
           : [];
@@ -616,9 +844,9 @@ export function createDashboardStore() {
           newTransformation = result.transformation;
           skippedFilters = result.skipped;
         } else {
-          // Include the viz's own brush UUID so the source chart also filters
-          // its own data. Previously excluded to avoid re-render side effects,
-          // but those are now handled upstream:
+          // Every filter applies to every chart, including the one whose click
+          // or brush set it, so the source chart also filters its own data.
+          // Re-render side effects of that are handled upstream:
           //   - deep-clone of props.spec in UDIVis.vue render() prevents spec
           //     mutations from leaking back to React's specKey (no remount)
           //   - save/restore of per-channel signals in VegaLite.vue
@@ -630,6 +858,7 @@ export function createDashboardStore() {
             currentSourceName ?? 'unknown_source',
             dataFiltersStore,
             dataPackageStore,
+            getSpecSourceNames(viz.interactiveSpec),
           );
           newTransformation = [
             ...newFilters,
@@ -681,6 +910,69 @@ export function createDashboardStore() {
       });
     },
 
+    /**
+     * Replace a chart with a freshly instantiated one from the same template.
+     *
+     * Keeps the viz's uuid, so a live brush and every cross-filter keyed on it
+     * survive the swap, and merges the accepted bindings so the next tweak builds
+     * on this one. `params` comes back from the server and replaces the stored
+     * descriptors, which is what makes a template whose parameter set has changed
+     * self-correct on first use.
+     */
+    applyTemplateRebind: (key, newSpec, toolArgs, params, sourceFields, cubeMeasureFields) => {
+      const viz = get().activeVisualizations.get(key);
+      if (!viz || !viz.template) return;
+      const interactiveSpec = injectInteractivity(
+        newSpec,
+        viz.uuid,
+        sourceFields,
+        cubeMeasureFields,
+      );
+      set((state) => {
+        const next = new Map(state.activeVisualizations);
+        next.set(key, {
+          ...viz,
+          spec: newSpec,
+          interactiveSpec,
+          template: {
+            tool: viz.template!.tool,
+            toolArgs: { ...viz.template!.toolArgs, ...toolArgs },
+            params: params ?? viz.template!.params,
+          },
+        });
+        return { activeVisualizations: next };
+      });
+    },
+
+    /**
+     * Forget that a chart came from a template — used when the agent no longer
+     * recognises it, so the panel stops offering a control that cannot work.
+     */
+    clearTemplateProvenance: (key) => {
+      const viz = get().activeVisualizations.get(key);
+      if (!viz || !viz.template) return;
+      set((state) => {
+        const next = new Map(state.activeVisualizations);
+        const rest = { ...viz };
+        delete rest.template;
+        next.set(key, rest);
+        return { activeVisualizations: next };
+      });
+    },
+
+    setVisualizationTitle: (key, title) => {
+      const viz = get().activeVisualizations.get(key);
+      if (!viz) return;
+      const trimmed = title.trim();
+      const userTitle = trimmed.length > 0 ? trimmed : undefined;
+      if (userTitle === viz.userTitle) return;
+      set((state) => {
+        const next = new Map(state.activeVisualizations);
+        next.set(key, { ...viz, userTitle });
+        return { activeVisualizations: next };
+      });
+    },
+
     setLayoutItems: (items) => {
       const state = get();
       const knownKeys = new Set(state.activeVisualizations.keys());
@@ -725,20 +1017,17 @@ export function createDashboardStore() {
     },
 
     setGridCols: (cols) => {
-      const safe = clampGridCols(cols);
-      const current = get();
-      if (current.gridCols === safe) return;
-      // Re-pack items into the new column count in row-major reading order
-      // so existing cards with x+w > newCols don't overflow the grid.
-      const sorted = [...current.layout.items].sort((a, b) =>
-        a.y === b.y ? a.x - b.x : a.y - b.y,
-      );
-      const repacked = packAllRowMajor(sorted, safe);
-      if (layoutItemsEqual(current.layout.items, repacked)) {
-        set({ gridCols: safe });
-        return;
-      }
-      set({ gridCols: safe, layout: { items: repacked } });
+      // Marked chosen even when unchanged: an import asking for the default
+      // count must still stop the fit-on-mount from replacing it.
+      if (get().gridColsAuto) set({ gridColsAuto: false });
+      const next = withGridCols(get(), cols);
+      if (next) set(next);
+    },
+
+    fitGridColsToWidth: (px) => {
+      if (!get().gridColsAuto) return;
+      const next = withGridCols(get(), gridColsForWidth(px));
+      if (next) set(next);
     },
 
     setGridRowHeight: (px) => {
@@ -756,12 +1045,12 @@ export function createDashboardStore() {
       set((state) => {
         if (state.layout.items.length === 0) return state;
         const cols = state.gridCols;
-        const getDomainForField = dataPackageStore?.getState().getDomainForField;
+        const dp = dataPackageStore?.getState();
         const ordered = state.layout.items.map((it) => {
           const viz = state.activeVisualizations.get(it.i);
           const h =
-            viz && getDomainForField
-              ? computeInitialCardHeight(viz.spec, getDomainForField, state.gridRowHeight)
+            viz && dp
+              ? computeInitialCardHeight(viz.spec, dp, state.gridRowHeight)
               : DEFAULT_CARD_H;
           return {
             ...it,
@@ -771,7 +1060,10 @@ export function createDashboardStore() {
             minH: MIN_CARD_H,
           };
         });
-        return { layout: { items: packAllRowMajor(ordered, cols) } };
+        // Every card is re-sized here as if new, so any of them can need a row
+        // of its own.
+        const widened = widenTallItems(ordered, cols, new Set(ordered.map((it) => it.i)));
+        return { layout: { items: packAllRowMajor(widened, cols) } };
       });
     },
 
@@ -781,6 +1073,7 @@ export function createDashboardStore() {
       // height back to the default. Then repack the cards against the reset grid.
       set((state) => ({
         gridCols: gridColsForWidth(state.containerWidth),
+        gridColsAuto: true,
         gridRowHeight: DEFAULT_GRID_ROW_HEIGHT_PX,
       }));
       get().repackLayout(dataPackageStore);
@@ -797,7 +1090,11 @@ export function createDashboardStore() {
           toolCallIndex: viz.toolCallIndex,
           userPrompt: viz.userPrompt,
           title: viz.title,
+          userTitle: viz.userTitle,
+          titleTemplate: viz.titleTemplate,
+          summaryTemplate: viz.summaryTemplate,
           spec: structuredClone(viz.spec),
+          template: viz.template ? structuredClone(viz.template) : undefined,
         });
       }
       return {
@@ -818,7 +1115,11 @@ export function createDashboardStore() {
           interactiveSpec,
           userPrompt: v.userPrompt,
           title: v.title,
+          userTitle: v.userTitle,
+          titleTemplate: v.titleTemplate,
+          summaryTemplate: v.summaryTemplate,
           uuid,
+          template: v.template,
         });
       }
       const knownKeys = new Set(next.keys());
@@ -852,9 +1153,15 @@ export function createDashboardStore() {
 export function normalizeToolCalls(message: Message) {
   if (!message.tool_calls) return [];
   return message.tool_calls.map((call, index) => {
+    // `meta` rides along: it is the only record of which template produced a
+    // spec, and the tweak panel needs it to re-bind rather than rewrite.
     const normalized = call.function
-      ? { name: call.function.name, arguments: call.function.arguments }
-      : { name: call.name!, arguments: call.arguments! };
+      ? {
+          name: call.function.name,
+          arguments: call.function.arguments,
+          meta: call.function.meta,
+        }
+      : { name: call.name!, arguments: call.arguments!, meta: call.meta };
     return { ...normalized, originalIndex: index };
   });
 }
@@ -875,6 +1182,42 @@ export function parseSpecFromToolCall(toolCall: {
   return null;
 }
 
+/**
+ * Read template provenance off a tool call's `meta`, or nothing if it isn't
+ * trustworthy.
+ *
+ * The agent already withholds `tweakable_params` when the spec it delivered is no
+ * longer exactly its template's instantiation (a correction pass replaces it), so
+ * this is a shape check on top of that decision — older agents send no `meta` at
+ * all, and an imported session can carry anything.
+ */
+export function parseTemplateProvenance(
+  meta: ToolCallMeta | undefined,
+): TemplateProvenance | undefined {
+  if (!meta) return undefined;
+  const { tool_used: tool, tool_args: toolArgs, tweakable_params: params } = meta;
+  if (typeof tool !== 'string' || tool.length === 0) return undefined;
+  if (!toolArgs || typeof toolArgs !== 'object') return undefined;
+  if (!Array.isArray(params) || params.length === 0) return undefined;
+  const wellFormed = params.every(
+    (p): p is TemplateParamDescriptor =>
+      !!p &&
+      typeof p === 'object' &&
+      typeof p.param === 'string' &&
+      typeof p.label === 'string' &&
+      // A field binding's value is a column name; a grouping's is the grouping
+      // object itself. Requiring a string rejected the whole descriptor list —
+      // and with it every control on the card, not just the grouping — the
+      // moment the agent actually supplied a grouping. The chart rendered, so
+      // the only symptom was a tweak panel that quietly stopped appearing on
+      // exactly the charts the grouping widget was built for.
+      (typeof p.value === 'string' ||
+        (p.kind === 'grouping' && typeof p.value === 'object' && p.value !== null)),
+  );
+  if (!wellFormed) return undefined;
+  return { tool, toolArgs: toolArgs as Record<string, TemplateArgValue>, params };
+}
+
 export function extractAllUdiSpecsFromMessage(message: Message): ExtractedSpec[] {
   if (message.role !== 'assistant' || !message.tool_calls?.length) return [];
   const results: ExtractedSpec[] = [];
@@ -882,11 +1225,16 @@ export function extractAllUdiSpecsFromMessage(message: Message): ExtractedSpec[]
     if (call.name !== 'RenderVisualization') continue;
     const spec = parseSpecFromToolCall(call);
     if (spec) {
-      const title = call.arguments?.title;
+      const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
       results.push({
         spec,
         toolCallIndex: call.originalIndex,
-        title: typeof title === 'string' ? title : undefined,
+        // `title` only appears on messages from sessions that predate
+        // programmatic titles; the two templates are what the agent sends now.
+        title: str(call.arguments?.title),
+        titleTemplate: str(call.arguments?.titleTemplate),
+        summaryTemplate: str(call.arguments?.summaryTemplate),
+        template: parseTemplateProvenance(call.meta),
       });
     }
   }

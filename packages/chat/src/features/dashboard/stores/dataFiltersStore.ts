@@ -1,12 +1,9 @@
 import { createStore } from 'zustand/vanilla';
-import type {
-  DataSelection,
-  DataSelections,
-  RangeSelection,
-  PointSelection,
-} from 'udi-toolkit/react';
+import type { DataSelection, DataSelections } from 'udi-toolkit/react';
 import type { Message, ToolCall } from '@/types/messages';
-import type { FilterDataArgs } from '@/features/tool-calls';
+import type { ValidStatus } from '@/types/dataPackage';
+import type { FilterDataArgs, FilterOperationArgs, FilterScope } from '@/features/tool-calls';
+import { normalizePointValues } from '@/features/data-package';
 
 export type { DataSelection, DataSelections };
 
@@ -15,22 +12,208 @@ export interface ExtractedFilter {
   toolCallIndex: number;
 }
 
+export interface ExtractedFilterOperation {
+  args: FilterOperationArgs;
+  toolCallIndex: number;
+}
+
 interface ValidateFilterFn {
-  isValidIntervalFilter: (entity: string, field: string) => { isValid: string };
-  isValidPointFilter: (entity: string, field: string, values: unknown[]) => { isValid: string };
+  isValidIntervalFilter: (entity: string, field: string) => ValidStatus;
+  isValidPointFilter: (entity: string, field: string, values: unknown[]) => ValidStatus;
+}
+
+/**
+ * Admit anything not definitively invalid.
+ *
+ * `unknown` means "can't verify" — a server-side package drops categorical
+ * domains above 80 distinct values, so demanding `yes` silently discarded
+ * perfectly good filters. Admission (syncFiltersFromMessages) and application
+ * (getValidDataSelections) must use the SAME rule: loosen one without the
+ * other and a filter renders a populated widget while filtering nothing.
+ */
+function isAdmissible(status: ValidStatus): boolean {
+  return status.isValid !== 'no';
+}
+
+/** Where a filter came from: a FilterData tool call, a chart brush/click, or
+ *  the embedding page's `filters` prop. */
+export type FilterOrigin = 'chat' | 'chart' | 'host';
+
+/**
+ * How the `filters` prop meets the column filters. `separate` (the default)
+ * keeps each host filter apart, read-only to the agent and ANDed with any chat
+ * or chart filter on the same column. `shared` makes a host filter on one
+ * field that column's filter: one chip, which the host, the agent or a chart
+ * click may change, the last edit winning.
+ */
+export type FilterMode = 'separate' | 'shared';
+
+/**
+ * A filter as the embedding page sees it (`filters` / `onFiltersChange`). An
+ * empty value list (or `[]` range) is all-inclusive: the filter is in place but
+ * drops nothing. `origin` is reported, and ignored on input.
+ */
+export interface UDIFilter extends DataSelection {
+  id: string;
+  origin?: FilterOrigin;
+  /** Test the filter per subject rather than per row; absent is row-level. */
+  scope?: FilterScope | null;
+}
+
+/** `dataSelections` key prefix for filters set through the `filters` prop. */
+export const HOST_FILTER_PREFIX = 'host-filter-';
+
+/** `dataSelections` key prefix for the one filter per column that chat and
+ *  charts share. */
+export const COLUMN_FILTER_PREFIX = 'col:';
+
+/**
+ * The id of the filter on `entity.field`. Chat and charts write the same
+ * filter for the same column — the last edit replaces it — so a chat filter on
+ * gender and a click on a gender chart are one filter with one chip.
+ */
+export function columnFilterKey(entity: string, field: string): string {
+  return `${COLUMN_FILTER_PREFIX}${entity}.${field}`;
+}
+
+export function isColumnFilterKey(key: string): boolean {
+  return key.startsWith(COLUMN_FILTER_PREFIX);
+}
+
+/** Keys of `dataSelections` that are filters: column filters and host filters. */
+export function isChatFilterKey(key: string): boolean {
+  return isColumnFilterKey(key) || key.startsWith(HOST_FILTER_PREFIX);
+}
+
+/**
+ * Whether a selection currently constrains anything. A point field with every
+ * value unchecked, or an interval field emptied to `[]`, is "present but
+ * empty": the filter is still in place (its chip reads "All"), it just drops
+ * nothing.
+ */
+export function selectionHasValue(selection: DataSelection): boolean {
+  const sel = selection.selection;
+  if (sel == null) return false;
+  const values = Object.values(sel);
+  if (values.length === 0) return false;
+  return !values.every((v) => v == null || (Array.isArray(v) && v.length === 0));
+}
+
+/** Every field admissible — not only the first, which is all the LLM path ever
+ *  produces but a host-supplied filter need not respect. */
+export function isValidSelection(sel: DataSelection, validate: ValidateFilterFn): boolean {
+  const entries = Object.entries(sel.selection ?? {});
+  if (entries.length === 0) return false;
+  return entries.every(([field, values]) =>
+    isAdmissible(
+      sel.type === 'interval'
+        ? validate.isValidIntervalFilter(sel.dataSourceKey, field)
+        : validate.isValidPointFilter(sel.dataSourceKey, field, values as unknown[]),
+    ),
+  );
+}
+
+/**
+ * The column filters as the user left them, for a session export. The messages
+ * alone rebuild only what the agent asked for; this carries the user's edits,
+ * scope changes, removals and chart selections on top. Host filters stay with
+ * the host page.
+ */
+export interface ExportedFilterState {
+  selections: DataSelections;
+  scopes: Record<string, FilterScope>;
+  removed: string[];
+  /** Who last set each filter. One missing here (as in older exports) is chat's. */
+  origins: Record<string, 'chat' | 'chart'>;
+  /** Where each chart-made filter sits in the chat (`brushAnchors`). */
+  anchors: Record<string, number>;
 }
 
 export interface DataFiltersState {
+  /** Every filter: one per column (`col:{entity}.{field}`, a single field
+   *  each), set from chat or a chart, plus the host's (`host-filter-{id}`). */
   dataSelections: DataSelections;
-  internalDataSelections: DataSelections;
+  /** Who last set each column filter: the agent (`chat`), a chart click or
+   *  brush (`chart`) or, in the `shared` filter mode, the host (`host`).
+   *  Absent for separate host filters. */
+  filterOrigins: Record<string, FilterOrigin>;
+  /**
+   * The scope of each chat or host filter that has one, keyed like
+   * `dataSelections`. A filter with no entry is row-level. Kept beside the
+   * selections rather than in them: a selection is the toolkit's shape, bound
+   * into Pinia as is.
+   */
+  filterScopes: Record<string, FilterScope>;
+  /**
+   * The FilterData calls already applied, keyed `message-filter-{i}-{j}`. Each
+   * applies once, so re-syncing after a later message never undoes an edit
+   * the user made since — and a reset clears this, so a replay rebuilds the
+   * same state.
+   */
+  appliedFilterOps: Record<string, true>;
+  /**
+   * Filters the user removed (chip gone, chat item collapsed), keyed by filter
+   * id. A removed filter is also emptied, so it drops nothing; the flag goes as
+   * soon as the filter holds a value again (a fresh click or brush).
+   */
+  removedFilters: Record<string, true>;
+  /**
+   * Where each chart-made filter sits in the chat: how many messages the
+   * conversation held when a chart first created it, keyed by filter id. Its
+   * widget renders just before the message at that index, so it reads in the
+   * order it happened. A chart replacing a chat filter's values gets no
+   * anchor: that filter's widget is already in its message.
+   */
+  brushAnchors: Record<string, number>;
+  /** The filter the pointer is on, and which side it is on: its chat widget
+   *  highlights for a toolbar hover and its chip for a chat one, while the
+   *  chart a brush came from highlights for either. */
+  hoveredFilter: HoveredFilter | null;
 
   getValidDataSelections: (validate: ValidateFilterFn) => DataSelections;
+  /** Apply every FilterData call not yet applied, in order: an add sets its
+   *  column's filter (replacing any), a modify redefines its target, a remove
+   *  deletes it and a clear deletes every column filter. */
   syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => void;
-  syncSelectionsBackToMessages: (messages: Message[]) => void;
-  updateInternalDataSelections: (newFilters: DataSelections) => void;
-  clearFilter: (key: string) => void;
+  /** Set or (with `null`) drop a filter's scope. */
+  setFilterScope: (id: string, scope: FilterScope | null) => void;
+  exportFilterState: () => ExportedFilterState;
+  /** Put exported chat filters back, and mark every FilterData call in
+   *  `messages` applied so the next sync does not redo — and undo — them. */
+  restoreFilterState: (state: ExportedFilterState, messages: Message[]) => void;
+  /**
+   * A chart's own selection, written into the column filters on `fields` (the
+   * fields that chart selects on). A field with a value replaces its column's
+   * filter, keeping its scope; a field without one clears it — a chart-made
+   * filter goes, a chat one stays in place with nothing picked. `messageCount`
+   * anchors each filter the chart creates (see `brushAnchors`).
+   */
+  applyChartSelection: (
+    entity: string,
+    fields: string[],
+    selection: DataSelection | null,
+    messageCount?: number,
+  ) => void;
+  /** Make a filter all-inclusive while keeping it in place. */
+  clearFilter: (id: string) => void;
+  /** Clear a filter and hide it; `restoreFilter` brings it back, cleared. */
+  removeFilter: (id: string) => void;
+  restoreFilter: (id: string) => void;
+  /** Clear every filter, chat and chart alike. */
+  clearAllFilters: () => void;
+  /** Write an edit to a filter by id. */
+  setFilter: (id: string, selection: DataSelection) => void;
+  /** Sync the `filters` prop in: upsert what changed since the last call,
+   *  delete what the host dropped. See {@link FilterMode}. */
+  applyExternalFilters: (filters: UDIFilter[], mode?: FilterMode) => void;
   resetFilters: () => void;
   setDataSelection: (key: string, selection: DataSelection) => void;
+  setHoveredFilter: (hovered: HoveredFilter | null) => void;
+}
+
+export interface HoveredFilter {
+  id: string;
+  from: 'chat' | 'toolbar';
 }
 
 // --- Pure helper functions ---
@@ -53,22 +236,15 @@ export function messageFilterKeyWithToolCall(
   return message?.linkedVisFilterId ?? `message-filter-${messageIndex}-${toolCallIndex}`;
 }
 
-export function messageFilterKey(messageIndex: number, message?: Message): string {
-  return messageFilterKeyWithToolCall(messageIndex, 0, message);
-}
-
-function messageIndexFromKey(filterKey: string): number | null {
-  const match = filterKey.match(/message-filter-(\d+)/);
-  return match ? parseInt(match[1]) : null;
-}
-
 export function containsFilterCall(message: Message): boolean {
   return message.tool_calls?.some((call) => getToolCallName(call) === 'FilterData') ?? false;
 }
 
-export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFilter[] {
+/** Every FilterData call in a message, in order: adds, modifies, removes and
+ *  clears alike. */
+export function extractFilterOperationsFromMessage(message: Message): ExtractedFilterOperation[] {
   if (!message.tool_calls?.length) return [];
-  const results: ExtractedFilter[] = [];
+  const results: ExtractedFilterOperation[] = [];
   for (let i = 0; i < message.tool_calls.length; i++) {
     const call = message.tool_calls[i];
     if (getToolCallName(call) !== 'FilterData') continue;
@@ -79,14 +255,43 @@ export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFil
   return results;
 }
 
+export function isFilterDefinition(args: FilterOperationArgs): args is FilterDataArgs {
+  return args.op === undefined || args.op === 'add' || args.op === 'modify';
+}
+
+/** The FilterData calls in a message that define a filter (adds and modifies). */
+export function extractAllFilterSpecsFromMessage(message: Message): ExtractedFilter[] {
+  return extractFilterOperationsFromMessage(message).filter((f): f is ExtractedFilter =>
+    isFilterDefinition(f.args),
+  );
+}
+
 export function extractFilterSpecFromMessage(message: Message): FilterDataArgs | null {
   const filters = extractAllFilterSpecsFromMessage(message);
   return filters.length > 0 ? filters[0].args : null;
 }
 
+/**
+ * The args of one specific FilterData call in a message.
+ *
+ * `messageFilterKeyWithToolCall` already keys per tool call, so a widget for
+ * tool call #1 must read #1's args — `extractFilterSpecFromMessage` always
+ * returns the first, which made a two-filter message render the wrong field.
+ */
+export function filterSpecForToolCall(
+  message: Message,
+  toolCallIndex?: number,
+): FilterDataArgs | null {
+  const all = extractAllFilterSpecsFromMessage(message);
+  if (all.length === 0) return null;
+  if (toolCallIndex == null) return all[0].args;
+  return all.find((f) => f.toolCallIndex === toolCallIndex)?.args ?? null;
+}
+
 /** Normalize legacy `{ entity, field, min, max }` format into the current
  *  `{ entity, field, filter: { filterType, intervalRange, pointValues } }` shape. */
-function normalizeFilterArgs(args: Record<string, unknown>): FilterDataArgs {
+function normalizeFilterArgs(args: Record<string, unknown>): FilterOperationArgs {
+  if (args.op === 'remove' || args.op === 'clear') return args as unknown as FilterOperationArgs;
   const legacy = args as {
     title?: string;
     entity?: string;
@@ -109,213 +314,408 @@ function normalizeFilterArgs(args: Record<string, unknown>): FilterDataArgs {
   };
 }
 
-export function generateFilterMessage(key: string, selection: DataSelection): Message | null {
-  const sel = selection.selection;
-  if (sel == null || Object.keys(sel).length === 0) return null;
-  const tool_calls: ToolCall[] = Object.keys(sel).map((field) => {
-    const value = sel[field];
-    const filter =
-      selection.type === 'interval'
-        ? {
-            filterType: 'interval' as const,
-            intervalRange: {
-              min: (value as RangeSelection[string])[0],
-              max: (value as RangeSelection[string])[1],
-            },
-            pointValues: [] as string[],
-          }
-        : {
-            filterType: 'point' as const,
-            intervalRange: { min: 0, max: 0 },
-            pointValues: value as PointSelection[string],
-          };
+/**
+ * The selection a FilterData definition asks for, or null when the data
+ * package rules its field out.
+ */
+function selectionFromArgs(args: FilterDataArgs, validate: ValidateFilterFn): DataSelection | null {
+  if (args.filter.filterType === 'interval') {
+    if (!isAdmissible(validate.isValidIntervalFilter(args.entity, args.field))) return null;
     return {
-      function: {
-        name: 'FilterData',
-        arguments: {
-          entity: selection.dataSourceKey,
-          field,
-          filter,
-        },
-      },
+      dataSourceKey: args.entity,
+      type: 'interval',
+      selection: { [args.field]: [args.filter.intervalRange.min, args.filter.intervalRange.max] },
     };
-  });
+  }
+  if (!isAdmissible(validate.isValidPointFilter(args.entity, args.field, args.filter.pointValues)))
+    return null;
+  // A filter asked for without values ("filter by radiation type") arrives as
+  // `[]`, or as `[""]` from older agents. Either way it is present with nothing
+  // picked, so its widget lists the values to choose from; a literal "" would
+  // filter to blanks and empty every chart.
   return {
-    role: 'user' as const,
-    content: '',
-    linkedVisFilterId: key,
-    tool_calls,
+    dataSourceKey: args.entity,
+    type: 'point',
+    selection: { [args.field]: normalizePointValues(args.filter.pointValues) },
   };
 }
 
 // --- Store ---
 
+/** Same shape the filter widgets' clear-all produces: fields kept, values dropped. */
+function emptySelection(sel: DataSelection): DataSelection {
+  if (!sel.selection) return sel;
+  const fields = Object.keys(sel.selection);
+  return {
+    ...sel,
+    selection: Object.fromEntries(fields.map((f) => [f, []])) as DataSelection['selection'],
+  };
+}
+
+/** State update that empties filter `id`, keeping it in place. */
+function clearedState(
+  s: DataFiltersState,
+  id: string,
+): Pick<DataFiltersState, 'removedFilters'> & Partial<DataFiltersState> {
+  const removedFilters = { ...s.removedFilters };
+  delete removedFilters[id];
+  const selection = s.dataSelections[id];
+  if (!selection) return { removedFilters };
+  return {
+    dataSelections: { ...s.dataSelections, [id]: emptySelection(selection) },
+    removedFilters,
+  };
+}
+
+/** The one-field selection a column filter holds. */
+function columnSelection(
+  entity: string,
+  type: DataSelection['type'],
+  field: string,
+  values: unknown,
+): DataSelection {
+  return {
+    dataSourceKey: entity,
+    type,
+    selection: { [field]: values } as DataSelection['selection'],
+  };
+}
+
+/** Re-key a pre-column-key filter (`message-filter-*`, one field) by column. */
+function columnKeyFor(key: string, selection: DataSelection): string {
+  if (isColumnFilterKey(key) || key.startsWith(HOST_FILTER_PREFIX)) return key;
+  const [field] = Object.keys(selection.selection ?? {});
+  return field ? columnFilterKey(selection.dataSourceKey, field) : key;
+}
+
+/** Copies of the maps a filter edit changes, a `drop` that deletes a filter
+ *  from every one, and `commit`, the state update that writes them back. */
+function draftFilters(s: DataFiltersState) {
+  const next = { ...s.dataSelections };
+  const origins = { ...s.filterOrigins };
+  const scopes = { ...s.filterScopes };
+  const removed = { ...s.removedFilters };
+  const anchors = { ...s.brushAnchors };
+  const drop = (id: string) => {
+    delete next[id];
+    delete origins[id];
+    delete scopes[id];
+    delete removed[id];
+    delete anchors[id];
+  };
+  const commit = () => ({
+    dataSelections: next,
+    filterOrigins: origins,
+    filterScopes: scopes,
+    removedFilters: removed,
+    brushAnchors: anchors,
+  });
+  return { next, origins, scopes, removed, anchors, drop, commit };
+}
+
 export function createDataFiltersStore() {
+  // Last-applied JSON per host filter key, so a re-render passing the same
+  // `filters` prop never clobbers the user's edits to those filters, and the
+  // column filter it was written to in the `shared` mode.
+  const appliedHostFilters = new Map<string, { json: string; column?: string }>();
+
   return createStore<DataFiltersState>()((set, get) => ({
     dataSelections: {},
-    internalDataSelections: {},
+    filterOrigins: {},
+    filterScopes: {},
+    appliedFilterOps: {},
+    removedFilters: {},
+    brushAnchors: {},
+    hoveredFilter: null,
 
     getValidDataSelections: (validate: ValidateFilterFn): DataSelections => {
       const { dataSelections } = get();
       const valid: DataSelections = {};
       for (const [key, selection] of Object.entries(dataSelections)) {
-        if (!selection.selection || Object.keys(selection.selection).length === 0) continue;
-        if (Object.values(selection.selection).every((v) => Array.isArray(v) && v.length === 0))
-          continue;
-        if (!key.startsWith('message-filter-')) continue;
-
-        if (selection.type === 'interval') {
-          if (
-            validate.isValidIntervalFilter(
-              selection.dataSourceKey,
-              Object.keys(selection.selection)[0],
-            ).isValid === 'yes'
-          ) {
-            valid[key] = selection;
-          }
-        } else if (selection.type === 'point') {
-          if (
-            validate.isValidPointFilter(
-              selection.dataSourceKey,
-              Object.keys(selection.selection)[0],
-              Object.values(selection.selection)[0],
-            ).isValid === 'yes'
-          ) {
-            valid[key] = selection;
-          }
-        }
+        if (!isChatFilterKey(key) || !selectionHasValue(selection)) continue;
+        if (isValidSelection(selection, validate)) valid[key] = selection;
       }
       return valid;
     },
 
     syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => {
-      const current = get().dataSelections;
+      const state = get();
+      const { next, origins, scopes, removed, anchors, drop, commit } = draftFilters(state);
+      const applied = { ...state.appliedFilterOps };
+      // `message-filter-{i}-{j}` -> the column its add set, so a modify or
+      // remove naming the old id (sessions before column keys) still lands.
+      const aliases: Record<string, string> = {};
       let changed = false;
-      const next = { ...current };
+
+      const setScope = (id: string, scope: FilterScope | null | undefined) => {
+        if (scope) scopes[id] = { entity: scope.entity, match: scope.match };
+        else delete scopes[id];
+      };
+      // A filter the agent defines is shown by the message that defined it,
+      // so a chart that made it no longer anchors it in the chat.
+      const define = (id: string, selection: DataSelection, scope?: FilterScope | null) => {
+        next[id] = selection;
+        origins[id] = 'chat';
+        setScope(id, scope);
+        delete removed[id];
+        delete anchors[id];
+      };
 
       for (let i = 0; i < messages.length; i++) {
         const message = messages[i];
         if (!message || !containsFilterCall(message)) continue;
-        const filters = extractAllFilterSpecsFromMessage(message);
-        for (const { args: filterSpec, toolCallIndex } of filters) {
-          const key = messageFilterKeyWithToolCall(i, toolCallIndex, message);
-          if (key in next) continue;
+        for (const { args, toolCallIndex } of extractFilterOperationsFromMessage(message)) {
+          const opKey = messageFilterKeyWithToolCall(i, toolCallIndex, message);
+          if (isFilterDefinition(args) && args.op !== 'modify' && args.entity && args.field) {
+            aliases[opKey] = columnFilterKey(args.entity, args.field);
+          }
+          if (applied[opKey]) continue;
+          applied[opKey] = true;
+          changed = true;
 
-          if (filterSpec.filter.filterType === 'interval') {
-            if (
-              validate.isValidIntervalFilter(filterSpec.entity, filterSpec.field).isValid !== 'yes'
-            )
-              continue;
-            next[key] = {
-              dataSourceKey: filterSpec.entity,
-              type: 'interval',
-              selection: {
-                [filterSpec.field]: [
-                  filterSpec.filter.intervalRange.min,
-                  filterSpec.filter.intervalRange.max,
-                ],
-              },
-            };
-            changed = true;
+          if (args.op === 'clear') {
+            for (const id of Object.keys(next)) if (isColumnFilterKey(id)) drop(id);
+          } else if (args.op === 'remove') {
+            const id = aliases[args.id] ?? args.id;
+            // Never a host filter: those belong to the embedding page.
+            if (id && !id.startsWith(HOST_FILTER_PREFIX)) drop(id);
+          } else if (args.op === 'modify') {
+            // A filter that is still here, made in chat or on a chart.
+            const id = args.id && (aliases[args.id] ?? args.id);
+            if (!id || id.startsWith(HOST_FILTER_PREFIX) || !(id in next)) continue;
+            const selection = selectionFromArgs(args, validate);
+            if (!selection) continue;
+            // A modify may move the filter to another column.
+            const target = columnFilterKey(args.entity, args.field);
+            if (target !== id) {
+              drop(id);
+              if (args.id) aliases[args.id] = target;
+            }
+            define(target, selection, args.scope);
           } else {
-            if (
-              validate.isValidPointFilter(
-                filterSpec.entity,
-                filterSpec.field,
-                filterSpec.filter.pointValues,
-              ).isValid !== 'yes'
-            )
-              continue;
-            next[key] = {
-              dataSourceKey: filterSpec.entity,
-              type: 'point',
-              selection: { [filterSpec.field]: filterSpec.filter.pointValues },
-            };
-            changed = true;
+            const selection = selectionFromArgs(args, validate);
+            if (!selection) continue;
+            // One filter per column: an add replaces what the column had.
+            define(columnFilterKey(args.entity, args.field), selection, args.scope);
           }
         }
       }
-      if (changed) set({ dataSelections: next });
+      if (changed) set({ ...commit(), appliedFilterOps: applied });
     },
 
-    syncSelectionsBackToMessages: (messages: Message[]) => {
-      const { dataSelections } = get();
-      for (const [selectionKey, selection] of Object.entries(dataSelections)) {
-        const idx = messageIndexFromKey(selectionKey);
-        if (idx === null) continue;
-        const message = messages[idx];
-        if (!message?.tool_calls) continue;
-        for (const toolCall of message.tool_calls) {
-          if (getToolCallName(toolCall) !== 'FilterData') continue;
-          const args = getToolCallArgs(toolCall);
-          if (!args || args.entity !== selection.dataSourceKey) continue;
-          if (selection.type !== 'interval') continue;
-          // Narrow the unknown-valued arg bag down to the shape FilterData
-          // tool-call arguments are expected to have.
-          const filterArg = args.filter as
-            { intervalRange?: { min: number; max: number } } | undefined;
-          if (!filterArg?.intervalRange) continue;
-          for (const [selectionField, intervalSelection] of Object.entries(
-            selection.selection ?? {},
-          )) {
-            if (args.field !== selectionField) continue;
-            filterArg.intervalRange.min = intervalSelection[0] as number;
-            filterArg.intervalRange.max = intervalSelection[1] as number;
-          }
+    exportFilterState: () => {
+      const { dataSelections, filterOrigins, filterScopes, removedFilters } = get();
+      // A shared host filter stays with the host page, like a separate one.
+      const ownColumn = (k: string) => isColumnFilterKey(k) && filterOrigins[k] !== 'host';
+      const isColumn = ([k]: [string, unknown]) => ownColumn(k);
+      return {
+        selections: Object.fromEntries(Object.entries(dataSelections).filter(isColumn)),
+        scopes: Object.fromEntries(Object.entries(filterScopes).filter(isColumn)),
+        removed: Object.keys(removedFilters).filter(ownColumn),
+        origins: Object.fromEntries(Object.entries(filterOrigins).filter(isColumn)) as Record<
+          string,
+          'chat' | 'chart'
+        >,
+        anchors: Object.fromEntries(Object.entries(get().brushAnchors).filter(isColumn)),
+      };
+    },
+
+    restoreFilterState: (exported: ExportedFilterState, messages: Message[]) => {
+      const applied: Record<string, true> = {};
+      messages.forEach((message, i) => {
+        for (const { toolCallIndex } of extractFilterOperationsFromMessage(message)) {
+          applied[messageFilterKeyWithToolCall(i, toolCallIndex, message)] = true;
         }
+      });
+      // Exports made before column keys hold `message-filter-*` ids.
+      const rekey: Record<string, string> = {};
+      const selections: DataSelections = {};
+      for (const [key, selection] of Object.entries(exported.selections)) {
+        rekey[key] = columnKeyFor(key, selection);
+        selections[rekey[key]] = selection;
       }
+      const byColumn = <T>(entries: Record<string, T>) =>
+        Object.fromEntries(Object.entries(entries).map(([k, v]) => [rekey[k] ?? k, v]));
+      const origins: Record<string, 'chat' | 'chart'> = {};
+      for (const key of Object.values(rekey)) origins[key] = 'chat';
+      Object.assign(origins, byColumn(exported.origins));
+      set((s) => ({
+        dataSelections: { ...s.dataSelections, ...selections },
+        filterOrigins: { ...s.filterOrigins, ...origins },
+        filterScopes: { ...s.filterScopes, ...byColumn(exported.scopes) },
+        removedFilters: {
+          ...s.removedFilters,
+          ...Object.fromEntries(exported.removed.map((id) => [rekey[id] ?? id, true as const])),
+        },
+        appliedFilterOps: { ...s.appliedFilterOps, ...applied },
+        brushAnchors: { ...s.brushAnchors, ...byColumn(exported.anchors) },
+      }));
     },
 
-    updateInternalDataSelections: (newFilters: DataSelections) => {
-      const current = get().internalDataSelections;
-      const next = { ...current };
+    setFilterScope: (id: string, scope: FilterScope | null) =>
+      set((s) => {
+        const filterScopes = { ...s.filterScopes };
+        if (scope) filterScopes[id] = scope;
+        else delete filterScopes[id];
+        return { filterScopes };
+      }),
+
+    applyChartSelection: (entity, fields, selection, messageCount) => {
+      const state = get();
+      const { next, origins, removed, anchors, drop, commit } = draftFilters(state);
       let changed = false;
-      for (const [key, newFilter] of Object.entries(newFilters)) {
-        if (key.startsWith('message-filter-')) continue;
-        if (JSON.stringify(next[key]) !== JSON.stringify(newFilter)) {
-          next[key] = newFilter;
+      const values = (selection?.selection ?? {}) as Record<string, unknown>;
+
+      for (const field of fields) {
+        const id = columnFilterKey(entity, field);
+        const current = next[id];
+        const value = values[field];
+        const hasValue = Array.isArray(value) && value.length > 0;
+        if (hasValue && selection) {
+          const written = columnSelection(entity, selection.type, field, value);
+          if (JSON.stringify(current) === JSON.stringify(written)) continue;
+          next[id] = written;
+          origins[id] = 'chart';
+          delete removed[id];
+          if (!current && messageCount != null) anchors[id] = messageCount;
+          changed = true;
+        } else if (current && selectionHasValue(current)) {
+          // A chart's selection no longer covering this column. A filter a
+          // chart made (its widget is anchored in the chat) goes with it; one
+          // a message shows — made in chat, even if a chart changed it since —
+          // stays, emptied, so that message's widget keeps a filter to show.
+          if (id in state.brushAnchors) drop(id);
+          else next[id] = emptySelection(current);
           changed = true;
         }
       }
-      if (changed) set({ internalDataSelections: next });
+      if (changed) set(commit());
     },
 
-    clearFilter: (key: string) => {
-      const { dataSelections, internalDataSelections } = get();
+    // Clearing keeps the filter in place (its chip reads "All", its chat
+    // widget stays expanded) with nothing checked: fields kept at `[]`, the
+    // same shape the widgets' own clear-all produces. That holds for an
+    // interval brush too — `{field: []}` filters nothing in either executor,
+    // and DashboardCard remounts the chart to drop the drawn rectangle.
+    clearFilter: (id: string) => set((s) => clearedState(s, id)),
 
-      const nextData = { ...dataSelections };
-      const nextInternal = { ...internalDataSelections };
+    removeFilter: (id: string) =>
+      set((s) => {
+        const next = clearedState(s, id);
+        return { ...next, removedFilters: { ...next.removedFilters, [id]: true } };
+      }),
 
-      // Per-field clear for split point filters (`${uuid}::${field}`): drop
-      // only that field from the uuid's multi-field selection; the whole
-      // selection clears when the last field goes. Removing the key entirely
-      // (vs leaving `field: []`) also removes its chat widget — clearing a
-      // chip is an explicit "remove this filter".
-      const [base, field] = key.split('::');
-      if (field && nextInternal[base]?.selection) {
-        const remaining = { ...nextInternal[base].selection } as Record<string, unknown>;
-        delete remaining[field];
-        nextInternal[base] = {
-          ...nextInternal[base],
-          selection: Object.keys(remaining).length > 0 ? (remaining as never) : null,
+    restoreFilter: (id: string) =>
+      set((s) => {
+        if (!s.removedFilters[id]) return {};
+        const removedFilters = { ...s.removedFilters };
+        delete removedFilters[id];
+        return { removedFilters };
+      }),
+
+    clearAllFilters: () =>
+      set((s) => {
+        const empty = (sels: DataSelections) =>
+          Object.fromEntries(Object.entries(sels).map(([k, v]) => [k, emptySelection(v)]));
+        return { dataSelections: empty(s.dataSelections) };
+      }),
+
+    setFilter: (id: string, selection: DataSelection) => get().setDataSelection(id, selection),
+
+    applyExternalFilters: (filters: UDIFilter[], mode: FilterMode = 'separate') => {
+      const draft = draftFilters(get());
+      const { next, origins, scopes, removed, anchors, drop } = draft;
+      const seen = new Set<string>();
+      let changed = false;
+      // What a host entry wrote before: its own key, or in the shared mode a
+      // column, which goes only while the host still owns it — a chat or chart
+      // edit since made it theirs.
+      const undo = (key: string, column: string | undefined) => {
+        if (!column) {
+          delete next[key];
+          delete scopes[key];
+          delete removed[key];
+        } else if (origins[column] === 'host') {
+          drop(column);
+        }
+      };
+      for (const f of filters) {
+        // A host echoing `onFiltersChange` straight back would otherwise copy
+        // every chat and chart filter in as a host filter.
+        if (f.origin === 'chat' || f.origin === 'chart') continue;
+        const key = HOST_FILTER_PREFIX + f.id;
+        seen.add(key);
+        const selection: DataSelection = {
+          dataSourceKey: f.dataSourceKey,
+          type: f.type,
+          selection: f.selection,
         };
-        set({ dataSelections: nextData, internalDataSelections: nextInternal });
-        return;
+        // A scope on the filtered table itself reaches no table, so it would
+        // silently drop the filter everywhere; it means row-level.
+        const scope =
+          f.scope && f.scope.entity !== f.dataSourceKey
+            ? { entity: f.scope.entity, match: f.scope.match }
+            : null;
+        const json = JSON.stringify([selection, scope]);
+        const before = appliedHostFilters.get(key);
+        if (before?.json === json) continue;
+        const fields = Object.keys(f.selection ?? {});
+        const column =
+          mode === 'shared' && fields.length === 1
+            ? columnFilterKey(f.dataSourceKey, fields[0])
+            : undefined;
+        if (before && before.column !== column) undo(key, before.column);
+        appliedHostFilters.set(key, { json, column });
+        const target = column ?? key;
+        // An echo of what the column already holds keeps whoever set it.
+        if (column && JSON.stringify([next[column], scopes[column] ?? null]) === json) continue;
+        next[target] = selection;
+        if (scope) scopes[target] = scope;
+        else delete scopes[target];
+        delete removed[target];
+        if (column) {
+          origins[column] = 'host';
+          delete anchors[column];
+        }
+        changed = true;
       }
-
-      if (nextData[key]) nextData[key] = { ...nextData[key], selection: null };
-      if (nextInternal[key]) nextInternal[key] = { ...nextInternal[key], selection: null };
-      set({ dataSelections: nextData, internalDataSelections: nextInternal });
+      for (const [key, { column }] of [...appliedHostFilters]) {
+        if (seen.has(key)) continue;
+        appliedHostFilters.delete(key);
+        undo(key, column);
+        changed = true;
+      }
+      if (changed) set(draft.commit());
     },
 
+    // Host filters belong to the embedding page, not the conversation, so a
+    // reset or conversation switch keeps them, shared ones included.
     resetFilters: () => {
-      set({ dataSelections: {}, internalDataSelections: {} });
+      set((s) => {
+        const isHost = ([k]: [string, unknown]) =>
+          k.startsWith(HOST_FILTER_PREFIX) || s.filterOrigins[k] === 'host';
+        return {
+          dataSelections: Object.fromEntries(Object.entries(s.dataSelections).filter(isHost)),
+          filterScopes: Object.fromEntries(Object.entries(s.filterScopes).filter(isHost)),
+          filterOrigins: Object.fromEntries(Object.entries(s.filterOrigins).filter(isHost)),
+          appliedFilterOps: {},
+          removedFilters: {},
+          brushAnchors: {},
+        };
+      });
     },
+
+    setHoveredFilter: (hoveredFilter) => set({ hoveredFilter }),
 
     setDataSelection: (key: string, selection: DataSelection) => {
-      set((state) => ({
-        dataSelections: { ...state.dataSelections, [key]: selection },
-      }));
+      set((state) => {
+        if (!selectionHasValue(selection) || !state.removedFilters[key]) {
+          return { dataSelections: { ...state.dataSelections, [key]: selection } };
+        }
+        const removedFilters = { ...state.removedFilters };
+        delete removedFilters[key];
+        return { dataSelections: { ...state.dataSelections, [key]: selection }, removedFilters };
+      });
     },
   }));
 }

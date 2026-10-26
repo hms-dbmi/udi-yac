@@ -41,3 +41,12 @@ def test_expr_in_chart_spec():
     )
     assert spec["transformation"][0]["filter"] == Expr.not_null("age")
     assert spec["transformation"][1]["derive"] == {"rank": {"window": "rank"}}
+
+
+def test_log_and_exp_build_function_nodes():
+    # A running product is exp(sum(log(x))) — the Kaplan-Meier estimate.
+    assert Expr.log(Expr.field("f")) == {"fn": "log", "args": [{"field": "f"}]}
+    assert Expr.exp(Expr.agg("sum", "lf")) == {
+        "fn": "exp",
+        "args": [{"agg": "sum", "field": "lf"}],
+    }

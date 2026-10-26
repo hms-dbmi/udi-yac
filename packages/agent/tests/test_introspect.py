@@ -17,7 +17,7 @@ def engine():
     connector = DuckDBConnector(
         views={
             "penguins": str(_SAMPLE / "penguins.csv"),
-            "donors": str(_SAMPLE / "donors.csv"),
+            "donors": str(_SAMPLE / "hubmap" / "donors.tsv"),
         }
     )
     return QueryEngine(connector, table_map={"penguins": "penguins", "donors": "donors"})
@@ -57,8 +57,18 @@ def test_introspect_domains(engine):
     assert mass["domain"]["min"] == 2700
     assert mass["domain"]["max"] == 6300
 
-    # High-cardinality categoricals are dropped (removeLongDomains parity).
+    # Categoricals over DEFAULT_DISTINCT_CAP are dropped (hubmap_id has 501).
     assert ("donors", "hubmap_id") not in by_key
+
+
+def test_distinct_cap_covers_every_drawable_category():
+    """A chart can draw up to MAX_DRAWN_CATEGORIES categories; below that,
+    the domain must be collected, or the chart's filter can list only the
+    values already selected."""
+    from udiagent.query.introspect import DEFAULT_DISTINCT_CAP
+    from udiagent.vis_generate import MAX_DRAWN_CATEGORIES
+
+    assert DEFAULT_DISTINCT_CAP >= MAX_DRAWN_CATEGORIES
 
 
 def test_entity_schemas_merged_into_resources():
@@ -82,6 +92,37 @@ def test_entity_schemas_merged_into_resources():
     assert resource["schema"]["primaryKey"] == ["species"]
     # Introspected fields remain intact alongside the merge.
     assert any(f["name"] == "body_mass_g" for f in resource["schema"]["fields"])
+
+
+def test_entity_schema_descriptions_overlay_introspected_fields():
+    """Descriptions exist only in the package; the seeders carry them into
+    `schemas`, and introspect() lays them over the columns it found rather
+    than replacing them — a described column the table lacks is ignored."""
+    connector = DuckDBConnector(views={"penguins": str(_SAMPLE / "penguins.csv")})
+    engine = QueryEngine(
+        connector,
+        table_map={"penguins": "penguins"},
+        entity_schemas={
+            "penguins": {
+                "description": "One row per penguin.",
+                "fields": [
+                    {"name": "body_mass_g", "description": "Body mass, in grams."},
+                    {"name": "wingspan", "description": "Not a column."},
+                ],
+            }
+        },
+    )
+    meta = introspect(engine, "p")
+    resource = meta["dataSchema"]["resources"][0]
+    assert resource["description"] == "One row per penguin."
+    assert "description" not in resource["schema"] and "fields" in resource["schema"]
+    by_name = {f["name"]: f for f in resource["schema"]["fields"]}
+    assert len(by_name) == 7 and "wingspan" not in by_name
+    assert by_name["body_mass_g"]["description"] == "Body mass, in grams."
+    assert by_name["species"]["description"] == ""
+    domains = {d["field"]: d for d in meta["dataDomains"]}
+    assert domains["body_mass_g"]["fieldDescription"] == "Body mass, in grams."
+    assert domains["species"]["fieldDescription"] == ""
 
 
 def test_metadata_cache_ttl(engine):

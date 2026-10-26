@@ -1,12 +1,12 @@
 [project]
 name = "udiagent"
-version = "0.2.7"
+version = "0.9.0"
 description = "UDI Agent: LLM-powered data visualization orchestration library"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
 dependencies = [
-    "openai>=2.15.0",
+    "openai>=3.33.0",
     "jsonschema>=4.26.0",
     "requests>=2.32.5",
     "python-dotenv>=1.0.0",
@@ -16,14 +16,23 @@ dependencies = [
 langfuse = [
     "langfuse>=4",
 ]
+# Amazon Bedrock SigV4 auth (IAM instance profile / task role). Unpinned: the
+# core openai floor already covers openai.providers.bedrock (added in 2.44.0).
+# openai[bedrock] rather than a bare botocore pin tracks upstream.
+bedrock = [
+    "openai[bedrock]",
+]
 server = [
-    "fastapi[standard]>=0.128.0",
-    "python-jose>=3.5.0",
+    "fastapi[standard]>=0.143.0",
+    "python-jose[cryptography]>=3.5.0",
     "python-dotenv>=1.0.0",
+    # Already pulled in by fastapi[standard]; declared because ServerConfig
+    # imports it directly.
+    "pydantic-settings>=2.0",
 ]
 benchmark = [
-    "datasets>=4.5.0",
-    "huggingface-hub>=0.36.0",
+    "datasets>=5.0.1",
+    "huggingface-hub>=2.2.0",
     "ijson>=3.4.0.post0",
 ]
 codegen = [
@@ -39,9 +48,10 @@ starrocks = [
 test = [
     "pytest>=8.0.0",
     "duckdb>=1.0.0",
+    "cryptography>=42.0.0",
 ]
 all = [
-    "udiagent[langfuse,server,benchmark,codegen,starrocks,duckdb]",
+    "udiagent[langfuse,server,benchmark,codegen,starrocks,duckdb,bedrock]",
 ]
 
 [build-system]
@@ -53,3 +63,14 @@ packages = ["src/udiagent"]
 
 [tool.uv.sources]
 udi-grammar-py = { workspace = true }
+
+# The Python API reference on the docs site (apps/site/scripts/sync-docs.mjs
+# runs `uvx griffe2md` from this directory, once per public package).
+[tool.griffe2md]
+search_paths = ["src"]
+show_submodules = false
+show_signature_annotations = true
+show_if_no_docstring = false
+summary = { modules = false, attributes = false, classes = true, functions = true }
+# A tool-definition constant: its value is one very long line.
+filters = ["!^_", "!^ORCHESTRATOR_TOOLS$"]

@@ -16,6 +16,8 @@ import {
 } from './TableUtil';
 import type { UDIPalette } from './Palette';
 import { toTableRampInterpolator, toTableCategoryColors } from './Palette';
+import { formatTime, timeFormatOf } from './temporal';
+import { cellLink } from './recordUrl';
 
 // Define props
 
@@ -27,6 +29,8 @@ export interface UDICellRendererParams<
   udiColumnMapping: ExtendedRowMapping[];
   /** Consumer-supplied color palette, forwarded from TableComponent. */
   palette?: UDIPalette;
+  /** Time columns of the spec (`timeColumns`), forwarded from TableComponent. */
+  timeColumns?: Map<string, string>;
 }
 
 export interface UDICellRendererProps {
@@ -36,6 +40,22 @@ export interface UDICellRendererProps {
 }
 
 const props = defineProps<UDICellRendererProps>();
+
+/*
+ * Chrome colors reach the scoped SCSS below as custom properties rather than
+ * being written into every style binding: the marks in a cell are already
+ * data-driven per element, and the *default* mark fill, text color and empty-cell
+ * glyph are not. Without this a table keeps its hard-coded light greys whatever
+ * the host's theme is — the table half of "the chart surface isn't theme-aware".
+ */
+const chromeVars = computed<CSSProperties>(() => {
+  const palette = props.params.palette;
+  const vars: Record<string, string> = {};
+  if (palette?.text != null) vars['--udi-table-text'] = palette.text;
+  if (palette?.mutedText != null) vars['--udi-table-muted'] = palette.mutedText;
+  if (palette?.grid != null) vars['--udi-table-mark'] = palette.grid;
+  return vars;
+});
 
 // const marks = computed(() => {
 //   if (!props.params.udiColumnMapping) return [];
@@ -110,6 +130,11 @@ function getTextValue(layer: string) {
   const textMapping = rowMapping.find((m) => m.encoding === 'text');
   if (!textMapping) return null;
   let value = props.params.data?.[textMapping.field];
+  const timeFormat =
+    typeof value === 'number' && props.params.timeColumns
+      ? timeFormatOf(props.params.timeColumns, textMapping.field)
+      : undefined;
+  if (timeFormat) value = formatTime(value, timeFormat);
   if (value instanceof Date) {
     value = value.toLocaleDateString();
   }
@@ -370,14 +395,21 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
 </script>
 
 <template>
-  <div class="cell-container">
+  <div class="cell-container" :style="chromeVars">
     <template v-for="{ layer, mark } in layeredMarks" :key="mark">
       <div
         v-if="mark === 'text'"
         :style="getStyle(layer, mark)"
         class="pos-absolute text"
       >
-        {{ getTextValue(layer) }}
+        <a
+          v-if="cellLink(getTextValue(layer))"
+          :href="cellLink(getTextValue(layer))!"
+          target="_blank"
+          rel="noopener noreferrer"
+          >{{ getTextValue(layer) }}</a
+        >
+        <template v-else>{{ getTextValue(layer) }}</template>
       </div>
       <div
         v-else-if="mark === 'bar'"
@@ -407,7 +439,9 @@ function getStyle(layer: string, mark: RowMarkOptions): CSSProperties | null {
 </template>
 
 <style scoped lang="scss">
-$default-color: rgb(198, 207, 216);
+// Fallbacks are the values these rules carried before the palette gained
+// chrome colors, so a table with no palette renders exactly as it did.
+$default-color: var(--udi-table-mark, rgb(198, 207, 216));
 .pos-absolute {
   position: absolute;
 }
@@ -422,7 +456,7 @@ $container-margin-top: 2px;
 }
 
 .text {
-  color: black;
+  color: var(--udi-table-text, black);
   top: 50%;
   transform: translateY(-50%);
   line-height: 1;
@@ -430,6 +464,12 @@ $container-margin-top: 2px;
   // background-color: bisque;
   // top: 50%;
   // dominant-baseline: middle;
+}
+
+// A host sets --udi-table-link to its own link color; the browser's otherwise.
+.text a {
+  color: var(--udi-table-link, LinkText);
+  text-decoration: underline;
 }
 
 .bar {
@@ -469,6 +509,6 @@ $container-margin-top: 2px;
   left: 50%;
   transform: translate(-50%, -50%);
   line-height: 1;
-  color: rgb(94, 94, 94);
+  color: var(--udi-table-muted, rgb(94, 94, 94));
 }
 </style>

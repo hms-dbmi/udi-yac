@@ -14,7 +14,7 @@ export default {
 // A stacked bar whose color encodes a categorical field — exercises
 // `config.range.category`.
 const categoricalSpec = {
-  source: { name: 'datasets', source: './data/datasets.csv' },
+  source: { name: 'datasets', source: './data/hubmap/datasets.tsv' },
   transformation: [
     { groupby: 'assay_category' },
     { rollup: { count: { op: 'count' } } },
@@ -31,7 +31,7 @@ const categoricalSpec = {
 // A rect heatmap whose color encodes a numeric count — exercises the
 // continuous `config.range.ramp`.
 const heatmapSpec = {
-  source: { name: 'datasets', source: './data/datasets.csv' },
+  source: { name: 'datasets', source: './data/hubmap/datasets.tsv' },
   transformation: [
     { groupby: ['origin_samples_unique_mapped_organs', 'assay_category'] },
     { rollup: { count: { op: 'count' } } },
@@ -62,7 +62,14 @@ export const CategoricalCustomColors = {
   args: {
     spec: categoricalSpec,
     palette: {
-      category: ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02'],
+      category: [
+        '#1b9e77',
+        '#d95f02',
+        '#7570b3',
+        '#e7298a',
+        '#66a61e',
+        '#e6ab02',
+      ],
     },
   },
 };
@@ -141,7 +148,7 @@ export const ContinuousFunctionRamp = {
 export const TableFunctionRamp = {
   args: {
     spec: {
-      source: { name: 'donors', source: './data/donors.csv' },
+      source: { name: 'donors', source: './data/hubmap/donors.tsv' },
       transformation: [{ orderby: 'weight_value' }],
       representation: {
         mark: 'row',

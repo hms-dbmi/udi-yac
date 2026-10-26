@@ -10,8 +10,11 @@ import {
   useDashboard,
   useDashboardStore,
   useDataPackageStore,
+  useGlobal,
+  useGlobalStore,
   useTracker,
 } from '@/app/UDIChatContext';
+import { MAX_FONT_SCALE, MIN_FONT_SCALE } from '@/stores/globalStore';
 import {
   MAX_GRID_COLS,
   MAX_GRID_ROW_HEIGHT_PX,
@@ -19,10 +22,15 @@ import {
   MIN_GRID_ROW_HEIGHT_PX,
 } from '../utils/gridDefaults';
 
-export function GridSettingsButton() {
+/** The grid's sliders and Reset layout: the Display settings popover, and the
+ *  Layout section of the folded header menu. */
+export function GridSettingsPanel() {
   const gridCols = useDashboard((s) => s.gridCols);
   const gridRowHeight = useDashboard((s) => s.gridRowHeight);
+  const fontScale = useGlobal((s) => s.fontScale);
+  const hostFontScale = useGlobal((s) => s.hostFontScale);
   const store = useDashboardStore();
+  const globalStore = useGlobalStore();
   const dataPackageStore = useDataPackageStore();
   const trackEvent = useTracker();
 
@@ -42,12 +50,92 @@ export function GridSettingsButton() {
     [store],
   );
 
+  const handleFontScaleChange = useCallback(
+    (next: number | readonly number[]) => {
+      const n = Array.isArray(next) ? next[0] : (next as number);
+      globalStore.getState().setFontScale(n);
+    },
+    [globalStore],
+  );
+
   const handleResetLayout = useCallback(() => {
     const state = store.getState();
     state.resetLayout(dataPackageStore);
     trackEvent('layout_reset', { vizCount: state.activeVisualizations.size });
   }, [store, dataPackageStore, trackEvent]);
 
+  return (
+    <div className="udi:flex udi:flex-col udi:gap-3">
+      <div className="udi:flex udi:flex-col udi:gap-1.5">
+        <div className="udi:flex udi:items-center udi:justify-between">
+          <Label htmlFor="grid-cols" className="udi:text-xs">
+            Columns
+          </Label>
+          <span className="udi:text-xs udi:tabular-nums udi:text-muted-foreground">{gridCols}</span>
+        </div>
+        <Slider
+          id="grid-cols"
+          min={MIN_GRID_COLS}
+          max={MAX_GRID_COLS}
+          step={1}
+          value={[gridCols]}
+          onValueChange={handleColsChange}
+        />
+      </div>
+      <div className="udi:flex udi:flex-col udi:gap-1.5">
+        <div className="udi:flex udi:items-center udi:justify-between">
+          <Label htmlFor="grid-row-height" className="udi:text-xs">
+            Row height
+          </Label>
+          <span className="udi:text-xs udi:tabular-nums udi:text-muted-foreground">
+            {gridRowHeight} px
+          </span>
+        </div>
+        <Slider
+          id="grid-row-height"
+          min={MIN_GRID_ROW_HEIGHT_PX}
+          max={MAX_GRID_ROW_HEIGHT_PX}
+          step={10}
+          value={[gridRowHeight]}
+          onValueChange={handleRowHeightChange}
+        />
+      </div>
+      {/* A host that sets `fontScale` owns the text size. */}
+      {hostFontScale == null && (
+        <div className="udi:flex udi:flex-col udi:gap-1.5">
+          <div className="udi:flex udi:items-center udi:justify-between">
+            <Label htmlFor="text-size" className="udi:text-xs">
+              Text size
+            </Label>
+            <span className="udi:text-xs udi:tabular-nums udi:text-muted-foreground">
+              {Math.round(fontScale * 100)}%
+            </span>
+          </div>
+          <Slider
+            id="text-size"
+            min={MIN_FONT_SCALE}
+            max={MAX_FONT_SCALE}
+            step={0.25}
+            value={[fontScale]}
+            onValueChange={handleFontScaleChange}
+          />
+        </div>
+      )}
+      <Separator />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="udi:-mx-1 udi:h-8 udi:justify-start udi:px-2 udi:text-xs"
+        onClick={handleResetLayout}
+      >
+        <RotateCcw className="udi:mr-2 udi:h-3.5 udi:w-3.5" />
+        Reset layout
+      </Button>
+    </div>
+  );
+}
+
+export function GridSettingsButton() {
   return (
     <Popover>
       <Tooltip>
@@ -58,62 +146,19 @@ export function GridSettingsButton() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 w-7 p-0"
-                  aria-label="Grid settings"
+                  className="udi:h-7 udi:w-7 udi:p-0"
+                  aria-label="Display settings"
                 />
               }
             >
-              <Settings className="h-3.5 w-3.5" />
+              <Settings className="udi:h-3.5 udi:w-3.5" />
             </PopoverTrigger>
           }
         />
-        <TooltipContent>Grid settings</TooltipContent>
+        <TooltipContent>Display settings</TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-64">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="grid-cols" className="text-xs">
-                Columns
-              </Label>
-              <span className="text-xs tabular-nums text-muted-foreground">{gridCols}</span>
-            </div>
-            <Slider
-              id="grid-cols"
-              min={MIN_GRID_COLS}
-              max={MAX_GRID_COLS}
-              step={1}
-              value={[gridCols]}
-              onValueChange={handleColsChange}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="grid-row-height" className="text-xs">
-                Row height
-              </Label>
-              <span className="text-xs tabular-nums text-muted-foreground">{gridRowHeight} px</span>
-            </div>
-            <Slider
-              id="grid-row-height"
-              min={MIN_GRID_ROW_HEIGHT_PX}
-              max={MAX_GRID_ROW_HEIGHT_PX}
-              step={10}
-              value={[gridRowHeight]}
-              onValueChange={handleRowHeightChange}
-            />
-          </div>
-          <Separator />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-mx-1 h-8 justify-start px-2 text-xs"
-            onClick={handleResetLayout}
-          >
-            <RotateCcw className="mr-2 h-3.5 w-3.5" />
-            Reset layout
-          </Button>
-        </div>
+      <PopoverContent className="udi:w-64">
+        <GridSettingsPanel />
       </PopoverContent>
     </Popover>
   );

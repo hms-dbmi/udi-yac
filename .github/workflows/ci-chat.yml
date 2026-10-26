@@ -6,30 +6,35 @@ on:
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
+      - "sample-data/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-chat.yml"
+  # No branch filter on PRs: in a stacked PR the base is the branch below it.
   pull_request:
-    branches: [main]
     paths:
       - "packages/chat/**"
       - "packages/grammar/**"
+      - "sample-data/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-chat.yml"
+
+permissions:
+  contents: read
 
 jobs:
   ci:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -49,6 +54,12 @@ jobs:
       - name: Typecheck
         run: pnpm --filter udi-yac typecheck
 
+      # .env.example, the README table, and env.d.ts are generated from
+      # src/app/envVars.ts; this also fails if a VITE_* is read in the source
+      # without being documented there.
+      - name: Check generated env docs are current
+        run: node scripts/gen-chat-env-docs.mjs --check
+
       - name: Test
         run: pnpm --filter udi-yac test
 
@@ -59,7 +70,13 @@ jobs:
         run: pnpm --filter udi-yac build:lib
 
       # The library is embedded in host apps that are themselves Tailwind v4 +
-      # shadcn, so a token or element reset escaping to :root/html/body would
-      # retheme the host. Invisible in our own SPA, hence a build-output check.
+      # shadcn, so a token, element reset or unprefixed utility escaping our
+      # subtree would retheme the host. Invisible in our own SPA, hence a
+      # build-output check.
       - name: Check library CSS scoping
         run: pnpm --filter udi-yac test:css
+
+      # Hosts import the package from a server-rendered route, where a
+      # dependency touching `document` at module scope takes the route down.
+      - name: Check library imports on the server
+        run: pnpm --filter udi-yac test:ssr

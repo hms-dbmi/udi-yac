@@ -105,6 +105,17 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     return name in cubeMetadata.value;
   }
 
+  // Serialize only the selection payloads (not the full ActiveDataSelection
+  // objects which may reference reactive proxies) to avoid cyclic-object
+  // errors and to keep the hash lightweight.
+  function rehashSelections(): void {
+    const hashObj: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(dataSelections.value)) {
+      hashObj[k] = v?.selection ?? null;
+    }
+    selectionHash.value = JSON.stringify(hashObj);
+  }
+
   function bindExternalDataSelections(
     externalSelections: DataSelections,
   ): void {
@@ -122,14 +133,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       changed = true;
     }
     if (changed) {
-      // Serialize only the selection payloads (not the full ActiveDataSelection
-      // objects which may reference reactive proxies) to avoid cyclic-object
-      // errors and to keep the hash lightweight.
-      const hashObj: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(dataSelections.value)) {
-        hashObj[k] = v?.selection ?? null;
-      }
-      selectionHash.value = JSON.stringify(hashObj);
+      rehashSelections();
     }
   }
 
@@ -138,14 +142,19 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     selectionName: string,
     type: 'point' | 'interval',
   ): { alreadyExists: boolean } {
-    if (selectionName in dataSelections.value) {
+    const existing = dataSelections.value[selectionName];
+    if (existing?.type === type) {
       return { alreadyExists: true };
     }
+    // A tweak that rebinds x from a number to a category keeps the chart's id,
+    // so its name can come back with the other type. Keeping the old entry would
+    // store the next click as a range over category values.
     dataSelections.value[selectionName] = {
       dataSourceKey,
       selection: null,
       type,
     };
+    if (existing?.selection != null) rehashSelections();
     return { alreadyExists: false };
   }
 
@@ -176,11 +185,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     const current = dataSelections.value[selectionName].selection;
     if (isEqual(current, selection)) return; // no change — skip reactive churn
     dataSelections.value[selectionName].selection = selection;
-    const hashObj: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(dataSelections.value)) {
-      hashObj[k] = v?.selection ?? null;
-    }
-    selectionHash.value = JSON.stringify(hashObj);
+    rehashSelections();
   }
 
   function clearDataSelection(selectionName: string): void {
@@ -208,39 +213,35 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     return dataSelections.value[selectionName].selection;
   }
 
-  function RangeSelectionToArqueroFilter(
-    selection: RangeSelection | null,
-  ): string | null {
+  type RowTest = (d: Record<string, unknown>) => boolean;
+  const allOf = (tests: RowTest[]) =>
+    tests.length
+      ? escape((d: Record<string, unknown>) => tests.every((t) => t(d)))
+      : null;
+
+  // Both build escaped functions rather than expression text, so a field name
+  // with a quote in it (`donor's age`) cannot break the filter.
+  function RangeSelectionToArqueroFilter(selection: RangeSelection | null) {
     if (selection === null) return null;
-    const filters: string[] = [];
-    for (const [field, range] of Object.entries(selection)) {
-      // console.log('range:', range);
-      const [min, max] = range;
-      if (min != null && max != null) {
-        filters.push(`d['${field}'] >= ${min} && d['${field}'] <= ${max}`);
-      } else if (min != null) {
-        filters.push(`d['${field}'] >= ${min}`);
-      } else if (max != null) {
-        filters.push(`d['${field}'] <= ${max}`);
-      }
+    const tests: RowTest[] = [];
+    for (const [field, [min, max]] of Object.entries(selection)) {
+      if (min != null) tests.push((d) => (d[field] as number) >= min);
+      if (max != null) tests.push((d) => (d[field] as number) <= max);
     }
-    return filters.join(' && ');
+    return allOf(tests);
   }
 
-  function PointSelectionToArqueroFilter(
-    selection: PointSelection | null,
-  ): string | null {
+  function PointSelectionToArqueroFilter(selection: PointSelection | null) {
     if (selection === null) return null;
-    const filters: string[] = [];
-    for (const [field, values] of Object.entries(selection)) {
-      if (values.length === 0) continue; // skip empty selections
-      const innerFilters: string[] = [];
-      for (const value of values) {
-        innerFilters.push(`d['${field}'] === ${JSON.stringify(value)}`);
-      }
-      filters.push(`(${innerFilters.join(' || ')})`);
-    }
-    return filters.join(' && ');
+    // Compared as text, as a click stores them (`String(datum[field])`): the
+    // table holds a CSV's 2020 as the number 2020, which `=== "2020"` missed.
+    const tests = Object.entries(selection)
+      .filter(([, values]) => values.length > 0) // empty: no constraint
+      .map(([field, values]): RowTest => {
+        const set = new Set(values.map(String));
+        return (d) => set.has(String(d[field]));
+      });
+    return allOf(tests);
   }
 
   function selectionToArqueroFilter(dataSelection: ActiveDataSelection) {
@@ -267,7 +268,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     selectionMatching?: FilterMatch | undefined;
     selectionEntityRelationship?: FilterEntityRelationship | null;
     selectionSourceKey?: string;
-  }): string | null {
+  }): string | ReturnType<typeof escape> | null {
     // Check that the filter is being applied
     const dataSelection = dataSelections.value[selectionName];
     if (!dataSelection || !dataSelection.selection) return null;
@@ -319,15 +320,30 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     const totalTable = relevantTable.dest.reify();
     const filteredTable = relevantTable.dest.filter(relevantFilter).reify();
 
+    // Rows whose key is one of `ids`. A set lookup rather than an expression
+    // OR-ing one `d[key] === id` per id: the ids come one per filtered origin
+    // row, so a brush over most of a large table wrote thousands of terms, and
+    // parsing that chain recursed once per term until the stack ran out
+    // ("too much recursion" in Firefox).
+    const keyIn = (ids: Iterable<unknown>) => {
+      const set = new Set(ids);
+      if (set.size === 0) return 'false';
+      return escape((d: Record<string, unknown>) => set.has(d[targetKey]));
+    };
+
+    // 'none': rows whose key no matching origin row carries. A row with no key
+    // relates to nothing, so it is dropped — as SQL's NOT IN drops it.
+    if (selectionMatching === 'none') {
+      const set = new Set(filteredTable.array(originKey) as unknown[]);
+      return escape(
+        (d: Record<string, unknown>) =>
+          d[targetKey] != null && !set.has(d[targetKey]),
+      );
+    }
+
     // If the matching is 'any' or not specified, we just return the filter expression
     if (selectionMatching != 'all') {
-      const originIds = filteredTable.array(originKey) as string[];
-
-      if (originIds.length === 0) return 'false';
-
-      return originIds
-        .map((id) => `d['${targetKey}'] === '${id}'`)
-        .join(' || ');
+      return keyIn(filteredTable.array(originKey) as string[]);
     }
 
     // Otherwise, the matching is 'all', meaning we need to find entities that satisfy the filter completely
@@ -350,15 +366,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       if (f > 0 && f === t) exclusiveOriginIds.push(id);
     }
 
-    // Return a list of OR-ed ids as a filter string for the target table
-    const orExpression =
-      exclusiveOriginIds.length > 0
-        ? exclusiveOriginIds
-            .map((id) => `d['${targetKey}'] === '${id}'`)
-            .join(' || ')
-        : 'false'; // nothing qualifies
-
-    return orExpression;
+    return keyIn(exclusiveOriginIds);
   }
 
   const loading = ref<boolean>(true);
@@ -514,7 +522,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
       transformations.length > 0 &&
       'rollup' in (transformations[transformations.length - 1] as object);
     const displayDataOnly = options?.displayDataOnly ?? endsWithRollup;
-    const cacheKey = `${tablesVersion.value}|${selectionHash.value}|${displayDataOnly ? 'd' : 'a'}|${[...keys].sort().join('\0')}|${JSON.stringify(dataTransformations ?? null)}`;
+    const cacheKey = `${tablesVersion.value}|${selectionHash.value}|${displayDataOnly ? 'd' : 'a'}|${keys.join('\0')}|${JSON.stringify(dataTransformations ?? null)}`;
     const cached = getDataObjectCache.get(cacheKey);
     if (cached) {
       // LRU-ish touch: re-insert to mark as most-recently-used.
@@ -546,7 +554,13 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
     // (UDIVis) will retry when tablesVersion bumps. Previously this only
     // checked size === 0, which let partial-data transformations run when
     // some-but-not-all sources had arrived.
-    if (namedTables.size !== keys.length) return null;
+    //
+    // Counted against the DISTINCT keys, because the map is keyed by name: a
+    // spec may legitimately list one table twice (a template naming the same
+    // entity for two roles), and comparing against `keys.length` read that
+    // collapsed duplicate as a source still loading. The chart then waited
+    // forever on a table it already had, and rendered blank with no error.
+    if (namedTables.size !== new Set(keys).size) return null;
 
     const { data: dataTable, containsNamedFilter } = PerformDataTransformations(
       namedTables,
@@ -656,9 +670,15 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
               : {}),
           });
 
-          if (mappedFilter) {
-            currentTable.table = inTable.filter(mappedFilter).reify();
-          }
+          // A named filter with no active selection is a pass-through, and it has
+          // to forward its INPUT table explicitly. Leaving `currentTable.table`
+          // alone only looked right while every filter was implicitly operating on
+          // it; with an explicit `in`, the untouched table then gets published
+          // under this transform's `out` — handing the next step an unrelated
+          // table under the name it asked for.
+          currentTable.table = mappedFilter
+            ? inTable.filter(mappedFilter).reify()
+            : inTable;
         }
       } else if ('only' in transform) {
         const inTable = getInTable(transform.in);
@@ -705,9 +725,38 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         } else {
           currentTable.table = inTable.groupby(transform.groupby);
         }
+      } else if ('unnest' in transform) {
+        const inTable = getInTable(transform.in);
+        const {
+          field,
+          separator = ';',
+          out = transform.unnest.field,
+        } = transform.unnest;
+
+        // Split on the separator, trimming whitespace so "a; b" and "a;b" agree,
+        // then unroll the resulting array into one row per value. Null/empty
+        // cells become an empty array and unroll away, which is what we want:
+        // a row with no value belongs to no category.
+        const splitInto = escape((d: Record<string, unknown>) => {
+          const raw = d[field];
+          if (raw === null || raw === undefined) return [];
+          // Only a string can hold a delimited set. Any other cell type is a
+          // single value already, so it passes through as itself rather than as
+          // a stringified copy of itself.
+          if (typeof raw !== 'string') return [raw];
+          return raw
+            .split(separator)
+            .map((part) => part.trim())
+            .filter((part) => part.length > 0);
+        });
+
+        currentTable.table = inTable
+          .derive({ [out]: splitInto })
+          .unroll(out)
+          .reify();
       } else if ('binby' in transform) {
         const inTable = getInTable(transform.in);
-        const { field, bins = 10, nice = true } = transform.binby;
+        const { field, bins = 10, nice = true, unit } = transform.binby;
         const { bin_start = 'start', bin_end = 'end' } = transform.binby
           .output ?? {
           bin_start: 'start',
@@ -729,18 +778,39 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           );
           extentTable = unfilteredInTable;
         }
-        const [binMin, binMax, binStep] = agg(
-          extentTable,
-          op.bins(field, bins, nice),
+        // A `unit` makes the width a nice multiple of it (whole years, for a
+        // time column) rather than of a power of ten: bin the values counted
+        // in units, then scale the edges back. The SQL compiler does the same.
+        const scale = unit ?? 1;
+        const unitTable = unit
+          ? extentTable.params({ binField: field, binUnit: unit }).derive({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              __binby_units: (d: any, $: any) => d[$.binField] / $.binUnit,
+            })
+          : extentTable;
+        const [unitMin, unitMax, unitStep] = agg(
+          unitTable,
+          op.bins(unit ? '__binby_units' : field, bins, nice),
         ) as [number, number, number];
+        const [binMin, binMax, binStep] = [
+          unitMin * scale,
+          unitMax * scale,
+          unitStep * scale,
+        ];
 
         const fieldKey = JSON.stringify(field);
-        const groupbyObject: { [key: string]: string } = {
+        const binColumns: { [key: string]: string } = {
           [bin_start]: `d => op.bin(d[${fieldKey}], ${binMin}, ${binMax}, ${binStep}, 0)`,
           [bin_end]: `d => op.bin(d[${fieldKey}], ${binMin}, ${binMax}, ${binStep}, 1)`,
         };
 
-        currentTable.table = inTable.groupby(groupbyObject);
+        // Bin edges become real columns, then the grouping, as the SQL compiler
+        // does: grouping by the computed keys alone left no `start`/`end`
+        // column for a later step to name, so a `groupby` adding a category
+        // to the bins (a stacked histogram) failed in the browser only.
+        currentTable.table = inTable
+          .derive(binColumns)
+          .groupby(bin_start, bin_end);
       } else if ('rollup' in transform) {
         const inTable = getInTable(transform.in);
         const aggregateFunctions: { [key: string]: TableExpr } = {};
@@ -770,18 +840,19 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         } else {
           orderbyList = transform.orderby;
         }
-        const orderKeys: OrderKey[] = orderbyList.map((orderby) => {
-          let orderKey: OrderKey;
-          if (typeof orderby !== 'string') {
-            const dir = orderby.order;
-            orderKey = orderby.field;
-            if (dir === 'desc') {
-              orderKey = desc(orderKey);
-            }
-          } else {
-            orderKey = orderby;
-          }
-          return orderKey;
+        // A DirectionalOrder may name several fields at once (grammar-py's
+        // `.orderby([a, b])` emits that shape, and the SQL compiler expands it),
+        // so flatten before applying the direction to each.
+        // The type argument goes on `flatMap`, not on the result: annotating the
+        // result makes TS resolve the callback's return against `OrderKey`'s
+        // first member (a plain column name), which rejects the `desc(...)`
+        // wrapper objects the descending branch returns.
+        const orderKeys = orderbyList.flatMap<OrderKey>((orderby) => {
+          if (typeof orderby === 'string') return [orderby];
+          const fields = Array.isArray(orderby.field)
+            ? orderby.field
+            : [orderby.field];
+          return orderby.order === 'desc' ? fields.map((f) => desc(f)) : fields;
         });
         currentTable.table = inTable.orderby(orderKeys);
       } else if ('derive' in transform) {
@@ -810,11 +881,14 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         if (!leftTable || !rightTable) {
           throw new Error('join table not found');
         }
+        // `left` keeps unmatched rows of the first table, nulling the second's
+        // columns — which is what a question about absence needs.
+        const joinFn = transform.join.kind === 'left' ? 'join_left' : 'join';
         if (
           typeof transform.join.on === 'string' ||
           transform.join.on.every((x) => typeof x === 'string')
         ) {
-          currentTable.table = leftTable.join(rightTable, transform.join.on);
+          currentTable.table = leftTable[joinFn](rightTable, transform.join.on);
         } else {
           const [leftMultiKeys, rightMultiKeys] = transform.join.on;
           if (leftMultiKeys.length !== rightMultiKeys.length) {
@@ -836,7 +910,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
                   $.leftMultiKeys.map((k) => d[k]).join('¶'),
               ),
             })
-            .join(
+            [joinFn](
               rightTable
                 .params({
                   rightMultiKeys: transform.join.on[1],
@@ -908,6 +982,7 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
         }
 
         const partitions = inTable.partitions();
+        const column = inTable.column(field);
         for (let i = 0; i < partitions.length; i++) {
           const partition = partitions[i];
           // partition is a list of indices that define a group
@@ -915,7 +990,12 @@ export const useDataSourcesStore = defineStore('DataSourcesStore', () => {
           if (!partition || partition.length < 2) {
             continue; // skip empty or single-element partitions
           }
-          const values = partition.map((i) => inTable.get(field, i));
+          // Not `partition.map`: a partition is a Uint32Array, and its `.map`
+          // returns one too, truncating every value to an unsigned 32-bit
+          // integer (39.1 → 39; an epoch-ms date overflows, so its density
+          // came out 0 everywhere). `column.at` reads by backing-data index,
+          // which is what a partition holds.
+          const values = Array.from(partition, (row) => column?.at(row));
           const densityEstimates = density1d(values, {
             bandwidth,
             bins: samples,

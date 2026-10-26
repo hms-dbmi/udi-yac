@@ -19,9 +19,26 @@ The user asked an informational question that doesn't require generating a visua
 
 {{available_tools}}
 
-## Data Schema
+## Data Schema — the complete list of tables and columns
+
+Authoritative. Answer "what tables/fields are available?" from this, and never
+say a table or column is absent unless it is missing here.
 
 {{data_schema}}
+
+## Column Values — a PARTIAL sample
+
+Sample values for some columns. A column missing from this section still exists
+if the schema lists it, and where a column says `showing N of M` those are not
+all its values.
+
+{{data_domains}}
+
+## Current filters
+
+Every filter active right now, with the values the user has since edited it to. Answer questions about which filters are on from this list. The `FilterData` calls in the conversation history show what was asked for at the time; the user may have edited or removed those filters since, or added chart brushes, without telling you.
+
+{{current_filters}}
 
 ## Structured Function References
 

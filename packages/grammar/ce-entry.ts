@@ -76,6 +76,10 @@ export type {
   RemoteBackendConfig,
 } from './queryBackend';
 
+// Time columns (`udi:time_format`), so charts and tables show dates, years and ages.
+export { setTimeFormats, formatTime } from './temporal';
+export type { TimeFormats } from './temporal';
+
 export interface QueryDataOptions {
   /** Maps entity names → canonical URLs, overriding URLs embedded in the spec. */
   sourceResolver?: Record<string, string>;
@@ -125,11 +129,15 @@ export async function queryData(
     });
   }
 
-  await store.initDataSources(sources, options?.sourceResolver);
-
+  // Bind before awaiting the sources, not after: a host's selections are a
+  // snapshot of its own state, and written back after an await they could
+  // overwrite a newer value another chart bound meanwhile — a brush mid-drag
+  // flicked every chart back to an older filter.
   if (selections) {
     store.bindExternalDataSelections(selections);
   }
+
+  await store.initDataSources(sources, options?.sourceResolver);
 
   const result = store.getDataObject(
     sources.map((s) => s.name),

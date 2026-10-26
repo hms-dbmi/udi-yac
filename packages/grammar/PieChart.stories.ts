@@ -1,5 +1,3 @@
-// import { fn } from '@storybook/test'
-
 import UDIVis from './UDIVis.vue';
 
 // export const ActionsData = {
@@ -24,7 +22,7 @@ export const Default = {
       source: [
         {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
       ],
       transformation: [
@@ -57,7 +55,7 @@ export const HierarchicalDonut = {
       source: [
         {
           name: 'datasets',
-          source: './data/datasets.csv',
+          source: './data/hubmap/datasets.tsv',
         },
       ],
       transformation: [

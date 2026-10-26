@@ -71,6 +71,26 @@ class Expr:
         return {"window": "rank"}
 
     @staticmethod
+    def concat(parts):
+        """String-concatenate the parts, in order; numbers are stringified.
+
+        For labels that combine values, since a text mark draws a single field.
+        Round or scale numbers beforehand — there is no formatting here.
+        """
+        return {"concat": list(parts)}
+
+    @staticmethod
+    def log(arg):
+        """Natural logarithm. Guard the argument: log(0) is an error in SQL."""
+        return {"fn": "log", "args": [arg]}
+
+    @staticmethod
+    def exp(arg):
+        """e to the power of the argument. With `log`, a running product is
+        ``exp(sum(log(x)))`` over a rolling window."""
+        return {"fn": "exp", "args": [arg]}
+
+    @staticmethod
     def not_null(field):
         """Common filter: ``d['field'] != null``."""
         return {"op": "!=", "left": {"field": field}, "right": {"literal": None}}

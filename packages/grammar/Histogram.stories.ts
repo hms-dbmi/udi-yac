@@ -1,5 +1,3 @@
-// import { fn } from '@storybook/test'
-
 import UDIVis from './UDIVis.vue';
 
 // export const ActionsData = {
@@ -23,7 +21,7 @@ export const Default = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {
@@ -59,7 +57,7 @@ export const BinTransform2 = {
     spec: {
       source: {
         name: 'donors',
-        source: './data/donors.csv',
+        source: './data/hubmap/donors.tsv',
       },
       transformation: [
         {

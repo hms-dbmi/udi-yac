@@ -1,52 +1,90 @@
+import { useEffect, useState } from 'react';
 import { UDIChat } from '@/app/UDIChat';
+import { env } from '@/app/env';
+
+// Dev only: HuBMAP records link to their portal pages, to try out `recordUrl`
+// locally. Other packages' entities have no entry, so they don't link.
+const HUBMAP_PAGES = new Map([
+  ['donors', 'donor'],
+  ['samples', 'sample'],
+  ['datasets', 'dataset'],
+]);
+function hubmapRecordUrl(record: Record<string, unknown>, entity: string) {
+  const page = HUBMAP_PAGES.get(entity);
+  return page && typeof record.uuid === 'string'
+    ? `https://portal.hubmapconsortium.org/browse/${page}/${record.uuid}`
+    : undefined;
+}
 
 /**
- * Default DataPackage URL — the bundled HuBMAP snapshot synced from the
- * repo-root sample-data/ into public/data on dev/build (a reproducible copy
- * of the live portal export). See sample-data/readme.md.
- */
-
-const HUBMAP_DATAPACKAGE_URL = '/data/hubmap/datapackage.json';
-// For direct access to the live portal endpoint (requires CORS bypass in browser):
-// const HUBMAP_DATAPACKAGE_URL = 'https://portal.hubmapconsortium.org/metadata/v0/udi/datapackage.json';
-// For local development with portal UI running locally in parallel:
-// const HUBMAP_DATAPACKAGE_URL = 'http://localhost:5001/metadata/v0/udi/datapackage.json';
-
-/**
- * Standalone dev/demo entry. Configuration is driven by Vite env vars so the
- * same bundle can target different backends and datasets:
- *
- *   VITE_UDI_API_BASE_URL    UDIAgent server (default: http://localhost:8007)
- *   VITE_UDI_DATA_PACKAGE    URL to a datapackage.json. Defaults to the bundled
- *                            `/data/hubmap/datapackage.json` (synced from
- *                            sample-data/). Set to the live portal URL above,
- *                            or any other reachable datapackage, to override.
- *   VITE_UDI_REQUIRE_API_KEY "false" to skip the in-app OpenAI key prompt
- *   VITE_UDI_MODEL           Optional LLM model name override
- *   VITE_UDI_REMOTE_PACKAGE  Name of a server-side data package (configured
- *                            via the agent server's query backends). When set,
- *                            data stays on the server: metadata comes from
- *                            /v1/yac/metadata and queries go to /v1/yac/query.
- *                            Takes precedence over VITE_UDI_DATA_PACKAGE.
+ * Standalone dev/demo entry. Every knob is described once in `env.ts`, which
+ * also generates `.env.example`, the README table, and `env.d.ts`.
  */
 function App() {
-  const apiBaseUrl = import.meta.env.VITE_UDI_API_BASE_URL ?? 'http://localhost:8007';
-  const dataPackagePath = import.meta.env.VITE_UDI_DATA_PACKAGE ?? HUBMAP_DATAPACKAGE_URL;
-  const remotePackage = import.meta.env.VITE_UDI_REMOTE_PACKAGE;
-  const requireApiKey = import.meta.env.VITE_UDI_REQUIRE_API_KEY !== 'false';
-  const model = import.meta.env.VITE_UDI_MODEL;
+  const initialSession = useInitialSession(env.initialSessionUrl);
+
+  // Nothing to show yet, and rendering early would be wrong rather than just
+  // blank: `UDIChat` reads `initialSession == null` to decide whether to
+  // restore the persisted layout, so a session that arrives afterwards would
+  // restore the old dashboard first and overwrite it a tick later.
+  if (initialSession === 'pending') return null;
 
   return (
-    <div className="h-screen">
+    <div className="udi:h-screen">
       <UDIChat
-        apiBaseUrl={apiBaseUrl}
-        remotePackage={remotePackage}
-        dataPackagePath={dataPackagePath}
-        requireApiKey={requireApiKey}
-        model={model}
+        apiBaseUrl={env.apiBaseUrl}
+        remotePackage={env.remotePackage}
+        dataPackagePath={env.dataPackagePath}
+        requireApiKey={env.requireApiKey}
+        model={env.model}
+        readOnly={env.readOnly}
+        initialSession={initialSession}
+        issueReporting={env.issueReporting}
+        recordUrl={import.meta.env.DEV ? hubmapRecordUrl : undefined}
+        // One saved-sessions list per data package: a session only renders
+        // against the package it was built on.
+        savedSessionsKey={env.remotePackage ?? env.dataPackagePath}
       />
     </div>
   );
+}
+
+/**
+ * Fetch the session export `VITE_UDI_INITIAL_SESSION` points at.
+ *
+ * The prop takes a parsed value rather than a URL — a library consumer already
+ * has the JSON in hand — so the standalone app is where the file gets read.
+ * The value is handed over unvalidated on purpose: `validateConfig` rejects a
+ * malformed one into the ErrorBoundary, which names the offending field.
+ *
+ * Returns `'pending'` while the fetch is in flight, `undefined` when there is
+ * no URL to load or the load failed.
+ */
+function useInitialSession(url: string | undefined): unknown {
+  const [session, setSession] = useState<unknown>('pending');
+
+  useEffect(() => {
+    if (!url) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        const json: unknown = await response.json();
+        if (!cancelled) setSession(json);
+      } catch (e) {
+        // A missing file shouldn't cost you the whole app: the dashboard just
+        // starts empty, the way it does without the variable set at all.
+        console.error(`[udi-yac] could not load VITE_UDI_INITIAL_SESSION (${url}):`, e);
+        if (!cancelled) setSession(undefined);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  return url ? session : undefined;
 }
 
 export default App;

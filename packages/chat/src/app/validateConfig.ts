@@ -1,4 +1,5 @@
 import type { UDIChatConfig } from '@/app/UDIChatConfig';
+import { parseSessionExport } from '@/features/dashboard/utils/dashboardSerialization';
 
 /**
  * Lightweight runtime validation for the UDIChatConfig shape.
@@ -80,6 +81,50 @@ export function validateConfig(config: UDIChatConfig): void {
   // dataFieldDomains, when provided, must be an array.
   if (config.dataFieldDomains != null && !Array.isArray(config.dataFieldDomains)) {
     errors.push('`dataFieldDomains` must be an array of DataFieldDomain objects when provided.');
+  }
+
+  // A malformed `initialSession` would otherwise fail silently inside the
+  // effect that applies it, leaving an empty dashboard with no explanation —
+  // especially bad in a read-only embed, where there is no chat to build one
+  // with instead.
+  if (config.initialSession != null) {
+    const parsed = parseSessionExport(config.initialSession);
+    if (!parsed.ok) {
+      errors.push(`\`initialSession\` is not a valid session export: ${parsed.error}`);
+    }
+  }
+
+  if (config.filters != null) {
+    if (!Array.isArray(config.filters)) {
+      errors.push('`filters` must be an array of UDIFilter objects when provided.');
+    } else {
+      config.filters.forEach((f, i) => {
+        if (typeof f?.id !== 'string' || typeof f?.dataSourceKey !== 'string') {
+          errors.push(`filters[${i}] needs a string \`id\` and \`dataSourceKey\`.`);
+        }
+        if (f?.type !== 'point' && f?.type !== 'interval') {
+          errors.push(`filters[${i}].type must be "point" or "interval".`);
+        }
+      });
+    }
+  }
+
+  if (config.cohort != null) {
+    const { entity, fields } = config.cohort as { entity?: unknown; fields?: unknown };
+    if (typeof entity !== 'string' || !entity) {
+      errors.push('`cohort.entity` must be the name of a table in the data package.');
+    }
+    if (fields != null && !(Array.isArray(fields) && fields.every((f) => typeof f === 'string'))) {
+      errors.push('`cohort.fields` must be an array of field names when provided.');
+    }
+  }
+
+  if (
+    config.filterMode != null &&
+    config.filterMode !== 'separate' &&
+    config.filterMode !== 'shared'
+  ) {
+    errors.push('`filterMode` must be "separate" or "shared" when provided.');
   }
 
   if (errors.length > 0) {

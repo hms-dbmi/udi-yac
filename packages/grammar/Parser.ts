@@ -3,12 +3,14 @@ import type {
   DataSource,
   DataTransformation,
   Representations,
+  VisualizationTitle,
 } from './GrammarTypes';
 
 export interface ParsedUDIGrammar {
   source: DataSource[];
   transformation?: DataTransformation[];
   representation: Representations;
+  title?: string | VisualizationTitle;
 }
 
 /**
@@ -17,7 +19,7 @@ export interface ParsedUDIGrammar {
  */
 export function parseSpecification(spec: UDIGrammar): ParsedUDIGrammar {
   let { source, representation } = spec;
-  const { transformation } = spec;
+  const { transformation, title } = spec;
   if (!Array.isArray(source)) {
     source = [source];
   }
@@ -39,7 +41,10 @@ export function parseSpecification(spec: UDIGrammar): ParsedUDIGrammar {
     representation = [representation] as Representations;
   }
 
+  // The parsed form is what the renderer sees, so anything it needs has to be
+  // copied across explicitly — this builds a fresh object rather than spreading.
   const result: ParsedUDIGrammar = { source, representation };
   if (transformation) result.transformation = transformation;
+  if (title) result.title = title;
   return result;
 }

@@ -1,0 +1,1347 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "UDIAgent API",
+    "description": "The reference server for the YAC chat: it turns a conversation about a data package into charts, filters and answers, and optionally serves the package's data from a database. Every endpoint is stateless: the client sends the conversation, the data package descriptor and the active filters with each request. [How the agent works](https://hms-dbmi.github.io/udi-yac/docs/backend/architecture/) follows a request through it.",
+    "version": "0.9.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Health check",
+        "operationId": "read_root",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/yac/completions": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Run a conversation turn",
+        "description": "Run one conversation turn.\n\nThe agent routes the latest message to tools (a chart, a filter change, an\nanswer, a clarifying question or a refusal) and returns one tool call per\noutcome. Token use comes back in the `X-Usage-*` headers.",
+        "operationId": "yac_completions",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-OpenAI-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The caller's own OpenAI key. Bypasses the server's quota, and lets `model` take effect.",
+              "title": "X-Openai-Key"
+            },
+            "description": "The caller's own OpenAI key. Bypasses the server's quota, and lets `model` take effect."
+          },
+          {
+            "name": "X-Conversation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Groups the turns of one conversation into a LangFuse session.",
+              "title": "X-Conversation-Id"
+            },
+            "description": "Groups the turns of one conversation into a LangFuse session."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YACCompletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The turn's outcomes, in the order to apply them. A quota refusal is a `Rebuff` here too, not an error status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ToolCall"
+                  },
+                  "title": "Response 200 Yac Completions"
+                }
+              }
+            },
+            "headers": {
+              "X-Usage-Prompt-Tokens": {
+                "description": "Prompt tokens across every LLM call in the turn.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Usage-Completion-Tokens": {
+                "description": "Completion tokens, reasoning included.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Usage-Total-Tokens": {
+                "description": "Prompt plus completion tokens.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Usage-Cached-Prompt-Tokens": {
+                "description": "Prompt tokens served from the provider's cache.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Usage-Cache-Write-Tokens": {
+                "description": "Prompt tokens written to the provider's cache.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Usage-Reasoning-Tokens": {
+                "description": "Reasoning tokens, a subset of completion tokens.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Usage-Model": {
+                "description": "The model the turn ran on.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token (`detail`). Or no OpenAI key: the server has none and the request sent no `X-OpenAI-Key`, or OpenAI rejected it (`error`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The server routes inference through Amazon Bedrock and refuses per-request `X-OpenAI-Key` headers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The LLM API call failed (a model the key cannot use, a rate limit, a timeout).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The server's LLM backend is misconfigured. Or: The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/yac/metadata": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Get a package's schema and column values",
+        "description": "Backend-introspected dataSchema/dataDomains for a package — the\nremote-mode replacement for browser-side CSV domain computation. Cached\nwith a TTL; pass ?refresh=1 to force re-introspection.",
+        "operationId": "yac_metadata",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "package",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Package"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Refresh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token (`detail`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The database rejected the caller's forwarded identity (JWT passthrough).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No query backend is configured for the package.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/yac/query": {
+      "post": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Run chart queries",
+        "description": "Run every visible chart's transformation pipeline as SQL, in one batch.\n\nThe server-side counterpart of the toolkit's in-browser executor: each query\nis compiled to SQL against the package's backend, with the current\nselections applied.",
+        "operationId": "yac_query",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YACQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token (`detail`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The database rejected the caller's forwarded identity (JWT passthrough).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No query backend is configured for the package.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/yac/vis_instantiate": {
+      "post": {
+        "tags": [
+          "charts"
+        ],
+        "summary": "Re-bind a chart made from a template",
+        "description": "Re-instantiate a template-generated visualization with new bindings.\n\nThis is what lets a client change *which field* a generated chart splits by\nwithout rewriting the finished spec. Rewriting is the tempting approach and\nit does not hold: a template's bindings can appear in transformations the\nrenamer has to know about one by one (a groupby entry, a derive expression,\na heading), so every new grammar feature silently falls outside it. Resolving\nthe template again is exact by construction, and placeholder resolution lives\nin exactly one place (``udiagent.vis_generate``).\n\nNo LLM call, so — unlike /v1/yac/completions — no OpenAI key is required and\nnothing is metered.",
+        "operationId": "yac_vis_instantiate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YACVisInstantiateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YACVisInstantiateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`bad_schema`: `dataSchema` has no entities.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token (`detail`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`unknown_template`: the template no longer exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`missing_bindings` or `invalid_bindings`: the bindings do not fit the template or the schema; `errors` lists them.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`instantiate_failed`: a template bug.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`templates_unavailable`: this agent has no generated templates. Or: The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/yac/issue_report": {
+      "post": {
+        "tags": [
+          "issues"
+        ],
+        "summary": "Record an issue report",
+        "description": "Record a user's issue report, with their session export, in LangFuse.\n\nFiled under the conversation's LangFuse session, next to the traces of the\nturns being reported. Needs LangFuse: without it there is nowhere to put a\nreport, so the endpoint says so instead of accepting and dropping it.",
+        "operationId": "yac_issue_report",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Conversation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Conversation-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueReportResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token (`detail`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The report is larger than 10 MiB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The report is invalid; `detail` has the per-field errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "LangFuse is not configured, so reports cannot be recorded. Or: The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "description": {
+                    "description": "The user's note.",
+                    "maxLength": 5000,
+                    "minLength": 1,
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "contact": {
+                    "anyOf": [
+                      {
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "How to reach the user, if given.",
+                    "title": "Contact"
+                  },
+                  "source": {
+                    "description": "Where the report was filed from: the Session menu, an agent offer in the chat, or the crash screen.",
+                    "enum": [
+                      "menu",
+                      "chat",
+                      "crash"
+                    ],
+                    "title": "Source",
+                    "type": "string"
+                  },
+                  "session": {
+                    "additionalProperties": true,
+                    "description": "The client's session export (on the crash screen, plus an `error` block).",
+                    "title": "Session",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "description",
+                  "source",
+                  "session"
+                ],
+                "title": "YACIssueReportRequest",
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/yac/examples": {
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "List example prompts",
+        "description": "Example prompts for the chat. A package with its own `examplePrompts` in\nthe backends config gets those — prompts are about a dataset, and the\nglobal list below is written for HuBMAP.",
+        "operationId": "yac_examples",
+        "parameters": [
+          {
+            "name": "package",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Package"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response 200 Yac Examples"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No example prompts for the package, and no global list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/yac/structured_functions": {
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "List the structured text functions",
+        "description": "Return the structured function registry for frontend consumption.",
+        "operationId": "yac_structured_functions",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "A message for the user."
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code",
+            "description": "A machine-readable reason (`/v1/yac/vis_instantiate`)."
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors",
+            "description": "Every problem found, when there are several."
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail",
+            "description": "An authentication failure's message, or a validation failure's per-field errors."
+          }
+        },
+        "type": "object",
+        "title": "ErrorResponse",
+        "description": "An error body. Authentication failures carry FastAPI's ``detail``\ninstead of ``error``."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IssueReportResponse": {
+        "properties": {
+          "traceId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traceid",
+            "description": "The report's LangFuse trace."
+          }
+        },
+        "type": "object",
+        "required": [
+          "traceId"
+        ],
+        "title": "IssueReportResponse"
+      },
+      "MetadataResponse": {
+        "properties": {
+          "package": {
+            "type": "string",
+            "title": "Package"
+          },
+          "interactive": {
+            "type": "boolean",
+            "title": "Interactive",
+            "description": "Always false: the package is queried on the server, not in the browser.",
+            "default": false
+          },
+          "dataSchema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dataschema",
+            "description": "The data package descriptor, introspected from the database."
+          },
+          "dataDomains": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Datadomains",
+            "description": "Each column's values or range."
+          }
+        },
+        "type": "object",
+        "required": [
+          "package",
+          "dataSchema",
+          "dataDomains"
+        ],
+        "title": "MetadataResponse"
+      },
+      "QueryResponse": {
+        "properties": {
+          "results": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Results",
+            "description": "One result per query, keyed by `vizId`. A query that fails carries `{error}` instead of rows; the others still succeed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "QueryResponse"
+      },
+      "ToolCall": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "`RenderVisualization`, `FilterData`, `FreeTextExplain`, `ClarifyVariable`, `Rebuff` or `OfferIssueReport`."
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Arguments",
+            "description": "The payload; its shape depends on `name`."
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta",
+            "description": "On a chart: its provenance (`tool_used`, `tool_args`, `tweakable_params`, ...), which `/v1/yac/vis_instantiate` takes back."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "name",
+          "arguments"
+        ],
+        "title": "ToolCall",
+        "description": "One outcome of a turn. A turn returns them in the order to apply them."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "YACCompletionRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "The conversation in OpenAI chat format, including the tool calls of earlier turns as the client applied them."
+          },
+          "dataSchema": {
+            "type": "string",
+            "title": "Dataschema",
+            "description": "The data package descriptor (Frictionless datapackage.json), as a JSON string."
+          },
+          "dataDomains": {
+            "type": "string",
+            "title": "Datadomains",
+            "description": "Each column's values or range, as a JSON string. The client may shorten high-cardinality columns."
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Optional model override. Honored only alongside an `X-OpenAI-Key` header: on the server's own key, model choice stays the operator's."
+          },
+          "filters": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Filters",
+            "description": "The active filters as the client holds them: chat, host and chart brush, with the user's edits (see `udiagent.filters`).",
+            "default": []
+          },
+          "issueReporting": {
+            "type": "boolean",
+            "title": "Issuereporting",
+            "description": "The client can send issue reports, so the agent may offer one. Honored only when the server records them (LangFuse configured).",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages",
+          "dataSchema",
+          "dataDomains"
+        ],
+        "title": "YACCompletionRequest"
+      },
+      "YACQueryItem": {
+        "properties": {
+          "vizId": {
+            "type": "string",
+            "title": "Vizid"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ],
+            "title": "Source"
+          },
+          "transformation": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transformation"
+          },
+          "displayDataOnly": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displaydataonly"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset",
+            "description": "Row offset for paging row-level results past the cap (\"load more\")."
+          }
+        },
+        "type": "object",
+        "required": [
+          "vizId",
+          "source"
+        ],
+        "title": "YACQueryItem"
+      },
+      "YACQueryRequest": {
+        "properties": {
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "selections": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Selections",
+            "default": {}
+          },
+          "queries": {
+            "items": {
+              "$ref": "#/components/schemas/YACQueryItem"
+            },
+            "type": "array",
+            "title": "Queries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "queries"
+        ],
+        "title": "YACQueryRequest",
+        "description": "Stateless batched query: every visible viz spec + the current\nselection state, in one request. Mirrors the toolkit's\ncreateRemoteBackend wire contract (packages/grammar/queryBackend.ts)."
+      },
+      "YACVisInstantiateRequest": {
+        "properties": {
+          "tool": {
+            "type": "string",
+            "title": "Tool",
+            "description": "The template tool, from the render's `meta.tool_used`."
+          },
+          "toolArgs": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Toolargs",
+            "description": "The bindings, from the render's `meta.tool_args`, with the changed one replaced. Values are column names and literal values, except a stratifier `grouping`, which is an object. A list is a `<V*:list>` literal: several values, any of which matches (a survival curve's end events)."
+          },
+          "dataSchema": {
+            "type": "string",
+            "title": "Dataschema",
+            "description": "The same data package descriptor as the render's request."
+          }
+        },
+        "type": "object",
+        "required": [
+          "tool",
+          "toolArgs",
+          "dataSchema"
+        ],
+        "title": "YACVisInstantiateRequest",
+        "description": "Re-render a template-generated visualization with a binding changed.\n\nStateless, like ``YACQueryRequest``: the caller sends back the provenance it\nreceived in the render's ``meta`` (``tool_used`` / ``tool_args``) together\nwith the same ``dataSchema``, and gets a freshly instantiated spec. Nothing\nis stored server-side, so any client that kept the provenance can re-bind —\nincluding one restoring a saved conversation."
+      },
+      "YACVisInstantiateResponse": {
+        "properties": {
+          "spec": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Spec",
+            "description": "The instantiated UDI grammar spec."
+          },
+          "toolArgs": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Toolargs",
+            "description": "The accepted bindings, pruned to parameters this template actually has, so a client can send them straight back for the next tweak. A stratifier `grouping` rides here as an object, like it does on the way in, and a list-valued literal as a list."
+          },
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/YACVisParam"
+            },
+            "type": "array",
+            "title": "Params",
+            "description": "The re-bindable parameters, for a UI."
+          }
+        },
+        "type": "object",
+        "required": [
+          "spec",
+          "toolArgs",
+          "params"
+        ],
+        "title": "YACVisInstantiateResponse"
+      },
+      "YACVisParam": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "`field`, `grouping` or `choice`.",
+            "default": "field"
+          },
+          "param": {
+            "type": "string",
+            "title": "Param"
+          },
+          "placeholder": {
+            "type": "string",
+            "title": "Placeholder"
+          },
+          "entity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type",
+            "description": "Field type the template requires, or null when unconstrained."
+          },
+          "encodings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Encodings",
+            "default": []
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ],
+            "title": "Value",
+            "description": "A column name for a `field`; the grouping object (or \"\") for a `grouping`; the chosen option for a `choice`."
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field",
+            "description": "Grouping parameters only: the stratifier field."
+          },
+          "fieldType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fieldtype",
+            "description": "Grouping parameters only: the stratifier's type in the schema."
+          },
+          "choices": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices",
+            "description": "Choice parameters only: the options a UI lists, `{value, label}` each. A `choice` picks how something is computed (a survival estimator)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "param",
+          "placeholder",
+          "label",
+          "value"
+        ],
+        "title": "YACVisParam",
+        "description": "One re-bindable template parameter, as offered to a UI.\n\nTwo kinds. A ``field`` parameter swaps which column a channel is bound to,\nand its ``value`` is that column's name. A ``grouping`` parameter re-cuts a\nstratifier into named strata, and its ``value`` is the grouping object (or\n``\"\"`` for the ungrouped default) — a client renders it from ``field`` and\n``fieldType``, which say what is being cut and therefore which control fits.\nA ``choice`` picks one of a fixed set of computations, listed in ``choices``."
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "A JWT, as `Bearer <token>`.",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "chat",
+      "description": "Conversation turns and prompt suggestions."
+    },
+    {
+      "name": "charts",
+      "description": "Re-binding a chart made from a template."
+    },
+    {
+      "name": "data",
+      "description": "Server-side data: a package's schema and query results from a database instead of CSVs in the browser."
+    },
+    {
+      "name": "issues",
+      "description": "User issue reports, recorded in LangFuse."
+    },
+    {
+      "name": "status",
+      "description": "Health check."
+    }
+  ]
+}

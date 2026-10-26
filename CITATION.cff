@@ -1,0 +1,58 @@
+cff-version: 1.2.0
+message: If you use YAC in your research, please cite the paper below.
+title: udi-yac
+repository-code: https://github.com/hms-dbmi/udi-yac
+url: https://hms-dbmi.github.io/udi-yac/
+license: MIT
+authors:
+  - family-names: Lange
+    given-names: Devin
+  - family-names: Gao
+    given-names: Shanghua
+  - family-names: Sui
+    given-names: Pengwei
+  - family-names: Misner
+    given-names: Priya
+  - family-names: van den Brandt
+    given-names: Astrid
+  - family-names: Money
+    given-names: Austen
+  - family-names: Akhmetov
+    given-names: Nikolay
+  - family-names: Choy
+    given-names: Lisa
+  - family-names: Zitnik
+    given-names: Marinka
+  - family-names: Gehlenborg
+    given-names: Nils
+preferred-citation:
+  type: article
+  title: "YAC: Bridging Natural Language and Interactive Visual Exploration with Generative AI for Biomedical Data Discovery"
+  authors:
+    - family-names: Lange
+      given-names: Devin
+    - family-names: Gao
+      given-names: Shanghua
+    - family-names: Sui
+      given-names: Pengwei
+    - family-names: Misner
+      given-names: Priya
+    - family-names: van den Brandt
+      given-names: Astrid
+    - family-names: Money
+      given-names: Austen
+    - family-names: Akhmetov
+      given-names: Nikolay
+    - family-names: Choy
+      given-names: Lisa
+    - family-names: Zitnik
+      given-names: Marinka
+    - family-names: Gehlenborg
+      given-names: Nils
+  year: 2025
+  doi: 10.48550/arXiv.2509.19182
+  url: https://arxiv.org/abs/2509.19182
+  repository: arXiv
+  identifiers:
+    - type: other
+      value: "arXiv:2509.19182"

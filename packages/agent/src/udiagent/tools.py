@@ -13,6 +13,49 @@ logger = logging.getLogger(__name__)
 # Top-level tool definitions (declarative registry)
 # ---------------------------------------------------------------------------
 
+#: Looks up a column's values from the domains the client sent. Answered by the
+#: agent itself, so both the orchestrator and vis generation offer it.
+LIST_FIELD_VALUES_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "ListFieldValues",
+        "description": (
+            "Look up the values in one column. The Column Values section of your "
+            "instructions is only a sample — where it says 'showing N of M', or "
+            "lists no values at all, the rest are here. Pass `contains` to search "
+            "a long column for the values a user means (e.g. a protocol or a drug) "
+            "rather than reading all of it. Call this before telling the user a "
+            "value or a category does not exist, and before filtering or grouping "
+            "on a value you have not seen spelled out. This does not produce a "
+            "chart or any visible output; you will get the values back and can "
+            "then continue."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "entity": {
+                    "type": "string",
+                    "description": "Table name, exactly as the schema spells it.",
+                },
+                "field": {
+                    "type": "string",
+                    "description": "Column name, exactly as the schema spells it.",
+                },
+                "contains": {
+                    "type": "string",
+                    "description": (
+                        "Optional search: only values containing this text, or "
+                        "every word of it, ignoring case (e.g. 'ACNS0334' or "
+                        "'regimen b'). Omit to list every value."
+                    ),
+                },
+            },
+            "required": ["entity", "field"],
+            "additionalProperties": False,
+        },
+    },
+}
+
 ORCHESTRATOR_TOOLS = [
     {
         "type": "function",
@@ -50,7 +93,9 @@ ORCHESTRATOR_TOOLS = [
                 "that could match multiple fields or entities in the dataset. For example, "
                 "'age' might match 'age_value' in donors or 'sample_age' in samples. "
                 "Returns a clarification request with candidate variables for the user "
-                "to choose from."
+                "to choose from. Only for ambiguous FIELDS: never use it to ask which "
+                "values to filter on — for that, call FilterData and say the values "
+                "are not named, which shows the user the field's values to pick from."
             ),
             "parameters": {
                 "type": "object",
@@ -140,9 +185,25 @@ ORCHESTRATOR_TOOLS = [
                 "Create a data visualization. Supports: bar charts (vertical/horizontal, "
                 "with count/min/max/avg/median/sum aggregations), stacked and grouped bar "
                 "charts, scatterplots, heatmaps, histograms, CDF line charts, pie/donut "
-                "charts, dot strips, density curves, and data tables. Can visualize a "
-                "single entity or join two related entities. The specific visualization "
-                "type will be automatically selected based on the data and request."
+                "charts, dot strips, density curves, and data tables. Also supports "
+                "survival curves — requests for 'survival', 'Kaplan-Meier' or 'KM' plots — "
+                "computed from an event-log table (one row per event, with a subject id, an "
+                "event-type column and a numeric time column) by pairing a start event with "
+                "an end event per subject. These also need a censoring source — a subject-level "
+                "table with a status column and the date that status was current, plus the "
+                "value meaning 'no event yet' (e.g. 'alive') — which places subjects who "
+                "never had the event at the time their follow-up stopped and ticks each one; "
+                "the curve is the Kaplan-Meier estimate. The end can be several event types "
+                "(event-free survival) or death alone (overall survival). "
+                "They can optionally be split into one curve per "
+                "category — either by the value the subject had at the start event (the "
+                "default, which partitions the cohort) or by every value it ever recorded "
+                "(which overlaps) — including per value of a delimited multi-value column, "
+                "by a field in another table, or by whether the subject appears in one or "
+                "two other tables at all (e.g. treated vs untreated). Can "
+                "visualize a single entity or join two related entities. The specific "
+                "visualization type will be automatically selected based on the data and "
+                "request."
             ),
             "parameters": {
                 "type": "object",
@@ -151,12 +212,11 @@ ORCHESTRATOR_TOOLS = [
                         "type": "string",
                         "description": "A brief natural-language description of what visualization to create.",
                     },
-                    "title": {
-                        "type": "string",
-                        "description": "A short, informative title for the chart (e.g. 'Donor Count by Sex', 'Height vs Weight'). Do NOT include the value of the filter since that can change dynamically later.",
-                    },
                 },
-                "required": ["description", "title"],
+                # No `title`: chart names are built programmatically from the
+                # generated spec on the frontend, which is free, deterministic,
+                # and cannot drift from what is actually plotted.
+                "required": ["description"],
                 "additionalProperties": False,
             },
         },
@@ -166,53 +226,115 @@ ORCHESTRATOR_TOOLS = [
         "function": {
             "name": "FilterData",
             "description": (
-                "Filter the dataset to a subset of rows. Use for categorical filters "
-                "(e.g. filter to Female donors) or numeric range filters (e.g. filter "
-                "to age > 50). Call this tool multiple times for multiple filters."
+                "Change the active data filters: add a filter (e.g. to Female "
+                "donors, or age above 50), change or re-scope one that exists, "
+                "remove one, or clear them all. One call covers every filter "
+                "change in the request. Also covers questions about subjects "
+                "rather than rows, e.g. 'patients who ever had …' or 'donors "
+                "with no …'. When the user names a categorical field but not "
+                "which values (e.g. 'filter by radiation type'), say so: the "
+                "user is shown the field's values to choose from."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "title": {
+                    "request": {
                         "type": "string",
-                        "description": "A short, informative title for the filter (e.g. 'Donor Sex', 'Donor Age', 'Sample Assay Type').",
-                    },
-                    "entity": {
-                        "type": "string",
-                        "description": "The entity (table) to filter.",
-                    },
-                    "field": {
-                        "type": "string",
-                        "description": "The field to filter on.",
-                    },
-                    "filterType": {
-                        "type": "string",
-                        "enum": ["point", "interval"],
-                        "description": "Type of filter: 'point' for categorical values, 'interval' for numeric ranges.",
-                    },
-                    "intervalRange": {
-                        "type": "object",
-                        "properties": {
-                            "min": {"type": "number", "description": "Minimum value."},
-                            "max": {"type": "number", "description": "Maximum value."},
-                        },
-                        "required": ["min", "max"],
-                        "additionalProperties": False,
-                        "description": "Range for interval filters. Required when filterType is 'interval'.",
-                    },
-                    "pointValues": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 1,
-                        "description": "Values to filter for. Required when filterType is 'point'.",
+                        "description": (
+                            "The filter change, in the user's terms plus anything "
+                            "you have confirmed: the table and column, the exact "
+                            "values, which current filter (by id) it changes, and "
+                            "whether it is about rows or about subjects such as "
+                            "patients."
+                        ),
                     },
                 },
-                "required": ["entity", "field", "filterType"],
+                "required": ["request"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    LIST_FIELD_VALUES_TOOL,
+    {
+        "type": "function",
+        "function": {
+            "name": "GetVisualizationSpec",
+            "description": (
+                "Read the full UDI grammar specification of a chart already in this "
+                "conversation. Charts made from a template appear in the history as "
+                "the template call that produced them (template_tool and "
+                "template_args), with the spec itself omitted. Call this when you "
+                "need the exact specification — to answer a question about how a "
+                "chart was built, what it computes, filters or encodes. You do not "
+                "need it to make a new or adjusted chart: start from template_args. "
+                "This does not produce any visible output; you will get the spec "
+                "back and can then continue."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "chart_id": {
+                        "type": "string",
+                        "description": (
+                            "The chart's chart_id as shown in the history, "
+                            'e.g. "chart_1".'
+                        ),
+                    },
+                },
+                "required": ["chart_id"],
                 "additionalProperties": False,
             },
         },
     },
 ]
+
+#: Tools the orchestrator answers itself and loops on, rather than returning to
+#: the client. They gather context; they are not an outcome of the turn.
+INTERNAL_ORCHESTRATOR_TOOLS = {"ListFieldValues", "GetVisualizationSpec"}
+
+#: Offered only when the client has issue reporting switched on and the server
+#: can record reports (LangFuse). Kept out of ``ORCHESTRATOR_TOOLS`` so the
+#: default tool list, and the capability lists the Rebuff and FreeTextExplain
+#: prompts are built from, stay as they were.
+OFFER_ISSUE_REPORT_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "OfferIssueReport",
+        "description": (
+            "Offer to send a problem report to the development team. The user "
+            "reviews and sends it themselves. Call it in two cases. (1) The user "
+            "asks to report a bug, an issue or feedback to the developers: set "
+            "user_requested to true. (2) The user says a result is wrong, broken "
+            "or not what they asked for: set user_requested to false, and still "
+            "fix or answer the request with the other tools in the same response "
+            "when you can. Never call it for questions about the data itself. "
+            "In case (2), do not call it if OfferIssueReport already appears "
+            "earlier in the conversation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "One short sentence shown to the user with the offer.",
+                },
+                "summary": {
+                    "type": "string",
+                    "description": (
+                        "A 1-3 sentence draft of the problem, in the user's terms, "
+                        "for them to edit before sending."
+                    ),
+                },
+                "user_requested": {
+                    "type": "boolean",
+                    "description": "True only when the user asked to report an issue.",
+                },
+            },
+            "required": ["message", "summary", "user_requested"],
+            "additionalProperties": False,
+        },
+    },
+}
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +343,14 @@ ORCHESTRATOR_TOOLS = [
 
 
 def function_call_render_visualization(
-    agent, messages, data_schema, grammar, usage=None, openai_api_key=None
+    agent,
+    messages,
+    data_schema,
+    grammar,
+    usage=None,
+    openai_api_key=None,
+    data_domains=None,
+    model=None,
 ):
     """Visualization generation via the skills pipeline."""
     from udiagent.vis_generate import generate_vis_spec
@@ -234,9 +363,73 @@ def function_call_render_visualization(
         grammar=grammar,
         usage=usage,
         openai_api_key=openai_api_key,
+        data_domains=data_domains,
+        model=model,
     )
+    failure = result.get("failure")
+    if failure:
+        # Say so, rather than rendering an empty card. A chart that cannot be
+        # built is a fact the reader can act on — pick a different column, name
+        # a value that exists — and an empty card is not.
+        return {
+            "name": "FreeTextExplain",
+            "arguments": _visualization_failure_args(failure),
+            "meta": result.get("meta"),
+        }
+    arguments = {"spec": result["spec"]}
+    # The chosen template's user-facing title and one-line summary, with tokens
+    # the frontend resolves against the live spec. Costs no output tokens: the
+    # text comes from the template registry, not the model.
+    text = result.get("text_templates")
+    if text:
+        if text.get("title"):
+            arguments["titleTemplate"] = text["title"]
+        if text.get("summary"):
+            arguments["summaryTemplate"] = text["summary"]
     return {
         "name": "RenderVisualization",
-        "arguments": {"spec": result["spec"]},
+        "arguments": arguments,
         "meta": result.get("meta"),
+    }
+
+
+#: Reader-facing wording per failure reason. The validation errors are already
+#: written for a reader (they name the column and its valid values), so they are
+#: passed through rather than summarised away.
+_FAILURE_OPENERS = {
+    "validation_failed": (
+        "I could not build that chart: the template I picked needs arguments this "
+        "data package cannot satisfy."
+    ),
+    "no_tool_call": (
+        "I could not find a chart template that fits that request against this "
+        "data package."
+    ),
+    "unknown_tool": "I could not build that chart — I picked a template that no longer exists.",
+    "instantiate_failed": (
+        "I could not build that chart: the template failed to resolve against this "
+        "data package. This is a bug in the template rather than in your request."
+    ),
+}
+
+
+def _visualization_failure_args(failure):
+    """FreeTextExplain arguments describing why no chart was produced.
+
+    Built here rather than asked of the model: the reasons are already known and
+    already phrased for a reader, and a second LLM call to restate them is a cost
+    with no information in it.
+    """
+    reason = failure.get("reason")
+    lines = [_FAILURE_OPENERS.get(reason, "I could not build that chart.")]
+    for error in failure.get("errors") or []:
+        lines.append(f"• {error}")
+    lines.append(
+        "Try naming the columns or values you want it to use, or ask for a "
+        "simpler version of the chart."
+    )
+    return {
+        "response_type": "general",
+        "text": lines,
+        "has_structured_elements": False,
     }
