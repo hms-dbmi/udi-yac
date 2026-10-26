@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import type { RecordUrlFn, UDIPalette } from 'udi-toolkit/react';
 import type { DataPackage, DataFieldDomain } from '@/types/dataPackage';
-import type { DownloadAction, EntityIconMap, UDIFilter } from '@/features/dashboard';
+import type { DownloadAction, EntityIconMap, FilterMode, UDIFilter } from '@/features/dashboard';
 import type { ReadOnlyOption } from '@/stores/globalStore';
 
-export type { ReadOnlyOption, UDIFilter };
+export type { FilterMode, ReadOnlyOption, UDIFilter };
 
 /**
  * Signature for the optional analytics callback — deliberately untyped in
@@ -208,6 +208,23 @@ export interface UDIChatConfig {
    * left out.
    */
   onFiltersChange?: (filters: UDIFilter[]) => void;
+  /**
+   * How {@link UDIChatConfig.filters} meet the filters made in the chat and
+   * on charts.
+   *
+   * - `'separate'` (default) — each host filter is its own chip, read-only to
+   *   the agent, and applies on top of any chat or chart filter on the same
+   *   column.
+   * - `'shared'` — a host filter on a single field becomes that column's
+   *   filter, the one chat and charts write too: one chip, and whoever edits
+   *   it last (the host, the agent, a chart click) sets it.
+   *   {@link UDIChatConfig.onFiltersChange} reports it as `col:<entity>.<field>`
+   *   with the `origin` of that last edit, so a host can mirror chart clicks
+   *   and chat requests by matching `dataSourceKey` and field. Dropping a host
+   *   entry removes the filter only while the host was still its last editor.
+   *   Filters on several fields stay separate.
+   */
+  filterMode?: FilterMode;
   /**
    * Let users report a problem to the development team: a *Report an issue*
    * item in the Session menu, a button on the crash screen, and an offer from

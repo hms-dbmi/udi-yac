@@ -31,6 +31,7 @@ export {
   HOST_FILTER_PREFIX,
   columnFilterKey,
   type DataFiltersState,
+  type FilterMode,
   type FilterOrigin,
   type UDIFilter,
   type DataSelection,

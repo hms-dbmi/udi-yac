@@ -25,7 +25,7 @@ Only call `CreateVisualization` when the user is asking for a **new or different
 
 ## Current filters
 
-Every filter active right now, with the values the user has since edited it to — one per column, whether it was set in chat or by clicking or brushing a chart. Charts and data counts already apply all of them. You can change or remove any of them except those marked read-only, which the host page set.
+Every filter active right now, with the values the user has since edited it to — one per column, whether it was set in chat or by clicking or brushing a chart. Charts and data counts already apply all of them. You can change or remove any of them except those marked read-only, which the host page keeps for itself.
 
 {{current_filters}}
 

@@ -461,6 +461,24 @@ describe('UDIChat — host filters', () => {
     expect(onFiltersChange).toHaveBeenLastCalledWith([{ ...sexFilter, origin: 'host' }]);
   });
 
+  it('in the shared mode, makes it the column’s filter and reports it under the column', async () => {
+    const onFiltersChange = vi.fn();
+    render(
+      <UDIDashboard
+        {...seedConfig}
+        initialSession={seededSession}
+        filters={[sexFilter]}
+        filterMode="shared"
+        onFiltersChange={onFiltersChange}
+      />,
+    );
+
+    expect(await screen.findAllByRole('button', { name: /Sex\s*Female/ })).toHaveLength(1);
+    expect(onFiltersChange).toHaveBeenLastCalledWith([
+      { ...sexFilter, id: 'col:donors.sex', origin: 'host' },
+    ]);
+  });
+
   it('rejects a malformed `filters` entry', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<UDIChat {...seedConfig} filters={[{ id: 'x' } as never]} />);

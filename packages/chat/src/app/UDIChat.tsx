@@ -76,6 +76,7 @@ function UDIChatInner({
   initialSession,
   filters,
   onFiltersChange,
+  filterMode,
   onReadOnlyChange,
   issueReporting,
 }: UDIChatConfig) {
@@ -264,8 +265,8 @@ function UDIChatInner({
   // `?? []` so a host that stops passing `filters` deletes the ones it set.
   useEffect(() => {
     if (loadingPhase !== 'ready') return;
-    dataFiltersStore.getState().applyExternalFilters(filters ?? []);
-  }, [filters, loadingPhase, dataFiltersStore]);
+    dataFiltersStore.getState().applyExternalFilters(filters ?? [], filterMode);
+  }, [filters, filterMode, loadingPhase, dataFiltersStore]);
 
   // Every filter in place out, whenever the set or a value changes. Lives here
   // rather than in the filter bar, which isn't always mounted.
@@ -275,7 +276,7 @@ function UDIChatInner({
     if (!onFiltersChange) return;
     const report: UDIFilter[] = activeFilters.map(({ id, origin, selection }) => ({
       ...selection,
-      id: origin === 'host' ? id.slice(HOST_FILTER_PREFIX.length) : id,
+      id: id.startsWith(HOST_FILTER_PREFIX) ? id.slice(HOST_FILTER_PREFIX.length) : id,
       origin,
     }));
     const json = JSON.stringify(report);
