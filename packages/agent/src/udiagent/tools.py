@@ -13,6 +13,49 @@ logger = logging.getLogger(__name__)
 # Top-level tool definitions (declarative registry)
 # ---------------------------------------------------------------------------
 
+#: Looks up a column's values from the domains the client sent. Answered by the
+#: agent itself, so both the orchestrator and vis generation offer it.
+LIST_FIELD_VALUES_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "ListFieldValues",
+        "description": (
+            "Look up the values in one column. The Column Values section of your "
+            "instructions is only a sample — where it says 'showing N of M', or "
+            "lists no values at all, the rest are here. Pass `contains` to search "
+            "a long column for the values a user means (e.g. a protocol or a drug) "
+            "rather than reading all of it. Call this before telling the user a "
+            "value or a category does not exist, and before filtering or grouping "
+            "on a value you have not seen spelled out. This does not produce a "
+            "chart or any visible output; you will get the values back and can "
+            "then continue."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "entity": {
+                    "type": "string",
+                    "description": "Table name, exactly as the schema spells it.",
+                },
+                "field": {
+                    "type": "string",
+                    "description": "Column name, exactly as the schema spells it.",
+                },
+                "contains": {
+                    "type": "string",
+                    "description": (
+                        "Optional search: only values containing this text, or "
+                        "every word of it, ignoring case (e.g. 'ACNS0334' or "
+                        "'regimen b'). Omit to list every value."
+                    ),
+                },
+            },
+            "required": ["entity", "field"],
+            "additionalProperties": False,
+        },
+    },
+}
+
 ORCHESTRATOR_TOOLS = [
     {
         "type": "function",
@@ -211,36 +254,7 @@ ORCHESTRATOR_TOOLS = [
             },
         },
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "ListFieldValues",
-            "description": (
-                "Look up the complete list of values in one column. The Column "
-                "Values section of your instructions is only a sample — where it "
-                "says 'showing N of M', or lists no values at all, the rest are "
-                "here. Call this before telling the user a value or a category "
-                "does not exist, and before filtering on a value you have not "
-                "seen spelled out. This does not produce a chart or any visible "
-                "output; you will get the values back and can then continue."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "entity": {
-                        "type": "string",
-                        "description": "Table name, exactly as the schema spells it.",
-                    },
-                    "field": {
-                        "type": "string",
-                        "description": "Column name, exactly as the schema spells it.",
-                    },
-                },
-                "required": ["entity", "field"],
-                "additionalProperties": False,
-            },
-        },
-    },
+    LIST_FIELD_VALUES_TOOL,
     {
         "type": "function",
         "function": {
