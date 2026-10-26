@@ -15,6 +15,10 @@ const REPO = join(SITE, '../..');
 const DOCS = join(SITE, 'src/content/docs/docs');
 const BLOB = 'https://github.com/hms-dbmi/udi-yac/blob/main/';
 const RAW = 'https://raw.githubusercontent.com/hms-dbmi/udi-yac/main/';
+// Source files link to this site by its published URL, which works on GitHub
+// and PyPI. On the site itself those links become root-relative, so they stay
+// on whatever host serves it (dev, preview, Pages).
+const PUBLISHED = 'https://hms-dbmi.github.io/udi-yac/';
 
 // Markdown file (repo path) → page under /docs/, in sidebar order per section.
 const SECTIONS = ['integrate', 'backend'];
@@ -49,6 +53,7 @@ const frontmatter = (fields) =>
 /** Repo-relative links in a synced file point at files on GitHub, or at their
  *  synced page when that file is itself one of the PAGES. */
 function rewriteLink(target, readmePath) {
+  if (target.startsWith(PUBLISHED)) return `/udi-yac/${target.slice(PUBLISHED.length)}`;
   if (/^([a-z]+:|#|\/)/i.test(target)) return target;
   const [path, anchor] = target.split('#');
   const repoPath = posix.normalize(posix.join(posix.dirname(readmePath), path));
@@ -164,7 +169,7 @@ function syncCharts() {
       );
       return `## ${TYPE_LABELS[type] ?? type}\n\n${entries.join('\n')}`;
     });
-  const intro = `YAC draws most charts from a library of ${templates.length} templates. When you ask a question, the agent picks a template and binds its *table* and *field* slots to your dataset; the dropdowns under a chart in the chat change those bindings. If no template fits, the agent writes a chart from scratch.\n\n:::note[Generated page]\nBuilt from [\`template_visualizations.json\`](${BLOB}packages/agent/src/udiagent/data/skills/template_visualizations.json) on every docs build.\n:::\n\n`;
+  const intro = `YAC draws its charts from a library of ${templates.length} templates. When you ask a question, the agent picks a template and binds its *table* and *field* slots to your dataset; the dropdowns under a chart in the chat change those bindings. If no template fits a question, the agent says why instead of drawing a chart.\n\n:::note[Generated page]\nBuilt from [\`template_visualizations.json\`](${BLOB}packages/agent/src/udiagent/data/skills/template_visualizations.json) on every docs build.\n:::\n\n`;
   writeFileSync(
     join(DOCS, 'charts.md'),
     frontmatter({

@@ -13,7 +13,7 @@ You can also refine a chart without typing a new question. The dropdowns under e
 
 1. **You type a question** in the chat, for example _"Compare survival from initial diagnosis between the two diagnosis cohorts."_
 2. **The agent reads the dataset's structure.** That is the table and field names, their descriptions and the values a field takes. It does not see the rows themselves.
-3. **It picks a chart.** Most charts come from a library of templates (see the [chart gallery](/udi-yac/docs/charts/)). The agent binds a template's slots to the tables and fields that fit your question. When no template fits, it writes a chart from scratch.
+3. **It picks a chart.** Charts come from a library of templates (see the [chart gallery](/udi-yac/docs/charts/)). The agent binds a template's slots to the tables and fields that fit your question. When no template fits, it says why instead of drawing a chart that might be wrong.
 4. **Your browser draws it.** The data is loaded and filtered in your browser, so charts and filters respond without a round trip.
 
 Besides charts, the agent can answer in text (for example, _"What does each table in this dataset describe?"_), add a filter, or ask which field you meant when a word in your question could match several.

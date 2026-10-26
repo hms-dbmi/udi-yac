@@ -11,10 +11,8 @@ shared steps:
 | Dependency versions | exact, from the workspace `uv.lock`                               | resolved at install time from `pyproject.toml` ranges               |
 | Process supervision | `--restart unless-stopped`                                        | yours (systemd unit below)                                          |
 | Dev-data endpoints  | work out of the box                                               | need `UDI_DATA_DIR` (step 3B)                                       |
-| CI deploy           | [`deploy-agent.yml`](../../../.github/workflows/deploy-agent.yml) | —                                                                   |
 
-Steps 1–2 and 4–5 apply to both, step 3 splits, step 6 is Path A only, step 7
-is client-side.
+Steps 1–2 and 4–5 apply to both, step 3 splits, and step 6 is client-side.
 
 ## 1. Get the code on the host
 
@@ -23,7 +21,7 @@ is client-side.
 ```bash
 git clone https://github.com/hms-dbmi/udi-yac.git
 cd udi-yac
-git checkout <branch>          # e.g. nickakhmetov/third-party-providers-2
+git checkout <tag or branch>   # e.g. a release tag, udiagent-vX.Y.Z
 ```
 
 Only the Python workspace matters for the agent image — no `pnpm install`, no
@@ -46,11 +44,11 @@ Copy the template and fill it in. Environment variables are the server's entire
 configuration surface — there is no config file format beyond this.
 
 ```bash
-# Path A: on the host, anywhere the container can read it
-cp packages/agent/.env.template /home/ec2-user/.env
-# Path B: in the directory the service will run from (its CWD is searched)
+# Path A passes it to `docker run --env-file`; Path B finds it in the service's
+# working directory, so keep it there.
+mkdir -p /opt/udiagent
 cp packages/agent/.env.template /opt/udiagent/.env
-chmod 600 /home/ec2-user/.env   # or /opt/udiagent/.env
+chmod 600 /opt/udiagent/.env
 ```
 
 Path B has no repo checkout, so grab the template from
@@ -123,28 +121,28 @@ Behavior and constraints: [Bedrock with an IAM
 role](library.md#amazon-bedrock-with-an-iam-role-sigv4). Three infrastructure
 preconditions have to hold, and none of them fail loudly in an obvious way:
 
-1. **The role needs Bedrock permissions.** The instance profile in
-   `cloudformation/udi-agent.yaml` (`EC2Role`) currently carries only
-   `AmazonSSMManagedInstanceCore`. Add `bedrock:InvokeModel` and
-   `bedrock:InvokeModelWithResponseStream`. Models reachable only through a
+1. **The role needs Bedrock permissions.** Grant the instance profile or task
+   role `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream`.
+   Models reachable only through a
    cross-region inference profile also need the action on the profile ARN and
    on the underlying foundation-model ARNs in every region the profile spans.
-2. **The IMDS hop limit must be ≥ 2 for a bridged container.** The launch
-   template sets no `MetadataOptions`, so the AWS default
-   `HttpPutResponseHopLimit: 1` applies — Docker's bridge network adds a hop,
-   the IMDSv2 token response never reaches the container, and credential
-   resolution fails. Either add `MetadataOptions` with
-   `HttpPutResponseHopLimit: 2` (which affects only **newly launched**
-   instances, so follow with an ASG instance refresh) or fix a running instance
-   in place:
+2. **On EC2, a bridged container needs an IMDS hop limit of at least 2.** With
+   the AWS default `HttpPutResponseHopLimit: 1`, Docker's bridge network adds a
+   hop, the IMDSv2 token response never reaches the container, and credential
+   resolution fails. Set `HttpPutResponseHopLimit: 2` in the launch template's
+   `MetadataOptions` (it affects only **newly launched** instances) or fix a
+   running instance in place:
 
    ```bash
    aws ec2 modify-instance-metadata-options --instance-id <id> \
      --http-put-response-hop-limit 2 --http-tokens required
    ```
 
+   ECS tasks are not affected: they get the task role's credentials from the
+   ECS credentials endpoint, not from IMDS.
+
 3. **`AWS_REGION` must be in the env file.** There is no instance-metadata
-   fallback for the region. Put it in `/home/ec2-user/.env` rather than passing
+   fallback for the region. Put it in the env file rather than passing
    `-e AWS_REGION=...` to `docker run` — Docker applies `-e` after
    `--env-file` regardless of order, so a flag would override the file and
    remove the operator's ability to invoke cross-region.
@@ -166,7 +164,7 @@ docker run -d \
   --name udi-agent \
   --restart unless-stopped \
   -p 80:8000 \
-  --env-file /home/ec2-user/.env \
+  --env-file /opt/udiagent/.env \
   udi-agent
 ```
 
@@ -191,10 +189,7 @@ UDI_LOG_DIR=/var/log/udiagent \
 ```
 
 Two path-related settings matter only on this path, because `_PACKAGE_ROOT`
-resolves into `site-packages` when the code is installed rather than checked out.
-Both variables — and reading `.env` from the working directory — landed after
-`0.2.7`, so publish a release containing them before relying on Path B (or use
-Path A, which builds from source):
+resolves into `site-packages` when the code is installed rather than checked out:
 
 - **`UDI_LOG_DIR`** — without it the rotating log file is written next to
   `site-packages`. If that location isn't writable (a system-wide install run by
@@ -232,7 +227,7 @@ WantedBy=multi-user.target
 plain (`JWT_SECRET_KEY=abc123`, no surrounding quotes).
 
 To upgrade: `pip install -U "udiagent[server]"` then restart the unit. Pin the
-version (`udiagent[server]==0.2.7`) if you want reproducible redeploys, since
+version (`udiagent[server]==X.Y.Z`) if you want reproducible redeploys, since
 this path resolves dependency ranges fresh at install time rather than using the
 repo's lockfile.
 
@@ -260,7 +255,7 @@ curl -fsS -X POST http://localhost/v1/yac/completions \
   }'
 ```
 
-A healthy response is a JSON body with a non-empty `tool_calls`. `$TOKEN` is a
+A healthy response is a JSON list of one or more tool calls. `$TOKEN` is a
 JWT signed with `JWT_SECRET_KEY` (`HS256` by default) — mint one with the
 `python-jose` that the `server` extra already installed:
 
@@ -273,10 +268,6 @@ TOKEN=$(docker exec udi-agent uv run --frozen --no-sync python -c \
 TOKEN=$(/opt/udiagent/venv/bin/python -c \
   "import os; from jose import jwt; print(jwt.encode({'sub':'smoke-test'}, os.environ['JWT_SECRET_KEY'], algorithm='HS256'))")
 ```
-
-Note the `Authorization` header is **required on `/v1/yac/completions` even
-when `INSECURE_DEV_MODE=1`** — dev mode skips verifying the token, not sending
-one. A request without the header returns `422`, not `401`.
 
 Two different failures both return `401`; tell them apart by the body —
 `{"detail":"Invalid or expired token"}` is a JWT problem, whereas
@@ -294,23 +285,11 @@ an `http://` API — so an HTTP-only agent is unreachable from the deployed chat
 not merely insecure. Put nginx/Caddy/an ALB in front with a certificate and
 proxy to the port from step 3.
 
-CORS is already `allow_origins=["*"]` with the `X-Usage-*` headers exposed, so
-no per-origin configuration is needed; tighten it in
-[`server/app.py`](../src/udiagent/server/app.py) if you want to restrict callers.
+CORS allows any origin by default, with the `X-Usage-*` headers exposed. In
+production, set `UDI_CORS_ORIGINS` to the origins that embed the chat (see
+[Server Environment Variables](server.md#server-environment-variables)).
 
-## 6. Deploy via GitHub Actions (Path A, the EC2 path)
-
-[`.github/workflows/deploy-agent.yml`](../../../.github/workflows/deploy-agent.yml)
-runs steps 3A–4 on a self-hosted runner: build, restart the container against
-`/home/ec2-user/.env`, health-check, prune old images. Trigger it from the
-Actions tab (`workflow_dispatch`).
-
-Prerequisites: the self-hosted runner must be registered to this repo (it was
-previously registered to `hms-dbmi/UDIAgent`), and `/home/ec2-user/.env` must
-exist on that host with step 2's contents. The workflow deploys whatever branch
-you dispatch it against.
-
-## 7. Point the chat at it
+## 6. Point the chat at it
 
 In `packages/chat/.env.local` (or the Pages build environment):
 
