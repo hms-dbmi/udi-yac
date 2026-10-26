@@ -16,7 +16,10 @@ import { act, render, screen, within } from '@testing-library/react';
 import type { DataPackage } from '@/types/dataPackage';
 import userEvent from '@testing-library/user-event';
 
+const { queryDataSpy } = vi.hoisted(() => ({ queryDataSpy: vi.fn() }));
+
 vi.mock('udi-toolkit/react', () => ({
+  queryData: queryDataSpy,
   UDIVis: () => <div data-testid="udi-vis" />,
   UDIToolkitProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   usePalette: () => undefined,
@@ -509,5 +512,73 @@ describe('UDIChat — host fontScale', () => {
     expect(rootScale(container)).toBe('2');
     expect(screen.getByText('Text size')).toBeTruthy();
     localStorage.removeItem('udi-yac:font-scale');
+  });
+});
+
+describe('UDIChat — cohort', () => {
+  afterEach(() => queryDataSpy.mockReset());
+
+  const sexFilter = {
+    id: 'cohort',
+    dataSourceKey: 'donors',
+    type: 'point' as const,
+    selection: { sex: ['Female'] },
+  };
+  const withKey = {
+    ...dataPackage,
+    resources: dataPackage.resources.map((r) => ({
+      ...r,
+      schema: { ...r.schema, primaryKey: ['sex'] },
+    })),
+  } as DataPackage;
+
+  it('reports null while no filter reaches the entity, without querying', async () => {
+    const onCohortChange = vi.fn();
+    render(
+      <UDIChat
+        {...seedConfig}
+        cohort={{ entity: 'donors', fields: ['sex'] }}
+        onCohortChange={onCohortChange}
+      />,
+    );
+    await vi.waitFor(() => expect(onCohortChange).toHaveBeenCalledWith(null));
+    expect(queryDataSpy).not.toHaveBeenCalled();
+  });
+
+  it('queries the filtered keys, grouped, and reports them once', async () => {
+    queryDataSpy.mockResolvedValue({
+      displayData: [{ sex: 'Female', n: 4 }],
+      allData: [],
+      isSubset: false,
+    });
+    const onCohortChange = vi.fn();
+    const props = {
+      ...seedConfig,
+      dataPackage: withKey,
+      filters: [sexFilter],
+      cohort: { entity: 'donors' },
+      onCohortChange,
+    };
+    const { rerender } = render(<UDIChat {...props} />);
+
+    await vi.waitFor(() =>
+      expect(onCohortChange).toHaveBeenLastCalledWith({
+        entity: 'donors',
+        keys: [{ sex: 'Female' }],
+      }),
+    );
+    const [spec, , options] = queryDataSpy.mock.calls.at(-1)!;
+    expect(spec.source.name).toBe('donors');
+    expect(spec.transformation.at(0)).toMatchObject({ filter: { name: 'host-filter-cohort' } });
+    // The primaryKey stands in for the fields left out.
+    expect(spec.transformation.slice(-2)).toEqual([
+      { groupby: ['sex'] },
+      { rollup: { n: { op: 'count' } } },
+    ]);
+    expect(options).toEqual({ displayDataOnly: true });
+
+    rerender(<UDIChat {...props} onCohortChange={onCohortChange} />);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(onCohortChange.mock.calls.filter(([c]) => c !== null)).toHaveLength(1);
   });
 });

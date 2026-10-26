@@ -8,7 +8,8 @@ import {
   type RefObject,
 } from 'react';
 import { Sparkles } from 'lucide-react';
-import { UDIToolkitProvider, type RecordUrlFn } from 'udi-toolkit/react';
+import { queryData, UDIToolkitProvider, type RecordUrlFn } from 'udi-toolkit/react';
+import type { DataTransformation } from 'udi-toolkit';
 import { useThemePalette } from './useThemePalette';
 import {
   UDIChatProvider,
@@ -34,7 +35,7 @@ import {
   useGlobalStore,
   useTracker,
 } from '@/app/UDIChatContext';
-import { DataOverviewPanel } from '@/features/data-package';
+import { DataOverviewPanel, joinDataPath } from '@/features/data-package';
 import { Button } from '@/components/ui/button';
 import {
   extractAllUdiSpecsFromMessage,
@@ -58,7 +59,7 @@ import { cn } from '@/lib/utils';
 import { ChatRootProvider } from '@/lib/chatRoot';
 import type { QueryConfig } from '@/features/chat/api/completions';
 import { validateConfig } from '@/app/validateConfig';
-import type { UDIChatConfig } from './UDIChatConfig';
+import type { UDIChatConfig, UDICohort } from './UDIChatConfig';
 import { selectFontScale } from '@/stores/globalStore';
 
 export type { UDIChatConfig };
@@ -77,6 +78,8 @@ function UDIChatInner({
   filters,
   onFiltersChange,
   filterMode,
+  cohort,
+  onCohortChange,
   onReadOnlyChange,
   issueReporting,
 }: UDIChatConfig) {
@@ -306,6 +309,97 @@ function UDIChatInner({
   // scroll position and a response still on its way.
   const [chatMounted, setChatMounted] = useState(!readOnly);
   if (!readOnly && !chatMounted) setChatMounted(true);
+
+  // The subjects every filter in place leaves, out to the host: the key
+  // columns of each `cohort.entity` row that passes, by the dashboard's own
+  // filter builder, so the cohort is what a chart of that table shows. `null`
+  // while no filter reaches the entity. Grouped, so a remote package returns
+  // every key rather than its row cap. The callback is read through a ref: an
+  // inline one would otherwise re-run the query on every host render.
+  const latestOnCohortChange = useRef(onCohortChange);
+  useLayoutEffect(() => {
+    latestOnCohortChange.current = onCohortChange;
+  });
+  const hasOnCohortChange = onCohortChange != null;
+  const cohortEntity = cohort?.entity;
+  const cohortFieldsKey = JSON.stringify(cohort?.fields ?? null);
+  const lastReportedCohort = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!hasOnCohortChange || !cohortEntity || loadingPhase !== 'ready') return;
+    const report = (value: UDICohort | null) => {
+      const json = JSON.stringify(value);
+      if (json === lastReportedCohort.current) return;
+      lastReportedCohort.current = json;
+      try {
+        // A copy, so a host mutating what it's handed can't reach us.
+        latestOnCohortChange.current?.(JSON.parse(json) as UDICohort | null);
+      } catch (err) {
+        console.error('UDIChat: onCohortChange threw', err);
+      }
+    };
+    const dataPackage = dataPackageStore.getState().dataPackage;
+    const resource = dataPackage?.resources.find((r) => r.name === cohortEntity);
+    const fields = (JSON.parse(cohortFieldsKey) as string[] | null) ?? resource?.schema.primaryKey;
+    if (!dataPackage || !resource || !fields?.length) {
+      console.error(
+        `UDIChat: cohort entity "${cohortEntity}" needs \`cohort.fields\` or a primaryKey in the data package.`,
+      );
+      return;
+    }
+    const dashboard = dashboardStore.getState();
+    const named = dashboard.getNamedFilters(
+      dashboard.getFilterIds(dataFiltersStore, dataPackageStore),
+      cohortEntity,
+      dataFiltersStore,
+      dataPackageStore,
+    ) as DataTransformation[];
+    if (named.length === 0) {
+      report(null);
+      return;
+    }
+    let stale = false;
+    // ponytail: a fixed 300ms debounce, so a brush drag runs one query, not
+    // one a frame; make it a prop if a host needs the cohort live.
+    const timer = setTimeout(() => {
+      queryData(
+        {
+          source: {
+            name: cohortEntity,
+            source: joinDataPath(dataPackage['udi:path'], resource.path),
+          },
+          transformation: [...named, { groupby: fields }, { rollup: { n: { op: 'count' } } }],
+        },
+        dataFiltersStore.getState().dataSelections,
+        // Explicit: left out, it runs the unfiltered pass as well.
+        { displayDataOnly: true },
+      )
+        .then((result) => {
+          if (stale || !result) return;
+          const keys = (result.displayData as Record<string, unknown>[]).map((row) =>
+            Object.fromEntries(fields.map((f) => [f, row[f]])),
+          );
+          report({ entity: cohortEntity, keys });
+        })
+        .catch((err) => console.error('UDIChat: cohort query failed', err));
+    }, 300);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+    // dataSelections / filterScopes / activeVisualizations are change
+    // triggers: the filter builder reads them out of the stores.
+  }, [
+    hasOnCohortChange,
+    cohortEntity,
+    cohortFieldsKey,
+    loadingPhase,
+    dataSelections,
+    filterScopes,
+    activeVisualizations,
+    dashboardStore,
+    dataFiltersStore,
+    dataPackageStore,
+  ]);
 
   const exitReadOnly = () => {
     trackEvent('read_only_exited', {});

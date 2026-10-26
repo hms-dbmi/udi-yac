@@ -143,6 +143,8 @@ Embedding in another app? Two things worth knowing up front:
 | `filters`               | `UDIFilter[]?`            | Filters set by the embedding page. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                                                |
 | `onFiltersChange`       | `(filters) => void`       | Called with every filter in place whenever one changes. See [Filters from the host page](#filters-from-the-host-page).                                                                                                                           |
 | `filterMode`            | `'separate' \| 'shared'?` | `'shared'` makes a host filter on one field that column's filter, which chat and chart clicks edit too. See [Filters from the host page](#filters-from-the-host-page).                                                                           |
+| `cohort`                | `{ entity, fields? }?`    | The table whose filtered rows to report, and their key fields (default: its `primaryKey`). See [Reporting the filtered cohort](#reporting-the-filtered-cohort).                                                                                  |
+| `onCohortChange`        | `(cohort) => void`        | Called with the key fields of every `cohort.entity` row all filters leave, or `null` while none reaches it. See [Reporting the filtered cohort](#reporting-the-filtered-cohort).                                                                 |
 | `issueReporting`        | `boolean?`                | Let users report a problem to the development team: a Report an issue item in the Session menu, a button on the crash screen, and an offer from the agent. Needs LangFuse on the agent, which records reports via `POST /v1/yac/issue_report`.   |
 | `className`             | `string?`                 | CSS class for the root element                                                                                                                                                                                                                   |
 | `style`                 | `CSSProperties?`          | Inline styles for the root element                                                                                                                                                                                                               |
@@ -278,6 +280,28 @@ then mirror chart clicks and chat requests into its own controls, matching on `d
 field. Dropping a host entry removes the filter only while the host was its last editor. Filters
 on several fields stay separate. Don't scope a filter to its own table: it is treated as
 unscoped, since a plain filter already reaches every related table through its foreign keys.
+
+### Reporting the filtered cohort
+
+A host can follow which subjects the filters leave, to narrow its own lists to the same people.
+Name the table and, if it has no `primaryKey`, the fields that identify its rows:
+
+```tsx
+<UDIChat
+  {...config}
+  cohort={{ entity: 'patient', fields: ['patient_id'] }}
+  onCohortChange={(cohort) => setPatientIds(cohort?.keys.map((k) => k.patient_id) ?? null)}
+/>
+```
+
+- Every filter counts: chat, chart and host, on any table that reaches `entity` (directly, or
+  through a subject scope), exactly as a chart of `entity` would be filtered.
+- `onCohortChange` gets `{ entity, keys }`, one object of key fields per row, once the filters have
+  settled (300 ms after the last change, so a brush drag runs one query). It gets `null` while no
+  filter reaches `entity`: everyone is in, and no list of every subject is sent.
+- In server-side data mode the keys come back grouped, so the list is complete: it is not cut at
+  the package's row cap.
+- A filter on another table reaches `entity` through a single key column, as charts do.
 
 ### Data Source Configuration
 
