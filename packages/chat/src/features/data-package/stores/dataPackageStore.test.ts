@@ -432,7 +432,7 @@ describe('dataPackageStore — serialization strings', () => {
     expect(sent.find((d: { field: string }) => d.field === 'age_value')).toBeTruthy();
   });
 
-  it('sends an identifier column as a count rather than 900 ids', async () => {
+  it('sends an identifier column as a count rather than 7000 ids', async () => {
     const store = createDataPackageStore();
     const domains: DataFieldDomain[] = [
       {
@@ -440,7 +440,7 @@ describe('dataPackageStore — serialization strings', () => {
         field: 'donor_id',
         type: 'point',
         fieldDescription: '',
-        domain: { values: Array.from({ length: 900 }, (_, i) => `d${i}`) },
+        domain: { values: Array.from({ length: 7000 }, (_, i) => `research-${i}`) },
       },
     ];
     await store.getState().setDataPackage(makePackage(), domains);
@@ -449,8 +449,52 @@ describe('dataPackageStore — serialization strings', () => {
     // Still named — the column exists and the agent must be able to see that.
     expect(sent.field).toBe('donor_id');
     expect(sent.domain.values).toEqual([]);
-    expect(sent.domain.distinct).toBe(900);
+    expect(sent.domain.distinct).toBe(7000);
     expect(sent.domain.omitted).toBe(true);
+  });
+
+  it('sends a long vocabulary by size, not by how many values it has', async () => {
+    const store = createDataPackageStore();
+    // 284 protocol arms: more values than the old count cap allowed, but small.
+    const arms = Array.from({ length: 284 }, (_, i) => `ACNS${1000 + i}: Regimen B`);
+    const domains: DataFieldDomain[] = [
+      {
+        entity: 'donors',
+        field: 'protocol_name_and_arm',
+        type: 'point',
+        fieldDescription: '',
+        domain: { values: arms },
+      },
+    ];
+    await store.getState().setDataPackage(makePackage(), domains);
+    const [sent] = JSON.parse(store.getState().dataDomainsString);
+
+    expect(sent.domain.values).toHaveLength(284);
+    expect(sent.domain.omitted).toBeUndefined();
+  });
+
+  it('omits the largest columns first once the whole payload is over budget', async () => {
+    const store = createDataPackageStore();
+    // Each column fits on its own (~11-12 KB), but 30 of them do not fit together.
+    const column = (field: string, width: number): DataFieldDomain => ({
+      entity: 'donors',
+      field,
+      type: 'point',
+      fieldDescription: '',
+      domain: { values: Array.from({ length: 1000 }, (_, i) => `${i}`.padStart(width, 'x')) },
+    });
+    const domains = [
+      column('wide', 9),
+      ...Array.from({ length: 30 }, (_, i) => column(`c${i}`, 8)),
+    ];
+    await store.getState().setDataPackage(makePackage(), domains);
+    const sent: Array<{ field: string; domain: { omitted?: boolean } }> = JSON.parse(
+      store.getState().dataDomainsString,
+    );
+
+    expect(sent).toHaveLength(31);
+    expect(sent.find((d) => d.field === 'wide')?.domain.omitted).toBe(true);
+    expect(sent.find((d) => d.field === 'c0')?.domain.omitted).toBeUndefined();
   });
 });
 
