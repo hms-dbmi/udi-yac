@@ -7,12 +7,15 @@ on:
   release:
     types: [published]
 
+# The build job runs the build backend, so it holds a read-only token. Only the
+# publish job, which runs none of it, gets the OIDC token PyPI trusts.
+permissions:
+  contents: read
+
 jobs:
-  publish:
+  build:
     if: startsWith(github.event.release.tag_name, 'udiagent-v')
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write # trusted publishing via OIDC
 
     steps:
       - uses: actions/checkout@v7
@@ -30,7 +33,25 @@ jobs:
         run: uv build --out-dir dist
         working-directory: packages/agent
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: packages/agent/dist
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # trusted publishing via OIDC
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: packages/agent/dist
+          packages-dir: dist

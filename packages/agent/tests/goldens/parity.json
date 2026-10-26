@@ -9715,6 +9715,95 @@
         ],
         "isSubset": false
       }
+    },
+    {
+      "name": "stratum-cut-with-nulls",
+      "spec": {
+        "source": {
+          "name": "penguins",
+          "source": "penguins.csv"
+        },
+        "transformation": [
+          {
+            "derive": {
+              "stratum": {
+                "if": {
+                  "op": "==",
+                  "left": {
+                    "field": "body_mass_g"
+                  },
+                  "right": {
+                    "literal": null
+                  }
+                },
+                "then": {
+                  "literal": null
+                },
+                "else": {
+                  "if": {
+                    "op": "<",
+                    "left": {
+                      "field": "body_mass_g"
+                    },
+                    "right": {
+                      "literal": 4000
+                    }
+                  },
+                  "then": {
+                    "literal": "< 4000"
+                  },
+                  "else": {
+                    "literal": "≥ 4000"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "groupby": "stratum"
+          },
+          {
+            "rollup": {
+              "n": {
+                "op": "count"
+              }
+            }
+          }
+        ]
+      },
+      "selections": null,
+      "displayDataOnly": null,
+      "expect": {
+        "displayData": [
+          {
+            "stratum": "< 4000",
+            "n": 165
+          },
+          {
+            "stratum": null,
+            "n": 2
+          },
+          {
+            "stratum": "≥ 4000",
+            "n": 177
+          }
+        ],
+        "allData": [
+          {
+            "stratum": "< 4000",
+            "n": 165
+          },
+          {
+            "stratum": null,
+            "n": 2
+          },
+          {
+            "stratum": "≥ 4000",
+            "n": 177
+          }
+        ],
+        "isSubset": false
+      }
     }
   ]
 }

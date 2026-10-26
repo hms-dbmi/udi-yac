@@ -86,7 +86,9 @@ HAVING count(matching) = count(total)`; `match: 'none'` → `targetKey NOT IN
   scope**: it keeps every row of each subject that matches. An empty point
   value-list means **no constraint** on that field (matches Arquero), not
   "match nothing".
-- `kde` must be the last op; the engine post-processes its rows in Python.
+- `kde` must be the last op; the engine post-processes its rows in Python. It
+  fetches only the kde field and the group columns, and `samples` is clamped
+  to 512.
 
 ### 2.2 `QueryEngine` (`engine.py`)
 
@@ -118,8 +120,9 @@ returns the client-facing result:
   `true` when the pipeline ends in a rollup (the aggregate's unfiltered twin
   is rarely consumed).
 - **Row cap**: aggregated results are small by construction and never capped;
-  row-level results are limited to `row_cap` and flagged `truncated`.
-  `offset` pages past the cap ("load more") — deterministic only when the
+  row-level results are limited to `row_cap` and flagged `truncated`. A kde
+  reads at most 50,000 input rows (whichever the backend returns first) and is
+  flagged `truncated` with that cap when it hits it. `offset` pages past the cap ("load more") — deterministic only when the
   spec orders by a unique key.
 
 `run_batch(queries, selections)` runs many specs in one call and returns

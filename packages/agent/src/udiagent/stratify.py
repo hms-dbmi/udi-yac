@@ -419,7 +419,14 @@ def grouping_expr(grouping, field_name):
             "then": {"literal": label},
             "else": expr,
         }
-    return expr
+    # A missing value has no bucket. Untested, the executors disagree on it:
+    # JavaScript's `null < cut` is true (the lowest bucket), SQL's is unknown
+    # (the top one). A null stratum is filtered out downstream.
+    return {
+        "if": {"op": "==", "left": {"field": field_name}, "right": {"literal": None}},
+        "then": {"literal": None},
+        "else": expr,
+    }
 
 
 # ---------------------------------------------------------------------------

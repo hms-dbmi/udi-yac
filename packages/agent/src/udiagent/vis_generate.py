@@ -69,6 +69,9 @@ def _grouping_parts(tag):
 # the one-element list, which keeps a call made before the parameter took lists
 # meaning what it meant.
 _LIST_VALUE = re.compile(r"(V\d*):list")
+#: One entry of such a list, `<V2:list:0>`: what `_expand_value_lists` leaves in
+#: each comparison, so the value itself only enters the text at substitution.
+_LIST_ITEM = re.compile(r"(V\d*):list:(\d+)")
 
 
 def value_list(value):
@@ -97,10 +100,11 @@ def value_list(value):
 def _expand_value_lists(spec_template, bindings):
     """Rewrite each comparison against a `<V*:list>` into one per listed value.
 
-    Done on the parsed template, before any string substitution, because the
-    values are data the model supplied and only a structured rewrite keeps them
-    out of the JSON text. `==` becomes an `||` chain, `!=` an `&&` chain; the
-    field side is copied untouched, so its own placeholder resolves as usual.
+    Done on the parsed template, before any string substitution. Each clause
+    compares against an indexed `<V*:list:i>`, not the value: a value that looks
+    like a placeholder (`<NA>`) would otherwise be resolved as one. `==` becomes
+    an `||` chain, `!=` an `&&` chain; the field side is copied untouched, so its
+    own placeholder resolves as usual.
     """
     if ":list>" not in spec_template:
         return spec_template
@@ -129,12 +133,16 @@ def _expand_value_lists(spec_template, bindings):
                 key = list_key(node.get(value_side))
                 if key is None:
                     continue
-                # An empty list compares against "" so the chart still
-                # instantiates; validation has already reported it.
-                values = value_list(bindings.get(key)) or [""]
+                # An empty list compares against "" (item 0 of nothing) so the
+                # chart still instantiates; validation has already reported it.
+                count = max(len(value_list(bindings.get(key))), 1)
                 clauses = [
-                    {"op": op, other_side: node[other_side], value_side: {"literal": v}}
-                    for v in values
+                    {
+                        "op": op,
+                        other_side: node[other_side],
+                        value_side: {"literal": f"<{key}:list:{i}>"},
+                    }
+                    for i in range(count)
                 ]
                 expr = clauses[0]
                 for clause in clauses[1:]:
@@ -652,6 +660,12 @@ def _resolve_placeholder(tag, bindings, schema):
     if tag in CHOICES:
         return json.dumps(resolve_choice(tag, bindings.get(tag)))
 
+    item = _LIST_ITEM.fullmatch(tag)
+    if item is not None:
+        values = value_list(bindings.get(item.group(1)))
+        index = int(item.group(2))
+        return json.dumps(values[index] if index < len(values) else "")[1:-1]
+
     # Strip type suffix: F:n -> F, E1.F:q -> E1.F
     base = tag.split(":")[0] if ":" in tag else tag
 
@@ -691,12 +705,11 @@ def instantiate_template(spec_template, bindings, schema):
     # And a choice, which resolves to the expression for the chosen option.
     for key in CHOICES:
         spec = spec.replace(f'"<{key}>"', f"<{key}>")
-    while True:
-        match = re.search(PLACEHOLDER, spec)
-        if not match:
-            break
-        resolved = _resolve_placeholder(match.group(1), bindings, schema)
-        spec = spec.replace(match.group(0), resolved, 1)
+    # One pass: a resolved value is never scanned again, so a value that looks
+    # like a placeholder (`<V>`, `<NA>`) stays as written.
+    spec = re.sub(
+        PLACEHOLDER, lambda m: _resolve_placeholder(m.group(1), bindings, schema), spec
+    )
     parsed = _dedupe_sources(json.loads(spec))
     return _pin_stratum_colours(parsed, spec_template, bindings)
 

@@ -20,6 +20,9 @@ on:
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci-chat.yml"
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: Lint, typecheck, test, build

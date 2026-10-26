@@ -91,6 +91,25 @@ def test_hostile_values_do_not_corrupt_the_spec(value):
     assert spec["transformation"][0]["derive"]["start day"]["if"]["right"]["literal"] == value
 
 
+@pytest.mark.parametrize("value", ["<V1>", "<LOD>", "<NA>", "<E.url>"])
+def test_a_value_that_looks_like_a_placeholder_stays_as_written(value):
+    """Substitution is one pass: `<V1>` bound to itself used to loop forever,
+    and a data value like `<NA>` was resolved again to ""."""
+    spec = instantiate_template(TEMPLATE, {**BASE, "V1": value}, SCHEMA)
+    assert spec["transformation"][0]["derive"]["start day"]["if"]["right"]["literal"] == value
+
+
+def test_a_listed_value_that_looks_like_a_placeholder_stays_as_written():
+    template = TEMPLATE.replace('"<V1>"', '"<V1:list>"')
+    spec = instantiate_template(template, {**BASE, "V1": ["<NA>", "<V1:list:0>"]}, SCHEMA)
+    condition = spec["transformation"][0]["derive"]["start day"]["if"]
+    assert condition["op"] == "||"
+    assert [condition["left"]["right"]["literal"], condition["right"]["right"]["literal"]] == [
+        "<NA>",
+        "<V1:list:0>",
+    ]
+
+
 def test_value_placeholders_are_exposed_as_tool_parameters():
     """The model can only fill a value if the tool actually offers the parameter."""
     from udiagent.generated_vis_tools import TOOL_DEFS, TOOL_DISPATCH
