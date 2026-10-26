@@ -37,8 +37,8 @@ POST /v1/yac/completions  {messages, dataSchema, dataDomains, filters}
    current filters. The model must call at least one tool
    (`tool_choice: "required"`).
 2. **Lookups.** Two tools are internal and never reach the client.
-   `ListFieldValues` returns a column's full value list when the prompt only
-   showed a sample. `GetVisualizationSpec` returns an earlier chart's full spec
+   `ListFieldValues` returns a column's full value list, or the values matching
+   a `contains` search, when the prompt only showed a sample. `GetVisualizationSpec` returns an earlier chart's full spec
    (see [Chart history](#chart-history)). Their answers go back to the model,
    which then decides. This loop runs at most twice.
 3. **Dispatch.** Every other tool call is an outcome, and its handler builds
@@ -78,10 +78,12 @@ templates and the tools are generated
    [Template sets and tags](library.md#visualization-template-sets-and-tags)).
    Templates that need more tables than the package has are dropped too.
 2. **Binding.** The model picks one template and names the tables, columns and
-   literal values to use.
+   literal values to use. It may first call `ListFieldValues` (at most twice,
+   optionally with a `contains` search) to find values its prompt only sampled,
+   such as the protocol arms for a stratifier grouping.
 3. **Validation.** `validate_bindings` checks the choice against the request's
    schema and values: that the columns exist and have the type the template
-   needs, that literal values occur in the column, that a field drawn on an axis
+   needs, that literal values and a grouping's values occur in the column, that a field drawn on an axis
    has no more than 500 categories, and so on. Its errors are written for a
    reader and name the valid alternatives.
 4. **Retry.** A rejected choice goes back to the model with every earlier

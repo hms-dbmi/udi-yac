@@ -252,6 +252,7 @@ def _call_llm_with_tools(
     openai_api_key=None,
     req_id="-",
     model=None,
+    data_domains=None,
 ):
     """Call the LLM with function-calling tools. Returns (tool_name, arguments) or None.
 
@@ -263,35 +264,102 @@ def _call_llm_with_tools(
     problem, while "the request blew up" is a network or API one — and to the
     caller they are the same `None`, which is how a swallowed traceback used to
     surface as a mysterious freehand chart.
+
+    With `data_domains`, the model may also call `ListFieldValues` first. This is
+    the call that writes a grouping's values and a `<V*>` literal, and the
+    prompt shows only a sample of each column — so a protocol arm the sample
+    missed had to be guessed. Lookups are answered here and loop, bounded like
+    the orchestrator's; the last round offers only the chart tools.
     """
-    from udiagent.orchestrator import _call_with_budget_guard, BudgetExceededError
+    from udiagent.orchestrator import (
+        MAX_VALUE_LOOKUPS,
+        BudgetExceededError,
+        _call_with_budget_guard,
+    )
+    from udiagent.schema import lookup_field_values
+    from udiagent.tools import LIST_FIELD_VALUES_TOOL
+
+    lookup_name = LIST_FIELD_VALUES_TOOL["function"]["name"]
+    offered = [*tools, LIST_FIELD_VALUES_TOOL] if data_domains else tools
+    messages = list(messages)
 
     try:
         client = agent._get_gpt_client(openai_api_key)
-        resp = _call_with_budget_guard(
-            agent.create_completion,
-            usage,
-            client,
-            model=model or agent.gpt_model_name,
-            messages=messages,
-            tools=tools,
-            tool_choice=agent.vis_tool_choice,
-            max_completion_tokens=1024,
-        )
-        if usage is not None:
-            usage.add("create_visualization", getattr(resp, "usage", None))
-        choice = resp.choices[0]
-        if choice.message.tool_calls:
-            tc = choice.message.tool_calls[0]
-            return tc.function.name, json.loads(tc.function.arguments)
-        logger.warning(
-            "[vis %s] model returned no tool call from %d offered "
-            "(finish_reason=%s, content_chars=%d)",
-            req_id,
-            len(tools),
-            getattr(choice, "finish_reason", None),
-            len(choice.message.content or ""),
-        )
+        for lookup_round in range(MAX_VALUE_LOOKUPS + 1):
+            last = lookup_round == MAX_VALUE_LOOKUPS
+            resp = _call_with_budget_guard(
+                agent.create_completion,
+                usage,
+                client,
+                model=model or agent.gpt_model_name,
+                messages=messages,
+                tools=tools if last else offered,
+                tool_choice=agent.vis_tool_choice,
+                max_completion_tokens=1024,
+            )
+            if usage is not None:
+                usage.add("create_visualization", getattr(resp, "usage", None))
+            choice = resp.choices[0]
+            calls = choice.message.tool_calls or []
+            lookups = [tc for tc in calls if tc.function.name == lookup_name]
+            if lookups and not last:
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in calls
+                        ],
+                    }
+                )
+                for tc in calls:
+                    if tc in lookups:
+                        args = json.loads(tc.function.arguments or "{}")
+                        answer = lookup_field_values(
+                            data_domains,
+                            args.get("entity"),
+                            args.get("field"),
+                            args.get("contains"),
+                        )
+                        logger.info(
+                            "[vis %s] field values looked up: %s.%s contains=%r",
+                            req_id,
+                            args.get("entity"),
+                            args.get("field"),
+                            args.get("contains"),
+                        )
+                    else:
+                        # Same as the orchestrator: a chart asked for alongside a
+                        # lookup was chosen before its values were known.
+                        answer = (
+                            "Not run — you also asked to look something up. "
+                            "Call this again if you still want it."
+                        )
+                    messages.append(
+                        {"role": "tool", "tool_call_id": tc.id, "content": answer}
+                    )
+                continue
+
+            picked = next((tc for tc in calls if tc.function.name != lookup_name), None)
+            if picked is not None:
+                return picked.function.name, json.loads(picked.function.arguments)
+            logger.warning(
+                "[vis %s] model returned no tool call from %d offered "
+                "(finish_reason=%s, content_chars=%d)",
+                req_id,
+                len(tools),
+                getattr(choice, "finish_reason", None),
+                len(choice.message.content or ""),
+            )
+            break
     except BudgetExceededError:
         raise
     except Exception:
@@ -2199,8 +2267,11 @@ def _execute_generate(skill, context):
             "and put those values in it. A tool without one can only split by "
             "whether a subject appears in a table at all: for a table with one row "
             "per drug given, that answers 'had any treatment', not 'had that drug'. "
-            "Name every spelling of the value you can see in the column, since one "
-            "drug or protocol is often recorded several ways.\n\n"
+            "Name every spelling of the value in the column, since one drug or "
+            "protocol is often recorded several ways. The Column Values below are "
+            "only a sample: unless the exact values are listed there, call "
+            "`ListFieldValues` with `contains` (e.g. the protocol or drug name) "
+            "to find them before writing the grouping, and copy them exactly.\n\n"
             f"## Available Datasets\n\n{data_schema_simple}"
         )
         # Some tools take a literal data value (a `value*` parameter) rather than
@@ -2213,8 +2284,9 @@ def _execute_generate(skill, context):
             if domains_simple:
                 system_msg += (
                     "\n\n## Column Values\n\n"
-                    "Use these when a tool asks for a literal `value` — copy one "
-                    "exactly rather than inventing it.\n\n"
+                    "Use these when a tool asks for a literal `value` or a "
+                    "`grouping` — copy one exactly rather than inventing it. Where "
+                    "a column is only sampled, `ListFieldValues` has the rest.\n\n"
                     f"{domains_simple}"
                 )
         tool_messages = [{"role": "system", "content": system_msg}] + list(
@@ -2227,6 +2299,7 @@ def _execute_generate(skill, context):
         result = _call_llm_with_tools(
             agent, tool_messages, selected_defs, config,
             usage=usage, openai_api_key=openai_api_key, req_id=rid, model=model,
+            data_domains=data_domains,
         )
         # Three attempts rather than two. A rejected binding is usually one
         # argument out of fifteen — a miscased literal value, a stratifier that
@@ -2293,6 +2366,7 @@ def _execute_generate(skill, context):
                         openai_api_key=openai_api_key,
                         req_id=rid,
                         model=model,
+                        data_domains=data_domains,
                     )
                     continue
                 fallback_reason = FALLBACK_VALIDATION_FAILED
