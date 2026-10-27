@@ -600,7 +600,11 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
                 aria-expanded={showRows}
                 onClick={toggleRows}
               >
-                {showRows ? 'Hide' : `Show ${rowCount.toLocaleString()} rows`}
+                {showRows
+                  ? 'Hide'
+                  : resource?.['udi:hide_count']
+                    ? 'Show rows'
+                    : `Show ${rowCount.toLocaleString()} rows`}
               </Button>
             </div>
           </div>

@@ -44,6 +44,9 @@ export interface DataPackageResource {
   type?: string;
   'udi:column_count'?: number;
   'udi:row_count'?: number;
+  /** Keeps the table's row count out of the UI: no count chip in the dashboard
+   *  header and no count in the data overview. Its data still downloads. */
+  'udi:hide_count'?: boolean;
 }
 
 export interface DataPackage {

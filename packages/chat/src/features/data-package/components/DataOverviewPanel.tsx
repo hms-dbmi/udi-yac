@@ -29,6 +29,11 @@ function shortCardinality(cardinality: string): string {
   return `${abbr(from)}:${abbr(to)}`;
 }
 
+/** A hidden count (`null`, `udi:hide_count`) is left out of the label too. */
+function rowsLabel(entity: string, rowCount: number | null): string {
+  return rowCount == null ? entity : `${entity}, ${rowCount.toLocaleString()} rows`;
+}
+
 interface SchemaTreeRowsProps {
   nodes: SchemaTreeNode[];
   icons: EntityIconMap;
@@ -48,7 +53,7 @@ function SchemaTreeRows({ nodes, icons, selected, onSelect, depth }: SchemaTreeR
             <button
               type="button"
               onClick={() => onSelect(node.name)}
-              aria-label={`${node.name}, ${node.rowCount.toLocaleString()} rows`}
+              aria-label={rowsLabel(node.name, node.rowCount)}
               className={cn(
                 'udi:flex udi:w-full udi:items-center udi:gap-1 udi:rounded udi:px-1 udi:py-0.5 udi:text-left udi:text-xs udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
                 selected === node.name && 'udi:bg-accent udi:font-medium udi:text-udi-primary',
@@ -69,7 +74,7 @@ function SchemaTreeRows({ nodes, icons, selected, onSelect, depth }: SchemaTreeR
                 {node.cardinality ? shortCardinality(node.cardinality) : ''}
               </span>
               <span className="udi:shrink-0 udi:tabular-nums udi:text-muted-foreground">
-                {node.rowCount.toLocaleString()}
+                {node.rowCount?.toLocaleString()}
               </span>
             </button>
             {/* No `otherEdges` branch: this renderer only runs when there are
@@ -121,7 +126,7 @@ function JoinList({ groups, icons, selected, onSelect }: JoinListProps) {
             <button
               type="button"
               onClick={() => onSelect(group.entity)}
-              aria-label={`${group.entity}, ${group.rowCount.toLocaleString()} rows`}
+              aria-label={rowsLabel(group.entity, group.rowCount)}
               className={cn(
                 'udi:flex udi:w-full udi:items-center udi:gap-1 udi:rounded udi:px-1 udi:py-0.5 udi:text-left udi:text-xs udi:hover:bg-accent udi:focus-visible:ring-3 udi:focus-visible:ring-ring/50 udi:focus-visible:outline-none',
                 selected === group.entity && 'udi:bg-accent udi:font-medium udi:text-udi-primary',
@@ -130,7 +135,7 @@ function JoinList({ groups, icons, selected, onSelect }: JoinListProps) {
               <Icon className="udi:size-3 udi:shrink-0 udi:text-muted-foreground" />
               <span className="udi:min-w-0 udi:flex-1 udi:truncate">{group.entity}</span>
               <span className="udi:shrink-0 udi:tabular-nums udi:text-muted-foreground">
-                {group.rowCount.toLocaleString()}
+                {group.rowCount?.toLocaleString()}
               </span>
             </button>
             <ul className="udi:flex udi:flex-col">
@@ -242,7 +247,7 @@ export function DataOverviewPanel() {
   const rowCounts = useMemo(() => {
     const map = new Map<string, number>();
     for (const resource of dataPackage?.resources ?? []) {
-      map.set(resource.name, resource['udi:row_count'] ?? 0);
+      if (!resource['udi:hide_count']) map.set(resource.name, resource['udi:row_count'] ?? 0);
     }
     return map;
   }, [dataPackage]);
@@ -321,7 +326,7 @@ export function DataOverviewPanel() {
                       <Icon className="udi:size-4 udi:shrink-0 udi:text-muted-foreground" />
                       <span className="udi:truncate">{name}</span>
                       <span className="udi:shrink-0 udi:text-xs udi:font-normal udi:tabular-nums udi:text-muted-foreground">
-                        {(rowCounts.get(name) ?? 0).toLocaleString()}
+                        {rowCounts.get(name)?.toLocaleString()}
                       </span>
                     </span>
                   </AccordionTrigger>
