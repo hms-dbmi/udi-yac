@@ -8,7 +8,7 @@ or ``__post_init__``'s mutual-exclusion check fires.
 import sys
 import tomllib
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -271,11 +271,13 @@ class TestServerConfigBedrock:
             ({}, False),
             ({"openai_api_key": "sk-test"}, True),
             ({"openai_base_url": "http://localhost:11434/v1"}, True),
-            ({"udi_bedrock": True}, True),
+            ({"bedrock": True}, True),
         ],
     )
-    def test_has_server_credentials(self, kwargs, expected):
-        assert _config(**kwargs).has_server_credentials is expected
+    def test_agent_can_serve_without_a_caller_key(self, kwargs, expected):
+        """What `udiagent.api` checks before a keyless request is refused with a 401."""
+        agent, _ = _make_agent(**kwargs)
+        assert (agent.gpt_model is not None) is expected
 
 
 class TestCredentialFailureResponse:
@@ -291,8 +293,9 @@ class TestCredentialFailureResponse:
             import udiagent.server.app as server_app
 
             mock_agent = UDIAgent.__new__(UDIAgent)
-            mock_agent.gpt_model = None
+            mock_agent.gpt_model = MagicMock(name="bedrock_client")
             mock_agent.gpt_model_name = "openai.gpt-oss-120b-1:0"
+            mock_agent.use_bedrock = False
             server_app.agent = mock_agent
             server_app.orchestrator.agent = mock_agent
             self.server_app = server_app
@@ -323,13 +326,10 @@ class TestCredentialFailureResponse:
     def test_missing_aws_credentials_returns_503(self, caplog):
         from openai import OpenAIError
 
-        config = _config(udi_bedrock=True, aws_region="us-east-1")
-        with patch.object(self.server_app, "config", config):
-            with self._raising(
-                OpenAIError("Could not find credentials for Bedrock.")
-            ):
-                with caplog.at_level("ERROR"):
-                    response = self._post(self._client())
+        self.server_app.agent.use_bedrock = True
+        with self._raising(OpenAIError("Could not find credentials for Bedrock.")):
+            with caplog.at_level("ERROR"):
+                response = self._post(self._client())
 
         assert response.status_code == 503
         assert "administrator" in response.json()["error"]
@@ -341,9 +341,8 @@ class TestCredentialFailureResponse:
     def test_non_bedrock_backend_error_returns_generic_503(self):
         from openai import OpenAIError
 
-        with patch.object(self.server_app, "config", _config(openai_api_key="sk")):
-            with self._raising(OpenAIError("some client construction problem")):
-                response = self._post(self._client())
+        with self._raising(OpenAIError("some client construction problem")):
+            response = self._post(self._client())
 
         assert response.status_code == 503
         assert "misconfigured" in response.json()["error"]
@@ -354,9 +353,8 @@ class TestCredentialFailureResponse:
         from openai import APIConnectionError
 
         exc = APIConnectionError(request=httpx.Request("POST", "https://example.com"))
-        with patch.object(self.server_app, "config", _config(openai_api_key="sk")):
-            with self._raising(exc):
-                response = self._post(self._client())
+        with self._raising(exc):
+            response = self._post(self._client())
 
         assert response.status_code == 502
 
@@ -372,9 +370,8 @@ class TestCredentialFailureResponse:
             ),
             body=None,
         )
-        with patch.object(self.server_app, "config", _config(openai_api_key="sk")):
-            with self._raising(exc):
-                response = self._post(self._client())
+        with self._raising(exc):
+            response = self._post(self._client())
 
         assert response.status_code == 401
         assert "rejected the API key" in response.json()["error"]

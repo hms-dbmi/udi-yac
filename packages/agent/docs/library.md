@@ -236,31 +236,23 @@ def yac_vis_instantiate():
         return jsonify(e.body()), e.status
 ```
 
-`/v1/yac/completions` is `Orchestrator.run`: pass the body's `messages`, `dataSchema`, `dataDomains` and `filters`, and return `result.tool_calls`. Who may use the server's OpenAI key, and on what budget, is the host's decision. `error_response` turns the failures the chat tells apart into the reference server's answers: a quota refusal into a `Rebuff`, a rejected OpenAI key into a 401, a failed LLM call into a 502. It returns `None` for anything else. `usage_headers` adds the `X-Usage-*` token counts the chat shows. A cross-origin caller can read them only if your CORS layer lists them in `Access-Control-Expose-Headers`.
+`completions` runs a conversation turn with the reference server's policy: a requested `model` is honored only with the caller's own key, and a `budget_check` you pass runs only on your key. A quota refusal comes back as a `Rebuff`, and the `X-Usage-*` headers come back beside the body. A cross-origin caller can read those headers only if your CORS layer lists them in `Access-Control-Expose-Headers`. Who may use your OpenAI key stays your decision: pass the caller's key, or `None` to run on the agent's.
 
 ```python
-from udiagent.api import error_response, usage_headers
+from udiagent.api import completions
 
 @app.post("/v1/yac/completions")
 def yac_completions():
-    body = request.get_json(silent=True) or {}
-    key = request.headers.get("X-OpenAI-Key")
-    model = orchestrator.agent.gpt_model_name
     try:
-        result = orchestrator.run(
-            messages=body["messages"],
-            data_schema=body["dataSchema"],
-            data_domains=body["dataDomains"],
-            filters=body.get("filters"),
-            openai_api_key=key,
+        tool_calls, headers = completions(
+            orchestrator,
+            request.get_json(silent=True) or {},
+            openai_api_key=request.headers.get("X-OpenAI-Key"),
+            session_id=request.headers.get("X-Conversation-Id"),
         )
-    except Exception as e:
-        handled = error_response(e, model=model, caller_key=bool(key))
-        if handled is None:
-            raise
-        status, content, headers = handled
-        return jsonify(content), status, headers
-    return jsonify(result.tool_calls), 200, usage_headers(result.usage, model)
+    except EndpointError as e:
+        return jsonify(e.body()), e.status
+    return jsonify(tool_calls), 200, headers
 ```
 
 ## Key Classes

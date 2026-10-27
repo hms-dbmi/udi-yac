@@ -25,9 +25,10 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from udiagent.agent import UDIAgent
-from udiagent.api import EndpointError, error_response, usage_headers, vis_instantiate
-from udiagent.filters import filter_summary
-from udiagent.orchestrator import BudgetExceededError, Orchestrator
+from udiagent.api import EndpointError, completions, vis_instantiate
+# Internal: the benchmark is not an endpoint hosts serve, so these stay private.
+from udiagent.api import _check_key, _llm_error
+from udiagent.orchestrator import Orchestrator
 from udiagent.structured_functions import export_registry_json
 # Dependency-free (no duckdb/pymysql at module scope), unlike the connector
 # imports further down, which stay lazy because the drivers are extras.
@@ -173,23 +174,29 @@ app.state.budget_check = None
 
 
 @app.exception_handler(EndpointError)
-@app.exception_handler(BudgetExceededError)
-@app.exception_handler(DatabaseAuthError)
-@app.exception_handler(OpenAIError)  # and its APIError, AuthenticationError
-async def _error_handler(request, exc):
-    """Answer the failures the chat tells apart; see ``udiagent.api.error_response``.
+async def _endpoint_error_handler(request, exc: EndpointError):
+    """Every failure a ``udiagent.api`` function reports.
 
     Here rather than as Starlette's default 500, which is built outside
     CORSMiddleware: without CORS headers a cross-origin browser reports only
     "NetworkError", and the status and the reason never reach the chat.
     """
-    status, content, headers = error_response(
-        exc,
-        model=agent.gpt_model_name,
-        caller_key=bool(request.headers.get("X-OpenAI-Key")),
-        bedrock=config.udi_bedrock,
+    return JSONResponse(status_code=exc.status, content=exc.body())
+
+
+@app.exception_handler(DatabaseAuthError)
+async def _db_auth_error_handler(request, exc: DatabaseAuthError):
+    """Surface a database identity rejection as a 403.
+
+    Raised when a JWT-passthrough backend cannot authenticate the caller to the
+    database. The message is fixed: the underlying pymysql error names the
+    principal and the host, neither of which belongs in a client response.
+    """
+    logger.warning("database rejected forwarded identity: %s", exc)
+    return JSONResponse(
+        status_code=403,
+        content={"error": "The database rejected your credentials for this dataset."},
     )
-    return JSONResponse(status_code=status, content=content, headers=headers)
 
 
 app.add_middleware(
@@ -268,35 +275,6 @@ def read_root():
     }
 
 
-def _reject_byok_in_bedrock_mode(x_openai_key: str | None) -> JSONResponse | None:
-    """Refuse a per-request OpenAI key when the server is backed by Bedrock.
-
-    Honoring one would build a client against api.openai.com and send the
-    prompt — including the data schema and domains — to a third party.
-    Deployments choose Bedrock to keep data inside their own AWS account, so
-    this fails closed rather than quietly falling back to the public API.
-
-    ``UDIAgent._get_gpt_client`` enforces the same rule as a backstop; this
-    exists so callers get an actionable 403 instead of a 500. Every endpoint
-    that accepts ``X-OpenAI-Key`` must call it.
-    """
-    if not (x_openai_key and config.udi_bedrock):
-        return None
-    logger.warning(
-        "Refused a per-request OpenAI key: this server routes inference "
-        "through Amazon Bedrock."
-    )
-    return JSONResponse(
-        status_code=403,
-        content={
-            "error": "This server routes all inference through Amazon Bedrock "
-            "and does not accept per-request OpenAI keys, because using one "
-            "would send your prompt and data schema to api.openai.com. Remove "
-            "the X-OpenAI-Key header to continue."
-        },
-    )
-
-
 @app.post(
     "/v1/yac/completions",
     summary="Run a conversation turn",
@@ -342,72 +320,14 @@ def yac_completions(
     answer, a clarifying question or a refusal) and returns one tool call per
     outcome. Token use comes back in the `X-Usage-*` headers.
     """
-    logger.info(
-        "Received /v1/yac/completions request "
-        "(message_count=%d, schema_char_count=%d, domain_char_count=%d, "
-        "has_conversation_id=%s, filters=%s)",
-        len(request.messages),
-        len(request.dataSchema),
-        len(request.dataDomains),
-        x_conversation_id is not None,
-        filter_summary(request.filters),
-    )
-
-    refusal = _reject_byok_in_bedrock_mode(x_openai_key)
-    if refusal is not None:
-        return refusal
-
-    # No key from the caller and no server-side credential → actionable 401
-    # instead of the RuntimeError the orchestrator would raise (a bare 500).
-    # A configured OPENAI_BASE_URL counts as credentialed (self-hosted backends
-    # take no key, and the agent builds a placeholder-key client for them), as
-    # does UDI_BEDROCK (requests are signed with the instance's IAM role).
-    if not x_openai_key and not config.has_server_credentials:
-        return JSONResponse(
-            status_code=401,
-            content={
-                "error": "No OpenAI API key. Set OPENAI_API_KEY (or UDI_BEDROCK) "
-                "in the agent's .env, or send a key via the X-OpenAI-Key header."
-            },
-        )
-
-    # Only enforce budget for users who don't bring their own key.
-    budget_check = None if x_openai_key else app.state.budget_check
-
-    # A caller-supplied model is honored only alongside a caller-supplied key:
-    # whoever pays for the tokens picks the model. On the server's own key,
-    # model choice (and its cost) stays the operator's.
-    # ponytail: key ownership is the permission check here. If deployments ever
-    # need to grant model choice independently of who pays, that becomes a
-    # role/claim lookup on token_payload — see the agent README.
-    requested_model = request.model if x_openai_key else None
-    if request.model and not x_openai_key:
-        logger.info(
-            "ignoring requested model %r: no caller-supplied key", request.model
-        )
-
-    result = orchestrator.run(
-        messages=request.messages,
-        data_schema=request.dataSchema,
-        data_domains=request.dataDomains,
+    tool_calls, headers = completions(
+        orchestrator,
+        request,
         openai_api_key=x_openai_key,
-        model=requested_model,
-        budget_check=budget_check,
         session_id=x_conversation_id,
-        filters=request.filters,
-        issue_reporting=request.issueReporting and agent.langfuse_enabled,
+        budget_check=app.state.budget_check,
     )
-    logger.info("orchestrator_choice: %s", result.orchestrator_choice)
-    logger.info("usage: %s", result.usage)
-    logger.info(
-        "tool_calls: count=%d names=%s",
-        len(result.tool_calls),
-        [tool_call.get("name", "unknown") for tool_call in result.tool_calls],
-    )
-    return JSONResponse(
-        content=result.tool_calls,
-        headers=usage_headers(result.usage, requested_model or agent.gpt_model_name),
-    )
+    return JSONResponse(content=tool_calls, headers=headers)
 
 
 # ---------------------------------------------------------------------------
@@ -833,9 +753,7 @@ def yac_benchmark(
     token_payload: dict = Depends(verify_jwt),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key"),
 ):
-    refusal = _reject_byok_in_bedrock_mode(x_openai_key)
-    if refusal is not None:
-        return refusal
+    _check_key(agent, x_openai_key)
 
     model = request.model if x_openai_key else None
     # The runner's --no-orchestrator sends the expected choice. Only a chart
@@ -854,14 +772,19 @@ def yac_benchmark(
             },
         )
     # Spends tokens like a completion, so it is held to the same budget.
-    result = run(
-        messages=request.messages,
-        data_schema=request.dataSchema,
-        data_domains=request.dataDomains,
-        openai_api_key=x_openai_key,
-        model=model,
-        budget_check=None if x_openai_key else app.state.budget_check,
-    )
+    try:
+        result = run(
+            messages=request.messages,
+            data_schema=request.dataSchema,
+            data_domains=request.dataDomains,
+            openai_api_key=x_openai_key,
+            model=model,
+            budget_check=None if x_openai_key else app.state.budget_check,
+        )
+    except OpenAIError as exc:
+        raise _llm_error(
+            exc, caller_key=bool(x_openai_key), bedrock=agent.use_bedrock
+        ) from exc
 
     return {
         "tool_calls": result.tool_calls,

@@ -326,6 +326,7 @@ class TestServerUsage:
             mock_agent = UDIAgent.__new__(UDIAgent)
             mock_agent.gpt_model = MagicMock()
             mock_agent.gpt_model_name = "gpt-test"
+            mock_agent.use_bedrock = False
 
             server_app.agent = mock_agent
             server_app.orchestrator.agent = mock_agent
@@ -407,7 +408,7 @@ class TestServerUsage:
 
         with (
             patch.object(self.server_app.orchestrator, "run", return_value=result),
-            caplog.at_level(logging.INFO, logger=self.server_app.__name__),
+            caplog.at_level(logging.INFO, logger="udiagent.api"),
         ):
             resp = self.client.post(
                 "/v1/yac/completions",
@@ -422,7 +423,7 @@ class TestServerUsage:
         log_messages = [
             record.getMessage()
             for record in caplog.records
-            if record.name == self.server_app.__name__
+            if record.name == "udiagent.api"
         ]
         logs = "\n".join(log_messages)
         for sensitive_value in (
@@ -638,23 +639,44 @@ class TestServerUsage:
 
 
 # ---------------------------------------------------------------------------
-# udiagent.api.error_response: the same mapping for a host on another framework
+# udiagent.api.completions: the same turn for a host on another framework
 # ---------------------------------------------------------------------------
 
 
-def test_error_response_leaves_unknown_exceptions_to_the_host():
-    from udiagent.api import error_response
+def _host_orchestrator(run):
+    agent = UDIAgent.__new__(UDIAgent)
+    agent.gpt_model = MagicMock()
+    agent.gpt_model_name = "gpt-test"
+    agent.use_bedrock = False
+    return SimpleNamespace(agent=agent, run=run)
 
-    assert error_response(KeyError("messages")) is None
+
+_HOST_BODY = {
+    "messages": [{"role": "user", "content": "hi"}],
+    "dataSchema": "{}",
+    "dataDomains": "{}",
+}
 
 
-def test_error_response_turns_a_quota_refusal_into_a_rebuff():
-    from udiagent.api import error_response
+def test_a_host_gets_a_quota_refusal_as_a_rebuff():
+    from udiagent.api import completions
 
-    status, body, headers = error_response(
-        BudgetExceededError("Out of tokens.", Usage(total_tokens=5)), model="gpt-test"
-    )
-    assert status == 200
-    assert body == [build_rebuff_toolcall("Out of tokens.", reason="budget_exceeded")]
+    def run(**kwargs):
+        raise BudgetExceededError("Out of tokens.", Usage(total_tokens=5))
+
+    tool_calls, headers = completions(_host_orchestrator(run), _HOST_BODY)
+    assert tool_calls == [build_rebuff_toolcall("Out of tokens.", reason="budget_exceeded")]
     assert headers["X-Usage-Total-Tokens"] == "5"
     assert headers["X-Usage-Model"] == "gpt-test"
+
+
+def test_a_host_gets_a_malformed_body_as_a_bad_request():
+    from udiagent.api import EndpointError, completions
+
+    with pytest.raises(EndpointError) as caught:
+        completions(_host_orchestrator(MagicMock()), {"messages": []})
+    assert caught.value.status == 422
+    assert caught.value.errors == [
+        "dataSchema: Field required",
+        "dataDomains: Field required",
+    ]
