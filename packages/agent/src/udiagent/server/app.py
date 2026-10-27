@@ -12,7 +12,6 @@ Run with::
 import importlib.metadata
 import json
 import logging
-import urllib.request
 from dataclasses import asdict
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -22,17 +21,21 @@ from openai import OpenAIError
 from fastapi import BackgroundTasks, FastAPI, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 
 from udiagent.agent import UDIAgent
-from udiagent.api import EndpointError, completions, vis_instantiate
+from udiagent.api import (
+    MAX_ISSUE_REPORT_BYTES,
+    EndpointError,
+    completions,
+    issue_report,
+    metadata,
+    query,
+    vis_instantiate,
+)
 # Internal: the benchmark is not an endpoint hosts serve, so these stay private.
 from udiagent.api import _check_key, _llm_error
 from udiagent.orchestrator import Orchestrator
 from udiagent.structured_functions import export_registry_json
-# Dependency-free (no duckdb/pymysql at module scope), unlike the connector
-# imports further down, which stay lazy because the drivers are extras.
-from udiagent.query import DatabaseAuthError, use_db_token
 from udiagent.server.config import ServerConfig
 from udiagent.server.auth import RAW_TOKEN_CLAIM, make_verify_jwt
 from udiagent.models import (
@@ -184,21 +187,6 @@ async def _endpoint_error_handler(request, exc: EndpointError):
     return JSONResponse(status_code=exc.status, content=exc.body())
 
 
-@app.exception_handler(DatabaseAuthError)
-async def _db_auth_error_handler(request, exc: DatabaseAuthError):
-    """Surface a database identity rejection as a 403.
-
-    Raised when a JWT-passthrough backend cannot authenticate the caller to the
-    database. The message is fixed: the underlying pymysql error names the
-    principal and the host, neither of which belongs in a client response.
-    """
-    logger.warning("database rejected forwarded identity: %s", exc)
-    return JSONResponse(
-        status_code=403,
-        content={"error": "The database rejected your credentials for this dataset."},
-    )
-
-
 app.add_middleware(
     CORSMiddleware,
     # Defaults to ["*"] — any origin. Set UDI_CORS_ORIGINS to name the hosts
@@ -247,8 +235,8 @@ def _errors(descriptions: dict[int, str]) -> dict:
 
 _UNAUTHORIZED = "Missing, invalid or expired token (`detail`)."
 _IDP_UNREACHABLE = "The identity provider's keys could not be fetched (`JWT_JWKS_URL`)."
-_DB_FORBIDDEN = "The database rejected the caller's forwarded identity (JWT passthrough)."
-_NO_BACKEND = "No query backend is configured for the package."
+_DB_FORBIDDEN = "`database_forbidden`: the database rejected the caller's forwarded identity (JWT passthrough)."
+_NO_BACKEND = "`no_backend`: no query backend is configured for the package."
 
 _USAGE_HEADERS = {
     name: {"description": description, "schema": {"type": "string"}}
@@ -288,13 +276,15 @@ def read_root():
         },
         **_errors(
             {
-                401: f"{_UNAUTHORIZED} Or no OpenAI key: the server has none and "
-                "the request sent no `X-OpenAI-Key`, or OpenAI rejected it (`error`).",
-                403: "The server routes inference through Amazon Bedrock and "
-                "refuses per-request `X-OpenAI-Key` headers.",
-                502: "The LLM API call failed (a model the key cannot use, a rate "
-                "limit, a timeout).",
-                503: f"The server's LLM backend is misconfigured. Or: {_IDP_UNREACHABLE}",
+                401: f"{_UNAUTHORIZED} Or `no_openai_key`: the server has none and "
+                "the request sent no `X-OpenAI-Key`. Or `openai_key_rejected`: "
+                "OpenAI rejected the key.",
+                403: "`openai_key_refused`: the server routes inference through "
+                "Amazon Bedrock and refuses per-request `X-OpenAI-Key` headers.",
+                502: "`llm_call_failed`: the LLM API call failed (a model the key "
+                "cannot use, a rate limit, a timeout).",
+                503: "`llm_backend_misconfigured`: the server's LLM backend is "
+                f"misconfigured. Or: {_IDP_UNREACHABLE}",
             }
         ),
     },
@@ -398,22 +388,6 @@ def _load_query_engines() -> dict:
     return engines
 
 
-def _no_backend_message(package, engines) -> str:
-    """Actionable 404 text: what's configured (if anything) and how to fix it."""
-    if not engines:
-        return (
-            f"no query backend configured for package {package!r}: the server has "
-            "no query backends loaded. Set UDI_QUERY_BACKENDS to a seeded config "
-            "(seed one with packages/agent/scripts/seed_duckdb.py, or run the "
-            "'Data: Use penguins (remote/DuckDB)' VS Code task) and restart the agent."
-        )
-    return (
-        f"no query backend configured for package {package!r}. Configured packages: "
-        f"{sorted(engines)}. Point VITE_UDI_REMOTE_PACKAGE at one of these, or seed "
-        f"{package!r} and restart the agent."
-    )
-
-
 def _load_example_prompts() -> dict[str, list[str]]:
     """Per-package "Try an example" prompts: each backend spec's optional
     `examplePrompts`, which the seeders fill from `example_prompts.json`."""
@@ -434,11 +408,9 @@ app.state.example_prompts = _load_example_prompts()
 # (introspect.py), so under per-user row policies a shared cache would serve one
 # user's data to the next. principal is None whenever the backend is not doing
 # passthrough, which collapses this back to one entry per package.
-# Bounded: unbounded per-user caches are a slow leak in a long-lived process.
-# A plain dict, not an OrderedDict: dicts are insertion-ordered, LRU needs only
-# re-insert and drop-first, and this stays a documented extension point that
-# callers can assign a bare {} to.
-_MAX_METADATA_CACHES = 32
+# Bounded in udiagent.api.metadata. A plain dict, not an OrderedDict: dicts are
+# insertion-ordered, LRU needs only re-insert and drop-first, and this stays a
+# documented extension point that callers can assign a bare {} to.
 app.state.metadata_caches = {}
 
 
@@ -466,37 +438,15 @@ def yac_metadata(
     """Backend-introspected dataSchema/dataDomains for a package — the
     remote-mode replacement for browser-side CSV domain computation. Cached
     with a TTL; pass ?refresh=1 to force re-introspection."""
-    engines = app.state.query_engines
-    key = package if package in engines else "default"
-    engine = engines.get(key)
-    if engine is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": _no_backend_message(package, engines)},
-        )
-    token = token_payload.get(RAW_TOKEN_CLAIM)
-    principal = token_payload.get("sub") if engine.connector.jwt_passthrough else None
-    caches = app.state.metadata_caches
-    cache_key = (key, principal)
-    if cache_key in caches:
-        caches[cache_key] = caches.pop(cache_key)  # re-insert = move to newest
-    else:
-        from udiagent.query import MetadataCache
-
-        caches[cache_key] = MetadataCache(
-            engine, package or key, ttl_seconds=config.udi_metadata_ttl_seconds
-        )
-        while len(caches) > _MAX_METADATA_CACHES:
-            del caches[next(iter(caches))]  # oldest insertion = LRU
-
-    with use_db_token(token):
-        cache = caches[cache_key]
-        metadata = cache.refresh() if refresh else cache.get()
-    return {
-        "package": package or key,
-        "interactive": False,
-        **metadata,
-    }
+    return metadata(
+        app.state.query_engines,
+        app.state.metadata_caches,
+        package,
+        refresh=refresh,
+        token=token_payload.get(RAW_TOKEN_CLAIM),
+        principal=token_payload.get("sub"),
+        ttl_seconds=config.udi_metadata_ttl_seconds,
+    )
 
 
 @app.post(
@@ -525,19 +475,9 @@ def yac_query(
     is compiled to SQL against the package's backend, with the current
     selections applied.
     """
-    engines = app.state.query_engines
-    engine = engines.get(request.package) or engines.get("default")
-    if engine is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": _no_backend_message(request.package, engines)},
-        )
-    with use_db_token(token_payload.get(RAW_TOKEN_CLAIM)):
-        results = engine.run_batch(
-            [q.model_dump() for q in request.queries],
-            request.selections,
-        )
-    return {"results": results}
+    return query(
+        app.state.query_engines, request, token=token_payload.get(RAW_TOKEN_CLAIM)
+    )
 
 
 @app.post(
@@ -578,79 +518,6 @@ def yac_vis_instantiate(
     return vis_instantiate(request)
 
 
-# ponytail: checked after the body is buffered, so it caps what reaches
-# LangFuse, not what the process reads. A streaming cap (or a proxy limit) if
-# oversized uploads ever become a problem.
-MAX_ISSUE_REPORT_BYTES = 10 * 1024 * 1024
-
-
-def _slack_escape(text: str) -> str:
-    # The note is the user's text: escaped, it cannot @channel or forge links.
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
-def _notify_issue_report(
-    url: str,
-    report: YACIssueReportRequest,
-    trace_id: str | None,
-    session_id: str | None,
-):
-    """POST a summary of a recorded report to UDI_ISSUE_REPORT_WEBHOOK_URL.
-
-    Runs after the response, and a failure is only logged: the report is
-    already in LangFuse. The session stays there, behind its access control;
-    only the note, contact and links go out — to the conversation the report
-    is about (its LangFuse session) and to the report itself.
-    """
-    trace_url = session_url = None
-    if trace_id:
-        try:
-            trace_url, session_url = agent.langfuse_urls(trace_id, session_id)
-        except Exception as exc:  # noqa: BLE001 - the links are optional
-            logger.warning("could not build the LangFuse URLs: %s", type(exc).__name__)
-
-    where = {"menu": "Session menu", "chat": "chat", "crash": "crash screen"}[report.source]
-    lines = [f"*Issue report* from the {where}"]
-    lines += [f">{_slack_escape(line)}" for line in report.description.splitlines()]
-    if report.contact:
-        lines.append(f"Contact: {_slack_escape(report.contact)}")
-    links = []
-    if session_url:
-        links.append(f"<{session_url}|Open the conversation in LangFuse>")
-    if trace_url:
-        links.append(f"<{trace_url}|Open the report>")
-    if links:
-        lines.append(" · ".join(links))
-    payload = {
-        "text": "\n".join(lines),
-        "report": {
-            "description": report.description,
-            "contact": report.contact,
-            "source": report.source,
-            "traceId": trace_id,
-            "traceUrl": trace_url,
-            "sessionId": session_id,
-            "sessionUrl": session_url,
-        },
-    }
-    request = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            logger.info("issue report webhook delivered (status=%d)", response.status)
-    except Exception as exc:  # noqa: BLE001 - logged, never raised
-        # Never log the URL: Slack's and Teams' embed their credentials.
-        logger.warning(
-            "issue report webhook failed: %s %s",
-            type(exc).__name__,
-            getattr(exc, "code", ""),
-        )
-
-
 @app.post(
     "/v1/yac/issue_report",
     summary="Record an issue report",
@@ -670,9 +537,10 @@ def _notify_issue_report(
         **_errors(
             {
                 401: _UNAUTHORIZED,
-                413: f"The report is larger than {MAX_ISSUE_REPORT_BYTES // 2**20} MiB.",
-                422: "The report is invalid; `detail` has the per-field errors.",
-                503: f"LangFuse is not configured, so reports cannot be recorded. Or: {_IDP_UNREACHABLE}",
+                413: f"`too_large`: the report is larger than {MAX_ISSUE_REPORT_BYTES // 2**20} MiB.",
+                422: "`bad_request`: the report is invalid; `errors` lists every bad field.",
+                503: "`issue_reports_unavailable`: LangFuse is not configured, so reports "
+                f"cannot be recorded. Or: {_IDP_UNREACHABLE}",
             }
         ),
     },
@@ -689,61 +557,13 @@ async def yac_issue_report(
     turns being reported. Needs LangFuse: without it there is nowhere to put a
     report, so the endpoint says so instead of accepting and dropping it.
     """
-    if not agent.langfuse_enabled:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "error": "Issue reporting needs LangFuse, which this server has not configured."
-            },
-        )
-
-    raw = await request.body()
-    if len(raw) > MAX_ISSUE_REPORT_BYTES:
-        return JSONResponse(
-            status_code=413,
-            content={
-                "error": f"Issue report is too large ({len(raw)} bytes; "
-                f"limit {MAX_ISSUE_REPORT_BYTES})."
-            },
-        )
-    try:
-        report = YACIssueReportRequest.model_validate_json(raw)
-    except ValidationError as exc:
-        return JSONResponse(
-            status_code=422,
-            content={
-                "error": "Invalid issue report.",
-                "detail": exc.errors(
-                    include_input=False, include_url=False, include_context=False
-                ),
-            },
-        )
-
-    # Sizes only: the note, contact and session are the user's words and data.
-    logger.info(
-        "Received /v1/yac/issue_report (source=%s, byte_count=%d, "
-        "has_contact=%s, has_conversation_id=%s)",
-        report.source,
-        len(raw),
-        report.contact is not None,
-        x_conversation_id is not None,
-    )
-    trace_id = agent.record_issue_report(
-        description=report.description,
-        contact=report.contact,
-        source=report.source,
-        session=report.session,
+    return issue_report(
+        agent,
+        await request.body(),
         session_id=x_conversation_id,
+        webhook_url=config.udi_issue_report_webhook_url,
+        defer=background_tasks.add_task,
     )
-    if config.udi_issue_report_webhook_url:
-        background_tasks.add_task(
-            _notify_issue_report,
-            config.udi_issue_report_webhook_url,
-            report,
-            trace_id,
-            x_conversation_id,
-        )
-    return {"traceId": trace_id}
 
 
 # Benchmark tooling, left out of the published spec (see docs/benchmarking.md).

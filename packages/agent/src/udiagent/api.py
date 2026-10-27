@@ -18,10 +18,12 @@ A Flask route, for example::
             return jsonify(e.body()), e.status
 
 What stays with the host is what only it knows: authentication, who may use
-the server's OpenAI key, and the budget.
+the server's OpenAI key, the budget, and which query backends exist.
 """
 
+import json
 import logging
+import urllib.request
 from collections.abc import Callable
 
 from openai import APIError, AuthenticationError, OpenAIError
@@ -30,6 +32,8 @@ from pydantic import BaseModel, ValidationError
 from udiagent.filters import filter_summary
 from udiagent.models import (
     YACCompletionRequest,
+    YACIssueReportRequest,
+    YACQueryRequest,
     YACVisInstantiateRequest,
     YACVisInstantiateResponse,
 )
@@ -39,6 +43,7 @@ from udiagent.orchestrator import (
     Usage,
     build_rebuff_toolcall,
 )
+from udiagent.query import DatabaseAuthError, MetadataCache, QueryEngine, use_db_token
 from udiagent.vis_generate import (
     _load_generated_tools,
     _parse_request_schema,
@@ -75,16 +80,20 @@ class EndpointError(Exception):
         return body
 
 
+def _bad_request(exc: ValidationError, message: str) -> EndpointError:
+    """A 422 ``bad_request`` naming every bad field."""
+    errors = [
+        f"{'.'.join(map(str, e['loc'])) or 'body'}: {e['msg']}"
+        for e in exc.errors(include_url=False)
+    ]
+    return EndpointError(422, "bad_request", message, errors)
+
+
 def _validate[M: BaseModel](model: type[M], body, message: str) -> M:
-    """``body`` as ``model``, or a 422 ``bad_request`` naming every bad field."""
     try:
         return model.model_validate(body)
     except ValidationError as exc:
-        errors = [
-            f"{'.'.join(map(str, e['loc'])) or 'body'}: {e['msg']}"
-            for e in exc.errors(include_url=False)
-        ]
-        raise EndpointError(422, "bad_request", message, errors) from exc
+        raise _bad_request(exc, message) from exc
 
 
 def _usage_headers(usage: Usage, model: str) -> dict[str, str]:
@@ -355,3 +364,281 @@ def vis_instantiate(body: dict | YACVisInstantiateRequest) -> dict:
         toolArgs={k: v for k, v in request.toolArgs.items() if k in param_map},
         params=template_tweakable_params(spec_template, param_map, bindings, schema),
     ).model_dump()
+
+
+# --- Server-side data: /v1/yac/metadata and /v1/yac/query -------------------
+# A host keeps its own registry of package name -> QueryEngine (the key
+# "default" serves a package with no engine of its own) and passes it in.
+
+
+def _engine(engines: dict[str, QueryEngine], package: str | None):
+    engine = engines.get(package) or engines.get("default")
+    if engine is not None:
+        return engine
+    if not engines:
+        message = (
+            f"no query backend configured for package {package!r}: the server has "
+            "no query backends loaded. Set UDI_QUERY_BACKENDS to a seeded config "
+            "(seed one with packages/agent/scripts/seed_duckdb.py, or run the "
+            "'Data: Use penguins (remote/DuckDB)' VS Code task) and restart the agent."
+        )
+    else:
+        message = (
+            f"no query backend configured for package {package!r}. Configured packages: "
+            f"{sorted(engines)}. Point VITE_UDI_REMOTE_PACKAGE at one of these, or seed "
+            f"{package!r} and restart the agent."
+        )
+    raise EndpointError(404, "no_backend", message)
+
+
+def _forbidden(exc: DatabaseAuthError) -> EndpointError:
+    # The message is fixed: the driver's error names the principal and the
+    # host, neither of which belongs in a client response.
+    logger.warning("database rejected forwarded identity: %s", exc)
+    return EndpointError(
+        403, "database_forbidden", "The database rejected your credentials for this dataset."
+    )
+
+
+# ponytail: a fixed bound on per-user caches, which would otherwise leak slowly
+# in a long-lived process. A parameter if a deployment ever needs more users.
+_MAX_METADATA_CACHES = 32
+
+
+def metadata(
+    engines: dict[str, QueryEngine],
+    caches: dict,
+    package: str | None = None,
+    *,
+    refresh: bool = False,
+    token: str | None = None,
+    principal: str | None = None,
+    ttl_seconds: float = 3600,
+) -> dict:
+    """A package's schema and column values, introspected from its database.
+
+    The logic of ``GET /v1/yac/metadata``: the remote-mode replacement for the
+    browser computing them from CSVs. Cached for ``ttl_seconds``.
+
+    Args:
+        engines: The host's query backends, by package name.
+        caches: Where the metadata caches live between requests: an empty
+            dict the host keeps, bounded to the 32 most recently used.
+        package: The package to describe.
+        refresh: Re-introspect now instead of serving the cache.
+        token: The caller's raw JWT, for a backend that forwards it to the
+            database (``jwtPassthrough``).
+        principal: Who the caller is (e.g. the token's ``sub``). A
+            passthrough backend keeps a cache per principal, because the
+            column values are the user's own rows.
+
+    Returns:
+        ``{package, interactive, dataSchema, dataDomains}`` (see
+        ``MetadataResponse``).
+
+    Raises:
+        EndpointError: ``no_backend`` (404) or ``database_forbidden`` (403).
+    """
+    engine = _engine(engines, package)
+    key = package if package in engines else "default"
+    cache_key = (key, principal if engine.connector.jwt_passthrough else None)
+    if cache_key in caches:
+        caches[cache_key] = caches.pop(cache_key)  # re-insert = move to newest
+    else:
+        caches[cache_key] = MetadataCache(engine, package or key, ttl_seconds=ttl_seconds)
+        while len(caches) > _MAX_METADATA_CACHES:
+            del caches[next(iter(caches))]  # oldest insertion = LRU
+
+    try:
+        with use_db_token(token):
+            cache = caches[cache_key]
+            result = cache.refresh() if refresh else cache.get()
+    except DatabaseAuthError as exc:
+        raise _forbidden(exc) from exc
+    return {"package": package or key, "interactive": False, **result}
+
+
+def query(
+    engines: dict[str, QueryEngine],
+    body: dict | YACQueryRequest,
+    *,
+    token: str | None = None,
+) -> dict:
+    """Run every visible chart's transformation pipeline as SQL, in one batch.
+
+    The logic of ``POST /v1/yac/query``: the server-side counterpart of the
+    toolkit's in-browser executor. A query that fails carries ``{error}`` in
+    its result; the others still succeed.
+
+    Args:
+        engines: The host's query backends, by package name.
+        body: The request body (see ``YACQueryRequest``).
+        token: The caller's raw JWT, for a backend that forwards it to the
+            database (``jwtPassthrough``).
+
+    Returns:
+        ``{results}``, one per query, keyed by ``vizId`` (see ``QueryResponse``).
+
+    Raises:
+        EndpointError: ``bad_request`` (422), ``no_backend`` (404) or
+            ``database_forbidden`` (403).
+    """
+    request = _validate(YACQueryRequest, body, "Invalid request body.")
+    engine = _engine(engines, request.package)
+    try:
+        with use_db_token(token):
+            results = engine.run_batch(
+                [q.model_dump() for q in request.queries], request.selections
+            )
+    except DatabaseAuthError as exc:
+        raise _forbidden(exc) from exc
+    return {"results": results}
+
+
+# --- /v1/yac/issue_report -----------------------------------------------------
+
+# ponytail: checked after the body is buffered, so it caps what reaches
+# LangFuse, not what the process reads. A streaming cap (or a proxy limit) if
+# oversized uploads ever become a problem.
+MAX_ISSUE_REPORT_BYTES = 10 * 1024 * 1024
+
+
+def _slack_escape(text: str) -> str:
+    # The note is the user's text: escaped, it cannot @channel or forge links.
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _notify_issue_report(
+    agent,
+    url: str,
+    report: YACIssueReportRequest,
+    trace_id: str | None,
+    session_id: str | None,
+):
+    """POST a summary of a recorded report to the webhook.
+
+    A failure is only logged: the report is already in LangFuse. The session
+    stays there, behind its access control; only the note, contact and links
+    go out — to the conversation the report is about (its LangFuse session)
+    and to the report itself.
+    """
+    trace_url = session_url = None
+    if trace_id:
+        try:
+            trace_url, session_url = agent.langfuse_urls(trace_id, session_id)
+        except Exception as exc:  # noqa: BLE001 - the links are optional
+            logger.warning("could not build the LangFuse URLs: %s", type(exc).__name__)
+
+    where = {"menu": "Session menu", "chat": "chat", "crash": "crash screen"}[report.source]
+    lines = [f"*Issue report* from the {where}"]
+    lines += [f">{_slack_escape(line)}" for line in report.description.splitlines()]
+    if report.contact:
+        lines.append(f"Contact: {_slack_escape(report.contact)}")
+    links = []
+    if session_url:
+        links.append(f"<{session_url}|Open the conversation in LangFuse>")
+    if trace_url:
+        links.append(f"<{trace_url}|Open the report>")
+    if links:
+        lines.append(" · ".join(links))
+    payload = {
+        "text": "\n".join(lines),
+        "report": {
+            "description": report.description,
+            "contact": report.contact,
+            "source": report.source,
+            "traceId": trace_id,
+            "traceUrl": trace_url,
+            "sessionId": session_id,
+            "sessionUrl": session_url,
+        },
+    }
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            logger.info("issue report webhook delivered (status=%d)", response.status)
+    except Exception as exc:  # noqa: BLE001 - logged, never raised
+        # Never log the URL: Slack's and Teams' embed their credentials.
+        logger.warning(
+            "issue report webhook failed: %s %s",
+            type(exc).__name__,
+            getattr(exc, "code", ""),
+        )
+
+
+def issue_report(
+    agent,
+    raw: bytes | str,
+    *,
+    session_id: str | None = None,
+    webhook_url: str | None = None,
+    defer: Callable[..., object] | None = None,
+) -> dict:
+    """Record a user's issue report, with their session export, in LangFuse.
+
+    The logic of ``POST /v1/yac/issue_report``. The report is filed under the
+    conversation's LangFuse session, next to the traces of the turns being
+    reported. Without LangFuse there is nowhere to put it, so it is refused
+    rather than accepted and dropped.
+
+    Args:
+        agent: The ``UDIAgent`` whose LangFuse records the report.
+        raw: The request body as received, so its size is checked before it
+            is parsed (see ``YACIssueReportRequest``).
+        session_id: The conversation's ID (the ``X-Conversation-Id`` header).
+        webhook_url: Where to post a summary (a Slack or Teams incoming
+            webhook), or ``None`` for no post.
+        defer: Called as ``defer(fn, *args)`` to post the summary after the
+            response is sent (FastAPI: ``BackgroundTasks.add_task``). ``None``
+            posts it before returning, which can take up to 10 s.
+
+    Returns:
+        ``{traceId}`` (see ``IssueReportResponse``).
+
+    Raises:
+        EndpointError: ``issue_reports_unavailable`` (503, no LangFuse),
+            ``too_large`` (413) or ``bad_request`` (422).
+    """
+    if not agent.langfuse_enabled:
+        raise EndpointError(
+            503,
+            "issue_reports_unavailable",
+            "Issue reporting needs LangFuse, which this server has not configured.",
+        )
+    size = len(raw.encode() if isinstance(raw, str) else raw)
+    if size > MAX_ISSUE_REPORT_BYTES:
+        raise EndpointError(
+            413,
+            "too_large",
+            f"Issue report is too large ({size} bytes; limit {MAX_ISSUE_REPORT_BYTES}).",
+        )
+    try:
+        report = YACIssueReportRequest.model_validate_json(raw)
+    except ValidationError as exc:
+        raise _bad_request(exc, "Invalid issue report.") from exc
+
+    # Sizes only: the note, contact and session are the user's words and data.
+    logger.info(
+        "Received /v1/yac/issue_report (source=%s, byte_count=%d, "
+        "has_contact=%s, has_conversation_id=%s)",
+        report.source,
+        size,
+        report.contact is not None,
+        session_id is not None,
+    )
+    trace_id = agent.record_issue_report(
+        description=report.description,
+        contact=report.contact,
+        source=report.source,
+        session=report.session,
+        session_id=session_id,
+    )
+    if webhook_url:
+        run = defer or (lambda fn, *args: fn(*args))
+        run(_notify_issue_report, agent, webhook_url, report, trace_id, session_id)
+    return {"traceId": trace_id}

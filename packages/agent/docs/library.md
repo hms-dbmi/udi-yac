@@ -224,6 +224,18 @@ Installing `udiagent[langfuse]` alone does **not** enable tracing — credential
 
 The chat calls a handful of HTTP endpoints. A host that serves them from its own web framework (Flask, Django) needs only plain `udiagent`, not the `[server]` extra. `udiagent.api` holds the logic a host would otherwise copy from the reference server: each function takes the parsed JSON body, returns the JSON response body, and raises `EndpointError` with the status and `{code, error, errors}` body the chat reads. The reference FastAPI server calls the same functions, so a host answers exactly as it does. The request and response models are in `udiagent.models`.
 
+| Endpoint                           | Call                                                                           |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| `POST /v1/yac/completions`         | `completions(orchestrator, body, openai_api_key=, session_id=, budget_check=)` |
+| `POST /v1/yac/vis_instantiate`     | `vis_instantiate(body)`                                                        |
+| `GET /v1/yac/metadata`             | `metadata(engines, caches, package, refresh=, token=, principal=)`             |
+| `POST /v1/yac/query`               | `query(engines, body, token=)`                                                 |
+| `POST /v1/yac/issue_report`        | `issue_report(agent, raw_body, session_id=, webhook_url=, defer=)`             |
+| `GET /v1/yac/structured_functions` | `udiagent.export_registry_json()`                                              |
+| `GET /v1/yac/examples`             | Your own list of prompts about your data.                                      |
+
+Authentication, and which callers may use your OpenAI key, stay with your host. So do the query backends: `engines` maps a package name to a `udiagent.query.QueryEngine` (see the [query README](../src/udiagent/query/README.md)), and `caches` is an empty dict you keep between requests. You need them only for server-side data; the chat's default browser mode reads CSVs itself.
+
 ```python
 from flask import jsonify, request
 from udiagent.api import EndpointError, vis_instantiate
