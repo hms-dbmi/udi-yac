@@ -119,3 +119,40 @@ def test_per_viz_error_isolation(client):
     results = response.json()["results"]
     assert "error" in results["bad"]
     assert "displayData" in results["ok"]
+
+
+def test_a_host_serves_both_data_endpoints_from_its_own_registry():
+    """udiagent.api with plain dicts: what a Flask or Django host calls."""
+    from udiagent.api import EndpointError, metadata, query
+
+    engines = {
+        "pkg": QueryEngine(
+            DuckDBConnector(views={"penguins": _PENGUINS}),
+            table_map={"penguins": "penguins"},
+        )
+    }
+    caches = {}
+
+    described = metadata(engines, caches, "pkg")
+    assert described["package"] == "pkg"
+    assert [r["name"] for r in described["dataSchema"]["resources"]] == ["penguins"]
+    assert len(caches) == 1
+
+    body = {
+        "package": "pkg",
+        "queries": [
+            {
+                "vizId": "q",
+                "source": {"name": "penguins"},
+                "transformation": [
+                    {"groupby": "island"},
+                    {"rollup": {"n": {"op": "count"}}},
+                ],
+            }
+        ],
+    }
+    assert len(query(engines, body)["results"]["q"]["displayData"]) == 3
+
+    with pytest.raises(EndpointError) as caught:
+        query({}, body)
+    assert (caught.value.status, caught.value.code) == (404, "no_backend")

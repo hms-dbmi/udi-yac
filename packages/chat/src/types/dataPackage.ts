@@ -59,6 +59,9 @@ export interface DataPackageResource {
   /** Cube dimension → the line-level column it was aggregated from. A filter
    *  on either is carried to the other, since a cube has no key to join on. */
   'udi:linked_dimensions'?: Record<string, DimensionLink>;
+  /** Keeps the table's row count out of the UI: no count chip in the dashboard
+   *  header and no count in the data overview. Its data still downloads. */
+  'udi:hide_count'?: boolean;
 }
 
 /** One column of one table. */

@@ -21,10 +21,11 @@ At the top level:
 
 For each table resource:
 
-| Field              | Description                              |
-| ------------------ | ---------------------------------------- |
-| `udi:row_count`    | The number of rows in the table.         |
-| `udi:column_count` | The number of data columns in the table. |
+| Field              | Description                                                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `udi:row_count`    | The number of rows in the table.                                                                                                                                                                                                                             |
+| `udi:column_count` | The number of data columns in the table.                                                                                                                                                                                                                     |
+| `udi:hide_count`   | Optional. `true` keeps the table's row count out of the chat: no count chip in the dashboard header, no count in the data overview. The table still loads, charts and downloads as usual. For a server-side backend, set it in the table's `schemas` entry. |
 
 For each data field:
 

@@ -119,6 +119,8 @@ def load_package(data_dir: Path) -> list[dict]:
             }
             if resource.get("description"):
                 schema_extras["description"] = resource["description"]
+            if resource.get("udi:hide_count"):
+                schema_extras["udi:hide_count"] = True
             described = [
                 {
                     "name": f["name"],

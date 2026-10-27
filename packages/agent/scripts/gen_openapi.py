@@ -7,7 +7,7 @@ site, which would need the server's dependencies, and committing it also puts
 every API change in front of PR review.
 
 The spec is FastAPI's own (`app.openapi()`), so describe an endpoint where it is
-declared, in src/udiagent/server/app.py and models.py, and regenerate.
+declared, in src/udiagent/server/app.py and src/udiagent/models.py, and regenerate.
 
 Usage::
 

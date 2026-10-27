@@ -23,6 +23,9 @@ interface EntityChip {
   id: string;
   label: string;
   totalCount: number;
+  /** `udi:hide_count`: no chip drawn, but its specs still run — the filtered
+   *  download reads the export spec. */
+  hidden: boolean;
   Icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -70,6 +73,7 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
           id: name,
           label: name,
           totalCount,
+          hidden: resource?.['udi:hide_count'] === true,
           Icon: mergedIcons[name] ?? FALLBACK_ENTITY_ICON,
         };
       })
@@ -285,13 +289,14 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
     );
   }
 
-  if (chips.length === 0) return null;
+  const shownChips = chips.filter((chip) => !chip.hidden);
+  if (shownChips.length === 0) return null;
 
   const hasFilters = filterIds.length > 0;
 
   return (
     <div className="udi:flex udi:items-center udi:gap-2 udi:flex-wrap">
-      {chips.map((chip) => {
+      {shownChips.map((chip) => {
         const filtered = filteredCounts[chip.id];
         const isFiltered =
           domainsReady && hasFilters && filtered != null && filtered !== chip.totalCount;

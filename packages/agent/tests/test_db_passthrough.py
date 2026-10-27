@@ -16,6 +16,7 @@ import pytest
 from udiagent.query import DatabaseAuthError, use_db_token
 from udiagent.query.connectors import (
     _MAX_CONNECTIONS,
+    _POOL_SIZE,
     _OpenIDConnectClient,
     _lenenc,
     StarRocksConnector,
@@ -56,6 +57,12 @@ def fake_connect(monkeypatch):
 
     monkeypatch.setattr(StarRocksConnector, "_connect", lambda self, u, p: _connect(u, p))
     return opened
+
+
+def use(c):
+    """One query's worth of the pool, as the current request: check out, back in."""
+    key, user, password, expires_at = c._identity()
+    c._checkin(key, c._checkout(key, user, password, expires_at))
 
 
 def connector(**kwargs):
@@ -132,15 +139,14 @@ def test_use_db_token_restores_the_previous_value():
         c._identity()
 
 
-# ── connection cache ─────────────────────────────────────────────────────────
+# ── connection pool ──────────────────────────────────────────────────────────
 
 
 def test_one_principal_reuses_one_connection(fake_connect):
     c = connector()
     for _ in range(3):
         with use_db_token(make_token("alice")):
-            key, user, pw, exp = c._identity()
-            c._get(key, user, pw, exp)
+            use(c)
     assert len(fake_connect) == 1
     assert list(c._conns) == ["alice"]
 
@@ -149,7 +155,7 @@ def test_distinct_principals_get_distinct_connections(fake_connect):
     c = connector()
     for who in ("alice", "bob"):
         with use_db_token(make_token(who)):
-            c._get(*c._identity())
+            use(c)
     assert [conn.user for conn in fake_connect] == ["alice", "bob"]
     assert sorted(c._conns) == ["alice", "bob"]
 
@@ -158,7 +164,7 @@ def test_cache_is_bounded_and_closes_what_it_evicts(fake_connect):
     c = connector()
     for i in range(_MAX_CONNECTIONS + 1):
         with use_db_token(make_token(f"user{i:03d}")):
-            c._get(*c._identity())
+            use(c)
     assert len(c._conns) == _MAX_CONNECTIONS
     # user000 was least recently used, so it went — and its socket was closed,
     # not merely dropped on the floor.
@@ -171,12 +177,12 @@ def test_eviction_is_least_recently_used(fake_connect):
     c = connector()
     for i in range(_MAX_CONNECTIONS):
         with use_db_token(make_token(f"user{i:03d}")):
-            c._get(*c._identity())
+            use(c)
     # Touch the oldest so it is no longer the LRU.
     with use_db_token(make_token("user000")):
-        c._get(*c._identity())
+        use(c)
     with use_db_token(make_token("newcomer")):
-        c._get(*c._identity())
+        use(c)
     assert "user000" in c._conns
     assert "user001" not in c._conns
 
@@ -184,38 +190,113 @@ def test_eviction_is_least_recently_used(fake_connect):
 def test_connection_is_recycled_once_its_token_expires(fake_connect):
     c = connector()
     with use_db_token(make_token("alice")):
-        c._get(*c._identity())
-    first = c._conns["alice"].conn
+        use(c)
+    first = c._conns["alice"][0].conn
     # StarRocks does not re-check exp mid-session, so the connector must.
-    c._conns["alice"].expires_at = time.time() - 1
+    c._conns["alice"][0].expires_at = time.time() - 1
     with use_db_token(make_token("alice")):
-        c._get(*c._identity())
+        use(c)
     assert first.closed is True
-    assert c._conns["alice"].conn is not first
+    assert c._conns["alice"][0].conn is not first
     assert len(fake_connect) == 2
 
 
 def test_a_refreshed_token_extends_the_session(fake_connect):
     c = connector()
     with use_db_token(make_token("alice", exp_in=60)):
-        c._get(*c._identity())
-    original = c._conns["alice"].expires_at
+        use(c)
+    original = c._conns["alice"][0].expires_at
     with use_db_token(make_token("alice", exp_in=3600)):
-        c._get(*c._identity())
-    assert c._conns["alice"].expires_at > original
+        use(c)
+    assert c._conns["alice"][0].expires_at > original
     assert len(fake_connect) == 1  # extended, not reconnected
 
 
 def test_idle_connections_are_reaped(fake_connect, monkeypatch):
     c = connector()
     with use_db_token(make_token("alice")):
-        c._get(*c._identity())
-    idle = c._conns["alice"].conn
-    c._conns["alice"].last_used -= 10_000
+        use(c)
+    idle = c._conns["alice"][0].conn
+    c._conns["alice"][0].last_used -= 10_000
     with use_db_token(make_token("bob")):
-        c._get(*c._identity())
+        use(c)
     assert idle.closed is True
     assert "alice" not in c._conns
+
+
+def test_an_identity_keeps_at_most_pool_size_idle_connections(fake_connect):
+    c = connector()
+    with use_db_token(make_token("alice")):
+        key, user, pw, exp = c._identity()
+        held = [c._checkout(key, user, pw, exp) for _ in range(_POOL_SIZE + 2)]
+        for entry in held:
+            c._checkin(key, entry)
+    # Concurrent checkouts each got their own socket; the extras were closed.
+    assert len({id(e.conn) for e in held}) == _POOL_SIZE + 2
+    assert len(c._conns["alice"]) == _POOL_SIZE
+    assert sum(conn.closed for conn in fake_connect) == 2
+
+
+class _Cursor:
+    def __init__(self, conn):
+        self._conn = conn
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, sql, params):
+        self._conn.run(sql)
+
+    def fetchall(self):
+        return [{"n": 1}]
+
+
+def test_queries_of_one_user_run_at_the_same_time(monkeypatch):
+    """The pool's lock is held to check a connection out and in, never across a
+    query: two queries meet inside the database or the barrier times out."""
+    import threading
+
+    barrier = threading.Barrier(2, timeout=5)
+
+    class SlowConn(FakeConn):
+        def ping(self, reconnect=False):
+            pass
+
+        def cursor(self):
+            return _Cursor(self)
+
+        def run(self, sql):
+            barrier.wait()
+
+    monkeypatch.setattr(StarRocksConnector, "_connect", lambda self, u, p: SlowConn(u, p))
+    # execute() imports pymysql for its error classes; CI's agent job runs
+    # without the [starrocks] extra, and the fake connection needs nothing else.
+    import sys
+    import types
+
+    err = types.SimpleNamespace(InterfaceError=OSError, OperationalError=OSError)
+    monkeypatch.setitem(sys.modules, "pymysql", types.SimpleNamespace(err=err))
+    c = connector()
+    token = make_token("alice")
+    errors = []
+
+    def query():
+        try:
+            with use_db_token(token):
+                assert c.execute("SELECT 1 AS n") == [{"n": 1}]
+        except Exception as exc:  # noqa: BLE001 - surfaced below
+            errors.append(exc)
+
+    threads = [threading.Thread(target=query) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert len(c._conns["alice"]) == 2
 
 
 # ── auth plugin wire format ──────────────────────────────────────────────────

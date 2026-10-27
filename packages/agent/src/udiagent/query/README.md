@@ -198,7 +198,8 @@ the database stores no FK constraints — this is what makes cross-entity
 filtering work in remote mode. So are descriptions: a schema's `description`
 becomes the resource's, and its `fields` (`[{name, description}]`) fill in the
 matching introspected columns' `description` and their domains'
-`fieldDescription`.
+`fieldDescription`. A schema's `"udi:hide_count": true` lands on the resource
+too, keeping that table's row count out of the chat.
 
 ---
 
@@ -209,7 +210,9 @@ matching introspected columns' `description` and their domains'
 Set the env var to a JSON file mapping **package name → backend spec**. The
 reference server loads it at startup (`server/app.py` `_load_query_engines`).
 The key `default` (or a package with no explicit match) serves requests whose
-`package` doesn't match a configured one.
+`package` doesn't match a configured one. A host on another web framework
+builds its own `{package: QueryEngine}` and serves the two endpoints with
+`udiagent.api.metadata` and `udiagent.api.query`.
 
 ```jsonc
 {
@@ -262,6 +265,8 @@ The key `default` (or a package with no explicit match) serves requests whose
         "primaryKey": ["id"],
         // optional: what the LLM is told the table and its columns mean
         "description": "One row per tissue donor.",
+        // optional: keep this table's row count out of the chat
+        "udi:hide_count": true,
         "fields": [
           { "name": "age", "description": "Age at donation, in years." },
         ],
@@ -302,7 +307,7 @@ Related env var: `UDI_METADATA_TTL_SECONDS` (default `3600`) — introspection
 cache TTL.
 
 **Generating the config for a CSV dataset.** Two seeders write this config for
-you, carrying `foreignKeys`/`primaryKey` and descriptions from the directory's
+you, carrying `foreignKeys`/`primaryKey`, descriptions and `udi:hide_count` from the directory's
 `datapackage.json` into `schemas` and applying identical CSV cleaning:
 
 - `packages/agent/scripts/seed_duckdb.py` → a local `.duckdb` file +

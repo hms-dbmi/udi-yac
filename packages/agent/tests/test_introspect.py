@@ -61,6 +61,66 @@ def test_introspect_domains(engine):
     assert ("donors", "hubmap_id") not in by_key
 
 
+def test_introspect_lists_every_column_in_one_query_per_table():
+    """On secured StarRocks views each query costs ~60 ms whatever it reads, so
+    the values of all of a table's categoricals come from one query: DESCRIBE,
+    COUNT(*), the stats pass and that one, however many columns there are."""
+    connector = DuckDBConnector(views={"donors": str(_SAMPLE / "hubmap" / "donors.tsv")})
+    queries = []
+    execute = connector.execute
+
+    def counted(sql, *args, **kwargs):
+        queries.append(sql)
+        return execute(sql, *args, **kwargs)
+
+    connector.execute = counted
+    meta = introspect(QueryEngine(connector, table_map={"donors": "donors"}), "p")
+    listed = [d for d in meta["dataDomains"] if d["type"] == "point"]
+
+    assert len(listed) > 1
+    assert len(queries) == 4
+    for domain in listed:
+        values = domain["domain"]["values"]
+        # A column's own NULLs are left out; GROUPING() keeps the other
+        # columns' sets from leaking theirs in.
+        assert None not in values
+        assert values == sorted(values)
+        assert len(values) == len(set(values))
+
+
+def test_introspect_runs_tables_in_parallel_as_the_request():
+    """Tables run on worker threads; each must still query as the request's
+    user, or a passthrough backend would refuse it (no token) — the token is a
+    contextvar, which threads do not inherit on their own."""
+    import threading
+
+    from udiagent.query import use_db_token
+    from udiagent.query.connectors import _db_token
+
+    connector = DuckDBConnector(
+        views={
+            "penguins": str(_SAMPLE / "penguins.csv"),
+            "donors": str(_SAMPLE / "hubmap" / "donors.tsv"),
+        }
+    )
+    seen = []
+    execute = connector.execute
+
+    def recorded(sql, *args, **kwargs):
+        seen.append((_db_token.get(), threading.get_ident()))
+        return execute(sql, *args, **kwargs)
+
+    connector.execute = recorded
+    engine = QueryEngine(connector, table_map={"penguins": "penguins", "donors": "donors"})
+    with use_db_token("the-request-token"):
+        meta = introspect(engine, "p")
+
+    assert {token for token, _ in seen} == {"the-request-token"}
+    assert threading.get_ident() not in {thread for _, thread in seen}
+    # Resources keep the table map's order, whichever table finished first.
+    assert [r["name"] for r in meta["dataSchema"]["resources"]] == ["penguins", "donors"]
+
+
 def test_distinct_cap_covers_every_drawable_category():
     """A chart can draw up to MAX_DRAWN_CATEGORIES categories; below that,
     the domain must be collected, or the chart's filter can list only the

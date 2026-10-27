@@ -53,6 +53,7 @@ def _make_package(tmp: Path) -> Path:
                         "name": "Visit",
                         "path": "visit.csv",
                         "udi:row_count": 2,
+                        "udi:hide_count": True,
                         "schema": {
                             "fields": [
                                 {"name": "research_id", "udi:data_type": "nominal"},
@@ -123,6 +124,9 @@ def test_seed_duckdb_round_trips(tmp_path):
     assert patient["description"] == "One row per patient."
     ages = {f["name"]: f["description"] for f in patient["schema"]["fields"]}
     assert ages == {"research_id": "", "age": "Age in days."}
+    # As does hiding a table's count, on the resource rather than its schema.
+    assert visit.get("udi:hide_count") is True and "udi:hide_count" not in visit["schema"]
+    assert "udi:hide_count" not in patient
 
     # "Unavailable" survives as a real category, not nulled away.
     rows = engine.run_query(source={"name": "Visit", "source": "visit"})["displayData"]

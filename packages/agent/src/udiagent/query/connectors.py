@@ -76,8 +76,11 @@ _IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 # ── per-request database identity (JWT passthrough) ──────────────────────────
-# Bounds on the per-user connection cache. Module constants rather than
-# settings, matching the _JWKS_* precedent in server/auth.py.
+# Bounds on the connection pool: idle connections kept per identity, and in
+# all. Module constants rather than settings, matching the _JWKS_* precedent in
+# server/auth.py. _POOL_SIZE is introspection's parallelism too (introspect.py),
+# so its tables reuse warm connections.
+_POOL_SIZE = 6
 _MAX_CONNECTIONS = 32
 _IDLE_SECONDS = 300.0
 
@@ -203,6 +206,9 @@ class DuckDBConnector:
         # writable (they CREATE VIEW), so only lock down the plain file case.
         read_only = database != ":memory:" and not views
         self._conn = duckdb.connect(database, read_only=read_only)
+        # A DuckDB connection is not thread-safe, and requests and introspection
+        # share this one across threads.
+        self._lock = threading.Lock()
         for name, path in (views or {}).items():
             if not _IDENT_RE.match(name):
                 raise ValueError(f"invalid view name: {name!r}")
@@ -214,12 +220,11 @@ class DuckDBConnector:
             )
 
     def execute(self, sql: str, params: list | None = None) -> list[dict]:
-        cursor = self._conn.execute(sql, params or [])
-        columns = [d[0] for d in cursor.description]
-        return [
-            {c: _normalize_value(v) for c, v in zip(columns, row)}
-            for row in cursor.fetchall()
-        ]
+        with self._lock:
+            cursor = self._conn.execute(sql, params or [])
+            columns = [d[0] for d in cursor.description]
+            rows = cursor.fetchall()
+        return [{c: _normalize_value(v) for c, v in zip(columns, row)} for row in rows]
 
 
 class StarRocksConnector:
@@ -236,11 +241,13 @@ class StarRocksConnector:
       applies that user's own grants, so authorization lives in the database
       rather than in this process. One cached connection per principal.
 
-    Both modes share one cache and one lock. Connections are long-lived and so
-    must survive idle timeouts: every execute pings with reconnect and retries
-    once if the socket died mid-query. pymysql connections are not thread-safe
-    and FastAPI runs sync endpoints in a threadpool, so the lock serializes
-    access.
+    Both modes share one pool: idle connections per identity, each checked out
+    by one query at a time (pymysql connections are not thread-safe) while the
+    pool's lock is held only to check them out and back in. Queries run in
+    parallel — FastAPI's threadpool across requests, introspection across
+    tables — and a slow query or connect never stalls another user.
+    Connections are long-lived and so must survive idle timeouts: every execute
+    pings with reconnect and retries once if the socket died mid-query.
 
     **Revocation ceiling**: MySQL binds identity at CONNECT time and StarRocks
     does not re-check `exp` mid-session, so a cached connection is recycled once
@@ -248,8 +255,6 @@ class StarRocksConnector:
     therefore not seen until the connection is recycled — at most one token
     lifetime, or `_IDLE_SECONDS` of inactivity, whichever comes first.
 
-    ponytail: one lock across all identities and one connection each — per-entry
-    locks or a real pool when multi-user concurrency actually bites.
     """
 
     dialect = StarRocksDialect()
@@ -281,7 +286,8 @@ class StarRocksConnector:
             **kwargs,
         }
         self._lock = threading.Lock()
-        self._conns: OrderedDict[str, _Entry] = OrderedDict()
+        # Idle connections per identity, least recently used identity first.
+        self._conns: OrderedDict[str, list[_Entry]] = OrderedDict()
 
     # ── identity ─────────────────────────────────────────────────────────────
 
@@ -311,7 +317,7 @@ class StarRocksConnector:
             raise DatabaseAuthError("bearer token has expired")
         return principal, principal, token, exp
 
-    # ── connection cache (all of these assume the lock is held) ──────────────
+    # ── connection pool ──────────────────────────────────────────────────────
 
     def _connect(self, user: str, password: str):
         import pymysql  # lazy: optional extra
@@ -335,47 +341,70 @@ class StarRocksConnector:
                 ) from exc
             raise
 
-    def _drop(self, key: str) -> None:
-        entry = self._conns.pop(key, None)
-        if entry is not None:
-            try:
-                entry.conn.close()
-            except Exception:  # noqa: BLE001 - already going away
-                pass
+    def _open(self, user: str, password: str, expires_at: float | None) -> _Entry:
+        return _Entry(self._connect(user, password), expires_at, time.monotonic())
 
-    def _get(self, key: str, user: str, password: str, expires_at: float | None):
-        # Reap idle entries on the way past; no background thread.
-        cutoff = time.monotonic() - _IDLE_SECONDS
-        for idle in [k for k, e in self._conns.items() if e.last_used < cutoff]:
-            self._drop(idle)
+    @staticmethod
+    def _close(entry: _Entry) -> None:
+        try:
+            entry.conn.close()
+        except Exception:  # noqa: BLE001 - already going away
+            pass
 
-        entry = self._conns.get(key)
-        if (
-            entry is not None
-            and entry.expires_at is not None
-            and time.time() >= entry.expires_at
-        ):
-            # The token that opened this session has expired. Recycle it so the
-            # current (freshly verified) token re-authenticates.
-            self._drop(key)
+    def _checkout(
+        self, key: str, user: str, password: str, expires_at: float | None
+    ) -> _Entry:
+        """An idle connection of this identity, or a new one. The caller owns
+        it until `_checkin`; nobody else can use it meanwhile."""
+        with self._lock:
+            # Reap idle connections on the way past; no background thread.
+            cutoff = time.monotonic() - _IDLE_SECONDS
+            for k in list(self._conns):
+                for idle in [e for e in self._conns[k] if e.last_used < cutoff]:
+                    self._conns[k].remove(idle)
+                    self._close(idle)
+                if not self._conns[k]:
+                    del self._conns[k]
+
+            pool = self._conns.get(key, [])
             entry = None
-
+            while pool and entry is None:
+                candidate = pool.pop()
+                if candidate.expires_at is not None and time.time() >= candidate.expires_at:
+                    # The token that opened this session has expired. Recycle it
+                    # so the current (freshly verified) token re-authenticates.
+                    self._close(candidate)
+                else:
+                    entry = candidate
+            if key in self._conns and not pool:
+                del self._conns[key]
         if entry is None:
-            entry = _Entry(self._connect(user, password), expires_at, time.monotonic())
-            self._conns[key] = entry
-            while len(self._conns) > _MAX_CONNECTIONS:
-                self._drop(next(iter(self._conns)))  # LRU is first
-        else:
-            # Reused socket, fresh token: a re-authenticated user extends the
-            # session rather than being cut off at the old token's expiry.
-            if expires_at is not None and (
-                entry.expires_at is None or expires_at > entry.expires_at
-            ):
-                entry.expires_at = expires_at
-
-        self._conns.move_to_end(key)
-        entry.last_used = time.monotonic()
+            # Outside the lock: a slow connect must not stall other users.
+            return self._open(user, password, expires_at)
+        # Reused socket, fresh token: a re-authenticated user extends the
+        # session rather than being cut off at the old token's expiry.
+        if expires_at is not None and (
+            entry.expires_at is None or expires_at > entry.expires_at
+        ):
+            entry.expires_at = expires_at
         return entry
+
+    def _checkin(self, key: str, entry: _Entry) -> None:
+        """Back to its identity's idle pool, within the per-identity and total
+        bounds; what does not fit is closed. Least recently used goes first."""
+        with self._lock:
+            entry.last_used = time.monotonic()
+            pool = self._conns.setdefault(key, [])
+            self._conns.move_to_end(key)
+            if len(pool) >= _POOL_SIZE:
+                self._close(entry)
+                return
+            pool.append(entry)
+            while sum(len(p) for p in self._conns.values()) > _MAX_CONNECTIONS:
+                oldest = next(iter(self._conns))
+                self._close(self._conns[oldest].pop(0))
+                if not self._conns[oldest]:
+                    del self._conns[oldest]
 
     # ── public API ───────────────────────────────────────────────────────────
 
@@ -383,8 +412,8 @@ class StarRocksConnector:
         import pymysql
 
         key, user, password, expires_at = self._identity()
-        with self._lock:
-            entry = self._get(key, user, password, expires_at)
+        entry: _Entry | None = self._checkout(key, user, password, expires_at)
+        try:
             try:
                 # Reconnects transparently if the connection timed out idle.
                 entry.conn.ping(reconnect=True)
@@ -393,9 +422,13 @@ class StarRocksConnector:
                 # Socket died between ping and query — reconnect and retry once,
                 # with the CURRENT request's credentials rather than whatever
                 # opened the dead connection.
-                self._drop(key)
-                entry = self._get(key, user, password, expires_at)
+                self._close(entry)
+                entry = None
+                entry = self._open(user, password, expires_at)
                 rows = self._run(entry.conn, sql, params)
+        finally:
+            if entry is not None:
+                self._checkin(key, entry)
         return [{c: _normalize_value(v) for c, v in row.items()} for row in rows]
 
     @staticmethod
