@@ -56,6 +56,15 @@ export interface DataPackageResource {
    *  across a dimension). Omitted measures are assumed additive; see
    *  `getCubeMeasureOp` for the fallback. */
   'udi:measure_aggregations'?: Record<string, string>;
+  /** Cube dimension → the line-level column it was aggregated from. A filter
+   *  on either is carried to the other, since a cube has no key to join on. */
+  'udi:linked_dimensions'?: Record<string, LinkedColumn>;
+}
+
+/** One column of one table. */
+export interface LinkedColumn {
+  entity: string;
+  field: string;
 }
 
 /** Cube roles for one resource, as the dashboard needs them. */

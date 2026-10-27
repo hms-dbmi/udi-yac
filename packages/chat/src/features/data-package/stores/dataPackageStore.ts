@@ -5,6 +5,7 @@ import type {
   DataPackageResource,
   CategoricalDomain,
   CubeInfo,
+  LinkedColumn,
   IntervalDomain,
   ValidStatus,
   EntityRelationship,
@@ -65,6 +66,10 @@ export interface DataPackageState {
   /** Entity → pre-aggregated measure columns, for cube resources only. A
    *  measure is a computed value, so it must not become a brush target. */
   cubeMeasureFields: Record<string, string[]>;
+  /** Groups of columns that are one column across tables: a cube dimension
+   *  and the line-level column it was aggregated from (`udi:linked_dimensions`).
+   *  A filter on any member applies to the others. */
+  dimensionLinks: LinkedColumn[][];
   entityNames: string[];
   dataPackageString: string;
   dataDomainsString: string;
@@ -321,6 +326,53 @@ function computeCubeMeasureFields(dp: DataPackage | null): Record<string, string
   return fieldsMap;
 }
 
+/**
+ * Link groups from every cube's `udi:linked_dimensions`. Two cubes linked to
+ * the same line-level column land in one group, so a filter on either cube
+ * reaches the other as well. A link naming a column the package doesn't have
+ * is dropped with a warning: it would mirror a filter onto nothing.
+ */
+export function computeDimensionLinks(dp: DataPackage | null): LinkedColumn[][] {
+  const resources = dp?.resources ?? [];
+  const hasColumn = ({ entity, field }: LinkedColumn) =>
+    resources.some((r) => r.name === entity && r.schema?.fields?.some((f) => f.name === field));
+  const key = (c: LinkedColumn) => `${c.entity}.${c.field}`;
+  // Union-find over columns, keyed `entity.field`.
+  const parent = new Map<string, string>();
+  const columns = new Map<string, LinkedColumn>();
+  const find = (k: string): string => {
+    const p = parent.get(k) ?? k;
+    if (p === k) return k;
+    const root = find(p);
+    parent.set(k, root);
+    return root;
+  };
+  for (const resource of resources) {
+    const cube = resourceCubeInfo(resource);
+    for (const [dimension, target] of Object.entries(resource['udi:linked_dimensions'] ?? {})) {
+      const own = { entity: resource.name, field: dimension };
+      if (!cube?.dimensions.includes(dimension) || !hasColumn(target)) {
+        console.warn(
+          `[udi] ${resource.name}: linked dimension ${dimension} -> ` +
+            `${target.entity}.${target.field} skipped (not a cube dimension, or no such column)`,
+        );
+        continue;
+      }
+      for (const c of [own, target]) {
+        columns.set(key(c), c);
+        if (!parent.has(key(c))) parent.set(key(c), key(c));
+      }
+      parent.set(find(key(own)), find(key(target)));
+    }
+  }
+  const groups = new Map<string, LinkedColumn[]>();
+  for (const [k, column] of columns) {
+    const root = find(k);
+    groups.set(root, [...(groups.get(root) ?? []), column]);
+  }
+  return [...groups.values()];
+}
+
 function computeEntityNames(dp: DataPackage | null): string[] {
   if (!dp?.resources) return [];
   return dp.resources.map((r) => r.name);
@@ -358,6 +410,7 @@ export function createDataPackageStore() {
     quantitativeSourceFields: null,
     categoricalSourceFields: null,
     cubeMeasureFields: {},
+    dimensionLinks: [],
     entityNames: [],
     dataPackageString: '',
     dataDomainsString: '',
@@ -690,6 +743,7 @@ function applyDataPackage(set: (partial: Partial<DataPackageState>) => void, jso
     quantitativeSourceFields: computeQuantitativeSourceFields(json),
     categoricalSourceFields: computeCategoricalSourceFields(json),
     cubeMeasureFields: computeCubeMeasureFields(json),
+    dimensionLinks: computeDimensionLinks(json),
     entityNames: computeEntityNames(json),
     dataPackageString: computeDataPackageString(json),
     sourceResolver: computeSourceResolver(json),

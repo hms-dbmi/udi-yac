@@ -5,6 +5,7 @@
 
 export {
   createDataPackageStore,
+  computeDimensionLinks,
   type DataPackageState,
   type LoadingPhase,
   type ContractOp,

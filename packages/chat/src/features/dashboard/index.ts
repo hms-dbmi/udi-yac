@@ -62,6 +62,12 @@ export {
 } from './utils/vizTitle';
 
 export { useVizTitleLabels } from './hooks/useVizTitleLabels';
+export { useToolkitSelections } from './hooks/useToolkitSelections';
+export {
+  linkedSelections,
+  withLinkedSelections,
+  isLinkedSelectionKey,
+} from './utils/linkedSelections';
 
 export {
   useBrushFilters,

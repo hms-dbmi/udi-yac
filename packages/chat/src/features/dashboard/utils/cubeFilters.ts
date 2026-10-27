@@ -81,6 +81,10 @@ export interface ActiveFilter {
   sourceName: string;
   /** The fields it constrains. */
   fields: string[];
+  /** Field → the other tables a link carries the filter to (see
+   *  `linkedSelections`). A cube among them is served by the mirror, so the
+   *  filter itself is no loss to it. */
+  linkedTo?: Record<string, string[]>;
 }
 
 export interface BuildCubeTransformationArgs {
@@ -236,8 +240,13 @@ function partitionFilters(
   for (const filter of filters) {
     if (filter.sourceName !== sourceName) {
       // A cube row is an aggregate, not an entity — there is no key column to
-      // join another entity's selection against.
-      skipped.push({ id: filter.id, fields: filter.fields, reason: 'cross-source' });
+      // join another entity's selection against. A field linked to one of
+      // this cube's dimensions arrives anyway, as a mirrored selection; only
+      // the rest is lost.
+      const unlinked = filter.fields.filter((f) => !filter.linkedTo?.[f]?.includes(sourceName));
+      if (unlinked.length > 0) {
+        skipped.push({ id: filter.id, fields: unlinked, reason: 'cross-source' });
+      }
       continue;
     }
     const foreign = filter.fields.filter((f) => !cube.dimensions.includes(f));

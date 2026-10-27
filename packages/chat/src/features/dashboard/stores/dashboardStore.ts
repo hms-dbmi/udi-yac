@@ -7,7 +7,7 @@ import type {
   TemplateParamDescriptor,
   ToolCallMeta,
 } from '@/types/messages';
-import type { DataFiltersState } from './dataFiltersStore';
+import type { DataFiltersState, DataSelections } from './dataFiltersStore';
 import type { DataPackageState } from '@/features/data-package';
 import type { MemoryBankState } from './memoryBankStore';
 import type { EntityRelationship } from '@/types/dataPackage';
@@ -31,6 +31,7 @@ import {
   widenTallItems,
 } from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
+import { linkedEntitiesByColumn, linkedSelections } from '../utils/linkedSelections';
 import {
   buildCubeTransformation,
   type ActiveFilter,
@@ -489,6 +490,27 @@ function withGridCols(
   return { gridCols: safe, layout: { items: repacked } };
 }
 
+/**
+ * Every selection that is a filter: the column and host filters the package
+ * admits, plus the selections links mirror them onto (`linkedSelections`).
+ * Mirrors with nothing to carry are left out — the charts are still sent them
+ * as null, but a null filter has no place in a pipeline.
+ */
+function filterSelections(
+  dataFiltersStore: StoreApi<DataFiltersState>,
+  dataPackageStore: StoreApi<DataPackageState>,
+): DataSelections {
+  const dpState = dataPackageStore.getState();
+  const valid = dataFiltersStore.getState().getValidDataSelections({
+    isValidIntervalFilter: dpState.isValidIntervalFilter,
+    isValidPointFilter: dpState.isValidPointFilter,
+  });
+  const mirrors = Object.entries(linkedSelections(valid, dpState.dimensionLinks)).filter(
+    ([, s]) => s.selection != null,
+  );
+  return { ...valid, ...Object.fromEntries(mirrors) };
+}
+
 export function createDashboardStore() {
   return createStore<DashboardState>()((set, get) => ({
     activeVisualizations: new Map(),
@@ -682,22 +704,14 @@ export function createDashboardStore() {
     // is not a filter: its click or brush is written into the column filters
     // on its fields.
     getFilterIds: (dataFiltersStore, dataPackageStore) => {
-      const dpState = dataPackageStore.getState();
-      const validSelections = dataFiltersStore.getState().getValidDataSelections({
-        isValidIntervalFilter: dpState.isValidIntervalFilter,
-        isValidPointFilter: dpState.isValidPointFilter,
-      });
-      return Object.keys(validSelections).sort();
+      return Object.keys(filterSelections(dataFiltersStore, dataPackageStore)).sort();
     },
 
     getActiveFilters: (filterIdList, dataFiltersStore, dataPackageStore) => {
       // Every filter — chat, host, or a chart's click or brush — lives in
       // `dataSelections` and names the entity it constrains.
-      const dpState = dataPackageStore.getState();
-      const validSelections = dataFiltersStore.getState().getValidDataSelections({
-        isValidIntervalFilter: dpState.isValidIntervalFilter,
-        isValidPointFilter: dpState.isValidPointFilter,
-      });
+      const validSelections = filterSelections(dataFiltersStore, dataPackageStore);
+      const linked = linkedEntitiesByColumn(dataPackageStore.getState().dimensionLinks);
       const result: ActiveFilter[] = [];
       for (const id of filterIdList) {
         const selection = validSelections[id];
@@ -710,7 +724,13 @@ export function createDashboardStore() {
         if (fields.length === 0) continue;
         const sourceName = selection.dataSourceKey;
         if (!sourceName) continue;
-        result.push({ id, sourceName, fields });
+        const linkedTo = Object.fromEntries(
+          fields.flatMap((f) => {
+            const entities = linked.get(`${sourceName}.${f}`);
+            return entities ? [[f, entities]] : [];
+          }),
+        );
+        result.push({ id, sourceName, fields, linkedTo });
       }
       return result;
     },
@@ -724,10 +744,7 @@ export function createDashboardStore() {
     ) => {
       const dpState = dataPackageStore.getState();
       const dfState = dataFiltersStore.getState();
-      const validSelections = dfState.getValidDataSelections({
-        isValidIntervalFilter: dpState.isValidIntervalFilter,
-        isValidPointFilter: dpState.isValidPointFilter,
-      });
+      const validSelections = filterSelections(dataFiltersStore, dataPackageStore);
 
       const getSourceName = (id: string) => validSelections[id]?.dataSourceKey ?? null;
 

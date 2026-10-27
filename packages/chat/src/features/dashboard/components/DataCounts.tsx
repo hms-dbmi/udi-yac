@@ -13,6 +13,7 @@ import {
   useGlobalStore,
 } from '@/app/UDIChatContext';
 import { buildCubeCountTransformation } from '../utils/cubeFilters';
+import { useToolkitSelections } from '../hooks/useToolkitSelections';
 import { joinDataPath } from '@/features/data-package';
 import { cn } from '@/lib/utils';
 import { DEFAULT_ENTITY_ICONS, FALLBACK_ENTITY_ICON } from '@/utils/entityIcons';
@@ -33,6 +34,7 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const loadError = useDataPackage((s) => s.error);
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const toolkitSelections = useToolkitSelections();
   const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dashboardStore = useDashboardStore();
@@ -197,7 +199,7 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
   // across the spec map. Supplying `onResult` routes per-entity results
   // straight into the dashboard's stores without re-rendering DataCounts.
   useQueryData(countSpecs, {
-    selections: dataSelections,
+    selections: toolkitSelections,
     enabled: domainsReady,
     // displayDataOnly auto-defaults to true (count specs end with rollup).
     onResult: (entityName, result) => {
@@ -228,7 +230,7 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
   });
 
   useQueryData(exportSpecs, {
-    selections: dataSelections,
+    selections: toolkitSelections,
     enabled: domainsReady,
     // Export specs have no rollup, so opt in explicitly — we only read
     // displayData; the unfiltered allData pass would be wasted work.

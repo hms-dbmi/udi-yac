@@ -42,6 +42,7 @@ import {
   HOST_FILTER_PREFIX,
   IssueReportDialog,
   useActiveFilters,
+  withLinkedSelections,
   type TemplateProvenance,
   type UDIFilter,
 } from '@/features/dashboard';
@@ -371,7 +372,10 @@ function UDIChatInner({
           },
           transformation: [...named, { groupby: fields }, { rollup: { n: { op: 'count' } } }],
         },
-        dataFiltersStore.getState().dataSelections,
+        withLinkedSelections(
+          dataFiltersStore.getState().dataSelections,
+          dataPackageStore.getState().dimensionLinks,
+        ),
         // Explicit: left out, it runs the unfiltered pass as well.
         { displayDataOnly: true },
       )

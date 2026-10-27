@@ -28,6 +28,7 @@ import {
   useTracker,
 } from '@/app/UDIChatContext';
 import { cn } from '@/lib/utils';
+import { useToolkitSelections } from '@/features/dashboard';
 import type { DataFieldDomain } from '@/types/dataPackage';
 import { highlightMatch } from '@/utils/highlightMatch';
 import { joinDataPath } from '../utils/joinDataPath';
@@ -261,6 +262,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
   // Subscribed so the row table's named filters are rebuilt when the set of
   // filters changes (see the tableSpec memo).
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const toolkitSelections = useToolkitSelections();
   const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const palette = usePalette();
@@ -615,7 +617,7 @@ export function EntityOverview({ entity }: EntityOverviewProps) {
                   key={`${entity}|${showAllFields}`}
                   className="udi:block udi:h-full udi:w-full"
                   spec={tableSpec}
-                  selections={dataSelections}
+                  selections={toolkitSelections}
                   sourceResolver={sourceResolver}
                   palette={palette}
                   fillContainer
