@@ -108,6 +108,9 @@ export interface DataPackage {
    *  requested by, which is what the agent keys per-package config on. */
   name?: string;
   'udi:path': string;
+  /** Which kind of table the agent answers from when a package holds both
+   *  line-level tables and data cubes and either could serve a request. */
+  'udi:prefer'?: 'line_level' | 'data_cube';
   resources: DataPackageResource[];
   /**
    * Friendly labels for categorical *values*, raw → label, applied across every

@@ -438,3 +438,72 @@ def test_mixed_package_instantiates_each_kind_on_its_own_table():
     assert cube_spec["source"]["source"] == "https://example.org/sales/sales.csv"
     line_spec = instantiate_template(line_t, {"E": "orders", "F": "region"}, mixed)
     assert line_spec["source"]["source"] == "https://example.org/sales/orders.csv"
+
+
+# ---------------------------------------------------------------------------
+# udi:prefer — which kind of table a mixed package answers from by default
+# ---------------------------------------------------------------------------
+
+
+def test_prefer_is_parsed_and_unknown_values_ignored(caplog):
+    assert _parse_request_schema({**MIXED, "udi:prefer": "line_level"})["prefer"] == "line_level"
+    assert "prefer" not in _parse_request_schema(MIXED)
+    with caplog.at_level("WARNING"):
+        parsed = _parse_request_schema({**MIXED, "udi:prefer": "rows"})
+    assert "prefer" not in parsed
+    assert "udi:prefer" in caplog.text
+
+
+class _Offered(Exception):
+    """Raised by the stubbed model once it has seen what it was offered."""
+
+
+def _generate_capturing(monkeypatch, package):
+    """Run the real _execute_generate on `package` up to the model's tool
+    choice, and return what the model was offered."""
+    import pytest
+
+    import udiagent.vis_generate as vg
+
+    seen = {}
+
+    def fake_call(agent, messages, tools, config, **_kwargs):
+        seen["tools"] = [t["function"]["name"] for t in tools]
+        seen["system"] = messages[0]["content"]
+        raise _Offered
+
+    monkeypatch.setattr(vg, "_call_llm_with_tools", fake_call)
+    context = {
+        "agent": object(),
+        "grammar": {},
+        "config": {},
+        "data_schema": json.dumps(package),
+        "messages": [{"role": "user", "content": "orders by region"}],
+        "openai_api_key": None,
+        "usage": None,
+    }
+    with pytest.raises(_Offered):
+        vg._execute_generate(skill=None, context=context)
+    return seen
+
+
+def test_prefer_line_level_lists_line_tools_first_and_says_so(monkeypatch):
+    _defs, _dispatch, _templates, tool_tags = _load_generated_tools()
+    seen = _generate_capturing(monkeypatch, {**MIXED, "udi:prefer": "line_level"})
+
+    kinds = ["line_item" in tool_tags[n] for n in seen["tools"]]
+    first_cube = kinds.index(False)
+    assert all(kinds[:first_cube]) and not any(kinds[first_cube:])
+    assert "use the line-level tables: this dataset prefers them" in seen["system"]
+
+
+def test_prefer_data_cube_lists_cube_tools_first(monkeypatch):
+    _defs, _dispatch, _templates, tool_tags = _load_generated_tools()
+    seen = _generate_capturing(monkeypatch, {**MIXED, "udi:prefer": "data_cube"})
+    assert "data_cube" in tool_tags[seen["tools"][0]]
+    assert "use the data cubes: this dataset prefers them" in seen["system"]
+
+
+def test_prefer_is_moot_without_both_kinds_of_table(monkeypatch):
+    seen = _generate_capturing(monkeypatch, {**SALES_CUBE, "udi:prefer": "line_level"})
+    assert "prefers them" not in seen["system"]

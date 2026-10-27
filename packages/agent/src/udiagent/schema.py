@@ -1,7 +1,10 @@
 """Data schema parsing and simplification utilities."""
 
 import json
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 
 def parse_schema_from_dict(raw: dict) -> dict:
@@ -80,7 +83,21 @@ def parse_schema_from_dict(raw: dict) -> dict:
                 }
             )
 
-    return {"base_path": base_path, "entities": entities, "relationships": relationships}
+    parsed = {"base_path": base_path, "entities": entities, "relationships": relationships}
+    prefer = raw.get("udi:prefer")
+    if prefer in PREFER_TAGS:
+        parsed["prefer"] = prefer
+    elif prefer is not None:
+        logger.warning(
+            "udi:prefer %r ignored; expected one of %s", prefer, ", ".join(PREFER_TAGS)
+        )
+    return parsed
+
+
+#: `udi:prefer` values → the template tag of the tables they prefer. A package
+#: holding both line-level tables and data cubes may say which to answer from
+#: when either could; nothing else reads it.
+PREFER_TAGS = {"line_level": "line_item", "data_cube": "data_cube"}
 
 
 def schema_is_cube(parsed_schema: dict) -> bool:

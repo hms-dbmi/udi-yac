@@ -2001,6 +2001,15 @@ def _active_template_tags(request_schema):
     return tags
 
 
+def _preferred_tag(request_schema, active_tags):
+    """The template tag the package prefers (`udi:prefer`), when it has both
+    kinds of table to choose between; None otherwise."""
+    from udiagent.schema import PREFER_TAGS
+
+    tag = PREFER_TAGS.get(request_schema.get("prefer"))
+    return tag if tag and active_tags >= {"data_cube", "line_item"} else None
+
+
 def _template_reads_cube(spec_template):
     """True if the template reads a pre-aggregated cube: it picks a marginal
     (``<MARGINAL…>``) or reads the measure (``<M>``). Every other template
@@ -2299,6 +2308,14 @@ def _execute_generate(skill, context):
         # get the data-cube tools). Replaces a hard-coded active-set switch.
         active_tags = _active_template_tags(request_schema)
         selected_defs = _select_tools(tool_defs, tool_tags, active_tags, request_schema)
+        preferred_tag = _preferred_tag(request_schema, active_tags)
+        if preferred_tag:
+            # The package's preferred kind first. A nudge, not a filter: the
+            # other kind stays on offer for what only it can answer.
+            selected_defs = sorted(
+                selected_defs,
+                key=lambda d: preferred_tag not in tool_tags.get(d["function"]["name"], []),
+            )
         logger.info(
             "[vis %s] template tools offered: count=%d of %d (tags=%s)",
             rid,
@@ -2342,6 +2359,18 @@ def _execute_generate(skill, context):
                 "the line-level tables: pick the tool that matches the table the "
                 "request is about."
             )
+            if preferred_tag:
+                preferred, other = (
+                    ("line-level tables", "a data cube")
+                    if preferred_tag == "line_item"
+                    else ("data cubes", "a line-level table")
+                )
+                system_msg += (
+                    f" When the request can be answered from either, use the "
+                    f"{preferred}: this dataset prefers them. Use {other} only for "
+                    f"what the {preferred} cannot answer, such as a column only it "
+                    f"has, or when the user asks for it."
+                )
         # Some tools take a literal data value (a `value*` parameter) rather than
         # only column names. The schema lists columns but not their contents, so
         # without domains the model would have to guess those values. Append them
