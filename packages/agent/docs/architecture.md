@@ -72,9 +72,10 @@ parameters are the things to bind (`entity`, `field`, `value`, …). Both the
 templates and the tools are generated
 ([below](#regenerating-template-visualizations-and-tool-definitions)).
 
-1. **Selection.** Templates are tagged by data shape. A schema that marks a
-   resource as a pre-aggregated cube gets the `data_cube` templates, any other
-   schema gets the `line_item` ones (see
+1. **Selection.** Templates are tagged by data shape. Cube tables bring in
+   the `data_cube` templates and line-level tables the `line_item` ones, so a
+   package holding both gets both, and binding keeps each template on its own
+   kind of table (see
    [Template sets and tags](library.md#visualization-template-sets-and-tags)).
    Templates that need more tables than the package has are dropped too.
 2. **Binding.** The model picks one template and names the tables, columns and

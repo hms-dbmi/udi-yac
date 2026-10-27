@@ -350,3 +350,91 @@ def test_execute_generate_end_to_end_cube(monkeypatch):
     assert ops["class_display"] == "!="
     assert ops["gender"] == "=="
     assert spec["source"]["source"].endswith("core__count_encounter_month.csv")
+
+
+# ---------------------------------------------------------------------------
+# Mixed packages: line-level tables and cubes side by side
+# ---------------------------------------------------------------------------
+
+# SALES_CUBE plus a line-level table of the individual sales.
+MIXED = {
+    "udi:path": "https://example.org/sales/",
+    "resources": [
+        *SALES_CUBE["resources"],
+        {
+            "name": "orders",
+            "path": "orders.csv",
+            "udi:row_count": 5000,
+            "schema": {
+                "fields": [
+                    {"name": "order_id", "udi:data_type": "nominal", "udi:cardinality": 5000},
+                    {"name": "region", "udi:data_type": "nominal", "udi:cardinality": 4},
+                ]
+            },
+        },
+    ],
+}
+
+
+def _line_tools_by_param(param_map):
+    _defs, tool_dispatch, templates, tool_tags = _load_generated_tools()
+    return [
+        templates[idx]
+        for name, (idx, pm) in tool_dispatch.items()
+        if "line_item" in tool_tags.get(name, []) and pm == param_map
+    ]
+
+
+def _mixed_templates():
+    mixed = _parse_request_schema(MIXED)
+    cube_t = next(
+        t
+        for t in _cube_tools_by_param({"entity": "E", "dimension": "D"})
+        if validate_bindings(t, {"E": "sales_cube", "D": "region"}, mixed) == []
+    )
+    line_t = next(
+        t
+        for t in _line_tools_by_param({"entity": "E", "field": "F"})
+        if validate_bindings(t, {"E": "orders", "F": "region"}, mixed) == []
+    )
+    return mixed, cube_t, line_t
+
+
+def test_mixed_package_offers_both_template_kinds():
+    mixed = _parse_request_schema(MIXED)
+    assert _active_template_tags(mixed) == {"data_cube", "line_item"}
+
+    tool_defs, _dispatch, _templates, tool_tags = _load_generated_tools()
+    names = {d["function"]["name"] for d in _select_tools(tool_defs, tool_tags, {"data_cube", "line_item"}, mixed)}
+    assert any("data_cube" in tool_tags[n] for n in names)
+    assert any("line_item" in tool_tags[n] for n in names)
+
+
+def test_empty_schema_still_gets_line_item_templates():
+    assert _active_template_tags({"entities": {}}) == {"line_item"}
+
+
+def test_cube_template_rejects_line_level_table():
+    mixed, cube_t, _line_t = _mixed_templates()
+    errors = validate_bindings(cube_t, {"E": "orders", "D": "region"}, mixed)
+    assert errors == [
+        "'orders' is a line-level table, but this tool reads a pre-aggregated "
+        "data cube. Use a line-level tool for it, or a data cube: sales_cube."
+    ]
+
+
+def test_line_template_rejects_cube_table():
+    mixed, _cube_t, line_t = _mixed_templates()
+    errors = validate_bindings(line_t, {"E": "sales_cube", "F": "region"}, mixed)
+    assert errors == [
+        "'sales_cube' is a pre-aggregated data cube, but this tool reads "
+        "line-level rows. Use a data-cube tool for it, or a line-level table: orders."
+    ]
+
+
+def test_mixed_package_instantiates_each_kind_on_its_own_table():
+    mixed, cube_t, line_t = _mixed_templates()
+    cube_spec = instantiate_template(cube_t, {"E": "sales_cube", "D": "region"}, mixed)
+    assert cube_spec["source"]["source"] == "https://example.org/sales/sales.csv"
+    line_spec = instantiate_template(line_t, {"E": "orders", "F": "region"}, mixed)
+    assert line_spec["source"]["source"] == "https://example.org/sales/orders.csv"

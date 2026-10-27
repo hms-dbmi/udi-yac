@@ -52,8 +52,15 @@ request by the data-shape tag inferred from the incoming schema:
 
 | Data-shape tag | Used for                                    | Selected when                                                                          |
 | -------------- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `line_item`    | Tidy, per-record tables (groupby/rollup)    | default                                                                                |
+| `line_item`    | Tidy, per-record tables (groupby/rollup)    | the schema has a resource that is not a cube (or no resources at all)                  |
 | `data_cube`    | Pre-aggregated "powerset" cubes (marginals) | the schema marks a resource `udi:cube` (or declares `udi:dimensions` + `udi:measures`) |
+
+A package can hold both kinds of table and then gets both sets. Each template
+binds only its own kind: `validate_bindings` rejects a cube template bound to a
+line-level table and a line-item template bound to a cube, naming the tables
+that would fit, so the model's retry can correct it. A template's kind is read
+off its text: cube templates use `<M>` or `<MARGINAL…>`, and no other template
+does.
 
 A **data cube** is a pre-aggregated table with one measure column and several
 dimension columns, where a row's empty dimensions mean it is aggregated over

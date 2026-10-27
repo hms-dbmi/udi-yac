@@ -94,6 +94,18 @@ def schema_is_cube(parsed_schema: dict) -> bool:
     )
 
 
+def schema_has_line_items(parsed_schema: dict) -> bool:
+    """True if any entity in a parsed schema is a line-level (non-cube) table.
+
+    With ``schema_is_cube`` this says which template kinds a package can use: a
+    package may hold both, and each kind of template binds only its own tables.
+    """
+    return any(
+        not entity.get("is_cube")
+        for entity in parsed_schema.get("entities", {}).values()
+    )
+
+
 def derive_relationships(schema: dict) -> list[dict]:
     """Entity relationships from a data package dict: direct foreign keys,
     plus derived sibling links between entities that share a parent (star
