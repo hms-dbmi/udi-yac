@@ -10,9 +10,10 @@ import { withLinkedSelections } from '../utils/linkedSelections';
  */
 export function useToolkitSelections(): DataSelections {
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const filterScopes = useDataFilters((s) => s.filterScopes);
   const dimensionLinks = useDataPackage((s) => s.dimensionLinks);
   return useMemo(
-    () => withLinkedSelections(dataSelections, dimensionLinks),
-    [dataSelections, dimensionLinks],
+    () => withLinkedSelections(dataSelections, dimensionLinks, filterScopes),
+    [dataSelections, dimensionLinks, filterScopes],
   );
 }

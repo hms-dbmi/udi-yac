@@ -60,6 +60,9 @@ export type SkipReason =
   /** The selection originates in another entity; a cube has no line-level
    *  keys to join on. */
   | 'cross-source'
+  /** The selection is scoped per subject (`match: 'none'` or `'all'`), and a
+   *  cube has no subjects to scope it by. */
+  | 'subject-scope'
   /** The measure cannot be re-aggregated across the contracted dimension. */
   | 'non-additive-measure'
   /** The spec references no cube measure, so there is nothing to contract. */
@@ -85,6 +88,9 @@ export interface ActiveFilter {
    *  `linkedSelections`). A cube among them is served by the mirror, so the
    *  filter itself is no loss to it. */
   linkedTo?: Record<string, string[]>;
+  /** Scoped per subject with `match: 'none'` or `'all'`: never mirrored, and
+   *  reported as such by a cube it would otherwise have reached. */
+  subjectScoped?: boolean;
 }
 
 export interface BuildCubeTransformationArgs {
@@ -245,7 +251,11 @@ function partitionFilters(
       // the rest is lost.
       const unlinked = filter.fields.filter((f) => !filter.linkedTo?.[f]?.includes(sourceName));
       if (unlinked.length > 0) {
-        skipped.push({ id: filter.id, fields: unlinked, reason: 'cross-source' });
+        skipped.push({
+          id: filter.id,
+          fields: unlinked,
+          reason: filter.subjectScoped ? 'subject-scope' : 'cross-source',
+        });
       }
       continue;
     }

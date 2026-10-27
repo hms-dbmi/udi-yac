@@ -375,6 +375,7 @@ function UDIChatInner({
         withLinkedSelections(
           dataFiltersStore.getState().dataSelections,
           dataPackageStore.getState().dimensionLinks,
+          dataFiltersStore.getState().filterScopes,
         ),
         // Explicit: left out, it runs the unfiltered pass as well.
         { displayDataOnly: true },

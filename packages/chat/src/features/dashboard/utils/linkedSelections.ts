@@ -22,14 +22,32 @@
  * no entry carries across as it is: an exact link needs no map, and a value
  * the other side lacks (a diagnosis no cube counts) then matches nothing there.
  *
+ * A filter scoped per subject with `match: 'none'` or `'all'` is not mirrored.
+ * Its meaning is about subjects ("patients with no Group 3 diagnosis"), and a
+ * cube has no subjects: carried across as a plain value filter it would keep
+ * exactly the group the filter excludes. `'any'` is mirrored, being close
+ * enough to the plain filter. A cube reports the others as skipped instead
+ * (see `isSubjectScoped`).
+ *
  * Mirrors are keyed by (target column, source column), never by the selection
  * they came from, and are always present — null when nothing is selected. The
  * toolkit's store only ever merges selections bound into it, so a mirror that
  * stopped being sent would stay in force after its filter was cleared.
  */
 
+import type { FilterScope } from '@/features/tool-calls';
 import type { LinkedColumn, LinkGroup, LinkMember } from '@/types/dataPackage';
 import type { DataSelection, DataSelections } from '../stores/dataFiltersStore';
+
+/** Filter id → its per-subject scope, as the filters store keeps them. */
+export type FilterScopes = Record<string, FilterScope>;
+
+/** Whether a filter's scope makes it about subjects rather than values, so
+ *  that it cannot be carried to a cube (see the module comment). */
+export function isSubjectScoped(scopes: FilterScopes | undefined, id: string): boolean {
+  const match = scopes?.[id]?.match;
+  return match === 'none' || match === 'all';
+}
 
 /** Prefix of every mirrored selection's key. */
 export const LINKED_SELECTION_PREFIX = 'link:';
@@ -115,10 +133,14 @@ type Constraint =
   | { type: 'interval'; range: [number | null, number | null] };
 
 /** Every non-empty constraint the selections put on one column. */
-function constraintsOn(selections: DataSelections, column: LinkedColumn): Constraint[] {
+function constraintsOn(
+  selections: DataSelections,
+  column: LinkedColumn,
+  scopes?: FilterScopes,
+): Constraint[] {
   const out: Constraint[] = [];
   for (const [key, s] of Object.entries(selections)) {
-    if (isLinkedSelectionKey(key)) continue;
+    if (isLinkedSelectionKey(key) || isSubjectScoped(scopes, key)) continue;
     if (s?.dataSourceKey !== column.entity || !s.selection) continue;
     const value = (s.selection as Record<string, unknown>)[column.field];
     if (!Array.isArray(value)) continue;
@@ -166,11 +188,15 @@ function combine(
  * The mirrored selections for a set of selections: one per ordered pair of
  * columns in each link group, null when the source column is unfiltered.
  */
-export function linkedSelections(selections: DataSelections, groups: LinkGroup[]): DataSelections {
+export function linkedSelections(
+  selections: DataSelections,
+  groups: LinkGroup[],
+  scopes?: FilterScopes,
+): DataSelections {
   const out: DataSelections = {};
   for (const { members } of groups) {
     for (const source of members) {
-      const combined = combine(constraintsOn(selections, source));
+      const combined = combine(constraintsOn(selections, source, scopes));
       for (const target of members) {
         if (target === source) continue;
         const value =
@@ -194,9 +220,10 @@ export function linkedSelections(selections: DataSelections, groups: LinkGroup[]
 export function withLinkedSelections(
   selections: DataSelections,
   groups: LinkGroup[],
+  scopes?: FilterScopes,
 ): DataSelections {
   if (groups.length === 0) return selections;
-  return { ...selections, ...linkedSelections(selections, groups) };
+  return { ...selections, ...linkedSelections(selections, groups, scopes) };
 }
 
 /**

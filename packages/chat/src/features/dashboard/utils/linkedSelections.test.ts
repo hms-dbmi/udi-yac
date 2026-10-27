@@ -591,4 +591,49 @@ describe('linked filtering between a line-level table and a cube', () => {
       },
     });
   });
+
+  describe('a filter scoped per subject', () => {
+    function scoped(match: 'any' | 'all' | 'none') {
+      const { dashboard, dataFilters, dataPackage } = setup();
+      dashboard.getState().setFilterAllNullValues(false);
+      dashboard.getState().addActiveVisualization(0, 0, speciesBars, '', null);
+      selectIsland(dataFilters, LINE, ['Biscoe']);
+      dataFilters.getState().setFilterScope(`col:${LINE}.island`, { entity: LINE, match });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      dashboard.getState().updateSpecFilters(dataFilters, dataPackage);
+      warn.mockRestore();
+      const viz = dashboard.getState().activeVisualizations.get('0-0')!;
+      const mirrors = linkedSelections(
+        dataFilters.getState().dataSelections,
+        dataPackage.getState().dimensionLinks,
+        dataFilters.getState().filterScopes,
+      );
+      return {
+        viz,
+        mirror:
+          mirrors[
+            linkedSelectionKey({ entity: CUBE, field: 'island' }, { entity: LINE, field: 'island' })
+          ],
+      };
+    }
+
+    it.each(['none', 'all'] as const)(
+      "with match '%s' is not carried to a cube, and is reported as skipped",
+      (match) => {
+        const { viz, mirror } = scoped(match);
+        // Carried across as a plain value filter, 'none' would keep exactly the
+        // group it excludes.
+        expect(mirror.selection).toBeNull();
+        expect(viz.skippedFilters).toEqual([
+          { id: `col:${LINE}.island`, fields: ['island'], reason: 'subject-scope' },
+        ]);
+      },
+    );
+
+    it("with match 'any' is carried across like a plain filter", () => {
+      const { viz, mirror } = scoped('any');
+      expect(mirror.selection).toEqual({ island: ['Biscoe'] });
+      expect(viz.skippedFilters ?? []).toEqual([]);
+    });
+  });
 });

@@ -31,7 +31,11 @@ import {
   widenTallItems,
 } from '../utils/gridPacking';
 import { computeInitialCardHeight } from '../utils/initialCardSize';
-import { linkedEntitiesByColumn, linkedSelections } from '../utils/linkedSelections';
+import {
+  isSubjectScoped,
+  linkedEntitiesByColumn,
+  linkedSelections,
+} from '../utils/linkedSelections';
 import {
   buildCubeTransformation,
   type ActiveFilter,
@@ -501,13 +505,14 @@ function filterSelections(
   dataPackageStore: StoreApi<DataPackageState>,
 ): DataSelections {
   const dpState = dataPackageStore.getState();
-  const valid = dataFiltersStore.getState().getValidDataSelections({
+  const dfState = dataFiltersStore.getState();
+  const valid = dfState.getValidDataSelections({
     isValidIntervalFilter: dpState.isValidIntervalFilter,
     isValidPointFilter: dpState.isValidPointFilter,
   });
-  const mirrors = Object.entries(linkedSelections(valid, dpState.dimensionLinks)).filter(
-    ([, s]) => s.selection != null,
-  );
+  const mirrors = Object.entries(
+    linkedSelections(valid, dpState.dimensionLinks, dfState.filterScopes),
+  ).filter(([, s]) => s.selection != null);
   return { ...valid, ...Object.fromEntries(mirrors) };
 }
 
@@ -712,6 +717,7 @@ export function createDashboardStore() {
       // `dataSelections` and names the entity it constrains.
       const validSelections = filterSelections(dataFiltersStore, dataPackageStore);
       const linked = linkedEntitiesByColumn(dataPackageStore.getState().dimensionLinks);
+      const scopes = dataFiltersStore.getState().filterScopes;
       const result: ActiveFilter[] = [];
       for (const id of filterIdList) {
         const selection = validSelections[id];
@@ -730,7 +736,12 @@ export function createDashboardStore() {
             return entities ? [[f, entities]] : [];
           }),
         );
-        result.push({ id, sourceName, fields, linkedTo });
+        // A subject-scoped filter is not mirrored, so no cube receives it.
+        result.push(
+          isSubjectScoped(scopes, id)
+            ? { id, sourceName, fields, subjectScoped: true }
+            : { id, sourceName, fields, linkedTo },
+        );
       }
       return result;
     },
