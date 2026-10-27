@@ -146,7 +146,7 @@
             }
           },
           "401": {
-            "description": "Missing, invalid or expired token (`detail`). Or no OpenAI key: the server has none and the request sent no `X-OpenAI-Key`, or OpenAI rejected it (`error`).",
+            "description": "Missing, invalid or expired token (`detail`). Or `no_openai_key`: the server has none and the request sent no `X-OpenAI-Key`. Or `openai_key_rejected`: OpenAI rejected the key.",
             "content": {
               "application/json": {
                 "schema": {
@@ -156,7 +156,7 @@
             }
           },
           "403": {
-            "description": "The server routes inference through Amazon Bedrock and refuses per-request `X-OpenAI-Key` headers.",
+            "description": "`openai_key_refused`: the server routes inference through Amazon Bedrock and refuses per-request `X-OpenAI-Key` headers.",
             "content": {
               "application/json": {
                 "schema": {
@@ -166,7 +166,7 @@
             }
           },
           "502": {
-            "description": "The LLM API call failed (a model the key cannot use, a rate limit, a timeout).",
+            "description": "`llm_call_failed`: the LLM API call failed (a model the key cannot use, a rate limit, a timeout).",
             "content": {
               "application/json": {
                 "schema": {
@@ -176,7 +176,7 @@
             }
           },
           "503": {
-            "description": "The server's LLM backend is misconfigured. Or: The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
+            "description": "`llm_backend_misconfigured`: the server's LLM backend is misconfigured. Or: The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -261,7 +261,7 @@
             }
           },
           "403": {
-            "description": "The database rejected the caller's forwarded identity (JWT passthrough).",
+            "description": "`database_forbidden`: the database rejected the caller's forwarded identity (JWT passthrough).",
             "content": {
               "application/json": {
                 "schema": {
@@ -271,7 +271,7 @@
             }
           },
           "404": {
-            "description": "No query backend is configured for the package.",
+            "description": "`no_backend`: no query backend is configured for the package.",
             "content": {
               "application/json": {
                 "schema": {
@@ -343,7 +343,7 @@
             }
           },
           "403": {
-            "description": "The database rejected the caller's forwarded identity (JWT passthrough).",
+            "description": "`database_forbidden`: the database rejected the caller's forwarded identity (JWT passthrough).",
             "content": {
               "application/json": {
                 "schema": {
@@ -353,7 +353,7 @@
             }
           },
           "404": {
-            "description": "No query backend is configured for the package.",
+            "description": "`no_backend`: no query backend is configured for the package.",
             "content": {
               "application/json": {
                 "schema": {
@@ -540,7 +540,7 @@
             }
           },
           "413": {
-            "description": "The report is larger than 10 MiB.",
+            "description": "`too_large`: the report is larger than 10 MiB.",
             "content": {
               "application/json": {
                 "schema": {
@@ -550,7 +550,7 @@
             }
           },
           "422": {
-            "description": "The report is invalid; `detail` has the per-field errors.",
+            "description": "`bad_request`: the report is invalid; `errors` lists every bad field.",
             "content": {
               "application/json": {
                 "schema": {
@@ -560,7 +560,7 @@
             }
           },
           "503": {
-            "description": "LangFuse is not configured, so reports cannot be recorded. Or: The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
+            "description": "`issue_reports_unavailable`: LangFuse is not configured, so reports cannot be recorded. Or: The identity provider's keys could not be fetched (`JWT_JWKS_URL`).",
             "content": {
               "application/json": {
                 "schema": {

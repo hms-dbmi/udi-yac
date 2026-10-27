@@ -172,7 +172,9 @@ matching introspected columns' `description` and their domains'
 Set the env var to a JSON file mapping **package name → backend spec**. The
 reference server loads it at startup (`server/app.py` `_load_query_engines`).
 The key `default` (or a package with no explicit match) serves requests whose
-`package` doesn't match a configured one.
+`package` doesn't match a configured one. A host on another web framework
+builds its own `{package: QueryEngine}` and serves the two endpoints with
+`udiagent.api.metadata` and `udiagent.api.query`.
 
 ```jsonc
 {
