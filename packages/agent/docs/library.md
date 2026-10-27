@@ -236,7 +236,32 @@ def yac_vis_instantiate():
         return jsonify(e.body()), e.status
 ```
 
-`/v1/yac/completions` is `Orchestrator.run`: pass the body's `messages`, `dataSchema`, `dataDomains` and `filters`, and return `result.tool_calls`.
+`/v1/yac/completions` is `Orchestrator.run`: pass the body's `messages`, `dataSchema`, `dataDomains` and `filters`, and return `result.tool_calls`. Who may use the server's OpenAI key, and on what budget, is the host's decision. `error_response` turns the failures the chat tells apart into the reference server's answers: a quota refusal into a `Rebuff`, a rejected OpenAI key into a 401, a failed LLM call into a 502. It returns `None` for anything else. `usage_headers` adds the `X-Usage-*` token counts the chat shows. A cross-origin caller can read them only if your CORS layer lists them in `Access-Control-Expose-Headers`.
+
+```python
+from udiagent.api import error_response, usage_headers
+
+@app.post("/v1/yac/completions")
+def yac_completions():
+    body = request.get_json(silent=True) or {}
+    key = request.headers.get("X-OpenAI-Key")
+    model = orchestrator.agent.gpt_model_name
+    try:
+        result = orchestrator.run(
+            messages=body["messages"],
+            data_schema=body["dataSchema"],
+            data_domains=body["dataDomains"],
+            filters=body.get("filters"),
+            openai_api_key=key,
+        )
+    except Exception as e:
+        handled = error_response(e, model=model, caller_key=bool(key))
+        if handled is None:
+            raise
+        status, content, headers = handled
+        return jsonify(content), status, headers
+    return jsonify(result.tool_calls), 200, usage_headers(result.usage, model)
+```
 
 ## Key Classes
 

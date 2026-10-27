@@ -14,6 +14,7 @@ def client():
 
         mock_agent = UDIAgent.__new__(UDIAgent)
         mock_agent.gpt_model = MagicMock(name="default_gpt_model")
+        mock_agent.gpt_model_name = "test-model"
         server_app.agent = mock_agent
         server_app.orchestrator.agent = mock_agent
         saved = server_app.app.state.example_prompts

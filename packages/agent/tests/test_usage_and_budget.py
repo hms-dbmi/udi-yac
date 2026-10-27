@@ -635,3 +635,26 @@ class TestServerUsage:
         finally:
             app.dependency_overrides.clear()
         assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# udiagent.api.error_response: the same mapping for a host on another framework
+# ---------------------------------------------------------------------------
+
+
+def test_error_response_leaves_unknown_exceptions_to_the_host():
+    from udiagent.api import error_response
+
+    assert error_response(KeyError("messages")) is None
+
+
+def test_error_response_turns_a_quota_refusal_into_a_rebuff():
+    from udiagent.api import error_response
+
+    status, body, headers = error_response(
+        BudgetExceededError("Out of tokens.", Usage(total_tokens=5)), model="gpt-test"
+    )
+    assert status == 200
+    assert body == [build_rebuff_toolcall("Out of tokens.", reason="budget_exceeded")]
+    assert headers["X-Usage-Total-Tokens"] == "5"
+    assert headers["X-Usage-Model"] == "gpt-test"

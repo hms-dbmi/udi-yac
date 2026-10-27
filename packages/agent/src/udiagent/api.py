@@ -16,13 +16,20 @@ A Flask route, for example::
             return jsonify(vis_instantiate(request.get_json(silent=True) or {}))
         except EndpointError as e:
             return jsonify(e.body()), e.status
+
+``error_response`` answers the other failures the chat tells apart (a quota
+refusal, a rejected OpenAI key, a failed LLM call), and ``usage_headers`` adds
+the token counts the chat shows.
 """
 
 import logging
 
+from openai import APIError, AuthenticationError, OpenAIError
 from pydantic import ValidationError
 
 from udiagent.models import YACVisInstantiateRequest, YACVisInstantiateResponse
+from udiagent.orchestrator import BudgetExceededError, Usage, build_rebuff_toolcall
+from udiagent.query import DatabaseAuthError
 from udiagent.vis_generate import (
     _load_generated_tools,
     _parse_request_schema,
@@ -154,3 +161,110 @@ def vis_instantiate(body: dict | YACVisInstantiateRequest) -> dict:
         toolArgs={k: v for k, v in request.toolArgs.items() if k in param_map},
         params=template_tweakable_params(spec_template, param_map, bindings, schema),
     ).model_dump()
+
+
+def usage_headers(usage: Usage | None, model: str | None = None) -> dict[str, str]:
+    """A turn's token use as the ``X-Usage-*`` response headers the chat reads.
+
+    Args:
+        usage: ``OrchestratorResult.usage``; ``None`` counts as zero.
+        model: The model the turn ran on. Omitted from the headers when
+            ``None``.
+    """
+    usage = usage or Usage()
+    headers = {
+        "X-Usage-Prompt-Tokens": str(usage.prompt_tokens),
+        "X-Usage-Completion-Tokens": str(usage.completion_tokens),
+        "X-Usage-Total-Tokens": str(usage.total_tokens),
+        "X-Usage-Cached-Prompt-Tokens": str(usage.cached_prompt_tokens),
+        "X-Usage-Cache-Write-Tokens": str(usage.cache_write_tokens),
+        "X-Usage-Reasoning-Tokens": str(usage.reasoning_tokens),
+    }
+    if model:
+        headers["X-Usage-Model"] = model
+    return headers
+
+
+def error_response(
+    exc: Exception,
+    *,
+    model: str | None = None,
+    caller_key: bool = False,
+    bedrock: bool = False,
+) -> tuple[int, dict | list, dict[str, str]] | None:
+    """The response for an exception the chat tells apart, or ``None``.
+
+    Call it from the handler of any endpoint that runs the agent, and re-raise
+    when it returns ``None``. Without it every one of these is a bare 500,
+    which the chat can only report as a server error.
+
+    - ``EndpointError``: its own status and body.
+    - ``BudgetExceededError``: 200 with a ``Rebuff``, which the chat shows like
+      any other refusal rather than as an error, plus the usage headers.
+    - ``DatabaseAuthError``: 403. The message is fixed: the driver's error
+      names the principal and the host.
+    - ``openai.AuthenticationError``: 401, the OpenAI key was rejected.
+    - ``openai.APIError``: 502, the LLM call failed (a model the key cannot
+      use, a rate limit, a timeout).
+    - Any other ``openai.OpenAIError``: 503, the LLM backend is misconfigured
+      (e.g. Bedrock signing with no AWS credentials). The SDK raises these for
+      client and credential problems, at request time.
+
+    Args:
+        exc: The exception the handler caught.
+        model: The model the turn would have run on, for the usage headers.
+        caller_key: Whether the caller sent their own OpenAI key. Only then
+            does a 502 echo the provider's message: it describes that key. On
+            the server's credential it can name the operator's account (a
+            Bedrock access denial carries the role ARN), so it is only logged.
+        bedrock: Whether the agent runs on Amazon Bedrock, which turns the
+            503's log line into a credentials checklist for the operator.
+
+    Returns:
+        ``(status, body, headers)``.
+    """
+    if isinstance(exc, EndpointError):
+        return exc.status, exc.body(), {}
+    if isinstance(exc, BudgetExceededError):
+        rebuff = build_rebuff_toolcall(exc.message, reason="budget_exceeded")
+        return 200, [rebuff], usage_headers(exc.usage, model)
+    if isinstance(exc, DatabaseAuthError):
+        logger.warning("database rejected forwarded identity: %s", exc)
+        return 403, {"error": "The database rejected your credentials for this dataset."}, {}
+    if isinstance(exc, AuthenticationError):
+        logger.warning("OpenAI authentication failed: %s", exc)
+        return 401, {"error": "OpenAI rejected the API key (invalid or unauthorized)."}, {}
+    if isinstance(exc, APIError):
+        logger.warning("LLM API call failed: %s", exc)
+        if caller_key:
+            detail = f"The LLM API call failed: {exc.message}"
+        else:
+            detail = "The LLM API call failed. Please try again or contact the administrator."
+        return 502, {"error": detail}, {}
+    if isinstance(exc, OpenAIError):
+        # The response stays terse (an end user cannot act on it); the
+        # checklist goes to the log, where the operator is looking.
+        if bedrock:
+            logger.error(
+                "Bedrock request failed — could not resolve AWS credentials: %s "
+                "Check that the instance profile / task role is attached and grants "
+                "bedrock:InvokeModel, that AWS_REGION is set, and — for a container "
+                "on Docker's bridge network — that the IMDSv2 hop limit is at least "
+                "2 (`aws ec2 modify-instance-metadata-options "
+                "--http-put-response-hop-limit 2 --http-tokens required`).",
+                exc,
+            )
+            detail = (
+                "The server could not authenticate to its Amazon Bedrock backend. "
+                "This is a server configuration problem, not a problem with your "
+                "request — please contact the administrator."
+            )
+        else:
+            logger.error("LLM backend is misconfigured: %s", exc)
+            detail = (
+                "The server's LLM backend is misconfigured. This is a server "
+                "problem, not a problem with your request — please contact the "
+                "administrator."
+            )
+        return 503, {"error": detail}, {}
+    return None
