@@ -220,6 +220,24 @@ Tracing turns on when **any** of `langfuse_public_key`, `langfuse_secret_key`, o
 
 Installing `udiagent[langfuse]` alone does **not** enable tracing — credentials must be supplied explicitly. Library consumers who prefer environment-variable configuration should read the env vars themselves and pass the values to the constructor.
 
+## Serving the chat from your own backend
+
+The chat calls a handful of HTTP endpoints. A host that serves them from its own web framework (Flask, Django) needs only plain `udiagent`, not the `[server]` extra. `udiagent.api` holds the logic a host would otherwise copy from the reference server: each function takes the parsed JSON body, returns the JSON response body, and raises `EndpointError` with the status and `{code, error, errors}` body the chat reads. The reference FastAPI server calls the same functions, so a host answers exactly as it does. The request and response models are in `udiagent.models`.
+
+```python
+from flask import jsonify, request
+from udiagent.api import EndpointError, vis_instantiate
+
+@app.post("/v1/yac/vis_instantiate")
+def yac_vis_instantiate():
+    try:
+        return jsonify(vis_instantiate(request.get_json(silent=True) or {}))
+    except EndpointError as e:
+        return jsonify(e.body()), e.status
+```
+
+`/v1/yac/completions` is `Orchestrator.run`: pass the body's `messages`, `dataSchema`, `dataDomains` and `filters`, and return `result.tool_calls`.
+
 ## Key Classes
 
 | Class                | Description                                                                            |
