@@ -317,11 +317,6 @@ class ServerConfig(BaseSettings):
             if origin.strip()
         ]
 
-    @property
-    def has_server_credentials(self) -> bool:
-        """Whether the server can serve a request with no ``X-OpenAI-Key``."""
-        return bool(self.openai_api_key or self.openai_base_url or self.udi_bedrock)
-
     @field_validator("jwt_algorithm", mode="after")
     @classmethod
     def _normalize_algorithm(cls, value: str) -> str:

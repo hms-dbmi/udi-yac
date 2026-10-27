@@ -194,7 +194,9 @@ class ErrorResponse(BaseModel):
 
     error: str | None = Field(default=None, description="A message for the user.")
     code: str | None = Field(
-        default=None, description="A machine-readable reason (`/v1/yac/vis_instantiate`)."
+        default=None,
+        description="A machine-readable reason, e.g. `unknown_template` or "
+        "`no_openai_key`. Every error from `udiagent.api` carries one.",
     )
     errors: list[str] | None = Field(
         default=None, description="Every problem found, when there are several."

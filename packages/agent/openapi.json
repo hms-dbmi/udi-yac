@@ -737,7 +737,7 @@
               }
             ],
             "title": "Code",
-            "description": "A machine-readable reason (`/v1/yac/vis_instantiate`)."
+            "description": "A machine-readable reason, e.g. `unknown_template` or `no_openai_key`. Every error from `udiagent.api` carries one."
           },
           "errors": {
             "anyOf": [
