@@ -362,3 +362,43 @@ def test_schema_without_entities_is_rejected(client):
     )
     assert response.status_code == 400
     assert response.json()["code"] == "bad_schema"
+
+
+# --- udiagent.api: the same endpoint for a host on another web framework -----
+
+
+def test_a_host_gets_the_server_answer_from_a_plain_dict(client, data_schema):
+    from udiagent.api import vis_instantiate
+
+    body = {"tool": _SURVIVAL_TOOL, "toolArgs": _ARGS, "dataSchema": data_schema}
+    assert vis_instantiate(body) == client.post(
+        "/v1/yac/vis_instantiate", json=body, headers=_HEADERS
+    ).json()
+
+
+def test_a_malformed_body_names_every_missing_field():
+    from udiagent.api import EndpointError, vis_instantiate
+
+    with pytest.raises(EndpointError) as caught:
+        vis_instantiate({"tool": _SURVIVAL_TOOL})
+    assert caught.value.status == 422
+    assert caught.value.body() == {
+        "code": "bad_request",
+        "error": "Invalid request body.",
+        "errors": ["toolArgs: Field required", "dataSchema: Field required"],
+    }
+
+
+def test_the_api_module_does_not_need_the_server_extra():
+    """A Flask host installs plain `udiagent`, without FastAPI."""
+    import subprocess
+    import sys
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, udiagent.api; assert 'fastapi' not in sys.modules",
+        ],
+        check=True,
+    )

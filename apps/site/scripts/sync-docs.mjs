@@ -95,11 +95,11 @@ function relinkPythonApi(md) {
   );
 }
 
-/** The public API of `udiagent` and `udiagent.query`, from their docstrings.
+/** The public API of `udiagent`, `udiagent.api` and `udiagent.query`, from their docstrings.
  *  griffe2md reads the source statically (configured in the agent's
  *  pyproject.toml), so none of the agent's dependencies need installing. */
 function syncPythonApi(order) {
-  const runs = ['udiagent', 'udiagent.query'].map((pkg) =>
+  const runs = ['udiagent', 'udiagent.api', 'udiagent.query'].map((pkg) =>
     spawnSync('uvx', ['griffe2md@1.5.1', pkg], {
       cwd: join(REPO, 'packages/agent'),
       encoding: 'utf8',

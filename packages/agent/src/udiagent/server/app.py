@@ -25,6 +25,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from udiagent.agent import UDIAgent
+from udiagent.api import EndpointError, vis_instantiate
 from udiagent.filters import filter_summary
 from udiagent.orchestrator import (
     BudgetExceededError,
@@ -38,7 +39,7 @@ from udiagent.structured_functions import export_registry_json
 from udiagent.query import DatabaseAuthError, use_db_token
 from udiagent.server.config import ServerConfig
 from udiagent.server.auth import RAW_TOKEN_CLAIM, make_verify_jwt
-from udiagent.server.models import (
+from udiagent.models import (
     ErrorResponse,
     IssueReportResponse,
     MetadataResponse,
@@ -193,6 +194,11 @@ def _usage_headers(usage: Usage | None, model: str | None = None) -> dict[str, s
         "X-Usage-Reasoning-Tokens": str(usage.reasoning_tokens),
         "X-Usage-Model": model or agent.gpt_model_name,
     }
+
+
+@app.exception_handler(EndpointError)
+async def _endpoint_error_handler(request, exc: EndpointError):
+    return JSONResponse(status_code=exc.status, content=exc.body())
 
 
 @app.exception_handler(BudgetExceededError)
@@ -770,100 +776,7 @@ def yac_vis_instantiate(
     No LLM call, so — unlike /v1/yac/completions — no OpenAI key is required and
     nothing is metered.
     """
-    from udiagent.vis_generate import (
-        _load_generated_tools,
-        _parse_request_schema,
-        instantiate_template,
-        shared_entities_for,
-        template_tweakable_params,
-        unbound_placeholders,
-        validate_bindings,
-    )
-
-    generated = _load_generated_tools()
-    if generated is None:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "code": "templates_unavailable",
-                "error": "This agent has no generated visualization templates.",
-            },
-        )
-    _tool_defs, tool_dispatch, templates, _tool_tags = generated
-
-    entry = tool_dispatch.get(request.tool)
-    if entry is None:
-        return JSONResponse(
-            status_code=404,
-            content={
-                "code": "unknown_template",
-                "error": (
-                    f"Unknown visualization template '{request.tool}'. The agent's "
-                    "templates may have changed since this chart was created."
-                ),
-            },
-        )
-    template_idx, param_map = entry
-    spec_template = templates[template_idx]
-
-    schema = _parse_request_schema(request.dataSchema)
-    if not schema.get("entities"):
-        # _parse_request_schema degrades to an empty schema by design, which
-        # would validate nothing and instantiate an unusable spec.
-        return JSONResponse(
-            status_code=400,
-            content={
-                "code": "bad_schema",
-                "error": "dataSchema has no entities; send the data package descriptor.",
-            },
-        )
-
-    bindings = {
-        param_map[k]: v for k, v in request.toolArgs.items() if k in param_map
-    }
-
-    missing = unbound_placeholders(spec_template, param_map, bindings)
-    if missing:
-        return JSONResponse(
-            status_code=422,
-            content={
-                "code": "missing_bindings",
-                "error": (
-                    "Missing bindings for this template: " + ", ".join(missing)
-                ),
-                "errors": missing,
-            },
-        )
-
-    errors = validate_bindings(
-        spec_template, bindings, schema, shared_entities=shared_entities_for(request.tool)
-    )
-    if errors:
-        # errors[0] is already reader-grade prose naming the valid alternatives.
-        return JSONResponse(
-            status_code=422,
-            content={"code": "invalid_bindings", "error": errors[0], "errors": errors},
-        )
-
-    try:
-        spec = instantiate_template(spec_template, bindings, schema)
-    except Exception as exc:  # noqa: BLE001 - reported, not swallowed
-        logger.warning("vis_instantiate failed for %s: %s", request.tool, exc)
-        return JSONResponse(
-            status_code=500,
-            content={
-                "code": "instantiate_failed",
-                "error": f"Could not build a spec from template '{request.tool}'.",
-            },
-        )
-
-    return {
-        "spec": spec,
-        "toolArgs": {k: v for k, v in request.toolArgs.items() if k in param_map},
-        "params": template_tweakable_params(
-            spec_template, param_map, bindings, schema
-        ),
-    }
+    return vis_instantiate(request)
 
 
 # ponytail: checked after the body is buffered, so it caps what reaches

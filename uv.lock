@@ -2532,6 +2532,7 @@ source = { editable = "packages/agent" }
 dependencies = [
     { name = "jsonschema" },
     { name = "openai" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "requests" },
 ]
@@ -2599,6 +2600,7 @@ requires-dist = [
     { name = "openai", specifier = ">=3.33.0" },
     { name = "openai", extras = ["bedrock"], marker = "extra == 'bedrock'" },
     { name = "pandas", marker = "extra == 'codegen'", specifier = ">=2.0.0" },
+    { name = "pydantic", specifier = ">=2" },
     { name = "pydantic-settings", marker = "extra == 'server'", specifier = ">=2.0" },
     { name = "pymysql", marker = "extra == 'starrocks'", specifier = ">=1.1.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
