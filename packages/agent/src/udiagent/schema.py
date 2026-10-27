@@ -34,6 +34,14 @@ def parse_schema_from_dict(raw: dict) -> dict:
                     "from_cardinality": str, "to_cardinality": str,
                 }
             ],
+            "links": [  # from each cube's ``udi:linked_dimensions``
+                {
+                    "cube": str, "dimension": str,  # the cube column
+                    "entity": str, "field": str,    # the line-level column
+                    "values": {cube_value: [line_level_value, ...]},
+                }
+            ],
+            "prefer": "line_level" | "data_cube",  # only when declared
         }
 
     The ``url`` and ``relationships`` data is required by the visualization
@@ -43,6 +51,7 @@ def parse_schema_from_dict(raw: dict) -> dict:
     base_path = raw.get("udi:path", "./")
     entities = {}
     relationships = []
+    links = []
     for resource in raw.get("resources", []):
         name = resource["name"]
         row_count = resource.get("udi:row_count", 0)
@@ -70,6 +79,22 @@ def parse_schema_from_dict(raw: dict) -> dict:
             entity["measures"] = list(measures)
         entities[name] = entity
 
+        # A cube dimension's link to the line-level column it was aggregated
+        # from, with the value map between the two spellings. The chat filters
+        # across it; the agent reads it to accept either spelling in a filter.
+        for dimension, link in (resource.get("udi:linked_dimensions") or {}).items():
+            if not isinstance(link, dict) or not link.get("entity") or not link.get("field"):
+                continue
+            links.append(
+                {
+                    "cube": name,
+                    "dimension": dimension,
+                    "entity": link["entity"],
+                    "field": link["field"],
+                    "values": dict(link.get("values") or {}),
+                }
+            )
+
         for fk in resource.get("schema", {}).get("foreignKeys", []):
             card = fk.get("udi:cardinality", {})
             relationships.append(
@@ -83,7 +108,12 @@ def parse_schema_from_dict(raw: dict) -> dict:
                 }
             )
 
-    parsed = {"base_path": base_path, "entities": entities, "relationships": relationships}
+    parsed = {
+        "base_path": base_path,
+        "entities": entities,
+        "relationships": relationships,
+        "links": links,
+    }
     prefer = raw.get("udi:prefer")
     if prefer in PREFER_TAGS:
         parsed["prefer"] = prefer
