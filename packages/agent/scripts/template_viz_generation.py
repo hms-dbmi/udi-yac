@@ -921,6 +921,11 @@ def _cube_survival_chart(stratified: bool = False):
         # every other dimension aggregated away. Selecting it is what makes the
         # counts below add up to each patient exactly once.
         .filter(f"<MARGINAL:{dims}>")
+        # A negative time is a cube's code for "follow-up unknown" (pcx writes
+        # -1), which no time axis can place. Dropped as the line-level curves
+        # drop a negative span, so the subject leaves the cohort rather than
+        # drawing a step before time zero.
+        .filter(Expr.binop(">=", Expr.field("<D1>"), Expr.lit(0)))
         # The status dimension carries two different quantities in one column, so
         # split it into two before anything is summed.
         .derive(
