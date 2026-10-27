@@ -34,7 +34,8 @@ export interface SchemaNode {
   rank: number;
   /** Index of this node within its rank. */
   col: number;
-  rowCount: number;
+  /** `null` when the package hides the table's count (`udi:hide_count`). */
+  rowCount: number | null;
 }
 
 export interface SchemaEdge {
@@ -54,7 +55,7 @@ export interface SchemaGraph {
 
 export interface SchemaTreeNode {
   name: string;
-  rowCount: number;
+  rowCount: number | null;
   /** Cardinality of the edge to this node's parent, read outward. */
   cardinality?: string;
   /**
@@ -68,7 +69,7 @@ export interface SchemaTreeNode {
 
 export interface JoinGroup {
   entity: string;
-  rowCount: number;
+  rowCount: number | null;
   /** This entity's outgoing foreign keys, in declaration order. Often empty. */
   edges: SchemaEdge[];
 }
@@ -171,7 +172,8 @@ export function buildSchemaGraph(dataPackage: DataPackage | null): SchemaGraph {
     const rank = rankOf(resource.name);
     const col = usedCols.get(rank) ?? 0;
     usedCols.set(rank, col + 1);
-    return { name: resource.name, rank, col, rowCount: resource['udi:row_count'] ?? 0 };
+    const rowCount = resource['udi:hide_count'] ? null : (resource['udi:row_count'] ?? 0);
+    return { name: resource.name, rank, col, rowCount };
   });
 
   const edges: SchemaEdge[] = [];

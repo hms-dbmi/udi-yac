@@ -185,10 +185,13 @@ def introspect(
         # the chat's cross-entity filtering can resolve entity relationships.
         # Nor are descriptions or date formats: `description` is the table's,
         # and `fields` overlays per-column descriptions and `udi:time_format`
-        # by name rather than replacing the introspected fields.
+        # by name rather than replacing the introspected fields. Nor is
+        # `udi:hide_count`, a display choice that sits on the resource.
         extras = dict(entity_schemas.get(entity) or {})
         if description := extras.pop("description", None):
             resource["description"] = description
+        if extras.pop("udi:hide_count", False):
+            resource["udi:hide_count"] = True
         overlay = {f["name"]: f for f in extras.pop("fields", [])}
         for field in resource["schema"]["fields"]:
             extra = overlay.get(field["name"], {})

@@ -121,6 +121,13 @@ describe('buildSchemaGraph', () => {
     expect(g.nodes.find((n) => n.name === 'datasets')?.rowCount).toBe(9474);
   });
 
+  it('leaves out the count of a table that hides it', () => {
+    const g = buildSchemaGraph(
+      pkg([resource('donors'), { ...resource('events'), 'udi:hide_count': true }]),
+    );
+    expect(g.nodes.map((n) => n.rowCount)).toEqual([10, null]);
+  });
+
   it('spreads a star schema across one rank', () => {
     const star = pkg([
       resource('Patient', { rows: 37 }),
