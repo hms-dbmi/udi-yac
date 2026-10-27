@@ -81,6 +81,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   const memoryBankStore = useMemoryBankStore();
   const sourceResolver = useDataPackage((s) => s.sourceResolver);
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const dimensionLinks = useDataPackage((s) => s.dimensionLinks);
   // Remote (non-interactive) mode: true while a batched server round-trip is
   // updating the dashboard — drives the per-card loading overlay.
   const remoteQueryPending = useDataPackage((s) => s.remoteQueryPending);
@@ -101,7 +102,7 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
   // Or when a filter on a column it selects on is hovered — its chip, or its
   // widget in the chat — whichever chart or message set it.
   const isFilterHovered = useDataFilters(
-    (s) => !!s.hoveredFilter && chartCoversFilter(selectFields, s.hoveredFilter.id),
+    (s) => !!s.hoveredFilter && chartCoversFilter(selectFields, s.hoveredFilter.id, dimensionLinks),
   );
   const isHovered = isSelfHovered || isMessageHovered || isFilterHovered;
 
@@ -216,10 +217,11 @@ export function DashboardCard({ vizKey, viz, selections }: DashboardCardProps) {
             selectFields.fields,
             JSON.parse(latest) as DataSelection | null,
             conversationStore.getState().messages.length,
+            dimensionLinks,
           );
       });
     },
-    [dataFiltersStore, conversationStore, selectFields, viz.uuid],
+    [dataFiltersStore, conversationStore, selectFields, viz.uuid, dimensionLinks],
   );
   useEffect(
     () => () => {

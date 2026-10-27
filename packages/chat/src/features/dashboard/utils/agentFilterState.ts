@@ -1,5 +1,7 @@
 import type { FilterScope } from '@/features/tool-calls';
 import type { Message } from '@/types/messages';
+import type { LinkGroup } from '@/types/dataPackage';
+import { canonicalColumn } from './linkedSelections';
 import type { ActiveFilter } from '../hooks/useFilterChips';
 import {
   columnFilterKey,
@@ -29,12 +31,15 @@ export interface AgentFilterEntry {
   scope?: FilterScope;
 }
 
-/** The title the agent last gave each column's filter, keyed by filter id. */
-function chatFilterTitles(messages: Message[]): Record<string, string> {
+/** The title the agent last gave each column's filter, keyed by filter id —
+ *  the canonical column's, for a filter kept there (see `canonicalFilter`). */
+function chatFilterTitles(messages: Message[], links: LinkGroup[]): Record<string, string> {
   const titles: Record<string, string> = {};
   for (const message of messages) {
     for (const { args } of extractAllFilterSpecsFromMessage(message)) {
-      if (args.title) titles[columnFilterKey(args.entity, args.field)] = args.title;
+      if (!args.title) continue;
+      const { entity, field } = canonicalColumn(links, args.entity, args.field);
+      titles[columnFilterKey(entity, field)] = args.title;
     }
   }
   return titles;
@@ -44,8 +49,9 @@ export function agentFilterState(
   filters: ActiveFilter[],
   scopes: Record<string, FilterScope>,
   messages: Message[],
+  links: LinkGroup[] = [],
 ): AgentFilterEntry[] {
-  const titles = chatFilterTitles(messages);
+  const titles = chatFilterTitles(messages, links);
   return filters.flatMap(({ id, origin, selection }) =>
     Object.entries(selection.selection ?? {}).map(([field, raw]) => {
       const values = Array.isArray(raw) ? raw : [];

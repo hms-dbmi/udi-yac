@@ -67,6 +67,8 @@ export {
   linkedSelections,
   withLinkedSelections,
   isLinkedSelectionKey,
+  canonicalColumn,
+  canonicalFilter,
 } from './utils/linkedSelections';
 
 export {

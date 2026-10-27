@@ -244,7 +244,7 @@ function UDIChatInner({
       isValidIntervalFilter: dpState.isValidIntervalFilter,
       isValidPointFilter: dpState.isValidPointFilter,
     };
-    dataFiltersStore.getState().syncFiltersFromMessages(messages, validate);
+    dataFiltersStore.getState().syncFiltersFromMessages(messages, validate, dpState.dimensionLinks);
   }, [messages, loadingPhase, dataFiltersStore, dataPackageStore]);
 
   // Update spec filter structure when any filter selection changes or when

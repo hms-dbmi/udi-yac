@@ -1,9 +1,10 @@
 import { createStore } from 'zustand/vanilla';
 import type { DataSelection, DataSelections } from 'udi-toolkit/react';
 import type { Message, ToolCall } from '@/types/messages';
-import type { ValidStatus } from '@/types/dataPackage';
+import type { LinkGroup, ValidStatus } from '@/types/dataPackage';
 import type { FilterDataArgs, FilterOperationArgs, FilterScope } from '@/features/tool-calls';
 import { normalizePointValues } from '@/features/data-package';
+import { canonicalFilter } from '../utils/linkedSelections';
 
 export type { DataSelection, DataSelections };
 
@@ -174,7 +175,12 @@ export interface DataFiltersState {
   /** Apply every FilterData call not yet applied, in order: an add sets its
    *  column's filter (replacing any), a modify redefines its target, a remove
    *  deletes it and a clear deletes every column filter. */
-  syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => void;
+  syncFiltersFromMessages: (
+    messages: Message[],
+    validate: ValidateFilterFn,
+    /** As for `applyChartSelection`. */
+    links?: LinkGroup[],
+  ) => void;
   /** Set or (with `null`) drop a filter's scope. */
   setFilterScope: (id: string, scope: FilterScope | null) => void;
   exportFilterState: () => ExportedFilterState;
@@ -193,6 +199,9 @@ export interface DataFiltersState {
     fields: string[],
     selection: DataSelection | null,
     messageCount?: number,
+    /** The package's link groups: a field in one is kept on its group's
+     *  canonical column, translated (see `canonicalFilter`). */
+    links?: LinkGroup[],
   ) => void;
   /** Make a filter all-inclusive while keeping it in place. */
   clearFilter: (id: string) => void;
@@ -318,6 +327,22 @@ function normalizeFilterArgs(args: Record<string, unknown>): FilterOperationArgs
  * The selection a FilterData definition asks for, or null when the data
  * package rules its field out.
  */
+/** A FilterData call's filter, moved to its column's canonical column. */
+function canonicalArgs(args: FilterDataArgs, links: LinkGroup[]): FilterDataArgs {
+  const { filterType, pointValues } = args.filter;
+  const canon = canonicalFilter(links, args.entity, args.field, filterType, pointValues ?? []);
+  if (canon.entity === args.entity && canon.field === args.field) return args;
+  return {
+    ...args,
+    entity: canon.entity,
+    field: canon.field,
+    filter:
+      filterType === 'point'
+        ? { ...args.filter, pointValues: canon.values as string[] }
+        : args.filter,
+  };
+}
+
 function selectionFromArgs(args: FilterDataArgs, validate: ValidateFilterFn): DataSelection | null {
   if (args.filter.filterType === 'interval') {
     if (!isAdmissible(validate.isValidIntervalFilter(args.entity, args.field))) return null;
@@ -438,7 +463,7 @@ export function createDataFiltersStore() {
       return valid;
     },
 
-    syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn) => {
+    syncFiltersFromMessages: (messages: Message[], validate: ValidateFilterFn, links = []) => {
       const state = get();
       const { next, origins, scopes, removed, anchors, drop, commit } = draftFilters(state);
       const applied = { ...state.appliedFilterOps };
@@ -464,7 +489,13 @@ export function createDataFiltersStore() {
       for (let i = 0; i < messages.length; i++) {
         const message = messages[i];
         if (!message || !containsFilterCall(message)) continue;
-        for (const { args, toolCallIndex } of extractFilterOperationsFromMessage(message)) {
+        for (const op of extractFilterOperationsFromMessage(message)) {
+          const { toolCallIndex } = op;
+          // A filter on a linked column is kept on its group's canonical one.
+          const args =
+            isFilterDefinition(op.args) && op.args.entity && op.args.field
+              ? canonicalArgs(op.args, links)
+              : op.args;
           const opKey = messageFilterKeyWithToolCall(i, toolCallIndex, message);
           if (isFilterDefinition(args) && args.op !== 'modify' && args.entity && args.field) {
             aliases[opKey] = columnFilterKey(args.entity, args.field);
@@ -560,19 +591,27 @@ export function createDataFiltersStore() {
         return { filterScopes };
       }),
 
-    applyChartSelection: (entity, fields, selection, messageCount) => {
+    applyChartSelection: (entity, fields, selection, messageCount, links = []) => {
       const state = get();
       const { next, origins, removed, anchors, drop, commit } = draftFilters(state);
       let changed = false;
       const values = (selection?.selection ?? {}) as Record<string, unknown>;
 
       for (const field of fields) {
-        const id = columnFilterKey(entity, field);
-        const current = next[id];
         const value = values[field];
         const hasValue = Array.isArray(value) && value.length > 0;
+        // A linked column's filter is kept on its group's canonical column.
+        const canon = canonicalFilter(
+          links,
+          entity,
+          field,
+          selection?.type ?? 'point',
+          hasValue ? (value as unknown[]) : [],
+        );
+        const id = columnFilterKey(canon.entity, canon.field);
+        const current = next[id];
         if (hasValue && selection) {
-          const written = columnSelection(entity, selection.type, field, value);
+          const written = columnSelection(canon.entity, selection.type, canon.field, canon.values);
           if (JSON.stringify(current) === JSON.stringify(written)) continue;
           next[id] = written;
           origins[id] = 'chart';

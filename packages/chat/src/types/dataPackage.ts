@@ -58,13 +58,43 @@ export interface DataPackageResource {
   'udi:measure_aggregations'?: Record<string, string>;
   /** Cube dimension → the line-level column it was aggregated from. A filter
    *  on either is carried to the other, since a cube has no key to join on. */
-  'udi:linked_dimensions'?: Record<string, LinkedColumn>;
+  'udi:linked_dimensions'?: Record<string, DimensionLink>;
 }
 
 /** One column of one table. */
 export interface LinkedColumn {
   entity: string;
   field: string;
+}
+
+/** A cube dimension's link to the line-level column it was aggregated from. */
+export interface DimensionLink extends LinkedColumn {
+  /**
+   * Cube value → the linked column's values it stands for, for columns that
+   * spell their values differently. A value with no entry is carried across
+   * as it is, so an exact link needs no map.
+   */
+  values?: Record<string, string[]>;
+  /**
+   * Which side a filter is kept and shown on: the linked column (the default)
+   * or this cube dimension. A filter made on the other side is translated.
+   */
+  canonical?: 'linked' | 'dimension';
+}
+
+/** One column of a link group, with how its values translate to the hub's. */
+export interface LinkMember extends LinkedColumn {
+  /** This column's value → the hub column's values. Absent on the hub. */
+  toHub?: Record<string, string[]>;
+}
+
+/** Columns that are one column across tables: every cube dimension linked to
+ *  the same line-level column (the hub), and the hub itself. */
+export interface LinkGroup {
+  hub: LinkedColumn;
+  members: LinkMember[];
+  /** Where a filter on any member is kept, and so how it is shown. */
+  canonical: LinkedColumn;
 }
 
 /** Cube roles for one resource, as the dashboard needs them. */
