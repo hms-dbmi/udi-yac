@@ -292,7 +292,7 @@ def test_tweakable_params_only_expose_encoded_field_parameters():
         # Re-binding it is offered only among quantitative dimensions, which is
         # the same latitude every other tweakable field gets.
         "survival_cube": ["dimension1"],
-        "survival_cube_stratified": ["dimension1", "dimension3"],
+        "survival_cube_stratified": ["dimension1", "dimension3", "grouping"],
         "survival_presence": [],
         "survival_presence_2x2": [],
     }

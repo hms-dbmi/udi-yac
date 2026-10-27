@@ -507,3 +507,73 @@ def test_prefer_data_cube_lists_cube_tools_first(monkeypatch):
 def test_prefer_is_moot_without_both_kinds_of_table(monkeypatch):
     seen = _generate_capturing(monkeypatch, {**SALES_CUBE, "udi:prefer": "line_level"})
     assert "prefers them" not in seen["system"]
+
+
+# ---------------------------------------------------------------------------
+# Cube survival: which status value is which, and grouping the stratifier
+# ---------------------------------------------------------------------------
+
+
+def _survival_cube_tool(stratified):
+    defs, dispatch, templates, _tags = _load_generated_tools()
+    name = "vis_064_line_survival_cube_stratified" if stratified else "vis_063_line_survival_cube"
+    tool = next(d for d in defs if d["function"]["name"] == name)
+    return tool, templates[dispatch[name][0]]
+
+
+def test_cube_survival_values_say_which_is_the_event():
+    """Swapped, the curve counts censored subjects as events and still looks
+    like a survival curve, so the two parameters must not read alike."""
+    for stratified in (False, True):
+        props = _survival_cube_tool(stratified)[0]["function"]["parameters"]["properties"]
+        assert props["value1"]["description"].startswith("The status value meaning the EVENT")
+        assert "CENSORED" in props["value2"]["description"]
+
+
+def test_stratified_cube_survival_groups_its_stratifier():
+    tool, template = _survival_cube_tool(stratified=True)
+    assert "grouping" in tool["function"]["parameters"]["properties"]
+    sales = _parse_request_schema(
+        {
+            "udi:path": "./",
+            "resources": [
+                {
+                    "name": "efs",
+                    "path": "efs.csv",
+                    "udi:cube": True,
+                    "udi:measures": ["cnt"],
+                    "udi:dimensions": ["months", "status", "protocol"],
+                    "schema": {
+                        "fields": [
+                            {"name": "cnt", "udi:data_type": "quantitative"},
+                            {"name": "months", "udi:data_type": "quantitative"},
+                            {"name": "status", "udi:data_type": "nominal"},
+                            {"name": "protocol", "udi:data_type": "nominal"},
+                        ]
+                    },
+                }
+            ],
+        }
+    )
+    bindings = {
+        "E": "efs",
+        "D1": "months",
+        "D2": "status",
+        "D3": "protocol",
+        "V1": "event",
+        "V2": "event-free",
+        "GROUP": json.dumps(
+            {
+                "type": "nominal",
+                "groups": [{"label": "Methotrexate", "values": ["ACNS0334: Regimen B"]}],
+                "other": "No methotrexate",
+            }
+        ),
+    }
+    assert validate_bindings(template, bindings, sales) == []
+    spec = instantiate_template(template, bindings, sales)
+    # Cut right after the marginal and the unknown-time filter, before anything
+    # is summed, so each cell moves into its group whole.
+    stratum = spec["transformation"][2]["derive"]["stratum"]
+    assert stratum["then"] == {"literal": "Methotrexate"}
+    assert stratum["else"] == {"literal": "No methotrexate"}

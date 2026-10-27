@@ -1606,69 +1606,70 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  'label", "type": "nominal"}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, '
  '"avoidOverlap": 8}]}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D1,D2,D3>"}, {"filter": '
- '{"op": ">=", "left": {"field": "<D1>"}, "right": {"literal": 0}}}, {"derive": {"events": {"if": {"op": "==", "left": '
- '{"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, "else": {"literal": 0}}, "censored": '
- '{"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, "then": {"field": "<M>"}, "else": '
- '{"literal": 0}}}}, {"groupby": ["<D3>", "<D1>"]}, {"rollup": {"events": {"op": "sum", "field": "events"}, '
- '"censored": {"op": "sum", "field": "censored"}}}, {"derive": {"observed": {"op": "+", "left": {"field": "events"}, '
- '"right": {"field": "censored"}}}}, {"derive": {"cohort end": {"agg": "max", "field": "<D1>"}}}, {"groupby": "<D3>"}, '
- '{"derive": {"subjects": {"agg": "sum", "field": "observed"}, "deaths": {"agg": "sum", "field": "events"}}}, '
- '{"orderby": {"field": "<D1>", "order": "asc"}}, {"derive": {"left so far": {"rolling": {"expression": {"agg": "sum", '
- '"field": "observed"}}}}}, {"derive": {"at risk": {"op": "+", "left": {"op": "-", "left": {"field": "subjects"}, '
- '"right": {"field": "left so far"}}, "right": {"field": "observed"}}}}, {"derive": {"km factor": {"op": "-", "left": '
- '{"literal": 1}, "right": {"op": "/", "left": {"field": "events"}, "right": {"field": "at risk"}}}}}, {"derive": {"km '
- 'log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": '
- '{"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": {"if": {"op": ">", "left": {"field": "km '
- 'factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"literal": 1}}}}, {"derive": {"greenwood term": '
- '{"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": "events"}}, "then": {"op": "/", "left": '
- '{"field": "events"}, "right": {"op": "*", "left": {"field": "at risk"}, "right": {"op": "-", "left": {"field": "at '
- 'risk"}, "right": {"field": "events"}}}}, "else": {"literal": 0}}}}, {"derive": {"km log sum": {"rolling": '
- '{"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": {"rolling": {"expression": {"agg": "sum", '
- '"field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": {"agg": "sum", "field": "greenwood term"}}}, '
- '"events so far": {"rolling": {"expression": {"agg": "sum", "field": "events"}}}}}, {"derive": {"km percentage": '
- '{"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, '
- '"else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log sum"}]}, "right": {"literal": 100}}}}}, '
- '{"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": '
- '{"field": "events so far"}, "right": {"field": "subjects"}}}, "right": {"literal": 100}}, "kaplan meier": '
- '"<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": {"field": "kaplan meier"}, "right": '
- '{"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic percentage"}}}}, {"derive": {"km log '
- 'se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": "log", "args": [{"if": {"op": ">", '
- '"left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": "greenwood sum"}, "else": '
- '{"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": {"field": "km log sum"}, '
- '"right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": "km log sum"}}, "else": '
- '{"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": {"op": "&&", "left": {"op": '
- '"==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan '
- 'meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": '
- '{"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": "km log sum"}, "right": '
- '{"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": {"field": "km log sum"}, '
- '"right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, "right": {"field": "km log '
- 'se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": {"literal": null}}, "ci '
- 'upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, '
- '"right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", '
- '"left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": '
- '"<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": '
- '[{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": '
- '-1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km '
- 'percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": {"horizon '
- 'time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 12}}}}, {"derive": {"curve cut": {"if": '
- '{"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": 1}, "else": '
- '{"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "<D1>"}, "right": {"field": "horizon time"}}}, '
- '{"derive": {"curve end": {"agg": "max", "field": "<D1>"}, "events in window": {"agg": "sum", "field": "events"}}}, '
- '{"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"full survival": '
- '{"literal": 100}}}, {"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, {"derive": {"first percentage": '
- '{"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": {"window": '
- '"rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": "rank"}, '
- '"right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": {"op": '
- '"<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": '
- 'null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": '
- '{"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 2}}, '
- '"then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": "==", '
- '"left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": null}}}}, '
- '{"derive": {"censor time": {"if": {"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, "then": '
- '{"field": "<D1>"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": "final '
- 'percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
+ '{"op": ">=", "left": {"field": "<D1>"}, "right": {"literal": 0}}}, {"derive": {"stratum": "<GROUP:D3>"}}, {"filter": '
+ '{"op": "!=", "left": {"field": "stratum"}, "right": {"literal": null}}}, {"derive": {"events": {"if": {"op": "==", '
+ '"left": {"field": "<D2:n>"}, "right": {"literal": "<V1>"}}, "then": {"field": "<M>"}, "else": {"literal": 0}}, '
+ '"censored": {"if": {"op": "==", "left": {"field": "<D2:n>"}, "right": {"literal": "<V2>"}}, "then": {"field": '
+ '"<M>"}, "else": {"literal": 0}}}}, {"groupby": ["stratum", "<D1>"]}, {"rollup": {"events": {"op": "sum", "field": '
+ '"events"}, "censored": {"op": "sum", "field": "censored"}}}, {"derive": {"observed": {"op": "+", "left": {"field": '
+ '"events"}, "right": {"field": "censored"}}}}, {"derive": {"cohort end": {"agg": "max", "field": "<D1>"}}}, '
+ '{"groupby": "stratum"}, {"derive": {"subjects": {"agg": "sum", "field": "observed"}, "deaths": {"agg": "sum", '
+ '"field": "events"}}}, {"orderby": {"field": "<D1>", "order": "asc"}}, {"derive": {"left so far": {"rolling": '
+ '{"expression": {"agg": "sum", "field": "observed"}}}}}, {"derive": {"at risk": {"op": "+", "left": {"op": "-", '
+ '"left": {"field": "subjects"}, "right": {"field": "left so far"}}, "right": {"field": "observed"}}}}, {"derive": '
+ '{"km factor": {"op": "-", "left": {"literal": 1}, "right": {"op": "/", "left": {"field": "events"}, "right": '
+ '{"field": "at risk"}}}}}, {"derive": {"km log": {"fn": "log", "args": [{"if": {"op": ">", "left": {"field": "km '
+ 'factor"}, "right": {"literal": 0}}, "then": {"field": "km factor"}, "else": {"literal": 1}}]}, "km exhausted": '
+ '{"if": {"op": ">", "left": {"field": "km factor"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"literal": 1}}}}, {"derive": {"greenwood term": {"if": {"op": ">", "left": {"field": "at risk"}, "right": {"field": '
+ '"events"}}, "then": {"op": "/", "left": {"field": "events"}, "right": {"op": "*", "left": {"field": "at risk"}, '
+ '"right": {"op": "-", "left": {"field": "at risk"}, "right": {"field": "events"}}}}, "else": {"literal": 0}}}}, '
+ '{"derive": {"km log sum": {"rolling": {"expression": {"agg": "sum", "field": "km log"}}}, "km exhausted so far": '
+ '{"rolling": {"expression": {"agg": "sum", "field": "km exhausted"}}}, "greenwood sum": {"rolling": {"expression": '
+ '{"agg": "sum", "field": "greenwood term"}}}, "events so far": {"rolling": {"expression": {"agg": "sum", "field": '
+ '"events"}}}}}, {"derive": {"km percentage": {"if": {"op": ">", "left": {"field": "km exhausted so far"}, "right": '
+ '{"literal": 0}}, "then": {"literal": 0}, "else": {"op": "*", "left": {"fn": "exp", "args": [{"field": "km log '
+ 'sum"}]}, "right": {"literal": 100}}}}}, {"derive": {"basic percentage": {"op": "*", "left": {"op": "-", "left": '
+ '{"literal": 1}, "right": {"op": "/", "left": {"field": "events so far"}, "right": {"field": "subjects"}}}, "right": '
+ '{"literal": 100}}, "kaplan meier": "<ESTIMATOR>"}}, {"derive": {"survival percentage": {"if": {"op": "==", "left": '
+ '{"field": "kaplan meier"}, "right": {"literal": 1}}, "then": {"field": "km percentage"}, "else": {"field": "basic '
+ 'percentage"}}}}, {"derive": {"km log se": {"op": "/", "left": {"fn": "exp", "args": [{"op": "*", "left": {"fn": '
+ '"log", "args": [{"if": {"op": ">", "left": {"field": "greenwood sum"}, "right": {"literal": 0}}, "then": {"field": '
+ '"greenwood sum"}, "else": {"literal": 1}}]}, "right": {"literal": 0.5}}]}, "right": {"if": {"op": "<", "left": '
+ '{"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "-", "left": {"literal": 0}, "right": {"field": '
+ '"km log sum"}}, "else": {"literal": 1}}}}}, {"derive": {"ci requested": "<CI>"}}, {"derive": {"ci lower": {"if": '
+ '{"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": {"literal": 1}}, "right": {"op": "==", '
+ '"left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": {"op": ">", "left": {"field": "km '
+ 'exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": {"if": {"op": "<", "left": {"field": '
+ '"km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": {"literal": 1.959963984540054}, '
+ '"right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": {"field": "km percentage"}}}, "else": '
+ '{"literal": null}}, "ci upper": {"if": {"op": "&&", "left": {"op": "==", "left": {"field": "ci requested"}, "right": '
+ '{"literal": 1}}, "right": {"op": "==", "left": {"field": "kaplan meier"}, "right": {"literal": 1}}}, "then": {"if": '
+ '{"op": ">", "left": {"field": "km exhausted so far"}, "right": {"literal": 0}}, "then": {"literal": 0}, "else": '
+ '{"if": {"op": "<", "left": {"field": "km log sum"}, "right": {"literal": 0}}, "then": {"op": "*", "left": {"fn": '
+ '"exp", "args": [{"op": "*", "left": {"field": "km log sum"}, "right": {"fn": "exp", "args": [{"op": "*", "left": '
+ '{"literal": -1.959963984540054}, "right": {"field": "km log se"}}]}}]}, "right": {"literal": 100}}, "else": '
+ '{"field": "km percentage"}}}, "else": {"literal": null}}}}, {"derive": {"horizon years": "<HORIZON>"}}, {"derive": '
+ '{"horizon time": {"op": "*", "left": {"field": "horizon years"}, "right": {"literal": 12}}}}, {"derive": {"curve '
+ 'cut": {"if": {"op": ">", "left": {"field": "cohort end"}, "right": {"field": "horizon time"}}, "then": {"literal": '
+ '1}, "else": {"literal": 0}}}}, {"filter": {"op": "<=", "left": {"field": "<D1>"}, "right": {"field": "horizon '
+ 'time"}}}, {"derive": {"curve end": {"agg": "max", "field": "<D1>"}, "events in window": {"agg": "sum", "field": '
+ '"events"}}}, {"derive": {"final percentage": {"agg": "min", "field": "survival percentage"}}}, {"derive": {"full '
+ 'survival": {"literal": 100}}}, {"derive": {"first time": {"agg": "min", "field": "<D1>"}}}, {"derive": {"first '
+ 'percentage": {"agg": "max", "field": "survival percentage"}}}, {"derive": {"lead time": {"if": {"op": "==", "left": '
+ '{"window": "rank"}, "right": {"literal": 1}}, "then": {"literal": 0}, "else": {"if": {"op": "==", "left": {"window": '
+ '"rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": {"literal": null}}}, "drop time": {"if": '
+ '{"op": "<=", "left": {"window": "rank"}, "right": {"literal": 2}}, "then": {"field": "first time"}, "else": '
+ '{"literal": null}}, "drop percentage": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": 1}}, '
+ '"then": {"field": "full survival"}, "else": {"if": {"op": "==", "left": {"window": "rank"}, "right": {"literal": '
+ '2}}, "then": {"field": "first percentage"}, "else": {"literal": null}}}}}, {"derive": {"label time": {"if": {"op": '
+ '"==", "left": {"window": "rank"}, "right": {"literal": 1}}, "then": {"field": "curve end"}, "else": {"literal": '
+ 'null}}}}, {"derive": {"censor time": {"if": {"op": ">", "left": {"field": "censored"}, "right": {"literal": 0}}, '
+ '"then": {"field": "<D1>"}, "else": {"literal": null}}}}, {"derive": {"_label_offset": {"op": "+", "left": {"field": '
+ '"final percentage"}, "right": {"literal": 0.5}}}}, {"derive": {"final survival": {"op": "-", "left": {"field": '
  '"_label_offset"}, "right": {"op": "%", "left": {"field": "_label_offset"}, "right": {"literal": 1}}}}}, {"derive": '
- '{"final label": {"concat": [{"field": "<D3>"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
+ '{"final label": {"concat": [{"field": "stratum"}, {"literal": " "}, {"field": "final survival"}, {"literal": "%"}, '
  '{"if": {"op": "==", "left": {"field": "curve cut"}, "right": {"literal": 1}}, "then": {"concat": [{"literal": " at '
  '"}, {"field": "horizon years"}, {"literal": "y"}]}, "else": {"literal": ""}}, {"literal": " (n="}, {"field": '
  '"subjects"}, {"literal": ", "}, {"field": "events in window"}, {"literal": " events)"}]}}}, {"derive": {"label time '
@@ -1677,29 +1678,29 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  'percentage"}, "right": {"literal": 85}}, "then": {"field": "label time"}, "else": {"literal": null}}}}], '
  '"representation": [{"mark": "line", "mapping": [{"encoding": "x", "field": "lead time", "type": "quantitative", '
  '"title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "full survival", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, '
- '{"mark": "line", "mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", "title": "time", '
- '"domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": {"min": 0, '
- '"max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "area", '
- '"mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", "domain": {"min": 0}}, '
- '{"encoding": "y", "field": "ci lower", "type": "quantitative", "domain": {"min": 0, "max": 100}, "title": '
- '"event-free (%)"}, {"encoding": "y2", "field": "ci upper", "type": "quantitative"}, {"encoding": "opacity", "value": '
- '0.12}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], "interpolate": "step-after"}, '
- '{"mark": "line", "mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", "domain": '
- '{"min": 0}}, {"encoding": "y", "field": "survival percentage", "title": "event-free (%)", "type": "quantitative", '
- '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], '
- '"interpolate": "step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor time", "type": '
- '"quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "type": '
- '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
+ '"domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": '
+ 'true}]}, {"mark": "line", "mapping": [{"encoding": "x", "field": "drop time", "type": "quantitative", "title": '
+ '"time", "domain": {"min": 0}}, {"encoding": "y", "field": "drop percentage", "type": "quantitative", "domain": '
+ '{"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}]}, '
+ '{"mark": "area", "mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": "time", "domain": '
+ '{"min": 0}}, {"encoding": "y", "field": "ci lower", "type": "quantitative", "domain": {"min": 0, "max": 100}, '
+ '"title": "event-free (%)"}, {"encoding": "y2", "field": "ci upper", "type": "quantitative"}, {"encoding": "opacity", '
+ '"value": 0.12}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "interpolate": '
+ '"step-after"}, {"mark": "line", "mapping": [{"encoding": "x", "field": "<D1>", "type": "quantitative", "title": '
+ '"time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival percentage", "title": "event-free (%)", "type": '
+ '"quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "color", "field": "stratum", "type": "nominal", '
+ '"omitLegend": true}], "interpolate": "step-after"}, {"mark": "point", "mapping": [{"encoding": "x", "field": "censor '
+ 'time", "type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "survival '
+ 'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "shape", "value": '
  '"M-0.09,-0.5L0.09,-0.5L0.09,0.5L-0.09,0.5Z"}, {"encoding": "size", "value": 500}, {"encoding": "color", "field": '
- '"<D3>", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
+ '"stratum", "type": "nominal", "omitLegend": true}]}, {"mark": "text", "mapping": [{"encoding": "x", "field": "label '
  'time above", "type": "quantitative", "title": "time", "domain": {"min": 0}}, {"encoding": "y", "field": "final '
  'percentage", "type": "quantitative", "domain": {"min": 0, "max": 100}}, {"encoding": "text", "field": "final label", '
- '"type": "nominal"}, {"encoding": "color", "field": "<D3>", "type": "nominal", "omitLegend": true}], "align": '
+ '"type": "nominal"}, {"encoding": "color", "field": "stratum", "type": "nominal", "omitLegend": true}], "align": '
  '"right", "dy": -9, "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7, "avoidOverlap": 8}, {"mark": "text", '
  '"mapping": [{"encoding": "x", "field": "label time below", "type": "quantitative", "title": "time", "domain": '
  '{"min": 0}}, {"encoding": "y", "field": "final percentage", "type": "quantitative", "domain": {"min": 0, "max": '
- '100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "<D3>", '
+ '100}}, {"encoding": "text", "field": "final label", "type": "nominal"}, {"encoding": "color", "field": "stratum", '
  '"type": "nominal", "omitLegend": true}], "align": "right", "dy": 10, "stroke": "white", "strokeWidth": 3, '
  '"strokeOpacity": 0.7, "avoidOverlap": 8}], "title": {"text": "<D3>", "align": "right"}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F2>", "<F1>"]}, {"rollup": '
@@ -4746,14 +4747,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
  {'function': {'description': '[line] Survival curve from a pre-aggregated CUBE: one step per time point, falling as '
                               'events accumulate. Needs two dimensions — a QUANTITATIVE elapsed-time dimension and a '
                               'status dimension whose values say whether the subject had the event or was still '
-                              "event-free when last seen — plus the two status values themselves. Counts the cube's "
-                              'measure rather than reconstructing subjects, so it needs no event log. Censored time '
-                              'points carry a tick on the curve. Design: Reads the cube marginal by filtering to rows '
-                              'where the chosen dimension(s) are present and every other dimension is empty; the '
-                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
-                              "the per-request schema's dimension list, so this template works for any cube. The "
-                              'marginal broken out here is time x status, so each subject is counted exactly once and '
-                              'the cells add up to the cohort. The elapsed-time dimension must be quantitative.',
+                              'event-free when last seen — plus the two status values themselves: value1 the one '
+                              "meaning the event happened, value2 the one meaning censored. Counts the cube's measure "
+                              'rather than reconstructing subjects, so it needs no event log. Censored time points '
+                              'carry a tick on the curve. Design: Reads the cube marginal by filtering to rows where '
+                              'the chosen dimension(s) are present and every other dimension is empty; the measure is '
+                              'mapped directly with no re-aggregation. The marginal filter is expanded from the '
+                              "per-request schema's dimension list, so this template works for any cube. The marginal "
+                              'broken out here is time x status, so each subject is counted exactly once and the cells '
+                              'add up to the cohort. The elapsed-time dimension must be quantitative.',
                'name': 'vis_063_line_survival_cube',
                'parameters': {'additionalProperties': False,
                               'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
@@ -4796,12 +4798,17 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              "far as the data goes').",
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The status value meaning the EVENT HAPPENED '
+                                                                       "(e.g. 'event', 'deceased', 'dead') — counted "
+                                                                       'as an event. A literal data VALUE to match '
+                                                                       '(not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                             'value2': {'description': 'The status value meaning the subject was '
+                                                                       'CENSORED: still alive or event-free when last '
+                                                                       "seen (e.g. 'event-free', 'alive', 'censored'). "
+                                                                       'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
@@ -4809,18 +4816,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'required': ['entity', 'dimension1', 'dimension2', 'value1', 'value2'],
                               'type': 'object'}},
   'type': 'function'},
- {'function': {'description': '[line] Survival curves from a pre-aggregated CUBE, one per value of a third dimension. '
-                              'Needs a QUANTITATIVE elapsed-time dimension, a status dimension saying whether the '
-                              'subject had the event, the stratifying dimension, and the two status values. Each '
-                              'subject is counted once within its own stratum, so the curves PARTITION the cohort and '
-                              "their sizes add back to the marginal's total. Censored time points carry a tick on "
-                              'their own curve. Design: Reads the cube marginal by filtering to rows where the chosen '
-                              'dimension(s) are present and every other dimension is empty; the measure is mapped '
-                              'directly with no re-aggregation. The marginal filter is expanded from the per-request '
-                              "schema's dimension list, so this template works for any cube. The marginal broken out "
-                              'here is time x status x stratifier, so every subject lands in exactly one stratum and '
-                              'one time point. Tasks: Compare event-free survival across groups; see which stratum '
-                              'falls fastest and how many subjects each curve rests on.',
+ {'function': {'description': '[line] Survival curves from a pre-aggregated CUBE, one per value of a third dimension — '
+                              'or, with a `grouping`, one per named group of its values (e.g. one protocol against all '
+                              'the others), or per band of a numeric dimension. Needs a QUANTITATIVE elapsed-time '
+                              'dimension, a status dimension saying whether the subject had the event, the stratifying '
+                              'dimension, and the two status values: value1 the one meaning the event happened, value2 '
+                              'the one meaning censored. Each subject is counted once within its own stratum, so the '
+                              "curves PARTITION the cohort and their sizes add back to the marginal's total. Censored "
+                              'time points carry a tick on their own curve. Design: Reads the cube marginal by '
+                              'filtering to rows where the chosen dimension(s) are present and every other dimension '
+                              'is empty; the measure is mapped directly with no re-aggregation. The marginal filter is '
+                              "expanded from the per-request schema's dimension list, so this template works for any "
+                              'cube.',
                'name': 'vis_064_line_survival_cube_stratified',
                'parameters': {'additionalProperties': False,
                               'properties': {'confidence_band': {'description': 'OPTIONAL — leave it out. The 95% '
@@ -4840,8 +4847,7 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'dimension2': {'description': 'cube nominal dimension — the column whose '
                                                                            'values value1, value2 name.',
                                                             'type': 'string'},
-                                             'dimension3': {'description': 'cube nominal dimension, encodes color, '
-                                                                           'text label.',
+                                             'dimension3': {'description': 'cube nominal dimension, encodes color.',
                                                             'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
@@ -4856,6 +4862,86 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
+                                             'grouping': {'description': "OPTIONAL. Combine the stratifier's values "
+                                                                         'into a few named strata. Omit it entirely '
+                                                                         'for one stratum per distinct value, which is '
+                                                                         'usually what you want. Supply it when the '
+                                                                         'request compares GROUPS of values rather '
+                                                                         "than every value ('white versus all other "
+                                                                         "races'), or splits a number at a threshold "
+                                                                         "('over 65'). At most 10 strata.",
+                                                          'properties': {'cuts': {'description': 'Quantitative only. '
+                                                                                                 'Ascending '
+                                                                                                 'thresholds; N cuts '
+                                                                                                 'make N+1 buckets, '
+                                                                                                 'each half-open on '
+                                                                                                 'the right — a cut at '
+                                                                                                 '65 puts 65 in the '
+                                                                                                 'upper bucket.',
+                                                                                  'items': {'type': 'number'},
+                                                                                  'type': 'array'},
+                                                                         'groups': {'description': 'Nominal only. One '
+                                                                                                   'entry per stratum. '
+                                                                                                   'Values not listed '
+                                                                                                   'in any group fall '
+                                                                                                   "into 'other'.",
+                                                                                    'items': {'properties': {'label': {'description': 'What '
+                                                                                                                                      'this '
+                                                                                                                                      'stratum '
+                                                                                                                                      'is '
+                                                                                                                                      'called '
+                                                                                                                                      'in '
+                                                                                                                                      'the '
+                                                                                                                                      'legend.',
+                                                                                                                       'type': 'string'},
+                                                                                                             'values': {'description': 'Column '
+                                                                                                                                       'values '
+                                                                                                                                       'in '
+                                                                                                                                       'this '
+                                                                                                                                       'stratum, '
+                                                                                                                                       'copied '
+                                                                                                                                       'EXACTLY '
+                                                                                                                                       'as '
+                                                                                                                                       'they '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'the '
+                                                                                                                                       'data, '
+                                                                                                                                       'including '
+                                                                                                                                       'case. '
+                                                                                                                                       'A '
+                                                                                                                                       'value '
+                                                                                                                                       'may '
+                                                                                                                                       'appear '
+                                                                                                                                       'in '
+                                                                                                                                       'only '
+                                                                                                                                       'one '
+                                                                                                                                       'group.',
+                                                                                                                        'items': {'type': 'string'},
+                                                                                                                        'type': 'array'}},
+                                                                                              'required': ['label',
+                                                                                                           'values'],
+                                                                                              'type': 'object'},
+                                                                                    'type': 'array'},
+                                                                         'other': {'description': 'Nominal only. Label '
+                                                                                                  'for values no group '
+                                                                                                  'claims; null to '
+                                                                                                  'leave them out of '
+                                                                                                  'the chart entirely. '
+                                                                                                  'Defaults to '
+                                                                                                  "'Other'.",
+                                                                                   'type': ['string', 'null']},
+                                                                         'type': {'description': "'nominal' to combine "
+                                                                                                 'named values, '
+                                                                                                 "'quantitative' to "
+                                                                                                 'cut a number at '
+                                                                                                 'thresholds. Must '
+                                                                                                 'match the stratifier '
+                                                                                                 "column's type.",
+                                                                                  'enum': ['nominal', 'quantitative'],
+                                                                                  'type': 'string'}},
+                                                          'required': ['type'],
+                                                          'type': 'object'},
                                              'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
                                                                              'the survival curve shows. Omit it for '
                                                                              'the default of 5 years. Set it only when '
@@ -4866,12 +4952,17 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              "far as the data goes').",
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The status value meaning the EVENT HAPPENED '
+                                                                       "(e.g. 'event', 'deceased', 'dead') — counted "
+                                                                       'as an event. A literal data VALUE to match '
+                                                                       '(not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'A literal data VALUE to match (not a column '
+                                             'value2': {'description': 'The status value meaning the subject was '
+                                                                       'CENSORED: still alive or event-free when last '
+                                                                       "seen (e.g. 'event-free', 'alive', 'censored'). "
+                                                                       'A literal data VALUE to match (not a column '
                                                                        'name) — one of the values actually present in '
                                                                        'the relevant column, copied exactly, including '
                                                                        'case and spacing.',
@@ -5398,6 +5489,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'dimension3': 'D3',
                                             'entity': 'E',
                                             'estimator': 'ESTIMATOR',
+                                            'grouping': 'GROUP',
                                             'time_horizon': 'HORIZON',
                                             'value1': 'V1',
                                             'value2': 'V2'}),
@@ -5772,9 +5864,10 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_063_line_survival_cube': ('Survival curve over {enc:x}',
                                 'Plots the share of subjects still event-free at each {enc:x} value, counted from the '
                                 "cube's measure; censored time points carry a tick."),
- 'vis_064_line_survival_cube_stratified': ('Survival curves over {enc:x} by {enc:color}',
-                                           'Plots one curve per {enc:color} value, showing the share still event-free '
-                                           'at each {enc:x}; each subject is counted once within its own stratum.'),
+ 'vis_064_line_survival_cube_stratified': ('Survival curves over {enc:x} by {col:dimension3}',
+                                           'Plots one curve per {col:dimension3} value, showing the share still '
+                                           'event-free at each {enc:x}; each subject is counted once within its own '
+                                           'stratum.'),
  'vis_065_heatmap_count': ('Heatmap of the number of {entity} by {enc:y} and {enc:x}',
                            'Displays the number of {entity} for each pairing of {enc:y} and {enc:x}, as a grid of '
                            'shaded, labelled cells.'),
