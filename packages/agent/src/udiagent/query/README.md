@@ -120,7 +120,7 @@ visualization rather than render a plausible wrong number.
 
 ### 2.2 `QueryEngine` (`engine.py`)
 
-`QueryEngine(connector, table_map, row_cap=5000, entity_schemas=None)`.
+`QueryEngine(connector, table_map, row_cap=5000, entity_schemas=None, package_extras=None)`.
 
 - `table_map`: entity name → physical table/view name (entity names may
   contain spaces; table names are SQL-safe).
@@ -129,7 +129,14 @@ visualization rather than render a plausible wrong number.
   `primaryKey`/`foreignKeys` land in the schema and drive the chat's
   cross-entity filtering; descriptions are what the LLM reads; the cube roles
   (`udi:cube`, `udi:dimensions`, `udi:measures`, `udi:measure_aggregations`)
-  land on the resource and drive `only`.
+  land on the resource and drive `only`, as does `udi:linked_dimensions`,
+  which drives the chat's filtering between cubes and line-level tables.
+- `package_extras`: package-level descriptor keys, likewise un-introspectable —
+  merged into the package descriptor by `introspect()`. Today that is
+  `udi:prefer`, which tells the agent whether a package holding both
+  line-level tables and cubes answers from the line-level tables or the cubes
+  by default. It cannot replace a key introspection sets (`name`, `udi:path`,
+  `resources`).
 
 `run_query(source, transformation?, selections?, display_data_only?, offset?)`
 returns the client-facing result:
@@ -263,6 +270,10 @@ The key `default` (or a package with no explicit match) serves requests whose
     // optional: the chat's "Try an example" prompts for this package, served by
     // GET /v1/yac/examples?package=my_cohort in place of the global list
     "examplePrompts": ["How many donors are in each age group?"],
+    // optional: package-level keys served with the introspected schema
+    // (`package_extras`); a package mixing line-level tables and cubes says
+    // which to answer from by default
+    "package": { "udi:prefer": "line_level" },
   },
 }
 ```

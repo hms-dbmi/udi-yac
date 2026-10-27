@@ -16,8 +16,11 @@ follow-up only for near-unique columns, so huge tables stay cheap.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Categorical domains larger than this are omitted from an introspected
 # package. At least vis_generate.MAX_DRAWN_CATEGORIES: a chart can draw that
@@ -172,7 +175,11 @@ _RESOURCE_LEVEL_EXTRAS = (
     "udi:dimensions",
     "udi:measures",
     "udi:measure_aggregations",
+    "udi:linked_dimensions",
 )
+
+# Descriptor keys introspection owns; configured package extras can't replace them.
+_RESERVED_PACKAGE_KEYS = ("name", "udi:name", "udi:path", "resources")
 
 
 def introspect(
@@ -216,15 +223,20 @@ def introspect(
         resource["schema"].update(extras)
         resources.append(resource)
         all_domains.extend(domains)
-    return {
-        "dataSchema": {
-            "name": package_name,
-            "udi:name": package_name,
-            "udi:path": "",
-            "resources": resources,
-        },
-        "dataDomains": all_domains,
+    data_schema = {
+        "name": package_name,
+        "udi:name": package_name,
+        "udi:path": "",
+        "resources": resources,
     }
+    # Package-level metadata a database can't hold (`udi:prefer`), from the
+    # engine's configuration, as the per-entity extras above are.
+    for key, value in (getattr(engine, "package_extras", None) or {}).items():
+        if key in _RESERVED_PACKAGE_KEYS:
+            logger.warning("package extra %r ignored: introspection sets it", key)
+            continue
+        data_schema[key] = value
+    return {"dataSchema": data_schema, "dataDomains": all_domains}
 
 
 class MetadataCache:

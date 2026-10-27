@@ -145,6 +145,7 @@ def load_package(data_dir: Path) -> list[dict]:
                         "udi:dimensions",
                         "udi:measures",
                         "udi:measure_aggregations",
+                        "udi:linked_dimensions",
                     )
                     if key in resource
                 }
@@ -178,6 +179,22 @@ def load_package(data_dir: Path) -> list[dict]:
     if not entries:
         raise SystemExit(f"no CSV/TSV files or datapackage.json found in {data_dir}")
     return entries
+
+
+#: Package-level descriptor keys carried into the backends config (`package`):
+#: like the per-entity extras, a database has nowhere to keep them.
+PACKAGE_EXTRA_KEYS = ("udi:prefer",)
+
+
+def load_package_extras(data_dir: Path) -> dict | None:
+    """The package-level keys of `datapackage.json` the server should serve
+    with the introspected schema, or None if there are none."""
+    path = data_dir / "datapackage.json"
+    if not path.exists():
+        return None
+    package = json.loads(path.read_text())
+    extras = {key: package[key] for key in PACKAGE_EXTRA_KEYS if key in package}
+    return extras or None
 
 
 def load_example_prompts(data_dir: Path) -> list[str] | None:
@@ -324,6 +341,7 @@ def write_backends_config(
     out_path: Path, database: str, entries: list[dict],
     host: str, port: int, user: str, password: str,
     example_prompts: list[str] | None = None,
+    package_extras: dict | None = None,
 ) -> None:
     config = {
         database: {
@@ -345,6 +363,8 @@ def write_backends_config(
         config[database]["schemas"] = schemas
     if example_prompts:
         config[database]["examplePrompts"] = example_prompts
+    if package_extras:
+        config[database]["package"] = package_extras
     existing = {}
     if out_path.exists():
         try:
@@ -387,7 +407,7 @@ def seed(
     if config_out is not None:
         write_backends_config(
             config_out, database, entries, host, port, user, password,
-            load_example_prompts(data_dir),
+            load_example_prompts(data_dir), load_package_extras(data_dir),
         )
         print(f"\nwrote {config_out}")
     return entries

@@ -36,6 +36,7 @@ class QueryEngine:
         table_map: dict[str, str],
         row_cap: int = DEFAULT_ROW_CAP,
         entity_schemas: dict[str, dict] | None = None,
+        package_extras: dict | None = None,
     ):
         """
         connector: DuckDBConnector / StarRocksConnector (execute + dialect).
@@ -46,11 +47,15 @@ class QueryEngine:
             table `description` and per-column `fields` descriptions — merged
             into each resource by introspect(). The chat's cross-entity
             filtering (getEntityRelationship) depends on foreignKeys.
+        package_extras: package-level descriptor keys introspection can't
+            produce either, such as `udi:prefer` — merged into the package
+            descriptor by introspect().
         """
         self.connector = connector
         self.table_map = table_map
         self.row_cap = row_cap
         self.entity_schemas = entity_schemas or {}
+        self.package_extras = package_extras or {}
         self._columns_cache: dict[str, list] = {}
 
     # ── public API ───────────────────────────────────────────────────────────

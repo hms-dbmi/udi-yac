@@ -570,6 +570,7 @@ def _engine_from_config(spec: dict):
         table_map=spec.get("tables", {}),
         row_cap=spec.get("rowCap", 5000),
         entity_schemas=spec.get("schemas"),
+        package_extras=spec.get("package"),
     )
 
 
