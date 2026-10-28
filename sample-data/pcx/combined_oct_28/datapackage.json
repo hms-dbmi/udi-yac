@@ -966,6 +966,7 @@
     },
     {
       "name": "Os",
+      "title": "Patients (Cumulus)",
       "description": "Overall survival cube, full cohort: ATRT and Medulloblastoma (CBTN PCX 30 V6, 2026-10-21 revised delivery), durations in months. Pre-aggregated marginal cube (Presto GROUP BY CUBE, 64 grouping sets, 24,352 rows): each row counts patients over its non-null dimensions; null means the dimension is rolled up, never missing data. Missing data is a literal 'Not Reported' / 'Not Applicable' string, or -1 for durations. 970 patients, 267 deaths. Every patient in the PCX 30 patient table; none excluded. Use overall_survival_months with vital_status for survival curves. No small-cell suppression (18,134 rows have cnt = 1). Scope: full data (also called all, Cumulus or Radiant data), all 970 patients across every site. Requests about the full, all, Cumulus or Radiant data are answered from the Efs and Os cubes; requests about the Seattle data or Seattle patients from the line-level tables.",
       "type": "table",
       "path": "pcx30_os_all_dx_v6_months_2026-10-21r_cube.csv",

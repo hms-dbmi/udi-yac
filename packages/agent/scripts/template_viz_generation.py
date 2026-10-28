@@ -896,6 +896,8 @@ def _survival_subject_rows(
 _CUBE_EVENTS = "events"
 _CUBE_CENSORED = "censored"
 _CUBE_CENSOR_TIME = "censor time"
+#: The time dimension in years, the unit every survival curve is plotted in.
+_CUBE_YEARS = "survival years"
 
 
 def _cube_survival_chart(stratified: bool = False):
@@ -977,9 +979,14 @@ def _cube_survival_chart(stratified: bool = False):
             )
         }
     )
+    # Plot years, as the line-level curves do. The time dimension is read as
+    # MONTHS — what the cubes this targets bin follow-up in.
+    chart = chart.derive(
+        {_CUBE_YEARS: Expr.binop("/", Expr.field("<D1>"), Expr.lit(12))}
+    )
     # Global while the table is still ungrouped: whether the horizon cut the
     # chart is a question about the whole cohort, not about one curve.
-    chart = chart.derive({"cohort end": Expr.agg("max", "<D1>")})
+    chart = chart.derive({"cohort end": Expr.agg("max", _CUBE_YEARS)})
 
     if stratified:
         chart = chart.groupby(stratum)
@@ -989,7 +996,7 @@ def _cube_survival_chart(stratified: bool = False):
             "deaths": Expr.agg("sum", _CUBE_EVENTS),
         }
     )
-    chart = chart.orderby("<D1>")
+    chart = chart.orderby(_CUBE_YEARS)
     # The Kaplan-Meier estimate over the ordered time points — the same estimator
     # as the line-level curve, stepping a time point at a time instead of a
     # subject at a time. Each point removes everyone it observed (events and
@@ -997,12 +1004,10 @@ def _cube_survival_chart(stratified: bool = False):
     # against it: the at-risk count includes this point's censored subjects,
     # which is the Kaplan-Meier tie rule.
     chart = _kaplan_meier(chart, events=_CUBE_EVENTS, leaving="observed")
-    # The time dimension is read as MONTHS — what the cubes this targets bin
-    # follow-up in — so the horizon's years are scaled to it.
-    chart = _cut_at_horizon(chart, "<D1>", _CUBE_EVENTS, units_per_year=12)
+    chart = _cut_at_horizon(chart, _CUBE_YEARS, _CUBE_EVENTS, units_per_year=1)
     chart = chart.derive({"final percentage": Expr.agg("min", "survival percentage")})
     chart = chart.derive({"full survival": Expr.lit(100)})
-    chart = chart.derive({"first time": Expr.agg("min", "<D1>")})
+    chart = chart.derive({"first time": Expr.agg("min", _CUBE_YEARS)})
     chart = chart.derive({"first percentage": Expr.agg("max", "survival percentage")})
     # The flat opening segment and the drop into the first time point, drawn
     # explicitly: a cube's earliest cell can already carry events, so without
@@ -1052,7 +1057,7 @@ def _cube_survival_chart(stratified: bool = False):
         {
             _CUBE_CENSOR_TIME: Expr.cond(
                 Expr.binop(">", Expr.field(_CUBE_CENSORED), Expr.lit(0)),
-                Expr.field("<D1>"),
+                Expr.field(_CUBE_YEARS),
                 Expr.lit(None),
             )
         }
@@ -1093,7 +1098,7 @@ def _cube_survival_chart(stratified: bool = False):
     def colour(c):
         return c.color(field=stratum, type="nominal", omitLegend=True) if stratified else c
 
-    time_axis = dict(type="quantitative", title="time", domain={"min": 0})
+    time_axis = dict(type="quantitative", title="survival years", domain={"min": 0})
     pct_axis = dict(type="quantitative", domain={"min": 0, "max": 100})
 
     chart = colour(
@@ -1102,11 +1107,11 @@ def _cube_survival_chart(stratified: bool = False):
     chart = colour(
         chart.mark("line").x(field="drop time", **time_axis).y(field="drop percentage", **pct_axis)
     )
-    chart = _band_layer(chart, "<D1>", time_axis, colour, y_title="event-free (%)")
+    chart = _band_layer(chart, _CUBE_YEARS, time_axis, colour, y_title="event-free (%)")
     chart = colour(
         chart.mark("line")
         .interpolate("step-after")
-        .x(field="<D1>", **time_axis)
+        .x(field=_CUBE_YEARS, **time_axis)
         .y(field="survival percentage", title="event-free (%)", **pct_axis)
     )
     chart = colour(
@@ -4393,7 +4398,7 @@ def generate():
         chart_type=ChartType.LINE,
         name_hint="survival_cube",
         value_descriptions=cube_status_values,
-        title_template="<ENDPOINT> curve over <D1>",
+        title_template="<ENDPOINT> curve for <E>",
         summary_template=(
             "Plots the share of subjects still event-free at each <D1> value, counted from the cube's measure; censored time points carry a tick."
         ),
@@ -4470,7 +4475,7 @@ def generate():
         chart_type=ChartType.LINE,
         name_hint="survival_cube_stratified",
         value_descriptions=cube_status_values,
-        title_template="<ENDPOINT> curves over <D1> by <D3>",
+        title_template="<ENDPOINT> curves for <E> by <D3>",
         summary_template=(
             "Plots one curve per <D3> value, showing the share still event-free at each <D1>; each subject is counted once within its own stratum."
         ),
