@@ -1,0 +1,157 @@
+organization_name,research_id,protocol_name_and_arm,chemotherapy_type,age_at_regimen_start_days,age_at_regimen_stop_days,chemotherapy_agents,is_initial_treatment
+Seattle Children's Hospital,C103074,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,8237,8636,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C104427,ACNS0333,Treatment follows a protocol but subject is not enrolled,414,597,"carboplatin,cisplatin,cyclophosphamide,etoposide,filgrastim,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C104427,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,661,953,bevacizumab,yes
+Seattle Children's Hospital,C1056939,ACNS0333,Treatment follows a protocol but subject is not enrolled,661,747,"carboplatin,cisplatin,cyclophosphamide,etoposide,filgrastim,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C1056939,Not Reported,Treatment follows a protocol but subject is not enrolled,790,856,Not Reported,no
+Seattle Children's Hospital,C1057185,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,6158,6389,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C1057185,ACNS0821: TEMO+IRIN+BEVA,Treatment follows a protocol but subject is not enrolled,7430,7802,"bevacizumab,irinotecan,temozolomide",no
+Seattle Children's Hospital,C1057431,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,2118,2491,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C1070100,ACNS0821: TEMO+IRIN+BEVA,Treatment follows a protocol and subject is enrolled on a protocol,7007,7272,"bevacizumab,irinotecan,temozolomide",no
+Seattle Children's Hospital,C1070100,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,5050,5435,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C1070100,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,7517,7808,etoposide,no
+Seattle Children's Hospital,C1070100,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,7868,Not Reported,"etoposide,bevacizumab,hydrocortisone / phenol",no
+Seattle Children's Hospital,C1070223,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,6628,Not Available,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C1070346,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,674,811,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C1070346,"APEC1621: Subprotocol C (EZH2, SMARCB1, or SMARCA4 gene mutation)",Treatment follows a protocol and subject is enrolled on a protocol,1381,1705,tazemetostat,no
+Seattle Children's Hospital,C1070346,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,1736,1783,"temozolomide,irinotecan,bevacizumab",no
+Seattle Children's Hospital,C1070346,PNOC013,Treatment follows a protocol and subject is enrolled on a protocol,1807,1821,cemiplimab,no
+Seattle Children's Hospital,C1070838,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,2138,2528,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C1070838,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,3165,3720,"bevacizumab,irinotecan,methotrexate",no
+Seattle Children's Hospital,C1070838,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,3757,4010,"etoposide,methotrexate",no
+Seattle Children's Hospital,C1070838,PNOC005: Stratum B,Treatment follows a protocol and subject is enrolled on a protocol,3027,3034,disseminated atrt/medullo (delivery via lp x 1 dose),no
+Seattle Children's Hospital,C1154847,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,538,682,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C1155462,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,1546,Not Available,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C1155462,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,2065,2399,"bevacizumab,irinotecan,temozolomide,methotrexate",no
+Seattle Children's Hospital,C1155462,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,Not Available,Not Available,etoposide,no
+Seattle Children's Hospital,C1155462,PNOC005: Stratum B,Treatment follows a protocol and subject is enrolled on a protocol,2526,2526,disseminated atrt/medullo (delivery via lp x 1 dose),no
+Seattle Children's Hospital,C1155585,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol and subject is enrolled on a protocol,4340,4532,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C1155585,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,4827,4984,"methotrexate,cytarabine,bevacizumab,irinotecan,temozolomide",no
+Seattle Children's Hospital,C1183875,ACNS1422,Treatment follows a protocol and subject is enrolled on a protocol,6502,6721,"cisplatin,cyclophosphamide,lomustine,vincristine",yes
+Seattle Children's Hospital,C1253493,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,2026,2418,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C1253862,Head Start II: induction,Treatment follows a protocol and subject is enrolled on a protocol,3231,3373,"cisplatin,cyclophosphamide,etoposide,vincristine",no
+Seattle Children's Hospital,C1253862,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,4635,4690,"temozolomide,etoposide",no
+Seattle Children's Hospital,C1253862,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,4698,4863,vismodegib,no
+Seattle Children's Hospital,C1253862,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,5097,5139,"fluorouracil,oxaliplatin,pembrolizumab",no
+Seattle Children's Hospital,C1253862,Other,Treatment follows a protocol and subject is enrolled on a protocol,4432,4587,Not Reported,no
+Seattle Children's Hospital,C141696,"ACNS0332: Regimen B (carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,3997,4210,"carboplatin,cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C141696,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,5048,5160,etoposide,no
+Seattle Children's Hospital,C141696,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,5166,5300,vismodegib oral product,no
+Seattle Children's Hospital,C141696,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,5539,5626,"temozolomide,irinotecan",no
+Seattle Children's Hospital,C142557,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,1044,1180,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C142557,ACNS0821: TEMO+IRIN+BEVA,Treatment follows a protocol and subject is enrolled on a protocol,1518,1958,"bevacizumab,irinotecan,temozolomide",no
+Seattle Children's Hospital,C142557,MEMMAT,Treatment follows a protocol but subject is not enrolled,1701,1852,"bevacizumab,celecoxib,cyclophosphamide,cytarabine,etoposide,fenofibric acid,thalidomide",no
+Seattle Children's Hospital,C142557,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,1862,1960,"etoposide,methotrexate,topotecan",no
+Seattle Children's Hospital,C143172,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,4067,4448,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C143418,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,1907,2159,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C143541,CCG-99703,Treatment follows a protocol but subject is not enrolled,313,435,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C148215,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,225,368,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C154365,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,5737,6125,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C169248,ACNS0331,Treatment follows a protocol and subject is enrolled on a protocol,2177,2565,"cisplatin,cyclophosphamide,lomustine,vincristine",yes
+Seattle Children's Hospital,C169248,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,9196,Not Reported,"temozolomide oral capsule,vp-16 50 mg oral capsule",no
+Seattle Children's Hospital,C169248,Not Reported,Treatment follows a protocol and subject is enrolled on a protocol,3146,3517,Not Reported,no
+Seattle Children's Hospital,C169371,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,3154,3584,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C170232,CCG-99701: Regimen B,Treatment follows a protocol and subject is enrolled on a protocol,3169,3400,"carboplatin,cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C226074,ACNS0333,Treatment follows a protocol and subject is enrolled on a protocol,166,349,"carboplatin,cisplatin,cyclophosphamide,etoposide,filgrastim,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2333064,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,561,687,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2333310,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,493,630,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2333310,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,775,785,"etoposide,dasatinib",no
+Seattle Children's Hospital,C2358156,PBTC026,Treatment follows a protocol and subject is enrolled on a protocol,417,969,"carboplatin,cisplatin,cyclophosphamide,etoposide,isotretinoin,thiotepa,vincristine,vorinostat",yes
+Seattle Children's Hospital,C2463690,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1288,1426,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2544870,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,5144,5362,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C2571192,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,815,955,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2571192,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,1161,Not Available,etoposide,yes
+Seattle Children's Hospital,C2571315,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1289,1410,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2605755,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,565,1038,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2696529,PBTC026,Treatment follows a protocol and subject is enrolled on a protocol,933,1073,"carboplatin,cisplatin,cyclophosphamide,etoposide,isotretinoin,thiotepa,vincristine,vorinostat",yes
+Seattle Children's Hospital,C2698251,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1444,1585,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2784966,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,10608,11364,"temozolomide,irinotecan,etoposide,bevacizumab,vismodegib",no
+Seattle Children's Hospital,C2784966,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,8617,8725,"cisplatin,cyclophosphamide,etoposide,vincristine",yes
+Seattle Children's Hospital,C2852616,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,5776,6083,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C2892714,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1045,1185,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C2892714,ACNS0821: TEMO+IRIN+BEVA,Treatment follows a protocol but subject is not enrolled,1224,1408,"bevacizumab,irinotecan,temozolomide",yes
+Seattle Children's Hospital,C310206,CCG-99701: Regimen B,Treatment follows a protocol but subject is not enrolled,2646,2925,"carboplatin,cisplatin,cyclophosphamide,vincristine",no
+Seattle Children's Hospital,C3388527,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1215,1367,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C3544368,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,587,724,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C3544737,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,4720,4896,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C3544737,"ACNS0332: Regimen C (no carboplatin, isotretinoin)",Treatment follows a protocol but subject is not enrolled,4648,4689,"cisplatin,cyclophosphamide,isotretinoin,vincristine",yes
+Seattle Children's Hospital,C3544737,PNOC016,Treatment follows a protocol and subject is enrolled on a protocol,4919,4947,fimepinostat,yes
+Seattle Children's Hospital,C3631329,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,4344,4351,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C3631698,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,9277,9669,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C3631698,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,11104,Not Reported,vismodegib,no
+Seattle Children's Hospital,C3717306,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,3884,4111,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C3884586,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,3657,4043,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C4031571,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1204,1359,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C4031694,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,3467,3761,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C4034523,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1579,1709,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C4034646,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,1802,Not Reported,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C4103649,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,2140,2275,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C4104018,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol and subject is enrolled on a protocol,195,429,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C4104018,PNOC016,Treatment follows a protocol and subject is enrolled on a protocol,661,779,fimepinostat,no
+Seattle Children's Hospital,C4344483,Other,Treatment follows a protocol and subject is enrolled on a protocol,3040,3077,Not Reported,yes
+Seattle Children's Hospital,C5254437,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,1489,1613,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C5254437,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,2133,Not Available,tazemetostat,no
+Seattle Children's Hospital,C5492565,CCG-A9961: Regimen A,Treatment follows a protocol and subject is enrolled on a protocol,4705,5086,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C558912,ACNS0333,Treatment follows a protocol but subject is not enrolled,1034,1167,"carboplatin,cisplatin,cyclophosphamide,etoposide,filgrastim,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C5623560,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1737,1874,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C5624052,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,91,Not Reported,"vincristine,etoposide,cyclophosphamide,cisplatin,carboplatin",yes
+Seattle Children's Hospital,C602700,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1399,1525,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C603069,ACNS0333,Treatment follows a protocol but subject is not enrolled,229,336,"carboplatin,cisplatin,cyclophosphamide,etoposide,filgrastim,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C603069,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,456,472,"methotrexate,cytarabine",no
+Seattle Children's Hospital,C603069,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,568,584,etoposide,no
+Seattle Children's Hospital,C6083703,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,2945,Not Reported,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C622257,"ACNS0332: Regimen B (carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,1777,1997,"carboplatin,cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C647349,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,777,901,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C647349,ADVL1515,Treatment follows a protocol and subject is enrolled on a protocol,1382,1396,prexasertib,no
+Seattle Children's Hospital,C647349,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,1280,1308,"irinotecan,temozolomide,methotrexate",no
+Seattle Children's Hospital,C647349,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,1409,1567,"temozolomide,bevacizumab,irinotecan",no
+Seattle Children's Hospital,C647349,PNOC005: Stratum A,Treatment follows a protocol and subject is enrolled on a protocol,1341,1376,locally recurrent atrt/medullo (delivery into tumor bed),no
+Seattle Children's Hospital,C676746,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol and subject is enrolled on a protocol,6466,6679,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C6958725,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,916,1071,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C700977,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,7660,8042,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C701223,CCG-A9961: Regimen A,Treatment follows a protocol and subject is enrolled on a protocol,3276,3565,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C701223,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,3656,3684,avastin,yes
+Seattle Children's Hospital,C701469,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,746,875,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C7093902,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,932,1063,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C724962,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,4448,4788,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C724962,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,4732,4774,avastin,yes
+Seattle Children's Hospital,C725331,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,4987,5223,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C725331,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,5311,5312,etoposide oral capsule,no
+Seattle Children's Hospital,C7302756,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1715,1883,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C7457490,ACNS0334: Regimen B,Treatment follows a protocol and subject is enrolled on a protocol,1211,1371,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C758541,"ACNS0332: Regimen B (carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,2839,3077,"carboplatin,cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C758541,ACNS0821: TEMO+IRIN+BEVA,Treatment follows a protocol but subject is not enrolled,4288,4558,"bevacizumab,irinotecan,temozolomide",no
+Seattle Children's Hospital,C758541,BRAINCHILD-04,Treatment follows a protocol and subject is enrolled on a protocol,6179,6283,"""car-t b7-h3;egfr806;her2;il13-zetakine""",no
+Seattle Children's Hospital,C758541,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,3642,4030,etoposide oral product,no
+Seattle Children's Hospital,C758541,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,5181,5195,etoposide oral product,no
+Seattle Children's Hospital,C758541,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,5373,5936,"methotrexate,etoposide oral product",no
+Seattle Children's Hospital,C758541,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,6050,6178,etoposide oral product,no
+Seattle Children's Hospital,C758541,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,6330,6608,etoposide oral product,no
+Seattle Children's Hospital,C758541,PNOC005: Stratum C,Treatment follows a protocol and subject is enrolled on a protocol,4869,4876,disseminated medullo (delivery via lp x 2 doses),no
+Seattle Children's Hospital,C7611978,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,1461,1578,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C7617267,ACNS0334: Regimen A,Treatment follows a protocol but subject is not enrolled,1201,Not Available,"carboplatin,cisplatin,cyclophosphamide,etoposide,thiotepa,vincristine",yes
+Seattle Children's Hospital,C7617267,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1201,1578,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C782649,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,4095,4238,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C782895,"ACNS0332: Regimen B (carboplatin, no isotretinoin)",Treatment follows a protocol and subject is enrolled on a protocol,2033,2376,"carboplatin,cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C784371,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,8321,Not Available,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C797655,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,2210,2615,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C8183559,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol but subject is not enrolled,3519,Not Available,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C836769,"ACNS0332: Regimen A (no carboplatin, no isotretinoin)",Treatment follows a protocol and subject is enrolled on a protocol,4323,4556,"cisplatin,cyclophosphamide,vincristine",yes
+Seattle Children's Hospital,C836769,ACNS0821: TEMO+IRIN+BEVA,Treatment follows a protocol and subject is enrolled on a protocol,4665,4910,"bevacizumab,irinotecan,temozolomide",no
+Seattle Children's Hospital,C837630,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,83,212,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C837630,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,1308,1693,"vincristine,bevacizumab,irinotecan,temozolomide",no
+Seattle Children's Hospital,C837630,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,2275,2499,etoposide,no
+Seattle Children's Hospital,C8379990,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,4397,Not Reported,"vincristine,cisplatin,cyclophosphamide",yes
+Seattle Children's Hospital,C849561,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,753,895,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C849561,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,1071,1114,bevacizumab,yes
+Seattle Children's Hospital,C8735460,CCG-A9961: Regimen A,Treatment follows a protocol and subject is enrolled on a protocol,4197,Not Reported,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C912414,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,2933,3313,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C912660,ADVL1514,Treatment follows a protocol and subject is enrolled on a protocol,3180,3198,"irinotecan,nanoparticle albumin-bound rapamycin,temozolomide",no
+Seattle Children's Hospital,C912660,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,1883,2273,"cisplatin,lomustine,vincristine",yes
+Seattle Children's Hospital,C912660,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,2913,3170,vismodegib,no
+Seattle Children's Hospital,C912660,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,3199,3254,"temozolomide,irinotecan",no
+Seattle Children's Hospital,C912660,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,3359,3407,etoposide,no
+Seattle Children's Hospital,C912660,Not Applicable,Treatment follows other standard of care not associated with a current or past protocol,3463,Not Available,vismodegib,no
+Seattle Children's Hospital,C912660,PNOC005: Stratum B,Treatment follows a protocol and subject is enrolled on a protocol,3431,3458,disseminated atrt/medullo (delivery via lp x 1 dose),no
+Seattle Children's Hospital,C923607,ACNS0334: Regimen B,Treatment follows a protocol but subject is not enrolled,1408,1538,"carboplatin,cisplatin,cyclophosphamide,etoposide,methotrexate,thiotepa,vincristine",yes
+Seattle Children's Hospital,C948330,CCG-A9961: Regimen A,Treatment follows a protocol but subject is not enrolled,5949,6370,"cisplatin,lomustine,vincristine",yes

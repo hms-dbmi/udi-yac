@@ -1,0 +1,1127 @@
+{
+  "name": "pcx-combined-oct-28",
+  "resources": [
+    {
+      "name": "Demographics",
+      "description": "Patient demographic and cohort information, including birth year, race, ethnicity, sex, geographic area, and the diagnosis cohort the patient belongs to. Scope: Seattle data, the 93 radiant-cohort patients treated at Seattle Children's Hospital. Requests about the Seattle data or Seattle patients are answered from the line-level tables (Patient, Demographics, Event, Medical Therapy, Radiation, Surgery, Treatment Summary); requests about the full, all, Cumulus or Radiant data from the Efs and Os cubes.",
+      "type": "table",
+      "path": "pcx_30_demographics_deid.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 93,
+      "udi:column_count": 10,
+      "schema": {
+        "fields": [
+          {
+            "name": "organization_name",
+            "type": "string",
+            "description": "Name of the institution that contributed the patient's data to this release.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "research_id",
+            "type": "string",
+            "description": "De-identified patient research identifier.",
+            "udi:cardinality": 93,
+            "udi:unique": true,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "given_name",
+            "type": "string",
+            "description": "De-identification placeholder for the patient's first name; contains no real name information.",
+            "udi:cardinality": 93,
+            "udi:unique": true,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "family_name",
+            "type": "string",
+            "description": "De-identification placeholder for the patient's last name; contains no real name information.",
+            "udi:cardinality": 93,
+            "udi:unique": true,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "birth_year",
+            "type": "number",
+            "description": "Patient's year of birth. Month and day are removed for de-identification.",
+            "udi:cardinality": 30,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "year"
+          },
+          {
+            "name": "race",
+            "type": "string",
+            "description": "Patient's race as reported by the contributing institution.",
+            "udi:cardinality": 15,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "ethnicity",
+            "type": "string",
+            "description": "Patient's ethnicity as reported by the contributing institution.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "gender",
+            "type": "string",
+            "description": "Patient's administrative sex as recorded by the contributing institution.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "address_postal_code",
+            "type": "string",
+            "description": "Patient's residential ZIP code, partially masked for de-identification.",
+            "udi:cardinality": 23,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "diagnosis_type_cohort",
+            "type": "string",
+            "description": "The patient's primary diagnosis group used to define the cohort for this release.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "research_id"
+            ],
+            "reference": {
+              "fields": [
+                "research_id"
+              ],
+              "resource": "Patient"
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "one"
+            }
+          }
+        ],
+        "primaryKey": [
+          "research_id"
+        ]
+      },
+      "udi:hide_count": true
+    },
+    {
+      "name": "Event",
+      "description": "Disease events across the patient's cancer journey, including initial diagnosis, progression, recurrence, second malignancy, and death, with the diagnosis, tumor location, and metastasis status recorded at each event. Scope: Seattle data, the 93 radiant-cohort patients treated at Seattle Children's Hospital. Requests about the Seattle data or Seattle patients are answered from the line-level tables (Patient, Demographics, Event, Medical Therapy, Radiation, Surgery, Treatment Summary); requests about the full, all, Cumulus or Radiant data from the Efs and Os cubes.",
+      "type": "table",
+      "path": "pcx_30_event_level_deid.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 198,
+      "udi:column_count": 12,
+      "schema": {
+        "fields": [
+          {
+            "name": "organization_name",
+            "type": "string",
+            "description": "Name of the institution that contributed the patient's data to this release.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "research_id",
+            "type": "string",
+            "description": "De-identified patient research identifier.",
+            "udi:cardinality": 93,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "event_type",
+            "type": "string",
+            "description": "The type of diagnosis-related event determined via surgery, imaging, or clinical observation.",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "age_at_event_days",
+            "type": "number",
+            "description": "Patient age in days at the diagnosis-related event. A value of -1 indicates an unknown date.",
+            "udi:cardinality": 196,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "metastasis",
+            "type": "string",
+            "description": "Whether metastatic disease was present at the time of the event.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "metastasis_location",
+            "type": "string",
+            "description": "The site of the metastasis.",
+            "udi:cardinality": 17,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "metastasis_location_other",
+            "type": "string",
+            "description": "Free-text value supplied when the coded metastasis_location does not cover the finding (the site of the metastasis).",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "cns_diagnosis_category",
+            "type": "string",
+            "description": "The diagnosis at the time of the event (broad diagnosis category).",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "cns_integrated_diagnosis",
+            "type": "string",
+            "description": "The diagnosis at the time of the event (WHO integrated histologic plus molecular diagnosis). A more specific molecular subtype from OpenPedCan replaces the CBTN value in two cases: where CBTN recorded only a non-specific \"NOS or NEC\" value, and where CBTN recorded \"Medulloblastoma, non-WNT/non-SHH\" and OpenPedCan identified Group 3 or Group 4 (which are non-WNT/non-SHH subtypes, so this narrows the diagnosis rather than contradicting it). cns_integrated_diagnosis_source records which source won.",
+            "udi:cardinality": 15,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "cns_integrated_diagnosis_source",
+            "type": "string",
+            "description": "Which source supplied cns_integrated_diagnosis on this row: 'CBTN' where the value is as CBTN recorded it, or 'OpenPedCan' where a more specific molecular subtype from openpedcan_histologies_annotated replaced it, matched on the event's biospecimen sample ID. OpenPedCan wins in two cases: a non-specific CBTN \"NOS or NEC\" value, and a CBTN \"Medulloblastoma, non-WNT/non-SHH\" value that OpenPedCan narrows to Group 3 or Group 4.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "tumor_locations",
+            "type": "string",
+            "description": "The anatomical site of the tumor.",
+            "udi:cardinality": 54,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "tumor_location_other",
+            "type": "string",
+            "description": "Free-text value supplied when the coded tumor_locations does not cover the finding (the anatomical site of the tumor).",
+            "udi:cardinality": 8,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "research_id"
+            ],
+            "reference": {
+              "fields": [
+                "research_id"
+              ],
+              "resource": "Patient"
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "one"
+            }
+          }
+        ]
+      },
+      "udi:hide_count": true
+    },
+    {
+      "name": "Medical Therapy",
+      "description": "Systemic therapy treatment, including the treatment protocol and arm, whether the patient was enrolled on that protocol, the treatment timing expressed as patient age in days, the chemotherapy agents administered, and whether the regimen was part of the patient's initial treatment. Scope: Seattle data, the 93 radiant-cohort patients treated at Seattle Children's Hospital. Requests about the Seattle data or Seattle patients are answered from the line-level tables (Patient, Demographics, Event, Medical Therapy, Radiation, Surgery, Treatment Summary); requests about the full, all, Cumulus or Radiant data from the Efs and Os cubes.",
+      "type": "table",
+      "path": "pcx_30_medical_therapy_level_deid.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 156,
+      "udi:column_count": 8,
+      "schema": {
+        "fields": [
+          {
+            "name": "organization_name",
+            "type": "string",
+            "description": "Name of the institution that contributed the patient's data to this release.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "research_id",
+            "type": "string",
+            "description": "De-identified patient research identifier.",
+            "udi:cardinality": 91,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "protocol_name_and_arm",
+            "type": "string",
+            "description": "Name of the treatment protocol the patient is enrolled on or being treated in accordance with.",
+            "udi:cardinality": 27,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "chemotherapy_type",
+            "type": "string",
+            "description": "Whether the regimen followed a treatment protocol (with or without enrollment) or other standard of care.",
+            "udi:cardinality": 3,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "age_at_regimen_start_days",
+            "type": "string",
+            "description": "Patient age in days at the start of the medical therapy regimen.",
+            "udi:cardinality": 153,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "age_at_regimen_stop_days",
+            "type": "string",
+            "description": "Patient age in days at the end of the medical therapy regimen.",
+            "udi:cardinality": 139,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "chemotherapy_agents",
+            "type": "string",
+            "description": "Therapeutic agent being administered.",
+            "udi:cardinality": 49,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "is_initial_treatment",
+            "type": "string",
+            "description": "yes/no column indicating whether this regimen was part of the patient's initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "research_id"
+            ],
+            "reference": {
+              "fields": [
+                "research_id"
+              ],
+              "resource": "Patient"
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "one"
+            }
+          }
+        ]
+      },
+      "udi:hide_count": true
+    },
+    {
+      "name": "Patient",
+      "title": "Patients (Seattle)",
+      "description": "Patient survival information, including the most recent known vital status and the patient age in days at which it was determined. Scope: Seattle data, the 93 radiant-cohort patients treated at Seattle Children's Hospital. Requests about the Seattle data or Seattle patients are answered from the line-level tables (Patient, Demographics, Event, Medical Therapy, Radiation, Surgery, Treatment Summary); requests about the full, all, Cumulus or Radiant data from the Efs and Os cubes.",
+      "type": "table",
+      "path": "pcx_30_patient_level_deid.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 93,
+      "udi:column_count": 3,
+      "schema": {
+        "fields": [
+          {
+            "name": "research_id",
+            "type": "string",
+            "description": "De-identified patient research identifier.",
+            "udi:cardinality": 93,
+            "udi:unique": true,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "age_at_vital_status_days",
+            "type": "number",
+            "description": "Patient age in days at the most recent known vital status.",
+            "udi:cardinality": 93,
+            "udi:unique": true,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "vital_status",
+            "type": "string",
+            "description": "The patient's most recent known vital status, as of the patient age in age_at_vital_status_days.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": [],
+        "primaryKey": [
+          "research_id"
+        ]
+      }
+    },
+    {
+      "name": "Radiation",
+      "description": "Radiation therapy treatment, including the treatment timing expressed as patient age in days, the field or site treated, the radiation method delivered, the prescribed dose, and whether the course was part of the patient's initial treatment. Scope: Seattle data, the 93 radiant-cohort patients treated at Seattle Children's Hospital. Requests about the Seattle data or Seattle patients are answered from the line-level tables (Patient, Demographics, Event, Medical Therapy, Radiation, Surgery, Treatment Summary); requests about the full, all, Cumulus or Radiant data from the Efs and Os cubes.",
+      "type": "table",
+      "path": "pcx_30_radiation_level_deid.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 93,
+      "udi:column_count": 13,
+      "schema": {
+        "fields": [
+          {
+            "name": "organization_name",
+            "type": "string",
+            "description": "Name of the institution that contributed the patient's data to this release.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "research_id",
+            "type": "string",
+            "description": "De-identified patient research identifier.",
+            "udi:cardinality": 77,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "age_at_radiation_start_days",
+            "type": "number",
+            "description": "Patient age in days at the start of the radiation round.",
+            "udi:cardinality": 91,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "age_at_radiation_stop_days",
+            "type": "number",
+            "description": "Patient age in days at the end of the radiation round.",
+            "udi:cardinality": 91,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "radiation_site",
+            "type": "string",
+            "description": "Field or site of radiation.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "radiation_site_other",
+            "type": "string",
+            "description": "Free-text value supplied when the coded radiation_site does not cover the finding (field or site of radiation).",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "radiation_type",
+            "type": "string",
+            "description": "Method or type of radiation delivered.",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "radiation_type_other",
+            "type": "string",
+            "description": "Free-text value supplied when the coded radiation_type does not cover the finding (method or type of radiation delivered).",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "total_radiation_dose",
+            "type": "string",
+            "description": "Dose of craniospinal radiation given.",
+            "udi:cardinality": 17,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "total_radiation_dose_unit",
+            "type": "string",
+            "description": "Unit of measure for total_radiation_dose (dose of craniospinal radiation given).",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "total_radiation_dose_focal",
+            "type": "string",
+            "description": "Total radiation given to the primary site.",
+            "udi:cardinality": 26,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "total_radiation_dose_focal_unit",
+            "type": "string",
+            "description": "Unit of measure for total_radiation_dose_focal (total radiation given to the primary site).",
+            "udi:cardinality": 5,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "is_initial_treatment",
+            "type": "string",
+            "description": "yes/no column indicating whether this radiation course was part of the patient's initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death), based on the course start age. 'no' also covers rows where this could not be determined.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "research_id"
+            ],
+            "reference": {
+              "fields": [
+                "research_id"
+              ],
+              "resource": "Patient"
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "one"
+            }
+          }
+        ]
+      },
+      "udi:hide_count": true
+    },
+    {
+      "name": "Surgery",
+      "description": "Tumor-directed surgery, including the patient age in days at the procedure, the extent of tumor resection achieved, and whether the surgery was part of the patient's initial treatment. Scope: Seattle data, the 93 radiant-cohort patients treated at Seattle Children's Hospital. Requests about the Seattle data or Seattle patients are answered from the line-level tables (Patient, Demographics, Event, Medical Therapy, Radiation, Surgery, Treatment Summary); requests about the full, all, Cumulus or Radiant data from the Efs and Os cubes.",
+      "type": "table",
+      "path": "pcx_30_surgery_level_deid.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 142,
+      "udi:column_count": 5,
+      "schema": {
+        "fields": [
+          {
+            "name": "organization_name",
+            "type": "string",
+            "description": "Name of the institution that contributed the patient's data to this release.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "research_id",
+            "type": "string",
+            "description": "De-identified patient research identifier.",
+            "udi:cardinality": 92,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "age_at_surgery_days",
+            "type": "number",
+            "description": "Patient age in days when the tumor-related surgery (resection or biopsy) was performed. A value of -1 indicates an unknown date.",
+            "udi:cardinality": 137,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "extent_of_tumor_resection",
+            "type": "string",
+            "description": "Extent of tumor resection performed during the surgery.",
+            "udi:cardinality": 4,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "is_initial_treatment",
+            "type": "string",
+            "description": "yes/no column indicating whether this surgery was part of the patient's initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "research_id"
+            ],
+            "reference": {
+              "fields": [
+                "research_id"
+              ],
+              "resource": "Patient"
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "one"
+            }
+          }
+        ]
+      },
+      "udi:hide_count": true
+    },
+    {
+      "name": "Treatment Summary",
+      "description": "Summary measures of each patient's initial treatment, including patient age in days at initial diagnosis and at first event, the age in days at the first-ever and first-initial radiation and chemotherapy, the age at first-ever methotrexate, whether each was part of initial treatment, and the order in which radiation and chemotherapy were given. Scope: Seattle data, the 93 radiant-cohort patients treated at Seattle Children's Hospital. Requests about the Seattle data or Seattle patients are answered from the line-level tables (Patient, Demographics, Event, Medical Therapy, Radiation, Surgery, Treatment Summary); requests about the full, all, Cumulus or Radiant data from the Efs and Os cubes.",
+      "type": "table",
+      "path": "pcx_30_treatment_summary_deid.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 93,
+      "udi:column_count": 13,
+      "schema": {
+        "fields": [
+          {
+            "name": "research_id",
+            "type": "string",
+            "description": "De-identified patient research identifier.",
+            "udi:cardinality": 93,
+            "udi:unique": true,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "organization_name",
+            "type": "string",
+            "description": "Name of the institution that contributed the patient's data to this release.",
+            "udi:cardinality": 1,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "age_at_initial_dx_days",
+            "type": "number",
+            "description": "Patient age in days at initial CNS diagnosis. A value of -1 indicates an unknown date.",
+            "udi:cardinality": 92,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "age_at_first_event_days",
+            "type": "number",
+            "description": "Patient age in days at first event that is of event type progression, recurrence, second malignancy, or deceased. A value of -1 indicates an unknown date.",
+            "udi:cardinality": 38,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "age_at_first_radiation_ever_days",
+            "type": "number",
+            "description": "Patient age in days at the start of the patient's first radiation treatment ever, whether or not it was part of initial treatment.",
+            "udi:cardinality": 77,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "age_at_initial_radiation_days",
+            "type": "number",
+            "description": "Patient age in days at the start of the first radiation treatment that was part of the patient's initial treatment. Null when no radiation fell within the initial treatment window.",
+            "udi:cardinality": 72,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "age_at_first_chemo_ever_days",
+            "type": "number",
+            "description": "Patient age in days at the start of the patient's first chemotherapy regimen ever, for any agent, whether or not it was part of initial treatment.",
+            "udi:cardinality": 91,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "age_at_initial_chemo_days",
+            "type": "number",
+            "description": "Patient age in days at the start of the first chemotherapy regimen that was part of the patient's initial treatment. Null when no chemotherapy fell within the initial treatment window.",
+            "udi:cardinality": 89,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "age_at_first_methotrexate_ever_days",
+            "type": "number",
+            "description": "Patient age in days at the start of the patient's first methotrexate regimen ever, whether or not it was part of initial treatment.",
+            "udi:cardinality": 35,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all",
+            "udi:time_format": "days"
+          },
+          {
+            "name": "had_initial_radiation",
+            "type": "string",
+            "description": "Yes/No column indicating whether the patient had radiation as part of their initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "had_initial_chemo",
+            "type": "string",
+            "description": "Yes/No column indicating whether the patient had chemotherapy, for any agent, as part of their initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "had_initial_methotrexate",
+            "type": "string",
+            "description": "Yes/No column indicating whether the patient had methotrexate as part of their initial treatment (the treatment that occurred prior to the first relapse, progression, second malignancy, or death). 'no' also covers rows where this could not be determined.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "initial_treatment_order",
+            "type": "string",
+            "description": "The order of initial treatments the patient received, specific to radiation, chemotherapy, both, or neither. Values: radiation_before_chemotherapy, chemo_before_radiation, radiation_and_chemo_same_day, chemo_only_no_initial_radiation, radiation_only_no_initial_chemo, no_initial_radiation_or_chemo.",
+            "udi:cardinality": 6,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "research_id"
+            ],
+            "reference": {
+              "fields": [
+                "research_id"
+              ],
+              "resource": "Patient"
+            },
+            "udi:cardinality": {
+              "from": "many",
+              "to": "one"
+            }
+          }
+        ],
+        "primaryKey": [
+          "research_id"
+        ]
+      },
+      "udi:hide_count": true
+    },
+    {
+      "name": "Efs",
+      "title": "Patients (Cumulus)",
+      "description": "Event-free survival cube, full cohort: ATRT and Medulloblastoma (CBTN PCX 30 V6, 2026-10-21 revised delivery), durations in months. Pre-aggregated marginal cube (Presto GROUP BY CUBE, 64 grouping sets, 24,056 rows): each row counts patients over its non-null dimensions; null means the dimension is rolled up, never missing data. Missing data is a literal 'Not Reported' / 'Not Applicable' string, or -1 for durations. 970 patients, 397 events. Every patient in the PCX 30 patient table; none excluded. Use event_free_survival_months with efs_status for survival curves. No small-cell suppression (17,619 rows have cnt = 1). Scope: full data (also called all, Cumulus or Radiant data), all 970 patients across every site. Requests about the full, all, Cumulus or Radiant data are answered from the Efs and Os cubes; requests about the Seattle data or Seattle patients from the line-level tables.",
+      "type": "table",
+      "path": "pcx30_efs_all_dx_v6_months_2026-10-21r_cube.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 24056,
+      "udi:column_count": 7,
+      "schema": {
+        "fields": [
+          {
+            "name": "cnt",
+            "title": "Patient count",
+            "type": "number",
+            "description": "Count of distinct patients in the cell (COUNT(DISTINCT research_id)). Within any grouping set the counts sum to the cohort (970); do not sum overlapping cube cells.",
+            "udi:cardinality": 109,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "event_free_survival_months",
+            "type": "number",
+            "description": "Time from initial diagnosis to the first progression, recurrence, second malignancy or death; if none, to the most recent vital status, in whole months: floor(days / 30.4375), where 30.4375 = 365.25 / 12. 0 means under one month of follow-up, not missing. 120 means 120 months (10 years) or more. -1 means the duration is unknown (no initial diagnosis date, no vital-status date, or an end date before diagnosis); exclude it from survival curves. Read with efs_status. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 108,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "efs_status",
+            "type": "string",
+            "description": "Whether the EFS clock stopped on an event. 'event' = first progression, recurrence, second malignancy or death observed; 'event-free' = none of these, censored at most recent vital status. Conventional EFS: death without a prior event counts as an event (unlike CBTN's workbook definition, which censors those deaths). Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "diagnosis",
+            "type": "string",
+            "description": "Patient's diagnosis cohort: CBTN demographics.diagnosis_type_cohort as delivered; if absent, the CNS diagnosis category of the patient's Initial CNS Tumor event (else earliest event). Levels: ATRT, Medulloblastoma. Filter to one value for a single-diagnosis view. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "protocol_name_and_arm",
+            "type": "string",
+            "description": "protocol_name_and_arm of the patient's first medical-therapy regimen, ordered by regimen start (ties and undated regimens fall back to the order in CBTN's table). Taken from any point after diagnosis, not limited to the initial treatment window. CBTN labels as delivered; a protocol without an arm suffix (e.g. 'ACNS0331') means the arm was not recorded. 'Not Applicable' = no medical-therapy record; 'Not Reported' = regimen recorded, protocol not recorded; 'Other' = CBTN's label for a protocol outside its list. Because this is the first regimen at any time, a regimen started only after relapse can appear for a patient with no initial chemotherapy. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 57,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "subtype",
+            "type": "string",
+            "description": "Molecular subtype at initial diagnosis, from cns_integrated_diagnosis. Every value carries its diagnosis as a prefix ('MB-' or 'ATRT-'), so subtypes never pool across diagnoses when diagnosis is rolled up. Medulloblastoma: refined with OpenPedCan molecular subtype where CBTN supplied it; SHH TP53-wildtype and SHH TP53-mutant are pooled as 'MB-SHH'. ATRT: CBTN label as delivered, no refinement. Levels: MB-Group 3, MB-Group 4, MB-non-WNT/non-SHH, MB-NOS/NEC, MB-SHH, MB-WNT, ATRT-MYC, ATRT-NOS/NEC, ATRT-SHH, ATRT-TYR. 'MB-NOS/NEC' and 'ATRT-NOS/NEC' = no molecular subtype recorded; 'MB-non-WNT/non-SHH' = Group 3 or 4 not resolved further. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "site",
+            "type": "string",
+            "description": "CBTN organization_name as delivered (the treating organization on the patient's event records). Not grouped by consent or RADIANT status. 'CBTN Non-Consortium Member' is a CBTN-supplied label for patients from organizations outside the consortium. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 30,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": []
+      },
+      "udi:cube": true,
+      "udi:measures": [
+        "cnt"
+      ],
+      "udi:dimensions": [
+        "event_free_survival_months",
+        "efs_status",
+        "diagnosis",
+        "protocol_name_and_arm",
+        "subtype",
+        "site"
+      ],
+      "udi:linked_dimensions": {
+        "diagnosis": {
+          "entity": "Demographics",
+          "field": "diagnosis_type_cohort",
+          "values": {
+            "ATRT": [
+              "Atypical teratoid/rhabdoid tumor"
+            ]
+          }
+        },
+        "protocol_name_and_arm": {
+          "entity": "Medical Therapy",
+          "field": "protocol_name_and_arm"
+        },
+        "subtype": {
+          "entity": "Event",
+          "field": "cns_integrated_diagnosis",
+          "values": {
+            "MB-Group 3": [
+              "Medulloblastoma, Group 3"
+            ],
+            "MB-Group 4": [
+              "Medulloblastoma, Group 4"
+            ],
+            "MB-NOS/NEC": [
+              "Medulloblastoma, NOS or NEC"
+            ],
+            "MB-SHH": [
+              "Medulloblastoma, SHH-activated and\u00a0TP53-mutant",
+              "Medulloblastoma, SHH-activated and\u00a0TP53-wildtype"
+            ],
+            "MB-WNT": [
+              "Medulloblastoma, WNT-activated"
+            ],
+            "MB-non-WNT/non-SHH": [
+              "Medulloblastoma, non-WNT/non-SHH"
+            ],
+            "ATRT-NOS/NEC": [
+              "ATRT, NOS or NEC"
+            ]
+          }
+        },
+        "site": {
+          "entity": "Demographics",
+          "field": "organization_name"
+        }
+      }
+    },
+    {
+      "name": "Os",
+      "description": "Overall survival cube, full cohort: ATRT and Medulloblastoma (CBTN PCX 30 V6, 2026-10-21 revised delivery), durations in months. Pre-aggregated marginal cube (Presto GROUP BY CUBE, 64 grouping sets, 24,352 rows): each row counts patients over its non-null dimensions; null means the dimension is rolled up, never missing data. Missing data is a literal 'Not Reported' / 'Not Applicable' string, or -1 for durations. 970 patients, 267 deaths. Every patient in the PCX 30 patient table; none excluded. Use overall_survival_months with vital_status for survival curves. No small-cell suppression (18,134 rows have cnt = 1). Scope: full data (also called all, Cumulus or Radiant data), all 970 patients across every site. Requests about the full, all, Cumulus or Radiant data are answered from the Efs and Os cubes; requests about the Seattle data or Seattle patients from the line-level tables.",
+      "type": "table",
+      "path": "pcx30_os_all_dx_v6_months_2026-10-21r_cube.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "udi:row_count": 24352,
+      "udi:column_count": 7,
+      "schema": {
+        "fields": [
+          {
+            "name": "cnt",
+            "title": "Patient count",
+            "type": "number",
+            "description": "Count of distinct patients in the cell (COUNT(DISTINCT research_id)). Within any grouping set the counts sum to the cohort (970); do not sum overlapping cube cells.",
+            "udi:cardinality": 106,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "overall_survival_months",
+            "type": "number",
+            "description": "Time from initial diagnosis to the most recent vital status, in whole months: floor(days / 30.4375), where 30.4375 = 365.25 / 12. 0 means under one month of follow-up, not missing. 120 means 120 months (10 years) or more. -1 means the duration is unknown (no initial diagnosis date, no vital-status date, or an end date before diagnosis); exclude it from survival curves. Read with vital_status. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 112,
+            "udi:unique": false,
+            "udi:data_type": "quantitative",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "vital_status",
+            "type": "string",
+            "description": "CBTN vital_status at the most recent vital-status record. 'deceased' = death observed; 'alive' = censored at most recent vital status. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "diagnosis",
+            "type": "string",
+            "description": "Patient's diagnosis cohort: CBTN demographics.diagnosis_type_cohort as delivered; if absent, the CNS diagnosis category of the patient's Initial CNS Tumor event (else earliest event). Levels: ATRT, Medulloblastoma. Filter to one value for a single-diagnosis view. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 2,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "protocol_name_and_arm",
+            "type": "string",
+            "description": "protocol_name_and_arm of the patient's first medical-therapy regimen, ordered by regimen start (ties and undated regimens fall back to the order in CBTN's table). Taken from any point after diagnosis, not limited to the initial treatment window. CBTN labels as delivered; a protocol without an arm suffix (e.g. 'ACNS0331') means the arm was not recorded. 'Not Applicable' = no medical-therapy record; 'Not Reported' = regimen recorded, protocol not recorded; 'Other' = CBTN's label for a protocol outside its list. Because this is the first regimen at any time, a regimen started only after relapse can appear for a patient with no initial chemotherapy. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 57,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "subtype",
+            "type": "string",
+            "description": "Molecular subtype at initial diagnosis, from cns_integrated_diagnosis. Every value carries its diagnosis as a prefix ('MB-' or 'ATRT-'), so subtypes never pool across diagnoses when diagnosis is rolled up. Medulloblastoma: refined with OpenPedCan molecular subtype where CBTN supplied it; SHH TP53-wildtype and SHH TP53-mutant are pooled as 'MB-SHH'. ATRT: CBTN label as delivered, no refinement. Levels: MB-Group 3, MB-Group 4, MB-non-WNT/non-SHH, MB-NOS/NEC, MB-SHH, MB-WNT, ATRT-MYC, ATRT-NOS/NEC, ATRT-SHH, ATRT-TYR. 'MB-NOS/NEC' and 'ATRT-NOS/NEC' = no molecular subtype recorded; 'MB-non-WNT/non-SHH' = Group 3 or 4 not resolved further. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 10,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          },
+          {
+            "name": "site",
+            "type": "string",
+            "description": "CBTN organization_name as delivered (the treating organization on the patient's event records). Not grouped by consent or RADIANT status. 'CBTN Non-Consortium Member' is a CBTN-supplied label for patients from organizations outside the consortium. Null when the row aggregates over (rolls up) this dimension.",
+            "udi:cardinality": 30,
+            "udi:unique": false,
+            "udi:data_type": "nominal",
+            "udi:overlapping_fields": "all"
+          }
+        ],
+        "foreignKeys": []
+      },
+      "udi:cube": true,
+      "udi:measures": [
+        "cnt"
+      ],
+      "udi:dimensions": [
+        "overall_survival_months",
+        "vital_status",
+        "diagnosis",
+        "protocol_name_and_arm",
+        "subtype",
+        "site"
+      ],
+      "udi:linked_dimensions": {
+        "diagnosis": {
+          "entity": "Demographics",
+          "field": "diagnosis_type_cohort",
+          "values": {
+            "ATRT": [
+              "Atypical teratoid/rhabdoid tumor"
+            ]
+          }
+        },
+        "protocol_name_and_arm": {
+          "entity": "Medical Therapy",
+          "field": "protocol_name_and_arm"
+        },
+        "subtype": {
+          "entity": "Event",
+          "field": "cns_integrated_diagnosis",
+          "values": {
+            "MB-Group 3": [
+              "Medulloblastoma, Group 3"
+            ],
+            "MB-Group 4": [
+              "Medulloblastoma, Group 4"
+            ],
+            "MB-NOS/NEC": [
+              "Medulloblastoma, NOS or NEC"
+            ],
+            "MB-SHH": [
+              "Medulloblastoma, SHH-activated and\u00a0TP53-mutant",
+              "Medulloblastoma, SHH-activated and\u00a0TP53-wildtype"
+            ],
+            "MB-WNT": [
+              "Medulloblastoma, WNT-activated"
+            ],
+            "MB-non-WNT/non-SHH": [
+              "Medulloblastoma, non-WNT/non-SHH"
+            ],
+            "ATRT-NOS/NEC": [
+              "ATRT, NOS or NEC"
+            ]
+          }
+        },
+        "site": {
+          "entity": "Demographics",
+          "field": "organization_name"
+        }
+      },
+      "udi:hide_count": true
+    }
+  ],
+  "udi:name": "pcx-combined-oct-28",
+  "udi:path": "./data/pcx/combined_oct_28/",
+  "udi:prefer": "line_level",
+  "udi:example_prompts": [
+    "Show survival curves from initial diagnosis by diagnosis cohort.",
+    "Does survival differ for patients who had radiation as part of their initial treatment?",
+    "What is the distribution of age at initial diagnosis?",
+    "How was initial treatment sequenced between radiation and methotrexate?",
+    "Which treatment protocols are most common?",
+    "Which chemotherapy agents are given most often?",
+    "Break down radiation type by radiation site.",
+    "What extent of tumor resection did surgeries achieve?",
+    "Which disease events are recorded, and how often?",
+    "Which sites contributed the most patients in the full data?",
+    "Filter to medulloblastoma patients.",
+    "What does each table in this dataset describe?",
+    "Compare overall survival for SJMB12 patients against all other protocols."
+  ]
+}
