@@ -1360,8 +1360,9 @@ def _cut_at_horizon(chart, time_field, events, units_per_year):
       `events in window` — per curve, the events the label should count.
 
     `cohort end` must already be the cohort-wide maximum (taken while the table
-    was ungrouped), so every curve is cut against the same edge. A cube's time
-    dimension is in months, hence `units_per_year`.
+    was ungrouped), so every curve is cut against the same edge.
+    `units_per_year` scales the horizon to `time_field`'s unit. Both callers now
+    plot years (the cube curve converts its months first), so both pass 1.
     """
     # The choice resolves to an expression, so it fills a derive on its own and
     # is read back as a column, like `<ESTIMATOR>`.

@@ -4,24 +4,24 @@
 A patient's cohort is `data_type_cohort` on the demographics table (`radiant` or
 `cbtn-non-radiant`) and their site is its `organization_name`. Every table keeps
 only the rows whose `research_id` belongs to a patient in the cohort (and site),
-less any `--drop` columns; row order and the data dictionary are copied
-unchanged. Stdlib only:
+less any `--drop` columns; row order is kept. Stdlib only:
 
     python3 filter_cohort.py <source-dir> <dest-dir> [--cohort radiant]
         [--site "Seattle Children's Hospital"] [--drop column ...]
 
-This package was built with:
+This package's line-level tables are rebuilt, from the committed pcx tables, with:
 
     python3 sample-data/pcx/combined_oct_28/filter_cohort.py \
-        sample-data/pcx/line-level-kai/prelim_30_deid_tables \
-        sample-data/pcx/combined_oct_28 \
+        sample-data/pcx sample-data/pcx/combined_oct_28 \
         --site "Seattle Children's Hospital" \
         --drop data_type_cohort protocol_name protocol_arm
+
+`datapackage.json` is not rebuilt: it also carries the cubes, their links and
+the tables' scope descriptions, so it is edited by hand.
 """
 
 import argparse
 import csv
-import shutil
 from pathlib import Path
 
 DEMOGRAPHICS = "pcx_30_demographics_deid.csv"
@@ -71,12 +71,9 @@ def main() -> None:
     args.dest.mkdir(parents=True, exist_ok=True)
     ids = cohort_ids(args.source, args.cohort, args.site)
     print(f"{len(ids)} patients in the '{args.cohort}' cohort" + (f" at {args.site}" if args.site else ""))
-    for path in sorted(args.source.glob("pcx_30_*.csv")):
+    for path in sorted(args.source.glob("pcx_30_*_deid.csv")):
         before, after = filter_table(path, args.dest, ids, set(args.drop))
         print(f"  {path.name}: {before} -> {after} rows")
-    dictionary = args.source / "data_dictionary.csv"
-    if dictionary.exists():
-        shutil.copy2(dictionary, args.dest / dictionary.name)
 
 
 if __name__ == "__main__":
