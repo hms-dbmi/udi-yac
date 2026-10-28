@@ -5731,9 +5731,8 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_003_barchart_join_count_horiz_grouped': ('Bar chart of the number of {entity1} by {enc:y}',
                                                'Displays the number of {entity1} in each {enc:y} category as '
                                                'horizontal bars.'),
- 'vis_004_barchart_basic': ('Bar chart of {enc:y} by {enc:x}', 'Displays {enc:y} for each {enc:x} category as bars.'),
- 'vis_005_barchart_basic': ('Bar chart of {enc:y} by {enc:x}',
-                            'Displays {enc:y} across the values of {enc:x} as bars.'),
+ 'vis_004_barchart_basic': ('{enc:y} by {enc:x}', 'Displays {enc:y} for each {enc:x} category as bars.'),
+ 'vis_005_barchart_basic': ('{enc:y} by {enc:x}', 'Displays {enc:y} across the values of {enc:x} as bars.'),
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': ('Stacked bar chart of the number of {entity1} by {enc:x} and '
                                                          '{enc:color}',
                                                          'Displays the number of {entity1} in each {enc:x} category as '
@@ -5750,7 +5749,7 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                                                      '{enc:color}',
                                                      'Displays the number of {entity} in each {enc:y} category as '
                                                      'horizontal bars, split by {enc:color}.'),
- 'vis_010_stacked_bar_vert_stacked': ('Stacked bar chart of {enc:y} by {enc:x} and {enc:color}',
+ 'vis_010_stacked_bar_vert_stacked': ('{enc:y} by {enc:x} and {enc:color}',
                                       'Displays {enc:y} for each {enc:x} category as bars, split by {enc:color}.'),
  'vis_011_stacked_bar_count_vert_grouped': ('Grouped bar chart of the number of {entity} by {enc:x} and {enc:xOffset}',
                                             'Displays the number of {entity} in each {enc:x} category as vertical '
@@ -5758,7 +5757,7 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_012_stacked_bar_count_horiz_grouped': ('Grouped bar chart of the number of {entity} by {enc:y} and {enc:yOffset}',
                                              'Displays the number of {entity} in each {enc:y} category as horizontal '
                                              'bars, placed side by side for each {enc:yOffset}.'),
- 'vis_013_stacked_bar_grouped': ('Grouped bar chart of {enc:y} by {enc:x} and {enc:xOffset}',
+ 'vis_013_stacked_bar_grouped': ('{enc:y} by {enc:x} and {enc:xOffset}',
                                  'Displays {enc:y} for each {enc:x} category as bars, placed side by side for each '
                                  '{enc:xOffset}.'),
  'vis_014_stacked_bar_freq_vert_normalized': ('Normalized bar chart of {enc:color} within {enc:x}',
@@ -5816,10 +5815,10 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_031_circular_proportion_distribution': ('Donut chart of the number of {entity} by {enc:color}',
                                               'Displays the share of {entity} that falls into each {enc:color} '
                                               'category as segments of a ring.'),
- 'vis_032_circular_proportion': ('Pie chart of {enc:theta} by {enc:color}',
+ 'vis_032_circular_proportion': ('{enc:theta} by {enc:color}',
                                  'Displays the share of {enc:theta} that falls into each {enc:color} category as '
                                  'slices of a circle.'),
- 'vis_033_circular_proportion': ('Donut chart of {enc:theta} by {enc:color}',
+ 'vis_033_circular_proportion': ('{enc:theta} by {enc:color}',
                                  'Displays the share of {enc:theta} that falls into each {enc:color} category as '
                                  'segments of a ring.'),
  'vis_034_table_count': ('Table of the number of {entity}',
@@ -5853,16 +5852,15 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_046_table_ranked_mode': ('Table of the number of {entity} by {enc:text}',
                                'Ranks every {enc:text} value by how many {entity} have it, highlighting the most '
                                'frequent.'),
- 'vis_047_table_sum': ('Table of {enc:text}', 'Displays the overall {enc:text} as a single figure.'),
- 'vis_048_table_sorted': ('Table of {enc:x} by {enc:text}',
+ 'vis_047_table_sum': ('{enc:text}', 'Displays the overall {enc:text} as a single figure.'),
+ 'vis_048_table_sorted': ('{enc:x} by {enc:text}',
                           'Lists each {enc:text} category with its {enc:x}, with a bar in each row showing the value.'),
  'vis_049_line_cdf': ('Line chart of the {enc:x} distribution',
                       'Displays what share of {entity} fall at or below each {enc:x} value, as a rising line.'),
  'vis_050_grouped_line_cdf': ('Line chart of the {enc:x} distribution by {enc:color}',
                               'Displays what share of {entity} fall at or below each {enc:x} value, as one line per '
                               '{enc:color} category.'),
- 'vis_051_line_sorted': ('Line chart of {enc:y} over {enc:x}',
-                         'Displays how {enc:y} changes across {enc:x}, as a line.'),
+ 'vis_051_line_sorted': ('{enc:y} over {enc:x}', 'Displays how {enc:y} changes across {enc:x}, as a line.'),
  'vis_052_line_survival': ('{bind:ENDPOINT} curve for {ent:entity2}',
                            'Plots the share of {ent:entity2} still event-free over time, from the start event to the '
                            "end event, reading each subject's events from {entity1}."),
@@ -5921,7 +5919,7 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_067_heatmap_avg': ('Heatmap of {enc:color} by {enc:y} and {enc:x}',
                          'Displays the mean {field:color} for each pairing of {enc:y} and {enc:x}, as a grid of shaded '
                          'cells.'),
- 'vis_068_heatmap_basic': ('Heatmap of {enc:color} by {enc:x} and {enc:y}',
+ 'vis_068_heatmap_basic': ('{enc:color} by {enc:x} and {enc:y}',
                            'Displays {enc:color} for each pairing of {enc:x} and {enc:y}, as a grid of shaded, '
                            'labelled cells.'),
  'vis_069_grouped_scatter_by_color': ('Scatterplot of {enc:x} and {enc:y} by {enc:color}',

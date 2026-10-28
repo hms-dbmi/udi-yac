@@ -99,7 +99,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Bar chart of <M> by <D:n>",
+    "title_template": "<M> by <D:n>",
     "summary_template": "Displays <M> for each <D:n> category as bars.",
     "value_descriptions": {}
   },
@@ -120,7 +120,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Bar chart of <M> by <D:q>",
+    "title_template": "<M> by <D:q>",
     "summary_template": "Displays <M> across the values of <D:q> as bars.",
     "value_descriptions": {}
   },
@@ -227,7 +227,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Stacked bar chart of <M> by <D1:n> and <D2:n>",
+    "title_template": "<M> by <D1:n> and <D2:n>",
     "summary_template": "Displays <M> for each <D1:n> category as bars, split by <D2:n>.",
     "value_descriptions": {}
   },
@@ -286,7 +286,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Grouped bar chart of <M> by <D1:n> and <D2:n>",
+    "title_template": "<M> by <D1:n> and <D2:n>",
     "summary_template": "Displays <M> for each <D1:n> category as bars, placed side by side for each <D2:n>.",
     "value_descriptions": {}
   },
@@ -660,7 +660,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Pie chart of <M> by <D:n>",
+    "title_template": "<M> by <D:n>",
     "summary_template": "Displays the share of <M> that falls into each <D:n> category as slices of a circle.",
     "value_descriptions": {}
   },
@@ -681,7 +681,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Donut chart of <M> by <D:n>",
+    "title_template": "<M> by <D:n>",
     "summary_template": "Displays the share of <M> that falls into each <D:n> category as segments of a ring.",
     "value_descriptions": {}
   },
@@ -969,7 +969,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Table of <M>",
+    "title_template": "<M>",
     "summary_template": "Displays the overall <M> as a single figure.",
     "value_descriptions": {}
   },
@@ -991,7 +991,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Table of <M> by <D:n>",
+    "title_template": "<M> by <D:n>",
     "summary_template": "Lists each <D:n> category with its <M>, with a bar in each row showing the value.",
     "value_descriptions": {}
   },
@@ -1057,7 +1057,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Line chart of <M> over <D:o>",
+    "title_template": "<M> over <D:o>",
     "summary_template": "Displays how <M> changes across <D:o>, as a line.",
     "value_descriptions": {}
   },
@@ -1684,7 +1684,7 @@
     "review_hint": "",
     "preview_bindings": null,
     "shared_entities": [],
-    "title_template": "Heatmap of <M> by <D1:n> and <D2:n>",
+    "title_template": "<M> by <D1:n> and <D2:n>",
     "summary_template": "Displays <M> for each pairing of <D1:n> and <D2:n>, as a grid of shaded, labelled cells.",
     "value_descriptions": {}
   },

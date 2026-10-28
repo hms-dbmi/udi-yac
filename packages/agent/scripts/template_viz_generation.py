@@ -98,6 +98,10 @@ class StratumReading(Enum):
 # Shared design note for data-cube templates: a cube is read by marginal
 # filtering, and the marginal filter (<MARGINAL:...>) is expanded at runtime
 # from the per-request schema's dimension list, so one template serves any cube.
+# Plain cube charts are titled by what they count ("<M> by <D:n>" → "Patient
+# count by Diagnosis"), without the chart type the chart itself already shows;
+# the measure reads well when the package gives it a `title`. Charts whose type
+# changes how they read (normalized bars, survival curves) keep it.
 # Event values used only to *preview* the survival templates in the studio. The
 # templates themselves take <V1>/<V2> literal-value placeholders, which the model
 # fills from the request's column domains, so they work with any event vocabulary.
@@ -2022,7 +2026,7 @@ def generate():
         chart_type=ChartType.BARCHART,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
         description="Shows the pre-aggregated cube measure for each category of a nominal dimension as a bar chart.",
-        title_template="Bar chart of <M> by <D:n>",
+        title_template="<M> by <D:n>",
         summary_template="Displays <M> for each <D:n> category as bars.",
         design_considerations=_CUBE_MARGINAL_NOTE,
         tasks="Compare the measure across categories; identify the most or least common category.",
@@ -2044,7 +2048,7 @@ def generate():
         chart_type=ChartType.BARCHART,
         task_types=[TaskType.CHARACTERIZE_DISTRIBUTION, TaskType.DETERMINE_RANGE],
         description="Shows the pre-aggregated cube measure across the values of a quantitative dimension as a bar chart.",
-        title_template="Bar chart of <M> by <D:q>",
+        title_template="<M> by <D:q>",
         summary_template="Displays <M> across the values of <D:q> as bars.",
         design_considerations=_CUBE_MARGINAL_NOTE,
         tasks="Assess how the measure is distributed across a numeric dimension.",
@@ -2195,7 +2199,7 @@ def generate():
         chart_type=ChartType.STACKED_BAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the pre-aggregated cube measure by two nominal dimensions as a vertical stacked bar chart.",
-        title_template="Stacked bar chart of <M> by <D1:n> and <D2:n>",
+        title_template="<M> by <D1:n> and <D2:n>",
         summary_template="Displays <M> for each <D1:n> category as bars, split by <D2:n>.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " Color encodes the sub-group; prefer the dimension with "
@@ -2282,7 +2286,7 @@ def generate():
         chart_type=ChartType.GROUPED_BAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the pre-aggregated cube measure by two nominal dimensions as a grouped (side-by-side) bar chart.",
-        title_template="Grouped bar chart of <M> by <D1:n> and <D2:n>",
+        title_template="<M> by <D1:n> and <D2:n>",
         summary_template="Displays <M> for each <D1:n> category as bars, placed side by side for each <D2:n>.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " xOffset gives side-by-side grouping for direct comparison "
@@ -2661,7 +2665,7 @@ def generate():
         chart_type=ChartType.CIRCULAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
         description="Shows the proportional cube measure for each category of a nominal dimension as a pie chart.",
-        title_template="Pie chart of <M> by <D:n>",
+        title_template="<M> by <D:n>",
         summary_template="Displays the share of <M> that falls into each <D:n> category as slices of a circle.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to angle and the renderer normalizes each "
@@ -2688,7 +2692,7 @@ def generate():
         chart_type=ChartType.CIRCULAR,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
         description="Shows the proportional cube measure for each category of a nominal dimension as a donut chart.",
-        title_template="Donut chart of <M> by <D:n>",
+        title_template="<M> by <D:n>",
         summary_template="Displays the share of <M> that falls into each <D:n> category as segments of a ring.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to angle and the renderer normalizes each "
@@ -3224,7 +3228,7 @@ def generate():
         chart_type=ChartType.TABLE,
         task_types=[TaskType.RETRIEVE_VALUE, TaskType.COMPUTE_DERIVED_VALUE],
         description="Shows the grand-total cube measure as a single-row table.",
-        title_template="Table of <M>",
+        title_template="<M>",
         summary_template="Displays the overall <M> as a single figure.",
         design_considerations=(
             "Reads the grand-total row directly by filtering to the marginal where every "
@@ -3263,7 +3267,7 @@ def generate():
         chart_type=ChartType.TABLE,
         task_types=[TaskType.DETERMINE_RANGE, TaskType.SORT, TaskType.RETRIEVE_VALUE],
         description="Lists each category of a nominal dimension with its pre-aggregated measure as a sorted table with in-cell bars.",
-        title_template="Table of <M> by <D:n>",
+        title_template="<M> by <D:n>",
         summary_template="Lists each <D:n> category with its <M>, with a bar in each row showing the value.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " Ordered by the measure descending, with the measure drawn "
@@ -3379,7 +3383,7 @@ def generate():
         chart_type=ChartType.LINE,
         task_types=[TaskType.CHARACTERIZE_DISTRIBUTION, TaskType.DETERMINE_RANGE],
         description="Shows the pre-aggregated cube measure over an ordered dimension (e.g. time) as a line chart.",
-        title_template="Line chart of <M> over <D:o>",
+        title_template="<M> over <D:o>",
         summary_template="Displays how <M> changes across <D:o>, as a line.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The axis is ordered ascending; a temporal dimension is "
@@ -4717,7 +4721,7 @@ def generate():
         chart_type=ChartType.HEATMAP,
         task_types=[TaskType.CLUSTER, TaskType.COMPUTE_DERIVED_VALUE, TaskType.CORRELATE],
         description="Shows the pre-aggregated cube measure for each combination of two nominal dimensions as a labeled heatmap.",
-        title_template="Heatmap of <M> by <D1:n> and <D2:n>",
+        title_template="<M> by <D1:n> and <D2:n>",
         summary_template="Displays <M> for each pairing of <D1:n> and <D2:n>, as a grid of shaded, labelled cells.",
         design_considerations=(
             _CUBE_MARGINAL_NOTE + " The measure maps to cell color with overlaid contrast-aware "
