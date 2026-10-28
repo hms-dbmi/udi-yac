@@ -3,7 +3,7 @@
   "info": {
     "title": "UDIAgent API",
     "description": "The reference server for the YAC chat: it turns a conversation about a data package into charts, filters and answers, and optionally serves the package's data from a database. Every endpoint is stateless: the client sends the conversation, the data package descriptor and the active filters with each request. [How the agent works](https://hms-dbmi.github.io/udi-yac/docs/backend/architecture/) follows a request through it.",
-    "version": "0.10.0"
+    "version": "0.11.0"
   },
   "paths": {
     "/": {
