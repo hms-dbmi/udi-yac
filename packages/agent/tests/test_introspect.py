@@ -231,3 +231,17 @@ def test_metadata_endpoint():
 
         server_app.app.state.query_engines = {}
         server_app.app.state.metadata_caches = {}
+
+
+def test_package_extras_merged_but_cannot_replace_introspected_keys(caplog):
+    connector = DuckDBConnector(views={"penguins": str(_SAMPLE / "penguins.csv")})
+    engine = QueryEngine(
+        connector,
+        table_map={"penguins": "penguins"},
+        package_extras={"udi:prefer": "data_cube", "udi:path": "./elsewhere/"},
+    )
+    with caplog.at_level("WARNING"):
+        schema = introspect(engine, "p")["dataSchema"]
+    assert schema["udi:prefer"] == "data_cube"
+    assert schema["udi:path"] == ""
+    assert "udi:path" in caplog.text

@@ -45,6 +45,7 @@ export function useSessionActions(): {
   const dashboardStore = useDashboardStore();
   const dataFiltersStore = useDataFiltersStore();
   const sourceFields = useDataPackage((s) => s.sourceFields);
+  const cubeMeasureFields = useDataPackage((s) => s.cubeMeasureFields);
   const globalStore = useGlobalStore();
   const issueReporting = useIssueReporting();
   const trackEvent = useTracker();
@@ -89,6 +90,7 @@ export function useSessionActions(): {
           dataFilters: dataFiltersStore,
         },
         sourceFields,
+        cubeMeasureFields,
       );
       trackEvent('session_imported', {
         source,
@@ -97,7 +99,14 @@ export function useSessionActions(): {
         itemCount: parsed.value.layout.items.length,
       });
     },
-    [conversationStore, dashboardStore, dataFiltersStore, sourceFields, trackEvent],
+    [
+      conversationStore,
+      dashboardStore,
+      dataFiltersStore,
+      sourceFields,
+      cubeMeasureFields,
+      trackEvent,
+    ],
   );
 
   const handlePickFile = useCallback(() => {

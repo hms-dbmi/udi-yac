@@ -162,6 +162,7 @@ def add_row(
     shared_entities: list[str] | None = None,
     title_template: str = "",
     summary_template: str = "",
+    value_descriptions: dict | None = None,
 ):
     """Append one template row.
 
@@ -236,6 +237,11 @@ def add_row(
         # the frontend can keep both live as fields are swapped.
         "title_template": title_template,
         "summary_template": summary_template,
+        # What each `<V*>` value MEANS in this template, prepended to the generic
+        # value-parameter description. Without it every value parameter reads
+        # the same, and a template taking two values of one column (an event and
+        # a censoring status) leaves the model to guess which goes where.
+        "value_descriptions": value_descriptions or {},
     }
     return df
 
@@ -912,7 +918,9 @@ def _cube_survival_chart(stratified: bool = False):
     keeps the curve internally consistent with the cells it is drawn from.
     """
     dims = "D1,D2,D3" if stratified else "D1,D2"
-    stratum = "<D3>" if stratified else None
+    # The column the curves split by: the stratifier as cut by the optional
+    # grouping (see `_apply_grouping`), its raw values without one.
+    stratum = _STRATUM_COL if stratified else None
 
     chart = (
         Chart()
@@ -921,9 +929,21 @@ def _cube_survival_chart(stratified: bool = False):
         # every other dimension aggregated away. Selecting it is what makes the
         # counts below add up to each patient exactly once.
         .filter(f"<MARGINAL:{dims}>")
+        # A negative time is a cube's code for "follow-up unknown" (pcx writes
+        # -1), which no time axis can place. Dropped as the line-level curves
+        # drop a negative span, so the subject leaves the cohort rather than
+        # drawing a step before time zero.
+        .filter(Expr.binop(">=", Expr.field("<D1>"), Expr.lit(0)))
+    )
+    if stratified:
+        # A cube dimension already holds one value per subject, so the grouping
+        # can cut it straight away: each cell moves into its group whole, and
+        # summing a group's cells below counts each of its subjects once.
+        chart = _apply_grouping(chart, "<D3>")
+    chart = (
         # The status dimension carries two different quantities in one column, so
         # split it into two before anything is summed.
-        .derive(
+        chart.derive(
             {
                 _CUBE_EVENTS: Expr.cond(
                     Expr.binop("==", Expr.field("<D2:n>"), Expr.lit("<V1>")),
@@ -1094,7 +1114,8 @@ def _cube_survival_chart(stratified: bool = False):
     )
     chart = _end_labels(chart, "label time", time_axis, pct_axis, colour)
     if stratified:
-        chart = chart.title(stratum, align="right")
+        # Names the field, not the derived stratum column, which no reader knows.
+        chart = chart.title("<D3>", align="right")
     return chart
 
 
@@ -1855,6 +1876,7 @@ def generate():
             "shared_entities",
             "title_template",
             "summary_template",
+            "value_descriptions",
         ]
     )
 
@@ -4336,6 +4358,20 @@ def generate():
     # Survival from a pre-aggregated cube
     # ---------------------------------------------------------------
 
+    # Two values of the one status column, with opposite meanings. Swapped,
+    # the curve counts the censored subjects as events and still looks like a
+    # survival curve, so the parameters say which is which.
+    cube_status_values = {
+        "V1": (
+            "The status value meaning the EVENT HAPPENED (e.g. 'event', "
+            "'deceased', 'dead') — counted as an event."
+        ),
+        "V2": (
+            "The status value meaning the subject was CENSORED: still alive or "
+            "event-free when last seen (e.g. 'event-free', 'alive', 'censored')."
+        ),
+    }
+
     # Unstratified: the whole cohort, accumulated out of (time, status) cells.
     df = add_row(
         df,
@@ -4348,6 +4384,7 @@ def generate():
         spec=_cube_survival_chart(),
         chart_type=ChartType.LINE,
         name_hint="survival_cube",
+        value_descriptions=cube_status_values,
         title_template="Survival curve over <D1>",
         summary_template=(
             "Plots the share of subjects still event-free at each <D1> value, counted from the cube's measure; censored time points carry a tick."
@@ -4361,7 +4398,8 @@ def generate():
             "Survival curve from a pre-aggregated CUBE: one step per time point, falling as "
             "events accumulate. Needs two dimensions — a QUANTITATIVE elapsed-time dimension "
             "and a status dimension whose values say whether the subject had the event or was "
-            "still event-free when last seen — plus the two status values themselves. Counts "
+            "still event-free when last seen — plus the two status values themselves: value1 "
+            "the one meaning the event happened, value2 the one meaning censored. Counts "
             "the cube's measure rather than reconstructing subjects, so it needs no event log. "
             "Censored time points carry a tick on the curve."
         ),
@@ -4414,14 +4452,16 @@ def generate():
     df = add_row(
         df,
         query_templates=[
-            "Show survival curves split by <D3:n>.",
-            "Kaplan-Meier plot stratified by <D3:n>.",
-            "Does event-free survival differ by <D3:n>?",
-            "Compare survival across <D3:n>.",
+            "Show survival curves split by <D3>.",
+            "Kaplan-Meier plot stratified by <D3>.",
+            "Does event-free survival differ by <D3>?",
+            "Compare survival across <D3>.",
+            "Compare survival for one <D3> against all the others.",
         ],
         spec=_cube_survival_chart(stratified=True),
         chart_type=ChartType.LINE,
         name_hint="survival_cube_stratified",
+        value_descriptions=cube_status_values,
         title_template="Survival curves over <D1> by <D3>",
         summary_template=(
             "Plots one curve per <D3> value, showing the share still event-free at each <D1>; each subject is counted once within its own stratum."
@@ -4432,9 +4472,12 @@ def generate():
             TaskType.CORRELATE,
         ],
         description=(
-            "Survival curves from a pre-aggregated CUBE, one per value of a third dimension. "
+            "Survival curves from a pre-aggregated CUBE, one per value of a third dimension — "
+            "or, with a `grouping`, one per named group of its values (e.g. one protocol "
+            "against all the others), or per band of a numeric dimension. "
             "Needs a QUANTITATIVE elapsed-time dimension, a status dimension saying whether "
-            "the subject had the event, the stratifying dimension, and the two status values. "
+            "the subject had the event, the stratifying dimension, and the two status values: "
+            "value1 the one meaning the event happened, value2 the one meaning censored. "
             "Each subject is counted once within its own stratum, so the curves PARTITION the "
             "cohort and their sizes add back to the marginal's total. Censored time points "
             "carry a tick on their own curve."

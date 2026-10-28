@@ -38,6 +38,7 @@ from seed_starrocks import (  # noqa: E402
     _column_type,
     load_example_prompts,
     load_package,
+    load_package_extras,
     read_csv,
     set_env_var,
     table_name_for,
@@ -68,6 +69,7 @@ def create_and_load(conn, entry: dict, null_sentinels: frozenset[str]) -> int:
 def write_backends_config(
     out_path: Path, package: str, db_path: Path, entries: list[dict],
     example_prompts: list[str] | None = None,
+    package_extras: dict | None = None,
 ) -> None:
     config = {
         package: {
@@ -83,6 +85,8 @@ def write_backends_config(
         config[package]["schemas"] = schemas
     if example_prompts:
         config[package]["examplePrompts"] = example_prompts
+    if package_extras:
+        config[package]["package"] = package_extras
     existing = {}
     if out_path.exists():
         try:
@@ -117,7 +121,8 @@ def seed(
         conn.close()
     if config_out is not None:
         write_backends_config(
-            config_out, package, db_path, entries, load_example_prompts(data_dir)
+            config_out, package, db_path, entries, load_example_prompts(data_dir),
+            load_package_extras(data_dir),
         )
         print(f"\nwrote {config_out}")
     return entries

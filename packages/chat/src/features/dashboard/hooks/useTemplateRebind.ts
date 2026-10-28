@@ -72,7 +72,14 @@ export function useTemplateRebind(
         if (seq !== requestSeq.current) return;
         dashboardStore
           .getState()
-          .applyTemplateRebind(vizKey, result.spec, result.toolArgs, result.params, sourceFields);
+          .applyTemplateRebind(
+            vizKey,
+            result.spec,
+            result.toolArgs,
+            result.params,
+            sourceFields,
+            dataPackageStore.getState().cubeMeasureFields,
+          );
         // Re-apply named + null filters to the new pipeline, as a spec rewrite does.
         dashboardStore.getState().updateSpecFilters(dataFiltersStore, dataPackageStore);
         trackEvent('visualization_tweaked', { encoding: param, kind: 'binding' });

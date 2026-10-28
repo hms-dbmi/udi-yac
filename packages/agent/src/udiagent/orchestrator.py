@@ -20,6 +20,7 @@ from udiagent.filters import (
     filter_failure_args,
     normalize_filters,
     operation_tool_calls,
+    translate_linked_values,
     validate_operations,
 )
 from udiagent.grammar import load_grammar
@@ -714,7 +715,10 @@ class Orchestrator:
             if args is None:
                 errors = ["No filter change came back."]
                 continue
-            operations = args.get("operations")
+            # A linked column's values may arrive in another column's spelling.
+            operations = translate_linked_values(
+                args.get("operations"), schema, data_domains
+            )
             errors = validate_operations(operations, schema, data_domains, current)
             if not errors:
                 return operation_tool_calls(operations, current)

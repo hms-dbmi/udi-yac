@@ -440,25 +440,32 @@ _VALUE_DESCRIPTION = (
 )
 
 
-def _value_param_schema(placeholder: str) -> dict:
+def _value_param_schema(placeholder: str, meaning: str = "") -> dict:
     """The tool parameter for a `<V*>` literal: a string, or for `<V*:list>` a
     non-empty list of them, any of which counts as a match.
 
     A list rather than a delimiter inside one string, because the values are
     copied out of the data and a delimiter can occur in a value.
+
+    `meaning` is the template's own account of what the value stands for
+    (`value_descriptions`), put first: the generic text says how to copy a
+    value, not which one, and two values of one column read identically
+    without it.
     """
+    lead = f"{meaning.strip()} " if meaning else ""
     if placeholder.endswith(":list"):
         return {
             "type": "array",
             "items": {"type": "string", "description": _VALUE_DESCRIPTION},
             "minItems": 1,
-            "description": (
+            "description": lead
+            + (
                 "One or more literal data VALUES (not column names); a row "
                 "holding ANY of them matches. Each copied exactly from the "
                 "relevant column, including case and spacing."
             ),
         }
-    return {"type": "string", "description": _VALUE_DESCRIPTION}
+    return {"type": "string", "description": lead + _VALUE_DESCRIPTION}
 
 
 def _add_choice_param(
@@ -650,7 +657,9 @@ def _generate_single_entity_tool(
             # <V*> is a literal data value, not a column. Say so explicitly: the
             # obvious failure is the model passing a column name here, which would
             # make the comparison it feeds match nothing.
-            properties[param_name] = _value_param_schema(ph)
+            properties[param_name] = _value_param_schema(
+                ph, (template.get("value_descriptions") or {}).get(base, "")
+            )
             required.append(param_name)
             param_map[param_name] = base
             continue
@@ -777,7 +786,9 @@ def _generate_join_entity_tool(
         seen.add(param_name)
 
         if base.startswith("V"):
-            properties[param_name] = _value_param_schema(ph)
+            properties[param_name] = _value_param_schema(
+                ph, (template.get("value_descriptions") or {}).get(base, "")
+            )
             required.append(param_name)
             param_map[param_name] = base
             continue

@@ -86,20 +86,57 @@ HAVING count(matching) = count(total)`; `match: 'none'` → `targetKey NOT IN
   scope**: it keeps every row of each subject that matches. An empty point
   value-list means **no constraint** on that field (matches Arquero), not
   "match nothing".
+- `only` selects one **marginal** of a pre-aggregated cube: the rows where
+  exactly the named dimensions are populated and every other dimension is
+  null. The complement comes from the entity's configured `udi:dimensions`
+  (see §3.1), not from the spec — so `{"only": ["sex"]}` compiles to `sex IS
+NOT NULL AND race IS NULL AND age IS NULL` without the caller knowing the
+  cube's shape. `{"only": []}` is the grand-total row. Pass `dimensions`
+  inline to use it against an entity with no configured cube roles; with
+  neither, the query fails loudly rather than returning a wrong marginal.
 - `kde` must be the last op; the engine post-processes its rows in Python. It
   fetches only the kde field and the group columns, and `samples` is clamped
   to 512.
 
+**Filtering a cube.** A prepended predicate cannot work: a per-sex chart reads
+the marginal where `race IS NULL`, so `race IN (…)` on top of it is
+unsatisfiable and returns nothing. Filtering means reading a _different_
+marginal and re-aggregating — expand → filter → contract:
+
+```json
+[
+  { "only": ["sex", "race"] },
+  { "filter": { "name": "race-brush" } },
+  { "groupby": ["sex"] },
+  { "rollup": { "cnt": { "op": "sum", "field": "cnt" } } }
+]
+```
+
+The chat builds this automatically for cube sources
+(`features/dashboard/utils/cubeFilters.ts`). Contraction is exact for additive
+measures and `min`/`max` only; means, medians and distinct counts cannot be
+re-aggregated from cells, and the chat declines to filter such a
+visualization rather than render a plausible wrong number.
+
 ### 2.2 `QueryEngine` (`engine.py`)
 
-`QueryEngine(connector, table_map, row_cap=5000, entity_schemas=None)`.
+`QueryEngine(connector, table_map, row_cap=5000, entity_schemas=None, package_extras=None)`.
 
 - `table_map`: entity name → physical table/view name (entity names may
   contain spaces; table names are SQL-safe).
-- `entity_schemas`: per-entity `primaryKey`/`foreignKeys` and descriptions
-  that **can't be introspected from the database** — merged into the resource
-  by `introspect()` (see §4); the chat's cross-entity filtering depends on the
-  keys, and the LLM reads the descriptions.
+- `entity_schemas`: per-entity metadata that **can't be introspected from the
+  database** — merged into the resource by `introspect()` (see §4).
+  `primaryKey`/`foreignKeys` land in the schema and drive the chat's
+  cross-entity filtering; descriptions are what the LLM reads; the cube roles
+  (`udi:cube`, `udi:dimensions`, `udi:measures`, `udi:measure_aggregations`)
+  land on the resource and drive `only`, as does `udi:linked_dimensions`,
+  which drives the chat's filtering between cubes and line-level tables.
+- `package_extras`: package-level descriptor keys, likewise un-introspectable —
+  merged into the package descriptor by `introspect()`. Today that is
+  `udi:prefer`, which tells the agent whether a package holding both
+  line-level tables and cubes answers from the line-level tables or the cubes
+  by default. It cannot replace a key introspection sets (`name`, `udi:path`,
+  `resources`).
 
 `run_query(source, transformation?, selections?, display_data_only?, offset?)`
 returns the client-facing result:
@@ -207,7 +244,15 @@ builds its own `{package: QueryEngine}` and serves the two endpoints with
     },
     "tables": { "donors": "donors", "samples": "samples" },
     "schemas": {
-      // optional but REQUIRED for cross-entity filtering
+      // optional but REQUIRED for cross-entity filtering, and for `only`
+      // on a pre-aggregated cube. Cube roles are resource-level keys and
+      // are served back on the resource by /v1/yac/metadata, so the chat
+      // recognises a remote cube; everything else lands in the schema.
+      "encounter_cube": {
+        "udi:cube": true,
+        "udi:dimensions": ["sex", "race", "age_group"],
+        "udi:measures": ["cnt"],
+      },
       "samples": {
         "foreignKeys": [
           {
@@ -230,6 +275,10 @@ builds its own `{package: QueryEngine}` and serves the two endpoints with
     // optional: the chat's "Try an example" prompts for this package, served by
     // GET /v1/yac/examples?package=my_cohort in place of the global list
     "examplePrompts": ["How many donors are in each age group?"],
+    // optional: package-level keys served with the introspected schema
+    // (`package_extras`); a package mixing line-level tables and cubes says
+    // which to answer from by default
+    "package": { "udi:prefer": "line_level" },
   },
 }
 ```

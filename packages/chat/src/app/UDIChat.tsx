@@ -42,6 +42,7 @@ import {
   HOST_FILTER_PREFIX,
   IssueReportDialog,
   useActiveFilters,
+  withLinkedSelections,
   type TemplateProvenance,
   type UDIFilter,
 } from '@/features/dashboard';
@@ -155,6 +156,7 @@ function UDIChatInner({
       parsedInitialSession.value,
       { conversation: conversationStore, dashboard: dashboardStore, dataFilters: dataFiltersStore },
       dataPackageStore.getState().sourceFields,
+      dataPackageStore.getState().cubeMeasureFields,
     );
   }, [
     parsedInitialSession,
@@ -242,13 +244,14 @@ function UDIChatInner({
       isValidIntervalFilter: dpState.isValidIntervalFilter,
       isValidPointFilter: dpState.isValidPointFilter,
     };
-    dataFiltersStore.getState().syncFiltersFromMessages(messages, validate);
+    dataFiltersStore.getState().syncFiltersFromMessages(messages, validate, dpState.dimensionLinks);
   }, [messages, loadingPhase, dataFiltersStore, dataPackageStore]);
 
-  // Update spec filter structure when LLM FilterData selections change or when
-  // the set of active visualizations changes. Brush selections don't need to
-  // trigger this — each viz's own UUID is already in the filter list (from
-  // activeVisualizations), so the filter structure is stable once set up.
+  // Update spec filter structure when any filter selection changes or when
+  // the set of active visualizations changes. Chart brushes write into
+  // `dataSelections` too, which cube sources depend on: which marginal a
+  // visualization must expand to depends on WHICH FIELDS are currently
+  // selected.
   const dataSelections = useDataFilters((s) => s.dataSelections);
   const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
@@ -369,7 +372,11 @@ function UDIChatInner({
           },
           transformation: [...named, { groupby: fields }, { rollup: { n: { op: 'count' } } }],
         },
-        dataFiltersStore.getState().dataSelections,
+        withLinkedSelections(
+          dataFiltersStore.getState().dataSelections,
+          dataPackageStore.getState().dimensionLinks,
+          dataFiltersStore.getState().filterScopes,
+        ),
         // Explicit: left out, it runs the unfiltered pass as well.
         { displayDataOnly: true },
       )

@@ -68,6 +68,7 @@ export function useChatApi(config: QueryConfig, options: UseChatApiOptions = {})
         }),
         dfState.filterScopes,
         messages,
+        dpState.dimensionLinks,
       );
       const hadUserKey = !!config.openAiKey;
       const startedAt = performance.now();

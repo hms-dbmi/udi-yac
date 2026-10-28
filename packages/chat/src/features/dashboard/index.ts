@@ -41,6 +41,17 @@ export {
 export { createMemoryBankStore, type MemoryBankState } from './stores/memoryBankStore';
 
 export {
+  buildCubeTransformation,
+  buildCubeCountTransformation,
+  getRepresentedFields,
+  collectFieldReferences,
+  marginalDimensions,
+  type ActiveFilter as CubeActiveFilter,
+  type SkippedFilter,
+  type SkipReason,
+} from './utils/cubeFilters';
+
+export {
   applyFieldLabels,
   buildVizTitle,
   resolveVizTitle,
@@ -51,6 +62,14 @@ export {
 } from './utils/vizTitle';
 
 export { useVizTitleLabels } from './hooks/useVizTitleLabels';
+export { useToolkitSelections } from './hooks/useToolkitSelections';
+export {
+  linkedSelections,
+  withLinkedSelections,
+  isLinkedSelectionKey,
+  canonicalColumn,
+  canonicalFilter,
+} from './utils/linkedSelections';
 
 export {
   useBrushFilters,

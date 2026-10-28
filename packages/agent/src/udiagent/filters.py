@@ -293,6 +293,67 @@ def _value_lists(data_domains) -> dict:
     return out
 
 
+def _linked_spellings(schema: dict, entity: str, field: str, value: str) -> list[str]:
+    """How ``value``, spelled as some other column of the same link group,
+    reads on ``entity.field``. Empty when no link knows the value.
+
+    A cube dimension and the line-level column it was aggregated from
+    (``udi:linked_dimensions``) spell the same category differently — "SHH"
+    against "Medulloblastoma, SHH-activated and TP53-mutant". The chat keeps a
+    linked filter on one of them, so the model may meet a filter on the
+    line-level column while knowing the cube's values, or the other way round.
+    Values translate through the line-level column (the hub), as they do in
+    the chat, so two cubes linked to it translate between themselves too.
+    """
+    links = schema.get("links") or []
+    own = next(
+        (l for l in links if (l["cube"], l["dimension"]) == (entity, field)), None
+    )
+    hub = (own["entity"], own["field"]) if own else (entity, field)
+    group = [l for l in links if (l["entity"], l["field"]) == hub]
+    if not group:
+        return []
+    # The value on the hub: as a cube spells it, or already the hub's own.
+    hub_values = [h for l in group for h in l["values"].get(value, [])] or [value]
+    if own is None:
+        return [] if hub_values == [value] else list(dict.fromkeys(hub_values))
+    return [c for c, hubs in own["values"].items() if any(h in hubs for h in hub_values)]
+
+
+def translate_linked_values(operations, schema: dict, data_domains) -> list:
+    """``operations`` with each point value the target column does not hold,
+    but a linked column spells, rewritten to the target's own spelling.
+
+    Done before validation and kept in the emitted filter, so the filter the
+    client applies holds values that match rows. A value no link knows is left
+    for validation to report.
+    """
+    if not isinstance(operations, list) or not schema.get("links"):
+        return operations
+    values = _value_lists(data_domains)
+    out = []
+    for op in operations:
+        if (
+            not isinstance(op, dict)
+            or op.get("op") not in ("add", "modify")
+            or op.get("filterType") != "point"
+        ):
+            out.append(op)
+            continue
+        entity, field = op.get("entity"), op.get("field")
+        known = values.get((entity, field))
+        picked = []
+        for value in op.get("pointValues") or []:
+            spellings = (
+                [s for s in _linked_spellings(schema, entity, field, value) if s in known]
+                if known and value not in known
+                else []
+            )
+            picked += spellings or [value]
+        out.append({**op, "pointValues": list(dict.fromkeys(picked))})
+    return out
+
+
 def _related(schema: dict, a: str, b: str) -> bool:
     """A direct foreign key between ``a`` and ``b``, either way round."""
     return any(
@@ -358,11 +419,12 @@ def _validate_condition(
                     f"'{lowered[value.lower()]}' is — copy it exactly, including case."
                 )
             else:
-                sample = ", ".join(repr(v) for v in known[:8])
-                more = "" if len(known) <= 8 else f", … ({len(known)} in all)"
+                # Every value: this step has no tool to look up the rest, and the
+                # list is already bounded by what the client sent in full.
+                listed = ", ".join(repr(v) for v in known)
                 errors.append(
                     f"Value '{value}' is not in '{entity}.{field}', so the filter "
-                    f"would match no rows. Values there: {sample}{more}."
+                    f"would match no rows. Values there ({len(known)}): {listed}."
                 )
     else:
         errors.append("filterType must be 'point' or 'interval'.")

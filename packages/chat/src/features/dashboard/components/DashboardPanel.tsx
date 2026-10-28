@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useDashboard, useDataFilters, useGlobal } from '@/app/UDIChatContext';
+import { useDashboard, useGlobal } from '@/app/UDIChatContext';
 import { DashboardGrid } from './DashboardGrid';
 import { ScrollAffordances } from './ScrollAffordances';
 import { GridSettingsButton } from './GridSettingsButton';
 import { WelcomeSplash } from './WelcomeSplash';
 import { FilterToolbar } from './FilterToolbar';
 import { useFilterChips } from '../hooks/useFilterChips';
+import { useToolkitSelections } from '../hooks/useToolkitSelections';
 import { DataCounts } from './DataCounts';
 import { DownloadButton } from './DownloadButton';
 import { DashboardMenu } from './DashboardMenu';
@@ -99,7 +100,7 @@ function DashboardHeader() {
  */
 export function DashboardPanel({ seeding = false }: { seeding?: boolean }) {
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
-  const dataSelections = useDataFilters((s) => s.dataSelections);
+  const toolkitSelections = useToolkitSelections();
   const readOnly = useGlobal((s) => s.readOnly);
   // Read-only has no header, so the sticky band holds only the Filters section;
   // with nothing filtered it would be an empty white strip.
@@ -199,7 +200,7 @@ export function DashboardPanel({ seeding = false }: { seeding?: boolean }) {
               these gutters, so the grid insets from both panel edges while the
               dashboard background still spans the full width. */}
           <div className="udi:px-3">
-            <DashboardGrid selections={dataSelections} />
+            <DashboardGrid selections={toolkitSelections} />
           </div>
         </div>
       </ScrollArea>

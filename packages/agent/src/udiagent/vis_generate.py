@@ -1429,6 +1429,35 @@ def validate_bindings(
     if errors:
         return errors
 
+    # Each kind of template reads only its own kind of table. A cube template
+    # bound to a line-level table has no marginal to pick; a line-level template
+    # bound to a cube counts its pre-aggregated cells as if they were subjects,
+    # and draws a plausible chart of wrong numbers. Checked here rather than at
+    # tool selection, because a package can hold both kinds of table.
+    reads_cube = _template_reads_cube(spec_template)
+    for key, name in entity_bindings.items():
+        if bool(entities[name].get("is_cube")) == reads_cube:
+            continue
+        valid = [n for n, e in entities.items() if bool(e.get("is_cube")) == reads_cube]
+        if reads_cube:
+            problem = (
+                f"'{name}' is a line-level table, but this tool reads a "
+                "pre-aggregated data cube."
+            )
+            remedy = "Use a line-level tool for it, or a data cube"
+        else:
+            problem = (
+                f"'{name}' is a pre-aggregated data cube, but this tool reads "
+                "line-level rows."
+            )
+            remedy = "Use a data-cube tool for it, or a line-level table"
+        errors.append(
+            f"{problem} {remedy}"
+            + (f": {', '.join(valid)}." if valid else ".")
+        )
+    if errors:
+        return errors
+
     # Check join entities are different — every pair, so a three-table template
     # cannot quietly cross a table with itself and report every subject as
     # belonging to both groups.
@@ -1957,11 +1986,35 @@ def _load_generated_tools():
 
 
 def _active_template_tags(request_schema):
-    """Tags to select templates for this request: cube schemas get the
-    ``data_cube`` templates, everything else the ``line_item`` templates."""
-    from udiagent.schema import schema_is_cube
+    """Tags to select templates for this request: one per kind of table the
+    package holds. Cube tables get the ``data_cube`` templates and line-level
+    tables the ``line_item`` ones, so a package with both gets both;
+    ``validate_bindings`` then keeps each template on its own kind of table.
+    A package with no tables at all gets the ``line_item`` templates."""
+    from udiagent.schema import schema_has_line_items, schema_is_cube
 
-    return {"data_cube"} if schema_is_cube(request_schema) else {"line_item"}
+    tags = set()
+    if schema_is_cube(request_schema):
+        tags.add("data_cube")
+    if schema_has_line_items(request_schema) or not tags:
+        tags.add("line_item")
+    return tags
+
+
+def _preferred_tag(request_schema, active_tags):
+    """The template tag the package prefers (`udi:prefer`), when it has both
+    kinds of table to choose between; None otherwise."""
+    from udiagent.schema import PREFER_TAGS
+
+    tag = PREFER_TAGS.get(request_schema.get("prefer"))
+    return tag if tag and active_tags >= {"data_cube", "line_item"} else None
+
+
+def _template_reads_cube(spec_template):
+    """True if the template reads a pre-aggregated cube: it picks a marginal
+    (``<MARGINAL…>``) or reads the measure (``<M>``). Every other template
+    aggregates line-level rows itself."""
+    return "<M>" in spec_template or "<MARGINAL" in spec_template
 
 
 def _tool_entity_arity(tool_def):
@@ -2255,6 +2308,14 @@ def _execute_generate(skill, context):
         # get the data-cube tools). Replaces a hard-coded active-set switch.
         active_tags = _active_template_tags(request_schema)
         selected_defs = _select_tools(tool_defs, tool_tags, active_tags, request_schema)
+        preferred_tag = _preferred_tag(request_schema, active_tags)
+        if preferred_tag:
+            # The package's preferred kind first. A nudge, not a filter: the
+            # other kind stays on offer for what only it can answer.
+            selected_defs = sorted(
+                selected_defs,
+                key=lambda d: preferred_tag not in tool_tags.get(d["function"]["name"], []),
+            )
         logger.info(
             "[vis %s] template tools offered: count=%d of %d (tags=%s)",
             rid,
@@ -2287,6 +2348,29 @@ def _execute_generate(skill, context):
             "to find them before writing the grouping, and copy them exactly.\n\n"
             f"## Available Datasets\n\n{data_schema_simple}"
         )
+        if active_tags >= {"data_cube", "line_item"}:
+            # Both kinds of table, so both kinds of tool. Said up front because
+            # nothing in a tool's parameters says which tables it accepts.
+            system_msg += (
+                "\n\n## Data cubes and line-level tables\n\n"
+                "Some tables are pre-aggregated data cubes (`kind: data_cube` "
+                "above) and the rest hold line-level rows. The data-cube tools "
+                "only accept the cube tables, and every other tool only accepts "
+                "the line-level tables: pick the tool that matches the table the "
+                "request is about."
+            )
+            if preferred_tag:
+                preferred, other = (
+                    ("line-level tables", "a data cube")
+                    if preferred_tag == "line_item"
+                    else ("data cubes", "a line-level table")
+                )
+                system_msg += (
+                    f" When the request can be answered from either, use the "
+                    f"{preferred}: this dataset prefers them. Use {other} only for "
+                    f"what the {preferred} cannot answer, such as a column only it "
+                    f"has, or when the user asks for it."
+                )
         # Some tools take a literal data value (a `value*` parameter) rather than
         # only column names. The schema lists columns but not their contents, so
         # without domains the model would have to guess those values. Append them

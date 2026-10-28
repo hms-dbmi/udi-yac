@@ -36,6 +36,7 @@ class QueryEngine:
         table_map: dict[str, str],
         row_cap: int = DEFAULT_ROW_CAP,
         entity_schemas: dict[str, dict] | None = None,
+        package_extras: dict | None = None,
     ):
         """
         connector: DuckDBConnector / StarRocksConnector (execute + dialect).
@@ -46,11 +47,15 @@ class QueryEngine:
             table `description` and per-column `fields` descriptions — merged
             into each resource by introspect(). The chat's cross-entity
             filtering (getEntityRelationship) depends on foreignKeys.
+        package_extras: package-level descriptor keys introspection can't
+            produce either, such as `udi:prefer` — merged into the package
+            descriptor by introspect().
         """
         self.connector = connector
         self.table_map = table_map
         self.row_cap = row_cap
         self.entity_schemas = entity_schemas or {}
+        self.package_extras = package_extras or {}
         self._columns_cache: dict[str, list] = {}
 
     # ── public API ───────────────────────────────────────────────────────────
@@ -106,6 +111,7 @@ class QueryEngine:
             selections=selections,
             probe=self.connector.execute,
             columns_of=self._columns_of,
+            dimensions_of=self._dimensions_of,
         )
 
         # Same default as getDataObject: a trailing rollup yields a small
@@ -146,6 +152,16 @@ class QueryEngine:
                 name for name, _ in _describe(self.connector, table)
             ]
         return self._columns_cache[entity]
+
+    def _dimensions_of(self, entity: str) -> list | None:
+        """Declared cube dimensions for an entity, or None if it isn't a cube.
+
+        Cube roles can't be introspected from the database — a marginal row
+        looks like any other row with nulls in it — so they come from the
+        configured schemas, same as primaryKey/foreignKeys.
+        """
+        dimensions = self.entity_schemas.get(entity, {}).get("udi:dimensions")
+        return list(dimensions) if dimensions else None
 
     def _execute(self, compiled, offset: int = 0) -> tuple[list[dict], int | None]:
         """Rows, and the cap they were cut at (None when they were not)."""

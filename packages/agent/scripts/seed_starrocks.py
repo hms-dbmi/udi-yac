@@ -112,15 +112,15 @@ def load_package(data_dir: Path) -> list[dict]:
             # likewise exist only in the package, and are what tells the LLM
             # what a column means; so do date formats (`udi:time_format`), which
             # make the chat show an epoch column's BIGINTs as dates.
-            relationship_schema = {
+            schema_extras = {
                 key: schema[key]
                 for key in ("primaryKey", "foreignKeys")
                 if key in schema
             }
             if resource.get("description"):
-                relationship_schema["description"] = resource["description"]
+                schema_extras["description"] = resource["description"]
             if resource.get("udi:hide_count"):
-                relationship_schema["udi:hide_count"] = True
+                schema_extras["udi:hide_count"] = True
             described = [
                 {
                     "name": f["name"],
@@ -134,7 +134,24 @@ def load_package(data_dir: Path) -> list[dict]:
                 if f.get("description") or f.get("udi:time_format")
             ]
             if described:
-                relationship_schema["fields"] = described
+                schema_extras["fields"] = described
+            # Cube roles are resource-level and equally un-introspectable: a
+            # marginal row is just a row with nulls in it as far as the
+            # database is concerned. Carry them through so `only` can resolve
+            # a marginal's null complement server-side.
+            schema_extras.update(
+                {
+                    key: resource[key]
+                    for key in (
+                        "udi:cube",
+                        "udi:dimensions",
+                        "udi:measures",
+                        "udi:measure_aggregations",
+                        "udi:linked_dimensions",
+                    )
+                    if key in resource
+                }
+            )
             entries.append(
                 {
                     "entity": resource["name"],
@@ -146,7 +163,7 @@ def load_package(data_dir: Path) -> list[dict]:
                         if f.get("udi:data_type") == "quantitative"
                     },
                     "row_count": resource.get("udi:row_count"),
-                    "schema_extras": relationship_schema or None,
+                    "schema_extras": schema_extras or None,
                 }
             )
     else:
@@ -164,6 +181,22 @@ def load_package(data_dir: Path) -> list[dict]:
     if not entries:
         raise SystemExit(f"no CSV/TSV files or datapackage.json found in {data_dir}")
     return entries
+
+
+#: Package-level descriptor keys carried into the backends config (`package`):
+#: like the per-entity extras, a database has nowhere to keep them.
+PACKAGE_EXTRA_KEYS = ("udi:prefer",)
+
+
+def load_package_extras(data_dir: Path) -> dict | None:
+    """The package-level keys of `datapackage.json` the server should serve
+    with the introspected schema, or None if there are none."""
+    path = data_dir / "datapackage.json"
+    if not path.exists():
+        return None
+    package = json.loads(path.read_text())
+    extras = {key: package[key] for key in PACKAGE_EXTRA_KEYS if key in package}
+    return extras or None
 
 
 def load_example_prompts(data_dir: Path) -> list[str] | None:
@@ -310,6 +343,7 @@ def write_backends_config(
     out_path: Path, database: str, entries: list[dict],
     host: str, port: int, user: str, password: str,
     example_prompts: list[str] | None = None,
+    package_extras: dict | None = None,
 ) -> None:
     config = {
         database: {
@@ -331,6 +365,8 @@ def write_backends_config(
         config[database]["schemas"] = schemas
     if example_prompts:
         config[database]["examplePrompts"] = example_prompts
+    if package_extras:
+        config[database]["package"] = package_extras
     existing = {}
     if out_path.exists():
         try:
@@ -373,7 +409,7 @@ def seed(
     if config_out is not None:
         write_backends_config(
             config_out, database, entries, host, port, user, password,
-            load_example_prompts(data_dir),
+            load_example_prompts(data_dir), load_package_extras(data_dir),
         )
         print(f"\nwrote {config_out}")
     return entries

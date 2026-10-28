@@ -1,5 +1,5 @@
 import type { UDIGrammar } from './dist/GrammarTypes';
-import type { DataSelections } from './dist/DataSourcesStore';
+import type { DataSelections, CubeMetadata } from './dist/DataSourcesStore';
 import type {
   QueryDataSpec,
   QueryDataResult,
@@ -13,6 +13,7 @@ import type {
   DataFieldDomain,
   IntervalDomain,
   CategoricalDomain,
+  CubeMetadata,
 } from './dist/domainTypes';
 import type {
   UDIPalette,
@@ -58,6 +59,14 @@ export declare function clearAllSelections(): void;
 /** Snapshot of every active selection in the shared DataSourcesStore. */
 export declare function getDataSelections(): DataSelections;
 
+/**
+ * Cube metadata registered for `sourceName` by `loadDataPackage`, or null
+ * when the source is a plain row-level table.
+ */
+export declare function getCubeMetadata(
+  sourceName: string,
+): CubeMetadata | null;
+
 /*
  * Query backend seam. Local (the default) is the in-browser Arquero engine;
  * remote batches POSTs to a /v1/yac/query server. Re-exported from the built
@@ -102,6 +111,7 @@ export type {
   DataFieldDomain,
   IntervalDomain,
   CategoricalDomain,
+  CubeMetadata,
   UDIPalette,
   ContinuousColor,
   DiscreteColor,

@@ -12,6 +12,8 @@ import {
   useEntityIcons,
   useGlobalStore,
 } from '@/app/UDIChatContext';
+import { buildCubeCountTransformation } from '../utils/cubeFilters';
+import { useToolkitSelections } from '../hooks/useToolkitSelections';
 import { joinDataPath } from '@/features/data-package';
 import { cn } from '@/lib/utils';
 import { DEFAULT_ENTITY_ICONS, FALLBACK_ENTITY_ICON } from '@/utils/entityIcons';
@@ -35,6 +37,7 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
   const loadingPhase = useDataPackage((s) => s.loadingPhase);
   const loadError = useDataPackage((s) => s.error);
   const dataSelections = useDataFilters((s) => s.dataSelections);
+  const toolkitSelections = useToolkitSelections();
   const filterScopes = useDataFilters((s) => s.filterScopes);
   const activeVisualizations = useDashboard((s) => s.activeVisualizations);
   const dashboardStore = useDashboardStore();
@@ -43,6 +46,9 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
   const globalStore = useGlobalStore();
 
   const [filteredCounts, setFilteredCounts] = useState<Record<string, number>>({});
+  // Cube entities have no meaningful row count — their total is the measure
+  // on the grand-total marginal, which has to be queried for.
+  const [cubeTotals, setCubeTotals] = useState<Record<string, number>>({});
 
   const consumerIcons = useEntityIcons();
   const mergedIcons = useMemo<EntityIconMap>(
@@ -52,11 +58,17 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
 
   const chips = useMemo<EntityChip[]>(() => {
     if (!dataPackage?.resources) return [];
+    const dpState = dataPackageStore.getState();
     return entityNames
       .map((name) => {
         const resource = dataPackage.resources.find((r) => r.name === name);
-        const totalCount = resource?.['udi:row_count'] ?? 0;
-        if (totalCount <= 1) return null;
+        // A cube's row count is the number of pre-aggregated cells, not a
+        // count of anything a user asked about — the real total is the
+        // grand-total marginal's measure, which `cubeTotals` queries for.
+        const isCube = dpState.isCube(name);
+        const totalCount = isCube ? (cubeTotals[name] ?? 0) : (resource?.['udi:row_count'] ?? 0);
+        if (!isCube && totalCount <= 1) return null;
+        if (isCube && !resource) return null;
         return {
           id: name,
           label: name,
@@ -66,7 +78,7 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
-  }, [dataPackage, entityNames, mergedIcons]);
+  }, [dataPackage, entityNames, mergedIcons, dataPackageStore, cubeTotals]);
 
   // `dataSelections` is a change trigger: the filters are read out of the
   // store via getState(), which the linter cannot see.
@@ -79,10 +91,32 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
   // Build a count spec per entity (with named filters + rollup)
   const countSpecs = useMemo(() => {
     if (!dataPackage) return {};
+    const dpState = dataPackageStore.getState();
+    const activeFilters = dashboardStore
+      .getState()
+      .getActiveFilters(filterIds, dataFiltersStore, dataPackageStore);
     const specs: Record<string, QueryDataSpec> = {};
     for (const chip of chips) {
       const resource = dataPackage.resources.find((r) => r.name === chip.id);
       if (!resource) continue;
+      const source = {
+        name: chip.id,
+        source: joinDataPath(dataPackage['udi:path'], resource.path),
+      };
+      const cube = dpState.getCubeInfo(chip.id);
+      if (cube) {
+        // Same expand -> filter -> contract pipeline the charts use, with no
+        // visualization dimensions, so it contracts to a single total.
+        const { transformation } = buildCubeCountTransformation({
+          cube,
+          sourceName: chip.id,
+          filters: activeFilters,
+          measureOp: (measure) => dpState.getCubeMeasureOp(chip.id, measure),
+          as: 'count',
+        });
+        specs[chip.id] = { source, transformation };
+        continue;
+      }
       // The dashboard's own builder, so a count filters exactly as a chart
       // of the same table does — subject scopes included.
       const namedFilters = dashboardStore
@@ -94,10 +128,7 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
           dataPackageStore,
         ) as DataTransformation[];
       specs[chip.id] = {
-        source: {
-          name: chip.id,
-          source: joinDataPath(dataPackage['udi:path'], resource.path),
-        },
+        source,
         transformation: [...namedFilters, { rollup: { count: { op: 'count' } } }],
       };
     }
@@ -115,6 +146,32 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
     dataFiltersStore,
     dataPackageStore,
   ]);
+
+  // Unfiltered grand total per cube entity — the denominator in the chip's
+  // "filtered / total". Row-level entities read it from udi:row_count.
+  const cubeTotalSpecs = useMemo(() => {
+    if (!dataPackage) return {};
+    const dpState = dataPackageStore.getState();
+    const specs: Record<string, QueryDataSpec> = {};
+    for (const name of entityNames) {
+      const cube = dpState.getCubeInfo(name);
+      if (!cube) continue;
+      const resource = dataPackage.resources.find((r) => r.name === name);
+      if (!resource) continue;
+      const { transformation } = buildCubeCountTransformation({
+        cube,
+        sourceName: name,
+        filters: [],
+        measureOp: (measure) => dpState.getCubeMeasureOp(name, measure),
+        as: 'count',
+      });
+      specs[name] = {
+        source: { name, source: joinDataPath(dataPackage['udi:path'], resource.path) },
+        transformation,
+      };
+    }
+    return specs;
+  }, [dataPackage, entityNames, dataPackageStore]);
 
   // Build a filtered-data spec per entity (same filters, no rollup) for download export
   const exportSpecs = useMemo(() => {
@@ -146,7 +203,7 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
   // across the spec map. Supplying `onResult` routes per-entity results
   // straight into the dashboard's stores without re-rendering DataCounts.
   useQueryData(countSpecs, {
-    selections: dataSelections,
+    selections: toolkitSelections,
     enabled: domainsReady,
     // displayDataOnly auto-defaults to true (count specs end with rollup).
     onResult: (entityName, result) => {
@@ -165,8 +222,19 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
     },
   });
 
+  useQueryData(cubeTotalSpecs, {
+    enabled: domainsReady,
+    onResult: (entityName, result) => {
+      const total = (result?.displayData?.[0] as Record<string, unknown> | undefined)?.count;
+      if (typeof total !== 'number') return;
+      setCubeTotals((prev) =>
+        prev[entityName] === total ? prev : { ...prev, [entityName]: total },
+      );
+    },
+  });
+
   useQueryData(exportSpecs, {
-    selections: dataSelections,
+    selections: toolkitSelections,
     enabled: domainsReady,
     // Export specs have no rollup, so opt in explicitly — we only read
     // displayData; the unfiltered allData pass would be wasted work.

@@ -4,6 +4,8 @@ import {
   type DataSelection,
   type DataSelections,
 } from '../stores/dataFiltersStore';
+import type { LinkGroup } from '@/types/dataPackage';
+import { canonicalColumn, mirroredValue } from './linkedSelections';
 
 /** What a chart selects on: the table its selection reads, whether it is a
  *  click (`point`) or a brush (`interval`), and the source columns it covers. */
@@ -51,7 +53,12 @@ export function composeChartSelection(
     const value = (filter?.selection as Record<string, unknown> | null | undefined)?.[field];
     if (filter?.type === select.type && Array.isArray(value) && value.length > 0) {
       selection[field] = value;
+      continue;
     }
+    // A linked column's filter is kept on another column of its group; what
+    // this column shows is the selection mirrored onto it.
+    const mirrored = mirroredValue(dataSelections, select.entity, field, select.type);
+    if (mirrored) selection[field] = mirrored;
   }
   return {
     dataSourceKey: select.entity,
@@ -60,7 +67,15 @@ export function composeChartSelection(
   };
 }
 
-/** Whether filter `id` is on a column this chart selects on. */
-export function chartCoversFilter(select: ChartSelectFields | null, id: string): boolean {
-  return !!select?.fields.some((f) => columnFilterKey(select.entity, f) === id);
+/** Whether filter `id` is on a column this chart selects on, directly or as
+ *  the canonical column of a link group the column belongs to. */
+export function chartCoversFilter(
+  select: ChartSelectFields | null,
+  id: string,
+  links: LinkGroup[] = [],
+): boolean {
+  return !!select?.fields.some((f) => {
+    const { entity, field } = canonicalColumn(links, select.entity, f);
+    return columnFilterKey(entity, field) === id || columnFilterKey(select.entity, f) === id;
+  });
 }

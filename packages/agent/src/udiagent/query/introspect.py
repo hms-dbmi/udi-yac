@@ -20,11 +20,14 @@ so a value query per column made a 12-table package take ~12 s.
 from __future__ import annotations
 
 import contextvars
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from .connectors import _POOL_SIZE
+
+logger = logging.getLogger(__name__)
 
 # Categorical domains larger than this are omitted from an introspected
 # package. At least vis_generate.MAX_DRAWN_CATEGORIES: a chart can draw that
@@ -216,6 +219,19 @@ def introspect_table(
     return resource, domains
 
 
+# Configured-schema keys that live on the resource rather than in its schema.
+_RESOURCE_LEVEL_EXTRAS = (
+    "udi:cube",
+    "udi:dimensions",
+    "udi:measures",
+    "udi:measure_aggregations",
+    "udi:linked_dimensions",
+)
+
+# Descriptor keys introspection owns; configured package extras can't replace them.
+_RESERVED_PACKAGE_KEYS = ("name", "udi:name", "udi:path", "resources")
+
+
 def introspect(
     engine, package_name: str, distinct_cap: int = DEFAULT_DISTINCT_CAP
 ) -> dict:
@@ -265,18 +281,29 @@ def introspect(
         for domain in domains:
             extra = overlay.get(domain["field"], {})
             domain["fieldDescription"] = extra.get("description") or ""
+        # Cube roles are resource-level keys in a datapackage descriptor,
+        # not schema-level ones — the chat reads them off the resource.
+        # Everything else (primaryKey/foreignKeys) belongs in the schema.
+        for key in _RESOURCE_LEVEL_EXTRAS:
+            if key in extras:
+                resource[key] = extras.pop(key)
         resource["schema"].update(extras)
         resources.append(resource)
         all_domains.extend(domains)
-    return {
-        "dataSchema": {
-            "name": package_name,
-            "udi:name": package_name,
-            "udi:path": "",
-            "resources": resources,
-        },
-        "dataDomains": all_domains,
+    data_schema = {
+        "name": package_name,
+        "udi:name": package_name,
+        "udi:path": "",
+        "resources": resources,
     }
+    # Package-level metadata a database can't hold (`udi:prefer`), from the
+    # engine's configuration, as the per-entity extras above are.
+    for key, value in (getattr(engine, "package_extras", None) or {}).items():
+        if key in _RESERVED_PACKAGE_KEYS:
+            logger.warning("package extra %r ignored: introspection sets it", key)
+            continue
+        data_schema[key] = value
+    return {"dataSchema": data_schema, "dataDomains": all_domains}
 
 
 class MetadataCache:

@@ -133,3 +133,71 @@ def test_seed_duckdb_round_trips(tmp_path):
     assert {r["kind"] for r in rows} == {"initial", "Unavailable"}
     # The sentinel cell in the numeric column became NULL.
     assert any(r["visit_day"] is None for r in rows)
+
+
+def test_mixed_package_settings_survive_remote_mode(tmp_path):
+    """A package's `udi:prefer` and a cube's `udi:linked_dimensions` exist only
+    in datapackage.json. Seeding carries them into the backends config, and
+    the server serves them with the introspected schema, so remote mode gets
+    the same defaults and linked filtering as the CSV path."""
+    mixed = tmp_path / "mixed"
+    mixed.mkdir()
+    (mixed / "summary.csv").write_text("research_id,order\nP1,chemo_first\nP2,rt_first\n")
+    (mixed / "efs.csv").write_text("order,cnt\n,2\nchemo_first,1\nrt_first,1\n")
+    link = {"entity": "Summary", "field": "order", "values": {"chemo_first": ["chemo_first"]}}
+    (mixed / "datapackage.json").write_text(
+        json.dumps(
+            {
+                "name": "mixed",
+                "udi:path": "./data/mixed/",
+                "udi:prefer": "line_level",
+                "resources": [
+                    {
+                        "name": "Summary",
+                        "path": "summary.csv",
+                        "schema": {
+                            "fields": [
+                                {"name": "research_id", "udi:data_type": "nominal"},
+                                {"name": "order", "udi:data_type": "nominal"},
+                            ]
+                        },
+                    },
+                    {
+                        "name": "Efs",
+                        "path": "efs.csv",
+                        "udi:cube": True,
+                        "udi:dimensions": ["order"],
+                        "udi:measures": ["cnt"],
+                        "udi:linked_dimensions": {"order": link},
+                        "schema": {
+                            "fields": [
+                                {"name": "order", "udi:data_type": "nominal"},
+                                {"name": "cnt", "udi:data_type": "quantitative"},
+                            ]
+                        },
+                    },
+                ],
+            }
+        )
+    )
+    config_out = tmp_path / "duckdb-backends.json"
+    seed_duckdb.seed(mixed, "mixed", tmp_path / "mixed.duckdb", config_out=config_out)
+
+    cfg = json.loads(config_out.read_text())["mixed"]
+    assert cfg["package"] == {"udi:prefer": "line_level"}
+    assert cfg["schemas"]["Efs"]["udi:linked_dimensions"] == {"order": link}
+
+    # Built the way the server builds it, from the config alone.
+    from udiagent.server.app import _engine_from_config
+
+    meta = introspect(_engine_from_config(cfg), "mixed")["dataSchema"]
+    assert meta["udi:prefer"] == "line_level"
+    efs = next(r for r in meta["resources"] if r["name"] == "Efs")
+    # Resource-level, where the chat reads cube roles.
+    assert efs["udi:linked_dimensions"] == {"order": link}
+    assert "udi:linked_dimensions" not in efs["schema"]
+
+    # And the agent reads the preference off what the chat sends it.
+    from udiagent.vis_generate import _parse_request_schema
+
+    assert _parse_request_schema(meta)["prefer"] == "line_level"
