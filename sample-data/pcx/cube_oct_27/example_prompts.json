@@ -1,0 +1,10 @@
+[
+  "Show event-free survival curves by diagnosis.",
+  "Compare overall survival for SJMB12 patients against all other protocols.",
+  "How many patients are there by diagnosis?",
+  "Which molecular subtypes are most common?",
+  "Which treatment protocols are most common?",
+  "Show patient counts by subtype and site as a heatmap.",
+  "Filter to medulloblastoma patients.",
+  "What does this dataset contain?"
+]

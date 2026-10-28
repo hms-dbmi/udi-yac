@@ -1,0 +1,225 @@
+{
+  "name": "PCX 30 V6 full-cohort EFS and OS cubes",
+  "version": "V6",
+  "source": "CBTN PCX 30 de-identified tables, 2026-10-21 delivery (revised file set: prelim_30_deid_tables_20261021.zip)",
+  "cohort": {
+    "description": "Every patient in the CBTN PCX 30 patient table (one row per research_id). No patients are excluded.",
+    "diagnoses": [
+      "ATRT",
+      "Medulloblastoma"
+    ],
+    "unit": "patient; each patient is counted once in every grouping set"
+  },
+  "cube_format": {
+    "engine": "Presto GROUP BY CUBE over all dimensions (Cumulus layout)",
+    "cnt": "COUNT(DISTINCT research_id) for the combination of dimension values in that row",
+    "null": "NULL in a dimension column means that dimension is rolled up (all values combined) in that row. It never means missing data.",
+    "missing_data": "Missing data appears as a literal value ('Not Reported', 'Not Applicable', or -1 for durations).",
+    "reading_a_cell": "To get a count for a combination, select the row where the dimensions you care about hold the values you want and every other dimension is NULL.",
+    "suppression": "None applied. Cells with cnt = 1 are present; apply a minimum cell size before sharing outside the team."
+  },
+  "conventions": {
+    "dates": "CBTN records every date as the patient's age in days. -1 is CBTN's unknown-date sentinel and is treated as missing.",
+    "durations_start": "All durations start at the age at initial diagnosis (the Initial CNS Tumor event), not at birth."
+  },
+  "shared_dimensions": {
+    "diagnosis": {
+      "definition": "Patient's diagnosis cohort: CBTN demographics.diagnosis_type_cohort as delivered; if absent, the CNS diagnosis category of the patient's Initial CNS Tumor event (else earliest event).",
+      "values": [
+        "ATRT",
+        "Medulloblastoma"
+      ],
+      "note": "Filter to one value to get a single-diagnosis view; diagnosis = 'Medulloblastoma' reproduces the V5 cubes exactly."
+    },
+    "protocol_name_and_arm": {
+      "definition": "protocol_name_and_arm of the patient's first medical-therapy regimen, ordered by regimen start (ties and undated regimens fall back to the order in CBTN's table). Taken from any point after diagnosis, not limited to the initial treatment window.",
+      "values": [
+        "ACNS0126",
+        "ACNS0331",
+        "ACNS0331: Arm I (3-7 years of age, LDCSI, IFRT)",
+        "ACNS0331: Arm II (3-7 years of age, LDCSI, PFRT)",
+        "ACNS0331: Arm V (8-21 years of age, SDCSI, IFRT)",
+        "ACNS0331: Arm VI (8-21 years of age, SDCSI, PFRT)",
+        "ACNS0332: Regimen A (no carboplatin, no isotretinoin)",
+        "ACNS0332: Regimen B (carboplatin, no isotretinoin)",
+        "ACNS0332: Regimen C (no carboplatin, isotretinoin)",
+        "ACNS0332: Regimen D (carboplatin, isotretinoin)",
+        "ACNS0333",
+        "ACNS0333: Arm I (chemotherapy, autologous PBSC, 3D-CRT)",
+        "ACNS0333: Arm II (chemotherapy, 3D-CRT, autologous PBSC)",
+        "ACNS0334: Regimen A",
+        "ACNS0334: Regimen B",
+        "ACNS0821: TEMO+IRIN",
+        "ACNS1221",
+        "ACNS1422",
+        "ADVL1111",
+        "ANBL0531: Group 3 (chemotherapy, surgery)",
+        "Baby POG-1",
+        "CCG-9921: Regimen A",
+        "CCG-99701: Regimen A",
+        "CCG-99701: Regimen B",
+        "CCG-99703",
+        "CCG-A9961: Regimen A",
+        "CCG-A9961: Regimen B",
+        "CHP455",
+        "CHP693",
+        "CHP735: Induction",
+        "DFCI Modified IRS-III",
+        "Head Start 4: Induction",
+        "Head Start 4: Single Cycle Intensive Chemotherapy",
+        "Head Start 4: Tandem 3 Cycle Intensive Chemotherapy",
+        "Head Start II: induction",
+        "Head Start III: myeloablative chemotherapy",
+        "MEMMAT",
+        "PBTC001",
+        "PBTC026",
+        "PBTC045",
+        "PBTC053",
+        "SIOP-PNET-4",
+        "SJATART: Intervention B1",
+        "SJMB-96",
+        "SJMB03",
+        "SJMB12: Stratum N1: Standard Risk",
+        "SJMB12: Stratum N2: Intermediate Risk",
+        "SJMB12: Stratum N3: High Risk",
+        "SJMB12: Stratum S1: Standard Risk",
+        "SJMB12: Stratum S2: High Risk",
+        "SJMB12: Stratum W1: Low Risk",
+        "SJMB12: Stratum W2: Atypical",
+        "SJYC07: High-Risk Patients",
+        "SJYC07: Intermediate-Risk Therapy",
+        "Other",
+        "Not Reported",
+        "Not Applicable"
+      ],
+      "missing_values": {
+        "Not Applicable": "patient has no medical-therapy record",
+        "Not Reported": "regimen recorded, protocol not recorded",
+        "Other": "CBTN's own label for a protocol outside its list"
+      },
+      "note": "Values are CBTN's labels as delivered. A protocol without an arm suffix (e.g. 'ACNS0331') means the arm was not recorded, not that the protocol has no arms."
+    },
+    "subtype": {
+      "definition": "Molecular subtype at initial diagnosis, from cns_integrated_diagnosis. Every value carries its diagnosis as a prefix ('MB-' or 'ATRT-'), so subtypes never pool across diagnoses when diagnosis is rolled up. Medulloblastoma: refined with OpenPedCan molecular subtype where CBTN supplied it; SHH TP53-wildtype and SHH TP53-mutant are pooled as 'MB-SHH'. ATRT: CBTN label as delivered, no refinement.",
+      "values": {
+        "Medulloblastoma": [
+          "MB-Group 3",
+          "MB-Group 4",
+          "MB-non-WNT/non-SHH",
+          "MB-NOS/NEC",
+          "MB-SHH",
+          "MB-WNT"
+        ],
+        "ATRT": [
+          "ATRT-MYC",
+          "ATRT-NOS/NEC",
+          "ATRT-SHH",
+          "ATRT-TYR"
+        ]
+      },
+      "note": "'MB-NOS/NEC' and 'ATRT-NOS/NEC' = no molecular subtype recorded; 'MB-non-WNT/non-SHH' = Group 3 or 4 not resolved further."
+    },
+    "site": {
+      "definition": "CBTN organization_name as delivered (the treating organization on the patient's event records). Not grouped by consent or RADIANT status.",
+      "values": [
+        "Akron Children's Hospital",
+        "CBTN Non-Consortium Member",
+        "Children's Hospital Los Angeles",
+        "Children's Hospital of Atlanta (CHOA)",
+        "Children's National Medical Center (CNMC)",
+        "Dayton Children's Hospital",
+        "Hackensack",
+        "Hudson Institute",
+        "Intermountain Primary Children's Hospital",
+        "Johns Hopkins All Children's Hospital",
+        "Johns Hopkins Medicine",
+        "Lurie Children's Hospital",
+        "Maria Fareri Children's Hospital at Westchester Medical Center",
+        "Meyer Children's Hospital",
+        "Nicklaus Children's Hospital",
+        "NYU Langone Health",
+        "OHSU Doernbecher Children's Hospital",
+        "Orlando Health Arnold Palmer Hospital",
+        "Seattle Children's Hospital",
+        "Stanford Lucile Packard Children's Hospital",
+        "The Children's Hospital of Philadelphia",
+        "UAB",
+        "UCSF Benioff Children's Hospital",
+        "UNC Lineberger Comprehensive Cancer Center",
+        "University of Iowa",
+        "University of Michigan C.S. Mott Children's Hospital",
+        "University of Pittsburgh",
+        "Wake Forest Baptist Medical Center",
+        "Washington University in St. Louis",
+        "Weill Cornell Medical College"
+      ],
+      "note": "'CBTN Non-Consortium Member' is a CBTN-supplied label for patients from organizations outside the consortium."
+    }
+  },
+  "cubes": [
+    {
+      "name": "pcx30_efs_all_dx_v6_months_2026-10-21r_cube",
+      "outcome": "event-free survival",
+      "dimensions": {
+        "event_free_survival_months": {
+          "definition": "Time from initial diagnosis to the first progression, recurrence, second malignancy or death; if none, to the most recent vital status, in whole months: floor(days / 30.4375), where 30.4375 = 365.25 / 12.",
+          "type": "integer",
+          "values": "0 to 120, or -1",
+          "cap": "120 means 120 months (10 years) or more",
+          "missing_value": {
+            "-1": "duration unknown: no initial diagnosis date, no vital-status date, or an end date before diagnosis. Exclude from survival curves."
+          },
+          "note": "0 means under one month of follow-up, not missing."
+        },
+        "efs_status": {
+          "definition": "Whether the EFS clock stopped on an event.",
+          "values": {
+            "event": "first progression, recurrence, second malignancy or death observed",
+            "event-free": "none of these; censored at most recent vital status"
+          },
+          "note": "Conventional EFS: death without a prior progression, recurrence or second malignancy counts as an event, dated at the death (most recent vital status). This differs from CBTN's workbook definition, which censors those deaths."
+        },
+        "shared": [
+          "diagnosis",
+          "protocol_name_and_arm",
+          "subtype",
+          "site"
+        ]
+      }
+    },
+    {
+      "name": "pcx30_os_all_dx_v6_months_2026-10-21r_cube",
+      "outcome": "overall survival",
+      "dimensions": {
+        "overall_survival_months": {
+          "definition": "Time from initial diagnosis to the most recent vital status, in whole months: floor(days / 30.4375), where 30.4375 = 365.25 / 12.",
+          "type": "integer",
+          "values": "0 to 120, or -1",
+          "cap": "120 means 120 months (10 years) or more",
+          "missing_value": {
+            "-1": "duration unknown: no initial diagnosis date, no vital-status date, or an end date before diagnosis. Exclude from survival curves."
+          },
+          "note": "0 means under one month of follow-up, not missing."
+        },
+        "vital_status": {
+          "definition": "CBTN vital_status at the most recent vital-status record.",
+          "values": {
+            "deceased": "death observed",
+            "alive": "censored at most recent vital status"
+          }
+        },
+        "shared": [
+          "diagnosis",
+          "protocol_name_and_arm",
+          "subtype",
+          "site"
+        ]
+      }
+    }
+  ],
+  "interpretation_notes": [
+    "Survival curves: use the duration and status columns together; a duration alone does not distinguish events from censoring.",
+    "protocol_name_and_arm is the first regimen at any time, so a regimen started only after relapse can appear for a patient who had no initial chemotherapy.",
+    "Arm-level comparisons cover only patients whose arm was recorded."
+  ]
+}
