@@ -178,9 +178,9 @@ MAX_DRAWN_CATEGORIES = 500
 #: cap, which was raised for long, scrollable axes: under it alone a subject id
 #: (313 patients) passed as the colour and offset of a grouped bar chart.
 MAX_SPLIT_CATEGORIES = 30
-#: The channels MAX_SPLIT_CATEGORIES applies to; any other drawn channel (an axis,
-#: a pie's angle, a label) gets MAX_DRAWN_CATEGORIES.
-SPLIT_ENCODINGS = frozenset({"color", "xOffset", "yOffset", "shape", "strokeDash"})
+#: The channels that split marks another categorical field already places. See
+#: `_split_keys` for when MAX_SPLIT_CATEGORIES applies to them.
+SPLIT_ENCODINGS = frozenset({"color", "xOffset", "yOffset", "shape"})
 #: The value-count table: every distinct value of a field with its count, sorted.
 #: What a request falls back to when the chart it asked for would draw a field
 #: with more than MAX_DRAWN_CATEGORIES values. Found by suffix, which the
@@ -1363,11 +1363,44 @@ def _grouped_field_keys(spec_template, bindings):
     return keys
 
 
-def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozenset()):
+def _split_keys(encoding_info):
+    """Placeholders that split the bars of a categorical axis by colour, offset or
+    shape: drawn directly on a SPLIT_ENCODINGS channel, not themselves on an axis,
+    while another placeholder puts a nominal or ordinal field on x or y. Those
+    get MAX_SPLIT_CATEGORIES.
+
+    Deliberately narrow. A pie's colour *is* its category, a dot plot's colour
+    repeats its axis, and a survival curve or scatterplot coloured by a field
+    splits a quantitative axis, which has its own checks (and a `grouping` for
+    stratifiers); all of those keep MAX_DRAWN_CATEGORIES.
+    """
+    on_axis = {
+        key
+        for key, entry in encoding_info.items()
+        if {"x", "y"} & set(entry["direct_encodings"])
+    }
+    categorical_axes = {
+        key
+        for key in on_axis
+        if encoding_info[key]["declared_type"] in ("nominal", "ordinal")
+    }
+    return {
+        key
+        for key, entry in encoding_info.items()
+        if SPLIT_ENCODINGS & set(entry["direct_encodings"])
+        and key not in on_axis
+        and categorical_axes - {key}
+    }
+
+
+def over_cap_bindings(
+    spec_template, bindings, schema, grouped_field_keys=frozenset(), encoding_info=None
+):
     """`(key, entity, field, cardinality, cap)` for each categorical binding the
-    chart would draw with more values than its channel can show: MAX_SPLIT_CATEGORIES
-    when it splits marks by colour, offset or shape (SPLIT_ENCODINGS), otherwise
-    MAX_DRAWN_CATEGORIES.
+    chart would draw with more values than it can show: MAX_SPLIT_CATEGORIES for a
+    field that splits a categorical axis's bars (see `_split_keys`), otherwise
+    MAX_DRAWN_CATEGORIES. `encoding_info` is `placeholder_encoding_info`'s result,
+    when the caller already has it.
 
     Only drawn fields count; a grouping key the pipeline rolls up never reaches a
     visual channel (see _encoded_placeholders). A field the request supplies a
@@ -1382,33 +1415,37 @@ def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozen
     """
     if _is_row_table(spec_template):
         return []
-    encodings = _placeholder_encodings(spec_template)
+    if encoding_info is None:
+        encoding_info = placeholder_encoding_info(spec_template)
+    split_keys = _split_keys(encoding_info)
     entities = schema.get("entities", {})
     entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
     over = []
     for key, field_name in bindings.items():
         # A grouping binding is a dict, not a column name.
-        if not isinstance(field_name, str) or key not in encodings or key in grouped_field_keys:
+        if not isinstance(field_name, str) or key not in encoding_info or key in grouped_field_keys:
             continue
         entity_name = _entity_for_binding_key(key, entity_bindings)
         info = entities.get(entity_name, {}).get("fields", {}).get(field_name)
         if not isinstance(info, dict):
             continue
-        cap = (
-            MAX_SPLIT_CATEGORIES
-            if SPLIT_ENCODINGS.intersection(encodings[key])
-            else MAX_DRAWN_CATEGORIES
-        )
+        cap = MAX_SPLIT_CATEGORIES if key in split_keys else MAX_DRAWN_CATEGORIES
         cardinality = info.get("cardinality", 0)
         if info["type"] in ("nominal", "ordinal") and cardinality > cap:
             over.append((key, entity_name, field_name, cardinality, cap))
     return over
 
 
-def _duplicate_drawn_field_errors(spec_template, bindings, xy_placeholders):
-    """An error for each pair of drawn field bindings set to one column of one
-    table, except the x/y pair, which `validate_bindings` reports itself."""
-    encodings = _placeholder_encodings(spec_template)
+def _duplicate_drawn_field_errors(encoding_info, bindings, xy_placeholders):
+    """An error for each pair of field bindings drawn *directly* on a channel and
+    set to one column of one table, except the x/y pair, which `validate_bindings`
+    reports itself. Placeholders that only meet inside a derive (a proportion, a
+    survival span) are combined before they are drawn, so are left alone."""
+    encodings = {
+        key: entry["direct_encodings"]
+        for key, entry in encoding_info.items()
+        if entry["direct_encodings"]
+    }
     entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
     xy_pair = {(xy_placeholders.get(enc) or "").split(":")[0] for enc in ("x", "y")}
     seen = {}
@@ -1554,7 +1591,8 @@ def validate_bindings(
     # The same, for any two drawn fields: one column on the x axis and as the
     # colour and offset of a grouped bar chart splits every bar into one segment
     # of itself. Left to the x/y check above where that one applies.
-    errors.extend(_duplicate_drawn_field_errors(spec_template, bindings, xy_placeholders))
+    encoding_info = placeholder_encoding_info(spec_template)
+    errors.extend(_duplicate_drawn_field_errors(encoding_info, bindings, xy_placeholders))
 
     placeholder_types = _placeholder_type_requirements(spec_template)
 
@@ -1566,7 +1604,7 @@ def validate_bindings(
     over_cap = {
         key: (cardinality, cap)
         for key, _entity, _field, cardinality, cap in over_cap_bindings(
-            spec_template, bindings, schema, grouped_field_keys
+            spec_template, bindings, schema, grouped_field_keys, encoding_info
         )
     }
 
@@ -2284,9 +2322,9 @@ def _substitute_value_counts(
         for entry in over_cap_bindings(
             spec_template, bindings, schema, _grouped_field_keys(spec_template, bindings)
         )
-        # Only an axis over its cap: a split field over its cap was the wrong
-        # field to split by, and a list of its values answers nothing.
-        if entry[4] == MAX_DRAWN_CATEGORIES and _groups_by(spec_template, entry[0])
+        # Only over the axis cap: a split field between the two caps was the
+        # wrong field to split by, and a list of its values answers nothing.
+        if entry[3] > MAX_DRAWN_CATEGORIES and _groups_by(spec_template, entry[0])
     ]
     list_tool = next((n for n in tool_dispatch if n.endswith(VALUE_COUNTS_TOOL_SUFFIX)), None)
     if not over or list_tool is None:
