@@ -174,6 +174,13 @@ FALLBACK_INSTANTIATE_FAILED = "instantiate_failed"
 
 #: More categories than an axis or legend can show legibly.
 MAX_DRAWN_CATEGORIES = 500
+#: More categories than colour, offset or shape can tell apart. Far below the axis
+#: cap, which was raised for long, scrollable axes: under it alone a subject id
+#: (313 patients) passed as the colour and offset of a grouped bar chart.
+MAX_SPLIT_CATEGORIES = 30
+#: The channels MAX_SPLIT_CATEGORIES applies to; any other drawn channel (an axis,
+#: a pie's angle, a label) gets MAX_DRAWN_CATEGORIES.
+SPLIT_ENCODINGS = frozenset({"color", "xOffset", "yOffset", "shape", "strokeDash"})
 #: The value-count table: every distinct value of a field with its count, sorted.
 #: What a request falls back to when the chart it asked for would draw a field
 #: with more than MAX_DRAWN_CATEGORIES values. Found by suffix, which the
@@ -1357,8 +1364,10 @@ def _grouped_field_keys(spec_template, bindings):
 
 
 def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozenset()):
-    """`(key, entity, field, cardinality)` for each categorical binding the chart
-    would draw with more than MAX_DRAWN_CATEGORIES values.
+    """`(key, entity, field, cardinality, cap)` for each categorical binding the
+    chart would draw with more values than its channel can show: MAX_SPLIT_CATEGORIES
+    when it splits marks by colour, offset or shape (SPLIT_ENCODINGS), otherwise
+    MAX_DRAWN_CATEGORIES.
 
     Only drawn fields count; a grouping key the pipeline rolls up never reaches a
     visual channel (see _encoded_placeholders). A field the request supplies a
@@ -1373,22 +1382,51 @@ def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozen
     """
     if _is_row_table(spec_template):
         return []
-    encoded = _encoded_placeholders(spec_template)
+    encodings = _placeholder_encodings(spec_template)
     entities = schema.get("entities", {})
     entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
     over = []
     for key, field_name in bindings.items():
         # A grouping binding is a dict, not a column name.
-        if not isinstance(field_name, str) or key not in encoded or key in grouped_field_keys:
+        if not isinstance(field_name, str) or key not in encodings or key in grouped_field_keys:
             continue
         entity_name = _entity_for_binding_key(key, entity_bindings)
         info = entities.get(entity_name, {}).get("fields", {}).get(field_name)
         if not isinstance(info, dict):
             continue
+        cap = (
+            MAX_SPLIT_CATEGORIES
+            if SPLIT_ENCODINGS.intersection(encodings[key])
+            else MAX_DRAWN_CATEGORIES
+        )
         cardinality = info.get("cardinality", 0)
-        if info["type"] in ("nominal", "ordinal") and cardinality > MAX_DRAWN_CATEGORIES:
-            over.append((key, entity_name, field_name, cardinality))
+        if info["type"] in ("nominal", "ordinal") and cardinality > cap:
+            over.append((key, entity_name, field_name, cardinality, cap))
     return over
+
+
+def _duplicate_drawn_field_errors(spec_template, bindings, xy_placeholders):
+    """An error for each pair of drawn field bindings set to one column of one
+    table, except the x/y pair, which `validate_bindings` reports itself."""
+    encodings = _placeholder_encodings(spec_template)
+    entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
+    xy_pair = {(xy_placeholders.get(enc) or "").split(":")[0] for enc in ("x", "y")}
+    seen = {}
+    errors = []
+    for key, field_name in bindings.items():
+        if not isinstance(field_name, str) or key not in encodings or _ENTITY_KEY.fullmatch(key):
+            continue
+        column = (_entity_for_binding_key(key, entity_bindings), field_name)
+        other = seen.setdefault(column, key)
+        if other != key and {other, key} != xy_pair:
+            errors.append(
+                f"'{other}' and '{key}' are both set to '{field_name}', but they are "
+                f"drawn as different channels ({', '.join(encodings[other])} and "
+                f"{', '.join(encodings[key])}), so the chart would split each "
+                f"category by itself. Choose a different field for '{key}', or a "
+                f"chart that draws '{field_name}' once."
+            )
+    return errors
 
 
 def validate_bindings(
@@ -1513,6 +1551,11 @@ def validate_bindings(
                 f"both '{x_binding}' and '{y_binding}' are set to '{x_val}'"
             )
 
+    # The same, for any two drawn fields: one column on the x axis and as the
+    # colour and offset of a grouped bar chart splits every bar into one segment
+    # of itself. Left to the x/y check above where that one applies.
+    errors.extend(_duplicate_drawn_field_errors(spec_template, bindings, xy_placeholders))
+
     placeholder_types = _placeholder_type_requirements(spec_template)
 
     targets = grouping_targets(spec_template)
@@ -1521,8 +1564,8 @@ def validate_bindings(
     # Fields drawn with more categories than a chart can show. Reported in the
     # per-binding loop below, so errors keep binding order.
     over_cap = {
-        key: cardinality
-        for key, _entity, _field, cardinality in over_cap_bindings(
+        key: (cardinality, cap)
+        for key, _entity, _field, cardinality, cap in over_cap_bindings(
             spec_template, bindings, schema, grouped_field_keys
         )
     }
@@ -1653,11 +1696,20 @@ def validate_bindings(
         # message names the way out, since the retry reads it: a table lists
         # every value.
         if key in over_cap:
-            errors.append(
-                f"Field '{field_name}' has {over_cap[key]} unique values, too many to draw "
-                f"on an axis or legend (max {MAX_DRAWN_CATEGORIES}). A table can list every "
-                f"value, e.g. each value with its count, sorted by count."
-            )
+            cardinality, cap = over_cap[key]
+            if cap == MAX_SPLIT_CATEGORIES:
+                errors.append(
+                    f"Field '{field_name}' has {cardinality} unique values, too many to "
+                    f"split marks by colour or offset (max {cap}). Split by a field with "
+                    f"fewer values, or use a chart that does not split, e.g. one bar per "
+                    f"category."
+                )
+            else:
+                errors.append(
+                    f"Field '{field_name}' has {cardinality} unique values, too many to "
+                    f"draw on an axis or legend (max {cap}). A table can list every "
+                    f"value, e.g. each value with its count, sorted by count."
+                )
 
     # A rollup output bound to the same column as the key it groups by is a
     # degenerate chart, not just the SQL hazard of one name on two columns: the
@@ -2232,13 +2284,15 @@ def _substitute_value_counts(
         for entry in over_cap_bindings(
             spec_template, bindings, schema, _grouped_field_keys(spec_template, bindings)
         )
-        if _groups_by(spec_template, entry[0])
+        # Only an axis over its cap: a split field over its cap was the wrong
+        # field to split by, and a list of its values answers nothing.
+        if entry[4] == MAX_DRAWN_CATEGORIES and _groups_by(spec_template, entry[0])
     ]
     list_tool = next((n for n in tool_dispatch if n.endswith(VALUE_COUNTS_TOOL_SUFFIX)), None)
     if not over or list_tool is None:
         return None
 
-    _key, entity, field, cardinality = over[0]
+    _key, entity, field, cardinality, _cap = over[0]
     list_idx, list_map = tool_dispatch[list_tool]
     roles = {"E": entity, "F": field}
     list_args = {p: roles[ph] for p, ph in list_map.items() if ph in roles}
