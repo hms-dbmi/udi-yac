@@ -165,8 +165,13 @@ def test_entity_schema_descriptions_overlay_introspected_fields():
         entity_schemas={
             "penguins": {
                 "description": "One row per penguin.",
+                "title": "Penguins",
                 "fields": [
-                    {"name": "body_mass_g", "description": "Body mass, in grams."},
+                    {
+                        "name": "body_mass_g",
+                        "description": "Body mass, in grams.",
+                        "title": "Body mass",
+                    },
                     {"name": "wingspan", "description": "Not a column."},
                 ],
             }
@@ -175,11 +180,17 @@ def test_entity_schema_descriptions_overlay_introspected_fields():
     meta = introspect(engine, "p")
     resource = meta["dataSchema"]["resources"][0]
     assert resource["description"] == "One row per penguin."
+    # Titles are what the chat labels tables and columns with: the resource's
+    # and each field's, never the schema's.
+    assert resource["title"] == "Penguins"
     assert "description" not in resource["schema"] and "fields" in resource["schema"]
+    assert "title" not in resource["schema"]
     by_name = {f["name"]: f for f in resource["schema"]["fields"]}
     assert len(by_name) == 7 and "wingspan" not in by_name
     assert by_name["body_mass_g"]["description"] == "Body mass, in grams."
+    assert by_name["body_mass_g"]["title"] == "Body mass"
     assert by_name["species"]["description"] == ""
+    assert "title" not in by_name["species"]
     domains = {d["field"]: d for d in meta["dataDomains"]}
     assert domains["body_mass_g"]["fieldDescription"] == "Body mass, in grams."
     assert domains["species"]["fieldDescription"] == ""

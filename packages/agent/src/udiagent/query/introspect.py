@@ -263,19 +263,24 @@ def introspect(
         # Relationship metadata (primaryKey/foreignKeys) isn't introspectable
         # from the database — merge it from the engine's configured schemas so
         # the chat's cross-entity filtering can resolve entity relationships.
-        # Nor are descriptions or date formats: `description` is the table's,
-        # and `fields` overlays per-column descriptions and `udi:time_format`
-        # by name rather than replacing the introspected fields. Nor is
-        # `udi:hide_count`, a display choice that sits on the resource.
+        # Nor are descriptions, titles or date formats: `description` and
+        # `title` are the table's, and `fields` overlays per-column
+        # descriptions, titles and `udi:time_format` by name rather than
+        # replacing the introspected fields. Nor is `udi:hide_count`, a display
+        # choice that sits on the resource.
         extras = dict(entity_schemas.get(entity) or {})
         if description := extras.pop("description", None):
             resource["description"] = description
+        if title := extras.pop("title", None):
+            resource["title"] = title
         if extras.pop("udi:hide_count", False):
             resource["udi:hide_count"] = True
         overlay = {f["name"]: f for f in extras.pop("fields", [])}
         for field in resource["schema"]["fields"]:
             extra = overlay.get(field["name"], {})
             field["description"] = extra.get("description") or ""
+            if title := extra.get("title"):
+                field["title"] = title
             if time_format := extra.get("udi:time_format"):
                 field["udi:time_format"] = time_format
         for domain in domains:
