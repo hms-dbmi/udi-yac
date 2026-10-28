@@ -1,0 +1,94 @@
+organization_name,research_id,age_at_radiation_start_days,age_at_radiation_stop_days,radiation_site,radiation_site_other,radiation_type,radiation_type_other,total_radiation_dose,total_radiation_dose_unit,total_radiation_dose_focal,total_radiation_dose_focal_unit,is_initial_treatment
+Seattle Children's Hospital,C103074,8233,8280,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,21.40 ,CGE,54,CGE,yes
+Seattle Children's Hospital,C104427,476,514,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5040 ,CGE,yes
+Seattle Children's Hospital,C1056939,893,934,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5040 ,cGy,no
+Seattle Children's Hospital,C1057185,6157,6205,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C1057431,2114,2155,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,22.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C1070100,5048,5091,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54,CGE,yes
+Seattle Children's Hospital,C1070100,7002,7043,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,50.4,CGE,no
+Seattle Children's Hospital,C1070100,7853,7867,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,20,Gy,no
+Seattle Children's Hospital,C1070223,6624,6670,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,21.3,CGE,54,CGE,yes
+Seattle Children's Hospital,C1070346,838,880,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C1070838,2136,2179,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,23.4 ,CGE,54,Gy,yes
+Seattle Children's Hospital,C1154847,720,766,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Seattle Children's Hospital,C1155462,1546,1594,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C1155585,4339,4382,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C1155585,4987,4991,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,no
+Seattle Children's Hospital,C1183875,6423,6464,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,18,CGE,54,CGE,yes
+Seattle Children's Hospital,C1253493,2024,2067,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C1253862,3431,3480,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,23.4 ,Gy,55.8,Gy,no
+Seattle Children's Hospital,C1253862,4708,4738,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,12.6,CGE,37.4,CGE,no
+Seattle Children's Hospital,C141696,3997,4044,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,3600 ,cGy,5400 ,cGy,yes
+Seattle Children's Hospital,C141696,5181,5211,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,36,CGE,no
+Seattle Children's Hospital,C141696,5332,5354,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,3000 ,cGy,no
+Seattle Children's Hospital,C142557,1230,1267,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C143172,4067,4108,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Seattle Children's Hospital,C143418,1905,1948,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C148215,387,448,Unavailable,Not Applicable,Protons,Not Applicable,Unavailable,Not Reported,Not Applicable,Not Applicable,yes
+Seattle Children's Hospital,C154365,5737,5779,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5400 ,cGy,yes
+Seattle Children's Hospital,C169248,2176,2224,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C169248,3580,3618,Craniospinal with focal boost,Not Applicable,Gamma Knife,Not Applicable,2340 ,cGy,4500 ,cGy,no
+Seattle Children's Hospital,C169248,5471,5471,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,1900 ,cGy,no
+Seattle Children's Hospital,C169371,3153,3203,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C170232,3169,3212,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,5580,cGy,3600,cGy,yes
+Seattle Children's Hospital,C226074,229,277,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,Unavailable,Not Reported,yes
+Seattle Children's Hospital,C2358156,583,625,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C2463690,1459,1501,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C2544870,5142,5187,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3960 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C2571192,979,1025,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,CGE,yes
+Seattle Children's Hospital,C2571315,1434,1476,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,CGE,yes
+Seattle Children's Hospital,C2696529,1097,1142,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Seattle Children's Hospital,C2784966,10580,10587,Unavailable,Not Applicable,Gamma Knife,Not Applicable,3000 ,cGy,Not Applicable,Not Applicable,no
+Seattle Children's Hospital,C2784966,8557,8600,Craniospinal with focal boost,Not Applicable,Unavailable,Not Applicable,2340 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C2852616,5695,5738,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,CGE,5400 ,CGE,yes
+Seattle Children's Hospital,C310206,2661,2705,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C3544737,4648,4689,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54 ,CGE,yes
+Seattle Children's Hospital,C3631329,4329,4380,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,55.7 ,CGE,yes
+Seattle Children's Hospital,C3631698,9269,9310,Whole Ventricular with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,55,CGE,yes
+Seattle Children's Hospital,C3717306,3880,3923,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,36,Gy,55.8,Gy,yes
+Seattle Children's Hospital,C3884586,3657,3700,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54,CGE,yes
+Seattle Children's Hospital,C4031571,1376,1427,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C4031694,3391,3440,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C4034523,1737,1780,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C4034646,1960,2002,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,cGy,yes
+Seattle Children's Hospital,C4104018,193,229,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5490,cGy,yes
+Seattle Children's Hospital,C4344483,3036,3077,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C5254437,1654,1692,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,46.8,CGE,yes
+Seattle Children's Hospital,C5254437,2013,2060,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,no
+Seattle Children's Hospital,C5492565,4697,4743,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C558912,1189,1236,Craniospinal with focal boost,Not Applicable,Combination of Protons and Photons,Not Applicable,1260 ,CGE,5220 ,CGE,no
+Seattle Children's Hospital,C558912,1200,1236,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2132 ,CGE,5220 ,CGE,no
+Seattle Children's Hospital,C602700,1555,1598,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,55.8,CGE,yes
+Seattle Children's Hospital,C603069,367,408,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,5400 ,CGE,yes
+Seattle Children's Hospital,C603069,497,534,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,4500 ,cGy,no
+Seattle Children's Hospital,C6083703,2944,2987,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C622257,1769,1814,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,39.6,Gy,55.8,Gy,yes
+Seattle Children's Hospital,C647349,942,969,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C676746,6466,6508,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C6958725,1090,1131,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,52.2,CGE,yes
+Seattle Children's Hospital,C700977,7650,7693,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C701223,3276,3318,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,55.8,CGE,yes
+Seattle Children's Hospital,C701469,907,948,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C724962,4451,4494,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54.04,CGE,yes
+Seattle Children's Hospital,C725331,4987,5031,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C758541,2839,2888,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,36,Gy,55.8,Gy,yes
+Seattle Children's Hospital,C758541,3594,3594,Focal/Tumor bed,Not Applicable,Gamma Knife,Not Applicable,Not Applicable,Not Applicable,18,Gy,no
+Seattle Children's Hospital,C758541,4226,4245,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,35,Gy,no
+Seattle Children's Hospital,C758541,5997,6004,Focal/Tumor bed,Not Applicable,Photons,Not Applicable,Not Applicable,Not Applicable,25,Gy,no
+Seattle Children's Hospital,C7611978,1616,1657,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,CGE,5400,CGE,yes
+Seattle Children's Hospital,C7617267,1582,1626,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,36,CGE,54,CGE,no
+Seattle Children's Hospital,C7617267,1582,1626,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600,CGE,5400,CGE,no
+Seattle Children's Hospital,C782649,4027,4068,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,3600 ,CGE,5580 ,CGE,yes
+Seattle Children's Hospital,C782895,2033,2075,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C784371,8320,8362,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,2340 ,CGE,5400 ,CGE,yes
+Seattle Children's Hospital,C797655,2209,2249,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C8183559,3516,3567,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,yes
+Seattle Children's Hospital,C836769,4322,4365,Craniospinal with focal boost,Not Applicable,Photons,Not Applicable,3600 ,cGy,5580 ,cGy,yes
+Seattle Children's Hospital,C837630,1306,1352,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,54,CGE,no
+Seattle Children's Hospital,C8379990,4397,4440,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,36,CGE,56,CGE,yes
+Seattle Children's Hospital,C849561,924,966,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C8735460,4197,4240,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54,CGE,yes
+Seattle Children's Hospital,C912414,2926,2969,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,55.8,CGE,yes
+Seattle Children's Hospital,C912660,1881,1925,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4,CGE,54,CGE,yes
+Seattle Children's Hospital,C923607,1564,1605,Focal/Tumor bed,Not Applicable,Protons,Not Applicable,Not Applicable,Not Applicable,54,CGE,yes
+Seattle Children's Hospital,C948330,5942,5986,Craniospinal with focal boost,Not Applicable,Protons,Not Applicable,23.4 ,CGE,54 ,CGE,yes

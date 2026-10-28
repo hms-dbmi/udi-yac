@@ -86,9 +86,9 @@ _CUBE_STRATIFIED = "vis_064_line_survival_cube_stratified"
 @pytest.mark.parametrize(
     "endpoint, title",
     [
-        ("overall_survival", "Overall survival curve over {enc:x}"),
-        ("event_free_survival", "Event-free survival curve over {enc:x}"),
-        (None, "Survival curve over {enc:x}"),
+        ("overall_survival", "Overall survival curve for {entity}"),
+        ("event_free_survival", "Event-free survival curve for {entity}"),
+        (None, "Survival curve for {entity}"),
     ],
 )
 def test_the_cube_title_names_the_endpoint(endpoint, title):
@@ -99,7 +99,7 @@ def test_the_cube_title_names_the_endpoint(endpoint, title):
 
 def test_the_stratified_cube_title_keeps_its_other_tokens():
     text = resolve_text_templates(_CUBE_STRATIFIED, {"ENDPOINT": "overall_survival"})
-    assert text["title"] == "Overall survival curves over {enc:x} by {col:dimension3}"
+    assert text["title"] == "Overall survival curves for {entity} by {col:dimension3}"
 
 
 def test_both_cube_survival_tools_offer_the_endpoint_as_an_optional_enum():

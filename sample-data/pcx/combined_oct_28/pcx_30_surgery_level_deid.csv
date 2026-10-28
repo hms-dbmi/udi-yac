@@ -1,0 +1,143 @@
+organization_name,research_id,age_at_surgery_days,extent_of_tumor_resection,is_initial_treatment
+Seattle Children's Hospital,C103074,8203,Partial resection,yes
+Seattle Children's Hospital,C103074,8219,Gross/Near total resection,yes
+Seattle Children's Hospital,C104427,394,Gross/Near total resection,yes
+Seattle Children's Hospital,C1056939,3204,Gross/Near total resection,no
+Seattle Children's Hospital,C1056939,641,Gross/Near total resection,yes
+Seattle Children's Hospital,C1056939,768,Gross/Near total resection,yes
+Seattle Children's Hospital,C1056939,776,Gross/Near total resection,no
+Seattle Children's Hospital,C1057185,6136,Gross/Near total resection,yes
+Seattle Children's Hospital,C1057185,7410,Gross/Near total resection,yes
+Seattle Children's Hospital,C1057431,2090,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070100,5024,Partial resection,yes
+Seattle Children's Hospital,C1070100,5032,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070100,6989,Biopsy only,yes
+Seattle Children's Hospital,C1070223,6590,Partial resection,yes
+Seattle Children's Hospital,C1070223,6607,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070223,6611,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070346,1027,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070346,1337,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070346,663,Gross/Near total resection,yes
+Seattle Children's Hospital,C1070838,2106,Gross/Near total resection,yes
+Seattle Children's Hospital,C1154847,517,Partial resection,yes
+Seattle Children's Hospital,C1154847,633,Partial resection,yes
+Seattle Children's Hospital,C1154847,633,Unavailable,yes
+Seattle Children's Hospital,C1155462,1516,Gross/Near total resection,yes
+Seattle Children's Hospital,C1155462,2706,Partial resection,no
+Seattle Children's Hospital,C1155585,4322,Gross/Near total resection,yes
+Seattle Children's Hospital,C1155585,4329,Biopsy only,yes
+Seattle Children's Hospital,C1183875,6394,Gross/Near total resection,yes
+Seattle Children's Hospital,C1253493,1997,Gross/Near total resection,yes
+Seattle Children's Hospital,C1253862,3137,Partial resection,yes
+Seattle Children's Hospital,C1253862,3217,Partial resection,yes
+Seattle Children's Hospital,C1253862,4425,Partial resection,no
+Seattle Children's Hospital,C1253862,5086,Biopsy only,no
+Seattle Children's Hospital,C141696,3977,Partial resection,yes
+Seattle Children's Hospital,C141696,5041,Partial resection,yes
+Seattle Children's Hospital,C141696,5710,Partial resection,no
+Seattle Children's Hospital,C142557,1032,Partial resection,yes
+Seattle Children's Hospital,C143172,4044,Gross/Near total resection,yes
+Seattle Children's Hospital,C143418,1882,Gross/Near total resection,yes
+Seattle Children's Hospital,C143541,292,Gross/Near total resection,yes
+Seattle Children's Hospital,C148215,202,Partial resection,yes
+Seattle Children's Hospital,C148215,5999,Biopsy only,yes
+Seattle Children's Hospital,C154365,5709,Gross/Near total resection,yes
+Seattle Children's Hospital,C169248,2153,Gross/Near total resection,yes
+Seattle Children's Hospital,C169248,3139,Gross/Near total resection,yes
+Seattle Children's Hospital,C169248,9081,Gross/Near total resection,no
+Seattle Children's Hospital,C169371,3132,Gross/Near total resection,yes
+Seattle Children's Hospital,C170232,3142,Gross/Near total resection,yes
+Seattle Children's Hospital,C226074,147,Gross/Near total resection,yes
+Seattle Children's Hospital,C2333064,545,Gross/Near total resection,yes
+Seattle Children's Hospital,C2333310,490,Partial resection,yes
+Seattle Children's Hospital,C2358156,395,Gross/Near total resection,yes
+Seattle Children's Hospital,C2463690,1272,Gross/Near total resection,yes
+Seattle Children's Hospital,C2544870,5124,Gross/Near total resection,yes
+Seattle Children's Hospital,C2571192,1168,Biopsy only,yes
+Seattle Children's Hospital,C2571192,802,Gross/Near total resection,yes
+Seattle Children's Hospital,C2571315,1277,Gross/Near total resection,yes
+Seattle Children's Hospital,C2605755,557,Partial resection,yes
+Seattle Children's Hospital,C2696529,912,Gross/Near total resection,yes
+Seattle Children's Hospital,C2698251,1431,Gross/Near total resection,yes
+Seattle Children's Hospital,C2784966,10542,Gross/Near total resection,yes
+Seattle Children's Hospital,C2784966,8530,Gross/Near total resection,yes
+Seattle Children's Hospital,C2852616,5664,Gross/Near total resection,yes
+Seattle Children's Hospital,C2892714,1033,Gross/Near total resection,yes
+Seattle Children's Hospital,C310206,2648,Gross/Near total resection,yes
+Seattle Children's Hospital,C310206,5687,Partial resection,yes
+Seattle Children's Hospital,C310206,7912,Partial resection,no
+Seattle Children's Hospital,C3388527,1192,Partial resection,yes
+Seattle Children's Hospital,C3544368,571,Partial resection,yes
+Seattle Children's Hospital,C3544737,4624,Gross/Near total resection,yes
+Seattle Children's Hospital,C3631329,4278,Partial resection,yes
+Seattle Children's Hospital,C3631329,4287,Gross/Near total resection,yes
+Seattle Children's Hospital,C3631329,4329,Gross/Near total resection,yes
+Seattle Children's Hospital,C3631698,9216,Partial resection,yes
+Seattle Children's Hospital,C3631698,9255,Partial resection,yes
+Seattle Children's Hospital,C3631698,9260,Gross/Near total resection,yes
+Seattle Children's Hospital,C3717306,3855,Partial resection,yes
+Seattle Children's Hospital,C3884586,3630,Gross/Near total resection,yes
+Seattle Children's Hospital,C4031571,1187,Partial resection,yes
+Seattle Children's Hospital,C4031694,3365,Gross/Near total resection,yes
+Seattle Children's Hospital,C4033539,1537,Gross/Near total resection,no
+Seattle Children's Hospital,C4033539,737,Biopsy only,no
+Seattle Children's Hospital,C4034523,1562,Partial resection,yes
+Seattle Children's Hospital,C4034646,1785,Partial resection,yes
+Seattle Children's Hospital,C4103649,2122,Gross/Near total resection,yes
+Seattle Children's Hospital,C4104018,167,Partial resection,yes
+Seattle Children's Hospital,C4104018,663,Gross/Near total resection,no
+Seattle Children's Hospital,C4344483,3009,Gross/Near total resection,yes
+Seattle Children's Hospital,C5254437,1481,Biopsy only,yes
+Seattle Children's Hospital,C5254437,1989,Partial resection,yes
+Seattle Children's Hospital,C5492565,4669,Gross/Near total resection,yes
+Seattle Children's Hospital,C558912,1026,Partial resection,yes
+Seattle Children's Hospital,C558912,1039,Partial resection,yes
+Seattle Children's Hospital,C558912,1183,Unavailable,yes
+Seattle Children's Hospital,C5623560,1726,Partial resection,yes
+Seattle Children's Hospital,C5624052,149,Partial resection,yes
+Seattle Children's Hospital,C5624052,78,Biopsy only,yes
+Seattle Children's Hospital,C602700,1385,Partial resection,yes
+Seattle Children's Hospital,C602700,3963,Gross/Near total resection,yes
+Seattle Children's Hospital,C603069,218,Gross/Near total resection,yes
+Seattle Children's Hospital,C6083703,2915,Gross/Near total resection,yes
+Seattle Children's Hospital,C622257,1750,Gross/Near total resection,yes
+Seattle Children's Hospital,C647349,761,Partial resection,yes
+Seattle Children's Hospital,C676746,6444,Gross/Near total resection,yes
+Seattle Children's Hospital,C6958725,897,Gross/Near total resection,yes
+Seattle Children's Hospital,C700977,7628,Gross/Near total resection,yes
+Seattle Children's Hospital,C701223,3248,Biopsy only,yes
+Seattle Children's Hospital,C701223,3248,Gross/Near total resection,yes
+Seattle Children's Hospital,C701469,737,Partial resection,yes
+Seattle Children's Hospital,C7093902,916,Gross/Near total resection,yes
+Seattle Children's Hospital,C724962,4428,Gross/Near total resection,yes
+Seattle Children's Hospital,C725331,4973,Biopsy only,yes
+Seattle Children's Hospital,C725331,4985,Partial resection,yes
+Seattle Children's Hospital,C7302756,1698,Gross/Near total resection,yes
+Seattle Children's Hospital,C7457490,1195,Gross/Near total resection,yes
+Seattle Children's Hospital,C758541,2820,Partial resection,yes
+Seattle Children's Hospital,C758541,4584,Biopsy only,no
+Seattle Children's Hospital,C7611978,1447,Gross/Near total resection,yes
+Seattle Children's Hospital,C7617267,1182,Partial resection,yes
+Seattle Children's Hospital,C7617267,2015,Gross/Near total resection,no
+Seattle Children's Hospital,C782649,4007,Biopsy only,yes
+Seattle Children's Hospital,C782649,4144,Gross/Near total resection,yes
+Seattle Children's Hospital,C782895,2013,Partial resection,yes
+Seattle Children's Hospital,C784371,8286,Gross/Near total resection,yes
+Seattle Children's Hospital,C797655,2186,Gross/Near total resection,yes
+Seattle Children's Hospital,C8183559,3490,Gross/Near total resection,yes
+Seattle Children's Hospital,C836769,4295,Partial resection,yes
+Seattle Children's Hospital,C837630,1279,Biopsy only,yes
+Seattle Children's Hospital,C837630,1769,Gross/Near total resection,no
+Seattle Children's Hospital,C837630,194,Gross/Near total resection,yes
+Seattle Children's Hospital,C837630,77,Biopsy only,yes
+Seattle Children's Hospital,C8379990,4368,Partial resection,yes
+Seattle Children's Hospital,C849561,3022,Gross/Near total resection,yes
+Seattle Children's Hospital,C849561,733,Gross/Near total resection,yes
+Seattle Children's Hospital,C8735460,4160,Gross/Near total resection,yes
+Seattle Children's Hospital,C912414,2888,Partial resection,yes
+Seattle Children's Hospital,C912414,2909,Gross/Near total resection,yes
+Seattle Children's Hospital,C912660,1851,Gross/Near total resection,yes
+Seattle Children's Hospital,C912660,2841,Gross/Near total resection,yes
+Seattle Children's Hospital,C912660,3037,Gross/Near total resection,no
+Seattle Children's Hospital,C923607,1392,Gross/Near total resection,yes
+Seattle Children's Hospital,C948330,5918,Gross/Near total resection,yes

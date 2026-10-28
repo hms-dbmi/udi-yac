@@ -1,0 +1,14 @@
+[
+  "Show survival curves from initial diagnosis by diagnosis cohort.",
+  "Does survival differ for patients who had radiation as part of their initial treatment?",
+  "What is the distribution of age at initial diagnosis?",
+  "How was initial treatment sequenced between radiation and methotrexate?",
+  "Which treatment protocols are most common?",
+  "Which chemotherapy agents are given most often?",
+  "Break down radiation type by radiation site.",
+  "What extent of tumor resection did surgeries achieve?",
+  "Which disease events are recorded, and how often?",
+  "Which sites contributed the most patients in the full data?",
+  "Filter to medulloblastoma patients.",
+  "What does each table in this dataset describe?"
+]

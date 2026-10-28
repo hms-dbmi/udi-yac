@@ -28,6 +28,13 @@
       "sessions": []
     },
     {
+      "id": "pcx-combined",
+      "title": "Seattle records + survival cubes (pcx)",
+      "description": "Line-level clinical records for the 93 radiant-cohort patients at Seattle Children's Hospital, alongside the event-free and overall survival cubes for all 970 patients, linked by diagnosis, protocol, subtype and site.",
+      "datapackage": "pcx/combined_oct_28/datapackage.json",
+      "sessions": []
+    },
+    {
       "id": "hubmap",
       "title": "HuBMAP",
       "description": "Donor, sample and dataset metadata from the Human BioMolecular Atlas Program portal.",

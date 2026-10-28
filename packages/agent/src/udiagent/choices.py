@@ -84,10 +84,13 @@ HORIZON = Choice(
         "full": ("Full follow-up", _lit(HORIZON_FULL_YEARS)),
     },
     description=(
-        "OPTIONAL. How many years of follow-up the survival curve shows. Omit it for "
-        "the default of 5 years. Set it only when the request names a different span "
-        "('10-year survival', 'the first 2 years'), or 'full' when it asks for the "
-        "whole follow-up ('all follow-up', 'as far as the data goes')."
+        "OPTIONAL — leave it out. How many years of follow-up the survival curve "
+        "shows; omitted, it is 5 years. Set it ONLY when the request names a "
+        "different span of TIME ('10-year survival', 'the first 2 years'), or 'full' "
+        "when it explicitly asks for the whole follow-up TIME ('all follow-up', 'as "
+        "far as the data goes'). Words about which patients or data ('all data', "
+        "'the full data', 'the whole cohort', 'all patients') are not a time span: "
+        "leave it out for them."
     ),
     label="time span",
 )

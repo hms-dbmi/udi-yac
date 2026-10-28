@@ -174,6 +174,13 @@ FALLBACK_INSTANTIATE_FAILED = "instantiate_failed"
 
 #: More categories than an axis or legend can show legibly.
 MAX_DRAWN_CATEGORIES = 500
+#: More categories than colour, offset or shape can tell apart. Far below the axis
+#: cap, which was raised for long, scrollable axes: under it alone a subject id
+#: (313 patients) passed as the colour and offset of a grouped bar chart.
+MAX_SPLIT_CATEGORIES = 30
+#: The channels that split marks another categorical field already places. See
+#: `_split_keys` for when MAX_SPLIT_CATEGORIES applies to them.
+SPLIT_ENCODINGS = frozenset({"color", "xOffset", "yOffset", "shape"})
 #: The value-count table: every distinct value of a field with its count, sorted.
 #: What a request falls back to when the chart it asked for would draw a field
 #: with more than MAX_DRAWN_CATEGORIES values. Found by suffix, which the
@@ -1356,9 +1363,44 @@ def _grouped_field_keys(spec_template, bindings):
     return keys
 
 
-def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozenset()):
-    """`(key, entity, field, cardinality)` for each categorical binding the chart
-    would draw with more than MAX_DRAWN_CATEGORIES values.
+def _split_keys(encoding_info):
+    """Placeholders that split the bars of a categorical axis by colour, offset or
+    shape: drawn directly on a SPLIT_ENCODINGS channel, not themselves on an axis,
+    while another placeholder puts a nominal or ordinal field on x or y. Those
+    get MAX_SPLIT_CATEGORIES.
+
+    Deliberately narrow. A pie's colour *is* its category, a dot plot's colour
+    repeats its axis, and a survival curve or scatterplot coloured by a field
+    splits a quantitative axis, which has its own checks (and a `grouping` for
+    stratifiers); all of those keep MAX_DRAWN_CATEGORIES.
+    """
+    on_axis = {
+        key
+        for key, entry in encoding_info.items()
+        if {"x", "y"} & set(entry["direct_encodings"])
+    }
+    categorical_axes = {
+        key
+        for key in on_axis
+        if encoding_info[key]["declared_type"] in ("nominal", "ordinal")
+    }
+    return {
+        key
+        for key, entry in encoding_info.items()
+        if SPLIT_ENCODINGS & set(entry["direct_encodings"])
+        and key not in on_axis
+        and categorical_axes - {key}
+    }
+
+
+def over_cap_bindings(
+    spec_template, bindings, schema, grouped_field_keys=frozenset(), encoding_info=None
+):
+    """`(key, entity, field, cardinality, cap)` for each categorical binding the
+    chart would draw with more values than it can show: MAX_SPLIT_CATEGORIES for a
+    field that splits a categorical axis's bars (see `_split_keys`), otherwise
+    MAX_DRAWN_CATEGORIES. `encoding_info` is `placeholder_encoding_info`'s result,
+    when the caller already has it.
 
     Only drawn fields count; a grouping key the pipeline rolls up never reaches a
     visual channel (see _encoded_placeholders). A field the request supplies a
@@ -1373,22 +1415,55 @@ def over_cap_bindings(spec_template, bindings, schema, grouped_field_keys=frozen
     """
     if _is_row_table(spec_template):
         return []
-    encoded = _encoded_placeholders(spec_template)
+    if encoding_info is None:
+        encoding_info = placeholder_encoding_info(spec_template)
+    split_keys = _split_keys(encoding_info)
     entities = schema.get("entities", {})
     entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
     over = []
     for key, field_name in bindings.items():
         # A grouping binding is a dict, not a column name.
-        if not isinstance(field_name, str) or key not in encoded or key in grouped_field_keys:
+        if not isinstance(field_name, str) or key not in encoding_info or key in grouped_field_keys:
             continue
         entity_name = _entity_for_binding_key(key, entity_bindings)
         info = entities.get(entity_name, {}).get("fields", {}).get(field_name)
         if not isinstance(info, dict):
             continue
+        cap = MAX_SPLIT_CATEGORIES if key in split_keys else MAX_DRAWN_CATEGORIES
         cardinality = info.get("cardinality", 0)
-        if info["type"] in ("nominal", "ordinal") and cardinality > MAX_DRAWN_CATEGORIES:
-            over.append((key, entity_name, field_name, cardinality))
+        if info["type"] in ("nominal", "ordinal") and cardinality > cap:
+            over.append((key, entity_name, field_name, cardinality, cap))
     return over
+
+
+def _duplicate_drawn_field_errors(encoding_info, bindings, xy_placeholders):
+    """An error for each pair of field bindings drawn *directly* on a channel and
+    set to one column of one table, except the x/y pair, which `validate_bindings`
+    reports itself. Placeholders that only meet inside a derive (a proportion, a
+    survival span) are combined before they are drawn, so are left alone."""
+    encodings = {
+        key: entry["direct_encodings"]
+        for key, entry in encoding_info.items()
+        if entry["direct_encodings"]
+    }
+    entity_bindings = {k: v for k, v in bindings.items() if _ENTITY_KEY.fullmatch(k)}
+    xy_pair = {(xy_placeholders.get(enc) or "").split(":")[0] for enc in ("x", "y")}
+    seen = {}
+    errors = []
+    for key, field_name in bindings.items():
+        if not isinstance(field_name, str) or key not in encodings or _ENTITY_KEY.fullmatch(key):
+            continue
+        column = (_entity_for_binding_key(key, entity_bindings), field_name)
+        other = seen.setdefault(column, key)
+        if other != key and {other, key} != xy_pair:
+            errors.append(
+                f"'{other}' and '{key}' are both set to '{field_name}', but they are "
+                f"drawn as different channels ({', '.join(encodings[other])} and "
+                f"{', '.join(encodings[key])}), so the chart would split each "
+                f"category by itself. Choose a different field for '{key}', or a "
+                f"chart that draws '{field_name}' once."
+            )
+    return errors
 
 
 def validate_bindings(
@@ -1513,6 +1588,12 @@ def validate_bindings(
                 f"both '{x_binding}' and '{y_binding}' are set to '{x_val}'"
             )
 
+    # The same, for any two drawn fields: one column on the x axis and as the
+    # colour and offset of a grouped bar chart splits every bar into one segment
+    # of itself. Left to the x/y check above where that one applies.
+    encoding_info = placeholder_encoding_info(spec_template)
+    errors.extend(_duplicate_drawn_field_errors(encoding_info, bindings, xy_placeholders))
+
     placeholder_types = _placeholder_type_requirements(spec_template)
 
     targets = grouping_targets(spec_template)
@@ -1521,9 +1602,9 @@ def validate_bindings(
     # Fields drawn with more categories than a chart can show. Reported in the
     # per-binding loop below, so errors keep binding order.
     over_cap = {
-        key: cardinality
-        for key, _entity, _field, cardinality in over_cap_bindings(
-            spec_template, bindings, schema, grouped_field_keys
+        key: (cardinality, cap)
+        for key, _entity, _field, cardinality, cap in over_cap_bindings(
+            spec_template, bindings, schema, grouped_field_keys, encoding_info
         )
     }
 
@@ -1653,11 +1734,48 @@ def validate_bindings(
         # message names the way out, since the retry reads it: a table lists
         # every value.
         if key in over_cap:
-            errors.append(
-                f"Field '{field_name}' has {over_cap[key]} unique values, too many to draw "
-                f"on an axis or legend (max {MAX_DRAWN_CATEGORIES}). A table can list every "
-                f"value, e.g. each value with its count, sorted by count."
-            )
+            cardinality, cap = over_cap[key]
+            if cap == MAX_SPLIT_CATEGORIES:
+                errors.append(
+                    f"Field '{field_name}' has {cardinality} unique values, too many to "
+                    f"split marks by colour or offset (max {cap}). Split by a field with "
+                    f"fewer values, or use a chart that does not split, e.g. one bar per "
+                    f"category."
+                )
+            else:
+                errors.append(
+                    f"Field '{field_name}' has {cardinality} unique values, too many to "
+                    f"draw on an axis or legend (max {cap}). A table can list every "
+                    f"value, e.g. each value with its count, sorted by count."
+                )
+
+    # Only the survival templates take both <V1> and <V2>, and for them a value in
+    # both is never a chart: an event-log curve that starts and ends on the same
+    # event puts every subject's end at time 0 (a vertical line), and a cube curve
+    # whose event status is also its censored status counts each cell twice.
+    shared_values = set(value_list(bindings.get("V1"))) & set(value_list(bindings.get("V2")))
+    if shared_values:
+        roles = (
+            "the event status (value1) and the censored status (value2)"
+            if _template_reads_cube(spec_template)
+            else "the event that starts the clock (value1) and one that ends it (value2)"
+        )
+        errors.append(
+            f"{', '.join(repr(v) for v in sorted(shared_values))} cannot be both "
+            f"{roles}; they must be different values."
+        )
+    # An event-log curve's censored status (<V3>, a status column's "no event
+    # yet") naming one of its end events counts the dead as still alive. Compared
+    # ignoring case: the two come from different columns ('deceased' in a vital
+    # status, 'Deceased' in an event type).
+    censored = bindings.get("V3")
+    end_events = {v.casefold(): v for v in value_list(bindings.get("V2"))}
+    if isinstance(censored, str) and censored.casefold() in end_events:
+        errors.append(
+            f"'{censored}' (value3) must be the status meaning the subject had NO "
+            f"end event yet (e.g. 'alive'), but it names the end event "
+            f"'{end_events[censored.casefold()]}' (value2)."
+        )
 
     # A rollup output bound to the same column as the key it groups by is a
     # degenerate chart, not just the SQL hazard of one name on two columns: the
@@ -2232,13 +2350,15 @@ def _substitute_value_counts(
         for entry in over_cap_bindings(
             spec_template, bindings, schema, _grouped_field_keys(spec_template, bindings)
         )
-        if _groups_by(spec_template, entry[0])
+        # Only over the axis cap: a split field between the two caps was the
+        # wrong field to split by, and a list of its values answers nothing.
+        if entry[3] > MAX_DRAWN_CATEGORIES and _groups_by(spec_template, entry[0])
     ]
     list_tool = next((n for n in tool_dispatch if n.endswith(VALUE_COUNTS_TOOL_SUFFIX)), None)
     if not over or list_tool is None:
         return None
 
-    _key, entity, field, cardinality = over[0]
+    _key, entity, field, cardinality, _cap = over[0]
     list_idx, list_map = tool_dispatch[list_tool]
     roles = {"E": entity, "F": field}
     list_args = {p: roles[ph] for p, ph in list_map.items() if ph in roles}
@@ -2271,6 +2391,53 @@ def _substitute_value_counts(
         list_tool,
     )
     return context
+
+
+#: Words that say a request is about a span of follow-up time.
+_TIME_SPAN_WORDS = re.compile(
+    r"\b(?:\d+\s*-?\s*)?(?:years?|yrs?|months?|weeks?|days?)\b"
+    r"|\bfollow[\s-]*up\b|\bhorizon\b|\btime\s*-?\s*span\b|\blong[\s-]*term\b|\bas far as\b",
+    re.IGNORECASE,
+)
+
+
+def _latest_user_text(messages):
+    """The text of the newest user message, or "" when there is none."""
+    for message in reversed(messages or []):
+        if message.get("role") != "user":
+            continue
+        content = message.get("content")
+        if isinstance(content, list):
+            content = " ".join(
+                part.get("text", "") for part in content if isinstance(part, dict)
+            )
+        return content if isinstance(content, str) else ""
+    return ""
+
+
+def _drop_unasked_horizon(tool_args, request_text, rid=None):
+    """Drop a `time_horizon` the request never asked for, so the curve keeps its
+    5-year default.
+
+    The model sets it on its own for words that are about *which data* rather
+    than how long: "across all data" or "the full data" read as the `full`
+    option. A tool description saying so did not stop it, and a survival curve
+    should only leave the default when the request names a span of time, so
+    `request_text` has to mention one ("10-year", "the first 2 years", "full
+    follow-up").
+    """
+    param = CHOICES["HORIZON"].param
+    if not tool_args or tool_args.get(param) in (None, ""):
+        return tool_args
+    if _TIME_SPAN_WORDS.search(request_text or ""):
+        return tool_args
+    logger.info(
+        "[vis %s] dropped %s=%r: the request names no time span",
+        rid,
+        param,
+        tool_args[param],
+    )
+    return {k: v for k, v in tool_args.items() if k != param}
 
 
 def _execute_generate(skill, context):
@@ -2407,6 +2574,11 @@ def _execute_generate(skill, context):
                 fallback_reason = FALLBACK_NO_TOOL_CALL
                 break
             tool_name, tool_args = result
+            tool_args = _drop_unasked_horizon(
+                tool_args,
+                context.get("request_text") or _latest_user_text(context["messages"]),
+                rid,
+            )
             logger.info(
                 "[vis %s] attempt=%d model chose %s args=%s",
                 rid,
@@ -2684,12 +2856,17 @@ def generate_vis_spec(
     openai_api_key=None,
     data_domains=None,
     model=None,
+    request_text=None,
 ):
     """Generate a visualization spec using the skills pipeline.
 
     Args:
         agent: UDIAgent instance
         messages: chat history (list of dicts with role/content)
+        request_text: the user's own words, when `messages` ends in a rewrite
+            of them (the orchestrator's chart description). Optional choices
+            the request must ask for, such as the time span, are checked
+            against it; without it, against the newest user message.
         data_schema: JSON string describing available datasets
         grammar: dict from load_grammar()
         config: optional dict with keys:
@@ -2721,6 +2898,7 @@ def generate_vis_spec(
         "openai_api_key": openai_api_key,
         "model": model,
         "usage": usage,
+        "request_text": request_text,
         # Ties every log line from this request together. uvicorn interleaves
         # requests, so timestamps alone do not, and the value comes back in
         # `meta` so a reported chart carries its own grep key.

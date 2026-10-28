@@ -47,7 +47,7 @@ from udiagent.tools import (
     ORCHESTRATOR_TOOLS,
     function_call_render_visualization,
 )
-from udiagent.vis_generate import _parse_request_schema, _retry_turns
+from udiagent.vis_generate import _latest_user_text, _parse_request_schema, _retry_turns
 
 logger = logging.getLogger(__name__)
 
@@ -423,6 +423,9 @@ class Orchestrator:
             openai_api_key=openai_api_key,
             data_domains=data_domains,
             model=model,
+            # The description replaces the user's words; choices the request
+            # must ask for (the time span) are checked against the originals.
+            request_text=_latest_user_text(messages),
         )
 
         return result
