@@ -351,8 +351,10 @@ def function_call_render_visualization(
     openai_api_key=None,
     data_domains=None,
     model=None,
+    request_text=None,
 ):
-    """Visualization generation via the skills pipeline."""
+    """Visualization generation via the skills pipeline. `request_text` is the
+    user's own request when `messages` ends in a rewrite of it."""
     from udiagent.vis_generate import generate_vis_spec
 
     msgs = normalize_tool_calls(copy.deepcopy(messages))
@@ -365,6 +367,7 @@ def function_call_render_visualization(
         openai_api_key=openai_api_key,
         data_domains=data_domains,
         model=model,
+        request_text=request_text,
     )
     failure = result.get("failure")
     if failure:

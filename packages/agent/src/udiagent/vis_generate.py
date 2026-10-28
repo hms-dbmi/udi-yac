@@ -2365,6 +2365,53 @@ def _substitute_value_counts(
     return context
 
 
+#: Words that say a request is about a span of follow-up time.
+_TIME_SPAN_WORDS = re.compile(
+    r"\b(?:\d+\s*-?\s*)?(?:years?|yrs?|months?|weeks?|days?)\b"
+    r"|\bfollow[\s-]*up\b|\bhorizon\b|\btime\s*-?\s*span\b|\blong[\s-]*term\b|\bas far as\b",
+    re.IGNORECASE,
+)
+
+
+def _latest_user_text(messages):
+    """The text of the newest user message, or "" when there is none."""
+    for message in reversed(messages or []):
+        if message.get("role") != "user":
+            continue
+        content = message.get("content")
+        if isinstance(content, list):
+            content = " ".join(
+                part.get("text", "") for part in content if isinstance(part, dict)
+            )
+        return content if isinstance(content, str) else ""
+    return ""
+
+
+def _drop_unasked_horizon(tool_args, request_text, rid=None):
+    """Drop a `time_horizon` the request never asked for, so the curve keeps its
+    5-year default.
+
+    The model sets it on its own for words that are about *which data* rather
+    than how long: "across all data" or "the full data" read as the `full`
+    option. A tool description saying so did not stop it, and a survival curve
+    should only leave the default when the request names a span of time, so
+    `request_text` has to mention one ("10-year", "the first 2 years", "full
+    follow-up").
+    """
+    param = CHOICES["HORIZON"].param
+    if not tool_args or tool_args.get(param) in (None, ""):
+        return tool_args
+    if _TIME_SPAN_WORDS.search(request_text or ""):
+        return tool_args
+    logger.info(
+        "[vis %s] dropped %s=%r: the request names no time span",
+        rid,
+        param,
+        tool_args[param],
+    )
+    return {k: v for k, v in tool_args.items() if k != param}
+
+
 def _execute_generate(skill, context):
     """Execute the generate skill: try function-calling tools first, fall back to LLM."""
     agent = context["agent"]
@@ -2499,6 +2546,11 @@ def _execute_generate(skill, context):
                 fallback_reason = FALLBACK_NO_TOOL_CALL
                 break
             tool_name, tool_args = result
+            tool_args = _drop_unasked_horizon(
+                tool_args,
+                context.get("request_text") or _latest_user_text(context["messages"]),
+                rid,
+            )
             logger.info(
                 "[vis %s] attempt=%d model chose %s args=%s",
                 rid,
@@ -2776,12 +2828,17 @@ def generate_vis_spec(
     openai_api_key=None,
     data_domains=None,
     model=None,
+    request_text=None,
 ):
     """Generate a visualization spec using the skills pipeline.
 
     Args:
         agent: UDIAgent instance
         messages: chat history (list of dicts with role/content)
+        request_text: the user's own words, when `messages` ends in a rewrite
+            of them (the orchestrator's chart description). Optional choices
+            the request must ask for, such as the time span, are checked
+            against it; without it, against the newest user message.
         data_schema: JSON string describing available datasets
         grammar: dict from load_grammar()
         config: optional dict with keys:
@@ -2813,6 +2870,7 @@ def generate_vis_spec(
         "openai_api_key": openai_api_key,
         "model": model,
         "usage": usage,
+        "request_text": request_text,
         # Ties every log line from this request together. uvicorn interleaves
         # requests, so timestamps alone do not, and the value comes back in
         # `meta` so a reported chart carries its own grep key.

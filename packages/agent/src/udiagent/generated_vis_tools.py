@@ -2730,14 +2730,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -2935,14 +2939,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -3141,14 +3149,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -3347,14 +3359,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -3554,14 +3570,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -3771,14 +3791,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -3989,14 +4013,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -4209,14 +4237,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -4428,14 +4460,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -4566,14 +4602,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -4712,14 +4752,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'A literal data VALUE to match (not a column '
@@ -4820,14 +4864,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                           'data.',
                                                            'enum': ['kaplan_meier', 'basic'],
                                                            'type': 'string'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'The status value meaning the EVENT HAPPENED '
@@ -4989,14 +5037,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                                   'type': 'string'}},
                                                           'required': ['type'],
                                                           'type': 'object'},
-                                             'time_horizon': {'description': 'OPTIONAL. How many years of follow-up '
-                                                                             'the survival curve shows. Omit it for '
-                                                                             'the default of 5 years. Set it only when '
-                                                                             'the request names a different span '
-                                                                             "('10-year survival', 'the first 2 "
-                                                                             "years'), or 'full' when it asks for the "
-                                                                             "whole follow-up ('all follow-up', 'as "
-                                                                             "far as the data goes').",
+                                             'time_horizon': {'description': 'OPTIONAL — leave it out. How many years '
+                                                                             'of follow-up the survival curve shows; '
+                                                                             'omitted, it is 5 years. Set it ONLY when '
+                                                                             'the request names a different span of '
+                                                                             "TIME ('10-year survival', 'the first 2 "
+                                                                             "years'), or 'full' when it explicitly "
+                                                                             "asks for the whole follow-up TIME ('all "
+                                                                             "follow-up', 'as far as the data goes'). "
+                                                                             "Words about which patients or data ('all "
+                                                                             "data', 'the full data', 'the whole "
+                                                                             "cohort', 'all patients') are not a time "
+                                                                             'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
                                              'value1': {'description': 'The status value meaning the EVENT HAPPENED '
