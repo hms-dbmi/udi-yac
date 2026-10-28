@@ -1552,7 +1552,7 @@
     },
     "name_hint": "survival_cube",
     "shared_entities": [],
-    "title_template": "Survival curve over <D1>",
+    "title_template": "<ENDPOINT> curve over <D1>",
     "summary_template": "Plots the share of subjects still event-free at each <D1> value, counted from the cube's measure; censored time points carry a tick.",
     "value_descriptions": {
       "V1": "The status value meaning the EVENT HAPPENED (e.g. 'event', 'deceased', 'dead') \u2014 counted as an event.",
@@ -1592,7 +1592,7 @@
     },
     "name_hint": "survival_cube_stratified",
     "shared_entities": [],
-    "title_template": "Survival curves over <D1> by <D3>",
+    "title_template": "<ENDPOINT> curves over <D1> by <D3>",
     "summary_template": "Plots one curve per <D3> value, showing the share still event-free at each <D1>; each subject is counted once within its own stratum.",
     "value_descriptions": {
       "V1": "The status value meaning the EVENT HAPPENED (e.g. 'event', 'deceased', 'dead') \u2014 counted as an event.",

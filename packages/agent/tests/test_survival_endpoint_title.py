@@ -77,3 +77,36 @@ def test_the_endpoint_is_not_a_tweak():
     assert "endpoint" not in {p["param"] for p in params}
     # The endpoint is text only: it never reaches the spec it would have to change.
     assert "<ENDPOINT>" not in templates[idx]
+
+
+_CUBE_SINGLE = "vis_063_line_survival_cube"
+_CUBE_STRATIFIED = "vis_064_line_survival_cube_stratified"
+
+
+@pytest.mark.parametrize(
+    "endpoint, title",
+    [
+        ("overall_survival", "Overall survival curve over {enc:x}"),
+        ("event_free_survival", "Event-free survival curve over {enc:x}"),
+        (None, "Survival curve over {enc:x}"),
+    ],
+)
+def test_the_cube_title_names_the_endpoint(endpoint, title):
+    """A cube holding both EFS and OS needs the title to say which one it is."""
+    bindings = {"ENDPOINT": endpoint} if endpoint else {}
+    assert resolve_text_templates(_CUBE_SINGLE, bindings)["title"] == title
+
+
+def test_the_stratified_cube_title_keeps_its_other_tokens():
+    text = resolve_text_templates(_CUBE_STRATIFIED, {"ENDPOINT": "overall_survival"})
+    assert text["title"] == "Overall survival curves over {enc:x} by {col:dimension3}"
+
+
+def test_both_cube_survival_tools_offer_the_endpoint_as_an_optional_enum():
+    defs, _dispatch, _templates, _tags = _load_generated_tools()
+    tools = [d["function"] for d in defs if "_survival_cube" in d["function"]["name"]]
+    assert len(tools) == 2
+    for tool in tools:
+        properties = tool["parameters"]["properties"]
+        assert properties["endpoint"]["enum"] == list(ENDPOINT.options), tool["name"]
+        assert "endpoint" not in tool["parameters"]["required"], tool["name"]

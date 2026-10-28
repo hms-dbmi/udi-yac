@@ -2671,14 +2671,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -2793,14 +2794,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -2998,14 +3000,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3203,14 +3206,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3409,14 +3413,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3614,14 +3619,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -3831,14 +3837,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4050,14 +4057,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4268,14 +4276,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4487,14 +4496,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4622,14 +4632,15 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                  'enum': ['show', 'hide'],
                                                                  'type': 'string'},
                                              'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
-                                                                         'chart title, and must match the end events '
-                                                                         "in value2: 'overall_survival' when death "
-                                                                         'alone ends the curve; '
-                                                                         "'progression_free_survival' for progression "
-                                                                         "or death; 'event_free_survival' for "
-                                                                         'progression, recurrence, relapse, a second '
-                                                                         'malignancy or death. Omit it when the end '
-                                                                         'events are none of these; the title then '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
                                                                          "just says 'Survival'.",
                                                           'enum': ['overall_survival',
                                                                    'event_free_survival',
@@ -4775,6 +4786,21 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                              'dimension2': {'description': 'cube nominal dimension — the column whose '
                                                                            'values value1, value2 name.',
                                                             'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
                                              'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
@@ -4849,6 +4875,21 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                             'type': 'string'},
                                              'dimension3': {'description': 'cube nominal dimension, encodes color.',
                                                             'type': 'string'},
+                                             'endpoint': {'description': 'OPTIONAL. Names the survival endpoint in the '
+                                                                         'chart title, and must match the events that '
+                                                                         'end the curve (for a cube, what its time and '
+                                                                         'status dimensions describe): '
+                                                                         "'overall_survival' when death alone ends the "
+                                                                         "curve; 'progression_free_survival' for "
+                                                                         "progression or death; 'event_free_survival' "
+                                                                         'for progression, recurrence, relapse, a '
+                                                                         'second malignancy or death. Omit it when the '
+                                                                         'end events are none of these; the title then '
+                                                                         "just says 'Survival'.",
+                                                          'enum': ['overall_survival',
+                                                                   'event_free_survival',
+                                                                   'progression_free_survival'],
+                                                          'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'},
                                              'estimator': {'description': 'OPTIONAL — leave it out. The curve is '
@@ -5477,6 +5518,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                 {'confidence_band': 'CI',
                                  'dimension1': 'D1',
                                  'dimension2': 'D2',
+                                 'endpoint': 'ENDPOINT',
                                  'entity': 'E',
                                  'estimator': 'ESTIMATOR',
                                  'time_horizon': 'HORIZON',
@@ -5487,6 +5529,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
                                             'dimension1': 'D1',
                                             'dimension2': 'D2',
                                             'dimension3': 'D3',
+                                            'endpoint': 'ENDPOINT',
                                             'entity': 'E',
                                             'estimator': 'ESTIMATOR',
                                             'grouping': 'GROUP',
@@ -5861,10 +5904,10 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
                                         '{ent:entity3}',
                                         'Splits subjects four ways — {ent:entity2} only, {ent:entity3} only, both, '
                                         'neither — by whether each table holds a row for them.'),
- 'vis_063_line_survival_cube': ('Survival curve over {enc:x}',
+ 'vis_063_line_survival_cube': ('{bind:ENDPOINT} curve over {enc:x}',
                                 'Plots the share of subjects still event-free at each {enc:x} value, counted from the '
                                 "cube's measure; censored time points carry a tick."),
- 'vis_064_line_survival_cube_stratified': ('Survival curves over {enc:x} by {col:dimension3}',
+ 'vis_064_line_survival_cube_stratified': ('{bind:ENDPOINT} curves over {enc:x} by {col:dimension3}',
                                            'Plots one curve per {col:dimension3} value, showing the share still '
                                            'event-free at each {enc:x}; each subject is counted once within its own '
                                            'stratum.'),

@@ -144,10 +144,11 @@ class TextLabel:
     description: str
 
 
-#: Which survival endpoint a curve shows. The events that end a curve are the
-#: template's `value2` list — data values, which differ per dataset ("death",
-#: "Deceased"), so the endpoint cannot be read off them reliably. The model picks
-#: both from the same request, so it is asked to name the one it built.
+#: Which survival endpoint a curve shows. The events that end a curve are data
+#: values — an event-log template's `value2` list, a cube's event status
+#: `value1` — which differ per dataset ("death", "Deceased", "event"), so the
+#: endpoint cannot be read off them reliably. The model picks both from the same
+#: request, so it is asked to name the one it built.
 ENDPOINT = TextLabel(
     param="endpoint",
     default="Survival",
@@ -158,7 +159,8 @@ ENDPOINT = TextLabel(
     },
     description=(
         "OPTIONAL. Names the survival endpoint in the chart title, and must match "
-        "the end events in value2: 'overall_survival' when death alone ends the "
+        "the events that end the curve (for a cube, what its time and status "
+        "dimensions describe): 'overall_survival' when death alone ends the "
         "curve; 'progression_free_survival' for progression or death; "
         "'event_free_survival' for progression, recurrence, relapse, a second "
         "malignancy or death. Omit it when the end events are none of these; the "

@@ -4385,7 +4385,7 @@ def generate():
         chart_type=ChartType.LINE,
         name_hint="survival_cube",
         value_descriptions=cube_status_values,
-        title_template="Survival curve over <D1>",
+        title_template="<ENDPOINT> curve over <D1>",
         summary_template=(
             "Plots the share of subjects still event-free at each <D1> value, counted from the cube's measure; censored time points carry a tick."
         ),
@@ -4462,7 +4462,7 @@ def generate():
         chart_type=ChartType.LINE,
         name_hint="survival_cube_stratified",
         value_descriptions=cube_status_values,
-        title_template="Survival curves over <D1> by <D3>",
+        title_template="<ENDPOINT> curves over <D1> by <D3>",
         summary_template=(
             "Plots one curve per <D3> value, showing the share still event-free at each <D1>; each subject is counted once within its own stratum."
         ),
