@@ -417,14 +417,14 @@ describe('UDIChat — folded top bar', () => {
   ])('in a %i px row, shrinks only as far as it must', async (rowWidth, expected) => {
     const resize = layout(rowWidth);
     render(<UDIChat {...seedConfig} />);
-    const chip = await screen.findByRole('button', { name: /^donors:/ });
+    const chip = await screen.findByRole('button', { name: /^Donors:/ });
     // The chip arrived after the header first measured itself.
     resize(chip.parentElement!.parentElement!);
 
     expect({
       folded: screen.queryByRole('button', { name: 'Dashboard options' }) !== null,
       // A compact chip holds its label itself; a full one gives it a line of its own.
-      compact: within(chip).getByText('donors') === chip,
+      compact: within(chip).getByText('Donors') === chip,
     }).toEqual(expected);
   });
 });

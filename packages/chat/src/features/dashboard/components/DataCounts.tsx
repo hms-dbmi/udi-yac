@@ -71,7 +71,9 @@ export function DataCounts({ compact = false }: { compact?: boolean }) {
         if (isCube && !resource) return null;
         return {
           id: name,
-          label: name,
+          // The package's `title` for the table, so a cube named `Efs` can
+          // read "Patients".
+          label: dpState.getEntityLabel(name),
           totalCount,
           hidden: resource?.['udi:hide_count'] === true,
           Icon: mergedIcons[name] ?? FALLBACK_ENTITY_ICON,
