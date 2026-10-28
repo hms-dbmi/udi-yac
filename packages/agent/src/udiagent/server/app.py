@@ -21,6 +21,7 @@ from openai import OpenAIError
 from fastapi import BackgroundTasks, FastAPI, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 
 from udiagent.agent import UDIAgent
 from udiagent.api import (
@@ -254,11 +255,23 @@ _USAGE_HEADERS = {
 
 @app.get("/", tags=["status"], summary="Health check")
 def read_root():
+    """The server's version, the commit it was built from (`git_sha`, null
+    outside the Docker image) and its endpoints. `openapi` links the full spec.
+    """
     return {
-        "service": "UDIAgent API",
+        "service": app.title,
         "status": "running",
+        "version": app.version,
+        "git_sha": config.udi_git_sha or None,
+        "openapi": app.openapi_url,
+        "docs": app.docs_url,
+        # Built per request: this route is declared before the others. Only the
+        # routes the spec publishes, so the benchmark tooling stays unlisted.
         "endpoints": [
-            {"path": "/", "method": "GET", "description": "API status and info"},
+            {"path": route.path, "method": method, "description": route.summary}
+            for route in app.routes
+            if isinstance(route, APIRoute) and route.include_in_schema
+            for method in sorted(route.methods)
         ],
     }
 

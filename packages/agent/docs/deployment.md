@@ -237,7 +237,7 @@ Substitute your port (`80` for the container as run above, `8007` for the
 systemd unit):
 
 ```bash
-curl -fsS http://localhost/                          # {"service":"UDIAgent API","status":"running",...}
+curl -fsS http://localhost/                          # {"service":"UDIAgent API","status":"running","version":...,"git_sha":...}
 curl -fsS http://localhost/v1/yac/structured_functions   # 200 — bundled package data loaded
 ```
 

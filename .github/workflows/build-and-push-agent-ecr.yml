@@ -89,7 +89,8 @@ jobs:
           # The SHA tag is the deployable one; 'latest' (excluded from immutability
           # in the ECR repo policy) is a convenience pointer only — the deploy
           # workflow refuses it.
-          docker build -f packages/agent/Dockerfile -t "${IMAGE}:${SHA}" -t "${IMAGE}:latest" .
+          docker build -f packages/agent/Dockerfile --build-arg GIT_SHA="${SHA}" \
+            -t "${IMAGE}:${SHA}" -t "${IMAGE}:latest" .
           docker push "${IMAGE}:${SHA}"
           docker push "${IMAGE}:latest"
           echo "Pushed ${IMAGE}:${SHA}" >> "$GITHUB_STEP_SUMMARY"

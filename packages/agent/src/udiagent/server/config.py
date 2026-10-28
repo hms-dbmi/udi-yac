@@ -308,6 +308,16 @@ class ServerConfig(BaseSettings):
         ),
     )
 
+    # --- Build ---
+    udi_git_sha: str | None = Field(
+        default=None,
+        json_schema_extra={"group": "Build"},
+        description=(
+            "Commit the server was built from, reported by `GET /`. The Docker "
+            "image build sets it; leave unset."
+        ),
+    )
+
     @property
     def cors_origins(self) -> list[str]:
         """`UDI_CORS_ORIGINS` as the list Starlette's CORSMiddleware wants."""
