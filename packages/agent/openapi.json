@@ -12,6 +12,7 @@
           "status"
         ],
         "summary": "Health check",
+        "description": "The server's version, the commit it was built from (`git_sha`, null\noutside the Docker image) and its endpoints. `openapi` links the full spec.",
         "operationId": "read_root",
         "responses": {
           "200": {

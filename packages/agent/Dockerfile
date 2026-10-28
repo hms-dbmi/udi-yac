@@ -41,4 +41,8 @@ WORKDIR /app/packages/agent
 # would refuse the bind. Hosts map their own port onto it (`-p 80:8000`).
 EXPOSE 8000
 
+# Reported by GET /. Last, so a new commit doesn't invalidate the layers above.
+ARG GIT_SHA=""
+ENV UDI_GIT_SHA=${GIT_SHA}
+
 CMD ["uv", "run", "--frozen", "--no-sync", "fastapi", "run", "src/udiagent/server/app.py", "--port", "8000", "--host", "0.0.0.0"]
