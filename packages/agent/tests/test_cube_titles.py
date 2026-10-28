@@ -27,4 +27,4 @@ def test_plain_cube_titles_lead_with_the_measure():
 
 
 def test_the_bar_chart_title():
-    assert resolve_text_templates("vis_004_barchart_basic", {})["title"] == "{enc:y} by {enc:x}"
+    assert resolve_text_templates("vis_004_barchart_horiz", {})["title"] == "{enc:x} by {enc:y}"

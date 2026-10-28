@@ -2020,15 +2020,19 @@ def generate():
             .source("<E>", "<E.url>")
             .filter("<MARGINAL:D>")
             .mark("bar")
-            .x(field="<D:n>", type="nominal")
-            .y(field="<M>", type="quantitative")
+            .x(field="<M>", type="quantitative")
+            .y(field="<D:n>", type="nominal")
         ),
         chart_type=ChartType.BARCHART,
         task_types=[TaskType.COMPUTE_DERIVED_VALUE, TaskType.DETERMINE_RANGE],
-        description="Shows the pre-aggregated cube measure for each category of a nominal dimension as a bar chart.",
+        description="Shows the pre-aggregated cube measure for each category of a nominal dimension as a horizontal bar chart.",
         title_template="<M> by <D:n>",
-        summary_template="Displays <M> for each <D:n> category as bars.",
-        design_considerations=_CUBE_MARGINAL_NOTE,
+        summary_template="Displays <M> for each <D:n> category as horizontal bars.",
+        design_considerations=(
+            _CUBE_MARGINAL_NOTE + " Horizontal, whatever the category count: cube dimensions "
+            "carry long labels (protocol arms, site names) that a vertical axis would rotate "
+            "or truncate."
+        ),
         tasks="Compare the measure across categories; identify the most or least common category.",
         shape="data_cube",
     )

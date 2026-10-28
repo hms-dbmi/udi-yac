@@ -31,8 +31,8 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '[{"encoding": "x", "field": "<E1> count", "type": "quantitative"}, {"encoding": "y", "field": "<E2.F>", "type": '
  '"nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}], "representation": '
- '{"mark": "bar", "mapping": [{"encoding": "x", "field": "<D:n>", "type": "nominal"}, {"encoding": "y", "field": '
- '"<M>", "type": "quantitative"}]}}',
+ '{"mark": "bar", "mapping": [{"encoding": "x", "field": "<M>", "type": "quantitative"}, {"encoding": "y", "field": '
+ '"<D:n>", "type": "nominal"}]}}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"filter": "<MARGINAL:D>"}], "representation": '
  '{"mark": "bar", "mapping": [{"encoding": "x", "field": "<D:q>", "type": "quantitative"}, {"encoding": "y", "field": '
  '"<M>", "type": "quantitative"}]}}',
@@ -1843,16 +1843,18 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                               'type': 'object'}},
   'type': 'function'},
  {'function': {'description': '[barchart] Shows the pre-aggregated cube measure for each category of a nominal '
-                              'dimension as a bar chart. Design: Reads the cube marginal by filtering to rows where '
-                              'the chosen dimension(s) are present and every other dimension is empty; the measure is '
-                              'mapped directly with no re-aggregation. The marginal filter is expanded from the '
-                              "per-request schema's dimension list, so this template works for any cube. Tasks: "
-                              'Compare the measure across categories; identify the most or least common category. '
-                              'Query patterns: How many are there by <dimension>?; Make a bar chart of the measure by '
-                              'a categorical dimension.',
-               'name': 'vis_004_barchart_basic',
+                              'dimension as a horizontal bar chart. Design: Reads the cube marginal by filtering to '
+                              'rows where the chosen dimension(s) are present and every other dimension is empty; the '
+                              'measure is mapped directly with no re-aggregation. The marginal filter is expanded from '
+                              "the per-request schema's dimension list, so this template works for any cube. "
+                              'Horizontal, whatever the category count: cube dimensions carry long labels (protocol '
+                              'arms, site names) that a vertical axis would rotate or truncate. Tasks: Compare the '
+                              'measure across categories; identify the most or least common category. Query patterns: '
+                              'How many are there by <dimension>?; Make a bar chart of the measure by a categorical '
+                              'dimension.',
+               'name': 'vis_004_barchart_horiz',
                'parameters': {'additionalProperties': False,
-                              'properties': {'dimension': {'description': 'cube nominal dimension, encodes x-axis.',
+                              'properties': {'dimension': {'description': 'cube nominal dimension, encodes y-axis.',
                                                            'type': 'string'},
                                              'entity': {'description': 'The data entity (table) to visualize.',
                                                         'type': 'string'}},
@@ -5252,7 +5254,7 @@ TOOL_DISPATCH = {'vis_000_barchart_count_vert_grouped': (0, {'entity': 'E', 'fie
  'vis_001_barchart_count_horiz_grouped': (1, {'entity': 'E', 'field': 'F'}),
  'vis_002_barchart_join_count_vert_grouped': (2, {'entity1': 'E1', 'entity2': 'E2', 'entity2_field': 'E2.F'}),
  'vis_003_barchart_join_count_horiz_grouped': (3, {'entity1': 'E1', 'entity2': 'E2', 'entity2_field': 'E2.F'}),
- 'vis_004_barchart_basic': (4, {'dimension': 'D', 'entity': 'E'}),
+ 'vis_004_barchart_horiz': (4, {'dimension': 'D', 'entity': 'E'}),
  'vis_005_barchart_basic': (5, {'dimension': 'D', 'entity': 'E'}),
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': (6,
                                                          {'entity1': 'E1',
@@ -5560,7 +5562,7 @@ TOOL_TAGS = {'vis_000_barchart_count_vert_grouped': ['line_item', 'barchart'],
  'vis_001_barchart_count_horiz_grouped': ['line_item', 'barchart'],
  'vis_002_barchart_join_count_vert_grouped': ['line_item', 'barchart'],
  'vis_003_barchart_join_count_horiz_grouped': ['line_item', 'barchart'],
- 'vis_004_barchart_basic': ['data_cube', 'barchart'],
+ 'vis_004_barchart_horiz': ['data_cube', 'barchart'],
  'vis_005_barchart_basic': ['data_cube', 'barchart'],
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': ['line_item', 'stacked_bar'],
  'vis_007_stacked_bar_join_count_horiz_stacked_grouped': ['line_item', 'stacked_bar'],
@@ -5642,7 +5644,7 @@ TOOL_SHARED_ENTITIES = {'vis_000_barchart_count_vert_grouped': [],
  'vis_001_barchart_count_horiz_grouped': [],
  'vis_002_barchart_join_count_vert_grouped': [],
  'vis_003_barchart_join_count_horiz_grouped': [],
- 'vis_004_barchart_basic': [],
+ 'vis_004_barchart_horiz': [],
  'vis_005_barchart_basic': [],
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': [],
  'vis_007_stacked_bar_join_count_horiz_stacked_grouped': [],
@@ -5731,7 +5733,7 @@ TOOL_TEXT = {'vis_000_barchart_count_vert_grouped': ('Bar chart of the number of
  'vis_003_barchart_join_count_horiz_grouped': ('Bar chart of the number of {entity1} by {enc:y}',
                                                'Displays the number of {entity1} in each {enc:y} category as '
                                                'horizontal bars.'),
- 'vis_004_barchart_basic': ('{enc:y} by {enc:x}', 'Displays {enc:y} for each {enc:x} category as bars.'),
+ 'vis_004_barchart_horiz': ('{enc:x} by {enc:y}', 'Displays {enc:x} for each {enc:y} category as horizontal bars.'),
  'vis_005_barchart_basic': ('{enc:y} by {enc:x}', 'Displays {enc:y} across the values of {enc:x} as bars.'),
  'vis_006_stacked_bar_join_count_vert_stacked_grouped': ('Stacked bar chart of the number of {entity1} by {enc:x} and '
                                                          '{enc:color}',
