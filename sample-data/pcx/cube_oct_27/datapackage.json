@@ -97,7 +97,7 @@
     },
     {
       "name": "Os",
-      "title": "Patients",
+      "title": "Patients (OS)",
       "type": "table",
       "path": "pcx30_os_all_dx_v6_months_2026-10-21r_cube.csv",
       "scheme": "file",
