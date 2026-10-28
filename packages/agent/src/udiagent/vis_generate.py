@@ -1749,6 +1749,34 @@ def validate_bindings(
                     f"value, e.g. each value with its count, sorted by count."
                 )
 
+    # Only the survival templates take both <V1> and <V2>, and for them a value in
+    # both is never a chart: an event-log curve that starts and ends on the same
+    # event puts every subject's end at time 0 (a vertical line), and a cube curve
+    # whose event status is also its censored status counts each cell twice.
+    shared_values = set(value_list(bindings.get("V1"))) & set(value_list(bindings.get("V2")))
+    if shared_values:
+        roles = (
+            "the event status (value1) and the censored status (value2)"
+            if _template_reads_cube(spec_template)
+            else "the event that starts the clock (value1) and one that ends it (value2)"
+        )
+        errors.append(
+            f"{', '.join(repr(v) for v in sorted(shared_values))} cannot be both "
+            f"{roles}; they must be different values."
+        )
+    # An event-log curve's censored status (<V3>, a status column's "no event
+    # yet") naming one of its end events counts the dead as still alive. Compared
+    # ignoring case: the two come from different columns ('deceased' in a vital
+    # status, 'Deceased' in an event type).
+    censored = bindings.get("V3")
+    end_events = {v.casefold(): v for v in value_list(bindings.get("V2"))}
+    if isinstance(censored, str) and censored.casefold() in end_events:
+        errors.append(
+            f"'{censored}' (value3) must be the status meaning the subject had NO "
+            f"end event yet (e.g. 'alive'), but it names the end event "
+            f"'{end_events[censored.casefold()]}' (value2)."
+        )
+
     # A rollup output bound to the same column as the key it groups by is a
     # degenerate chart, not just the SQL hazard of one name on two columns: the
     # rollup overwrites the key, so a survival curve stratified by its own

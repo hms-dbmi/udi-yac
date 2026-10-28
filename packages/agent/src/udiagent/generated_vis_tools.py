@@ -2744,15 +2744,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -2761,10 +2768,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -2953,15 +2964,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -2970,10 +2988,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -3163,15 +3185,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -3180,10 +3209,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -3373,15 +3406,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -3390,10 +3430,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -3584,15 +3628,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -3601,10 +3652,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -3805,15 +3860,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -3822,10 +3884,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4027,15 +4093,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4044,10 +4117,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4251,15 +4328,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4268,10 +4352,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4474,15 +4562,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4491,10 +4586,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4616,15 +4715,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4633,10 +4739,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',
@@ -4766,15 +4876,22 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                              'span: leave it out for them.',
                                                               'enum': ['1', '2', '3', '5', '10', 'full'],
                                                               'type': 'string'},
-                                             'value1': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value1': {'description': 'The event type that STARTS the clock (e.g. '
+                                                                       "'Initial CNS Tumor', 'diagnosis'), from the "
+                                                                       'event-type column. A literal data VALUE to '
+                                                                       'match (not a column name) — one of the values '
+                                                                       'actually present in the relevant column, '
+                                                                       'copied exactly, including case and spacing.',
                                                         'type': 'string'},
-                                             'value2': {'description': 'One or more literal data VALUES (not column '
-                                                                       'names); a row holding ANY of them matches. '
-                                                                       'Each copied exactly from the relevant column, '
-                                                                       'including case and spacing.',
+                                             'value2': {'description': 'The event types that END the clock, from the '
+                                                                       'event-type column: the death value alone for '
+                                                                       'overall survival; progression, recurrence, '
+                                                                       'second malignancy and death for event-free '
+                                                                       'survival. Never the start event. One or more '
+                                                                       'literal data VALUES (not column names); a row '
+                                                                       'holding ANY of them matches. Each copied '
+                                                                       'exactly from the relevant column, including '
+                                                                       'case and spacing.',
                                                         'items': {'description': 'A literal data VALUE to match (not a '
                                                                                  'column name) — one of the values '
                                                                                  'actually present in the relevant '
@@ -4783,10 +4900,14 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
                                                                   'type': 'string'},
                                                         'minItems': 1,
                                                         'type': 'array'},
-                                             'value3': {'description': 'A literal data VALUE to match (not a column '
-                                                                       'name) — one of the values actually present in '
-                                                                       'the relevant column, copied exactly, including '
-                                                                       'case and spacing.',
+                                             'value3': {'description': 'The status value meaning the subject had NO '
+                                                                       'end event when last seen, so is censored (e.g. '
+                                                                       "'alive', 'event-free'), from the status "
+                                                                       'column. Never the death value. A literal data '
+                                                                       'VALUE to match (not a column name) — one of '
+                                                                       'the values actually present in the relevant '
+                                                                       'column, copied exactly, including case and '
+                                                                       'spacing.',
                                                         'type': 'string'}},
                               'required': ['entity1',
                                            'entity2',

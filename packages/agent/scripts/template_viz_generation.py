@@ -455,6 +455,28 @@ _END_EVENTS = "<V2:list>"
 #: the dataset, not of the schema.
 _CENSOR_VALUE = "<V3>"
 
+#: What each literal value of an event-log survival curve is for, told to the
+#: model with the value parameters. Without them it saw only "a literal value"
+#: three times and guessed: the start event as an end event (every subject ends
+#: at time 0, so the curve collapses to a vertical line) or the death status as
+#: the censored one (the dead counted as alive, a plausible-looking wrong curve).
+_LINE_SURVIVAL_VALUES = {
+    "V1": (
+        "The event type that STARTS the clock (e.g. 'Initial CNS Tumor', "
+        "'diagnosis'), from the event-type column."
+    ),
+    "V2": (
+        "The event types that END the clock, from the event-type column: the death "
+        "value alone for overall survival; progression, recurrence, second "
+        "malignancy and death for event-free survival. Never the start event."
+    ),
+    "V3": (
+        "The status value meaning the subject had NO end event when last seen, so "
+        "is censored (e.g. 'alive', 'event-free'), from the status column. Never "
+        "the death value."
+    ),
+}
+
 #: Per-subject censoring time, carried through every rollup so the tick layer can
 #: place a mark at it.
 _CENSOR_DAY = "censor day"
@@ -3464,6 +3486,7 @@ def generate():
         # The studio cannot infer which column is the subject id, which is the
         # event type, or which holds the day offset — a type-directed search would
         # pick three plausible-looking columns and draw an empty curve. Name them.
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3546,6 +3569,7 @@ def generate():
             "steps coarsely; that is correct, not a denominator bug. "
             "There is no significance test, so do not read group differences as real."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3624,6 +3648,7 @@ def generate():
             "'Brain') and not combined strings like 'Leptomeningeal;Spine'; if they show "
             "combinations, unnest did not run."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3705,6 +3730,7 @@ def generate():
             "on whether a reader could mistake the curves for a partition; if so, the baseline "
             "variant is strictly better and this one should be rejected."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3779,6 +3805,7 @@ def generate():
             "single-valued 'ever' variant, judge whether a reader could mistake these "
             "overlapping curves for a partition."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E1.F1": "research_id",
@@ -3871,6 +3898,7 @@ def generate():
             "judge whether a reader could mistake these curves for a partition. Previews with "
             "the therapy table's protocol, where most subjects have several records."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Medical Therapy",
@@ -3957,6 +3985,7 @@ def generate():
             "curves move with it rather than staying put, which would mean the grouping is not "
             "reaching the pipeline. Previews by cutting birth_date, which stands in for age."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Demographics",
@@ -4082,6 +4111,7 @@ def generate():
             "a category: pcx has a 'Not Reported' agent, which the null filter cannot catch "
             "because it is a value, not a null."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Medical Therapy",
@@ -4177,6 +4207,7 @@ def generate():
             "case, 'ever received methotrexate', needs a value LIST rather than one value: "
             "that drug is recorded under three spellings."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Medical Therapy",
@@ -4263,6 +4294,7 @@ def generate():
             "the immortal-time caveat in the description is visible enough to a reader who sees "
             "only the chart."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Radiation",
@@ -4348,6 +4380,7 @@ def generate():
             "curves plus their end labels are still legible at review-card size, and whether the "
             "smallest cell is large enough to be worth drawing."
         ),
+        value_descriptions=_LINE_SURVIVAL_VALUES,
         preview_bindings={
             "E1": "Event",
             "E2": "Radiation",
