@@ -34,6 +34,7 @@ def _make_package(tmp: Path) -> Path:
                 "resources": [
                     {
                         "name": "Patient",
+                        "title": "Patients",
                         "path": "patient.csv",
                         "description": "One row per patient.",
                         "udi:row_count": 2,
@@ -42,6 +43,7 @@ def _make_package(tmp: Path) -> Path:
                                 {"name": "research_id", "udi:data_type": "nominal"},
                                 {
                                     "name": "age",
+                                    "title": "Age (days)",
                                     "udi:data_type": "quantitative",
                                     "description": "Age in days.",
                                 },
@@ -124,6 +126,10 @@ def test_seed_duckdb_round_trips(tmp_path):
     assert patient["description"] == "One row per patient."
     ages = {f["name"]: f["description"] for f in patient["schema"]["fields"]}
     assert ages == {"research_id": "", "age": "Age in days."}
+    # So do titles, the labels the chat shows for the table and its columns.
+    assert patient["title"] == "Patients" and "title" not in visit
+    titles = {f["name"]: f.get("title") for f in patient["schema"]["fields"]}
+    assert titles == {"research_id": None, "age": "Age (days)"}
     # As does hiding a table's count, on the resource rather than its schema.
     assert visit.get("udi:hide_count") is True and "udi:hide_count" not in visit["schema"]
     assert "udi:hide_count" not in patient

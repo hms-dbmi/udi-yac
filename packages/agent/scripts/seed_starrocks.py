@@ -110,28 +110,24 @@ def load_package(data_dir: Path) -> list[dict]:
             # cross-entity filtering depends on it — carry it through to the
             # backends config so /v1/yac/metadata can serve it. Descriptions
             # likewise exist only in the package, and are what tells the LLM
-            # what a column means; so do date formats (`udi:time_format`), which
-            # make the chat show an epoch column's BIGINTs as dates.
+            # what a column means; so do titles, the labels the chat shows, and
+            # date formats (`udi:time_format`), which make the chat show an
+            # epoch column's BIGINTs as dates.
             schema_extras = {
                 key: schema[key]
                 for key in ("primaryKey", "foreignKeys")
                 if key in schema
             }
-            if resource.get("description"):
-                schema_extras["description"] = resource["description"]
+            for key in ("description", "title"):
+                if resource.get(key):
+                    schema_extras[key] = resource[key]
             if resource.get("udi:hide_count"):
                 schema_extras["udi:hide_count"] = True
+            field_keys = ("description", "title", "udi:time_format")
             described = [
-                {
-                    "name": f["name"],
-                    **{
-                        key: f[key]
-                        for key in ("description", "udi:time_format")
-                        if f.get(key)
-                    },
-                }
+                {"name": f["name"], **{key: f[key] for key in field_keys if f.get(key)}}
                 for f in fields
-                if f.get("description") or f.get("udi:time_format")
+                if any(f.get(key) for key in field_keys)
             ]
             if described:
                 schema_extras["fields"] = described
