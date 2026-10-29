@@ -4617,10 +4617,14 @@ def generate():
 
     # Cross-entity count heatmap: one nominal field from each of two related
     # tables — protocol (on a therapy table) by vital status (on a patient
-    # table), gender (demographics) by vital status. Counts DISTINCT records of
-    # the referenced table, because the join repeats each of them once per
-    # related row: a patient with three regimens is three joined rows, and a
-    # row count would report regimens while the axis title said patients.
+    # table), files (on a file table) by species (on a subject table). Counts
+    # DISTINCT <E2> records whichever side of the relationship <E2> is on.
+    # <E1> is reduced to one row per (join key, <E1.F1>) before the join, so
+    # when <E2> is the parent the join cannot repeat it within a cell (a
+    # patient with three regimens on one protocol is one row, not three), and
+    # when <E2> is the child each of its rows meets at most one <E1> row. The
+    # old reduction ran after the join on the join key, which is the PARENT's
+    # key either way, so with <E2> as the child it counted parents.
     df = add_row(
         df,
         query_templates=[
@@ -4632,24 +4636,26 @@ def generate():
             Chart()
             .source("<E1>", "<E1.url>")
             .source("<E2>", "<E2.url>")
+            # One <E1> row per (join key, <E1.F1>), named on the rollup since a
+            # groupby's own `out` is a no-op in the SQL compiler. A no-op when
+            # <E1> is the parent, whose key is already unique.
+            .groupby(["<E1.r.E2.id.from>", "<E1.F1>"], in_name="<E1>")
+            .rollup({"<E1> rows": Op.count()}, in_name="<E1>", out_name="<E1>__by_key")
             .join(
-                in_name=["<E1>", "<E2>"],
+                in_name=["<E1>__by_key", "<E2>"],
                 on=["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"],
                 out_name="<E1>__<E2>",
             )
-            # One row per (cell, record): collapses the join's repeats, so the
-            # count below is of distinct <E2> records. A no-op when the tables
-            # are one-to-one.
-            .groupby(["<E1.F1>", "<E2.F2>", "<E1.r.E2.id.from>"])
-            .rollup({"<E1> rows": Op.count()})
             .groupby(["<E2.F2>", "<E1.F1>"])
             .rollup({"count <E2>": Op.count()})
             .mark("rect")
-            .color(field="count <E2>", type="quantitative")
+            # Titled explicitly: the chat names a field-less count after the
+            # spec's first source, which is <E1> here, not the table counted.
+            .color(field="count <E2>", type="quantitative", title="Count of <E2>")
             .y(field="<E1.F1>", type="nominal")
             .x(field="<E2.F2>", type="nominal")
             .mark("text")
-            .text(field="count <E2>", type="quantitative")
+            .text(field="count <E2>", type="quantitative", title="Count of <E2>")
             .y(field="<E1.F1>", type="nominal")
             .x(field="<E2.F2>", type="nominal")
             # Same black-on-halo labelling as the single-table count heatmap.
@@ -4666,11 +4672,11 @@ def generate():
         description=(
             "Joins two related entities and displays the number of distinct entity2 records "
             "for each combination of a nominal field on entity1 and a nominal field on entity2, "
-            "as a heatmap with labeled cells. Use when the two fields live in different tables — "
-            "e.g. a treatment protocol on a therapy table by vital status on a patient table, or "
-            "gender on a demographics table by vital status. Bind entity2 to the table whose "
-            "records are being counted (the patients) and entity1 to the related table holding "
-            "the other field."
+            "as a heatmap with labeled cells. Use when the two fields live in different tables. "
+            "Bind entity2 to the table whose records are being counted and entity1 to the related "
+            "table holding the other field, whichever of the two references the other: patients "
+            "by protocol counts patients (entity2) with protocol from a therapy table (entity1); "
+            "files by species counts files (entity2) with species from a subject table (entity1)."
         ),
         title_template="Heatmap of the number of <E2> by <E1.F1> and <E2.F2>",
         summary_template=(
@@ -4678,9 +4684,10 @@ def generate():
             "<E2.F2>; one with several <E1> rows under the same <E1.F1> counts once in that cell."
         ),
         design_considerations=(
-            "The join repeats each <E2> record once per related <E1> row, so the template first "
-            "reduces to one row per (cell, record) on the join key and only then counts: a cell "
-            "is the number of DISTINCT records, never the number of related rows. A record with "
+            "Joining repeats a parent record once per related row, so the template first reduces "
+            "<E1> to one row per (join key, <E1.F1>) and only then joins and counts: a cell is "
+            "the number of DISTINCT <E2> records, never the number of related rows, whether <E2> "
+            "is the parent or the child of the relationship. A record with "
             "rows under several <E1.F1> values is counted in each of those cells, so with a "
             "one-to-many relationship the cells can sum to more than the number of records — "
             "that is membership, not double counting within a cell. Records with no related row "
@@ -4696,7 +4703,9 @@ def generate():
             "Check cells count distinct records, not joined rows: on pcx, protocol (Medical "
             "Therapy) by vital_status (Patient) puts 20 deceased patients under 'Not "
             "Applicable', where a row count would say 29. Gender (Demographics) by "
-            "vital_status is one-to-one, so its cells sum to the patient count."
+            "vital_status is one-to-one, so its cells sum to the patient count. Counting the "
+            "child side, samples (entity2) by donor sex (entity1) on hubmap, the cells sum to "
+            "the samples with a donor, not to the donor count."
         ),
     )
 

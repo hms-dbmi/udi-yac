@@ -1715,14 +1715,15 @@ TEMPLATES = ['{"source": {"name": "<E>", "source": "<E.url>"}, "transformation":
  '"type": "nominal"}, {"encoding": "color", "value": "black"}], "stroke": "white", "strokeWidth": 3, "strokeOpacity": '
  '0.7}]}',
  '{"source": [{"name": "<E1>", "source": "<E1.url>"}, {"name": "<E2>", "source": "<E2.url>"}], "transformation": '
- '[{"join": {"on": ["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"]}, "in": ["<E1>", "<E2>"], "out": "<E1>__<E2>"}, '
- '{"groupby": ["<E1.F1>", "<E2.F2>", "<E1.r.E2.id.from>"]}, {"rollup": {"<E1> rows": {"op": "count"}}}, {"groupby": '
- '["<E2.F2>", "<E1.F1>"]}, {"rollup": {"count <E2>": {"op": "count"}}}], "representation": [{"mark": "rect", '
- '"mapping": [{"encoding": "color", "field": "count <E2>", "type": "quantitative"}, {"encoding": "y", "field": '
- '"<E1.F1>", "type": "nominal"}, {"encoding": "x", "field": "<E2.F2>", "type": "nominal"}]}, {"mark": "text", '
- '"mapping": [{"encoding": "text", "field": "count <E2>", "type": "quantitative"}, {"encoding": "y", "field": '
- '"<E1.F1>", "type": "nominal"}, {"encoding": "x", "field": "<E2.F2>", "type": "nominal"}, {"encoding": "color", '
- '"value": "black"}], "stroke": "white", "strokeWidth": 3, "strokeOpacity": 0.7}]}',
+ '[{"groupby": ["<E1.r.E2.id.from>", "<E1.F1>"], "in": "<E1>"}, {"rollup": {"<E1> rows": {"op": "count"}}, "in": '
+ '"<E1>", "out": "<E1>__by_key"}, {"join": {"on": ["<E1.r.E2.id.from>", "<E1.r.E2.id.to>"]}, "in": ["<E1>__by_key", '
+ '"<E2>"], "out": "<E1>__<E2>"}, {"groupby": ["<E2.F2>", "<E1.F1>"]}, {"rollup": {"count <E2>": {"op": "count"}}}], '
+ '"representation": [{"mark": "rect", "mapping": [{"encoding": "color", "field": "count <E2>", "type": "quantitative", '
+ '"title": "Count of <E2>"}, {"encoding": "y", "field": "<E1.F1>", "type": "nominal"}, {"encoding": "x", "field": '
+ '"<E2.F2>", "type": "nominal"}]}, {"mark": "text", "mapping": [{"encoding": "text", "field": "count <E2>", "type": '
+ '"quantitative", "title": "Count of <E2>"}, {"encoding": "y", "field": "<E1.F1>", "type": "nominal"}, {"encoding": '
+ '"x", "field": "<E2.F2>", "type": "nominal"}, {"encoding": "color", "value": "black"}], "stroke": "white", '
+ '"strokeWidth": 3, "strokeOpacity": 0.7}]}',
  '{"source": {"name": "<E>", "source": "<E.url>"}, "transformation": [{"groupby": ["<F3>", "<F2>"]}, {"rollup": '
  '{"average <F1>": {"op": "mean", "field": "<F1:q>"}}}], "representation": {"mark": "rect", "mapping": [{"encoding": '
  '"color", "field": "average <F1>", "type": "quantitative"}, {"encoding": "y", "field": "<F2>", "type": "nominal"}, '
@@ -5212,15 +5213,16 @@ TOOL_DEFS = [{'function': {'description': '[barchart] Counts entities grouped by
  {'function': {'description': '[heatmap] Joins two related entities and displays the number of distinct entity2 '
                               'records for each combination of a nominal field on entity1 and a nominal field on '
                               'entity2, as a heatmap with labeled cells. Use when the two fields live in different '
-                              'tables — e.g. a treatment protocol on a therapy table by vital status on a patient '
-                              'table, or gender on a demographics table by vital status. Bind entity2 to the table '
-                              'whose records are being counted (the patients) and entity1 to the related table holding '
-                              'the other field. Design: The join repeats each <E2> record once per related <E1> row, '
-                              'so the template first reduces to one row per (cell, record) on the join key and only '
-                              'then counts: a cell is the number of DISTINCT records, never the number of related '
-                              'rows. A record with rows under several <E1.F1> values is counted in each of those '
-                              'cells, so with a one-to-many relationship the cells can sum to more than the number of '
-                              'records — that is membership, not double counting within a cell.',
+                              'tables. Bind entity2 to the table whose records are being counted and entity1 to the '
+                              'related table holding the other field, whichever of the two references the other: '
+                              'patients by protocol counts patients (entity2) with protocol from a therapy table '
+                              '(entity1); files by species counts files (entity2) with species from a subject table '
+                              '(entity1). Design: Joining repeats a parent record once per related row, so the '
+                              'template first reduces <E1> to one row per (join key, <E1.F1>) and only then joins and '
+                              'counts: a cell is the number of DISTINCT <E2> records, never the number of related '
+                              'rows, whether <E2> is the parent or the child of the relationship. Tasks: Compare how a '
+                              'status on one table is distributed across categories recorded in a related table; find '
+                              'combinations that…',
                'name': 'vis_066_heatmap_count_join',
                'parameters': {'additionalProperties': False,
                               'properties': {'entity1': {'description': 'The primary data entity (table).',
