@@ -58,10 +58,10 @@ export function WelcomeSplash() {
       {/* Mascot + speech bubble */}
       <div className="udi:flex udi:flex-col udi:items-center udi:gap-1 udi:mt-12">
         {message !== null && (
-          <div className="udi:relative udi:bg-[#e8f4fc] udi:border-[1.5px] udi:border-[#57b4e9] udi:rounded-2xl udi:px-5 udi:py-3">
+          <div className="udi:relative udi:bg-[#e8f4fc] udi:dark:bg-[#323c42] udi:border-[1.5px] udi:border-[#57b4e9] udi:rounded-2xl udi:px-5 udi:py-3">
             <span className="udi:text-sm udi:text-foreground">{message}</span>
             <div className="udi:absolute udi:-bottom-[10px] udi:left-1/2 udi:-translate-x-1/2 udi:w-0 udi:h-0 udi:border-l-[10px] udi:border-r-[10px] udi:border-t-[10px] udi:border-l-transparent udi:border-r-transparent udi:border-t-[#57b4e9]" />
-            <div className="udi:absolute udi:-bottom-[8px] udi:left-1/2 udi:-translate-x-1/2 udi:w-0 udi:h-0 udi:border-l-[8px] udi:border-r-[8px] udi:border-t-[8px] udi:border-l-transparent udi:border-r-transparent udi:border-t-[#e8f4fc]" />
+            <div className="udi:absolute udi:-bottom-[8px] udi:left-1/2 udi:-translate-x-1/2 udi:w-0 udi:h-0 udi:border-l-[8px] udi:border-r-[8px] udi:border-t-[8px] udi:border-l-transparent udi:border-r-transparent udi:border-t-[#e8f4fc] udi:dark:border-t-[#323c42]" />
           </div>
         )}
         {mascotContent}
