@@ -26,7 +26,7 @@ overrides:
   # scoped, not global: udi-toolkit declares its own vite ^8 range, so pin it to
   # the workspace vite to keep a single instance.
   # (vitest 5 peer-deps vite ^8, so it no longer needs excluding from this pin.)
-  "udi-toolkit>vite": 8.3.3
+  "udi-toolkit>vite": 8.3.5
   "anymatch>picomatch": 2.3.2
   "readdirp>picomatch": 2.3.2
   "micromatch>picomatch": 2.3.2
