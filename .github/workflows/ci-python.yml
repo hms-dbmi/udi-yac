@@ -2,7 +2,7 @@ name: CI (python)
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "packages/agent/**"
       - "packages/grammar-py/**"
