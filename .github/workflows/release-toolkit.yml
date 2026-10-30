@@ -6,7 +6,8 @@ name: Release udi-toolkit
 # what publishes.
 #
 # To release:
-#   1. Bump "version" in packages/grammar/package.json in a PR; merge it.
+#   1. Bump "version" in packages/grammar/package.json in a PR into dev; merge
+#      it, then promote dev to main.
 #   2. git fetch origin main
 #      git tag udi-toolkit-v<version> origin/main && git push origin udi-toolkit-v<version>
 #
