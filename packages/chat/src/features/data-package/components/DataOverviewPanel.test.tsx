@@ -364,6 +364,9 @@ describe('DataOverviewPanel', () => {
     // dashboardStore.updateSpecFilters prepends the active named filters to
     // viz.spec.transformation, so carrying them here would filter twice.
     expect(viz.spec.transformation).toBeUndefined();
+    // Every column (the toolkit's `field: '*'` default), not just the keys:
+    // donors' keys are hubmap_id and created_timestamp, two ids and no data.
+    expect(viz.spec.representation).toBeUndefined();
 
     // Popping the same entity again is a no-op rather than a duplicate card.
     await userEvent.click(screen.getByLabelText('Open donors rows on the dashboard'));

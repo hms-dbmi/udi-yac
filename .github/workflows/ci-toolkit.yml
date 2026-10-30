@@ -2,7 +2,7 @@ name: CI (udi-toolkit)
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "packages/grammar/**"
       - "pnpm-lock.yaml"

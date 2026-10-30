@@ -6,7 +6,8 @@ name: Release udi-yac (chat)
 # what publishes.
 #
 # To release:
-#   1. Bump "version" in packages/chat/package.json in a PR; merge it.
+#   1. Bump "version" in packages/chat/package.json in a PR into dev; merge it,
+#      then promote dev to main.
 #   2. git fetch origin main
 #      git tag udi-yac-v<version> origin/main && git push origin udi-yac-v<version>
 #
