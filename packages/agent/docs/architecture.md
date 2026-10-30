@@ -61,8 +61,9 @@ benchmarks.
 
 Token use is added up across every LLM call in the turn and returned as
 `X-Usage-*` response headers. A server can refuse a turn that would exceed a
-quota through the `app.state.budget_check` hook. The refusal comes back as an
-ordinary `Rebuff`, with HTTP 200.
+quota through the `app.state.budget_check` hook, which gets the caller's decoded
+token and the turn's `Usage`, so a quota can be per user or per role. The
+refusal comes back as an ordinary `Rebuff`, with HTTP 200.
 
 ## Charts from templates
 

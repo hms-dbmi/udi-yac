@@ -9,6 +9,7 @@ Run with::
     uv run fastapi dev src/udiagent/server/app.py --port 8007
 """
 
+import functools
 import importlib.metadata
 import json
 import logging
@@ -172,9 +173,17 @@ app = FastAPI(
 
 # Optional budget-check hook.  Downstream integrators should monkey-patch this
 # (``server_app.app.state.budget_check = my_fn``) to consult their quota store.
-# The callback receives the accumulated ``Usage`` and returns a non-empty
-# message string to refuse the request, or ``None`` to proceed.
+# The callback receives the caller's decoded token (``verify_jwt``'s payload,
+# so a quota can key on ``sub`` or a role) and the turn's accumulated ``Usage``,
+# and returns a non-empty message string to refuse the request, or ``None`` to
+# proceed.
 app.state.budget_check = None
+
+
+def _budget_check(token_payload: dict):
+    """``app.state.budget_check`` bound to this request's token, or ``None``."""
+    check = app.state.budget_check
+    return functools.partial(check, token_payload) if check else None
 
 
 @app.exception_handler(EndpointError)
@@ -328,7 +337,7 @@ def yac_completions(
         request,
         openai_api_key=x_openai_key,
         session_id=x_conversation_id,
-        budget_check=app.state.budget_check,
+        budget_check=_budget_check(token_payload),
     )
     return JSONResponse(content=tool_calls, headers=headers)
 
@@ -613,7 +622,7 @@ def yac_benchmark(
             data_domains=request.dataDomains,
             openai_api_key=x_openai_key,
             model=model,
-            budget_check=None if x_openai_key else app.state.budget_check,
+            budget_check=None if x_openai_key else _budget_check(token_payload),
         )
     except OpenAIError as exc:
         raise _llm_error(
