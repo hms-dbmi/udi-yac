@@ -439,7 +439,7 @@ class TestServerUsage:
 
     def test_completions_budget_rebuff_returns_200(self):
         """Hooking app.state.budget_check produces a Rebuff body + usage headers."""
-        self.server_app.app.state.budget_check = lambda u: "Quota exceeded."
+        self.server_app.app.state.budget_check = lambda claims, u: "Quota exceeded."
 
         # Stub orchestrator.run to honor the budget_check passed in.
         def fake_run(**kwargs):
@@ -468,7 +468,7 @@ class TestServerUsage:
 
     def test_completions_budget_skipped_when_user_brings_key(self):
         """When X-OpenAI-Key is present, budget_check is not passed."""
-        self.server_app.app.state.budget_check = lambda u: "should not fire"
+        self.server_app.app.state.budget_check = lambda claims, u: "should not fire"
 
         with patch.object(
             self.server_app.orchestrator,
@@ -574,7 +574,7 @@ class TestServerUsage:
     def test_benchmark_is_held_to_the_budget_on_the_server_key(self, user_key, expect_check):
         """The benchmark spends tokens like a completion; without the hook it was
         an unmetered way around the quota."""
-        check = lambda u: None  # noqa: E731
+        check = lambda claims, u: None  # noqa: E731
         self.server_app.app.state.budget_check = check
         headers = {"Authorization": "Bearer test"}
         if user_key:
@@ -582,7 +582,12 @@ class TestServerUsage:
         result = MagicMock(tool_calls=[], orchestrator_choice="rebuff", usage=Usage())
         with patch.object(self.server_app.orchestrator, "run", return_value=result) as run:
             self.client.post("/v1/yac/benchmark", json=self._body(), headers=headers)
-        assert run.call_args.kwargs["budget_check"] is (check if expect_check else None)
+        bound = run.call_args.kwargs["budget_check"]
+        if expect_check:
+            # Bound to the caller's token, so a quota can key on the user.
+            assert bound.func is check and bound.args == ({"dev_mode": True},)
+        else:
+            assert bound is None
 
     def test_benchmark_refuses_to_skip_routing_for_other_choices(self):
         body = self._body() | {"orchestrator_choice": "get-subset-of-data"}
